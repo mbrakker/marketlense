@@ -282,18 +282,6 @@ Suggested priority order:
     - Repair attempts log before/after diffs and exact regenerated artifacts.
     - Benchmarks show lower regeneration volume.
 
-- **Title:** Modernize report HTML rendering and editorial data visibility [Impact: 4/5, Effort: 4/5]
-  - Explanation: Merge HTML template refactor, responsive assets, and editorial visibility improvements into one rendering program. Extract repeated template blocks into macros/partials, externalize stable CSS, pass image dimensions, add responsive variants, and surface report focus year, fieldwork dates, ordered chapters, methodology, coverage, findings, limitations, contact info, and improved TL;DR/executive-summary structure.
-  - Pros: Better readability, lower template duplication, improved Core Web Vitals, clearer report provenance.
-  - Cons: Touches rendering contracts, templates, and golden outputs.
-  - Acceptance Criteria:
-    - No duplicated preview/figure branches remain in `templates/report.html.j2`.
-    - Templates use shared CSS/macros while preserving relative asset conventions.
-    - Images render width/height plus `srcset`/`sizes` where variants exist.
-    - Metadata appears below TL;DR; summary renders as concise bullets.
-    - Methodology, coverage, findings, limitations, contact, semantic section labels, and ordered chapters render when data exists, with explicit empty states where required.
-    - Golden render tests approve only intentional changes.
-
 - **Title:** Add infographic asset generation for HTML and LinkedIn [Impact: 2/5, Effort: 4/5]
   - Explanation: Create a generator/service pair that produces simple infographic SVG/PNG assets from highlights, persists metadata, and exposes assets to HTML and publishing flows.
   - Pros: Richer publishable artifacts and better social sharing.

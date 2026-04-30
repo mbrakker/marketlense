@@ -811,6 +811,7 @@ def run_report_analysis(
     data_dict = normalized_payload.to_dict()
     if artifacts_payload:
         data_dict["artifacts"] = artifacts_payload
+    data_dict["evidence_packs"] = packs
     if validation_report:
         data_dict["validation_report"] = validation_report.to_dict()
     data_dict["report_identity_author"] = resolve_doc_map_primary_contributor(

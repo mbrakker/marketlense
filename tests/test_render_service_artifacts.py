@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from PIL import Image
+
 from src.contracts.report_assets import RenderRequest
 from src.contracts.run_context import RunContext
 from src.services.render_service import render_report
@@ -76,13 +78,14 @@ def test_render_includes_artifact_sections(tmp_path):
     assert 'id="section-appendix"' in html
     assert 'id="section-expert"' not in html
     assert 'id="section-linkedin"' not in html
-    assert '<p class="summary-copy" style="max-width:none">Artifact TLDR</p>' in html
-    assert (
-        '<p class="summary-copy" style="max-width:none">Artifact executive summary</p>'
-        in html
-    )
-    assert '<ul class="claim-list" style="max-width:none">' in html
-    assert 'style="max-width:none"' in html
+    assert '<section class="panel" id="section-summary"' in html
+    assert "<ul class=\"summary-list\">" in html
+    assert "<li>Artifact TLDR</li>" in html
+    assert "<li>Artifact executive summary</li>" in html
+    assert '<section class="panel" id="section-snapshot"' in html
+    assert "Metadata below the lead" in html
+    assert "<ul class=\"claim-list\"" in html
+    assert "style=\"max-width:none\"" not in html
 
 
 def test_render_expands_covered_topics_with_briefs(tmp_path):
@@ -289,6 +292,103 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
     assert "Source URL was not available in the extracted report metadata." in html
 
 
+def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):
+    data = {
+        "title": "Editorial Report",
+        "tldr": "Concise lead.",
+        "insights": ["Insight A"] * 5,
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "region": "Global",
+        "time_period": "2026 (fieldwork Oct 2025)",
+        "contents_page_number": 0,
+        "artifacts": {
+            "summary": {"tldr": "Concise lead.", "executive_summary": "Longer summary."},
+            "toc_entries": [
+                {
+                    "display_title": "Demand outlook",
+                    "section_title": "Demand outlook",
+                    "summary": "Demand shifts toward APAC.",
+                    "pages": [4, 5],
+                    "order": 1,
+                }
+            ],
+        },
+        "evidence_packs": {
+            "doc_map": {
+                "title": "Editorial Report",
+                "publisher": "Publisher",
+                "methodology": "Survey fielded in October 2025 across 12 markets.",
+                "contributors": [
+                    {
+                        "name": "Alex Analyst",
+                        "role": "Research lead",
+                        "email": "alex@example.com",
+                    }
+                ],
+            },
+            "methods": {
+                "methods": [
+                    {
+                        "name": "Market survey",
+                        "description": "Survey fielded in October 2025 across 12 markets.",
+                    }
+                ]
+            },
+            "findings": {
+                "findings": [
+                    {"statement": "Demand is rebounding in APAC first."},
+                ]
+            },
+            "limitations": {
+                "limitations": [
+                    {"message": "Sample is weighted toward enterprise respondents."},
+                ]
+            },
+            "scope": {
+                "scope": {
+                    "jurisdictions": ["US", "UK"],
+                    "sources": [{"title": "Editorial Report"}],
+                    "contentTypes": ["application/pdf"],
+                    "samplingRate": "100%",
+                    "retentionDays": 365,
+                }
+            },
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="editorial.pdf",
+        file_id="file_editorial",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert "Editorial details" in html
+    assert "Methodology" in html
+    assert "Survey fielded in October 2025 across 12 markets." in html
+    assert "Coverage" in html
+    assert "Jurisdictions: US, UK" in html
+    assert "Findings" in html
+    assert "Demand is rebounding in APAC first." in html
+    assert "Limitations" in html
+    assert "Sample is weighted toward enterprise respondents." in html
+    assert "Contacts" in html
+    assert "Alex Analyst — Research lead — alex@example.com" in html
+    assert "Ordered chapters" in html
+    assert "1. Demand outlook" in html
+    assert "Pages: 4, 5" in html
+    assert "Report focus year" in html
+    assert "2026" in html
+    assert "Fieldwork" in html
+    assert "fieldwork Oct 2025" in html
+
+
 def test_render_hides_figure_sections_when_disabled(tmp_path):
     data = {
         "title": "No Figures Report",
@@ -461,6 +561,57 @@ def test_render_formats_slug_chips_with_acronyms(tmp_path):
     assert "ROI" in html
     assert "ai-in-retail" not in html
     assert "private_label" not in html
+
+
+def test_render_adds_responsive_srcset_when_variant_exists(tmp_path):
+    assets_dir = tmp_path / "report" / "slices"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    base_path = assets_dir / "primary.png"
+    variant_path = assets_dir / "primary@2x.png"
+    Image.new("RGB", (800, 450), color="navy").save(base_path)
+    Image.new("RGB", (1600, 900), color="navy").save(variant_path)
+
+    data = {
+        "title": "Responsive Figure Report",
+        "tldr": "TLDR",
+        "insights": ["Insight A"] * 5,
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["tag"],
+        "region": "US",
+        "time_period": "2024",
+        "contents_page_number": 0,
+        "_figure_assets": [
+            {
+                "schema_version": "1.0",
+                "image_path": "report/slices/primary.png",
+                "page": 2,
+                "candidate_id": "chart-1",
+                "kind": "chart",
+                "is_primary": True,
+                "display_caption": "Primary generated caption",
+            }
+        ],
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="responsive.pdf",
+        file_id="file_responsive",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert 'srcset="report/slices/primary.png 1x, report/slices/primary@2x.png 2x"' in html
+    assert 'sizes="(max-width: 800px) 100vw, 980px"' in html
+    assert 'width="800"' in html
+    assert 'height="450"' in html
+    assert 'fetchpriority="high"' in html
+    assert 'loading="eager"' in html
 
 
 def test_render_is_deterministic_across_calls(tmp_path):

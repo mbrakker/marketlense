@@ -1,0 +1,58 @@
+{% macro format_chip_label(raw_label, acronym_map) -%}
+  {%- set label = raw_label|string|trim -%}
+  {%- if not label -%}
+    {{- "" -}}
+  {%- else -%}
+    {%- set lowercase_connectors = ["a", "an", "and", "as", "at", "by", "for", "from", "in", "of", "on", "or", "the", "to", "vs", "via", "with"] -%}
+    {%- set normalized = label|replace("_", " ")|replace("-", " ") -%}
+    {%- set words_ns = namespace(parts=[]) -%}
+    {%- for token in normalized.split() -%}
+      {%- set token_lower = token|lower -%}
+      {%- if token_lower in acronym_map -%}
+        {%- set pretty = acronym_map[token_lower] -%}
+      {%- elif loop.index0 > 0 and token_lower in lowercase_connectors -%}
+        {%- set pretty = token_lower -%}
+      {%- else -%}
+        {%- set pretty = token[:1]|upper ~ token[1:]|lower -%}
+      {%- endif -%}
+      {%- set words_ns.parts = words_ns.parts + [pretty] -%}
+    {%- endfor -%}
+    {{- words_ns.parts|join(" ") -}}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro responsive_image(media, class_name="", loading="lazy", fetchpriority="auto") -%}
+  <img
+    src="{{ media.src }}"
+    {% if media.srcset %}srcset="{{ media.srcset }}"{% endif %}
+    {% if media.sizes %}sizes="{{ media.sizes }}"{% endif %}
+    alt="{{ media.alt }}"
+    class="{{ class_name }}"
+    loading="{{ loading }}"
+    {% if fetchpriority and fetchpriority != "auto" %}fetchpriority="{{ fetchpriority }}"{% endif %}
+    decoding="async"
+    width="{{ media.width }}"
+    height="{{ media.height }}">
+{%- endmacro %}
+
+{% macro chip_list(items, acronym_map, extra_class="") -%}
+  <ul class="chip-list{% if extra_class %} {{ extra_class }}{% endif %}">
+    {%- for item in items -%}
+      {%- set value = item|string|trim -%}
+      {%- if value -%}
+      <li><span class="chip">{{ format_chip_label(value, acronym_map) }}</span></li>
+      {%- endif -%}
+    {%- endfor -%}
+  </ul>
+{%- endmacro %}
+
+{% macro bullet_list(items, class_name="summary-list") -%}
+  <ul class="{{ class_name }}">
+    {%- for item in items -%}
+      {%- set text = item|string|trim -%}
+      {%- if text -%}
+      <li>{{ text }}</li>
+      {%- endif -%}
+    {%- endfor -%}
+  </ul>
+{%- endmacro %}

@@ -1,996 +1,30 @@
 <!doctype html>
-{% set art = data.artifacts if data.artifacts is defined else {} %}
-{% set summary = art.summary if art.summary is defined else {} %}
-{% set source_status = art.source_status if art.source_status is defined else {} %}
-{% set family_status = art.family_status if art.family_status is defined and art.family_status else {} %}
-{% set summary_status = family_status.summary if family_status.summary is defined else {} %}
-{% set insights_status = family_status.insights_bundle if family_status.insights_bundle is defined else {} %}
-{% set quotes_status = family_status.quotes if family_status.quotes is defined else {} %}
-{% set expert_status = family_status.expert_comment if family_status.expert_comment is defined else {} %}
-{% set linkedin_status = family_status.linkedin_post if family_status.linkedin_post is defined else {} %}
-{% set report_title = data.title if data.title is defined and data.title else "" %}
-{% set report_title = report_title|string|trim %}
-{% set publisher = data.publisher if data.publisher is defined and data.publisher else "" %}
-{% set publisher = publisher|string|trim %}
-{% set report_identity_author = data.report_identity_author if data.report_identity_author is defined and data.report_identity_author else "" %}
-{% set report_identity_author = report_identity_author|string|trim %}
-{% set region = data.region if data.region is defined and data.region else "" %}
-{% set region = region|string|trim %}
-{% set report_year = data.time_period if data.time_period is defined and data.time_period else "" %}
-{% set report_year = report_year|string|trim %}
-{% set source_url = data.source if data.source is defined and data.source else "" %}
-{% set source_url = source_url|string|trim %}
-{% set canonical_url = data.canonical_url if data.canonical_url is defined and data.canonical_url else source_url %}
-{% set canonical_url = canonical_url|string|trim %}
-{% set fallback_reason = source_status.reason if source_status.reason is defined and source_status.reason else "" %}
-{% set fallback_reason = fallback_reason|string|trim %}
-{% set not_available = source_status.not_available if source_status.not_available is defined else (data._text_not_available if data._text_not_available is defined else False) %}
-{% set tldr_text = summary.tldr if summary.tldr is defined and summary.tldr else (data.tldr if data.tldr is defined and data.tldr else "") %}
-{% set tldr_text = tldr_text|string|trim %}
-{% if not tldr_text and not_available %}
-  {% set tldr_text = "Not available from text." %}
-{% endif %}
-{% set exec_summary = summary.executive_summary if summary.executive_summary is defined and summary.executive_summary else (data.commentary if data.commentary is defined else "") %}
-{% set exec_summary = exec_summary|string|trim %}
-{% set claim_map = summary.claim_evidence_map if summary.claim_evidence_map is defined and summary.claim_evidence_map else [] %}
-{% set insights_list = art.insights_final if art.insights_final is defined and art.insights_final else (data.insights if data.insights is defined else []) %}
-{% set quotes_list = art.quotes_final if art.quotes_final is defined and art.quotes_final else [] %}
-{% if not quotes_list and data.quote %}
-  {% set quotes_list = [{"text": data.quote.text, "speaker": data.quote.author, "citation": "", "page": data.contents_page_number or 0}] %}
-{% endif %}
-{% set expert_comment = art.expert_comment if art.expert_comment is defined else None %}
-{% set linkedin_post = art.linkedin_post if art.linkedin_post is defined else "" %}
-{% set commentary = data.commentary if data.commentary is defined else "" %}
-{% set commentary = commentary|string|trim %}
-{% set toc_entries = art.toc_entries if art.toc_entries is defined and art.toc_entries else [] %}
-{% set topics_list = art.toc_topics if art.toc_topics is defined and art.toc_topics else [] %}
-{% set topics_expanded = art.toc_topics_expanded if art.toc_topics_expanded is defined and art.toc_topics_expanded else [] %}
-{% if not topics_list and toc_entries %}
-  {% set toc_topics_ns = namespace(items=[]) %}
-  {% for entry in toc_entries %}
-    {% set entry_label = entry.display_title if entry.display_title is defined and entry.display_title else (entry.section_title if entry.section_title is defined else "") %}
-    {% set entry_label = entry_label|string|trim %}
-    {% if entry_label %}
-      {% set toc_topics_ns.items = toc_topics_ns.items + [entry_label] %}
-    {% endif %}
-  {% endfor %}
-  {% set topics_list = toc_topics_ns.items %}
-{% endif %}
-{% set categories_list = data.categories_display if data.categories_display is defined and data.categories_display else (data.categories if data.categories is defined else []) %}
-{% set tags_list = data.taxonomy if data.taxonomy is defined and data.taxonomy else [] %}
-{% set primary_figure = data._figure_top if data._figure_top is defined and data._figure_top else (data._figure_image if data._figure_image is defined else "") %}
-{% set primary_figure = primary_figure|string|trim %}
-{% set figure_gallery = data._figure_gallery if data._figure_gallery is defined and data._figure_gallery else [] %}
-{% set figure_assets = data._figure_assets if data._figure_assets is defined and data._figure_assets else [] %}
-{% if figure_assets and figure_assets[0].image_path is defined and figure_assets[0].image_path %}
-  {% set primary_figure = figure_assets[0].image_path|string|trim %}
-{% endif %}
-{% set figure_section_enabled = data._figure_section_enabled if data._figure_section_enabled is defined else True %}
-{% set figure_caption = "" %}
-{% if figure_assets and figure_assets[0].display_caption is defined and figure_assets[0].display_caption %}
-  {% set figure_caption = figure_assets[0].display_caption|string|trim %}
-{% elif data.figure is defined and data.figure %}
-  {% if data.figure.title is defined and data.figure.title %}
-    {% set figure_caption = data.figure.title|string|trim %}
-  {% elif data.figure.evidence is defined and data.figure.evidence %}
-    {% set figure_caption = data.figure.evidence|string|trim %}
-  {% endif %}
-{% endif %}
-{% set preview_width = 1400 %}
-{% set preview_height = 1980 %}
-{% set figure_width = 1600 %}
-{% set figure_height = 900 %}
-{% set thumb_width = 320 %}
-{% set thumb_height = 180 %}
-{% set has_metadata = (categories_list|length > 0) or (tags_list|length > 0) %}
-{% set has_topics = topics_list|length > 0 %}
-{% set has_topic_briefs = topics_expanded|length > 0 or toc_entries|length > 0 %}
-{% set has_primary_figure = figure_section_enabled and (primary_figure or figure_assets|length > 0) %}
-{% set has_claim_map = claim_map|length > 0 %}
-{% set has_expert_comment = expert_comment and (expert_comment|string|trim) %}
-{% set has_linkedin_post = linkedin_post and (linkedin_post|string|trim) %}
-{% set expert_abstained = expert_status.status is defined and expert_status.status == "abstained" %}
-{% set linkedin_abstained = linkedin_status.status is defined and linkedin_status.status == "abstained" %}
-{% set has_appendix = has_expert_comment or has_linkedin_post or expert_abstained or linkedin_abstained %}
-{% set has_commentary = commentary and not has_expert_comment %}
-{% set report_identity_ns = namespace(items=[]) %}
-{% if report_title %}{% set report_identity_ns.items = report_identity_ns.items + ["Title: " ~ report_title] %}{% endif %}
-{% if publisher %}{% set report_identity_ns.items = report_identity_ns.items + ["Publisher: " ~ publisher] %}{% endif %}
-{% if report_year %}{% set report_identity_ns.items = report_identity_ns.items + ["Year: " ~ report_year] %}{% endif %}
-{% if report_identity_author %}{% set report_identity_ns.items = report_identity_ns.items + ["Author: " ~ report_identity_author] %}{% endif %}
-{% set has_report_identity = report_identity_ns.items|length > 0 %}
-{% set insights_ns = namespace(count=0) %}
-{% for insight in insights_list %}
-  {% if insight.text is defined %}
-    {% set insight_text = insight.text|string|trim %}
-  {% else %}
-    {% set insight_text = insight|string|trim %}
-  {% endif %}
-  {% if insight_text %}
-    {% set insights_ns.count = insights_ns.count + 1 %}
-  {% endif %}
-{% endfor %}
-{% set has_insights = insights_ns.count > 0 %}
-{% set quotes_ns = namespace(count=0) %}
-{% for quote in quotes_list %}
-  {% if quote.text is defined %}
-    {% set quote_text = quote.text|string|trim %}
-  {% else %}
-    {% set quote_text = quote|string|trim %}
-  {% endif %}
-  {% if quote_text %}
-    {% set quotes_ns.count = quotes_ns.count + 1 %}
-  {% endif %}
-{% endfor %}
-{% set has_quotes = quotes_ns.count > 0 %}
-{% set has_substantive_content = (tldr_text and tldr_text|lower != "not available from text.") or has_insights or has_quotes or exec_summary %}
-{% set seo_description = tldr_text if tldr_text else (exec_summary if exec_summary else ("Digest for " ~ report_title)) %}
-{% set seo_description = seo_description|string|trim %}
-{% set seo_description = seo_description[:180] ~ ("..." if seo_description|length > 180 else "") %}
-{% set short_title = report_title[:72] ~ ("..." if report_title|length > 72 else "") %}
-{% set base_title = short_title %}
-{% if report_year %}
-  {% set base_title = base_title ~ " " ~ report_year %}
-{% endif %}
-{% set publisher_short = publisher[:40] ~ ("..." if publisher|length > 40 else "") %}
-{% set seo_title = base_title ~ (" | " ~ publisher_short if publisher_short else "") ~ " | Market Lense" %}
-{% set primary_image = preview_png if preview_png else primary_figure %}
-{% set primary_image = primary_image|string|trim %}
-{% set robots_content = data.robots if data.robots is defined and data.robots else ("index,follow" if has_substantive_content and not not_available else "noindex,nofollow") %}
-{% set robots_content = robots_content|string|trim %}
-{% set ld_keywords = tags_list if tags_list|length > 0 else categories_list %}
-{% set acronym_map = tag_acronym_map if tag_acronym_map is defined and tag_acronym_map else {} %}
-{% set lowercase_connectors = ["a", "an", "and", "as", "at", "by", "for", "from", "in", "of", "on", "or", "the", "to", "vs", "via", "with"] %}
-{% macro format_chip_label(raw_label) -%}
-  {%- set label = raw_label|string|trim -%}
-  {%- if not label -%}
-    {{- "" -}}
-  {%- else -%}
-    {%- set normalized = label|replace("_", " ")|replace("-", " ") -%}
-    {%- set words_ns = namespace(parts=[]) -%}
-    {%- for token in normalized.split() -%}
-      {%- set token_lower = token|lower -%}
-      {%- if token_lower in acronym_map -%}
-        {%- set pretty = acronym_map[token_lower] -%}
-      {%- elif loop.index0 > 0 and token_lower in lowercase_connectors -%}
-        {%- set pretty = token_lower -%}
-      {%- else -%}
-        {%- set pretty = token[:1]|upper ~ token[1:]|lower -%}
-      {%- endif -%}
-      {%- set words_ns.parts = words_ns.parts + [pretty] -%}
-    {%- endfor -%}
-    {{- words_ns.parts|join(" ") -}}
-  {%- endif -%}
-{%- endmacro %}
-{% set json_ld = {
-  "@context": "https://schema.org",
-  "@type": "Article",
-  "headline": report_title,
-  "description": seo_description,
-  "author": {"@type": "Organization", "name": publisher} if publisher else None,
-  "publisher": {"@type": "Organization", "name": publisher} if publisher else None,
-  "mainEntityOfPage": canonical_url if canonical_url else None,
-  "image": [primary_image] if primary_image else [],
-  "articleSection": topics_list,
-  "keywords": ld_keywords
-} %}
+{% import "_report_macros.j2" as macros %}
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{{ seo_title }}</title>
+<title>{{ view.seo.title }}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="{{ seo_description }}">
-<meta name="robots" content="{{ robots_content }}">
+<meta name="description" content="{{ view.seo.description }}">
+<meta name="robots" content="{{ view.seo.robots }}">
 <meta name="drive-file-id" content="{{ file_id }}">
 <meta name="theme-color" content="#0d3b66">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d3b66'/%3E%3Cpath d='M18 46V18h8l10 14 10-14h8v28h-8V30L36 44h-2L26 30v16z' fill='white'/%3E%3C/svg%3E">
 <meta property="og:site_name" content="Market Lense">
 <meta property="og:type" content="article">
-<meta property="og:title" content="{{ seo_title }}">
-<meta property="og:description" content="{{ seo_description }}">
-{% if canonical_url %}<meta property="og:url" content="{{ canonical_url }}">{% endif %}
-{% if primary_image %}<meta property="og:image" content="{{ primary_image }}">{% endif %}
+<meta property="og:title" content="{{ view.seo.title }}">
+<meta property="og:description" content="{{ view.seo.description }}">
+{% if view.canonical_url %}<meta property="og:url" content="{{ view.canonical_url }}">{% endif %}
+{% if view.seo.primary_image %}<meta property="og:image" content="{{ view.seo.primary_image }}">{% endif %}
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{ seo_title }}">
-<meta name="twitter:description" content="{{ seo_description }}">
-{% if primary_image %}<meta name="twitter:image" content="{{ primary_image }}">{% endif %}
-{% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+<meta name="twitter:title" content="{{ view.seo.title }}">
+<meta name="twitter:description" content="{{ view.seo.description }}">
+{% if view.seo.primary_image %}<meta name="twitter:image" content="{{ view.seo.primary_image }}">{% endif %}
+{% if view.canonical_url %}<link rel="canonical" href="{{ view.canonical_url }}">{% endif %}
 {% if preview_png %}<link rel="preload" as="image" href="{{ preview_png }}">{% endif %}
 <script type="application/ld+json">{{ json_ld|tojson }}</script>
 <style>
-:root{
-  --bg:#f3f5f8;
-  --panel:#ffffff;
-  --ink:#192231;
-  --muted:#566074;
-  --accent:#135ea7;
-  --accent-soft:#eaf2fb;
-  --border:#d9e1ec;
-  --shadow:0 16px 42px rgba(15,34,63,.08);
-  --radius-lg:18px;
-  --radius-md:12px;
-  --radius-sm:8px;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;
-  color:var(--ink);
-  background:
-    radial-gradient(circle at 5% 5%, #ffffff 0%, rgba(255,255,255,0) 40%),
-    linear-gradient(180deg, #eef2f8 0%, var(--bg) 100%);
-  font-family:"Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
-  line-height:1.62;
-}
-a{color:var(--accent);text-decoration:none}
-a:hover{text-decoration:underline}
-.page-shell{max-width:1040px;margin:28px auto 56px;padding:0 20px}
-.report{
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:var(--radius-lg);
-  box-shadow:var(--shadow);
-  overflow:visible;
-}
-.hero{
-  padding:28px 30px 22px;
-  border-bottom:1px solid var(--border);
-  background:linear-gradient(140deg,#f8fbff 0%,#f3f8ff 52%,#eef5ff 100%);
-}
-.eyebrow{
-  margin:0 0 10px;
-  color:var(--muted);
-  letter-spacing:.04em;
-  text-transform:uppercase;
-  font-size:.76rem;
-  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
-  font-weight:700;
-}
-h1{
-  margin:.1rem 0 .55rem;
-  line-height:1.18;
-  font-size:2.05rem;
-}
-.hero-subtitle{
-  margin:0;
-  color:var(--muted);
-  font-size:1.02rem;
-}
-.section-nav{
-  padding:14px 30px;
-  border-bottom:1px solid var(--border);
-  background:#fcfdff;
-}
-.nav-list{
-  margin:0;
-  padding:0;
-  list-style:none;
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-}
-.nav-list a{
-  display:inline-block;
-  border:1px solid var(--border);
-  background:#fff;
-  border-radius:999px;
-  padding:6px 12px;
-  font-size:.88rem;
-  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
-  color:#1f4f84;
-}
-.content{padding:24px 30px 30px}
-.panel{
-  border:1px solid var(--border);
-  border-radius:var(--radius-md);
-  background:#fff;
-  padding:18px 18px 16px;
-  margin:0 0 16px;
-}
-h2{
-  margin:0 0 .72rem;
-  font-size:1.3rem;
-  line-height:1.24;
-}
-h3{
-  margin:0;
-  font-size:1rem;
-  line-height:1.35;
-  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
-}
-.notice{
-  border:1px solid #e8b863;
-  background:#fff4df;
-  border-radius:var(--radius-md);
-  padding:12px 14px;
-}
-.muted{color:var(--muted)}
-.meta-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
-  gap:10px;
-}
-.meta-stack{
-  display:grid;
-  gap:12px;
-}
-.meta-row{
-  border:1px solid var(--border);
-  border-radius:var(--radius-sm);
-  background:#fcfdff;
-  padding:10px 11px;
-}
-.meta-card{
-  border:1px solid var(--border);
-  border-radius:var(--radius-sm);
-  background:#fcfdff;
-  padding:10px 11px;
-}
-.meta-label{
-  display:block;
-  margin:0 0 3px;
-  color:#2f3d53;
-  font-size:.78rem;
-  letter-spacing:.03em;
-  text-transform:uppercase;
-  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
-}
-.meta-value{margin:0;color:var(--ink)}
-.chip-list{
-  margin:0;
-  padding:0;
-  list-style:none;
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-}
-.chip-list.horizontal-strip{
-  flex-wrap:nowrap;
-  overflow-x:auto;
-  overflow-y:hidden;
-  padding-bottom:4px;
-  scrollbar-width:thin;
-}
-.chip-list.horizontal-strip li{
-  flex:0 0 auto;
-}
-.chip{
-  border:1px solid #ced9e8;
-  border-radius:999px;
-  background:var(--accent-soft);
-  color:#1e4a7b;
-  padding:6px 10px;
-  font-size:.86rem;
-  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
-}
-.topic-brief-grid{
-  margin-top:12px;
-  display:grid;
-  gap:10px;
-}
-.topic-brief-card{
-  border:1px solid var(--border);
-  border-radius:var(--radius-sm);
-  background:#fcfdff;
-  padding:11px 12px;
-}
-.topic-brief-card h3{
-  margin:0 0 7px;
-}
-.topic-brief-summary{
-  margin:0;
-  color:var(--ink);
-  white-space:pre-line;
-}
-.topic-brief-points{
-  margin:8px 0 0;
-  padding-left:18px;
-}
-.topic-brief-points li{
-  margin-bottom:6px;
-}
-.summary-copy{
-  margin:0;
-  white-space:pre-line;
-}
-.claim-list{
-  margin:12px 0 0;
-  padding-left:18px;
-}
-.claim-list li{margin-bottom:8px}
-.insight-grid{
-  list-style:none;
-  margin:0;
-  padding:0;
-  display:grid;
-  gap:10px;
-}
-.insight-card{
-  border:1px solid var(--border);
-  border-radius:var(--radius-sm);
-  background:#fcfdff;
-  padding:11px 12px;
-}
-.insight-head{
-  display:flex;
-  align-items:flex-start;
-  gap:10px;
-}
-.insight-index{
-  flex:0 0 auto;
-  min-width:30px;
-  height:30px;
-  border-radius:50%;
-  border:1px solid #b9c9df;
-  background:#fff;
-  text-align:center;
-  line-height:29px;
-  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
-  font-size:.82rem;
-  color:#2a4d78;
-}
-.insight-text{margin:1px 0 0}
-.badge-row{
-  margin-top:8px;
-  display:flex;
-  flex-wrap:wrap;
-  gap:7px;
-}
-.badge{
-  display:inline-block;
-  border:1px solid #c5d4e8;
-  border-radius:999px;
-  padding:4px 9px;
-  background:#fff;
-  font-size:.8rem;
-  color:#2c4d74;
-  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
-}
-.preview-block{
-  margin:0 0 16px;
-}
-.media-figure{
-  margin:0;
-  border:1px solid var(--border);
-  border-radius:var(--radius-sm);
-  overflow:hidden;
-  background:#fff;
-}
-.media-figure img{
-  width:100%;
-  height:auto;
-  display:block;
-}
-.media-figure figcaption{
-  padding:8px 10px;
-  border-top:1px solid var(--border);
-  color:var(--muted);
-  font-size:.88rem;
-}
-.media-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
-  gap:10px;
-  margin-top:10px;
-}
-.quote-grid{
-  margin:0;
-  padding:0;
-  list-style:none;
-  display:grid;
-  gap:10px;
-}
-.quote-card{
-  border:1px solid var(--border);
-  border-radius:var(--radius-sm);
-  padding:12px 13px;
-  margin:0;
-  background:#fcfdff;
-}
-.quote-card blockquote{
-  margin:0 0 10px;
-  padding:0;
-  border:none;
-}
-.quote-card blockquote p{
-  margin:0;
-  font-size:1.02rem;
-}
-.quote-byline{
-  color:var(--muted);
-  font-size:.9rem;
-  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
-}
-.prose-block{
-  margin:0;
-  white-space:pre-line;
-  overflow-wrap:anywhere;
-}
-.resource-list{
-  margin:0;
-  padding-left:18px;
-}
-.resource-list li{margin-bottom:6px}
-.footer{
-  border-top:1px solid var(--border);
-  padding:14px 30px 20px;
-  color:var(--muted);
-  font-size:.84rem;
-}
-:root{
-  --bg:#f0f4fb;
-  --panel:#ffffff;
-  --ink:#162339;
-  --muted:#4f6078;
-  --accent:#0d3b66;
-  --accent-2:#f4b942;
-  --border:#d6e0ed;
-  --shadow:0 18px 44px rgba(11,31,56,.12);
-}
-body{
-  font-family:"Iowan Old Style","Baskerville","Times New Roman",serif;
-  color:var(--ink);
-}
-.page-shell{max-width:1180px;margin:24px auto 58px}
-.report{
-  position:relative;
-  border:1px solid #cdd9ea;
-  box-shadow:var(--shadow);
-}
-.hero{
-  padding:0;
-  border-bottom:1px solid var(--border);
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 32%),
-    linear-gradient(130deg,#f7fbff 0%,#ebf2ff 52%,#f7efe3 100%);
-}
-.hero-split{
-  display:grid;
-  grid-template-columns:1.2fr .8fr;
-  gap:22px;
-  padding:28px 30px 22px;
-}
-.hero-copy{
-  align-self:center;
-}
-.hero .eyebrow{
-  letter-spacing:.08em;
-  color:#2c4f77;
-}
-.hero h1{
-  font-size:clamp(1.85rem,3.2vw,2.7rem);
-  line-height:1.1;
-  margin:0 0 .62rem;
-}
-.hero-subtitle{
-  margin:0 0 1rem;
-  font-size:1.02rem;
-  max-width:58ch;
-}
-.report-identity{
-  margin:0 0 .9rem;
-  color:#34506f;
-  font-size:.84rem;
-  line-height:1.45;
-  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
-}
-.hero-subtitle-line{
-  display:block;
-  margin:0 0 2px;
-}
-.hero-subtitle-label{
-  font-weight:700;
-}
-.hero-meta{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin:0;
-  padding:0;
-  list-style:none;
-}
-.hero-meta li{
-  border:1px solid #bfd1e8;
-  border-radius:999px;
-  padding:5px 11px;
-  font-size:.78rem;
-  color:#20456d;
-  background:rgba(255,255,255,.7);
-  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
-}
-.hero-media{
-  display:flex;
-  align-items:stretch;
-}
-.hero-card{
-  margin:0;
-  width:100%;
-  border:1px solid #bfd1e8;
-  border-radius:14px;
-  overflow:hidden;
-  background:#fff;
-  box-shadow:0 10px 26px rgba(13,59,102,.14);
-}
-.hero-card img{
-  width:100%;
-  height:100%;
-  min-height:220px;
-  max-height:340px;
-  object-fit:cover;
-  display:block;
-}
-.hero-card figcaption{
-  padding:8px 10px;
-  font-size:.82rem;
-  color:#4f6078;
-  border-top:1px solid #d8e3f0;
-}
-.sticky-nav{
-  position:sticky;
-  top:0;
-  z-index:90;
-  border-bottom:1px solid var(--border);
-  background:rgba(255,255,255,.72);
-  backdrop-filter:blur(12px);
-}
-.reading-progress{
-  position:relative;
-  height:3px;
-  background:rgba(13,59,102,.1);
-}
-.reading-progress span{
-  display:block;
-  height:100%;
-  width:0%;
-  background:linear-gradient(90deg,#0d3b66 0%,#f4b942 100%);
-  transition:width .2s linear;
-}
-.section-nav{
-  position:relative;
-  padding:10px 24px;
-  border-bottom:none;
-  background:transparent;
-  backdrop-filter:none;
-}
-.nav-scroll{
-  overflow-x:auto;
-  padding:4px 0;
-  scrollbar-width:thin;
-}
-.nav-list{
-  flex-wrap:nowrap;
-  gap:7px;
-  min-width:max-content;
-}
-.nav-list a{
-  scroll-snap-align:start;
-  border-color:#c4d6ea;
-  background:rgba(255,255,255,.86);
-  color:#1c446f;
-  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
-  font-weight:600;
-  transition:all .24s ease;
-}
-.nav-list a:hover{
-  text-decoration:none;
-  border-color:#86a8ca;
-  transform:translateY(-1px);
-}
-.nav-list a.is-active{
-  color:#fff;
-  border-color:#0d3b66;
-  background:linear-gradient(140deg,#0d3b66 0%,#245c92 100%);
-  box-shadow:0 6px 16px rgba(13,59,102,.28);
-}
-.content{padding:24px 30px 30px}
-.panel{
-  position:relative;
-  border:1px solid #d6e0ed;
-  border-radius:16px;
-  padding:20px 20px 18px;
-  background:#fff;
-  margin:0 0 16px;
-}
-.panel::before{
-  content:"";
-  position:absolute;
-  left:0;
-  top:0;
-  bottom:0;
-  width:4px;
-  border-top-left-radius:15px;
-  border-bottom-left-radius:15px;
-  background:#b2c7de;
-}
-.panel[data-tone="summary"]::before{background:linear-gradient(180deg,#0d3b66 0%,#3877b3 100%)}
-.panel[data-tone="insights"]::before{background:linear-gradient(180deg,#1a6f4f 0%,#38a169 100%)}
-.panel[data-tone="figures"]::before{background:linear-gradient(180deg,#6a4ea1 0%,#8b73bc 100%)}
-.panel[data-tone="quotes"]::before{background:linear-gradient(180deg,#915019 0%,#d18a44 100%)}
-h2{
-  margin:0 0 .72rem;
-  font-size:1.48rem;
-  line-height:1.18;
-  letter-spacing:.01em;
-  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
-}
-.summary-copy{
-  max-width:100%;
-  font-size:1.03rem;
-}
-.insight-grid{
-  gap:12px;
-}
-.insight-card{
-  background:linear-gradient(180deg,#f8fbff 0%,#f1f7ff 100%);
-  border:1px solid #d4e1f1;
-  padding:14px;
-}
-.insight-index{
-  border:none;
-  background:#0d3b66;
-  color:#fff;
-  font-weight:700;
-}
-.badge{
-  background:#fff;
-  border-color:#b9cbe2;
-}
-.quote-grid{
-  gap:12px;
-}
-.quote-card{
-  border:1px solid #e3d2bb;
-  border-radius:14px;
-  padding:16px 16px 12px;
-  background:
-    radial-gradient(circle at 100% 0%, #fff5e8 0%, rgba(255,245,232,0) 40%),
-    #fffcf8;
-}
-.quote-card blockquote{
-  position:relative;
-  margin:0;
-}
-.quote-card blockquote::before{
-  content:"\201C";
-  position:absolute;
-  left:-4px;
-  top:-17px;
-  font-size:3.2rem;
-  line-height:1;
-  color:#d9b38b;
-}
-.quote-card blockquote p{
-  margin:0 0 12px;
-  padding-left:24px;
-  font-size:1.07rem;
-  line-height:1.55;
-}
-.quote-byline{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:6px;
-  font-size:.85rem;
-}
-.quote-byline .quote-author{
-  color:#4a2b15;
-  font-weight:700;
-}
-.quote-citation{
-  display:inline-flex;
-  align-items:center;
-  gap:4px;
-  border:1px solid #e7c69f;
-  border-radius:999px;
-  padding:3px 8px;
-  background:#fff7eb;
-  color:#7c4a1e;
-  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
-}
-.figure-carousel{
-  display:grid;
-  gap:11px;
-}
-.carousel-shell{
-  position:relative;
-  border:1px solid #d6dff0;
-  border-radius:14px;
-  background:#f9fbff;
-  overflow:hidden;
-}
-.carousel-slides{
-  position:relative;
-}
-.carousel-slide{
-  margin:0;
-  display:none;
-}
-.carousel-slide.is-active{
-  display:block;
-}
-.carousel-slide img{
-  width:100%;
-  height:auto;
-  max-height:540px;
-  object-fit:contain;
-  background:#f5f8fd;
-  display:block;
-}
-.carousel-caption{
-  padding:8px 11px 10px;
-  color:#4f6078;
-  border-top:1px solid #d8e3f0;
-  font-size:.9rem;
-}
-.carousel-btn{
-  position:absolute;
-  top:50%;
-  transform:translateY(-50%);
-  width:38px;
-  height:38px;
-  border:1px solid #b6c8df;
-  border-radius:50%;
-  background:rgba(255,255,255,.94);
-  color:#0d3b66;
-  font-size:1.2rem;
-  line-height:1;
-  cursor:pointer;
-  z-index:3;
-}
-.carousel-btn:hover{background:#fff}
-.carousel-btn[disabled]{opacity:.45;cursor:default}
-.carousel-btn.prev{left:12px}
-.carousel-btn.next{right:12px}
-.carousel-toolbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-}
-.carousel-count{
-  font-size:.84rem;
-  color:#4f6078;
-  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
-}
-.lightbox-open{
-  border:1px solid #c2d3e8;
-  border-radius:999px;
-  background:#fff;
-  color:#0d3b66;
-  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
-  font-size:.82rem;
-  padding:5px 11px;
-  cursor:pointer;
-}
-.carousel-thumbs{
-  display:flex;
-  gap:8px;
-  overflow-x:auto;
-  padding-bottom:3px;
-}
-.carousel-thumb{
-  border:1px solid #bfd0e6;
-  border-radius:8px;
-  padding:2px;
-  background:#fff;
-  cursor:pointer;
-}
-.carousel-thumb img{
-  display:block;
-  width:110px;
-  height:68px;
-  object-fit:cover;
-  border-radius:6px;
-}
-.carousel-thumb.is-active{
-  border-color:#0d3b66;
-  box-shadow:0 0 0 2px rgba(13,59,102,.18);
-}
-.prose-block{
-  display:grid;
-  gap:11px;
-}
-.prose-block .prose-paragraph{
-  margin:0;
-  max-width:100%;
-}
-.lightbox{
-  position:fixed;
-  inset:0;
-  z-index:120;
-  background:rgba(7,15,26,.9);
-  display:grid;
-  grid-template-rows:auto 1fr;
-  padding:14px;
-}
-.lightbox[hidden]{display:none}
-.lightbox-top{
-  display:flex;
-  justify-content:flex-end;
-  margin-bottom:8px;
-}
-.lightbox-close{
-  border:1px solid rgba(255,255,255,.32);
-  border-radius:999px;
-  background:rgba(255,255,255,.1);
-  color:#fff;
-  padding:5px 12px;
-  font-size:.84rem;
-  cursor:pointer;
-}
-.lightbox figure{
-  margin:0;
-  display:grid;
-  place-items:center;
-  gap:10px;
-}
-.lightbox img{
-  max-width:min(95vw,1400px);
-  max-height:78vh;
-  width:auto;
-  height:auto;
-}
-.lightbox figcaption{
-  color:#d8e2f1;
-  text-align:center;
-  max-width:90ch;
-}
-.panel[data-reveal]{
-  opacity:0;
-  transform:translateY(18px);
-}
-.panel.is-visible{
-  opacity:1;
-  transform:none;
-  transition:opacity .45s ease, transform .45s ease;
-}
-@media (prefers-reduced-motion:reduce){
-  *{
-    animation:none!important;
-    transition:none!important;
-    scroll-behavior:auto!important;
-  }
-  .panel[data-reveal]{
-    opacity:1;
-    transform:none;
-  }
-}
-@media (max-width:800px){
-  .page-shell{padding:0 12px}
-  .content,.section-nav,.footer{padding-left:16px;padding-right:16px}
-  .hero-split{
-    grid-template-columns:1fr;
-    gap:12px;
-    padding:20px 16px 18px;
-  }
-  .hero-card img{
-    max-height:260px;
-  }
-  .section-nav{
-    top:auto;
-    padding:8px 10px;
-  }
-  .content{
-    padding:18px 16px 22px;
-  }
-  .panel{
-    padding:16px 14px 14px;
-  }
-  .carousel-btn{
-    width:34px;
-    height:34px;
-  }
-  .carousel-thumb img{
-    width:84px;
-    height:56px;
-  }
-  h1{font-size:1.58rem}
-}
-@media print{
-  body{background:#fff}
-  .page-shell{max-width:none;margin:0;padding:0}
-  .report{border:none;box-shadow:none;border-radius:0}
-  .sticky-nav,.section-nav,.reading-progress,.lightbox{display:none}
-  .panel{break-inside:avoid}
-}
+{% include "report.css.j2" %}
 </style>
 </head>
 <body>
@@ -1000,41 +34,31 @@ h2{
         <div class="hero-split">
           <div class="hero-copy">
             <p class="eyebrow">Market Lense report digest</p>
-            <h1>{{ report_title }}</h1>
-            {% if has_report_identity %}
-            <p class="report-identity">{{ report_identity_ns.items|join(" · ") }}</p>
+            <h1>{{ view.report_title }}</h1>
+            {% if view.report_identity_items %}
+            <p class="report-identity">{{ view.report_identity_items|join(" · ") }}</p>
             {% endif %}
             <p class="hero-subtitle">
-              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Publisher:</span> {% if publisher %}{{ publisher }}{% else %}Not extracted{% endif %}</span>
-              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Time Period:</span> {% if report_year %}{{ report_year }}{% else %}Not specified{% endif %}</span>
-              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Geography:</span> {% if region %}{{ region }}{% else %}Not specified{% endif %}</span>
+              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Publisher:</span> {% if view.publisher %}{{ view.publisher }}{% else %}Not extracted{% endif %}</span>
+              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Time Period:</span> {% if view.focus_year %}{{ view.focus_year }}{% else %}Not specified{% endif %}</span>
+              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Geography:</span> {% if view.region %}{{ view.region }}{% else %}Not specified{% endif %}</span>
             </p>
+            {% if view.hero_meta %}
             <ul class="hero-meta">
-              {% if has_insights %}<li>{{ insights_ns.count }} insight{% if insights_ns.count != 1 %}s{% endif %}</li>{% endif %}
-              {% if has_quotes %}<li>{{ quotes_ns.count }} quote{% if quotes_ns.count != 1 %}s{% endif %}</li>{% endif %}
-              {% if has_topics %}<li>{{ topics_list|length }} topic{% if topics_list|length != 1 %}s{% endif %}</li>{% endif %}
-              {% if canonical_url %}<li>Source linked</li>{% endif %}
+              {% for item in view.hero_meta %}
+              <li>{{ item }}</li>
+              {% endfor %}
             </ul>
-          </div>
-          <div class="hero-media">
-            {% set hero_image = preview_png if preview_png else (primary_figure if primary_figure else "") %}
-            {% if hero_image %}
-            <div class="preview">
-              <figure class="hero-card">
-                <img src="{{ hero_image }}"
-                  srcset="{{ hero_image }} 1x, {{ hero_image }} 2x"
-                  sizes="(max-width: 800px) 100vw, 38vw"
-                  alt="Report preview visual for {{ report_title }}"
-                  loading="eager"
-                  fetchpriority="high"
-                  decoding="async"
-                  width="{{ preview_width }}"
-                  height="{{ preview_height }}">
-                <figcaption>Preview panel for the source report.</figcaption>
-              </figure>
-            </div>
             {% endif %}
           </div>
+          {% if view.hero_image %}
+          <div class="hero-media">
+            <figure class="hero-card">
+              {{ macros.responsive_image(view.hero_image, loading="eager", fetchpriority="high") }}
+              <figcaption>{{ view.hero_image.caption }}</figcaption>
+            </figure>
+          </div>
+          {% endif %}
         </div>
       </header>
 
@@ -1043,110 +67,97 @@ h2{
         <nav class="section-nav" aria-label="Digest sections">
           <div class="nav-scroll">
             <ul class="nav-list">
-              {% if has_metadata %}<li><a href="#section-metadata" data-section-link>Report snapshot</a></li>{% endif %}
               <li><a href="#section-summary" data-section-link>TL;DR</a></li>
-              {% if has_topics %}<li><a href="#section-topics" data-section-link>Covered topics</a></li>{% endif %}
-              {% if exec_summary %}<li><a href="#section-executive" data-section-link>Executive summary</a></li>{% endif %}
+              {% if view.snapshot.facts or view.snapshot.categories or view.snapshot.tags %}<li><a href="#section-snapshot" data-section-link>Report snapshot</a></li>{% endif %}
+              {% if view.display.has_topics %}<li><a href="#section-topics" data-section-link>Covered topics</a></li>{% endif %}
+              {% if view.summary.executive_summary or view.statuses.summary.status == "abstained" %}<li><a href="#section-executive" data-section-link>Executive summary</a></li>{% endif %}
               <li><a href="#section-insights" data-section-link>Key data insights</a></li>
-              {% if has_primary_figure %}<li><a href="#section-figures" data-section-link>Figures</a></li>{% endif %}
+              {% if view.display.has_editorial or view.display.has_chapters %}<li><a href="#section-editorial" data-section-link>Editorial details</a></li>{% endif %}
+              {% if view.display.has_figures %}<li><a href="#section-figures" data-section-link>Figures</a></li>{% endif %}
               <li><a href="#section-quotes" data-section-link>Key quotes</a></li>
               <li><a href="#section-resources" data-section-link>Sources</a></li>
-              {% if has_appendix %}<li><a href="#section-appendix" data-section-link>Appendix</a></li>{% endif %}
+              {% if view.display.has_appendix %}<li><a href="#section-appendix" data-section-link>Appendix</a></li>{% endif %}
             </ul>
           </div>
         </nav>
       </div>
 
       <main class="content" id="digest-content">
-        {% if not_available %}
+        {% if view.not_available %}
         <section class="panel notice" id="section-notice" data-reveal aria-label="Source status">
-          Content not available from text{% if fallback_reason %}: {{ fallback_reason }}{% endif %}
-        </section>
-        {% endif %}
-
-        {% if has_metadata %}
-        <section class="panel" id="section-metadata" data-reveal data-section aria-label="Report snapshot">
-          <h2>Report snapshot</h2>
-          <div class="meta-stack">
-            {% if categories_list and categories_list|length > 0 %}
-            <article class="meta-row">
-              <span class="meta-label">Categories</span>
-              <ul class="chip-list horizontal-strip">
-                {% for category in categories_list %}
-                  {% set category_value = category|string|trim %}
-                  {% if category_value %}
-                  <li><span class="chip">{{ format_chip_label(category_value) }}</span></li>
-                  {% endif %}
-                {% endfor %}
-              </ul>
-            </article>
-            {% endif %}
-            {% if tags_list and tags_list|length > 0 %}
-            <article class="meta-row">
-              <span class="meta-label">Tags</span>
-              <ul class="chip-list horizontal-strip">
-                {% for tag in tags_list %}
-                  {% set tag_value = tag|string|trim %}
-                  {% if tag_value %}
-                  <li><span class="chip">{{ format_chip_label(tag_value) }}</span></li>
-                  {% endif %}
-                {% endfor %}
-              </ul>
-            </article>
-            {% endif %}
-          </div>
+          Content not available from text{% if view.fallback_reason %}: {{ view.fallback_reason }}{% endif %}
         </section>
         {% endif %}
 
         <section class="panel" id="section-summary" data-reveal data-section data-tone="summary" aria-label="TL;DR">
-          <h2>TL;DR</h2>
-          {% if tldr_text %}
-            <p class="summary-copy" style="max-width:none">{{ tldr_text }}</p>
-          {% elif summary_status.status is defined and summary_status.status == "abstained" %}
-            <p class="muted">TL;DR omitted because evidence support was too weak ({{ summary_status.reason if summary_status.reason is defined and summary_status.reason else "insufficient_evidence_support" }}).</p>
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Lead takeaway</p>
+              <h2>TL;DR</h2>
+            </div>
+          </div>
+          {% if view.summary.tldr_text %}
+            {{ macros.bullet_list(view.summary.tldr_bullets if view.summary.tldr_bullets else [view.summary.tldr_text]) }}
+          {% elif view.statuses.summary.status == "abstained" %}
+            <p class="muted">TL;DR omitted because evidence support was too weak ({{ view.statuses.summary.reason if view.statuses.summary.reason else "insufficient_evidence_support" }}).</p>
           {% else %}
             <p class="muted">Not available from text.</p>
           {% endif %}
         </section>
 
-        {% if has_topics or not_available %}
-        <section class="panel" id="section-topics" data-reveal data-section aria-label="Covered topics">
-          <h2>Covered topics</h2>
-          {% if has_topics %}
-          <ul class="chip-list">
-            {% for topic in topics_list %}
-              {% set topic_value = topic|string|trim %}
-              {% if topic_value %}
-              <li><span class="chip">{{ format_chip_label(topic_value) }}</span></li>
-              {% endif %}
+        {% if view.snapshot.facts or view.snapshot.categories or view.snapshot.tags %}
+        <section class="panel" id="section-snapshot" data-reveal data-section aria-label="Report snapshot">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Metadata below the lead</p>
+              <h2>Report snapshot</h2>
+            </div>
+          </div>
+          {% if view.snapshot.facts %}
+          <div class="fact-grid">
+            {% for fact in view.snapshot.facts %}
+            <article class="fact-card">
+              <span class="fact-label">{{ fact.label }}</span>
+              <p class="fact-value">{{ fact.value }}</p>
+            </article>
             {% endfor %}
-          </ul>
-          {% if has_topic_briefs %}
-          <div class="topic-brief-grid">
-            {% for item in (topics_expanded if topics_expanded else toc_entries) %}
-              {% set topic_label = item.topic if item.topic is defined else (item.display_title if item.display_title is defined else (item.section_title if item.section_title is defined else "")) %}
-              {% set topic_label = topic_label|string|trim %}
-              {% set topic_summary = item.summary if item.summary is defined else "" %}
-              {% set topic_summary = topic_summary|string|trim %}
-              {% set topic_points = item.key_points if item.key_points is defined and item.key_points is sequence and item.key_points is not string else [] %}
-              {% if topic_label and (topic_summary or topic_points|length > 0) %}
-              <article class="topic-brief-card">
-                <h3>{{ format_chip_label(topic_label) }}</h3>
-                {% if topic_summary %}
-                <p class="topic-brief-summary">{{ topic_summary }}</p>
-                {% endif %}
-                {% if topic_points|length > 0 %}
-                <ul class="topic-brief-points">
-                  {% for point in topic_points %}
-                    {% set point_text = point|string|trim %}
-                    {% if point_text %}
-                    <li>{{ point_text }}</li>
-                    {% endif %}
-                  {% endfor %}
-                </ul>
-                {% endif %}
-              </article>
-              {% endif %}
+          </div>
+          {% endif %}
+          <div class="meta-stack">
+            {% if view.snapshot.categories %}
+            <article class="meta-row">
+              <span class="meta-label">Categories</span>
+              {{ macros.chip_list(view.snapshot.categories, tag_acronym_map) }}
+            </article>
+            {% endif %}
+            {% if view.snapshot.tags %}
+            <article class="meta-row">
+              <span class="meta-label">Tags</span>
+              {{ macros.chip_list(view.snapshot.tags, tag_acronym_map) }}
+            </article>
+            {% endif %}
+          </div>
+        </section>
+        {% endif %}
+
+        {% if view.display.has_topics or view.not_available %}
+        <section class="panel" id="section-topics" data-reveal data-section aria-label="Covered topics">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Reading map</p>
+              <h2>Covered topics</h2>
+            </div>
+          </div>
+          {% if view.display.has_topics %}
+          {{ macros.chip_list(view.topics, tag_acronym_map) }}
+          {% if view.topic_briefs %}
+          <div class="topic-brief-grid" style="margin-top:18px">
+            {% for item in view.topic_briefs %}
+            <article class="topic-brief-card">
+              <h3>{{ macros.format_chip_label(item.title, tag_acronym_map) }}</h3>
+              {% if item.summary %}<p class="summary-copy">{{ item.summary }}</p>{% endif %}
+              {% if item.key_points %}{{ macros.bullet_list(item.key_points, class_name="topic-brief-points") }}{% endif %}
+            </article>
             {% endfor %}
           </div>
           {% endif %}
@@ -1156,171 +167,132 @@ h2{
         </section>
         {% endif %}
 
-        {% if exec_summary or (summary_status.status is defined and summary_status.status == "abstained") %}
+        {% if view.summary.executive_summary or view.statuses.summary.status == "abstained" %}
         <section class="panel" id="section-executive" data-reveal data-section data-tone="summary" aria-label="Executive summary">
-          <h2>Executive summary</h2>
-          {% if exec_summary %}
-          <p class="summary-copy" style="max-width:none">{{ exec_summary }}</p>
-          {% elif summary_status.status is defined and summary_status.status == "abstained" %}
-          <p class="muted">Executive summary omitted because evidence support was too weak ({{ summary_status.reason if summary_status.reason is defined and summary_status.reason else "insufficient_evidence_support" }}).</p>
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Editorial compression</p>
+              <h2>Executive summary</h2>
+            </div>
+          </div>
+          {% if view.summary.executive_summary %}
+          {{ macros.bullet_list(view.summary.executive_bullets if view.summary.executive_bullets else [view.summary.executive_summary]) }}
+          {% elif view.statuses.summary.status == "abstained" %}
+          <p class="muted">Executive summary omitted because evidence support was too weak ({{ view.statuses.summary.reason if view.statuses.summary.reason else "insufficient_evidence_support" }}).</p>
           {% endif %}
-          {% if has_claim_map %}
-          <ul class="claim-list" style="max-width:none">
-            {% for claim in claim_map %}
-              {% set claim_text = claim.claim if claim.claim is defined else "" %}
-              {% set claim_text = claim_text|string|trim %}
-              {% set claim_evidence = claim.evidence if claim.evidence is defined else "" %}
-              {% set claim_evidence = claim_evidence|string|trim %}
-              {% if claim_text %}
-              <li><strong>{{ claim_text }}</strong>{% if claim_evidence %}: {{ claim_evidence }}{% endif %}</li>
-              {% endif %}
-            {% endfor %}
-          </ul>
+          {% if view.summary.claim_map %}
+          <div style="margin-top:18px">
+            <span class="meta-label">Claim evidence map</span>
+            <ul class="claim-list" style="margin-top:10px">
+              {% for claim in view.summary.claim_map %}
+              <li><strong>{{ claim.claim }}</strong>{% if claim.evidence %}: {{ claim.evidence }}{% endif %}</li>
+              {% endfor %}
+            </ul>
+          </div>
           {% endif %}
         </section>
         {% endif %}
 
         <section class="panel" id="section-insights" data-reveal data-section data-tone="insights" aria-label="Key data insights">
-          <h2>Key data insights</h2>
-          {% if has_insights %}
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Signal inventory</p>
+              <h2>Key data insights</h2>
+            </div>
+          </div>
+          {% if view.display.has_insights %}
           <ol class="insight-grid">
-            {% for insight in insights_list %}
-              {% if insight.text is defined %}
-                {% set insight_text = insight.text|string|trim %}
-              {% else %}
-                {% set insight_text = insight|string|trim %}
-              {% endif %}
-              {% if insight_text %}
-              <li class="insight-card">
-                <div class="insight-head">
-                  <span class="insight-index">{{ loop.index }}</span>
-                  <p class="insight-text">{{ insight_text }}</p>
-                </div>
-              </li>
-              {% endif %}
+            {% for insight in view.insights %}
+            <li class="insight-card">
+              <div class="insight-head">
+                <span class="insight-index">{{ loop.index }}</span>
+                <p class="insight-text">{{ insight.text }}</p>
+              </div>
+            </li>
             {% endfor %}
           </ol>
-          {% elif insights_status.status is defined and insights_status.status == "abstained" %}
-          <p class="muted">Key data insights omitted because evidence support was too weak ({{ insights_status.reason if insights_status.reason is defined and insights_status.reason else "insufficient_evidence_support" }}).</p>
+          {% elif view.statuses.insights.status == "abstained" %}
+          <p class="muted">Key data insights omitted because evidence support was too weak ({{ view.statuses.insights.reason if view.statuses.insights.reason else "insufficient_evidence_support" }}).</p>
           {% else %}
           <p class="muted">Not available from text.</p>
           {% endif %}
         </section>
 
-        {% if has_primary_figure %}
-        <section class="panel" id="section-figures" data-reveal data-section data-tone="figures" aria-label="Figure carousel">
-          <h2>Figures</h2>
-          {% set slide_count = namespace(total=figure_assets|length) %}
-          {% if slide_count.total == 0 and has_primary_figure %}
-            {% set slide_count.total = slide_count.total + 1 %}
-          {% endif %}
-          {% if slide_count.total == 1 and figure_gallery and figure_gallery|length > 1 %}
-            {% for fig in figure_gallery %}
-              {% set figure_path = fig|string|trim %}
-              {% if figure_path and figure_path != primary_figure %}
-                {% set slide_count.total = slide_count.total + 1 %}
+        {% if view.display.has_editorial or view.display.has_chapters %}
+        <section class="panel" id="section-editorial" data-reveal data-section aria-label="Editorial details">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Provenance and scope</p>
+              <h2>Editorial details</h2>
+            </div>
+          </div>
+          <div class="editorial-grid">
+            {% for card in view.editorial_cards %}
+            <article class="editorial-card">
+              <h3>{{ card["label"] }}</h3>
+              {% if card["items"] %}
+              {{ macros.bullet_list(card["items"], class_name="editorial-list") }}
+              {% else %}
+              <p class="muted">{{ card["empty"] }}</p>
               {% endif %}
+            </article>
             {% endfor %}
+          </div>
+          {% if view.display.has_chapters %}
+          <div style="margin-top:22px">
+            <span class="meta-label">Ordered chapters</span>
+            <div class="chapter-grid" style="margin-top:12px">
+              {% for chapter in view.chapters %}
+              <article class="chapter-card">
+                <h3>{{ chapter.order }}. {{ chapter.title }}</h3>
+                {% if chapter.pages %}
+                <p class="chapter-meta">Pages: {{ chapter.pages|join(", ") }}</p>
+                {% endif %}
+                {% if chapter.summary %}
+                <p class="summary-copy">{{ chapter.summary }}</p>
+                {% else %}
+                <p class="muted">No chapter summary extracted.</p>
+                {% endif %}
+              </article>
+              {% endfor %}
+            </div>
+          </div>
           {% endif %}
+        </section>
+        {% endif %}
 
+        {% if view.display.has_figures %}
+        <section class="panel" id="section-figures" data-reveal data-section data-tone="figures" aria-label="Figure carousel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Visual evidence</p>
+              <h2>Figures</h2>
+            </div>
+          </div>
           <div class="figure-carousel" data-carousel>
             <div class="carousel-shell">
               <button type="button" class="carousel-btn prev" aria-label="Previous figure" data-carousel-prev>&lsaquo;</button>
               <div class="carousel-slides" tabindex="0">
-                {% set slide_ns = namespace(index=0) %}
-                {% if figure_assets and figure_assets|length > 0 %}
-                  {% for asset in figure_assets %}
-                    {% set figure_path = asset.image_path|string|trim if asset.image_path is defined else "" %}
-                    {% if figure_path %}
-                    {% set slide_ns.index = slide_ns.index + 1 %}
-                    {% set asset_caption = asset.display_caption|string|trim if asset.display_caption is defined and asset.display_caption else "" %}
-                    <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
-                      <img src="{{ figure_path }}"
-                        srcset="{{ figure_path }} 1x, {{ figure_path }} 2x"
-                        sizes="(max-width: 800px) 100vw, 980px"
-                        alt="{% if asset.is_primary is defined and asset.is_primary %}Selected figure from {{ report_title }}{% else %}Additional figure {{ slide_ns.index }} from {{ report_title }}{% endif %}"
-                        loading="lazy"
-                        decoding="async"
-                        width="{{ figure_width }}"
-                        height="{{ figure_height }}">
-                      <figcaption class="carousel-caption">{% if asset_caption %}{{ asset_caption }}{% elif slide_ns.index == 1 and figure_caption %}{{ figure_caption }}{% else %}Representative figure from the source report.{% endif %}</figcaption>
-                    </figure>
-                    {% endif %}
-                  {% endfor %}
-                {% else %}
-                  {% if has_primary_figure %}
-                  {% set slide_ns.index = slide_ns.index + 1 %}
-                  <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
-                    <img src="{{ primary_figure }}"
-                      srcset="{{ primary_figure }} 1x, {{ primary_figure }} 2x"
-                      sizes="(max-width: 800px) 100vw, 980px"
-                      alt="Selected figure from {{ report_title }}"
-                      loading="lazy"
-                      decoding="async"
-                      width="{{ figure_width }}"
-                      height="{{ figure_height }}">
-                    <figcaption class="carousel-caption">{% if figure_caption %}{{ figure_caption }}{% else %}Representative figure from the source report.{% endif %}</figcaption>
-                  </figure>
-                  {% endif %}
-                  {% if figure_gallery and figure_gallery|length > 1 %}
-                  {% for fig in figure_gallery %}
-                    {% set figure_path = fig|string|trim %}
-                    {% if figure_path and figure_path != primary_figure %}
-                    {% set slide_ns.index = slide_ns.index + 1 %}
-                    <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
-                      <img src="{{ figure_path }}"
-                        srcset="{{ figure_path }} 1x, {{ figure_path }} 2x"
-                        sizes="(max-width: 800px) 100vw, 980px"
-                        alt="Additional figure {{ slide_ns.index }} from {{ report_title }}"
-                        loading="lazy"
-                        decoding="async"
-                        width="{{ figure_width }}"
-                        height="{{ figure_height }}">
-                      <figcaption class="carousel-caption">Additional figure {{ slide_ns.index }}</figcaption>
-                    </figure>
-                    {% endif %}
-                  {% endfor %}
-                  {% endif %}
-                {% endif %}
+                {% for slide in view.figures.slides %}
+                <figure class="carousel-slide{% if loop.first %} is-active{% endif %}" data-carousel-slide="{{ loop.index }}">
+                  {{ macros.responsive_image(slide, loading="eager" if loop.first else "lazy", fetchpriority="high" if loop.first else "auto") }}
+                  <figcaption class="carousel-caption">{{ slide.caption }}</figcaption>
+                </figure>
+                {% endfor %}
               </div>
               <button type="button" class="carousel-btn next" aria-label="Next figure" data-carousel-next>&rsaquo;</button>
             </div>
             <div class="carousel-toolbar">
-              <span class="carousel-count" data-carousel-count>1 / {{ slide_count.total }}</span>
+              <span class="carousel-count" data-carousel-count>1 / {{ view.figures.slides|length }}</span>
               <button type="button" class="lightbox-open" data-lightbox-open>Open fullscreen</button>
             </div>
-            {% if slide_count.total > 1 %}
+            {% if view.figures.slides|length > 1 %}
             <div class="carousel-thumbs" role="tablist" aria-label="Figure thumbnails">
-              {% set thumb_ns = namespace(index=0) %}
-              {% if figure_assets and figure_assets|length > 0 %}
-                {% for asset in figure_assets %}
-                  {% set figure_path = asset.image_path|string|trim if asset.image_path is defined else "" %}
-                  {% if figure_path %}
-                  {% set thumb_ns.index = thumb_ns.index + 1 %}
-                  <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
-                    <img src="{{ figure_path }}" alt="Figure thumbnail {{ thumb_ns.index }}" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
-                  </button>
-                  {% endif %}
-                {% endfor %}
-              {% else %}
-                {% if has_primary_figure %}
-                {% set thumb_ns.index = thumb_ns.index + 1 %}
-                <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
-                  <img src="{{ primary_figure }}" alt="Figure thumbnail {{ thumb_ns.index }}" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
-                </button>
-                {% endif %}
-                {% if figure_gallery and figure_gallery|length > 1 %}
-                {% for fig in figure_gallery %}
-                  {% set figure_path = fig|string|trim %}
-                  {% if figure_path and figure_path != primary_figure %}
-                  {% set thumb_ns.index = thumb_ns.index + 1 %}
-                  <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
-                    <img src="{{ figure_path }}" alt="Figure thumbnail {{ thumb_ns.index }}" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
-                  </button>
-                  {% endif %}
-                {% endfor %}
-                {% endif %}
-              {% endif %}
+              {% for slide in view.figures.slides %}
+              <button type="button" class="carousel-thumb{% if loop.first %} is-active{% endif %}" data-carousel-thumb="{{ loop.index }}" aria-label="Open figure {{ loop.index }}">
+                {{ macros.responsive_image(slide.thumb) }}
+              </button>
+              {% endfor %}
             </div>
             {% endif %}
           </div>
@@ -1328,75 +300,82 @@ h2{
         {% endif %}
 
         <section class="panel" id="section-quotes" data-reveal data-section data-tone="quotes" aria-label="Key quotes">
-          <h2>Key quotes</h2>
-          {% if has_quotes %}
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Verbatim signals</p>
+              <h2>Key quotes</h2>
+            </div>
+          </div>
+          {% if view.display.has_quotes %}
           <ul class="quote-grid">
-            {% for quote in quotes_list %}
-              {% if quote.text is defined %}
-                {% set quote_text = quote.text|string|trim %}
-              {% else %}
-                {% set quote_text = quote|string|trim %}
-              {% endif %}
-              {% if quote_text %}
-                {% set quote_author = quote.speaker if quote.speaker is defined and quote.speaker else (quote.author if quote.author is defined else "Unknown") %}
-                {% set quote_author = quote_author|string|trim %}
-                {% set quote_citation = quote.citation if quote.citation is defined else "" %}
-                {% set quote_citation = quote_citation|string|trim %}
-                <li>
-                  <figure class="quote-card">
-                    <blockquote><p>"{{ quote_text }}"</p></blockquote>
-                    <figcaption class="quote-byline">
-                      <span class="quote-author">{{ quote_author }}</span>
-                      {% if quote_citation %}<span class="quote-citation">{{ quote_citation }}</span>{% endif %}
-                    </figcaption>
-                  </figure>
-                </li>
-              {% endif %}
+            {% for quote in view.quotes %}
+            <li>
+              <figure class="quote-card">
+                <blockquote><p>"{{ quote.text }}"</p></blockquote>
+                <figcaption class="quote-byline">
+                  <span class="quote-author">{{ quote.author }}</span>
+                  {% if quote.citation %}<span class="quote-citation">{{ quote.citation }}</span>{% endif %}
+                </figcaption>
+              </figure>
+            </li>
             {% endfor %}
           </ul>
-          {% elif quotes_status.status is defined and quotes_status.status == "abstained" %}
-          <p class="muted">Key quotes omitted because evidence support was too weak ({{ quotes_status.reason if quotes_status.reason is defined and quotes_status.reason else "insufficient_evidence_support" }}).</p>
+          {% elif view.statuses.quotes.status == "abstained" %}
+          <p class="muted">Key quotes omitted because evidence support was too weak ({{ view.statuses.quotes.reason if view.statuses.quotes.reason else "insufficient_evidence_support" }}).</p>
           {% else %}
           <p class="muted">Not available from text.</p>
           {% endif %}
         </section>
 
-        {% if has_commentary %}
+        {% if view.commentary and view.commentary != view.summary.executive_summary and not view.expert_comment %}
         <section class="panel" id="section-commentary" data-reveal data-section aria-label="Commentary">
-          <h2>Commentary</h2>
-          <div class="prose-block" data-chunk-prose>{{ commentary }}</div>
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Additional commentary</p>
+              <h2>Commentary</h2>
+            </div>
+          </div>
+          <div class="prose-block" data-chunk-prose>{{ view.commentary }}</div>
         </section>
         {% endif %}
 
         <section class="panel" id="section-resources" data-reveal data-section aria-label="Related resources">
-          <h2>Related resources</h2>
-          {% if not canonical_url and not source_url %}
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Traceability</p>
+              <h2>Related resources</h2>
+            </div>
+          </div>
+          {% if not view.canonical_url and not view.source_url %}
           <p class="muted">Source URL was not available in the extracted report metadata.</p>
           {% endif %}
           <ul class="resource-list">
-            {% if canonical_url %}<li><a href="{{ canonical_url }}" rel="noopener" target="_blank">Canonical/source URL</a></li>{% endif %}
-            {% if source_url and source_url != canonical_url %}<li><a href="{{ source_url }}" rel="noopener" target="_blank">Original source link</a></li>{% endif %}
+            {% if view.canonical_url %}<li><a href="{{ view.canonical_url }}" rel="noopener" target="_blank">Canonical/source URL</a></li>{% endif %}
+            {% if view.source_url and view.source_url != view.canonical_url %}<li><a href="{{ view.source_url }}" rel="noopener" target="_blank">Original source link</a></li>{% endif %}
             <li><a href="#section-summary">Back to TL;DR</a></li>
             <li><a href="#section-insights">Jump to key insights</a></li>
           </ul>
         </section>
 
-        {% if has_appendix %}
+        {% if view.expert_comment or view.linkedin_post or view.statuses.expert.status == "abstained" or view.statuses.linkedin.status == "abstained" %}
         <section class="panel" id="section-appendix" data-reveal data-section aria-label="Appendix">
-          <h2>Appendix</h2>
-          {% if has_expert_comment %}
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Generated extras</p>
+              <h2>Appendix</h2>
+            </div>
+          </div>
+          {% if view.expert_comment %}
           <h3>Expert comment (generated)</h3>
-          <div class="prose-block" data-chunk-prose style="max-width:none">{{ expert_comment }}</div>
+          <div class="prose-block" data-chunk-prose>{{ view.expert_comment }}</div>
+          {% elif view.statuses.expert.status == "abstained" %}
+          <p class="muted">Expert comment omitted because evidence support was too weak ({{ view.statuses.expert.reason if view.statuses.expert.reason else "insufficient_evidence_support" }}).</p>
           {% endif %}
-          {% if has_linkedin_post %}
-          <h3>LinkedIn post</h3>
-          <div class="prose-block" data-chunk-prose style="max-width:none">{{ linkedin_post }}</div>
-          {% endif %}
-          {% if expert_abstained and not has_expert_comment %}
-          <p class="muted">Expert comment omitted because evidence support was too weak ({{ expert_status.reason if expert_status.reason is defined and expert_status.reason else "insufficient_evidence_support" }}).</p>
-          {% endif %}
-          {% if linkedin_abstained and not has_linkedin_post %}
-          <p class="muted">LinkedIn post omitted because evidence support was too weak ({{ linkedin_status.reason if linkedin_status.reason is defined and linkedin_status.reason else "insufficient_evidence_support" }}).</p>
+          {% if view.linkedin_post %}
+          <h3 style="margin-top:18px">LinkedIn post</h3>
+          <div class="prose-block" data-chunk-prose>{{ view.linkedin_post }}</div>
+          {% elif view.statuses.linkedin.status == "abstained" %}
+          <p class="muted">LinkedIn post omitted because evidence support was too weak ({{ view.statuses.linkedin.reason if view.statuses.linkedin.reason else "insufficient_evidence_support" }}).</p>
           {% endif %}
         </section>
         {% endif %}
@@ -1407,7 +386,7 @@ h2{
           <button type="button" class="lightbox-close" data-lightbox-close>Close</button>
         </div>
         <figure>
-          <img src="" alt="" id="lightbox-image" width="{{ figure_width }}" height="{{ figure_height }}">
+          <img src="" alt="" id="lightbox-image" width="{{ view.figures.lightbox_width }}" height="{{ view.figures.lightbox_height }}">
           <figcaption id="lightbox-caption"></figcaption>
         </figure>
       </div>
