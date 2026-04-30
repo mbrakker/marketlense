@@ -145,16 +145,6 @@ Suggested priority order:
 
 ## 4. Browser Acquisition & Publisher Inventory
 
-- **Title:** Persist failure forensics packs for failed acquisition attempts [Impact: 3/5, Effort: 3/5]
-  - Explanation: Standardize HAR, DOM snapshot, screenshots, terminal evidence, route plan, and classified error metadata for failed HTTP/browser acquisition attempts.
-  - Pros: Faster root-cause analysis and better replay evidence.
-  - Cons: Storage and retention policy overhead.
-  - Acceptance Criteria:
-    - Failed attempts attach forensic bundle metadata.
-    - Logs include artifact links, route family, terminal evidence, and error class.
-    - Retention policy controls sensitive or large artifacts.
-    - Triage playbook uses the bundle consistently.
-
 - **Title:** Add deferred acquisition recovery recipes for high-confidence failures [Impact: 4/5, Effort: 3/5]
   - Explanation: Existing discovery docs identify second-pass recovery opportunities. Implement typed, bounded recovery recipes for strong candidates rejected due to recoverable landing-page/browser failures, without bypassing quality gates.
   - Pros: Higher acquisition yield on difficult publishers.

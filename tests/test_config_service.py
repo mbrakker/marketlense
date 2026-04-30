@@ -692,6 +692,10 @@ class TestConfigService(unittest.TestCase):
                 "max_steps": 12,
                 "output_dir": "./out/browser_downloads",
                 "headed": True,
+                "failure_forensics": {
+                    "enabled": True,
+                    "policy": "metadata_only",
+                },
                 "retry": {
                     "retries": 2,
                     "base_delay_seconds": 0.5,
@@ -735,6 +739,8 @@ class TestConfigService(unittest.TestCase):
         self.assertTrue(settings.drive_upload_enabled)
         self.assertTrue(settings.drive_upload_required)
         self.assertEqual("service_account", settings.drive_upload_auth_mode)
+        self.assertTrue(settings.failure_forensics_enabled)
+        self.assertEqual("metadata_only", settings.failure_forensics_policy)
         self.assertEqual(
             Path(tmp_dir, "sa.json").resolve(),
             Path(settings.drive_upload_google_sa_path).resolve(),

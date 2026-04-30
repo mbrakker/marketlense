@@ -36,6 +36,7 @@ from src.orchestrators.report_download_orchestrator import (
     ReportDownloadDependencies,
     run_report_download,
 )
+from src.services._browser_report_download import request as request_runtime
 from src.services.report_store_service import (
     get_publisher_download_route,
     record_publisher_download_route,
@@ -722,6 +723,163 @@ def test_run_report_download_does_not_retry_failed_http_probe_before_browser_fal
         if event.get("event") == "report_download_retry"
     ]
     assert retry_events == []
+
+
+@pytest.mark.parametrize(
+    ("failure_forensics_policy", "expected_retention_action"),
+    [("copy_artifacts", "copied"), ("metadata_only", "metadata_only")],
+)
+def test_run_report_download_persists_failure_forensics_pack(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    failure_forensics_policy: str,
+    expected_retention_action: str,
+) -> None:
+    settings = replace(
+        _settings(tmp_path),
+        retry_retries=0,
+        failure_forensics_enabled=True,
+        failure_forensics_policy=failure_forensics_policy,
+    )
+    normalized_url = "https://example.com/report"
+    download_dir = request_runtime.resolve_download_dir_path(
+        root_dir=settings.output_dir,
+        normalized_url=normalized_url,
+    )
+    download_dir.mkdir(parents=True, exist_ok=True)
+    html_snapshot_path = download_dir / "terminal.html"
+    screenshot_path = download_dir / "terminal.png"
+    html_snapshot_path.write_text(
+        "<html><body><h1>Report missing</h1></body></html>",
+        encoding="utf-8",
+    )
+    screenshot_path.write_bytes(b"png-bytes")
+
+    def _download(req, ctx):
+        route_family = req.route_family_hint or ""
+        if route_family == "http_pdf_probe":
+            raise AppError(
+                code="browser_download_http_probe_failed",
+                message="The planned HTTP probe did not produce a valid PDF artifact",
+                retryable=True,
+                context={"normalized_url": req.url},
+            )
+        raise AppError(
+            code="browser_download_report_not_found",
+            message="browser-use reached a listing or search page where the target report was not found",
+            retryable=False,
+            context={
+                "normalized_url": req.url,
+                "execution_url": req.url,
+                "final_page_url": f"{req.url}/missing",
+                "final_page_title": "Missing report",
+                "terminal_text_excerpt": "The requested report is no longer available.",
+                "html_snapshot_path": str(html_snapshot_path),
+                "screenshot_path": str(screenshot_path),
+                "route_kind": "none",
+                "network_events": [],
+            },
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url=normalized_url,
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "browser_download_report_not_found"
+    pack_path = Path(str(exc_info.value.context["failure_forensics_pack_path"]))
+    assert pack_path.exists()
+    pack_payload = json.loads(pack_path.read_text(encoding="utf-8"))
+    assert pack_payload["route_family"] == "browser_pdf_click"
+    assert pack_payload["error_class"] == "permanent_app_error"
+    assert pack_payload["terminal_evidence"]["html_snapshot_path"] == str(
+        html_snapshot_path
+    )
+    assert pack_payload["terminal_evidence"]["screenshot_path"] == str(
+        screenshot_path
+    )
+    artifact_actions = {
+        artifact["artifact_label"]: artifact["retention_action"]
+        for artifact in pack_payload["artifacts"]
+    }
+    assert artifact_actions["terminal_html_snapshot"] == expected_retention_action
+    assert artifact_actions["terminal_screenshot"] == expected_retention_action
+    if failure_forensics_policy == "copy_artifacts":
+        copied_paths = [
+            artifact["persisted_path"]
+            for artifact in pack_payload["artifacts"]
+            if artifact["persisted_path"]
+        ]
+        assert copied_paths
+        assert all(Path(path).exists() for path in copied_paths)
+    else:
+        assert all(
+            artifact["persisted_path"] is None for artifact in pack_payload["artifacts"]
+        )
+    failure_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_attempt_failed"
+    ]
+    step_failed_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_step_failed"
+    ]
+    assert failure_events
+    assert failure_events[-1]["fields"]["route_family"] == "browser_pdf_click"
+    assert failure_events[-1]["fields"]["error_class"] == "permanent_app_error"
+    assert failure_events[-1]["fields"]["failure_forensics_pack_path"] == str(
+        pack_path
+    )
+    assert step_failed_events
+    assert step_failed_events[-1]["fields"]["failure_forensics_pack_path"] == str(
+        pack_path
+    )
+    assert (
+        step_failed_events[-1]["fields"]["failure_forensics_artifact_policy"]
+        == failure_forensics_policy
+    )
 
 
 def test_run_report_download_does_not_fallback_after_non_retryable_memory_browser_timeout(

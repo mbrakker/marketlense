@@ -39,6 +39,57 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
 
+def _with_augmented_error_context(
+    exc: AppError,
+    *,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: str,
+    route_family_hint: str | None,
+    browser_run=None,
+) -> AppError:
+    context = dict(exc.context or {})
+    context.setdefault("normalized_url", normalized_url)
+    context.setdefault("execution_url", execution_url)
+    context.setdefault("download_dir", download_dir)
+    context.setdefault("route_family_hint", str(route_family_hint or "").strip())
+    if browser_run is not None:
+        context.setdefault("final_page_url", str(browser_run.final_page_url or "").strip())
+        context.setdefault(
+            "final_page_title", str(browser_run.final_page_title or "").strip()
+        )
+        context.setdefault(
+            "html_snapshot_path", str(browser_run.html_snapshot_path or "").strip()
+        )
+        context.setdefault(
+            "screenshot_path", str(browser_run.screenshot_path or "").strip()
+        )
+        context.setdefault(
+            "network_events",
+            [
+                {
+                    "schema_version": event.schema_version,
+                    "url": event.url,
+                    "initiator_type": event.initiator_type,
+                    "signal_kind": event.signal_kind,
+                }
+                for event in browser_run.network_events
+            ],
+        )
+        context.setdefault(
+            "network_event_count",
+            len(browser_run.network_events),
+        )
+    return AppError(
+        code=exc.code,
+        message=exc.message,
+        cause=exc.cause,
+        retryable=exc.retryable,
+        severity=exc.severity,
+        context=context,
+    )
+
+
 def download_report_with_browser_use(
     request: BrowserReportDownloadRequest,
     ctx: RunContext,
@@ -343,15 +394,31 @@ def download_report_with_browser_use(
                     )
                 )
                 return access_challenge_result
-        raise
-    response = finalize_browser_report_download_result(
-        request=request,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        delivery_email=delivery_email_value,
-        download_dir=download_dir,
-        browser_run=browser_run,
-    )
+        raise _with_augmented_error_context(
+            exc,
+            normalized_url=normalized_url,
+            execution_url=normalized_execution_url,
+            download_dir=str(download_dir),
+            route_family_hint=request.route_family_hint,
+        ) from exc
+    try:
+        response = finalize_browser_report_download_result(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            delivery_email=delivery_email_value,
+            download_dir=download_dir,
+            browser_run=browser_run,
+        )
+    except AppError as exc:
+        raise _with_augmented_error_context(
+            exc,
+            normalized_url=normalized_url,
+            execution_url=normalized_execution_url,
+            download_dir=str(download_dir),
+            route_family_hint=request.route_family_hint,
+            browser_run=browser_run,
+        ) from exc
     logger.info(
         log_event(
             ctx,

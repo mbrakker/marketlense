@@ -205,7 +205,7 @@ def _identity_families_for_field(field: BrowserDownloadIdentityField) -> set[str
     return families
 
 
-def prepare_download_dir(*, root_dir: str, normalized_url: str) -> Path:
+def resolve_download_dir_path(*, root_dir: str, normalized_url: str) -> Path:
     root = Path(root_dir).expanduser().resolve()
     host = urlsplit(normalized_url).netloc.replace(":", "_") or "unknown_host"
     url_hash = sha1(normalized_url.encode("utf-8")).hexdigest()[:12]
@@ -217,6 +217,14 @@ def prepare_download_dir(*, root_dir: str, normalized_url: str) -> Path:
             retryable=False,
             context={"root_dir": str(root), "download_dir": str(download_dir)},
         )
+    return download_dir
+
+
+def prepare_download_dir(*, root_dir: str, normalized_url: str) -> Path:
+    download_dir = resolve_download_dir_path(
+        root_dir=root_dir,
+        normalized_url=normalized_url,
+    )
     if download_dir.exists():
         for child in download_dir.iterdir():
             if child.is_dir():

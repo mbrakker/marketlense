@@ -150,6 +150,9 @@ browser_download:
   drive_upload:
     enabled: true
     required: true
+  failure_forensics:
+    enabled: true
+    policy: "copy_artifacts"
   retry:
     retries: 1
     base_delay_seconds: 1.0

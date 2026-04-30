@@ -1577,6 +1577,14 @@ def test_download_report_with_browser_use_raises_when_pdf_classification_has_no_
         code="browser_download_unverified_pdf_claim",
         retryable=True,
     )
+    assert excinfo.value.context["download_dir"]
+    assert excinfo.value.context["execution_url"] == "https://example.com/broken-report"
+    assert excinfo.value.context["route_family_hint"] == ""
+    assert excinfo.value.context["html_snapshot_path"]
+    assert Path(str(excinfo.value.context["html_snapshot_path"])).exists()
+    assert excinfo.value.context["screenshot_path"]
+    assert Path(str(excinfo.value.context["screenshot_path"])).exists()
+    assert excinfo.value.context["network_event_count"] == 0
 
 
 def test_download_report_with_browser_use_adopts_external_pdf_attachment(

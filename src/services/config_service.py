@@ -2210,6 +2210,7 @@ def load_browser_download_settings(
     drive_cfg = ingest.get("drive", {}) or {}
     browser_download = data.get("browser_download", {}) or {}
     drive_upload_cfg = browser_download.get("drive_upload", {}) or {}
+    failure_forensics_cfg = browser_download.get("failure_forensics", {}) or {}
     retry_cfg = browser_download.get("retry", {}) or {}
     drive_upload_enabled = _to_bool(
         drive_upload_cfg.get("enabled")
@@ -2233,6 +2234,33 @@ def load_browser_download_settings(
             True,
         ),
     )
+    failure_forensics_enabled = _to_bool(
+        failure_forensics_cfg.get("enabled")
+        if not _is_missing(failure_forensics_cfg.get("enabled"))
+        else _env_value("BROWSER_DOWNLOAD_FAILURE_FORENSICS_ENABLED"),
+        _to_bool(
+            _default_config_value(
+                "browser_download", "failure_forensics", "enabled", fallback=True
+            ),
+            True,
+        ),
+    )
+    failure_forensics_policy = str(
+        failure_forensics_cfg.get("policy")
+        if not _is_missing(failure_forensics_cfg.get("policy"))
+        else _env_value("BROWSER_DOWNLOAD_FAILURE_FORENSICS_POLICY")
+        or _default_config_value(
+            "browser_download",
+            "failure_forensics",
+            "policy",
+            fallback="copy_artifacts",
+        )
+    ).strip() or "copy_artifacts"
+    if failure_forensics_policy not in {"copy_artifacts", "metadata_only"}:
+        raise RuntimeError(
+            "browser_download.failure_forensics.policy must be one of "
+            "`copy_artifacts` or `metadata_only`"
+        )
 
     output_root = (
         browser_download.get("output_dir")
@@ -2448,6 +2476,8 @@ def load_browser_download_settings(
             "drive_include_items_from_all_drives"
         ],
         drive_upload_drive_id=drive_settings["drive_id"],
+        failure_forensics_enabled=failure_forensics_enabled,
+        failure_forensics_policy=failure_forensics_policy,
     )
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
@@ -2477,6 +2507,8 @@ def load_browser_download_settings(
                 "drive_upload_enabled": settings.drive_upload_enabled,
                 "drive_upload_required": settings.drive_upload_required,
                 "drive_upload_auth_mode": settings.drive_upload_auth_mode,
+                "failure_forensics_enabled": settings.failure_forensics_enabled,
+                "failure_forensics_policy": settings.failure_forensics_policy,
             },
         )
     )

@@ -25,7 +25,7 @@ python -m src.cli ingest --limit 1
 
 ## `browser_download_timeout`
 
-Review the browser forensic artifacts, route family, terminal evidence, and publisher route history. Prefer deterministic direct PDF or on-site capture routes when the timeout repeats for the same URL.
+Review the newest `failed_attempt__*.json` forensic pack under the affected browser-download output directory first. Use that bundle's route family, error class, terminal evidence, and retained artifact paths before falling back to publisher route history. Prefer deterministic direct PDF or on-site capture routes when the timeout repeats for the same URL.
 
 Remediation hook:
 
