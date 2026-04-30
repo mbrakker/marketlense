@@ -2136,6 +2136,12 @@ def load_publish_settings(
     validation_policy = str(validation_policy_raw).strip().lower()
     if validation_policy not in {"block", "warn"}:
         validation_policy = "block"
+    media_upload_workers_raw = (
+        publish.get("media_upload_workers")
+        or _env_value("PUBLISH_MEDIA_UPLOAD_WORKERS")
+        or _default_config_value("publish", "media_upload_workers", fallback=4)
+    )
+    media_upload_workers = max(_to_int(media_upload_workers_raw, 4), 1)
 
     if resolver.missing:
         logger.info(
@@ -2160,6 +2166,7 @@ def load_publish_settings(
         state_db=state_db,
         reports_db=reports_db,
         category_mapping_path=category_mapping_path,
+        media_upload_workers=media_upload_workers,
         validation_policy=validation_policy,
         wp=wp,
     )
@@ -2177,6 +2184,7 @@ def load_publish_settings(
                 "username": settings.wp.username,
                 "post_status": settings.wp.post_status,
                 "post_type": settings.wp.post_type,
+                "media_upload_workers": settings.media_upload_workers,
                 "ssl_verify": settings.wp.ssl_verify,
                 "ca_bundle_path": settings.wp.ca_bundle_path or "",
                 "validation_policy": settings.validation_policy,

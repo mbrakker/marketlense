@@ -575,6 +575,9 @@ class TestConfigService(unittest.TestCase):
     def test_publish_settings_derive_site_url_from_admin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=True)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["publish"]["media_upload_workers"] = 3
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
             env = {
                 "WP_ADMIN_URL": "https://example.com/wp-admin/",
                 "WP_SITE_URL": "",
@@ -593,6 +596,7 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("admin", settings.wp.username)
         self.assertEqual("app-pass", settings.wp.app_password)
         self.assertIsNone(settings.wp.bearer_token)
+        self.assertEqual(3, settings.media_upload_workers)
 
     def test_publish_settings_missing_site_url_raises(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

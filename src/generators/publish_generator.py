@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 import html
 import logging
 import mimetypes
@@ -42,9 +44,21 @@ from src.utils.html_utils import (
 )
 from src.utils.logging import log_event
 from src.utils.slugify import slugify
-from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_generator")
+
+
+@dataclass(frozen=True)
+class _MediaUploadJob:
+    src: str
+    local_path: str
+    is_preview: bool
+
+
+@dataclass(frozen=True)
+class _MediaUploadResult:
+    src: str
+    media_id: int
 
 
 def publish_html(
@@ -102,7 +116,13 @@ def publish_html(
             error="missing_file_id",
         )
 
-    auth_header = _resolve_auth_header(settings, ctx)
+    auth_header = str(request.auth_header or "").strip()
+    if not auth_header:
+        raise AppError(
+            code="wp_auth_missing",
+            message="Publish request must include a resolved WordPress auth header",
+            retryable=False,
+        )
     base_url = settings.wp.site_url.rstrip("/")
 
     metadata = get_metadata(
@@ -210,6 +230,7 @@ def publish_html(
         auth_header,
         settings.wp.ssl_verify,
         settings.wp.ca_bundle_path,
+        settings.media_upload_workers,
         ctx,
     )
     logger.info(
@@ -292,33 +313,6 @@ def publish_html(
         post_url=post_resp.link,
     )
 
-
-def _resolve_auth_header(settings: PublishSettings, ctx: RunContext) -> str:
-    try:
-        header = build_auth_header(
-            username=settings.wp.username,
-            app_password=settings.wp.app_password,
-            bearer_token=settings.wp.bearer_token,
-        )
-    except ValueError as exc:
-        raise AppError(
-            code="wp_auth_missing",
-            message=str(exc),
-            retryable=False,
-        ) from exc
-    source = "bearer_token" if settings.wp.bearer_token else "app_password"
-    logger.info(
-        log_event(
-            ctx,
-            role="generator",
-            event="publish_auth_source",
-            module=logger.name,
-            fields={"source": source},
-        )
-    )
-    return header
-
-
 def _upload_images(
     html_text: str,
     html_path: str,
@@ -327,6 +321,7 @@ def _upload_images(
     auth_header: str,
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
+    media_upload_workers: int,
     ctx: RunContext,
 ) -> Tuple[Dict[str, str], Optional[int]]:
     sources = extract_image_sources(html_text)
@@ -334,13 +329,80 @@ def _upload_images(
         return {}, None
 
     preview_src = extract_preview_image(html_text)
+    jobs = _collect_media_upload_jobs(
+        sources=sources,
+        preview_src=preview_src,
+        html_path=html_path,
+        output_dir=output_dir,
+        ctx=ctx,
+    )
+    if not jobs:
+        return {}, None
+
+    max_workers = max(1, min(int(media_upload_workers), len(jobs)))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_media_upload_plan",
+            module=logger.name,
+            fields={
+                "job_count": len(jobs),
+                "worker_count": max_workers,
+                "has_preview_src": bool(preview_src),
+            },
+        )
+    )
+
+    results_by_src: Dict[str, _MediaUploadResult] = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_job = {
+            executor.submit(
+                _upload_single_media,
+                job=job,
+                base_url=base_url,
+                auth_header=auth_header,
+                ssl_verify=ssl_verify,
+                ca_bundle_path=ca_bundle_path,
+                ctx=ctx,
+            ): job
+            for job in jobs
+        }
+        for future in as_completed(future_to_job):
+            result = future.result()
+            results_by_src[result.src] = result
+
     mapping: Dict[str, str] = {}
     media_ids: Dict[str, int] = {}
     featured_media_id: Optional[int] = None
+    for job in jobs:
+        result = results_by_src[job.src]
+        mapping[job.src] = _wordpress_media_proxy_url(result.media_id)
+        media_ids[job.src] = result.media_id
+        if job.is_preview:
+            featured_media_id = result.media_id
 
+    if not featured_media_id and media_ids:
+        first_src = sources[0]
+        featured_media_id = media_ids.get(first_src)
+
+    return mapping, featured_media_id
+
+
+def _collect_media_upload_jobs(
+    *,
+    sources: list[str],
+    preview_src: str | None,
+    html_path: str,
+    output_dir: str,
+    ctx: RunContext,
+) -> list[_MediaUploadJob]:
+    jobs: list[_MediaUploadJob] = []
+    seen: set[str] = set()
     for src in sources:
-        if src in mapping:
+        if src in seen:
             continue
+        seen.add(src)
         local_path = _resolve_local_path(src, html_path, output_dir, ctx)
         if not local_path:
             if not src.startswith("http://") and not src.startswith("https://"):
@@ -354,28 +416,38 @@ def _upload_images(
                     )
                 )
             continue
-        upload_resp = upload_media(
-            _media_upload_request(
-                local_path,
-                src,
-                base_url,
-                auth_header,
-                ssl_verify,
-                ca_bundle_path,
-                ctx,
-            ),
-            ctx,
+        jobs.append(
+            _MediaUploadJob(
+                src=src,
+                local_path=local_path,
+                is_preview=bool(preview_src and src == preview_src),
+            )
         )
-        mapping[src] = _wordpress_media_proxy_url(upload_resp.media_id)
-        media_ids[src] = upload_resp.media_id
-        if preview_src and src == preview_src:
-            featured_media_id = upload_resp.media_id
+    return jobs
 
-    if not featured_media_id and media_ids:
-        first_src = sources[0]
-        featured_media_id = media_ids.get(first_src)
 
-    return mapping, featured_media_id
+def _upload_single_media(
+    *,
+    job: _MediaUploadJob,
+    base_url: str,
+    auth_header: str,
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
+    ctx: RunContext,
+) -> _MediaUploadResult:
+    upload_resp = upload_media(
+        _media_upload_request(
+            job.local_path,
+            job.src,
+            base_url,
+            auth_header,
+            ssl_verify,
+            ca_bundle_path,
+            ctx,
+        ),
+        ctx,
+    )
+    return _MediaUploadResult(src=job.src, media_id=upload_resp.media_id)
 
 
 def _wordpress_media_proxy_url(media_id: int) -> str:

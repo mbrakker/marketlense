@@ -412,6 +412,34 @@ def test_upload_media_server_error_logs_response_diagnostics(
     assert_logs_have_required_fields(events)
 
 
+def test_upload_media_rate_limit_is_retryable(wordpress_http, assert_app_error) -> None:
+    wordpress_http.add_json(
+        "POST",
+        "https://site/wp-json/wp/v2/media",
+        status_code=429,
+        payload={"code": "too_many_requests", "message": "slow down"},
+        headers={"Retry-After": "60"},
+        reason="Too Many Requests",
+    )
+    request = WordPressMediaUploadRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        filename="x.png",
+        mime_type="image/png",
+        data=b"abc",
+    )
+
+    try:
+        svc.upload_media(request, _ctx())
+    except Exception as err:
+        assert_app_error(err, code="wp_media_rate_limited", retryable=True)
+        assert err.context["status_code"] == 429
+        assert err.context["response_headers"]["Retry-After"] == "60"
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
+
+
 def test_update_post_categories_server_error(wordpress_http, assert_app_error) -> None:
     wordpress_http.add_json(
         "POST",

@@ -136,6 +136,7 @@ publish:
     post_status: "publish"
     post_type: "ml_report"
     ssl_verify: true
+  media_upload_workers: 4
   validation:
     policy: "block"
 

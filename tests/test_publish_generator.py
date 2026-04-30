@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import json
+import threading
+import time
+from dataclasses import replace
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from src.contracts.publish import PublishRequest
@@ -7,6 +12,76 @@ from src.contracts.report_store import ReportMetadataUpsertRequest
 from src.generators import publish_generator as pg
 from src.services.report_store_service import upsert_metadata
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
+
+
+class _WordPressPublishStubHandler(BaseHTTPRequestHandler):
+    active_uploads = 0
+    max_active_uploads = 0
+    upload_headers: list[str] = []
+    media_patch_headers: list[str] = []
+    post_headers: list[str] = []
+    next_media_id = 100
+    lock = threading.Lock()
+
+    @classmethod
+    def reset(cls) -> None:
+        with cls.lock:
+            cls.active_uploads = 0
+            cls.max_active_uploads = 0
+            cls.upload_headers = []
+            cls.media_patch_headers = []
+            cls.post_headers = []
+            cls.next_media_id = 100
+
+    def _send_json(self, payload: dict, status: int = 200) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self) -> None:  # noqa: N802
+        auth_header = str(self.headers.get("Authorization") or "")
+        if self.path == "/wp-json/wp/v2/media":
+            with self.lock:
+                type(self).upload_headers.append(auth_header)
+                type(self).active_uploads += 1
+                if type(self).active_uploads > type(self).max_active_uploads:
+                    type(self).max_active_uploads = type(self).active_uploads
+                media_id = type(self).next_media_id
+                type(self).next_media_id += 1
+            try:
+                time.sleep(0.35)
+                self._send_json(
+                    {
+                        "id": media_id,
+                        "source_url": f"http://127.0.0.1:{self.server.server_port}/media/{media_id}.png",
+                    },
+                    status=201,
+                )
+            finally:
+                with self.lock:
+                    type(self).active_uploads -= 1
+            return
+        if self.path.startswith("/wp-json/wp/v2/media/"):
+            with self.lock:
+                type(self).media_patch_headers.append(auth_header)
+            media_id = int(self.path.rsplit("/", 1)[-1])
+            self._send_json({"id": media_id}, status=200)
+            return
+        if self.path == "/wp-json/wp/v2/ml_report":
+            with self.lock:
+                type(self).post_headers.append(auth_header)
+            self._send_json(
+                {"id": 42, "link": "http://127.0.0.1/post/42", "status": "publish"},
+                status=201,
+            )
+            return
+        self._send_json({"error": "not found"}, status=404)
+
+    def log_message(self, format: str, *args) -> None:  # noqa: A003
+        return
 
 
 def test_publish_html_uses_preloaded_html_with_real_wordpress_side_effect(
@@ -31,6 +106,7 @@ def test_publish_html_uses_preloaded_html_with_real_wordpress_side_effect(
         PublishRequest(
             schema_version="1.0",
             html_path="out/report.html",
+            auth_header="Bearer token",
             file_id=None,
             html_text=html_text,
         ),
@@ -71,6 +147,7 @@ def test_publish_html_injects_hidden_file_id_marker_when_missing(
         PublishRequest(
             schema_version="1.0",
             html_path="out/report.html",
+            auth_header="Bearer token",
             file_id="file123",
             html_text=html_text,
         ),
@@ -157,6 +234,7 @@ def test_publish_html_assigns_publisher_taxonomy_terms(
         PublishRequest(
             schema_version="1.0",
             html_path=str(html_path),
+            auth_header="Bearer token",
             file_id=None,
             html_text=None,
         ),
@@ -236,6 +314,7 @@ def test_publish_html_rewrites_uploaded_images_to_media_proxy(
         PublishRequest(
             schema_version="1.0",
             html_path=str(html_path),
+            auth_header="Bearer token",
             file_id="file123",
             html_text=None,
         ),
@@ -253,3 +332,71 @@ def test_publish_html_rewrites_uploaded_images_to_media_proxy(
     assert "wp-content/uploads/cover.png" not in post_call.json_data["content"]
     assert "srcset=" not in post_call.json_data["content"]
     assert "sizes=" not in post_call.json_data["content"]
+
+
+def test_publish_html_parallelizes_media_uploads_and_uses_request_auth_header(
+    publish_settings_factory,
+    run_context,
+    assert_no_defaulted_required_fields,
+) -> None:
+    _WordPressPublishStubHandler.reset()
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _WordPressPublishStubHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        settings = publish_settings_factory(validation_policy="warn")
+        settings = replace(
+            settings,
+            media_upload_workers=2,
+            wp=replace(
+                settings.wp,
+                site_url=f"http://127.0.0.1:{server.server_port}",
+                username=None,
+                app_password=None,
+                bearer_token=None,
+            ),
+        )
+        html_path = Path(settings.output_dir) / "report.html"
+        assets_dir = Path(settings.output_dir) / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        (assets_dir / "cover.png").write_bytes(b"cover")
+        (assets_dir / "chart.png").write_bytes(b"chart")
+        html_text = (
+            "<html><head><title>Report</title></head>"
+            "<body>Drive fileId: file123"
+            '<img src="assets/cover.png" alt="cover">'
+            '<img src="assets/chart.png" alt="chart"></body></html>'
+        )
+        html_path.write_text(html_text, encoding="utf-8")
+
+        started_at = time.perf_counter()
+        outcome = pg.publish_html(
+            PublishRequest(
+                schema_version="1.0",
+                html_path=str(html_path),
+                auth_header="Bearer request-token",
+                file_id="file123",
+                html_text=None,
+            ),
+            settings,
+            run_context,
+        )
+        elapsed_seconds = time.perf_counter() - started_at
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+        server.server_close()
+
+    assert_no_defaulted_required_fields(outcome)
+    assert outcome.status == "published"
+    assert _WordPressPublishStubHandler.max_active_uploads >= 2
+    assert elapsed_seconds < 0.9
+    assert _WordPressPublishStubHandler.upload_headers == [
+        "Bearer request-token",
+        "Bearer request-token",
+    ]
+    assert _WordPressPublishStubHandler.media_patch_headers == [
+        "Bearer request-token",
+        "Bearer request-token",
+    ]
+    assert _WordPressPublishStubHandler.post_headers == ["Bearer request-token"]

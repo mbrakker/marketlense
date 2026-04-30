@@ -149,6 +149,7 @@ def publish_settings_factory(app_paths: dict[str, str]):
             state_db=app_paths["state_db"],
             reports_db=app_paths["reports_db"],
             category_mapping_path=str(config_dir / "category-mappings.yaml"),
+            media_upload_workers=4,
             validation_policy=validation_policy,
             wp=WordPressAuthSettings(
                 schema_version="1.0",

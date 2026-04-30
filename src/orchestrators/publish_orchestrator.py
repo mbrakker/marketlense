@@ -235,6 +235,19 @@ def run_publish(
         app_password=settings.wp.app_password,
         bearer_token=settings.wp.bearer_token,
     )
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="publish_auth_source",
+            module=logger.name,
+            fields={
+                "source": "bearer_token"
+                if settings.wp.bearer_token
+                else "app_password"
+            },
+        )
+    )
     html_file_id_map: dict[str, str] = {}
     mapping_ctx = child_context(root_ctx, task_id="publish_file_id_map")
     try:
@@ -512,6 +525,7 @@ def run_publish(
                 PublishRequest(
                     schema_version="1.0",
                     html_path=html_path,
+                    auth_header=auth_header,
                     file_id=file_id,
                     html_text=preloaded_html,
                 ),

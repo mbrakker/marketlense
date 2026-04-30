@@ -212,15 +212,6 @@ Suggested priority order:
     - Delivery attempts are idempotent and logged.
     - Failure-injection tests cover restart, retry, duplicate dispatch, and partial WordPress failures.
 
-- **Title:** Parallelize WordPress media uploads and resolve auth once [Impact: 4/5, Effort: 3/5]
-  - Explanation: Speed up publishing by parallelizing media uploads and passing the resolved auth header through the publish request flow. Avoid deriving auth independently in both orchestrator and generator paths.
-  - Pros: Faster publish time and simpler auth flow.
-  - Cons: Requires concurrency and rate-limit handling.
-  - Acceptance Criteria:
-    - Media uploads run in parallel with bounded concurrency and rate-limit handling.
-    - Auth header is resolved once at the orchestration boundary.
-    - No duplicate auth derivation remains in the publish path.
-
 - **Title:** Introduce shared WordPress request executor with pooled sessions and error adaptation [Impact: 4/5, Effort: 4/5]
   - Explanation: `src/services/wordpress_service.py` repeats request setup, SSL handling, error parsing, and JSON adaptation. Centralize REST execution behind one internal executor backed by a pooled `requests.Session`.
   - Pros: Less duplicated HTTP code, lower connection overhead, consistent error taxonomy.

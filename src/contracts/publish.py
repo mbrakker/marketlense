@@ -18,6 +18,12 @@ class PublishSettings:
         metadata={"doc": "Filesystem path to category mappings YAML."}
     )
     wp: WordPressAuthSettings = field(metadata={"doc": "WordPress auth settings."})
+    media_upload_workers: int = field(
+        default=4,
+        metadata={
+            "doc": "Maximum number of parallel WordPress media uploads used during one publish run."
+        },
+    )
     validation_policy: str = field(
         default="block",
         metadata={
@@ -30,6 +36,11 @@ class PublishSettings:
 class PublishRequest:
     schema_version: str = field(metadata={"doc": "Publish request schema version."})
     html_path: str = field(metadata={"doc": "Filesystem path to HTML file."})
+    auth_header: str = field(
+        metadata={
+            "doc": "Pre-resolved WordPress authorization header passed through the publish workflow."
+        }
+    )
     file_id: Optional[str] = field(
         default=None, metadata={"doc": "Drive file ID, if known."}
     )

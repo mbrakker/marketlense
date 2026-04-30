@@ -230,6 +230,23 @@ def upload_media(
             resp=resp,
             fields={"url": url, "filename": request.filename},
         )
+    if resp.status_code == 429:
+        error_context = _http_error_context(resp)
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="wp_media_upload_rate_limited",
+                module=logger.name,
+                fields={"url": url, "filename": request.filename, **error_context},
+            )
+        )
+        raise AppError(
+            code="wp_media_rate_limited",
+            message="Media upload rate limited: 429",
+            retryable=True,
+            context=error_context,
+        )
     if resp.status_code >= 400:
         raise AppError(
             code="wp_media_client_error",
