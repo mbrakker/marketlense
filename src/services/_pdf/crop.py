@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import json
 from pathlib import Path
 import re
 from typing import Iterable, List, Optional, Tuple
@@ -49,6 +51,15 @@ from .figures import (
     _text_stats,
     _trim_top_page_number,
     _vertical_overlap_ratio,
+)
+from .fingerprint_cache import (
+    CROP_REFINE_PAGE_ARTIFACT_VERSION,
+    CROP_REGION_ARTIFACT_VERSION,
+    PREVIEW_ARTIFACT_VERSION,
+    PdfArtifactFingerprintDescriptor,
+    build_page_content_fingerprint,
+    resolve_artifact_cache,
+    write_artifact_sidecar,
 )
 from .page_artifacts import (
     create_page_artifact_cache,
@@ -909,6 +920,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
         mode=request.mode,
         doc=request.pdf_context.fitz_doc if request.pdf_context else None,
         artifact_cache=artifact_cache,
+        ctx=ctx,
     )
     crop_logger.info(
         log_event(
@@ -935,6 +947,7 @@ def _crop_regions(
     mode: str = "legacy",
     doc: Optional[fitz.Document] = None,
     artifact_cache=None,
+    ctx: RunContext | None = None,
 ) -> List[str]:
     safe_report_name = safe_path_segment(report_name, fallback="report")
     safe_subdir = safe_path_segment(subdir or "slices", fallback="slices")
@@ -942,6 +955,7 @@ def _crop_regions(
     output_dir.mkdir(parents=True, exist_ok=True)
     paths = []
     items_list = list(items)
+    page_fingerprint_cache: dict[int, str] = {}
     local_doc = doc or fitz.open(pdf_path)
     try:
         regions: list[_ResolvedCropRegion] = []
@@ -980,6 +994,112 @@ def _crop_regions(
         for region in regions:
             it = region.item
             page = local_doc[it.page]
+            rel = Path(safe_report_name) / safe_subdir / region.filename
+            output_path = output_dir / region.filename
+            content_fingerprint_payload = {
+                "page": build_page_content_fingerprint(
+                    page,
+                    per_page_cache=page_fingerprint_cache,
+                )
+            }
+            augment = augments.get(region.index)
+            if augment is not None and augment.prepend_page is not None:
+                content_fingerprint_payload["prepend_page"] = build_page_content_fingerprint(
+                    local_doc[augment.prepend_page],
+                    per_page_cache=page_fingerprint_cache,
+                )
+            if augment is not None and augment.append_page is not None:
+                content_fingerprint_payload["append_page"] = build_page_content_fingerprint(
+                    local_doc[augment.append_page],
+                    per_page_cache=page_fingerprint_cache,
+                )
+            descriptor = PdfArtifactFingerprintDescriptor(
+                artifact_kind="crop_region",
+                source_pdf_path=pdf_path,
+                output_rel_path=rel.as_posix(),
+                page=int(it.page),
+                artifact_identity=json.dumps(
+                    {
+                        "item_id": str(it.id or ""),
+                        "item_type": str(it.type or ""),
+                        "page": int(it.page),
+                        "bbox": [round(float(value), 3) for value in it.bbox],
+                    },
+                    ensure_ascii=True,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                content_fingerprint=hashlib.sha256(
+                    json.dumps(
+                        content_fingerprint_payload,
+                        ensure_ascii=True,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                ).hexdigest(),
+                settings_payload={
+                    "mode": str(mode or ""),
+                    "pad": int(pad),
+                    "subdir": safe_subdir,
+                    "resolved_rect": [
+                        round(float(region.rect.x0), 3),
+                        round(float(region.rect.y0), 3),
+                        round(float(region.rect.x1), 3),
+                        round(float(region.rect.y1), 3),
+                    ],
+                    "prepend_page": (
+                        int(augment.prepend_page)
+                        if augment is not None and augment.prepend_page is not None
+                        else None
+                    ),
+                    "append_page": (
+                        int(augment.append_page)
+                        if augment is not None and augment.append_page is not None
+                        else None
+                    ),
+                    "prepend_rect": (
+                        [
+                            round(float(augment.prepend_rect.x0), 3),
+                            round(float(augment.prepend_rect.y0), 3),
+                            round(float(augment.prepend_rect.x1), 3),
+                            round(float(augment.prepend_rect.y1), 3),
+                        ]
+                        if augment is not None and augment.prepend_rect is not None
+                        else None
+                    ),
+                    "append_rect": (
+                        [
+                            round(float(augment.append_rect.x0), 3),
+                            round(float(augment.append_rect.y0), 3),
+                            round(float(augment.append_rect.x1), 3),
+                            round(float(augment.append_rect.y1), 3),
+                        ]
+                        if augment is not None and augment.append_rect is not None
+                        else None
+                    ),
+                },
+                artifact_version=CROP_REGION_ARTIFACT_VERSION,
+            )
+            cache_status = resolve_artifact_cache(descriptor, output_path)
+            if cache_status.hit:
+                if ctx is not None:
+                    crop_logger.info(
+                        log_event(
+                            ctx,
+                            role="service",
+                            event="crop_region_cache_hit",
+                            module=crop_logger.name,
+                            fields={
+                                "cache_key": cache_status.cache_key,
+                                "source_artifact": cache_status.output_rel_path,
+                                "validity_reason": cache_status.reason,
+                                "page": int(it.page),
+                                "item_id": str(it.id or ""),
+                            },
+                        )
+                    )
+                paths.append(rel.as_posix())
+                continue
             pix = page.get_pixmap(
                 matrix=fitz.Matrix(2, 2), clip=region.rect, alpha=False
             )
@@ -1028,8 +1148,6 @@ def _crop_regions(
                         )
                 except PDF_CROP_EXCEPTIONS:
                     img = None
-
-            augment = augments.get(region.index)
             if it.type == "table" and augment is not None:
                 try:
                     base_img = img or Image.frombytes(
@@ -1061,13 +1179,27 @@ def _crop_regions(
                         "RGB", (pix.width, pix.height), pix.samples
                     )
 
-            filename = region.filename
-            op = output_dir / filename
             if img is not None:
-                img.save(op.as_posix())
+                img.save(output_path.as_posix())
             else:
-                pix.save(op.as_posix())
-            rel = Path(safe_report_name) / safe_subdir / filename
+                pix.save(output_path.as_posix())
+            write_artifact_sidecar(descriptor, output_path)
+            if ctx is not None:
+                crop_logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="crop_region_cache_store",
+                        module=crop_logger.name,
+                        fields={
+                            "cache_key": cache_status.cache_key,
+                            "source_artifact": rel.as_posix(),
+                            "validity_reason": cache_status.reason,
+                            "page": int(it.page),
+                            "item_id": str(it.id or ""),
+                        },
+                    )
+                )
             paths.append(rel.as_posix())
     finally:
         if doc is None:
@@ -1108,30 +1240,93 @@ def render_page_for_crop_refine(
                 context={"page_count": local_doc.page_count},
             )
         page = local_doc[request.page]
-        zoom = max(float(request.dpi), 72.0) / 72.0
-        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
         safe_report_name = safe_path_segment(request.report_name, fallback="report")
         out_dir = Path(request.out_dir) / safe_report_name / "crop_refine_pages"
         out_dir.mkdir(parents=True, exist_ok=True)
         filename = f"page-{request.page}.png"
         abs_path = out_dir / filename
-        pix.save(abs_path.as_posix())
         rel = (Path(safe_report_name) / "crop_refine_pages" / filename).as_posix()
-        page_width = float(page.rect.width)
-        page_height = float(page.rect.height)
-        scale_x = (float(pix.width) / page_width) if page_width > 0 else 0.0
-        scale_y = (float(pix.height) / page_height) if page_height > 0 else 0.0
-        response = CropRefinePageRenderResponse(
-            schema_version="1.0",
-            image_path=rel,
-            page=request.page,
-            image_width=int(pix.width),
-            image_height=int(pix.height),
-            page_width=page_width,
-            page_height=page_height,
-            scale_x=scale_x,
-            scale_y=scale_y,
+        descriptor = PdfArtifactFingerprintDescriptor(
+            artifact_kind="crop_refine_page_render",
+            source_pdf_path=request.pdf_path,
+            output_rel_path=rel,
+            page=int(request.page),
+            artifact_identity=f"crop_refine_page:{int(request.page)}",
+            content_fingerprint=build_page_content_fingerprint(page),
+            settings_payload={
+                "dpi": int(request.dpi),
+                "page": int(request.page),
+            },
+            artifact_version=CROP_REFINE_PAGE_ARTIFACT_VERSION,
         )
+        cache_status = resolve_artifact_cache(descriptor, abs_path)
+        if cache_status.hit:
+            with Image.open(abs_path) as cached_img:
+                image_width = int(cached_img.width)
+                image_height = int(cached_img.height)
+            page_width = float(page.rect.width)
+            page_height = float(page.rect.height)
+            scale_x = (float(image_width) / page_width) if page_width > 0 else 0.0
+            scale_y = (float(image_height) / page_height) if page_height > 0 else 0.0
+            crop_logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="crop_refine_page_render_cache_hit",
+                    module=crop_logger.name,
+                    fields={
+                        "cache_key": cache_status.cache_key,
+                        "source_artifact": cache_status.output_rel_path,
+                        "validity_reason": cache_status.reason,
+                        "page": int(request.page),
+                    },
+                )
+            )
+            response = CropRefinePageRenderResponse(
+                schema_version="1.0",
+                image_path=rel,
+                page=request.page,
+                image_width=image_width,
+                image_height=image_height,
+                page_width=page_width,
+                page_height=page_height,
+                scale_x=scale_x,
+                scale_y=scale_y,
+            )
+        else:
+            zoom = max(float(request.dpi), 72.0) / 72.0
+            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            pix.save(abs_path.as_posix())
+            write_artifact_sidecar(descriptor, abs_path)
+            crop_logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="crop_refine_page_render_cache_store",
+                    module=crop_logger.name,
+                    fields={
+                        "cache_key": cache_status.cache_key,
+                        "source_artifact": rel,
+                        "validity_reason": cache_status.reason,
+                        "page": int(request.page),
+                    },
+                )
+            )
+            page_width = float(page.rect.width)
+            page_height = float(page.rect.height)
+            scale_x = (float(pix.width) / page_width) if page_width > 0 else 0.0
+            scale_y = (float(pix.height) / page_height) if page_height > 0 else 0.0
+            response = CropRefinePageRenderResponse(
+                schema_version="1.0",
+                image_path=rel,
+                page=request.page,
+                image_width=int(pix.width),
+                image_height=int(pix.height),
+                page_width=page_width,
+                page_height=page_height,
+                scale_x=scale_x,
+                scale_y=scale_y,
+            )
     finally:
         if owns_doc and local_doc is not None:
             local_doc.close()
@@ -1374,6 +1569,7 @@ def render_preview(request: PreviewRequest, ctx: RunContext) -> PreviewResponse:
             dpi=request.dpi,
             variant=request.variant,
             doc=request.pdf_context.fitz_doc if request.pdf_context else None,
+            ctx=ctx,
         )
     except PREVIEW_RENDER_EXCEPTIONS as exc:
         preview_logger.info(
@@ -1414,6 +1610,7 @@ def _page_png(
     dpi: int = 144,
     variant: str | None = None,
     doc: Optional[fitz.Document] = None,
+    ctx: RunContext | None = None,
 ) -> Optional[str]:
     out_root = Path(out_dir)
     out_root.mkdir(parents=True, exist_ok=True)
@@ -1431,12 +1628,62 @@ def _page_png(
         if local_doc.page_count == 0 or page_number >= local_doc.page_count:
             return None
         page = local_doc.load_page(page_number)
+        rel_png = Path(safe_report_name) / "assets" / abs_png.name
+        descriptor = PdfArtifactFingerprintDescriptor(
+            artifact_kind="preview_render",
+            source_pdf_path=pdf_path,
+            output_rel_path=rel_png.as_posix(),
+            page=int(page_number),
+            artifact_identity=(
+                f"preview:{int(page_number)}:{slugify(variant) if variant else ''}"
+            ),
+            content_fingerprint=build_page_content_fingerprint(page),
+            settings_payload={
+                "dpi": int(dpi),
+                "variant": slugify(variant) if variant else "",
+                "page": int(page_number),
+            },
+            artifact_version=PREVIEW_ARTIFACT_VERSION,
+        )
+        cache_status = resolve_artifact_cache(descriptor, abs_png)
+        if cache_status.hit:
+            if ctx is not None:
+                preview_logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="preview_render_cache_hit",
+                        module=preview_logger.name,
+                        fields={
+                            "cache_key": cache_status.cache_key,
+                            "source_artifact": cache_status.output_rel_path,
+                            "validity_reason": cache_status.reason,
+                            "page_number": int(page_number),
+                        },
+                    )
+                )
+            return rel_png.as_posix()
         zoom = dpi / 72.0
         pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
         pix.save(abs_png.as_posix())
+        write_artifact_sidecar(descriptor, abs_png)
+        if ctx is not None:
+            preview_logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="preview_render_cache_store",
+                    module=preview_logger.name,
+                    fields={
+                        "cache_key": cache_status.cache_key,
+                        "source_artifact": rel_png.as_posix(),
+                        "validity_reason": cache_status.reason,
+                        "page_number": int(page_number),
+                    },
+                )
+            )
     finally:
         if doc is None:
             local_doc.close()
 
-    rel_png = Path(safe_report_name) / "assets" / abs_png.name
     return rel_png.as_posix()

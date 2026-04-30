@@ -112,16 +112,6 @@ Suggested priority order:
     - Evaluation set confirms required recall threshold.
     - Stage metrics show extraction/crop/OCR work avoided.
 
-- **Title:** Add deterministic per-page/per-figure fingerprint cache [Impact: 5/5, Effort: 3/5]
-  - Explanation: Cache expensive intermediate PDF outputs at sub-document granularity. Fingerprints must include content, page/figure identity, parser versions, settings, and prompt/model versions where relevant.
-  - Pros: High rerun speedups and lower CPU/model cost.
-  - Cons: Adds cache lifecycle and invalidation complexity.
-  - Acceptance Criteria:
-    - Fingerprint includes content plus parser/settings/version components.
-    - Cache invalidation is tied to version changes.
-    - Partial-change rerun benchmark demonstrates speedup.
-    - Cache-hit logs include key, source artifact, and validity reason.
-
 - **Title:** Fix O(n^2) table dedupe hotspot [Impact: 4/5, Effort: 3/5]
   - Explanation: Replace the O(n^2) table dedupe algorithm in candidate extraction with a hash/index-assisted approach that preserves conservative merge behavior.
   - Pros: Better performance on large PDFs.
