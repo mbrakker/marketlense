@@ -4,6 +4,8 @@ import html
 import re
 from typing import Dict, List, Optional
 
+from src.contracts.publish import PublishHtmlSnapshot
+
 
 _IMG_SRC_RX = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
 _IMG_SRCSET_RX = re.compile(r'(<img[^>]+srcset=["\'])([^"\']+)(["\'])', re.IGNORECASE)
@@ -100,6 +102,18 @@ def extract_preview_image(html_text: str) -> Optional[str]:
         return None
     imgs = extract_image_sources(m.group(0))
     return imgs[0] if imgs else None
+
+
+def build_publish_html_snapshot(html_text: str) -> PublishHtmlSnapshot:
+    return PublishHtmlSnapshot(
+        schema_version="1.0",
+        html_text=html_text,
+        file_id=extract_file_id(html_text),
+        title=extract_title(html_text),
+        body_html=extract_body_html(html_text),
+        image_sources=extract_image_sources(html_text),
+        preview_image_src=extract_preview_image(html_text),
+    )
 
 
 def _strip_tags(value: str) -> str:

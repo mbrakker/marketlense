@@ -76,6 +76,7 @@ Key traits:
 - Taxonomy extraction now separates report-level signal tags from portal categorization: the prompt returns `primary_tags`, `secondary_tags`, a merged `taxonomy` list, and per-tag `tag_evidence` as metadata for search/filtering, while portal categories are assigned separately from report context using category definitions in `src/config/category-mappings.yaml`.
 - HTML metadata chips normalize slug-style taxonomy values into readable labels (e.g., `ai-in-retail` -> `AI in Retail`) with acronym preservation loaded from `src/config/html-tag-acronyms.yaml`.
 - Publish file ID resolution is DB-first: publish/publish-queue share the same HTML-path canonicalization and reports-metadata (`html_path -> file_id`) lookup helper, then fall back to HTML parsing only when mapping is unavailable.
+- Publish HTML reuse: the publish orchestrator now carries a typed `PublishHtmlSnapshot` with loaded HTML, parsed file ID/title/body, and discovered image sources so each publish attempt reads an HTML artifact at most once and the generator does not reparse the same payload for media, title, or body extraction.
 - Publish-time validation-report parsing is centralized in `src/utils/validation.py` so the publish path maps JSON payloads to `ValidationReport` consistently before applying policy decisions.
 
 ---

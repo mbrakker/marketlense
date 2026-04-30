@@ -15,6 +15,7 @@ from src.contracts.idempotency import (
     OrchestratorIdempotencyRecordRequest,
 )
 from src.contracts.publish import (
+    PublishHtmlSnapshot,
     PublishOutcome,
     PublishRequest,
     PublishResolvedTerms,
@@ -55,7 +56,7 @@ from src.services.wordpress_service import (
     find_post_by_file_id,
     find_posts_by_file_id_batch,
 )
-from src.utils.html_utils import extract_file_id
+from src.utils.html_utils import build_publish_html_snapshot
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.slugify import slugify
@@ -70,7 +71,7 @@ _PUBLISH_IDEMPOTENCY_SCOPE = "publish_orchestrator.publish_html"
 class _PublishCandidate:
     html_path: str
     file_id: Optional[str]
-    preloaded_html: Optional[str]
+    html_snapshot: Optional[PublishHtmlSnapshot]
 
 
 @dataclass(frozen=True)
@@ -131,7 +132,7 @@ def _resolve_publish_candidates(
     candidates: list[_PublishCandidate] = []
     for html_path in html_paths:
         file_ctx = child_context(ctx, task_id=html_path)
-        preloaded_html: Optional[str] = None
+        html_snapshot: Optional[PublishHtmlSnapshot] = None
         file_id = html_file_id_map.get(canonicalize_html_path(html_path), "")
         if file_id:
             logger.info(
@@ -148,11 +149,11 @@ def _resolve_publish_candidates(
                 )
             )
         else:
-            html_resp = read_text(
+            html_text = read_text(
                 ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
-            )
-            preloaded_html = html_resp.content
-            file_id = extract_file_id(preloaded_html) or ""
+            ).content
+            html_snapshot = build_publish_html_snapshot(html_text)
+            file_id = str(html_snapshot.file_id or "").strip()
             if file_id:
                 logger.info(
                     log_event(
@@ -171,7 +172,7 @@ def _resolve_publish_candidates(
             _PublishCandidate(
                 html_path=html_path,
                 file_id=file_id or None,
-                preloaded_html=preloaded_html,
+                html_snapshot=html_snapshot,
             )
         )
     return candidates
@@ -788,7 +789,7 @@ def run_publish(
         html_path = entry.candidate.html_path
 
         file_ctx = child_context(root_ctx, task_id=html_path)
-        preloaded_html = entry.candidate.preloaded_html
+        html_snapshot = entry.candidate.html_snapshot
         file_id = str(entry.candidate.file_id or "")
         state_row = entry.state_row
         validation_status = entry.validation_status
@@ -851,14 +852,15 @@ def run_publish(
                 )
             )
             continue
-        if preloaded_html is None:
-            preloaded_html = read_text(
+        if html_snapshot is None:
+            html_text = read_text(
                 ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
             ).content
+            html_snapshot = build_publish_html_snapshot(html_text)
         publish_checksum = _publish_checksum(
             file_id=file_id,
             html_path=html_path,
-            html_text=preloaded_html or "",
+            html_text=html_snapshot.html_text,
             post_type=settings.wp.post_type,
             validation_status=validation_status,
             validation_issues=validation_issues,
@@ -1017,7 +1019,7 @@ def run_publish(
                     html_path=html_path,
                     auth_header=auth_header,
                     file_id=file_id,
-                    html_text=preloaded_html,
+                    html_snapshot=html_snapshot,
                     resolved_terms=resolved_terms,
                 ),
                 settings,

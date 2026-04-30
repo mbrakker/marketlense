@@ -221,15 +221,6 @@ Suggested priority order:
     - Request/response logging and error taxonomy remain intact.
     - Connection reuse is covered by service tests or instrumentation.
 
-- **Title:** Remove duplicate HTML reads and parses from publish path [Impact: 3/5, Effort: 2/5]
-  - Explanation: Publish orchestration can read HTML once to extract metadata and then process the same HTML again downstream. Carry loaded HTML and parsed metadata through the publish request path.
-  - Pros: Less file I/O, simpler publish control flow, fewer parsing inconsistencies.
-  - Cons: Requires request/contract changes between orchestrator and generator.
-  - Acceptance Criteria:
-    - Publish flow reads each HTML artifact at most once per attempt.
-    - File ID extraction, validation lookup, and publish generation reuse the same loaded HTML payload.
-    - Publish tests cover preloaded and non-preloaded entry paths.
-
 ---
 
 ## 7. Schema, Validation, Output Quality & Rendering

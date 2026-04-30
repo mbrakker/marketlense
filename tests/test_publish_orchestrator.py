@@ -273,6 +273,48 @@ def test_publish_prefers_reports_db_file_id_mapping(
     assert "Drive fileId: file_from_db" in post_call.json_data["content"]
 
 
+def test_publish_reuses_preloaded_html_snapshot_after_preflight_read(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    external_boundary_mocks_only,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_path = _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    _record_processed(settings.state_db, "file123", run_context)
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 44, "link": "https://example.com/post/44", "status": "publish"},
+    )
+
+    real_get_outcome = orch.idempotency_service.get_outcome
+
+    def _delete_html_then_lookup(request, ctx):
+        html_path.unlink(missing_ok=True)
+        return real_get_outcome(request, ctx)
+
+    external_boundary_mocks_only.setattr(
+        orch.idempotency_service,
+        "get_outcome",
+        _delete_html_then_lookup,
+    )
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].file_id == "file123"
+    assert not html_path.exists()
+
+
 def test_publish_uses_canonical_validation_json_over_regen_snapshots(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:

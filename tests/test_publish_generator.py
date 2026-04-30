@@ -11,6 +11,7 @@ from src.contracts.publish import PublishRequest, PublishResolvedTerms
 from src.contracts.report_store import ReportMetadataUpsertRequest
 from src.generators import publish_generator as pg
 from src.services.report_store_service import upsert_metadata
+from src.utils.html_utils import build_publish_html_snapshot
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 
 
@@ -84,7 +85,7 @@ class _WordPressPublishStubHandler(BaseHTTPRequestHandler):
         return
 
 
-def test_publish_html_uses_preloaded_html_with_real_wordpress_side_effect(
+def test_publish_html_uses_preloaded_snapshot_with_real_wordpress_side_effect(
     publish_settings_factory,
     run_context,
     wordpress_http,
@@ -105,10 +106,10 @@ def test_publish_html_uses_preloaded_html_with_real_wordpress_side_effect(
     outcome = pg.publish_html(
         PublishRequest(
             schema_version="1.0",
-            html_path="out/report.html",
+            html_path="out/missing-report.html",
             auth_header="Bearer token",
             file_id=None,
-            html_text=html_text,
+            html_snapshot=build_publish_html_snapshot(html_text),
         ),
         settings,
         run_context,

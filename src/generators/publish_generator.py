@@ -11,6 +11,7 @@ from urllib.parse import unquote, urlparse
 
 from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
 from src.contracts.publish import (
+    PublishHtmlSnapshot,
     PublishOutcome,
     PublishRequest,
     PublishResolvedTerms,
@@ -39,11 +40,8 @@ from src.services.wordpress_service import (
 )
 from src.utils.errors import AppError
 from src.utils.html_utils import (
-    extract_body_html,
+    build_publish_html_snapshot,
     extract_file_id,
-    extract_image_sources,
-    extract_preview_image,
-    extract_title,
     replace_image_sources,
     strip_image_srcset_and_sizes,
 )
@@ -81,14 +79,7 @@ def publish_html(
         )
     )
 
-    if request.html_text is None:
-        html_text = read_text(
-            ReadTextRequest(schema_version="1.0", path=request.html_path), ctx
-        ).content
-        html_source = "path"
-    else:
-        html_text = request.html_text
-        html_source = "request"
+    html_snapshot, html_source = _resolve_html_snapshot(request, ctx)
     logger.info(
         log_event(
             ctx,
@@ -98,11 +89,11 @@ def publish_html(
             fields={
                 "html_path": request.html_path,
                 "source": html_source,
-                "length": len(html_text),
+                "length": len(html_snapshot.html_text),
             },
         )
     )
-    file_id = request.file_id or extract_file_id(html_text)
+    file_id = request.file_id or html_snapshot.file_id
     if not file_id:
         logger.info(
             log_event(
@@ -150,15 +141,15 @@ def publish_html(
     )
 
     image_map, featured_media_id = _upload_images(
-        html_text,
-        request.html_path,
-        settings.output_dir,
-        base_url,
-        auth_header,
-        settings.wp.ssl_verify,
-        settings.wp.ca_bundle_path,
-        settings.media_upload_workers,
-        ctx,
+        html_snapshot=html_snapshot,
+        html_path=request.html_path,
+        output_dir=settings.output_dir,
+        base_url=base_url,
+        auth_header=auth_header,
+        ssl_verify=settings.wp.ssl_verify,
+        ca_bundle_path=settings.wp.ca_bundle_path,
+        media_upload_workers=settings.media_upload_workers,
+        ctx=ctx,
     )
     logger.info(
         log_event(
@@ -169,12 +160,12 @@ def publish_html(
             fields={"count": len(image_map), "featured_media": featured_media_id or 0},
         )
     )
-    rendered_html = replace_image_sources(html_text, image_map)
+    rendered_body_html = replace_image_sources(html_snapshot.body_html, image_map)
     # Proxy-backed digest images stay more reliable on the WP frontend without
     # responsive srcset/sizes candidates that still point at synthetic query URLs.
-    rendered_html = strip_image_srcset_and_sizes(rendered_html)
+    rendered_body_html = strip_image_srcset_and_sizes(rendered_body_html)
     body_html, file_id_marker_inserted = _ensure_hidden_file_id_marker(
-        extract_body_html(rendered_html),
+        rendered_body_html,
         file_id,
     )
     logger.info(
@@ -190,7 +181,7 @@ def publish_html(
         )
     )
 
-    title = extract_title(rendered_html) or Path(request.html_path).stem
+    title = str(html_snapshot.title or "").strip() or Path(request.html_path).stem
     slug = slugify(title)
 
     post_resp = create_post(
@@ -235,6 +226,19 @@ def publish_html(
         post_id=post_resp.post_id,
         post_url=post_resp.link,
     )
+
+
+def _resolve_html_snapshot(
+    request: PublishRequest, ctx: RunContext
+) -> tuple[PublishHtmlSnapshot, str]:
+    if request.html_snapshot is not None:
+        return request.html_snapshot, "request_snapshot"
+    if request.html_text is not None:
+        return build_publish_html_snapshot(request.html_text), "request_html_text"
+    html_text = read_text(
+        ReadTextRequest(schema_version="1.0", path=request.html_path), ctx
+    ).content
+    return build_publish_html_snapshot(html_text), "path"
 
 
 def _resolve_term_assignments(
@@ -348,7 +352,8 @@ def _resolve_term_assignments(
     )
 
 def _upload_images(
-    html_text: str,
+    *,
+    html_snapshot: PublishHtmlSnapshot,
     html_path: str,
     output_dir: str,
     base_url: str,
@@ -358,11 +363,11 @@ def _upload_images(
     media_upload_workers: int,
     ctx: RunContext,
 ) -> Tuple[Dict[str, str], Optional[int]]:
-    sources = extract_image_sources(html_text)
+    sources = list(html_snapshot.image_sources)
     if not sources:
         return {}, None
 
-    preview_src = extract_preview_image(html_text)
+    preview_src = html_snapshot.preview_image_src
     jobs = _collect_media_upload_jobs(
         sources=sources,
         preview_src=preview_src,

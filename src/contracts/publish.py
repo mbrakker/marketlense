@@ -54,6 +54,36 @@ class PublishResolvedTerms:
 
 
 @dataclass(frozen=True)
+class PublishHtmlSnapshot:
+    schema_version: str = field(
+        metadata={"doc": "Publish HTML snapshot schema version."}
+    )
+    html_text: str = field(
+        metadata={"doc": "Loaded HTML artifact text reused across the publish path."}
+    )
+    file_id: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Parsed Drive file ID extracted from the HTML, if present."},
+    )
+    title: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Parsed publish title extracted from h1/title tags, if present."},
+    )
+    body_html: str = field(
+        default="",
+        metadata={"doc": "Parsed HTML body fragment extracted from the full document."},
+    )
+    image_sources: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Ordered image src values extracted from the HTML payload."},
+    )
+    preview_image_src: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Preview image src extracted from the dedicated preview block, if present."},
+    )
+
+
+@dataclass(frozen=True)
 class PublishRequest:
     schema_version: str = field(metadata={"doc": "Publish request schema version."})
     html_path: str = field(metadata={"doc": "Filesystem path to HTML file."})
@@ -69,6 +99,12 @@ class PublishRequest:
         default=None,
         metadata={
             "doc": "Optional preloaded HTML content. When omitted, generator reads html_path."
+        },
+    )
+    html_snapshot: Optional[PublishHtmlSnapshot] = field(
+        default=None,
+        metadata={
+            "doc": "Optional preloaded publish HTML snapshot carrying loaded HTML plus parsed metadata for reuse across the publish path."
         },
     )
     resolved_terms: Optional[PublishResolvedTerms] = field(
