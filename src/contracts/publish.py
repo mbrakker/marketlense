@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from src.contracts.wordpress import WordPressAuthSettings
 
@@ -33,6 +33,27 @@ class PublishSettings:
 
 
 @dataclass(frozen=True)
+class PublishResolvedTerms:
+    schema_version: str = field(
+        metadata={"doc": "Resolved publish-term assignment schema version."}
+    )
+    category_ids: List[int] = field(
+        default_factory=list,
+        metadata={"doc": "Resolved native WordPress category IDs for the publish."},
+    )
+    tag_ids: List[int] = field(
+        default_factory=list,
+        metadata={"doc": "Resolved native WordPress tag IDs for the publish."},
+    )
+    taxonomy_terms: Dict[str, List[int]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Resolved custom taxonomy REST-base mappings to WordPress term IDs."
+        },
+    )
+
+
+@dataclass(frozen=True)
 class PublishRequest:
     schema_version: str = field(metadata={"doc": "Publish request schema version."})
     html_path: str = field(metadata={"doc": "Filesystem path to HTML file."})
@@ -48,6 +69,12 @@ class PublishRequest:
         default=None,
         metadata={
             "doc": "Optional preloaded HTML content. When omitted, generator reads html_path."
+        },
+    )
+    resolved_terms: Optional[PublishResolvedTerms] = field(
+        default=None,
+        metadata={
+            "doc": "Optional pre-resolved WordPress category/tag/custom-taxonomy IDs computed during batch publish preflight."
         },
     )
 

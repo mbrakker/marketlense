@@ -197,6 +197,71 @@ class WordPressPostLookupResponse:
 
 
 @dataclass(frozen=True)
+class WordPressPostLookupBatchRequest:
+    schema_version: str = field(
+        metadata={"doc": "Batch post lookup request schema version."}
+    )
+    base_url: str = field(metadata={"doc": "WordPress site base URL."})
+    auth_header: str = field(metadata={"doc": "Authorization header value."})
+    file_ids: List[str] = field(
+        metadata={"doc": "Drive file IDs to search for in one preflight batch."}
+    )
+    ssl_verify: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether HTTPS certificates should be verified for this request."
+        },
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional CA bundle path used when verifying HTTPS certificates."
+        },
+    )
+    per_page: int = field(default=5, metadata={"doc": "Max posts to inspect per file."})
+    post_type: str = field(
+        default="posts", metadata={"doc": "REST post type endpoint slug."}
+    )
+
+
+@dataclass(frozen=True)
+class WordPressPostLookupBatchItem:
+    schema_version: str = field(
+        metadata={"doc": "Batch post lookup item schema version."}
+    )
+    file_id: str = field(metadata={"doc": "Drive file ID searched in WordPress."})
+    found: bool = field(metadata={"doc": "True when a matching post was found."})
+    post_id: Optional[int] = field(
+        default=None, metadata={"doc": "Matching post ID, if found."}
+    )
+    link: Optional[str] = field(
+        default=None, metadata={"doc": "Matching post URL, if found."}
+    )
+    error_code: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Typed lookup error code captured for this file, if any."},
+    )
+    error_message: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Lookup error message captured for this file, if any."},
+    )
+    retryable: Optional[bool] = field(
+        default=None,
+        metadata={"doc": "Whether the captured lookup error is retryable, if any."},
+    )
+
+
+@dataclass(frozen=True)
+class WordPressPostLookupBatchResponse:
+    schema_version: str = field(
+        metadata={"doc": "Batch post lookup response schema version."}
+    )
+    items: List[WordPressPostLookupBatchItem] = field(
+        metadata={"doc": "Per-file batch lookup results for publish preflight."}
+    )
+
+
+@dataclass(frozen=True)
 class WordPressTaxonomyTerm:
     schema_version: str = field(
         metadata={"doc": "WordPress taxonomy term schema version."}

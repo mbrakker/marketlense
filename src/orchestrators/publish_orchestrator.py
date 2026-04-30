@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
 import hashlib
 import logging
 import time
@@ -9,11 +9,21 @@ from pathlib import Path
 from typing import List, Optional
 
 from src.contracts.files import ListHtmlRequest, ReadTextRequest
+from src.contracts.categories import CategoryMappingLoadRequest
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
 )
-from src.contracts.publish import PublishOutcome, PublishRequest, PublishSettings
+from src.contracts.publish import (
+    PublishOutcome,
+    PublishRequest,
+    PublishResolvedTerms,
+    PublishSettings,
+)
+from src.contracts.report_store import (
+    ReportMetadataGetResponse,
+    ReportMetadataListRequest,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
     StateGetRequest,
@@ -21,27 +31,519 @@ from src.contracts.state import (
     StatePublishRecordRequest,
 )
 from src.contracts.validation import ValidationReport
-from src.contracts.wordpress import WordPressPostLookupRequest
+from src.contracts.wordpress import (
+    WordPressPostLookupBatchItem,
+    WordPressPostLookupBatchRequest,
+    WordPressPostLookupRequest,
+    WordPressTaxonomyEnsureRequest,
+    WordPressTaxonomyTerm,
+    WordPressTagEnsureRequest,
+)
+from src.services.category_mapping_service import load_mappings as load_category_mappings
 from src.services.file_service import list_html, read_text
+from src.services.report_store_service import list_metadata
 from src.services.state_service import already_published as state_already_published
 from src.services.state_service import get as state_get
 from src.services.state_service import record_publish as state_record_publish
 from src.generators.publish_generator import publish_html
-from src.orchestrators.publish_shared import (
-    canonicalize_html_path,
-    load_html_file_id_map,
-)
+from src.orchestrators.publish_shared import canonicalize_html_path
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services import idempotency_service
-from src.services.wordpress_service import find_post_by_file_id
+from src.services.wordpress_service import (
+    ensure_tags,
+    ensure_taxonomy_terms,
+    find_post_by_file_id,
+    find_posts_by_file_id_batch,
+)
 from src.utils.html_utils import extract_file_id
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
+from src.utils.slugify import slugify
 from src.utils.validation import parse_validation_report_payload
 from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
 _PUBLISH_IDEMPOTENCY_SCOPE = "publish_orchestrator.publish_html"
+
+
+@dataclass(frozen=True)
+class _PublishCandidate:
+    html_path: str
+    file_id: Optional[str]
+    preloaded_html: Optional[str]
+
+
+@dataclass(frozen=True)
+class _PublishPreflightEntry:
+    candidate: _PublishCandidate
+    state_row: object | None
+    validation_status: str
+    validation_issues: List[str] = field(default_factory=list)
+    existing_post_lookup: WordPressPostLookupBatchItem | None = None
+    resolved_terms: PublishResolvedTerms | None = None
+
+
+def _metadata_index(
+    settings: PublishSettings, ctx: RunContext
+) -> tuple[dict[str, str], dict[str, ReportMetadataGetResponse]]:
+    response = list_metadata(
+        ReportMetadataListRequest(schema_version="1.1", db_path=settings.reports_db),
+        ctx,
+    )
+    html_file_id_map: dict[str, str] = {}
+    metadata_by_file_id: dict[str, ReportMetadataGetResponse] = {}
+    records = sorted(
+        response.records,
+        key=lambda row: int(getattr(row, "updated_at", 0) or 0),
+        reverse=True,
+    )
+    for row in records:
+        file_id = str(row.file_id or "").strip()
+        html_path = str(row.html_path or "").strip()
+        if file_id and file_id not in metadata_by_file_id:
+            metadata_by_file_id[file_id] = row
+        if html_path and file_id:
+            key = canonicalize_html_path(html_path)
+            if key not in html_file_id_map:
+                html_file_id_map[key] = file_id
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="publish_preflight_metadata_loaded",
+            module=logger.name,
+            fields={
+                "records": len(response.records),
+                "mapped_html_paths": len(html_file_id_map),
+                "mapped_file_ids": len(metadata_by_file_id),
+            },
+        )
+    )
+    return html_file_id_map, metadata_by_file_id
+
+
+def _resolve_publish_candidates(
+    *,
+    html_paths: list[str],
+    html_file_id_map: dict[str, str],
+    ctx: RunContext,
+) -> list[_PublishCandidate]:
+    candidates: list[_PublishCandidate] = []
+    for html_path in html_paths:
+        file_ctx = child_context(ctx, task_id=html_path)
+        preloaded_html: Optional[str] = None
+        file_id = html_file_id_map.get(canonicalize_html_path(html_path), "")
+        if file_id:
+            logger.info(
+                log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="publish_file_id_resolved",
+                    module=logger.name,
+                    fields={
+                        "html_path": html_path,
+                        "file_id": file_id,
+                        "source": "reports_db",
+                    },
+                )
+            )
+        else:
+            html_resp = read_text(
+                ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
+            )
+            preloaded_html = html_resp.content
+            file_id = extract_file_id(preloaded_html) or ""
+            if file_id:
+                logger.info(
+                    log_event(
+                        file_ctx,
+                        role="orchestrator",
+                        event="publish_file_id_resolved",
+                        module=logger.name,
+                        fields={
+                            "html_path": html_path,
+                            "file_id": file_id,
+                            "source": "html",
+                        },
+                    )
+                )
+        candidates.append(
+            _PublishCandidate(
+                html_path=html_path,
+                file_id=file_id or None,
+                preloaded_html=preloaded_html,
+            )
+        )
+    return candidates
+
+
+def _normalize_string_list(values: list[str] | None) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_value in values or []:
+        value = str(raw_value or "").strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        normalized.append(value)
+    return normalized
+
+
+def _normalize_tag_slugs(values: list[str] | None) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_value in values or []:
+        slug = slugify(raw_value)
+        if not slug or slug in seen:
+            continue
+        seen.add(slug)
+        normalized.append(slug)
+    return normalized
+
+
+def _batch_lookup_existing_posts(
+    *,
+    settings: PublishSettings,
+    base_url: str,
+    auth_header: str,
+    candidates: list[_PublishCandidate],
+    state_rows_by_file_id: dict[str, object],
+    ctx: RunContext,
+) -> dict[str, WordPressPostLookupBatchItem]:
+    eligible_file_ids = [
+        candidate.file_id
+        for candidate in candidates
+        if candidate.file_id and candidate.file_id in state_rows_by_file_id
+    ]
+    if not eligible_file_ids:
+        return {}
+    response = find_posts_by_file_id_batch(
+        WordPressPostLookupBatchRequest(
+            schema_version="1.0",
+            base_url=base_url,
+            auth_header=auth_header,
+            file_ids=eligible_file_ids,
+            ssl_verify=settings.wp.ssl_verify,
+            ca_bundle_path=settings.wp.ca_bundle_path,
+            post_type=settings.wp.post_type,
+        ),
+        ctx,
+    )
+    return {
+        item.file_id: item
+        for item in response.items
+        if str(item.file_id or "").strip()
+    }
+
+
+def _resolve_batch_term_assignments(
+    *,
+    settings: PublishSettings,
+    metadata_by_file_id: dict[str, ReportMetadataGetResponse],
+    selected_file_ids: list[str],
+    base_url: str,
+    auth_header: str,
+    ctx: RunContext,
+) -> dict[str, PublishResolvedTerms]:
+    selected_metadata = {
+        file_id: metadata_by_file_id[file_id]
+        for file_id in selected_file_ids
+        if file_id in metadata_by_file_id
+    }
+    if not selected_metadata:
+        return {}
+
+    needs_category_labels = any(
+        _normalize_string_list(record.categories)
+        for record in selected_metadata.values()
+    )
+    category_labels: dict[str, str] = {}
+    if needs_category_labels:
+        mappings_resp = load_category_mappings(
+            CategoryMappingLoadRequest(
+                schema_version="1.0",
+                path=settings.category_mapping_path,
+                reload_if_changed=True,
+            ),
+            ctx,
+        )
+        category_labels = {
+            category.id: category.label or category.id
+            for category in mappings_resp.mappings.categories
+        }
+
+    category_cache: dict[tuple[str, ...], list[int]] = {}
+    tag_cache: dict[tuple[str, ...], list[int]] = {}
+    publisher_cache: dict[str, list[int]] = {}
+    resolved_terms_by_file_id: dict[str, PublishResolvedTerms] = {}
+
+    for file_id, record in selected_metadata.items():
+        file_ctx = child_context(ctx, task_id=file_id)
+        categories = _normalize_string_list(record.categories)
+        category_ids: list[int] = []
+        if categories:
+            category_key = tuple(categories)
+            if category_key not in category_cache:
+                terms = [
+                    WordPressTaxonomyTerm(
+                        schema_version="1.0",
+                        slug=category_id,
+                        name=category_labels.get(category_id, category_id),
+                    )
+                    for category_id in categories
+                ]
+                try:
+                    response = ensure_taxonomy_terms(
+                        WordPressTaxonomyEnsureRequest(
+                            schema_version="1.0",
+                            base_url=base_url,
+                            auth_header=auth_header,
+                            taxonomy_rest_base="categories",
+                            terms=terms,
+                            ssl_verify=settings.wp.ssl_verify,
+                            ca_bundle_path=settings.wp.ca_bundle_path,
+                        ),
+                        file_ctx,
+                    )
+                    category_cache[category_key] = [
+                        response.slug_to_id[category_id]
+                        for category_id in categories
+                        if category_id in response.slug_to_id
+                    ]
+                except AppError as exc:
+                    logger.info(
+                        log_event(
+                            file_ctx,
+                            role="orchestrator",
+                            event="publish_preflight_category_resolution_failed",
+                            module=logger.name,
+                            fields={
+                                "file_id": file_id,
+                                "categories": categories,
+                                "code": exc.code,
+                                "error": exc.message,
+                            },
+                        )
+                    )
+                    continue
+            category_ids = list(category_cache.get(category_key, []))
+
+        publisher_taxonomy_terms: dict[str, list[int]] = {}
+        publisher_name = str(record.publisher or "").strip()
+        if publisher_name:
+            publisher_slug = slugify(publisher_name)
+            if publisher_slug:
+                if publisher_slug not in publisher_cache:
+                    try:
+                        response = ensure_taxonomy_terms(
+                            WordPressTaxonomyEnsureRequest(
+                                schema_version="1.0",
+                                base_url=base_url,
+                                auth_header=auth_header,
+                                taxonomy_rest_base="ml_publisher",
+                                terms=[
+                                    WordPressTaxonomyTerm(
+                                        schema_version="1.0",
+                                        slug=publisher_slug,
+                                        name=publisher_name,
+                                    )
+                                ],
+                                ssl_verify=settings.wp.ssl_verify,
+                                ca_bundle_path=settings.wp.ca_bundle_path,
+                            ),
+                            file_ctx,
+                        )
+                        publisher_cache[publisher_slug] = [
+                            response.slug_to_id[publisher_slug]
+                        ] if publisher_slug in response.slug_to_id else []
+                    except AppError as exc:
+                        logger.info(
+                            log_event(
+                                file_ctx,
+                                role="orchestrator",
+                                event="publish_preflight_publisher_resolution_failed",
+                                module=logger.name,
+                                fields={
+                                    "file_id": file_id,
+                                    "publisher": publisher_name,
+                                    "code": exc.code,
+                                    "error": exc.message,
+                                },
+                            )
+                        )
+                        continue
+                publisher_ids = list(publisher_cache.get(publisher_slug, []))
+                if publisher_ids:
+                    publisher_taxonomy_terms["ml_publisher"] = publisher_ids
+
+        tag_slugs = _normalize_tag_slugs(record.taxonomy)
+        tag_ids: list[int] = []
+        if tag_slugs:
+            tag_key = tuple(tag_slugs)
+            if tag_key not in tag_cache:
+                try:
+                    response = ensure_tags(
+                        WordPressTagEnsureRequest(
+                            schema_version="1.0",
+                            base_url=base_url,
+                            auth_header=auth_header,
+                            tags=tag_slugs,
+                            ssl_verify=settings.wp.ssl_verify,
+                            ca_bundle_path=settings.wp.ca_bundle_path,
+                        ),
+                        file_ctx,
+                    )
+                    tag_cache[tag_key] = [
+                        response.slug_to_id[tag_slug]
+                        for tag_slug in tag_slugs
+                        if tag_slug in response.slug_to_id
+                    ]
+                except AppError as exc:
+                    logger.info(
+                        log_event(
+                            file_ctx,
+                            role="orchestrator",
+                            event="publish_preflight_tag_resolution_failed",
+                            module=logger.name,
+                            fields={
+                                "file_id": file_id,
+                                "tags": tag_slugs,
+                                "code": exc.code,
+                                "error": exc.message,
+                            },
+                        )
+                    )
+                    continue
+            tag_ids = list(tag_cache.get(tag_key, []))
+
+        resolved_terms_by_file_id[file_id] = PublishResolvedTerms(
+            schema_version="1.0",
+            category_ids=category_ids,
+            tag_ids=tag_ids,
+            taxonomy_terms=publisher_taxonomy_terms,
+        )
+
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="publish_preflight_term_resolution_complete",
+            module=logger.name,
+            fields={
+                "selected_file_count": len(selected_file_ids),
+                "resolved_file_count": len(resolved_terms_by_file_id),
+                "category_set_count": len(category_cache),
+                "publisher_count": len(publisher_cache),
+                "tag_set_count": len(tag_cache),
+            },
+        )
+    )
+    return resolved_terms_by_file_id
+
+
+def _build_publish_preflight_entries(
+    *,
+    settings: PublishSettings,
+    candidates: list[_PublishCandidate],
+    metadata_by_file_id: dict[str, ReportMetadataGetResponse],
+    base_url: str,
+    auth_header: str,
+    ctx: RunContext,
+) -> list[_PublishPreflightEntry]:
+    state_rows_by_file_id: dict[str, object] = {}
+    validation_by_file_id: dict[str, tuple[str, list[str]]] = {}
+    eligible_network_preflight_file_ids: list[str] = []
+
+    for candidate in candidates:
+        file_id = str(candidate.file_id or "").strip()
+        if not file_id:
+            continue
+        file_ctx = child_context(ctx, task_id=candidate.html_path)
+        state_row = state_get(
+            StateGetRequest(
+                schema_version="1.0",
+                state_db=settings.state_db,
+                file_id=file_id,
+            ),
+            file_ctx,
+        )
+        if state_row is not None:
+            state_rows_by_file_id[file_id] = state_row
+        validation_report = _load_validation_report(
+            file_id=file_id,
+            html_path=candidate.html_path,
+            settings=settings,
+            ctx=file_ctx,
+        )
+        validation_by_file_id[file_id] = (
+            validation_report.status if validation_report else "missing",
+            [issue.message for issue in validation_report.issues]
+            if validation_report
+            else [],
+        )
+        if state_row is not None and not (
+            settings.validation_policy == "block"
+            and validation_by_file_id[file_id][0] != "pass"
+        ):
+            eligible_network_preflight_file_ids.append(file_id)
+
+    existing_posts_by_file_id = _batch_lookup_existing_posts(
+        settings=settings,
+        base_url=base_url,
+        auth_header=auth_header,
+        candidates=[
+            candidate
+            for candidate in candidates
+            if str(candidate.file_id or "").strip() in eligible_network_preflight_file_ids
+        ],
+        state_rows_by_file_id={
+            file_id: state_rows_by_file_id[file_id]
+            for file_id in eligible_network_preflight_file_ids
+            if file_id in state_rows_by_file_id
+        },
+        ctx=ctx,
+    )
+    resolved_terms_by_file_id = _resolve_batch_term_assignments(
+        settings=settings,
+        metadata_by_file_id=metadata_by_file_id,
+        selected_file_ids=eligible_network_preflight_file_ids,
+        base_url=base_url,
+        auth_header=auth_header,
+        ctx=ctx,
+    )
+
+    entries: list[_PublishPreflightEntry] = []
+    for candidate in candidates:
+        file_id = str(candidate.file_id or "").strip()
+        validation_status, validation_issues = validation_by_file_id.get(
+            file_id,
+            ("missing", []),
+        )
+        entries.append(
+            _PublishPreflightEntry(
+                candidate=candidate,
+                state_row=state_rows_by_file_id.get(file_id),
+                validation_status=validation_status,
+                validation_issues=list(validation_issues),
+                existing_post_lookup=existing_posts_by_file_id.get(file_id),
+                resolved_terms=resolved_terms_by_file_id.get(file_id),
+            )
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="publish_preflight_complete",
+            module=logger.name,
+            fields={
+                "candidate_count": len(candidates),
+                "state_row_count": len(state_rows_by_file_id),
+                "existing_post_batch_count": len(existing_posts_by_file_id),
+                "resolved_term_count": len(resolved_terms_by_file_id),
+            },
+        )
+    )
+    return entries
 
 
 def _validation_paths(output_dir: str, file_id: str, html_path: str) -> list[Path]:
@@ -225,6 +727,7 @@ def run_publish(
         ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir), root_ctx
     )
     max_n = limit if limit is not None else len(list_resp.html_paths)
+    selected_html_paths = list_resp.html_paths[:max_n]
 
     outcomes: List[PublishOutcome] = []
     attempted = 0
@@ -249,63 +752,64 @@ def run_publish(
         )
     )
     html_file_id_map: dict[str, str] = {}
-    mapping_ctx = child_context(root_ctx, task_id="publish_file_id_map")
+    metadata_by_file_id: dict[str, ReportMetadataGetResponse] = {}
+    mapping_ctx = child_context(root_ctx, task_id="publish_preflight_metadata")
     try:
-        html_file_id_map = load_html_file_id_map(settings.reports_db, mapping_ctx)
+        html_file_id_map, metadata_by_file_id = _metadata_index(settings, mapping_ctx)
     except Exception as exc:
         logger.info(
             log_event(
                 mapping_ctx,
                 role="orchestrator",
-                event="publish_html_file_id_map_failed",
+                event="publish_preflight_metadata_failed",
                 module=logger.name,
                 fields={"reports_db": settings.reports_db, "error": str(exc)},
             )
         )
         html_file_id_map = {}
+        metadata_by_file_id = {}
 
-    for html_path in list_resp.html_paths:
-        if attempted >= max_n:
-            break
+    candidates = _resolve_publish_candidates(
+        html_paths=selected_html_paths,
+        html_file_id_map=html_file_id_map,
+        ctx=root_ctx,
+    )
+    preflight_entries = _build_publish_preflight_entries(
+        settings=settings,
+        candidates=candidates,
+        metadata_by_file_id=metadata_by_file_id,
+        base_url=base_url,
+        auth_header=auth_header,
+        ctx=root_ctx,
+    )
+
+    for entry in preflight_entries:
         attempted += 1
+        html_path = entry.candidate.html_path
 
         file_ctx = child_context(root_ctx, task_id=html_path)
-        preloaded_html: Optional[str] = None
-        file_id = html_file_id_map.get(canonicalize_html_path(html_path), "")
-        if file_id:
+        preloaded_html = entry.candidate.preloaded_html
+        file_id = str(entry.candidate.file_id or "")
+        state_row = entry.state_row
+        validation_status = entry.validation_status
+        validation_issues = list(entry.validation_issues)
+        existing_post_lookup = entry.existing_post_lookup
+        resolved_terms = entry.resolved_terms
+
+        if existing_post_lookup and existing_post_lookup.error_code:
             logger.info(
                 log_event(
                     file_ctx,
                     role="orchestrator",
-                    event="publish_file_id_resolved",
+                    event="publish_preflight_lookup_fallback",
                     module=logger.name,
                     fields={
-                        "html_path": html_path,
                         "file_id": file_id,
-                        "source": "reports_db",
+                        "code": existing_post_lookup.error_code,
+                        "retryable": existing_post_lookup.retryable,
                     },
                 )
             )
-        else:
-            html_resp = read_text(
-                ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
-            )
-            preloaded_html = html_resp.content
-            file_id = extract_file_id(preloaded_html) or ""
-            if file_id:
-                logger.info(
-                    log_event(
-                        file_ctx,
-                        role="orchestrator",
-                        event="publish_file_id_resolved",
-                        module=logger.name,
-                        fields={
-                            "html_path": html_path,
-                            "file_id": file_id,
-                            "source": "html",
-                        },
-                    )
-                )
 
         if not file_id:
             logger.info(
@@ -327,13 +831,6 @@ def run_publish(
                 )
             )
             continue
-
-        state_row = state_get(
-            StateGetRequest(
-                schema_version="1.0", state_db=settings.state_db, file_id=file_id
-            ),
-            file_ctx,
-        )
         if not state_row:
             logger.info(
                 log_event(
@@ -354,16 +851,6 @@ def run_publish(
                 )
             )
             continue
-
-        validation_report = _load_validation_report(
-            file_id, html_path, settings, file_ctx
-        )
-        validation_status = validation_report.status if validation_report else "missing"
-        validation_issues = (
-            [issue.message for issue in validation_report.issues]
-            if validation_report
-            else []
-        )
         if preloaded_html is None:
             preloaded_html = read_text(
                 ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
@@ -476,18 +963,21 @@ def run_publish(
 
         def _publish_attempt() -> PublishOutcome:
             nonlocal outcome
-            lookup_resp = find_post_by_file_id(
-                WordPressPostLookupRequest(
-                    schema_version="1.0",
-                    base_url=base_url,
-                    auth_header=auth_header,
-                    file_id=file_id,
-                    ssl_verify=settings.wp.ssl_verify,
-                    ca_bundle_path=settings.wp.ca_bundle_path,
-                    post_type=settings.wp.post_type,
-                ),
-                file_ctx,
-            )
+            if existing_post_lookup is not None and not existing_post_lookup.error_code:
+                lookup_resp = existing_post_lookup
+            else:
+                lookup_resp = find_post_by_file_id(
+                    WordPressPostLookupRequest(
+                        schema_version="1.0",
+                        base_url=base_url,
+                        auth_header=auth_header,
+                        file_id=file_id,
+                        ssl_verify=settings.wp.ssl_verify,
+                        ca_bundle_path=settings.wp.ca_bundle_path,
+                        post_type=settings.wp.post_type,
+                    ),
+                    file_ctx,
+                )
             if lookup_resp.found and lookup_resp.post_id and lookup_resp.link:
                 logger.info(
                     log_event(
@@ -528,6 +1018,7 @@ def run_publish(
                     auth_header=auth_header,
                     file_id=file_id,
                     html_text=preloaded_html,
+                    resolved_terms=resolved_terms,
                 ),
                 settings,
                 file_ctx,

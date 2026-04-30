@@ -221,16 +221,6 @@ Suggested priority order:
     - Request/response logging and error taxonomy remain intact.
     - Connection reuse is covered by service tests or instrumentation.
 
-- **Title:** Batch WordPress preflight, taxonomy, and tag resolution [Impact: 3/5, Effort: 3/5]
-  - Explanation: Merge batch preflight and taxonomy/tag ensure work. Resolve publish state, validation status, existing posts, terms, and tag creation plans once per publish run instead of one file or term at a time.
-  - Pros: Fewer repeated service calls and clearer skip/error decisions.
-  - Cons: Adds a precomputed snapshot that must remain consistent.
-  - Acceptance Criteria:
-    - Publish preflight data is loaded in batch for the selected HTML set.
-    - Term lookup and creation planning happens per taxonomy/tag set.
-    - Per-file publish decisions consume the batch snapshot.
-    - Tests verify parity with current skip, existing-post, mixed existing/new term, and failure behavior.
-
 - **Title:** Remove duplicate HTML reads and parses from publish path [Impact: 3/5, Effort: 2/5]
   - Explanation: Publish orchestration can read HTML once to extract metadata and then process the same HTML again downstream. Carry loaded HTML and parsed metadata through the publish request path.
   - Pros: Less file I/O, simpler publish control flow, fewer parsing inconsistencies.

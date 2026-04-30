@@ -9,6 +9,7 @@ import urllib3  # type: ignore[import-untyped]
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
     WordPressMediaUploadRequest,
+    WordPressPostLookupBatchRequest,
     WordPressPostCreateRequest,
     WordPressPostLookupRequest,
     WordPressPostUpdateRequest,
@@ -220,6 +221,75 @@ def test_find_post_by_file_id_keeps_insecure_request_warning_when_ssl_verify_ena
         if issubclass(warning.category, urllib3.exceptions.InsecureRequestWarning)
     ]
     assert len(insecure) == 1
+
+
+def test_find_posts_by_file_id_batch_collects_found_and_missing(wordpress_http) -> None:
+    def _lookup(call: RecordedHttpRequest) -> FakeHttpResponse:
+        search = str(call.params.get("search") or "")
+        if "file-1" in search:
+            return FakeHttpResponse.from_payload(
+                status_code=200,
+                payload=[
+                    {
+                        "id": 11,
+                        "link": "https://site/p/11",
+                        "content": {"rendered": "Drive fileId: file-1"},
+                    }
+                ],
+            )
+        return FakeHttpResponse.from_payload(status_code=200, payload=[])
+
+    wordpress_http.add("GET", "https://site/wp-json/wp/v2/posts", _lookup)
+    request = WordPressPostLookupBatchRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        file_ids=["file-1", "file-2", "file-1"],
+    )
+
+    response = svc.find_posts_by_file_id_batch(request, _ctx())
+
+    assert len(response.items) == 2
+    assert response.items[0].file_id == "file-1"
+    assert response.items[0].found is True
+    assert response.items[0].post_id == 11
+    assert response.items[1].file_id == "file-2"
+    assert response.items[1].found is False
+    assert response.items[1].post_id is None
+    assert (
+        len(wordpress_http.calls_for("GET", "https://site/wp-json/wp/v2/posts")) == 2
+    )
+
+
+def test_find_posts_by_file_id_batch_captures_item_errors(
+    wordpress_http, assert_app_error
+) -> None:
+    def _lookup(call: RecordedHttpRequest) -> FakeHttpResponse:
+        search = str(call.params.get("search") or "")
+        if "file-bad" in search:
+            return FakeHttpResponse.from_payload(
+                status_code=503,
+                payload={"message": "retry"},
+            )
+        return FakeHttpResponse.from_payload(status_code=200, payload=[])
+
+    wordpress_http.add("GET", "https://site/wp-json/wp/v2/posts", _lookup)
+    request = WordPressPostLookupBatchRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        file_ids=["file-bad", "file-ok"],
+    )
+
+    response = svc.find_posts_by_file_id_batch(request, _ctx())
+
+    assert len(response.items) == 2
+    assert response.items[0].file_id == "file-bad"
+    assert response.items[0].found is False
+    assert response.items[0].error_code == "wp_post_lookup_server_error"
+    assert response.items[0].retryable is True
+    assert response.items[1].file_id == "file-ok"
+    assert response.items[1].found is False
 
 
 def test_find_post_by_file_id_redirect_logs_response_diagnostics(

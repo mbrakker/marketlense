@@ -13,6 +13,9 @@ from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
     WordPressMediaUploadRequest,
     WordPressMediaUploadResponse,
+    WordPressPostLookupBatchItem,
+    WordPressPostLookupBatchRequest,
+    WordPressPostLookupBatchResponse,
     WordPressPostCreateRequest,
     WordPressPostCreateResponse,
     WordPressPostLookupRequest,
@@ -506,6 +509,130 @@ def find_post_by_file_id(
         post_id=int(post_id) if post_id else None,
         link=str(link) if link else None,
     )
+
+
+def find_posts_by_file_id_batch(
+    request: WordPressPostLookupBatchRequest, ctx: RunContext
+) -> WordPressPostLookupBatchResponse:
+    normalized_file_ids: list[str] = []
+    seen: set[str] = set()
+    for raw_file_id in request.file_ids:
+        file_id = str(raw_file_id or "").strip()
+        if not file_id or file_id in seen:
+            continue
+        seen.add(file_id)
+        normalized_file_ids.append(file_id)
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="wp_post_lookup_batch_start",
+            module=logger.name,
+            fields={
+                "count": len(normalized_file_ids),
+                "post_type": _post_type_endpoint(request.post_type),
+                "ssl_verify": request.ssl_verify,
+                "ca_bundle_path": request.ca_bundle_path or "",
+            },
+        )
+    )
+
+    items: list[WordPressPostLookupBatchItem] = []
+    error_count = 0
+    found_count = 0
+    for file_id in normalized_file_ids:
+        try:
+            response = find_post_by_file_id(
+                WordPressPostLookupRequest(
+                    schema_version="1.0",
+                    base_url=request.base_url,
+                    auth_header=request.auth_header,
+                    file_id=file_id,
+                    ssl_verify=request.ssl_verify,
+                    ca_bundle_path=request.ca_bundle_path,
+                    per_page=request.per_page,
+                    post_type=request.post_type,
+                ),
+                ctx,
+            )
+            if response.found:
+                found_count += 1
+            items.append(
+                WordPressPostLookupBatchItem(
+                    schema_version="1.0",
+                    file_id=file_id,
+                    found=response.found,
+                    post_id=response.post_id,
+                    link=response.link,
+                )
+            )
+        except AppError as exc:
+            error_count += 1
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="wp_post_lookup_batch_item_error",
+                    module=logger.name,
+                    fields={
+                        "file_id": file_id,
+                        "code": exc.code,
+                        "retryable": exc.retryable,
+                        "error": exc.message,
+                    },
+                )
+            )
+            items.append(
+                WordPressPostLookupBatchItem(
+                    schema_version="1.0",
+                    file_id=file_id,
+                    found=False,
+                    error_code=exc.code,
+                    error_message=exc.message,
+                    retryable=exc.retryable,
+                )
+            )
+        except Exception as exc:
+            error_count += 1
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="wp_post_lookup_batch_item_error",
+                    module=logger.name,
+                    fields={
+                        "file_id": file_id,
+                        "error": str(exc),
+                        "retryable": False,
+                    },
+                )
+            )
+            items.append(
+                WordPressPostLookupBatchItem(
+                    schema_version="1.0",
+                    file_id=file_id,
+                    found=False,
+                    error_code="wp_post_lookup_unexpected_error",
+                    error_message=str(exc),
+                    retryable=False,
+                )
+            )
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="wp_post_lookup_batch_complete",
+            module=logger.name,
+            fields={
+                "count": len(items),
+                "found_count": found_count,
+                "error_count": error_count,
+            },
+        )
+    )
+    return WordPressPostLookupBatchResponse(schema_version="1.0", items=items)
 
 
 def _ensure_terms(

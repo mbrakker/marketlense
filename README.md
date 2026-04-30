@@ -678,8 +678,9 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - `src/services/state_service.py` verifies the report was processed and not already published.
 
 5. **Publishing (per file)**
-   - `src/generators/publish_generator.py` consumes the orchestrator-resolved WordPress auth header, uploads report images with bounded parallelism, swaps image URLs to the site-side media proxy route, injects a hidden `Drive fileId` marker when the rendered HTML does not already contain one, and creates a WordPress post.
-   - `src/services/wordpress_service.py` handles media and post API calls. WordPress 5xx responses now log bounded header/body diagnostics (sanitized and truncated) before retryable errors propagate, and post lookup requests fail fast on unexpected REST redirects with the redirect target logged in structured error context.
+   - `src/orchestrators/publish_orchestrator.py` now builds one publish-run preflight snapshot for the selected HTML set: file IDs, validation state, processed-state presence, existing WordPress post lookups, and resolved category/tag/publisher term IDs are prepared once before per-file publish decisions run.
+   - `src/generators/publish_generator.py` consumes the orchestrator-resolved WordPress auth header, accepts optional pre-resolved WordPress term IDs from that preflight snapshot, uploads report images with bounded parallelism, swaps image URLs to the site-side media proxy route, injects a hidden `Drive fileId` marker when the rendered HTML does not already contain one, and creates a WordPress post.
+   - `src/services/wordpress_service.py` handles media and post API calls. WordPress 5xx responses now log bounded header/body diagnostics (sanitized and truncated) before retryable errors propagate, post lookup requests fail fast on unexpected REST redirects with the redirect target logged in structured error context, and the batch publish preflight can reuse the service boundary to collect per-file existing-post lookup results without aborting the whole run on one transient lookup failure.
 
 6. **State record**
    - Published posts are recorded with post ID and URL for idempotency.

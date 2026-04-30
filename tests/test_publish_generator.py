@@ -7,7 +7,7 @@ from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from src.contracts.publish import PublishRequest
+from src.contracts.publish import PublishRequest, PublishResolvedTerms
 from src.contracts.report_store import ReportMetadataUpsertRequest
 from src.generators import publish_generator as pg
 from src.services.report_store_service import upsert_metadata
@@ -400,3 +400,54 @@ def test_publish_html_parallelizes_media_uploads_and_uses_request_auth_header(
         "Bearer request-token",
     ]
     assert _WordPressPublishStubHandler.post_headers == ["Bearer request-token"]
+
+
+def test_publish_html_uses_pre_resolved_terms_without_term_lookups(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    assert_no_defaulted_required_fields,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_text = (
+        "<html><head><title>Report</title></head>"
+        "<body>Drive fileId: file123</body></html>"
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    outcome = pg.publish_html(
+        PublishRequest(
+            schema_version="1.0",
+            html_path="out/report.html",
+            auth_header="Bearer token",
+            file_id="file123",
+            html_text=html_text,
+            resolved_terms=PublishResolvedTerms(
+                schema_version="1.0",
+                category_ids=[11],
+                tag_ids=[31, 32],
+                taxonomy_terms={"ml_publisher": [22]},
+            ),
+        ),
+        settings,
+        run_context,
+    )
+
+    post_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )[0]
+    assert_no_defaulted_required_fields(outcome)
+    assert outcome.status == "published"
+    assert post_call.json_data["categories"] == [11]
+    assert post_call.json_data["tags"] == [31, 32]
+    assert post_call.json_data["ml_publisher"] == [22]
+    assert (
+        wordpress_http.calls_for("GET", "https://example.com/wp-json/wp/v2/categories")
+        == []
+    )
+    assert wordpress_http.calls_for("GET", "https://example.com/wp-json/wp/v2/tags") == []

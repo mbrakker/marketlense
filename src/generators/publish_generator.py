@@ -10,7 +10,12 @@ from typing import Dict, Optional, Tuple
 from urllib.parse import unquote, urlparse
 
 from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
-from src.contracts.publish import PublishOutcome, PublishRequest, PublishSettings
+from src.contracts.publish import (
+    PublishOutcome,
+    PublishRequest,
+    PublishResolvedTerms,
+    PublishSettings,
+)
 from src.contracts.report_store import ReportMetadataGetRequest
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
@@ -130,10 +135,119 @@ def publish_html(
             schema_version="1.1", db_path=settings.reports_db, file_id=file_id
         ),
         ctx,
+    ) if request.resolved_terms is None else None
+    resolved_terms = request.resolved_terms or _resolve_term_assignments(
+        metadata=metadata,
+        settings=settings,
+        base_url=base_url,
+        auth_header=auth_header,
+        ctx=ctx,
     )
+    category_ids_for_wp = list(resolved_terms.category_ids)
+    tag_ids_for_wp = list(resolved_terms.tag_ids)
+    publisher_term_ids_for_wp = list(
+        (resolved_terms.taxonomy_terms or {}).get("ml_publisher", [])
+    )
+
+    image_map, featured_media_id = _upload_images(
+        html_text,
+        request.html_path,
+        settings.output_dir,
+        base_url,
+        auth_header,
+        settings.wp.ssl_verify,
+        settings.wp.ca_bundle_path,
+        settings.media_upload_workers,
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_images_uploaded",
+            module=logger.name,
+            fields={"count": len(image_map), "featured_media": featured_media_id or 0},
+        )
+    )
+    rendered_html = replace_image_sources(html_text, image_map)
+    # Proxy-backed digest images stay more reliable on the WP frontend without
+    # responsive srcset/sizes candidates that still point at synthetic query URLs.
+    rendered_html = strip_image_srcset_and_sizes(rendered_html)
+    body_html, file_id_marker_inserted = _ensure_hidden_file_id_marker(
+        extract_body_html(rendered_html),
+        file_id,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_file_id_marker",
+            module=logger.name,
+            fields={
+                "file_id": file_id,
+                "inserted": file_id_marker_inserted,
+            },
+        )
+    )
+
+    title = extract_title(rendered_html) or Path(request.html_path).stem
+    slug = slugify(title)
+
+    post_resp = create_post(
+        WordPressPostCreateRequest(
+            schema_version="1.0",
+            base_url=base_url,
+            auth_header=auth_header,
+            title=title,
+            content_html=body_html,
+            status=settings.wp.post_status,
+            ssl_verify=settings.wp.ssl_verify,
+            ca_bundle_path=settings.wp.ca_bundle_path,
+            slug=slug,
+            featured_media=featured_media_id,
+            categories=category_ids_for_wp if category_ids_for_wp else None,
+            tags=tag_ids_for_wp if tag_ids_for_wp else None,
+            taxonomy_terms=resolved_terms.taxonomy_terms or None,
+            post_type=settings.wp.post_type,
+        ),
+        ctx,
+    )
+
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_complete",
+            module=logger.name,
+            fields={
+                "file_id": file_id,
+                "post_id": post_resp.post_id,
+                "post_url": post_resp.link,
+            },
+        )
+    )
+
+    return PublishOutcome(
+        schema_version="1.0",
+        html_path=request.html_path,
+        file_id=file_id,
+        status="published",
+        post_id=post_resp.post_id,
+        post_url=post_resp.link,
+    )
+
+
+def _resolve_term_assignments(
+    *,
+    metadata,
+    settings: PublishSettings,
+    base_url: str,
+    auth_header: str,
+    ctx: RunContext,
+) -> PublishResolvedTerms:
     category_ids_for_wp: list[int] = []
     tag_ids_for_wp: list[int] = []
-    publisher_term_ids_for_wp: list[int] = []
+    taxonomy_terms: dict[str, list[int]] = {}
     if metadata and metadata.categories:
         mappings_resp = load_category_mappings(
             CategoryMappingLoadRequest(
@@ -198,12 +312,17 @@ def publish_html(
                 for term in publisher_terms
                 if term.slug in ensure_publishers_resp.slug_to_id
             ]
+            if publisher_term_ids_for_wp:
+                taxonomy_terms["ml_publisher"] = publisher_term_ids_for_wp
     if metadata and metadata.taxonomy:
         tag_slugs: list[str] = []
+        seen_tag_slugs: set[str] = set()
         for tag in metadata.taxonomy:
             slug = slugify(tag)
-            if slug:
-                tag_slugs.append(slug)
+            if not slug or slug in seen_tag_slugs:
+                continue
+            seen_tag_slugs.add(slug)
+            tag_slugs.append(slug)
         if tag_slugs:
             ensure_tags_resp = ensure_tags(
                 WordPressTagEnsureRequest(
@@ -221,96 +340,11 @@ def publish_html(
                 for slug in tag_slugs
                 if slug in ensure_tags_resp.slug_to_id
             ]
-
-    image_map, featured_media_id = _upload_images(
-        html_text,
-        request.html_path,
-        settings.output_dir,
-        base_url,
-        auth_header,
-        settings.wp.ssl_verify,
-        settings.wp.ca_bundle_path,
-        settings.media_upload_workers,
-        ctx,
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="generator",
-            event="publish_images_uploaded",
-            module=logger.name,
-            fields={"count": len(image_map), "featured_media": featured_media_id or 0},
-        )
-    )
-    rendered_html = replace_image_sources(html_text, image_map)
-    # Proxy-backed digest images stay more reliable on the WP frontend without
-    # responsive srcset/sizes candidates that still point at synthetic query URLs.
-    rendered_html = strip_image_srcset_and_sizes(rendered_html)
-    body_html, file_id_marker_inserted = _ensure_hidden_file_id_marker(
-        extract_body_html(rendered_html),
-        file_id,
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="generator",
-            event="publish_file_id_marker",
-            module=logger.name,
-            fields={
-                "file_id": file_id,
-                "inserted": file_id_marker_inserted,
-            },
-        )
-    )
-
-    title = extract_title(rendered_html) or Path(request.html_path).stem
-    slug = slugify(title)
-
-    post_resp = create_post(
-        WordPressPostCreateRequest(
-            schema_version="1.0",
-            base_url=base_url,
-            auth_header=auth_header,
-            title=title,
-            content_html=body_html,
-            status=settings.wp.post_status,
-            ssl_verify=settings.wp.ssl_verify,
-            ca_bundle_path=settings.wp.ca_bundle_path,
-            slug=slug,
-            featured_media=featured_media_id,
-            categories=category_ids_for_wp if category_ids_for_wp else None,
-            tags=tag_ids_for_wp if tag_ids_for_wp else None,
-            taxonomy_terms=(
-                {"ml_publisher": publisher_term_ids_for_wp}
-                if publisher_term_ids_for_wp
-                else None
-            ),
-            post_type=settings.wp.post_type,
-        ),
-        ctx,
-    )
-
-    logger.info(
-        log_event(
-            ctx,
-            role="generator",
-            event="publish_complete",
-            module=logger.name,
-            fields={
-                "file_id": file_id,
-                "post_id": post_resp.post_id,
-                "post_url": post_resp.link,
-            },
-        )
-    )
-
-    return PublishOutcome(
+    return PublishResolvedTerms(
         schema_version="1.0",
-        html_path=request.html_path,
-        file_id=file_id,
-        status="published",
-        post_id=post_resp.post_id,
-        post_url=post_resp.link,
+        category_ids=category_ids_for_wp,
+        tag_ids=tag_ids_for_wp,
+        taxonomy_terms=taxonomy_terms,
     )
 
 def _upload_images(
