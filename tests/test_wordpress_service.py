@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import Any
 import warnings
 
+import requests
 import urllib3  # type: ignore[import-untyped]
 
 from src.contracts.run_context import RunContext
@@ -529,5 +531,108 @@ def test_update_post_categories_server_error(wordpress_http, assert_app_error) -
         svc.update_post_categories(request, _ctx())
     except Exception as err:
         assert_app_error(err, code="wp_post_update_server_error", retryable=True)
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
+
+
+def test_batch_lookup_reuses_pooled_session(
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+    caplog,
+) -> None:
+    class _FakeSession:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, Any]] = []
+
+        def mount(self, _prefix: str, _adapter: Any) -> None:
+            return
+
+        def request(self, method: str, url: str, **kwargs: Any) -> FakeHttpResponse:
+            self.calls.append({"method": method, "url": url, **kwargs})
+            search = str((kwargs.get("params") or {}).get("search") or "")
+            if "file-1" in search:
+                return FakeHttpResponse.from_payload(
+                    status_code=200,
+                    payload=[
+                        {
+                            "id": 11,
+                            "link": "https://pooled.test/p/11",
+                            "content": {"rendered": "Drive fileId: file-1"},
+                        }
+                    ],
+                )
+            return FakeHttpResponse.from_payload(status_code=200, payload=[])
+
+    created_sessions: list[_FakeSession] = []
+
+    def _session_factory() -> _FakeSession:
+        session = _FakeSession()
+        created_sessions.append(session)
+        return session
+
+    caplog.set_level(logging.INFO, logger="market_lense.wordpress_service")
+    external_boundary_mocks_only.setattr(svc.requests, "Session", _session_factory)
+
+    response = svc.find_posts_by_file_id_batch(
+        WordPressPostLookupBatchRequest(
+            schema_version="1.0",
+            base_url="https://pooled.test",
+            auth_header="Bearer token",
+            file_ids=["file-1", "file-2"],
+            post_type="posts",
+        ),
+        _ctx(),
+    )
+
+    assert [item.found for item in response.items] == [True, False]
+    assert len(created_sessions) == 1
+    assert len(created_sessions[0].calls) == 2
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.wordpress_service"
+    ]
+    assert_logs_have_required_fields(events)
+    lookup_complete = [
+        event for event in events if event.get("event") == "wp_post_lookup_complete"
+    ]
+    assert len(lookup_complete) == 2
+    assert lookup_complete[0]["fields"]["used_pooled_session"] is True
+    assert lookup_complete[0]["fields"]["pool_reused"] is False
+    assert lookup_complete[1]["fields"]["used_pooled_session"] is True
+    assert lookup_complete[1]["fields"]["pool_reused"] is True
+
+
+def test_create_post_session_request_exception_adapts_to_app_error(
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    class _FakeSession:
+        def mount(self, _prefix: str, _adapter: Any) -> None:
+            return
+
+        def request(self, method: str, url: str, **kwargs: Any) -> FakeHttpResponse:
+            raise requests.RequestException(
+                f"boom {method} {url} {kwargs.get('timeout')}"
+            )
+
+    external_boundary_mocks_only.setattr(svc.requests, "Session", lambda: _FakeSession())
+
+    request = WordPressPostCreateRequest(
+        schema_version="1.0",
+        base_url="https://create-error.test",
+        auth_header="Bearer token",
+        title="T",
+        content_html="<p>x</p>",
+        status="publish",
+    )
+
+    try:
+        svc.create_post(request, _ctx())
+    except Exception as err:
+        assert_app_error(err, code="wp_post_create_failed", retryable=True)
+        assert err.context["method"] == "POST"
+        assert err.context["url"] == "https://create-error.test/wp-json/wp/v2/posts"
+        assert err.context["pool_key"] == "https://create-error.test"
     else:  # pragma: no cover
         raise AssertionError("expected AppError")

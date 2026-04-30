@@ -202,15 +202,6 @@ Suggested priority order:
     - Delivery attempts are idempotent and logged.
     - Failure-injection tests cover restart, retry, duplicate dispatch, and partial WordPress failures.
 
-- **Title:** Introduce shared WordPress request executor with pooled sessions and error adaptation [Impact: 4/5, Effort: 4/5]
-  - Explanation: `src/services/wordpress_service.py` repeats request setup, SSL handling, error parsing, and JSON adaptation. Centralize REST execution behind one internal executor backed by a pooled `requests.Session`.
-  - Pros: Less duplicated HTTP code, lower connection overhead, consistent error taxonomy.
-  - Cons: Requires careful migration of per-endpoint behavior and logging details.
-  - Acceptance Criteria:
-    - WordPress REST calls go through one shared executor/session helper.
-    - Request/response logging and error taxonomy remain intact.
-    - Connection reuse is covered by service tests or instrumentation.
-
 ---
 
 ## 7. Schema, Validation, Output Quality & Rendering
@@ -251,8 +242,8 @@ Suggested priority order:
   - Acceptance Criteria:
     - Claim contracts include evidence/span references for non-trivial claims.
     - Validation rejects unsupported claims.
-    - HTML renders citation micro-lines with evidence ID and page where available.
-    - `Unknown` quote speaker labels become `Unattributed in report`.
+    - HTML renders citation micro-lines with evidence ID and "report page X" where available.
+    - `Unknown` quote speaker labels become `<Publisher name> expert team`.
 
 - **Title:** Add deterministic failure-to-fix planner for targeted regeneration [Impact: 4/5, Effort: 4/5]
   - Explanation: Map known validation failure classes to deterministic repair recipes before full regeneration, reducing expensive broad reruns.

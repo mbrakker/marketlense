@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import warnings
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Any, Dict, Iterator, NoReturn, Optional
+from urllib.parse import urlsplit
 
 import requests  # type: ignore[import-untyped]
 import urllib3
@@ -35,6 +38,38 @@ logger = logging.getLogger("market_lense.wordpress_service")
 DEFAULT_TIMEOUT = 30
 HTTP_ERROR_BODY_LIMIT = 1000
 REDACTED_HEADER_KEYS = {"authorization", "cookie", "set-cookie"}
+WORDPRESS_HTTP_POOL_CONNECTIONS = 8
+WORDPRESS_HTTP_POOL_MAXSIZE = 8
+_ORIGINAL_REQUEST_CALLS: dict[str, Any] = {
+    "GET": requests.get,
+    "POST": requests.post,
+}
+
+
+@dataclass(frozen=True)
+class _WordPressRequestResult:
+    response: Any
+    used_pooled_session: bool
+    pool_key: str
+    pool_reused: bool
+
+
+class _SessionPool:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._sessions: dict[str, requests.Session] = {}
+
+    def acquire(self, pool_key: str) -> tuple[requests.Session, bool]:
+        with self._lock:
+            existing = self._sessions.get(pool_key)
+            if existing is not None:
+                return existing, True
+            session = _build_session()
+            self._sessions[pool_key] = session
+            return session, False
+
+
+_SESSION_POOL = _SessionPool()
 
 
 def _post_type_endpoint(post_type: str) -> str:
@@ -47,6 +82,103 @@ def _requests_verify(*, ssl_verify: bool, ca_bundle_path: Optional[str]) -> bool
         return False
     bundle_path = str(ca_bundle_path or "").strip()
     return bundle_path or True
+
+
+def _build_session() -> requests.Session:
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=WORDPRESS_HTTP_POOL_CONNECTIONS,
+        pool_maxsize=WORDPRESS_HTTP_POOL_MAXSIZE,
+        max_retries=0,
+    )
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+
+
+def _session_pool_key(url: str) -> str:
+    parsed = urlsplit(str(url or "").strip())
+    scheme = str(parsed.scheme or "").strip().casefold() or "https"
+    host = str(parsed.netloc or "").strip().casefold()
+    return f"{scheme}://{host}" if host else scheme
+
+
+def _patched_direct_transport(method: str) -> Any | None:
+    candidate = getattr(requests, str(method or "").strip().lower(), None)
+    original = _ORIGINAL_REQUEST_CALLS.get(str(method or "").strip().upper())
+    if callable(candidate) and candidate is not original:
+        return candidate
+    return None
+
+
+def _execute_request(
+    *,
+    method: str,
+    url: str,
+    headers: dict[str, str],
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
+    ctx: RunContext,
+    request_error_event: str,
+    request_error_code: str,
+    request_error_message: str,
+    request_error_fields: Optional[Dict[str, Any]] = None,
+    params: Optional[dict[str, Any]] = None,
+    data: Any = None,
+    files: Optional[dict[str, Any]] = None,
+    allow_redirects: Optional[bool] = None,
+) -> _WordPressRequestResult:
+    normalized_method = str(method or "").strip().upper()
+    request_kwargs: dict[str, Any] = {
+        "headers": dict(headers or {}),
+        "timeout": DEFAULT_TIMEOUT,
+        "verify": _requests_verify(
+            ssl_verify=ssl_verify,
+            ca_bundle_path=ca_bundle_path,
+        ),
+    }
+    if params is not None:
+        request_kwargs["params"] = dict(params)
+    if data is not None:
+        request_kwargs["data"] = data
+    if files is not None:
+        request_kwargs["files"] = dict(files)
+    if allow_redirects is not None:
+        request_kwargs["allow_redirects"] = bool(allow_redirects)
+    pool_key = _session_pool_key(url)
+    try:
+        with _suppress_insecure_request_warning(ssl_verify=ssl_verify):
+            direct_transport = _patched_direct_transport(normalized_method)
+            if direct_transport is not None:
+                response = direct_transport(url, **request_kwargs)
+                return _WordPressRequestResult(
+                    response=response,
+                    used_pooled_session=False,
+                    pool_key=pool_key,
+                    pool_reused=False,
+                )
+            session, pool_reused = _SESSION_POOL.acquire(pool_key)
+            response = session.request(normalized_method, url, **request_kwargs)
+            return _WordPressRequestResult(
+                response=response,
+                used_pooled_session=True,
+                pool_key=pool_key,
+                pool_reused=pool_reused,
+            )
+    except requests.RequestException as exc:
+        _raise_request_exception(
+            ctx=ctx,
+            event=request_error_event,
+            code=request_error_code,
+            message=request_error_message,
+            exc=exc,
+            fields={
+                **(request_error_fields or {}),
+                "url": url,
+                "method": normalized_method,
+                "pool_key": pool_key,
+            },
+        )
 
 
 @contextmanager
@@ -100,7 +232,9 @@ def _raise_request_exception(
     exc: requests.RequestException,
     fields: Optional[Dict[str, Any]] = None,
 ) -> NoReturn:
+    extra_fields = dict(fields or {})
     error_context = {
+        **extra_fields,
         "exception_type": type(exc).__name__,
         "exception_message": str(exc),
     }
@@ -113,7 +247,7 @@ def _raise_request_exception(
             role="service",
             event=event,
             module=logger.name,
-            fields={**(fields or {}), **error_context},
+            fields=error_context,
         )
     )
     raise AppError(
@@ -134,14 +268,17 @@ def _raise_http_server_error(
     resp: Any,
     fields: Optional[Dict[str, Any]] = None,
 ) -> NoReturn:
-    error_context = _http_error_context(resp)
+    error_context = {
+        **dict(fields or {}),
+        **_http_error_context(resp),
+    }
     logger.info(
         log_event(
             ctx,
             role="service",
             event=event,
             module=logger.name,
-            fields={**(fields or {}), **error_context},
+            fields=error_context,
         )
     )
     raise AppError(
@@ -161,14 +298,17 @@ def _raise_http_redirect_error(
     resp: Any,
     fields: Optional[Dict[str, Any]] = None,
 ) -> NoReturn:
-    error_context = _http_error_context(resp)
+    error_context = {
+        **dict(fields or {}),
+        **_http_error_context(resp),
+    }
     logger.info(
         log_event(
             ctx,
             role="service",
             event=event,
             module=logger.name,
-            fields={**(fields or {}), **error_context},
+            fields=error_context,
         )
     )
     raise AppError(
@@ -204,25 +344,20 @@ def upload_media(
     files = {
         "file": (request.filename, request.data, request.mime_type),
     }
-    try:
-        with _suppress_insecure_request_warning(ssl_verify=request.ssl_verify):
-            resp = requests.post(
-                url,
-                headers=headers,
-                files=files,
-                timeout=DEFAULT_TIMEOUT,
-                verify=_requests_verify(
-                    ssl_verify=request.ssl_verify,
-                    ca_bundle_path=request.ca_bundle_path,
-                ),
-            )
-    except requests.RequestException as exc:
-        raise AppError(
-            code="wp_media_upload_failed",
-            message="Failed to upload WordPress media",
-            cause=exc,
-            retryable=True,
-        ) from exc
+    request_result = _execute_request(
+        method="POST",
+        url=url,
+        headers=headers,
+        files=files,
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wp_media_upload_request_error",
+        request_error_code="wp_media_upload_failed",
+        request_error_message="Failed to upload WordPress media",
+        request_error_fields={"filename": request.filename},
+    )
+    resp = request_result.response
 
     if resp.status_code >= 500:
         _raise_http_server_error(
@@ -231,7 +366,13 @@ def upload_media(
             code="wp_media_server_error",
             message_prefix="Media upload server error",
             resp=resp,
-            fields={"url": url, "filename": request.filename},
+            fields={
+                "url": url,
+                "filename": request.filename,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
         )
     if resp.status_code == 429:
         error_context = _http_error_context(resp)
@@ -241,7 +382,14 @@ def upload_media(
                 role="service",
                 event="wp_media_upload_rate_limited",
                 module=logger.name,
-                fields={"url": url, "filename": request.filename, **error_context},
+                fields={
+                    "url": url,
+                    "filename": request.filename,
+                    "used_pooled_session": request_result.used_pooled_session,
+                    "pool_key": request_result.pool_key,
+                    "pool_reused": request_result.pool_reused,
+                    **error_context,
+                },
             )
         )
         raise AppError(
@@ -284,7 +432,13 @@ def upload_media(
             role="service",
             event="wp_media_upload_complete",
             module=logger.name,
-            fields={"media_id": media_id, "source_url": source_url},
+            fields={
+                "media_id": media_id,
+                "source_url": source_url,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
         )
     )
     return WordPressMediaUploadResponse(
@@ -342,25 +496,20 @@ def create_post(
             if key and normalized_ids:
                 payload[key] = normalized_ids
 
-    try:
-        with _suppress_insecure_request_warning(ssl_verify=request.ssl_verify):
-            resp = requests.post(
-                url,
-                headers=headers,
-                data=json.dumps(payload),
-                timeout=DEFAULT_TIMEOUT,
-                verify=_requests_verify(
-                    ssl_verify=request.ssl_verify,
-                    ca_bundle_path=request.ca_bundle_path,
-                ),
-            )
-    except requests.RequestException as exc:
-        raise AppError(
-            code="wp_post_create_failed",
-            message="Failed to create WordPress post",
-            cause=exc,
-            retryable=True,
-        ) from exc
+    request_result = _execute_request(
+        method="POST",
+        url=url,
+        headers=headers,
+        data=json.dumps(payload),
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wp_post_create_request_error",
+        request_error_code="wp_post_create_failed",
+        request_error_message="Failed to create WordPress post",
+        request_error_fields={"post_type": post_type_endpoint},
+    )
+    resp = request_result.response
 
     if resp.status_code >= 500:
         _raise_http_server_error(
@@ -369,7 +518,13 @@ def create_post(
             code="wp_post_server_error",
             message_prefix="Post create server error",
             resp=resp,
-            fields={"url": url, "post_type": post_type_endpoint},
+            fields={
+                "url": url,
+                "post_type": post_type_endpoint,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
         )
     if resp.status_code >= 400:
         raise AppError(
@@ -395,7 +550,14 @@ def create_post(
             role="service",
             event="wp_post_create_complete",
             module=logger.name,
-            fields={"post_id": post_id, "link": link, "status": status},
+            fields={
+                "post_id": post_id,
+                "link": link,
+                "status": status,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
         )
     )
     return WordPressPostCreateResponse(
@@ -430,28 +592,21 @@ def find_post_by_file_id(
         "per_page": request.per_page,
     }
     headers = {"Authorization": request.auth_header}
-    try:
-        with _suppress_insecure_request_warning(ssl_verify=request.ssl_verify):
-            resp = requests.get(
-                url,
-                headers=headers,
-                params=params,
-                allow_redirects=False,
-                timeout=DEFAULT_TIMEOUT,
-                verify=_requests_verify(
-                    ssl_verify=request.ssl_verify,
-                    ca_bundle_path=request.ca_bundle_path,
-                ),
-            )
-    except requests.RequestException as exc:
-        _raise_request_exception(
-            ctx=ctx,
-            event="wp_post_lookup_request_error",
-            code="wp_post_lookup_failed",
-            message="Failed to lookup WordPress post",
-            exc=exc,
-            fields={"url": url, "file_id": request.file_id},
-        )
+    request_result = _execute_request(
+        method="GET",
+        url=url,
+        headers=headers,
+        params=params,
+        allow_redirects=False,
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wp_post_lookup_request_error",
+        request_error_code="wp_post_lookup_failed",
+        request_error_message="Failed to lookup WordPress post",
+        request_error_fields={"file_id": request.file_id},
+    )
+    resp = request_result.response
 
     if 300 <= resp.status_code < 400:
         _raise_http_redirect_error(
@@ -460,7 +615,13 @@ def find_post_by_file_id(
             code="wp_post_lookup_redirected",
             message_prefix="Post lookup redirected unexpectedly",
             resp=resp,
-            fields={"url": url, "file_id": request.file_id},
+            fields={
+                "url": url,
+                "file_id": request.file_id,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
         )
     if resp.status_code >= 500:
         _raise_http_server_error(
@@ -469,7 +630,13 @@ def find_post_by_file_id(
             code="wp_post_lookup_server_error",
             message_prefix="Post lookup server error",
             resp=resp,
-            fields={"url": url, "file_id": request.file_id},
+            fields={
+                "url": url,
+                "file_id": request.file_id,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
         )
     if resp.status_code >= 400:
         raise AppError(
@@ -500,7 +667,13 @@ def find_post_by_file_id(
             role="service",
             event="wp_post_lookup_complete",
             module=logger.name,
-            fields={"file_id": request.file_id, "found": found},
+            fields={
+                "file_id": request.file_id,
+                "found": found,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
         )
     )
     return WordPressPostLookupResponse(
@@ -663,94 +836,104 @@ def _ensure_terms(
         "Authorization": auth_header,
         "Content-Type": "application/json",
     }
-    verify = _requests_verify(
-        ssl_verify=ssl_verify,
-        ca_bundle_path=ca_bundle_path,
-    )
-    with _suppress_insecure_request_warning(ssl_verify=ssl_verify):
-        for slug, name in terms:
-            try:
-                resp = requests.get(
-                    base_url,
-                    headers={"Authorization": auth_header},
-                    params={"slug": slug},
-                    timeout=DEFAULT_TIMEOUT,
-                    verify=verify,
-                )
-            except requests.RequestException as exc:
-                raise AppError(
-                    code=lookup_failed_code,
-                    message=lookup_failed_message,
-                    cause=exc,
-                    retryable=True,
-                ) from exc
+    for slug, name in terms:
+        lookup_result = _execute_request(
+            method="GET",
+            url=base_url,
+            headers={"Authorization": auth_header},
+            params={"slug": slug},
+            ssl_verify=ssl_verify,
+            ca_bundle_path=ca_bundle_path,
+            ctx=ctx,
+            request_error_event="wp_taxonomy_lookup_request_error",
+            request_error_code=lookup_failed_code,
+            request_error_message=lookup_failed_message,
+            request_error_fields={"base_url": base_url, "slug": slug},
+        )
+        resp = lookup_result.response
 
-            if resp.status_code >= 500:
+        if resp.status_code >= 500:
+            _raise_http_server_error(
+                ctx=ctx,
+                event="wp_taxonomy_lookup_http_error",
+                code=lookup_server_code,
+                message_prefix=lookup_server_prefix,
+                resp=resp,
+                fields={
+                    "base_url": base_url,
+                    "slug": slug,
+                    "used_pooled_session": lookup_result.used_pooled_session,
+                    "pool_key": lookup_result.pool_key,
+                    "pool_reused": lookup_result.pool_reused,
+                },
+            )
+        if resp.status_code >= 400:
+            raise AppError(
+                code=lookup_client_code,
+                message=f"{lookup_client_prefix}: {resp.status_code}",
+                retryable=False,
+            )
+
+        term_id: Optional[int] = None
+        try:
+            payload = json.loads(resp.text)
+        except json.JSONDecodeError:
+            payload = []
+        if isinstance(payload, list) and payload:
+            term_id = payload[0].get("id")
+
+        if not term_id:
+            create_result = _execute_request(
+                method="POST",
+                url=base_url,
+                headers=headers,
+                data=json.dumps({"name": name, "slug": slug}),
+                ssl_verify=ssl_verify,
+                ca_bundle_path=ca_bundle_path,
+                ctx=ctx,
+                request_error_event="wp_taxonomy_create_request_error",
+                request_error_code=create_failed_code,
+                request_error_message=create_failed_message,
+                request_error_fields={
+                    "base_url": base_url,
+                    "slug": slug,
+                    "name": name,
+                },
+            )
+            create_resp = create_result.response
+
+            if create_resp.status_code >= 500:
                 _raise_http_server_error(
                     ctx=ctx,
-                    event="wp_taxonomy_lookup_http_error",
-                    code=lookup_server_code,
-                    message_prefix=lookup_server_prefix,
-                    resp=resp,
-                    fields={"base_url": base_url, "slug": slug},
+                    event="wp_taxonomy_create_http_error",
+                    code=create_server_code,
+                    message_prefix=create_server_prefix,
+                    resp=create_resp,
+                    fields={
+                        "base_url": base_url,
+                        "slug": slug,
+                        "name": name,
+                        "used_pooled_session": create_result.used_pooled_session,
+                        "pool_key": create_result.pool_key,
+                        "pool_reused": create_result.pool_reused,
+                    },
                 )
-            if resp.status_code >= 400:
+            if create_resp.status_code >= 400:
                 raise AppError(
-                    code=lookup_client_code,
-                    message=f"{lookup_client_prefix}: {resp.status_code}",
+                    code=create_client_code,
+                    message=f"{create_client_prefix}: {create_resp.status_code}",
                     retryable=False,
                 )
+            data = _safe_json(create_resp.text)
+            term_id = data.get("id")
 
-            term_id: Optional[int] = None
-            try:
-                payload = json.loads(resp.text)
-            except json.JSONDecodeError:
-                payload = []
-            if isinstance(payload, list) and payload:
-                term_id = payload[0].get("id")
-
-            if not term_id:
-                try:
-                    create_resp = requests.post(
-                        base_url,
-                        headers=headers,
-                        data=json.dumps({"name": name, "slug": slug}),
-                        timeout=DEFAULT_TIMEOUT,
-                        verify=verify,
-                    )
-                except requests.RequestException as exc:
-                    raise AppError(
-                        code=create_failed_code,
-                        message=create_failed_message,
-                        cause=exc,
-                        retryable=True,
-                    ) from exc
-
-                if create_resp.status_code >= 500:
-                    _raise_http_server_error(
-                        ctx=ctx,
-                        event="wp_taxonomy_create_http_error",
-                        code=create_server_code,
-                        message_prefix=create_server_prefix,
-                        resp=create_resp,
-                        fields={"base_url": base_url, "slug": slug, "name": name},
-                    )
-                if create_resp.status_code >= 400:
-                    raise AppError(
-                        code=create_client_code,
-                        message=f"{create_client_prefix}: {create_resp.status_code}",
-                        retryable=False,
-                    )
-                data = _safe_json(create_resp.text)
-                term_id = data.get("id")
-
-            if not term_id:
-                raise AppError(
-                    code=invalid_code,
-                    message=invalid_message,
-                    retryable=False,
-                )
-            slug_to_id[slug] = int(term_id)
+        if not term_id:
+            raise AppError(
+                code=invalid_code,
+                message=invalid_message,
+                retryable=False,
+            )
+        slug_to_id[slug] = int(term_id)
     return slug_to_id
 
 
@@ -897,25 +1080,20 @@ def update_post_categories(
         "Content-Type": "application/json",
     }
     payload = {"categories": request.categories}
-    try:
-        with _suppress_insecure_request_warning(ssl_verify=request.ssl_verify):
-            resp = requests.post(
-                url,
-                headers=headers,
-                data=json.dumps(payload),
-                timeout=DEFAULT_TIMEOUT,
-                verify=_requests_verify(
-                    ssl_verify=request.ssl_verify,
-                    ca_bundle_path=request.ca_bundle_path,
-                ),
-            )
-    except requests.RequestException as exc:
-        raise AppError(
-            code="wp_post_update_failed",
-            message="Failed to update WordPress post",
-            cause=exc,
-            retryable=True,
-        ) from exc
+    request_result = _execute_request(
+        method="POST",
+        url=url,
+        headers=headers,
+        data=json.dumps(payload),
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wp_post_update_request_error",
+        request_error_code="wp_post_update_failed",
+        request_error_message="Failed to update WordPress post",
+        request_error_fields={"post_id": request.post_id, "post_type": post_type_endpoint},
+    )
+    resp = request_result.response
 
     if resp.status_code >= 500:
         _raise_http_server_error(
@@ -924,7 +1102,13 @@ def update_post_categories(
             code="wp_post_update_server_error",
             message_prefix="Post update server error",
             resp=resp,
-            fields={"url": url, "post_id": request.post_id},
+            fields={
+                "url": url,
+                "post_id": request.post_id,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
         )
     if resp.status_code >= 400:
         raise AppError(
@@ -940,7 +1124,12 @@ def update_post_categories(
             role="service",
             event="wp_post_update_complete",
             module=logger.name,
-            fields={"post_id": request.post_id},
+            fields={
+                "post_id": request.post_id,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
         )
     )
     return WordPressPostUpdateResponse(
@@ -964,18 +1153,21 @@ def _update_media_alt_text(
     }
     payload = {"alt_text": alt_text}
     try:
-        with _suppress_insecure_request_warning(ssl_verify=ssl_verify):
-            resp = requests.post(
-                url,
-                headers=headers,
-                data=json.dumps(payload),
-                timeout=DEFAULT_TIMEOUT,
-                verify=_requests_verify(
-                    ssl_verify=ssl_verify,
-                    ca_bundle_path=ca_bundle_path,
-                ),
-            )
-    except requests.RequestException:
+        request_result = _execute_request(
+            method="POST",
+            url=url,
+            headers=headers,
+            data=json.dumps(payload),
+            ssl_verify=ssl_verify,
+            ca_bundle_path=ca_bundle_path,
+            ctx=ctx,
+            request_error_event="wp_media_alt_text_request_error",
+            request_error_code="wp_media_alt_text_failed",
+            request_error_message="Failed to update WordPress media alt text",
+            request_error_fields={"media_id": media_id},
+        )
+        resp = request_result.response
+    except AppError:
         logger.info(
             log_event(
                 ctx,
@@ -989,13 +1181,19 @@ def _update_media_alt_text(
 
     if resp.status_code >= 400:
         logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="wp_media_alt_text_failed",
-                module=logger.name,
-                fields={"media_id": media_id, "status": resp.status_code},
-            )
+        log_event(
+            ctx,
+            role="service",
+            event="wp_media_alt_text_failed",
+            module=logger.name,
+            fields={
+                "media_id": media_id,
+                "status": resp.status_code,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
+        )
         )
 
 
