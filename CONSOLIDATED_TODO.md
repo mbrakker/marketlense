@@ -37,7 +37,6 @@ Suggested priority order:
 3. `5. Orchestration, State, Idempotency & Scheduling`
 4. `6. Publishing & WordPress`
 5. `8. CI, Observability, Governance & Release Safety`
-6. `9. Architecture Simplification & Code Reduction`
 
 ---
 
@@ -302,20 +301,6 @@ Suggested priority order:
 
 ---
 
-## 9. Architecture Simplification & Code Reduction
-
-- **Title:** Split remaining service long-file hotspots only along real capability boundaries [Impact: 5/5, Effort: 5/5]
-  - Explanation: The report-selection hotspot now uses a facade-plus-family layout (`src/generators/report_selection_generator.py` plus `src/generators/_report_selection_generator/*`). Remaining concentration still sits in report store, config service, browser-download artifact handling, PDF heuristics, and publisher inventory internals. Continue the same pattern only where a semantic family boundary is real: keep one canonical facade file per boundary, move coherent families into a same-name internal subfolder, and avoid pass-through wrapper layers.
-  - Pros: Higher simplicity, lower cognitive load, better defect containment.
-  - Cons: Large refactors can add fragmentation if boundaries are artificial.
-  - Acceptance Criteria:
-    - Remaining hotspots keep one canonical facade file, with real semantic families moved into a dedicated same-name internal subfolder.
-    - Each split has a documented semantic responsibility and concrete reason.
-    - Canonical service/generator/orchestrator entrypoints remain discoverable.
-    - No new pass-through wrapper modules are introduced.
-    - Long-file report shows reduced concentration in the remaining named hotspots.
-    - Golden and behavior tests prove parity or explicitly approved improvements.
-
 ## Priority Launch Plan
 
 ### Phase 1: Highest-Leverage Foundations (2-4 weeks)
@@ -343,6 +328,5 @@ Suggested priority order:
 
 ### Phase 4: Simplicity and Maintainability (ongoing)
 
-- Long-file hotspot splits by real capability boundary using facade file + same-name internal family subfolder layout.
 - Contract module family split using public module facade + same-name internal family subfolder layout.
 - Report-generation dependency-bundle split using public facade + semantic dependency-family modules.

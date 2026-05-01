@@ -121,12 +121,19 @@ def publish_html(
         )
     base_url = settings.wp.site_url.rstrip("/")
 
-    metadata = get_metadata(
-        ReportMetadataGetRequest(
-            schema_version="1.1", db_path=settings.reports_db, file_id=file_id
-        ),
-        ctx,
-    ) if request.resolved_terms is None else None
+    metadata = None
+    if request.resolved_terms is None:
+        reports_db_exists = file_exists(
+            FileExistsRequest(schema_version="1.0", path=settings.reports_db),
+            ctx,
+        ).exists
+        if reports_db_exists:
+            metadata = get_metadata(
+                ReportMetadataGetRequest(
+                    schema_version="1.1", db_path=settings.reports_db, file_id=file_id
+                ),
+                ctx,
+            )
     resolved_terms = request.resolved_terms or _resolve_term_assignments(
         metadata=metadata,
         settings=settings,
