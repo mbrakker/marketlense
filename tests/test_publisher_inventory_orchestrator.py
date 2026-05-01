@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -16,6 +19,7 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryBuildRequest,
     PublisherInventoryCandidateQualityDecision,
     PublisherInventoryCandidateQualityResponse,
+    PublisherInventoryRecoveryRecipe,
     PublisherInventoryCandidateScreeningDecision,
     PublisherInventoryCandidateScreeningItem,
     PublisherInventoryCandidateScreeningResponse,
@@ -28,16 +32,28 @@ from src.contracts.publisher_inventory import (
 )
 from src.contracts.report_store import (
     PublisherInventoryStateResponse,
+    PublishersReplaceRequest,
     ReportSourceDiscoveryRecordResponse,
 )
+from src.contracts.publisher_profiles import PublisherProfileRecord
 from src.orchestrators.publisher_inventory_orchestrator import (
     PublisherInventoryDependencies,
     run_publisher_inventory_discovery,
+)
+from src.services.report_store_service import (
+    record_publisher_inventory_recovery_cache_record,
+    record_publisher_inventory_run_quality,
+    record_publisher_inventory_state,
+    record_publisher_inventory_test_status,
+    replace_publishers,
 )
 from src.utils.errors import AppError
 
 
 def _settings() -> PublisherInventorySettings:
+    reports_db = str(
+        Path(tempfile.mkdtemp(prefix="publisher_inventory_test_")) / "reports.sqlite"
+    )
     return PublisherInventorySettings(
         schema_version="1.0",
         openrouter_api_key="openrouter-key",
@@ -46,7 +62,7 @@ def _settings() -> PublisherInventorySettings:
         timeout_seconds=30.0,
         max_steps=5,
         output_dir="./out/publisher_inventory_discovery",
-        reports_db="./state/reports.sqlite",
+        reports_db=reports_db,
         google_sa_path="./sa.json",
         prompt_namespace="publisher_inventory/discovery",
         pagination_max_pages=5,
@@ -431,12 +447,25 @@ def _dependencies(**overrides) -> PublisherInventoryDependencies:
     return PublisherInventoryDependencies(**defaults)
 
 
+def _request(
+    settings: PublisherInventorySettings | None = None,
+) -> PublisherInventoryDiscoveryRequest:
+    resolved_settings = settings or _settings()
+    return PublisherInventoryDiscoveryRequest(
+        schema_version="1.0",
+        insights_url="https://www.activate.com/insights",
+        reports_db=resolved_settings.reports_db,
+        settings=resolved_settings,
+    )
+
+
 def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_returns_diff(
     run_context,
     caplog,
     assert_logs_have_required_fields,
     assert_no_defaulted_required_fields,
 ):
+    settings = _settings()
     uploads = []
     records = []
     status_records = []
@@ -483,16 +512,7 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
         logging.INFO, logger="market_lense.publisher_inventory_orchestrator"
     )
 
-    result = run_publisher_inventory_discovery(
-        PublisherInventoryDiscoveryRequest(
-            schema_version="1.0",
-            insights_url="https://www.activate.com/insights",
-            reports_db="./state/reports.sqlite",
-            settings=_settings(),
-        ),
-        ctx=run_context,
-        dependencies=deps,
-    )
+    result = run_publisher_inventory_discovery(_request(settings), ctx=run_context, dependencies=deps)
 
     assert result.publisher_name == "Activate Consulting"
     assert result.snapshot_changed is True
@@ -526,6 +546,7 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
 def test_run_publisher_inventory_discovery_falls_back_after_memory_route_failure(
     run_context,
 ):
+    settings = _settings()
     attempts = {"memory": 0, "fresh": 0}
 
     def _discover(req, ctx):
@@ -549,16 +570,7 @@ def test_run_publisher_inventory_discovery_falls_back_after_memory_route_failure
         ),
     )
 
-    result = run_publisher_inventory_discovery(
-        PublisherInventoryDiscoveryRequest(
-            schema_version="1.0",
-            insights_url="https://www.activate.com/insights",
-            reports_db="./state/reports.sqlite",
-            settings=_settings(),
-        ),
-        ctx=run_context,
-        dependencies=deps,
-    )
+    result = run_publisher_inventory_discovery(_request(settings), ctx=run_context, dependencies=deps)
 
     assert attempts["memory"] >= 1
     assert attempts["fresh"] == 1
@@ -569,6 +581,7 @@ def test_run_publisher_inventory_discovery_does_not_fallback_after_non_retryable
     run_context,
     assert_app_error,
 ):
+    settings = _settings()
     attempts = {"memory": 0, "fresh": 0}
 
     def _discover(req, ctx):
@@ -593,16 +606,7 @@ def test_run_publisher_inventory_discovery_does_not_fallback_after_non_retryable
     )
 
     with pytest.raises(AppError) as err:
-        run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url="https://www.activate.com/insights",
-                reports_db="./state/reports.sqlite",
-                settings=_settings(),
-            ),
-            ctx=run_context,
-            dependencies=deps,
-        )
+        run_publisher_inventory_discovery(_request(settings), ctx=run_context, dependencies=deps)
 
     assert attempts["memory"] == 1
     assert attempts["fresh"] == 0
@@ -674,12 +678,7 @@ def test_run_publisher_inventory_discovery_applies_remaining_time_budget_to_step
         ],
     ):
         run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url="https://www.activate.com/insights",
-                reports_db="./state/reports.sqlite",
-                settings=settings,
-            ),
+            _request(settings),
             ctx=run_context,
             dependencies=deps,
         )
@@ -705,6 +704,7 @@ def test_run_publisher_inventory_discovery_applies_remaining_time_budget_to_step
 def test_run_publisher_inventory_discovery_records_failed_test_status(
     run_context,
 ):
+    settings = _settings()
     status_records = []
 
     deps = _dependencies(
@@ -722,12 +722,7 @@ def test_run_publisher_inventory_discovery_records_failed_test_status(
 
     with pytest.raises(AppError) as exc_info:
         run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url="https://www.activate.com/insights",
-                reports_db="./state/reports.sqlite",
-                settings=_settings(),
-            ),
+            _request(settings),
             ctx=run_context,
             dependencies=deps,
         )
@@ -765,12 +760,7 @@ def test_run_publisher_inventory_discovery_records_time_budget_failure_before_di
     ):
         with pytest.raises(AppError) as exc_info:
             run_publisher_inventory_discovery(
-                PublisherInventoryDiscoveryRequest(
-                    schema_version="1.0",
-                    insights_url="https://www.activate.com/insights",
-                    reports_db="./state/reports.sqlite",
-                    settings=settings,
-                ),
+                _request(settings),
                 ctx=run_context,
                 dependencies=deps,
             )
@@ -785,6 +775,7 @@ def test_run_publisher_inventory_discovery_records_time_budget_failure_before_di
 def test_run_publisher_inventory_discovery_does_not_retry_or_fallback_on_pagination_limit(
     run_context,
 ):
+    settings = _settings()
     attempts = {"memory": 0, "fresh": 0}
 
     def _discover(req, ctx):
@@ -807,16 +798,7 @@ def test_run_publisher_inventory_discovery_does_not_retry_or_fallback_on_paginat
     )
 
     with pytest.raises(AppError) as exc_info:
-        run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url="https://www.activate.com/insights",
-                reports_db="./state/reports.sqlite",
-                settings=_settings(),
-            ),
-            ctx=run_context,
-            dependencies=deps,
-        )
+        run_publisher_inventory_discovery(_request(settings), ctx=run_context, dependencies=deps)
 
     assert exc_info.value.code == "publisher_inventory_browser_pagination_limit"
     assert attempts == {"memory": 1, "fresh": 0}
@@ -826,6 +808,7 @@ def test_run_publisher_inventory_discovery_unchanged_rerun_skips_upload(
     run_context,
     idempotency_guard,
 ):
+    settings = _settings()
     uploads = []
     snapshot_payload = _snapshot_json("https://www.activate.com/reports/report-one")
     snapshot_sha256 = _snapshot_sha256(
@@ -912,12 +895,7 @@ def test_run_publisher_inventory_discovery_unchanged_rerun_skips_upload(
             ),
         )
         return run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url="https://www.activate.com/insights",
-                reports_db="./state/reports.sqlite",
-                settings=_settings(),
-            ),
+            _request(settings),
             ctx=run_context,
             dependencies=deps,
         )
@@ -1009,9 +987,185 @@ def test_run_publisher_inventory_discovery_reuses_idempotent_snapshot_and_source
     )
 
 
+def test_run_publisher_inventory_discovery_reuses_idempotent_auxiliary_writes(
+    tmp_path,
+    run_context,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    current_url = "https://www.activate.com/reports/new-report"
+    run_quality_calls: list[object] = []
+    recovery_cache_calls: list[object] = []
+    state_calls: list[object] = []
+    status_calls: list[object] = []
+
+    replace_publishers(
+        PublishersReplaceRequest(
+            schema_version="1.0",
+            db_path=reports_db,
+            source_page_url="https://www.notion.so/source",
+            publishers=[
+                PublisherProfileRecord(
+                    schema_version="1.0",
+                    notion_page_id="page-1",
+                    notion_page_url="https://www.notion.so/page-1",
+                    name="Activate Consulting",
+                    homepage="https://www.activate.com/",
+                    self_presentation="Activate description",
+                    insights_url="https://www.activate.com/insights",
+                    icon_source="https://cdn.example.com/activate.png",
+                )
+            ],
+        ),
+        run_context,
+    )
+
+    def _record_run_quality(req, ctx):
+        run_quality_calls.append(req)
+        return record_publisher_inventory_run_quality(req, ctx)
+
+    def _record_recovery_cache(req, ctx):
+        recovery_cache_calls.append(req)
+        return record_publisher_inventory_recovery_cache_record(req, ctx)
+
+    def _record_state(req, ctx):
+        state_calls.append(req)
+        return record_publisher_inventory_state(req, ctx)
+
+    def _record_status(req, ctx):
+        status_calls.append(req)
+        return record_publisher_inventory_test_status(req, ctx)
+
+    def _quality_with_recovery(req, ctx):
+        candidate = req.candidates[0]
+        rejected = PublisherInventoryQualifiedCandidateItem(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            title=candidate.title,
+            discovered_on_page_number=candidate.discovered_on_page_number,
+            source_page_url=candidate.source_page_url,
+        )
+        return PublisherInventoryCandidateQualityResponse(
+            schema_version="1.0",
+            approved_items=[],
+            rejected_items=[rejected],
+            decisions=[
+                PublisherInventoryCandidateQualityDecision(
+                    schema_version="1.0",
+                    canonical_url=candidate.canonical_url,
+                    accepted=False,
+                    reason="protected_document_probe_required",
+                    resolved_title=candidate.title,
+                    source_surface_class="report_detail",
+                    recovery_recipe=PublisherInventoryRecoveryRecipe(
+                        schema_version="1.0",
+                        verification_class="protected_document",
+                        source_surface_class="report_detail",
+                        recovery_action="protected_document_probe",
+                        reason="retry with deferred protected-document probe",
+                    ),
+                )
+            ],
+        )
+
+    settings = PublisherInventorySettings(
+        **{**_settings().__dict__, "reports_db": reports_db}
+    )
+    deps = _dependencies(
+        discover_publisher_inventory=lambda req, ctx: _service_response(
+            used_route_hint=False,
+            new_url=current_url,
+            title="Existing Report 1",
+        ),
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=False,
+            with_snapshot=False,
+            with_folder=True,
+            snapshot_sha256="",
+        ),
+        get_publisher_inventory_recovery_cache_record=lambda req, ctx: None,
+        qualify_publisher_inventory_candidates=_quality_with_recovery,
+        record_publisher_inventory_run_quality=_record_run_quality,
+        record_publisher_inventory_recovery_cache_record=_record_recovery_cache,
+        record_publisher_inventory_state=_record_state,
+        record_publisher_inventory_test_status=_record_status,
+        record_discovered_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("no qualified candidates should be recorded in this flow")
+        ),
+        upload_bytes=lambda req, ctx: DriveUploadBytesResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id="drive-file-aux",
+                name=req.file_name,
+                modified_time=None,
+                md5_checksum=None,
+                mime_type="application/json",
+            ),
+            size=len(req.content),
+            md5="abc123",
+        ),
+    )
+
+    first = run_publisher_inventory_discovery(
+        _request(settings),
+        ctx=run_context,
+        dependencies=deps,
+    )
+    second = run_publisher_inventory_discovery(
+        _request(settings),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert first.snapshot_changed is False
+    assert second.snapshot_changed is False
+    assert first.new_report_urls == []
+    assert second.new_report_urls == []
+    assert len(run_quality_calls) == 1
+    assert len(recovery_cache_calls) == 1
+    assert len(state_calls) == 1
+    assert len(status_calls) == 1
+
+    with sqlite3.connect(reports_db) as conn:
+        run_quality_history = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM publisher_inventory_route_history
+            WHERE normalized_url=?
+            """,
+            ("https://www.activate.com/insights",),
+        ).fetchone()
+        recovery_cache_rows = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM publisher_inventory_candidate_recovery_cache
+            WHERE normalized_url=?
+            """,
+            ("https://www.activate.com/insights",),
+        ).fetchone()
+        publisher_row = conn.execute(
+            """
+            SELECT discovery_test_status, inventory_snapshot_sha256
+            FROM publishers
+            WHERE normalized_insights_url=?
+            """,
+            ("https://www.activate.com/insights",),
+        ).fetchone()
+
+    assert int(run_quality_history[0] if run_quality_history else 0) == 1
+    assert int(recovery_cache_rows[0] if recovery_cache_rows else 0) == 1
+    assert publisher_row is not None
+    assert str(publisher_row[0] or "") == "passed:no_report_assets"
+    assert len(str(publisher_row[1] or "")) == 64
+
+
 def test_run_publisher_inventory_discovery_does_not_commit_raw_only_snapshot_drift(
+    tmp_path,
     run_context,
 ):
+    settings = PublisherInventorySettings(
+        **{**_settings().__dict__, "reports_db": str(tmp_path / "reports.sqlite")}
+    )
     uploads = []
     state_records = []
     snapshot_payload = _snapshot_json("https://www.activate.com/reports/report-one")
@@ -1067,12 +1221,7 @@ def test_run_publisher_inventory_discovery_does_not_commit_raw_only_snapshot_dri
     )
 
     result = run_publisher_inventory_discovery(
-        PublisherInventoryDiscoveryRequest(
-            schema_version="1.0",
-            insights_url="https://www.activate.com/insights",
-            reports_db="./state/reports.sqlite",
-            settings=_settings(),
-        ),
+        _request(settings),
         ctx=run_context,
         dependencies=deps,
     )
@@ -1090,6 +1239,7 @@ def test_run_publisher_inventory_discovery_requires_google_folder(
     run_context,
     assert_app_error,
 ):
+    settings = _settings()
     deps = _dependencies(
         get_publisher_inventory_state=lambda req, ctx: _publisher_state(
             with_route=False, with_snapshot=False, with_folder=False
@@ -1103,12 +1253,7 @@ def test_run_publisher_inventory_discovery_requires_google_folder(
     )
     with pytest.raises(AppError) as err:
         run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url="https://www.activate.com/insights",
-                reports_db="./state/reports.sqlite",
-                settings=_settings(),
-            ),
+            _request(settings),
             ctx=run_context,
             dependencies=deps,
         )
@@ -1120,6 +1265,7 @@ def test_run_publisher_inventory_discovery_requires_google_folder(
 def test_run_publisher_inventory_discovery_rejects_non_meaningful_candidates_before_recording(
     run_context,
 ):
+    settings = _settings()
     source_records = []
     uploads = []
     status_records = []
@@ -1168,12 +1314,7 @@ def test_run_publisher_inventory_discovery_rejects_non_meaningful_candidates_bef
     )
 
     result = run_publisher_inventory_discovery(
-        PublisherInventoryDiscoveryRequest(
-            schema_version="1.0",
-            insights_url="https://www.activate.com/insights",
-            reports_db="./state/reports.sqlite",
-            settings=_settings(),
-        ),
+        _request(settings),
         ctx=run_context,
         dependencies=deps,
     )
@@ -1186,8 +1327,12 @@ def test_run_publisher_inventory_discovery_rejects_non_meaningful_candidates_bef
 
 
 def test_run_publisher_inventory_discovery_quality_rejects_editorial_pages_before_recording(
+    tmp_path,
     run_context,
 ):
+    settings = PublisherInventorySettings(
+        **{**_settings().__dict__, "reports_db": str(tmp_path / "reports.sqlite")}
+    )
     source_records = []
     uploads = []
     status_records = []
@@ -1233,12 +1378,7 @@ def test_run_publisher_inventory_discovery_quality_rejects_editorial_pages_befor
     )
 
     result = run_publisher_inventory_discovery(
-        PublisherInventoryDiscoveryRequest(
-            schema_version="1.0",
-            insights_url="https://www.activate.com/insights",
-            reports_db="./state/reports.sqlite",
-            settings=_settings(),
-        ),
+        _request(settings),
         ctx=run_context,
         dependencies=deps,
     )
@@ -1254,6 +1394,7 @@ def test_run_publisher_inventory_discovery_rejects_material_shrinkage_without_ne
     run_context,
     assert_app_error,
 ):
+    settings = _settings()
     previous_urls = [
         f"https://www.activate.com/reports/report-{index}" for index in range(1, 11)
     ]
@@ -1347,12 +1488,7 @@ def test_run_publisher_inventory_discovery_rejects_material_shrinkage_without_ne
 
     with pytest.raises(AppError) as err:
         run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url="https://www.activate.com/insights",
-                reports_db="./state/reports.sqlite",
-                settings=_settings(),
-            ),
+            _request(settings),
             ctx=run_context,
             dependencies=deps,
         )
@@ -1373,6 +1509,7 @@ def test_run_publisher_inventory_discovery_screening_failure_does_not_commit_sna
     run_context,
     assert_app_error,
 ):
+    settings = _settings()
     uploads = []
     state_records = []
     deps = _dependencies(
@@ -1410,12 +1547,7 @@ def test_run_publisher_inventory_discovery_screening_failure_does_not_commit_sna
 
     with pytest.raises(AppError) as err:
         run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url="https://www.activate.com/insights",
-                reports_db="./state/reports.sqlite",
-                settings=_settings(),
-            ),
+            _request(settings),
             ctx=run_context,
             dependencies=deps,
         )
@@ -1433,6 +1565,7 @@ def test_run_publisher_inventory_discovery_fails_when_all_screened_candidates_ar
     run_context,
     assert_app_error,
 ):
+    settings = _settings()
     uploads = []
     state_records = []
     status_records = []
@@ -1493,12 +1626,7 @@ def test_run_publisher_inventory_discovery_fails_when_all_screened_candidates_ar
 
     with pytest.raises(AppError) as err:
         run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url="https://www.activate.com/insights",
-                reports_db="./state/reports.sqlite",
-                settings=_settings(),
-            ),
+            _request(settings),
             ctx=run_context,
             dependencies=deps,
         )
@@ -1516,8 +1644,12 @@ def test_run_publisher_inventory_discovery_fails_when_all_screened_candidates_ar
 
 
 def test_run_publisher_inventory_discovery_tolerates_unreachable_delta_when_previous_snapshot_exists(
+    tmp_path,
     run_context,
 ):
+    settings = PublisherInventorySettings(
+        **{**_settings().__dict__, "reports_db": str(tmp_path / "reports.sqlite")}
+    )
     previous_urls = ["https://www.activate.com/reports/existing-report"]
     snapshot_payload = _snapshot_json_for_urls(previous_urls)
     snapshot_sha256 = _snapshot_sha256_for_urls(previous_urls, run_context)
@@ -1633,12 +1765,7 @@ def test_run_publisher_inventory_discovery_tolerates_unreachable_delta_when_prev
     )
 
     result = run_publisher_inventory_discovery(
-        PublisherInventoryDiscoveryRequest(
-            schema_version="1.0",
-            insights_url="https://www.activate.com/insights",
-            reports_db="./state/reports.sqlite",
-            settings=_settings(),
-        ),
+        _request(settings),
         ctx=run_context,
         dependencies=deps,
     )

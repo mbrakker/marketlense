@@ -41,6 +41,7 @@ from src.services.report_store_service import (
     get_publisher_download_route,
     record_publisher_download_route,
 )
+from src.services.config_service import upsert_browser_download_identity_fields
 from src.utils.errors import AppError
 
 
@@ -1436,6 +1437,115 @@ def test_run_report_download_reuses_idempotent_source_record_and_drive_upload(
     assert len(second.drive_uploads) == 1
     assert second.drive_uploads[0].status == "uploaded"
     assert second.drive_uploads[0].drive_file.file_id == "drive-file-1"
+
+
+def test_run_report_download_reuses_idempotent_route_record_and_identity_update(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    Path(settings.identity_config_path).write_text(
+        "\n".join(
+            [
+                "schema_version: '1.0'",
+                "fields:",
+                "  - schema_version: '1.0'",
+                "    key: work_email",
+                "    label: Work email",
+                "    value: ops@example.com",
+                "    aliases:",
+                "      - email",
+                "delivery_emails: []",
+                "publisher_overrides: []",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    route_record_calls: list[object] = []
+    identity_update_calls: list[object] = []
+
+    def _record_route(req, ctx):
+        route_record_calls.append(req)
+        return record_publisher_download_route(req, ctx)
+
+    def _upsert_identity(req, ctx):
+        identity_update_calls.append(req)
+        return upsert_browser_download_identity_fields(req, ctx)
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: _result(
+            url="https://example.com/report",
+            used_route_hint=False,
+            path=None,
+        ),
+        get_publisher_download_route=get_publisher_download_route,
+        record_publisher_download_route=_record_route,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="unused-md5",
+        ),
+        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("email-required flow should not persist a report source")
+        ),
+        upsert_browser_download_identity_fields=_upsert_identity,
+        sleep_fn=lambda seconds: None,
+    )
+
+    first = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+    second = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert first.outcome == "email_required"
+    assert second.outcome == "email_required"
+    assert len(route_record_calls) == 1
+    assert len(identity_update_calls) == 1
+
+    with sqlite3.connect(settings.reports_db) as conn:
+        publisher_rows = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM publishers
+            WHERE normalized_insights_url=?
+              AND download_route_summary IS NOT NULL
+            """,
+            ("https://example.com/report",),
+        ).fetchone()
+        history_rows = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM publisher_download_route_history
+            WHERE normalized_url=?
+            """,
+            ("https://example.com/report",),
+        ).fetchone()
+
+    assert int(publisher_rows[0] if publisher_rows else 0) == 1
+    assert int(history_rows[0] if history_rows else 0) == 1
+
+    identity_yaml = Path(settings.identity_config_path).read_text(encoding="utf-8")
+    assert "key: name" in identity_yaml
+    assert "key: business" in identity_yaml
 
 
 def test_run_report_download_does_not_record_source_for_email_outcome(
