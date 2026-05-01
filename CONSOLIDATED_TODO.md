@@ -12,7 +12,7 @@ Deep-analysis evidence used for this consolidation:
 
 - Architecture import gate passes: `python scripts/ci/check_architecture_imports.py`.
 - Forbidden patching gate passes: `python scripts/ci/check_forbidden_patching.py`.
-- Long-file concentration remains high in `src/services/report_store_service.py`, `src/services/_pdf/visual_heuristics.py`, `src/services/_browser_report_download/artifact.py`, `src/services/config_service.py`, `src/ui/streamlit_pages.py`, `src/services/_browser_report_download/browser.py`, `src/services/publisher_inventory_service.py`, `src/generators/report_selection_generator.py`, and large paired tests.
+- Long-file concentration remains high in `src/services/report_store_service.py`, `src/services/_browser_report_download/artifact.py`, `src/services/config_service.py`, `src/ui/streamlit_pages.py`, `src/services/_browser_report_download/browser.py`, `src/services/publisher_inventory_service.py`, `src/generators/report_selection_generator.py`, and large paired tests.
 - Additional hotspots from the 2026-04-28 scan: `src/generators/report_generation_dependencies.py` imports 90 symbols, several model-call paths still mix `openai_service` and `llm_service`, and SQLite DDL/migrations remain embedded in service startup paths.
 - Prompt infrastructure now includes namespace-level dry-run contracts and loaders (`src/contracts/prompts.py`, `src/services/prompt_service.py`), so prompt workstream tasks should target CI enforcement and corpus quality thresholds instead of first-time scaffolding.
 - `docs/quality/initiative_ledger.yaml` tracks active initiatives (`ocr-confidence-gating`, `side-effect-idempotency`, `spend-guardrails`, `prompt-dry-run-validation`) and already-completed initiatives (`performance-cost-regression`, `repository-hygiene`); backlog priorities should align to that ledger.
@@ -120,19 +120,6 @@ Suggested priority order:
     - Dedupe algorithm is updated and benchmarked with large PDFs.
     - Correctness tests cover near-duplicate, overlapping, and distinct-table cases.
     - No regression in candidate quality on fixture reports.
-
-- **Title:** Refactor PDF visual/table heuristics around stable semantic sub-capabilities [Impact: 4/5, Effort: 4/5]
-  - Explanation: Long-file analysis shows very large PDF heuristic modules. Reduce complexity by converting the large file into a facade-plus-family layout: keep the current public entrypoint file (for example `src/services/_pdf/visual_heuristics.py`) as the discoverable facade only, and move real semantic families into a same-name internal subfolder (for example `src/services/_pdf/_visual_heuristics/geometry.py`, `panel_detection.py`, `legend_handling.py`, `table_grid.py`, `candidate_merge.py`). Extract only true semantic sub-capabilities and avoid pass-through helper layers.
-  - Pros: Simpler defect isolation, easier targeted tests, lower cognitive load.
-  - Cons: Refactor risk is high because heuristic behavior is fragile.
-  - Acceptance Criteria:
-    - The original heuristic module remains as the canonical facade, while family modules live under a dedicated same-name internal subfolder.
-    - Each extracted module has one semantic responsibility and no pass-through-only wrapper role.
-    - Public PDF service entrypoints remain canonical and unchanged for callers.
-    - Golden fixture outputs are unchanged except for explicitly approved improvements.
-    - Long-file report shows reduced concentration in PDF heuristic hotspots.
-
----
 
 ## 4. Browser Acquisition & Publisher Inventory
 
