@@ -326,17 +326,6 @@ Suggested priority order:
     - Session-state contracts remain explicit and tested.
     - UI tests cover navigation and representative page rendering.
 
-- **Title:** Split report-generation dependency bundle by semantic dependency families [Impact: 4/5, Effort: 4/5]
-  - Explanation: `src/generators/report_generation_dependencies.py` is called out in the hotspot scan for importing a very large symbol set and acting as a concentration point. Refactor it with the same facade-plus-family pattern: keep `src/generators/report_generation_dependencies.py` as the discoverable dependency facade only, and move stable dependency families into `src/generators/_report_generation_dependencies/` modules such as `analysis.py`, `render.py`, `validation.py`, `artifacts.py`, and `publishing.py`. The goal is to reduce import fan-in and make dependency ownership legible without creating competing entrypoints.
-  - Pros: Lower import concentration, easier reasoning about dependency ownership, smaller blast radius for report-pipeline changes.
-  - Cons: Refactor can become noisy if families are sliced too mechanically.
-  - Acceptance Criteria:
-    - `report_generation_dependencies.py` remains the only public dependency bundle facade for callers.
-    - Real dependency families move into a dedicated same-name internal subfolder.
-    - Family modules reflect stable capability groupings, not arbitrary symbol-count balancing.
-    - Import fan-in and long-file concentration are reduced in the hotspot report.
-    - Behavior and pipeline wiring tests prove no regression.
-
 ## Priority Launch Plan
 
 ### Phase 1: Highest-Leverage Foundations (2-4 weeks)
