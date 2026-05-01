@@ -19,6 +19,13 @@ from src.services.config_asset_service import read_config_asset, write_config_as
 from src.services.config_service import load_browser_download_settings
 from src.services.prompt_service import list_prompt_namespaces
 from src.ui import state as ui_state
+from src.ui._streamlit_pages.read_models import _invalidate_dashboard_read_models
+from src.ui._streamlit_pages.runtime import (
+    _try_load_publish_settings,
+    _try_load_settings,
+    _try_read_app_config,
+    _try_write_app_config,
+)
 from src.ui.common import (
     UI_SURFACE_EXCEPTIONS,
     _append_terminal,
@@ -30,16 +37,9 @@ from src.ui.common import (
 )
 
 
-def _legacy_pages():
-    from src.ui import streamlit_pages as pages
-
-    return pages
-
-
 def _refresh_runtime_state() -> None:
-    pages = _legacy_pages()
-    settings, settings_error = pages._try_load_settings()
-    publish_settings, publish_error = pages._try_load_publish_settings()
+    settings, settings_error = _try_load_settings()
+    publish_settings, publish_error = _try_load_publish_settings()
     st.session_state[ui_state.APP_SETTINGS_KEY] = settings
     st.session_state[ui_state.SETTINGS_ERROR_KEY] = settings_error
     st.session_state[ui_state.PUBLISH_SETTINGS_KEY] = publish_settings
@@ -405,10 +405,7 @@ def _render_asset_editor(
                 st.session_state[saved_key] = refreshed.content
             else:
                 st.session_state[saved_key] = editor_text
-            _legacy_pages()._invalidate_dashboard_read_models(
-                st.session_state,
-                reason="settings",
-            )
+            _invalidate_dashboard_read_models(st.session_state, reason="settings")
             _refresh_runtime_state()
             _append_terminal(
                 f"{spec['label']} saved ({write_response.bytes_written} bytes)"
@@ -429,9 +426,10 @@ def _render_asset_editor(
 def render_structured_config_form(
     config_payload: dict[str, Any], *, editor_key: str
 ) -> None:
-    _legacy_pages()._render_structured_config_form_legacy(
-        config_payload=config_payload,
-        editor_key=editor_key,
+    from src.ui.streamlit_pages import _render_structured_config_form_legacy
+
+    _render_structured_config_form_legacy(
+        config_payload=config_payload, editor_key=editor_key
     )
 
 
@@ -441,7 +439,6 @@ def render_settings_and_prompts(
     publish_error: str | None,
     settings_error: str | None = None,
 ) -> None:
-    pages = _legacy_pages()
     clicked, filters, main_col, detail_col = _page_shell(
         "Settings & Prompts",
         status_label="Config Error" if settings_error else "Config Studio",
@@ -458,7 +455,7 @@ def render_settings_and_prompts(
             "Full control of runtime YAML, operational assets, prompt files, and auth visibility through service-backed editors."
         )
 
-    config_doc, config_error = pages._try_read_app_config()
+    config_doc, config_error = _try_read_app_config()
     editor_key = "app_yaml_editor_text"
     saved_key = "app_yaml_saved_text"
     if config_doc and editor_key not in st.session_state:
@@ -757,7 +754,7 @@ def render_settings_and_prompts(
                         st.session_state[saved_key], editor_text, label="app.yaml"
                     )
                 if save_clicked:
-                    save_response, save_error = pages._try_write_app_config(
+                    save_response, save_error = _try_write_app_config(
                         editor_text,
                         make_backup=bool(make_backup),
                     )
@@ -766,15 +763,14 @@ def render_settings_and_prompts(
                     elif save_response is None:
                         st.error("Save failed: empty response from config service.")
                     else:
-                        refreshed_doc, refresh_error = pages._try_read_app_config()
+                        refreshed_doc, refresh_error = _try_read_app_config()
                         if refreshed_doc and not refresh_error:
                             st.session_state[editor_key] = refreshed_doc.content
                             st.session_state[saved_key] = refreshed_doc.content
                         else:
                             st.session_state[saved_key] = editor_text
-                        pages._invalidate_dashboard_read_models(
-                            st.session_state,
-                            reason="settings",
+                        _invalidate_dashboard_read_models(
+                            st.session_state, reason="settings"
                         )
                         _refresh_runtime_state()
                         _append_terminal(

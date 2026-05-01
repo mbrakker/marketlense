@@ -1302,6 +1302,8 @@ The entrypoint is thin and the UI is now split into grouped multi-page surfaces 
 
 - `src/streamlit_app.py`: entrypoint only, grouped `st.navigation(...)`, runtime state bootstrap, theme load.
 - `src/ui/app_pages/`: bounded page modules for overview, core operations, publisher operations, QA, observability, and configuration.
+- `src/ui/streamlit_pages.py`: compatibility facade plus the shared structured `app.yaml` form helper retained for legacy imports.
+- `src/ui/_streamlit_pages/`: shared Streamlit runtime/read-model helpers used across page families without reintroducing one page-owner monolith.
 - `src/ui/settings_page.py`: config studio for `app.yaml`, operational YAML/JSON assets, prompt files, and auth/source status.
 - `src/ui/run_control.py`: Streamlit-facing helpers for launching, polling, listing, canceling, and retrying persisted UI runs.
 - `src/orchestrators/ui_run_control_orchestrator.py`: background run orchestration over local worker processes plus registry persistence.

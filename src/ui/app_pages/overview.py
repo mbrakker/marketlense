@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any
 
 import streamlit as st
 
-from src.ui import streamlit_pages as legacy
 from src.ui import state as ui_state
+from src.ui._streamlit_pages.read_models import (
+    _as_utc,
+    _discover_log_files,
+    _invalidate_dashboard_read_models,
+    _load_log_events,
+    _load_ops_dashboard_snapshot,
+)
 from src.ui.common import _page_shell, _render_empty_state, _tip
 from src.ui.run_control import (
     cancel_selected_run,
@@ -193,7 +200,7 @@ def build_report_rows(
                 "title": str(row.get("title") or ""),
                 "publisher": str(row.get("publisher") or ""),
                 "analysis_mode": str(row.get("analysis_mode") or ""),
-                "updated_at_utc": legacy._as_utc(row.get("updated_at")),
+                "updated_at_utc": _as_utc(row.get("updated_at")),
                 "html_path": str(row.get("html_path") or ""),
             }
         )
@@ -210,7 +217,7 @@ def build_log_event_rows(
         )
         rows.append(
             {
-                "ts_utc": legacy._as_utc(event.get("ts_utc") or event.get("timestamp")),
+                "ts_utc": _as_utc(event.get("ts_utc") or event.get("timestamp")),
                 "level": str(event.get("level") or ""),
                 "event": str(event.get("event") or event.get("module") or ""),
                 "message": message[:140],
@@ -289,15 +296,15 @@ def render_cockpit_overview() -> None:
         st.error(ui_state.get_settings_error() or "App settings unavailable.")
         return
 
-    snapshot = legacy._load_ops_dashboard_snapshot(settings)
+    snapshot = _load_ops_dashboard_snapshot(settings)
     reports = snapshot.reports
     processed = snapshot.processed
     published = snapshot.published
-    lock = legacy.asdict(snapshot.lock)
-    health = [legacy.asdict(item) for item in snapshot.storage_health]
-    logs = legacy._discover_log_files()
+    lock = asdict(snapshot.lock)
+    health = [asdict(item) for item in snapshot.storage_health]
+    logs = _discover_log_files()
     recent_paths = [row["path"] for row in logs[:2]]
-    events = legacy._load_log_events(recent_paths)
+    events = _load_log_events(recent_paths)
     active_runs = list_recent_runs(
         settings, statuses=["queued", "running"], limit=20
     ).records
@@ -322,7 +329,7 @@ def render_cockpit_overview() -> None:
         primary_key="overview_refresh",
     )
     if clicked:
-        legacy._invalidate_dashboard_read_models(st.session_state, reason="refresh_all")
+        _invalidate_dashboard_read_models(st.session_state, reason="refresh_all")
         st.rerun()
 
     with filters:

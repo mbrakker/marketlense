@@ -316,16 +316,6 @@ Suggested priority order:
     - Long-file report shows reduced concentration in the remaining named hotspots.
     - Golden and behavior tests prove parity or explicitly approved improvements.
 
-- **Title:** Decompose Streamlit UI pages by workflow without nested card/layout drift [Impact: 3/5, Effort: 4/5]
-  - Explanation: `src/ui/streamlit_pages.py` is a long UI coordination file. Split it with a facade-plus-family layout: keep `src/ui/streamlit_pages.py` as navigation/composition only, and move workflow families into a same-name internal subfolder and/or the existing capability-owned page modules where that reduces coupling and improves scanability. The intended outcome is one top-level navigation facade with family-level page modules, not another long peer file.
-  - Pros: Easier UI maintenance and clearer page ownership.
-  - Cons: Streamlit session-state behavior can regress during moves.
-  - Acceptance Criteria:
-    - `streamlit_pages.py` becomes navigation/composition-only facade code.
-    - Workflow views live in family modules under a same-name split layout and/or existing capability-owned page modules.
-    - Session-state contracts remain explicit and tested.
-    - UI tests cover navigation and representative page rendering.
-
 ## Priority Launch Plan
 
 ### Phase 1: Highest-Leverage Foundations (2-4 weeks)
@@ -354,6 +344,5 @@ Suggested priority order:
 ### Phase 4: Simplicity and Maintainability (ongoing)
 
 - Long-file hotspot splits by real capability boundary using facade file + same-name internal family subfolder layout.
-- Streamlit workflow page decomposition using navigation facade + family modules.
 - Contract module family split using public module facade + same-name internal family subfolder layout.
 - Report-generation dependency-bundle split using public facade + semantic dependency-family modules.
