@@ -204,17 +204,6 @@ Suggested priority order:
     - Breaking changes require explicit version bump evidence.
     - Serialized fixture snapshots cover representative stored artifacts.
 
-- **Title:** Split oversized contract modules by semantic contract families [Impact: 4/5, Effort: 4/5]
-  - Explanation: Contract files such as `publisher_inventory.py`, `browser_download.py`, and `report_store.py` are over 1k lines and mix many request/response families. Split them with a facade-plus-family layout: keep the current top-level module as the public compatibility facade, and move family dataclasses into a same-name internal subfolder (for example `src/contracts/publisher_inventory.py` plus `src/contracts/_publisher_inventory/discovery.py`, `candidate_trace.py`, `screening.py`). Split only by stable semantic families while keeping dataclasses as the single source of truth and preserving public import compatibility where needed.
-  - Pros: Easier contract review, smaller schema-diff blast radius, clearer ownership.
-  - Cons: Import migration can be noisy if compatibility shims are not handled carefully.
-  - Acceptance Criteria:
-    - Each oversized contract file remains as the public import facade, with semantic families moved into a dedicated same-name internal subfolder.
-    - Oversized contract modules are split by semantic families, not arbitrary file size.
-    - Public compatibility imports remain during migration with documented removal dates.
-    - Contract round-trip and schema snapshot tests cover every moved dataclass.
-    - No generator/service logic is introduced into contract modules.
-
 - **Title:** Add ensemble validation with schema, deterministic rules, and LLM verifier [Impact: 5/5, Effort: 4/5]
   - Explanation: Combine orthogonal validators to catch failure modes that one validator misses. Aggregate conflicts into a typed validation report instead of hiding disagreement.
   - Pros: Higher robustness and better defect detection.

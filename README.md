@@ -105,6 +105,7 @@ src/
 ### Roles
 
 - **Contracts**: Define schema and shape of inputs/outputs at service boundaries. No logic.
+- **Contract family facades**: Large contract surfaces keep one public module boundary, while semantic dataclass families can live under same-name internal subfolders. Current examples include `src/contracts/publisher_inventory.py` with `src/contracts/_publisher_inventory/*`, `src/contracts/browser_download.py` with `src/contracts/_browser_download/*`, and `src/contracts/report_store.py` with `src/contracts/_report_store/*`.
 - **Services**: Only I/O. Talk to external APIs, filesystem, databases, or system resources. No business logic.
 - **Schema validation**: JSON schema loading/validation is treated as I/O and lives in `src/services/schema_validator_service.py`.
 - **Generators**: Compose services and enforce domain rules (e.g., which charts are selected, how outputs are structured).

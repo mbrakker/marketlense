@@ -14,8 +14,8 @@ import src.contracts as contracts_pkg
 
 
 def _contract_dataclasses() -> list[type]:
-    discovered: list[type] = []
-    for module_info in pkgutil.iter_modules(
+    discovered: dict[str, type] = {}
+    for module_info in pkgutil.walk_packages(
         contracts_pkg.__path__, f"{contracts_pkg.__name__}."
     ):
         module = importlib.import_module(module_info.name)
@@ -25,9 +25,10 @@ def _contract_dataclasses() -> list[type]:
                 and is_dataclass(candidate)
                 and candidate.__module__ == module.__name__
             ):
-                discovered.append(candidate)
-    discovered.sort(key=lambda item: f"{item.__module__}.{item.__name__}")
-    return discovered
+                discovered[f"{candidate.__module__}.{candidate.__name__}"] = candidate
+    ordered = list(discovered.values())
+    ordered.sort(key=lambda item: f"{item.__module__}.{item.__name__}")
+    return ordered
 
 
 def _build_value(annotation: Any, field_name: str, stack: tuple[type, ...]) -> Any:
