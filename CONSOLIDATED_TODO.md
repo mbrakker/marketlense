@@ -304,16 +304,16 @@ Suggested priority order:
 
 ## 9. Architecture Simplification & Code Reduction
 
-- **Title:** Split long-file hotspots only along real capability boundaries [Impact: 5/5, Effort: 5/5]
-  - Explanation: Long-file analysis identifies concentration in report store, PDF heuristics, browser-download artifact handling, config service, Streamlit pages, publisher inventory, and report selection. Refactor these hotspots with a consistent facade-plus-family pattern: keep the original discoverable module file as the public boundary, and move semantic families into a same-name internal subfolder. Example targets include `src/services/report_store_service.py` plus `src/services/_report_store_service/*`, `src/services/publisher_inventory_service.py` plus `src/services/_publisher_inventory_service/*`, and `src/generators/report_selection_generator.py` plus `src/generators/_report_selection_generator/*`. Refactor only where module boundaries reduce real coupling, improve test isolation, or clarify ownership; do not create pass-through layers.
+- **Title:** Split remaining service long-file hotspots only along real capability boundaries [Impact: 5/5, Effort: 5/5]
+  - Explanation: The report-selection hotspot now uses a facade-plus-family layout (`src/generators/report_selection_generator.py` plus `src/generators/_report_selection_generator/*`). Remaining concentration still sits in report store, config service, browser-download artifact handling, PDF heuristics, and publisher inventory internals. Continue the same pattern only where a semantic family boundary is real: keep one canonical facade file per boundary, move coherent families into a same-name internal subfolder, and avoid pass-through wrapper layers.
   - Pros: Higher simplicity, lower cognitive load, better defect containment.
   - Cons: Large refactors can add fragmentation if boundaries are artificial.
   - Acceptance Criteria:
-    - Each hotspot keeps one canonical facade file, with real semantic families moved into a dedicated same-name internal subfolder.
+    - Remaining hotspots keep one canonical facade file, with real semantic families moved into a dedicated same-name internal subfolder.
     - Each split has a documented semantic responsibility and concrete reason.
     - Canonical service/generator/orchestrator entrypoints remain discoverable.
     - No new pass-through wrapper modules are introduced.
-    - Long-file report shows reduced concentration in the named hotspots.
+    - Long-file report shows reduced concentration in the remaining named hotspots.
     - Golden and behavior tests prove parity or explicitly approved improvements.
 
 - **Title:** Decompose Streamlit UI pages by workflow without nested card/layout drift [Impact: 3/5, Effort: 4/5]

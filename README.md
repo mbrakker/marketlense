@@ -608,7 +608,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - `src/orchestrators/report_generation_orchestrator.py` is the per-report control plane and sequences source, selection, analysis, and render phases:
      - `src/contracts/report_generation.py`: typed handoff contracts (`ReportRuntimeState`, `ReportSourceState`, `ReportSelectionState`, `ReportAnalysisState`).
      - `src/generators/report_source_generator.py`: PDF context bootstrap, md5-backed PDF info/contents/text caches, density/extractability checks, and base payload seeding.
-     - `src/generators/report_selection_generator.py`: figure extraction, candidate prefilter/ranking, crop refinement, strict crops, and figure-gallery fallback selection.
+     - `src/generators/report_selection_generator.py`: canonical selection-phase facade; semantic families now live under `src/generators/_report_selection_generator/` for ranking, crop refinement, and figure-gallery fallback selection while the public entrypoint stays discoverable.
      - `src/orchestrators/report_analysis_orchestrator.py`: vector-store lifecycle coordination, taxonomy/category resolution, evidence packs, artifacts, validation, validation-regeneration looping, and analysis snapshot persistence.
      - `src/generators/report_render_generator.py`: preview rendering, metadata DB readback, HTML cache/render, cover generation, and final `IngestOutcome` assembly.
      - Optional within-file parallelism still uses `ingest.report_worker_limit` to overlap PDF info/contents/text extraction, figure vs candidate extraction, and taxonomy vs evidence generation when enabled (default `2`).
