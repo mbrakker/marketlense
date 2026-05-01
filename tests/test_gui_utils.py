@@ -51,6 +51,13 @@ def test_parse_structured_log_line_with_payload() -> None:
     assert parsed["timestamp_utc"].startswith("2026-02-09T12:01:02")
 
 
+def test_parse_structured_log_line_preserves_payload_timestamp() -> None:
+    line = '12:01:02 | INFO | market_lense.test | {"run_id":"r1","task_id":"t1","span_id":"s1","timestamp_utc":"2026-02-09T12:01:02+00:00","event":"ingest_start","role":"orchestrator","module":"m","fields":{}}'
+    parsed = parse_structured_log_line(line, log_date="2026-02-10")
+    assert parsed is not None
+    assert parsed["timestamp_utc"] == "2026-02-09T12:01:02+00:00"
+
+
 def test_filter_log_events_by_dimensions() -> None:
     rows = [
         {

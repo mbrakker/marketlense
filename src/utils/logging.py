@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime, timezone
 from typing import Any, Dict
 from uuid import uuid4
 
@@ -23,11 +24,17 @@ def new_run_context(
     task_id: TaskId | str | None = None,
     span_id: str | None = None,
 ) -> RunContext:
+    resolved_task_id = _coerce_task_id(task_id)
+    resolved_span_id = span_id or str(uuid4())
     return RunContext(
-        schema_version="1.0",
+        schema_version="1.1",
         run_id=RunId(str(uuid4())),
-        task_id=_coerce_task_id(task_id),
-        span_id=span_id or str(uuid4()),
+        task_id=resolved_task_id,
+        span_id=resolved_span_id,
+        trace_id=str(uuid4()),
+        parent_span_id="",
+        span_name=str(resolved_task_id),
+        span_depth=0,
     )
 
 
@@ -36,11 +43,16 @@ def child_context(
     *,
     task_id: TaskId | str | None = None,
 ) -> RunContext:
+    resolved_task_id = _coerce_task_id(task_id) if task_id is not None else parent.task_id
     return RunContext(
         schema_version=parent.schema_version,
         run_id=parent.run_id,
-        task_id=_coerce_task_id(task_id) if task_id is not None else parent.task_id,
+        task_id=resolved_task_id,
         span_id=str(uuid4()),
+        trace_id=str(parent.trace_id or parent.run_id),
+        parent_span_id=str(parent.span_id or ""),
+        span_name=str(resolved_task_id),
+        span_depth=max(0, int(getattr(parent, "span_depth", 0))) + 1,
     )
 
 
@@ -106,10 +118,17 @@ def log_event(
     module: str,
     fields: Dict[str, Any] | None = None,
 ) -> str:
+    trace_id = str(getattr(ctx, "trace_id", "") or ctx.run_id)
+    span_name = str(getattr(ctx, "span_name", "") or ctx.task_id)
     payload = {
         "run_id": ctx.run_id,
         "task_id": ctx.task_id,
         "span_id": ctx.span_id,
+        "trace_id": trace_id,
+        "parent_span_id": str(getattr(ctx, "parent_span_id", "") or ""),
+        "span_name": span_name,
+        "span_depth": int(getattr(ctx, "span_depth", 0) or 0),
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "module": module,
         "role": role,
         "event": event,
@@ -122,6 +141,11 @@ def log_event(
             "run_id": ctx.run_id,
             "task_id": ctx.task_id,
             "span_id": ctx.span_id,
+            "trace_id": trace_id,
+            "parent_span_id": str(getattr(ctx, "parent_span_id", "") or ""),
+            "span_name": span_name,
+            "span_depth": int(getattr(ctx, "span_depth", 0) or 0),
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
             "module": module,
             "role": role,
             "event": event,
@@ -154,9 +178,10 @@ def validate_log_event_payload(
         sorted(field for field in REQUIRED_LOG_EVENT_FIELDS if field not in data)
     )
     invalid: list[str] = []
+    empty_allowed = {"parent_span_id"}
     for field in REQUIRED_LOG_EVENT_FIELDS:
         value = data.get(field)
-        if field in data and not str(value or "").strip():
+        if field in data and field not in empty_allowed and not str(value).strip():
             invalid.append(field)
     role = str(data.get("role") or "").strip()
     if role and role not in LOG_EVENT_ROLES:

@@ -14,7 +14,7 @@ Key traits:
 - Service isolation for all external systems and file I/O.
 - Generator logic that composes services into domain outputs.
 - Orchestrator that controls sequencing, retries, and state (including publishing).
-- Structured logging with run/task/span identifiers.
+- Structured logging with run/task/span identifiers plus end-to-end trace IDs and nested span metadata.
 - Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
 - Validation-driven targeted regeneration: after a failed validation pass, the analysis orchestrator can regenerate only the mapped failing artifact families, re-run validation, and keep the latest canonical `validation.json` for downstream render/publish policy.
 - Confidence-scored family outputs: every evidence pack now persists a typed `family_status` record with `status`, `confidence_score`, `policy_action`, and `reason`, and generated artifact families do the same at the top level of `artifacts.json`. Low-confidence summary/insights/quotes families abstain into explicit validation regeneration targets instead of shipping weak output, while soft editorial families such as `expert_comment` and `linkedin_post` can abstain with warning-level omission notices that render transparently in the HTML digest.
@@ -735,7 +735,7 @@ This section keeps implementation-heavy extraction and crop heuristics out of th
 
 ## Logging and Observability
 
-Structured logs are emitted by all services and orchestrators using `src/utils/logging.py`.
+Structured logs are emitted by all services, generators, and orchestrators using `src/utils/logging.py`.
 Redaction covers API keys, bearer tokens, and common PII patterns before log emission.
 
 CLI-provided run contexts flow into the ingest orchestrator so CLI run/task IDs stay consistent across downstream orchestrator/service logs.
@@ -745,9 +745,23 @@ Every log event includes:
 - `run_id`: pipeline run identifier
 - `task_id`: per-file identifier
 - `span_id`: per-operation span identifier
+- `trace_id`: end-to-end trace identifier shared by nested spans in one run
+- `parent_span_id`: parent operation span for tree reconstruction
+- `span_name`: human-readable trace span name
+- `span_depth`: zero-based nesting depth
+- `timestamp_utc`: event timestamp used for trace timing
 - `module`: logger name
 - `role`: service / generator / orchestrator
 - `event`: logical event name
+
+`RunContext` remains backwards-compatible for older call sites, but `new_run_context(...)` now creates a root trace and `child_context(...)` preserves that trace while linking each child span to its parent. Operators can inspect one run as a tree without stitching raw logs manually:
+
+```bash
+python -m src.cli trace-run --run-id <run_id> --log-path logs/market_lense_YYYY-MM-DD.log
+python -m src.cli trace-run --trace-id <trace_id> --json
+```
+
+The trace inspector uses `src/generators/trace_generator.py` to group structured log events into span summaries with event counts, parent/child edges, and observed duration in milliseconds.
 
 UI-run worker orchestration also records replay metadata beside the registry DB:
 

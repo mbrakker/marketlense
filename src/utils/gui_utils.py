@@ -68,7 +68,7 @@ def parse_structured_log_line(
     event["level"] = str(match.group("level") or "").strip()
     event["logger_name"] = str(match.group("logger") or "").strip()
     event["timestamp_hms"] = str(match.group("time") or "").strip()
-    if timestamp_utc:
+    if timestamp_utc and not event.get("timestamp_utc"):
         event["timestamp_utc"] = timestamp_utc
     return event
 

@@ -221,15 +221,6 @@ Suggested priority order:
     - Missing per-service integration coverage requires either a marked test or an explicit temporary waiver.
     - README documents how to add and retire waivers.
 
-- **Title:** Add end-to-end tracing above current `run_id` / `task_id` / `span_id` logging [Impact: 4/5, Effort: 3/5]
-  - Explanation: Structured logs are already strong, but there is still no true cross-boundary trace model for critical-path timing, dependency edges, or flame-graph style analysis.
-  - Pros: Faster bottleneck localization and better incident debugging.
-  - Cons: Telemetry overhead and storage planning.
-  - Acceptance Criteria:
-    - Trace IDs and nested spans correlate with existing structured logs.
-    - Major orchestrator, generator, and service boundaries emit consistent tracing metadata.
-    - Operators can inspect one report or publisher run as a trace rather than stitching logs manually.
-
 ---
 
 ## Priority Launch Plan

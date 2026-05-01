@@ -13,3 +13,23 @@ class RunContext(SemanticIdContract):
         metadata={"doc": "Task identifier for grouping related events."}
     )
     span_id: str = field(metadata={"doc": "Span identifier for a specific operation."})
+    trace_id: str = field(
+        default="",
+        metadata={
+            "doc": "End-to-end trace identifier shared by all spans in one run."
+        },
+    )
+    parent_span_id: str = field(
+        default="",
+        metadata={
+            "doc": "Parent span identifier; empty only for the trace root span."
+        },
+    )
+    span_name: str = field(
+        default="",
+        metadata={"doc": "Human-readable operation name for trace inspection."},
+    )
+    span_depth: int = field(
+        default=0,
+        metadata={"doc": "Zero-based nested depth of this span in the trace tree."},
+    )

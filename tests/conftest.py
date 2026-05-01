@@ -169,7 +169,19 @@ def publish_settings_factory(app_paths: dict[str, str]):
 
 @pytest.fixture
 def assert_logs_have_required_fields():
-    required = {"run_id", "task_id", "span_id", "role", "module", "event"}
+    required = {
+        "run_id",
+        "task_id",
+        "span_id",
+        "trace_id",
+        "parent_span_id",
+        "span_name",
+        "span_depth",
+        "timestamp_utc",
+        "role",
+        "module",
+        "event",
+    }
 
     def _assert(records: Iterable[Any]) -> None:
         for idx, record in enumerate(records):

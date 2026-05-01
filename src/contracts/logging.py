@@ -3,9 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-LOG_EVENT_SCHEMA_VERSION = "1.0"
+LOG_EVENT_SCHEMA_VERSION = "1.1"
 REQUIRED_LOG_EVENT_FIELDS = frozenset(
-    {"run_id", "task_id", "span_id", "module", "role", "event"}
+    {
+        "run_id",
+        "task_id",
+        "span_id",
+        "trace_id",
+        "parent_span_id",
+        "span_name",
+        "span_depth",
+        "timestamp_utc",
+        "module",
+        "role",
+        "event",
+    }
 )
 LOG_EVENT_ROLES = frozenset({"service", "generator", "orchestrator", "utility", "ui"})
 
