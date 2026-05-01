@@ -246,17 +246,6 @@ Suggested priority order:
     - Required structured log fields are asserted for each orchestrator and service.
     - Contract round-trip tests cover every added/modified dataclass contract.
 
-- **Title:** Decompose mega-tests into behavior suites with shared fixture builders [Impact: 4/5, Effort: 4/5]
-  - Explanation: Tests such as `test_browser_report_download_service.py`, `test_pdf_figures_service.py`, and `test_publisher_inventory_service.py` are thousands of lines long. Split them with a suite-family layout: keep the original top-level test module as a thin suite index or compatibility wrapper only when needed, and move behavior families into a same-name test subfolder (for example `tests/test_browser_report_download_service/route_memory.py`, `terminal_state.py`, `artifact_validation.py`) plus shared builders local to that folder. Assertions must stay semantic rather than broad mock narratives.
-  - Pros: Faster review, easier targeted test runs, clearer failure localization.
-  - Cons: Refactor can accidentally weaken tests if assertions are not preserved.
-  - Acceptance Criteria:
-    - Each mega-test is decomposed into a dedicated same-name test subfolder with behavior-family files and shared fixture builders.
-    - Mega-tests are split by behavior family with stable fixture builders.
-    - Each split file keeps positive, negative, log-field, and remove-the-logic sentinel coverage where applicable.
-    - No new private-helper monkeypatching or tautological assertions are introduced.
-    - Test runtime and failure localization metrics improve or remain neutral.
-
 - **Title:** Add end-to-end tracing across orchestrator, generator, and service boundaries [Impact: 4/5, Effort: 3/5]
   - Explanation: Add trace spans for major pipeline boundaries and correlate them with run/task/span IDs to make critical-path timing and dependencies visible.
   - Pros: Faster bottleneck localization and stronger observability.

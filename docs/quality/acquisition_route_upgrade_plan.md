@@ -430,7 +430,7 @@ Recommended minimum additions:
 
 Primary test files to expand:
 
-- `tests/test_browser_report_download_service.py`
+- `tests/test_browser_report_download_service/`
 - `tests/test_report_download_orchestrator.py`
 - `tests/test_acquisition_audit_orchestrator.py`
 - publisher inventory tests covering candidate filtering

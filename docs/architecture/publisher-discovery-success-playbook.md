@@ -68,7 +68,7 @@ The implementation plan is now fully landed in code and fixated by the mandatory
 
 Automated verification passed after the implementation update:
 
-- `pytest tests/test_publisher_inventory_candidate_screening_generator.py tests/test_report_store_service.py tests/test_publisher_inventory_service.py tests/test_publisher_inventory_candidate_quality_generator.py tests/test_publisher_inventory_decomposition.py tests/test_publisher_inventory_orchestrator.py tests/test_config_service.py tests/test_cli.py -q`
+- `pytest tests/test_publisher_inventory_candidate_screening_generator.py tests/test_report_store_service.py tests/test_publisher_inventory_service tests/test_publisher_inventory_candidate_quality_generator.py tests/test_publisher_inventory_decomposition.py tests/test_publisher_inventory_orchestrator.py tests/test_config_service.py tests/test_cli.py -q`
 - result: `247 passed`
 
 The mandatory live gate passed on 2026-04-09.

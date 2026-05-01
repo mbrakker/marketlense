@@ -884,6 +884,7 @@ Test suites live under `tests/` (unit + contract + integration marker support):
 - `test_io_boundaries.py`: AST boundary gate that fails on direct filesystem/network I/O usage in `src/generators/*` and `src/utils/*`
 - `test_render_service_artifacts.py`: HTML sections for artifact rendering
 - `contracts/test_contract_roundtrip.py`: dataclass serialization/deserialization round-trip gate for `src/contracts/*`
+- Large behavior suites now live in same-name test packages with local shared builders, for example `tests/test_browser_report_download_service/*`, `tests/test_pdf_figures_service/*`, and `tests/test_publisher_inventory_service/*`. Their package `__init__.py` files re-export local builders to preserve existing helper imports used by adjacent tests.
 
 Install dev/test tooling:
 
