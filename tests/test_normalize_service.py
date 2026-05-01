@@ -106,6 +106,81 @@ class TestNormalizeService(unittest.TestCase):
         self.assertEqual(2, normalized._figure_assets[0].page)
         self.assertEqual("Generated", normalized._figure_assets[0].display_caption)
 
+    def test_normalize_backfills_enabled_figure_contract_from_primary_asset(
+        self,
+    ) -> None:
+        asset = ReportFigureAsset(
+            image_path="report/slices/primary.png",
+            page=2,
+            candidate_id="chart-1",
+            kind="chart",
+            is_primary=True,
+            detected_caption="Detected caption",
+            preview_text="Preview evidence",
+            display_caption="Display caption",
+            caption_source="detected",
+        )
+        payload = ReportPayload(
+            tldr="tldr",
+            title="Market Outlook",
+            insights=["a", "b", "c", "d", "e"],
+            quote=Quote(text="q", author="a"),
+            figure=Figure(title="", evidence=""),
+            commentary="c",
+            source="s",
+            _figure_assets=[asset],
+            _figure_section_enabled=True,
+        )
+        ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+        normalized = normalize_report(payload, ctx)
+
+        self.assertEqual("Display caption", normalized.figure.title)
+        self.assertEqual("Preview evidence", normalized.figure.evidence)
+
+    def test_normalize_backfills_enabled_figure_contract_from_top_image(
+        self,
+    ) -> None:
+        payload = ReportPayload(
+            tldr="tldr",
+            title="Market Outlook",
+            insights=["a", "b", "c", "d", "e"],
+            quote=Quote(text="q", author="a"),
+            figure=Figure(title="", evidence=""),
+            commentary="c",
+            source="s",
+            _figure_top="assets/primary.png",
+            _figure_section_enabled=True,
+        )
+        ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+        normalized = normalize_report(payload, ctx)
+
+        self.assertEqual("Figure from Market Outlook", normalized.figure.title)
+        self.assertEqual(
+            "Visual asset primary.png extracted from the Market Outlook.",
+            normalized.figure.evidence,
+        )
+
+    def test_normalize_does_not_backfill_disabled_figure_contract(self) -> None:
+        payload = ReportPayload(
+            tldr="tldr",
+            title="Market Outlook",
+            insights=["a", "b", "c", "d", "e"],
+            quote=Quote(text="q", author="a"),
+            figure=Figure(title="", evidence=""),
+            commentary="c",
+            source="s",
+            _figure_top="assets/primary.png",
+            _figure_section_enabled=False,
+        )
+        ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+        normalized = normalize_report(payload, ctx)
+
+        self.assertEqual("", normalized.figure.title)
+        self.assertEqual("", normalized.figure.evidence)
+
     def test_normalize_preserves_internal_analysis_metadata(self) -> None:
         payload = ReportPayload(
             tldr="tldr",

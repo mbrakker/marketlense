@@ -19,8 +19,8 @@ Deep-analysis evidence used for this consolidation:
 - Candidate extraction already performs binary page triage and shared page-artifact/fingerprint caching through `src/services/_pdf/figures.py`, `src/services/_pdf/page_artifacts.py`, and `src/services/_pdf/fingerprint_cache.py`.
 - `src/services/llm_service.py` still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"`, which is the strongest current signal that dynamic routing, provider failover, and spend-aware policy are still missing.
 - `src/services/vector_store_service.py` supports create/upload/attach/status/update, but delete/prune lifecycle operations are still absent.
-- Long-file concentration shifted after April refactors. Current first-party hotspots from `python scripts/count_long_files.py` are `src/services/_browser_report_download/artifact.py`, `src/services/_browser_report_download/browser.py`, `src/services/_pdf/table_heuristics.py`, `src/services/config_service.py`, `src/generators/artifact_generator.py`, `src/services/publisher_inventory_service.py`, `src/services/openai_service.py`, `src/orchestrators/report_download_orchestrator.py`, `src/services/_pdf/crop.py`, and large paired tests.
-- Recent facade splits establish the required shape for the remaining hotspot work: keep one public boundary file and move semantic families into a same-name internal folder. Current reference examples are `src/services/report_store_service.py` over `src/services/_report_store_service/*` and `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`.
+- Long-file concentration shifted after April refactors and the May facade work. Remaining first-party hotspots from `python scripts/count_long_files.py` are concentrated in deeper PDF/browser internals, publisher-discovery workflow internals, and large paired tests rather than the public `config_service`, `openai_service`, `artifact_generator`, `publisher_inventory_service`, and `report_download_orchestrator` boundaries.
+- Recent facade splits establish the required shape for future hotspot work: keep one public boundary file and move semantic families into a same-name internal folder. Current reference examples are `src/services/report_store_service.py` over `src/services/_report_store_service/*`, `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`, `src/services/config_service.py` over `src/services/_config_service/*`, `src/services/openai_service.py` over `src/services/_openai_service/*`, and `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
 
 Removed from the active backlog because the core capability already ships:
 
@@ -211,20 +211,6 @@ Suggested priority order:
 
 ## 7. Architecture Simplification, CI & Observability
 
-- **Title:** Split current first-party long-file hotspots into facade plus semantic-family folders without breaking canonical boundaries [Impact: 5/5, Effort: 4/5]
-  - Explanation: April facade refactors already removed some earlier hotspots, but the remaining first-party heavy files are still large enough to slow review and encourage role drift. The required split pattern is now explicit: keep the original module path as the only public facade, create a same-name internal folder, and move internals into semantic family files instead of creating competing peer entrypoints.
-  - Pros: Lower cognitive load, tighter role boundaries, easier testing.
-  - Cons: Large refactors can destabilize import surfaces if done carelessly.
-  - Acceptance Criteria:
-    - Public facades remain singular and discoverable, and callers continue importing only the original public boundary.
-    - Each split candidate uses the same-name family-folder pattern:
-      `src/services/config_service.py` stays as a facade and `src/services/_config_service/*` holds semantic families; `src/generators/artifact_generator.py` maps to `src/generators/_artifact_generator/*`; `src/orchestrators/report_download_orchestrator.py` maps to `src/orchestrators/_report_download_orchestrator/*`.
-    - `config_service` is split by semantic resolver families rather than by arbitrary file size, with a target shape like `paths.py`, `ingest.py`, `openai.py`, `browser_download.py`, `publisher_discovery.py`, `publish.py`, and `validation.py` under `src/services/_config_service/`, while `src/services/config_service.py` stays facade-only.
-    - The same facade-plus-family-folder rule is applied to the remaining named hotspots that still act as concentration points: `publisher_inventory_service`, `openai_service`, `artifact_generator`, `report_download_orchestrator`, `publish_orchestrator`, `report_analysis_orchestrator`, `analytics_store_service`, `sqlite_migration_service`, `drive_service`, `run_registry_service`, and `wordpress_service`.
-    - Already-internal hotspot modules are split one level deeper by family without changing their canonical boundary path, for example `src/services/_browser_report_download/browser.py` plus `src/services/_browser_report_download/_browser/*`, `src/services/_browser_report_download/artifact.py` plus `src/services/_browser_report_download/_artifact/*`, and `src/services/_pdf/table_heuristics.py` plus `src/services/_pdf/_table_heuristics/*`.
-    - README architecture notes are updated for every new facade/internal-family split.
-    - `python scripts/count_long_files.py` shows a material reduction in first-party hotspot concentration.
-
 - **Title:** Extend CI gates from current quality coverage into role-mixing and monolith-growth enforcement [Impact: 4/5, Effort: 3/5]
   - Explanation: The repo already has strong CI coverage, so the remaining gap is not "add more generic checks." The useful next step is automation around role mixing, direct-I/O drift, service integration coverage waivers, and first-party long-file growth.
   - Pros: Prevents architectural drift earlier and keeps the current rule set enforceable.
@@ -259,7 +245,6 @@ Suggested priority order:
 - Budget-aware model routing with deterministic context compaction.
 - Scored PDF page gating and table-dedupe rewrite.
 - Vector-store cleanup and retention orchestration.
-- First-party hotspot splits using one public facade plus same-name semantic-family folders for `config_service`, `publisher_inventory_service`, `openai_service`, `artifact_generator`, `report_download_orchestrator`, `publish_orchestrator`, `report_analysis_orchestrator`, `analytics_store_service`, `sqlite_migration_service`, `drive_service`, `run_registry_service`, `wordpress_service`, and browser-download/PDF extraction internals.
 
 ### Phase 3: Resilience and Compatibility (8-16+ weeks)
 

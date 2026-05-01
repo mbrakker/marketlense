@@ -577,6 +577,161 @@ def test_run_publisher_inventory_discovery_falls_back_after_memory_route_failure
     assert result.used_memory_route is False
 
 
+def test_run_publisher_inventory_discovery_skips_invalid_drive_snapshot(
+    run_context,
+    caplog,
+):
+    settings = _settings()
+    source_records = []
+    downloads = []
+
+    def _download_snapshot(req, ctx):
+        downloads.append(req.file.file_id)
+        return DriveDownloadResponse(
+            schema_version="1.0",
+            file=req.file,
+            content=b'{"schema_version":"1.0","publisher_name":"Integration Publisher"}',
+            md5="bad-md5",
+            size=65,
+        )
+
+    deps = _dependencies(
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0",
+            folder_id=req.folder_id,
+            files=[
+                DriveFile(
+                    schema_version="1.0",
+                    file_id="invalid-snapshot",
+                    name="publisher_inventory_snapshot__20260422T202421Z.json",
+                    modified_time="2026-04-22T20:24:21Z",
+                    md5_checksum="bad-md5",
+                    mime_type="application/json",
+                )
+            ],
+        ),
+        download_pdf=_download_snapshot,
+        record_discovered_report_source=lambda req, ctx: (
+            source_records.append(req)
+            or ReportSourceDiscoveryRecordResponse(
+                schema_version="1.0",
+                record_id=1,
+                publisher_name=req.publisher_name,
+                source_domain=req.source_domain,
+                report_name=req.report_name,
+                landing_page_url=req.landing_page_url,
+                source_page_url=req.source_page_url,
+                discovered_at_utc=req.discovered_at_utc,
+                discovered_on_page_number=req.discovered_on_page_number,
+                created_new=True,
+            )
+        ),
+    )
+    caplog.set_level(
+        logging.INFO, logger="market_lense.publisher_inventory_orchestrator"
+    )
+
+    result = run_publisher_inventory_discovery(
+        _request(settings),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert downloads == ["invalid-snapshot"]
+    assert result.snapshot_changed is True
+    assert [item.landing_page_url for item in source_records] == [
+        "https://www.activate.com/reports/new-report"
+    ]
+    events = _events(caplog, "market_lense.publisher_inventory_orchestrator")
+    assert any(
+        event["event"] == "publisher_inventory_previous_snapshot_skipped"
+        and event["fields"]["snapshot_drive_file_id"] == "invalid-snapshot"
+        for event in events
+    )
+
+
+def test_run_publisher_inventory_discovery_skips_mismatched_drive_snapshot(
+    run_context,
+    caplog,
+):
+    settings = _settings()
+    source_records = []
+
+    deps = _dependencies(
+        get_publisher_inventory_state=lambda req, ctx: PublisherInventoryStateResponse(
+            schema_version="1.0",
+            publisher_name="Algolia",
+            insights_url="https://resources.algolia.com/reports",
+            normalized_url="https://resources.algolia.com/reports",
+            google_folder="https://drive.google.com/drive/folders/folder123",
+            discovery_test_status=None,
+        ),
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0",
+            folder_id=req.folder_id,
+            files=[
+                DriveFile(
+                    schema_version="1.0",
+                    file_id="activate-snapshot",
+                    name="publisher_inventory_snapshot__20260501T195807Z.json",
+                    modified_time="2026-05-01T19:58:07Z",
+                    md5_checksum="activate-md5",
+                    mime_type="application/json",
+                )
+            ],
+        ),
+        download_pdf=lambda req, ctx: DriveDownloadResponse(
+            schema_version="1.0",
+            file=req.file,
+            content=_snapshot_json("https://www.activate.com/reports/old-report").encode(
+                "utf-8"
+            ),
+            md5="activate-md5",
+            size=100,
+        ),
+        record_discovered_report_source=lambda req, ctx: (
+            source_records.append(req)
+            or ReportSourceDiscoveryRecordResponse(
+                schema_version="1.0",
+                record_id=1,
+                publisher_name=req.publisher_name,
+                source_domain=req.source_domain,
+                report_name=req.report_name,
+                landing_page_url=req.landing_page_url,
+                source_page_url=req.source_page_url,
+                discovered_at_utc=req.discovered_at_utc,
+                discovered_on_page_number=req.discovered_on_page_number,
+                created_new=True,
+            )
+        ),
+    )
+    caplog.set_level(
+        logging.INFO, logger="market_lense.publisher_inventory_orchestrator"
+    )
+
+    result = run_publisher_inventory_discovery(
+        PublisherInventoryDiscoveryRequest(
+            schema_version="1.0",
+            insights_url="https://resources.algolia.com/reports",
+            reports_db=settings.reports_db,
+            settings=settings,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert result.previous_report_count == 0
+    assert [item.landing_page_url for item in source_records] == [
+        "https://www.activate.com/reports/new-report"
+    ]
+    events = _events(caplog, "market_lense.publisher_inventory_orchestrator")
+    assert any(
+        event["event"] == "publisher_inventory_previous_snapshot_skipped"
+        and event["fields"]["code"] == "publisher_inventory_snapshot_publisher_mismatch"
+        for event in events
+    )
+
+
 def test_run_publisher_inventory_discovery_does_not_fallback_after_non_retryable_memory_failure(
     run_context,
     assert_app_error,

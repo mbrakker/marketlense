@@ -52,6 +52,77 @@ def _s(value: Any) -> str:
     return value if isinstance(value, str) else str(value)
 
 
+def _first_text(*values: Any) -> str:
+    for value in values:
+        text = _s(value).strip()
+        if text:
+            return text
+    return ""
+
+
+def _primary_figure_asset(
+    assets: list[ReportFigureAsset],
+) -> ReportFigureAsset | None:
+    for asset in assets:
+        if bool(asset.is_primary):
+            return asset
+    return assets[0] if assets else None
+
+
+def _figure_image_name(*paths: str) -> str:
+    for path in paths:
+        normalized = _s(path).strip().replace("\\", "/")
+        if normalized:
+            return normalized.rsplit("/", 1)[-1]
+    return ""
+
+
+def _derive_figure_contract(
+    *,
+    figure: Figure,
+    report_title: str,
+    assets: list[ReportFigureAsset],
+    figure_top: str,
+    figure_image: str,
+    enabled: bool,
+) -> Figure:
+    if not enabled:
+        return figure
+    primary_asset = _primary_figure_asset(assets)
+    asset_page = primary_asset.page if primary_asset is not None else -1
+    image_name = _figure_image_name(
+        primary_asset.image_path if primary_asset is not None else "",
+        figure_top,
+        figure_image,
+    )
+    has_visual = bool(primary_asset or figure_top or figure_image)
+    if not has_visual:
+        return figure
+
+    source_name = report_title or "source report"
+    title = _first_text(
+        figure.title,
+        primary_asset.display_caption if primary_asset is not None else "",
+        primary_asset.generated_caption if primary_asset is not None else "",
+        primary_asset.detected_caption if primary_asset is not None else "",
+        primary_asset.preview_text[:140] if primary_asset is not None else "",
+        f"Figure from {source_name}",
+    )
+    if asset_page >= 0:
+        location = f"page {asset_page + 1}"
+    else:
+        location = f"the {source_name}"
+    evidence = _first_text(
+        figure.evidence,
+        primary_asset.preview_text if primary_asset is not None else "",
+        primary_asset.detected_caption if primary_asset is not None else "",
+        primary_asset.display_caption if primary_asset is not None else "",
+        primary_asset.generated_caption if primary_asset is not None else "",
+        f"Visual asset {image_name} extracted from {location}.",
+    )
+    return Figure(title=title, evidence=evidence)
+
+
 def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
     tldr = _s(data.tldr)
     title = _s(data.title).strip()
@@ -94,11 +165,6 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
     quote = Quote(
         text=_s(data.quote.text),
         author=_s(data.quote.author),
-    )
-
-    figure = Figure(
-        title=_s(data.figure.title),
-        evidence=_s(data.figure.evidence),
     )
 
     contents_page_number = (
@@ -150,6 +216,17 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
 
     if not _figure_top and _figure_image:
         _figure_top = _figure_image
+    figure = _derive_figure_contract(
+        figure=Figure(
+            title=_s(data.figure.title).strip(),
+            evidence=_s(data.figure.evidence).strip(),
+        ),
+        report_title=title,
+        assets=_figure_assets,
+        figure_top=_figure_top,
+        figure_image=_figure_image,
+        enabled=_figure_section_enabled,
+    )
 
     return ReportPayload(
         tldr=tldr,
