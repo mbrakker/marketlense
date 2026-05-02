@@ -281,6 +281,26 @@ fields:
   label: Marketing Country
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: place_branding_and_soft_power
+  label: Place branding and Soft Power
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: employer_branding
+  label: Employer branding
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: sports_brands_and_sponsorship
+  label: Sports brands and sponsorship
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: sustainability_perceptions_of_brands
+  label: Sustainability perceptions of brands
+  value: null
+  aliases: []
 publisher_overrides:
 - schema_version: '1.0'
   host_pattern: centricsoftware.com

@@ -149,16 +149,6 @@ Suggested priority order:
     - Default-on criteria are defined and tested against representative publishers.
     - README and the discovery playbook are updated when rollout state changes.
 
-- **Title:** Reduce low-yield browser-to-HTTP recovery and mixed-content false positives [Impact: 4/5, Effort: 3/5]
-  - Explanation: The current discovery playbook shows the remaining waste is not missing core traversal mechanics; it is spending effort on candidates that later die in qualification or route recovery. Recovery triggers and source-surface precision still need tightening.
-  - Pros: Higher yield per browser attempt and cleaner quality gates on mixed-content hubs.
-  - Cons: Too much tightening could suppress legitimate rescues.
-  - Acceptance Criteria:
-    - Recovery attempts and outcomes are logged by typed recovery class.
-    - Trigger policy blocks low-yield recovery paths that do not add signal.
-    - Sampled runs show lower recovery miss rate without a rise in editorial/service false positives.
-    - Tests assert which recovery classes are allowed, blocked, or deferred.
-
 ---
 
 ## 5. Idempotency, Checkpoints & Publish Durability

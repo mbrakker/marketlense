@@ -335,22 +335,32 @@ def _atomic_write_bytes(path: Path, content: bytes) -> None:
 
 def _atomic_temp_path(path: Path) -> Path:
     token = f"{os.getpid()}-{time.time_ns()}"
-    return path.with_name(f"{path.name}{_ATOMIC_WRITE_TEMP_TAG}{token}")
+    name_hash = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[:16]
+    return path.with_name(f".{name_hash}{_ATOMIC_WRITE_TEMP_TAG}{token}")
 
 
 def _cleanup_stale_atomic_temp_files(path: Path) -> None:
     now = time.time()
-    pattern = f"{path.name}{_ATOMIC_WRITE_TEMP_TAG}*"
-    for candidate in path.parent.glob(pattern):
-        try:
-            if not candidate.is_file():
-                continue
-            age_seconds = now - candidate.stat().st_mtime
-            if age_seconds < _ATOMIC_WRITE_STALE_SECONDS:
-                continue
-            candidate.unlink(missing_ok=True)
-        except OSError:
-            continue
+    name_hash = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[:16]
+    patterns = (
+        f".{name_hash}{_ATOMIC_WRITE_TEMP_TAG}*",
+        f"{path.name}{_ATOMIC_WRITE_TEMP_TAG}*",
+    )
+    for pattern in patterns:
+        for candidate in path.parent.glob(pattern):
+            _cleanup_stale_atomic_temp_file(candidate, now)
+
+
+def _cleanup_stale_atomic_temp_file(candidate: Path, now: float) -> None:
+    try:
+        if not candidate.is_file():
+            return
+        age_seconds = now - candidate.stat().st_mtime
+        if age_seconds < _ATOMIC_WRITE_STALE_SECONDS:
+            return
+        candidate.unlink(missing_ok=True)
+    except OSError:
+        return
 
 
 def file_md5(request: FileHashRequest, ctx: RunContext) -> FileHashResponse:

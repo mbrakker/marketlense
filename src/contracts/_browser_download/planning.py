@@ -60,6 +60,18 @@ class ReportDownloadRoutePlanStep:
             "doc": "Whether the orchestrator should continue to the next planned step when this attempt fails with a retryable error."
         },
     )
+    recovery_class: str = field(
+        default="",
+        metadata={
+            "doc": "Typed recovery class for observability and policy analysis, for example `browser_to_http_pdf_probe`."
+        },
+    )
+    recovery_decision: str = field(
+        default="primary",
+        metadata={
+            "doc": "Recovery policy decision for this step: `primary`, `allowed`, `blocked`, or `deferred`."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -106,6 +118,12 @@ class ReportDownloadRoutePlanResponse:
         metadata={
             "doc": "Short human-readable explanation of why this route order was chosen."
         }
+    )
+    blocked_recovery_classes: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Typed recovery classes that the trigger policy blocked or deferred because they did not add signal."
+        },
     )
 
 

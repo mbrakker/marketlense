@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import mimetypes
 import re
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urljoin, urlsplit
 
@@ -68,6 +68,23 @@ _HTML_FETCH_HEADERS = {
     "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
     "User-Agent": _PDF_FETCH_HEADERS["User-Agent"],
 }
+_DIRECT_ONSITE_RECOVERY_CLASS = "browser_direct_onsite_http_capture"
+_DETAIL_CANDIDATE_RECOVERY_CLASS = "browser_detail_candidate_http_capture"
+_MIXED_CONTENT_RECOVERY_CLASS = "mixed_content_hub_http_capture"
+_MIXED_CONTENT_HUB_SEGMENTS = {
+    "insight",
+    "insights",
+    "report",
+    "reports",
+    "research",
+    "resource",
+    "resources",
+    "publication",
+    "publications",
+    "library",
+    "blog",
+    "news",
+}
 _ONSITE_CAPTURE_HTML_MARKERS = (
     "report",
     "research",
@@ -78,6 +95,14 @@ _ONSITE_CAPTURE_HTML_MARKERS = (
     "survey",
     "investigation",
 )
+
+
+@dataclass(frozen=True)
+class DirectOnsiteRecoveryDecision:
+    schema_version: str
+    allowed: bool
+    recovery_class: str
+    reason: str
 _ONSITE_CAPTURE_BLOCKED_MARKERS = (
     "captcha",
     "cloudflare",
@@ -1135,7 +1160,24 @@ def try_direct_onsite_capture(
     download_dir: Path,
     page_url: str | None = None,
 ) -> BrowserReportDownloadResult | None:
-    if not _should_try_direct_onsite_capture(request):
+    decision = _direct_onsite_recovery_decision(request)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_direct_onsite_recovery_decision",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "route_family": request.route_family_hint or "",
+                "route_kind": request.route_kind_hint or "",
+                "recovery_class": decision.recovery_class,
+                "recovery_decision": "allowed" if decision.allowed else "blocked",
+                "recovery_reason": decision.reason,
+            },
+        )
+    )
+    if not decision.allowed:
         return None
     target_url = (
         str(page_url or request.attempt_url or request.url).strip() or request.url
@@ -1150,6 +1192,8 @@ def try_direct_onsite_capture(
                 "normalized_url": normalized_url,
                 "target_url": target_url,
                 "route_family": request.route_family_hint or "",
+                "recovery_class": decision.recovery_class,
+                "recovery_decision": "allowed",
                 "used_route_hint": bool(request.route_hint),
             },
         )
@@ -1192,6 +1236,8 @@ def try_direct_onsite_capture(
                 fields={
                     "normalized_url": normalized_url,
                     "target_url": target_url,
+                    "recovery_class": decision.recovery_class,
+                    "recovery_decision": "fallback",
                     "error_code": "browser_download_html_fetch_failed",
                     "error_message": exc.message,
                 },
@@ -1212,6 +1258,8 @@ def try_direct_onsite_capture(
                 "status_code": response.status_code,
                 "content_type": response.headers.get("content-type", ""),
                 "body_truncated": response.body_truncated,
+                "recovery_class": decision.recovery_class,
+                "recovery_decision": "allowed",
             },
         )
     )
@@ -1234,6 +1282,8 @@ def try_direct_onsite_capture(
                 fields={
                     "normalized_url": normalized_url,
                     "target_url": target_url,
+                    "recovery_class": decision.recovery_class,
+                    "recovery_decision": "fallback",
                     "error_code": "browser_download_direct_onsite_not_report_like",
                     "error_message": "Fetched HTML did not look like a reusable on-site report capture",
                 },
@@ -1319,7 +1369,11 @@ def try_direct_onsite_capture(
             role="service",
             event="browser_report_download_direct_onsite_attempt_complete",
             module=logger.name,
-            fields=asdict(response_result),
+            fields={
+                **asdict(response_result),
+                "recovery_class": decision.recovery_class,
+                "recovery_decision": "complete",
+            },
         )
     )
     return response_result
@@ -1636,26 +1690,80 @@ def download_pdf_from_url(
 def _should_try_direct_onsite_capture(
     request: BrowserReportDownloadRequest,
 ) -> bool:
+    return _direct_onsite_recovery_decision(request).allowed
+
+
+def _direct_onsite_recovery_decision(
+    request: BrowserReportDownloadRequest,
+) -> DirectOnsiteRecoveryDecision:
     route_family = str(request.route_family_hint or "").strip()
     route_kind = str(request.route_kind_hint or "").strip()
+    if request.candidate_trace is not None and _looks_like_mixed_content_hub_candidate(
+        request
+    ):
+        return DirectOnsiteRecoveryDecision(
+            schema_version="1.0",
+            allowed=False,
+            recovery_class=_MIXED_CONTENT_RECOVERY_CLASS,
+            reason="mixed_content_hub_candidate",
+        )
     if route_family == "browser_onsite_report" and route_kind == "onsite_report":
         if request.candidate_trace is not None:
-            return True
+            return DirectOnsiteRecoveryDecision(
+                schema_version="1.0",
+                allowed=True,
+                recovery_class=_DIRECT_ONSITE_RECOVERY_CLASS,
+                reason="onsite_report_candidate_trace",
+            )
         actions = {
             str(step.action or "").strip().lower() for step in request.route_step_hints
         }
         if "extract" in actions:
-            return True
+            return DirectOnsiteRecoveryDecision(
+                schema_version="1.0",
+                allowed=True,
+                recovery_class=_DIRECT_ONSITE_RECOVERY_CLASS,
+                reason="onsite_report_extract_step",
+            )
         hint = str(request.route_hint or "").casefold()
-        return "extract" in hint or "capture" in hint
+        if "extract" in hint or "capture" in hint:
+            return DirectOnsiteRecoveryDecision(
+                schema_version="1.0",
+                allowed=True,
+                recovery_class=_DIRECT_ONSITE_RECOVERY_CLASS,
+                reason="onsite_report_route_hint",
+            )
+        return DirectOnsiteRecoveryDecision(
+            schema_version="1.0",
+            allowed=False,
+            recovery_class=_DIRECT_ONSITE_RECOVERY_CLASS,
+            reason="onsite_report_without_capture_signal",
+        )
     if (
         request.candidate_trace is not None
         and route_family == "browser_pdf_click"
         and route_kind in {"", "pdf_download"}
         and not str(request.candidate_trace.pdf_url or "").strip()
     ):
-        return _looks_like_report_detail_candidate(request)
-    return False
+        if _looks_like_report_detail_candidate(request):
+            return DirectOnsiteRecoveryDecision(
+                schema_version="1.0",
+                allowed=True,
+                recovery_class=_DETAIL_CANDIDATE_RECOVERY_CLASS,
+                reason="report_detail_candidate",
+            )
+        return DirectOnsiteRecoveryDecision(
+            schema_version="1.0",
+            allowed=False,
+            recovery_class=_DETAIL_CANDIDATE_RECOVERY_CLASS,
+            reason="candidate_without_detail_signal",
+        )
+    return DirectOnsiteRecoveryDecision(
+        schema_version="1.0",
+        allowed=False,
+        recovery_class="unsupported_direct_onsite_http_capture",
+        reason="unsupported_route_context",
+    )
 
 
 def _looks_like_report_detail_candidate(request: BrowserReportDownloadRequest) -> bool:
@@ -1674,6 +1782,8 @@ def _looks_like_report_detail_candidate(request: BrowserReportDownloadRequest) -
     last_segment_tokens = [token for token in segments[-1].split("-") if token]
     if len(last_segment_tokens) < 2:
         return False
+    if _looks_like_mixed_content_hub_candidate(request):
+        return False
     title = str(candidate.title or "").casefold() if candidate is not None else ""
     report_markers = {
         "analysis",
@@ -1690,6 +1800,71 @@ def _looks_like_report_detail_candidate(request: BrowserReportDownloadRequest) -
     return any(marker in path for marker in report_markers) or any(
         marker in title for marker in report_markers
     )
+
+
+def _looks_like_mixed_content_hub_candidate(
+    request: BrowserReportDownloadRequest,
+) -> bool:
+    candidate = request.candidate_trace
+    target_url = str(
+        (candidate.canonical_url if candidate is not None else "")
+        or request.attempt_url
+        or request.url
+    ).strip()
+    parsed = urlsplit(target_url)
+    path = str(parsed.path or "").strip().casefold()
+    if not path or path.endswith(".pdf"):
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return True
+    last_segment = segments[-1]
+    last_tokens = [token for token in last_segment.replace("_", "-").split("-") if token]
+    title = str(candidate.title or "").casefold() if candidate is not None else ""
+    title_has_detail_signal = any(
+        marker in title
+        for marker in {
+            "benchmark",
+            "ebook",
+            "guide",
+            "outlook",
+            "playbook",
+            "report",
+            "research",
+            "study",
+            "survey",
+            "trend",
+            "whitepaper",
+            "white paper",
+        }
+    )
+    path_has_year = re.search(r"\b20\d{2}\b", path) is not None
+    if title_has_detail_signal and (len(last_tokens) >= 3 or path_has_year):
+        return False
+    source_surfaces = {
+        _url_surface_key(value)
+        for value in (candidate.source_page_urls if candidate is not None else [])
+        if str(value or "").strip()
+    }
+    same_as_source = bool(source_surfaces) and _url_surface_key(target_url) in source_surfaces
+    listing_last_segment = last_segment in _MIXED_CONTENT_HUB_SEGMENTS
+    short_listing = (
+        len(segments) <= 2
+        and any(segment in _MIXED_CONTENT_HUB_SEGMENTS for segment in segments)
+        and len(last_tokens) < 3
+    )
+    listing_query = any(
+        marker in str(parsed.query or "").casefold()
+        for marker in ("page=", "offset=", "category=", "tag=", "filter=", "search=")
+    )
+    return same_as_source or listing_last_segment or short_listing or listing_query
+
+
+def _url_surface_key(url: str) -> str:
+    parsed = urlsplit(str(url or "").strip())
+    host = str(parsed.hostname or "").strip().casefold()
+    path = "/".join(segment for segment in str(parsed.path or "").split("/") if segment)
+    return f"{host}/{path}".rstrip("/")
 
 
 def _looks_like_onsite_capture_html(

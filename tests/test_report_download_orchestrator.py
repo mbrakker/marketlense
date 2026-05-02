@@ -19,6 +19,7 @@ from src.contracts.browser_download import (
     BrowserReportDownloadResult,
     DownloadTerminalEvidence,
     ReportDownloadOrchestratorRequest,
+    ReportDownloadRoutePlanRequest,
 )
 from src.contracts.drive import (
     DriveFile,
@@ -35,6 +36,9 @@ from src.contracts.report_store import (
 from src.orchestrators.report_download_orchestrator import (
     ReportDownloadDependencies,
     run_report_download,
+)
+from src.orchestrators._report_download_orchestrator.route_planner import (
+    plan_report_download_routes,
 )
 from src.services._browser_report_download import request as request_runtime
 from src.services.report_store_service import (
@@ -239,6 +243,187 @@ def _drive_enabled_settings(
         drive_upload_supports_all_drives=True,
         drive_upload_include_items_from_all_drives=True,
     )
+
+
+def test_route_plan_recovery_classes_cover_allowed_blocked_and_deferred(
+    run_context,
+    caplog,
+) -> None:
+    caplog.set_level(
+        logging.INFO,
+        logger="market_lense.report_download_route_planner",
+    )
+
+    allowed = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/content/2026-ai-index-report",
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://example.com/content/2026-ai-index-report",
+                title="2026 AI Market Report",
+                discovered_on_page_number=1,
+                source_page_urls=["https://example.com/research"],
+                discovery_provenances=["browser_dom"],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.9,
+            ),
+            publisher_recommended_discovery_route_kind="browser_render",
+        ),
+        run_context,
+    )
+    assert [step.route_family for step in allowed.steps] == [
+        "browser_pdf_click",
+        "http_pdf_probe",
+    ]
+    assert allowed.steps[1].recovery_class == "browser_to_http_pdf_probe"
+    assert allowed.steps[1].recovery_decision == "allowed"
+
+    blocked = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/reports",
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://example.com/reports",
+                title="Reports and insights",
+                discovered_on_page_number=1,
+                source_page_urls=["https://example.com/reports"],
+                discovery_provenances=["browser_dom"],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.95,
+            ),
+            publisher_recommended_discovery_route_kind="browser_render",
+        ),
+        run_context,
+    )
+    assert [step.route_family for step in blocked.steps] == ["browser_listing_hub"]
+    assert blocked.blocked_recovery_classes == [
+        "browser_to_http_pdf_probe:blocked:terminal_browser_family:browser_listing_hub"
+    ]
+
+    deferred = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/content/ai-index-methodology",
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://example.com/content/ai-index-methodology",
+                title="AI index methodology",
+                discovered_on_page_number=1,
+                source_page_urls=["https://example.com/research"],
+                discovery_provenances=["browser_dom"],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.7,
+            ),
+            publisher_recommended_discovery_route_kind="browser_render",
+        ),
+        run_context,
+    )
+    assert [step.route_family for step in deferred.steps] == ["browser_pdf_click"]
+    assert deferred.blocked_recovery_classes == [
+        "browser_to_http_pdf_probe:deferred:browser_route_without_http_signal"
+    ]
+
+    route_plan_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_route_planner")
+        if event.get("event") == "report_download_route_plan_complete"
+    ]
+    assert route_plan_events
+    assert "browser_to_http_pdf_probe" in route_plan_events[0]["fields"][
+        "recovery_classes"
+    ]
+    blocked_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_route_planner")
+        if event.get("event") == "report_download_recovery_policy_blocked"
+    ]
+    assert len(blocked_events) == 2
+
+
+def test_run_report_download_rejects_mixed_content_hub_candidate(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    assert_app_error,
+) -> None:
+    settings = _settings(tmp_path)
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("mixed-content hub should be rejected before acquisition")
+        ),
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="unused",
+        ),
+        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record rejected candidates")
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/reports",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                candidate_trace=PublisherInventoryCandidateTrace(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/reports",
+                    title="Reports and insights",
+                    discovered_on_page_number=1,
+                    source_page_urls=["https://example.com/reports"],
+                    discovery_provenances=["browser_dom"],
+                    pdf_url=None,
+                    published_at_text=None,
+                    max_confidence=0.95,
+                ),
+                publisher_recommended_discovery_route_kind="browser_render",
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="report_download_candidate_rejected_mixed_content_hub",
+        retryable=False,
+        severity="error",
+    )
+    rejection_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_readiness_rejected"
+    ]
+    assert rejection_events
+    assert (
+        rejection_events[-1]["fields"]["readiness_rejection_reason"]
+        == "candidate_rejected_mixed_content_hub"
+    )
+    assert "mixed_content_hub_candidate" in rejection_events[-1]["fields"][
+        "readiness_signals"
+    ]
 
 
 def test_run_report_download_uses_memory_and_records_route(
@@ -1437,6 +1622,215 @@ def test_run_report_download_reuses_idempotent_source_record_and_drive_upload(
     assert len(second.drive_uploads) == 1
     assert second.drive_uploads[0].status == "uploaded"
     assert second.drive_uploads[0].drive_file.file_id == "drive-file-1"
+
+
+def test_run_report_download_drive_upload_idempotency_is_scoped_by_report_url(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _drive_enabled_settings(_settings(tmp_path))
+    report_artifacts: dict[str, tuple[Path, Path, Path]] = {}
+    for slug, payload in [("report-one", b"one"), ("report-two", b"two")]:
+        artifact_dir = tmp_path / slug
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        onsite_path = artifact_dir / "onsite_capture.html"
+        html_path = artifact_dir / "terminal_snapshot.html"
+        screenshot_path = artifact_dir / "terminal_screenshot.png"
+        onsite_path.write_bytes(b"<html>" + payload + b"</html>")
+        html_path.write_bytes(b"<html>snapshot " + payload + b"</html>")
+        screenshot_path.write_bytes(b"png-" + payload)
+        report_artifacts[f"https://example.com/{slug}"] = (
+            onsite_path,
+            html_path,
+            screenshot_path,
+        )
+    upload_calls: list[object] = []
+
+    def _download(req, ctx):
+        onsite_path, html_path, screenshot_path = report_artifacts[req.url]
+        return _captured_result(
+            url=req.url,
+            onsite_path=str(onsite_path),
+            html_snapshot_path=str(html_path),
+            screenshot_path=str(screenshot_path),
+        )
+
+    def _upload_local_file(req, ctx):
+        upload_calls.append(req)
+        return DriveUploadLocalFileResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id=f"drive-file-{len(upload_calls)}",
+                name=req.file_name or Path(req.source_path).name,
+                modified_time=None,
+                md5_checksum=_md5_for_path(Path(req.source_path)),
+                mime_type=req.mime_type,
+            ),
+            source_path=req.source_path,
+            size=Path(req.source_path).stat().st_size,
+            md5=_md5_for_path(Path(req.source_path)),
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5=_md5_for_path(Path(req.path)),
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+        get_report_download_drive_folder=lambda req, ctx: (
+            ReportDownloadDriveFolderLookupResponse(
+                schema_version="1.0",
+                publisher_name="Example",
+                google_folder="folder123",
+                resolution_source="publisher_insights_url",
+            )
+        ),
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0",
+            folder_id=req.folder_id,
+            files=[],
+        ),
+        upload_local_file=_upload_local_file,
+    )
+
+    for url in report_artifacts:
+        response = run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url=url,
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+        assert response.outcome == "captured"
+
+    assert len(upload_calls) == 6
+    assert [call.file_name for call in upload_calls].count("terminal_screenshot.png") == 2
+
+
+def test_run_report_download_idempotency_allows_changed_artifact_for_same_url(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _drive_enabled_settings(_settings(tmp_path))
+    pdf_path = Path(settings.output_dir) / "report.pdf"
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    source_record_calls: list[object] = []
+    upload_calls: list[object] = []
+
+    def _record_source(req, ctx):
+        source_record_calls.append(req)
+        return ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=len(source_record_calls),
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        )
+
+    def _upload_local_file(req, ctx):
+        upload_calls.append(req)
+        return DriveUploadLocalFileResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id=f"drive-file-{len(upload_calls)}",
+                name=req.file_name or Path(req.source_path).name,
+                modified_time=None,
+                md5_checksum=_md5_for_path(Path(req.source_path)),
+                mime_type=req.mime_type,
+            ),
+            source_path=req.source_path,
+            size=Path(req.source_path).stat().st_size,
+            md5=_md5_for_path(Path(req.source_path)),
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: _result(
+            url="https://example.com/report",
+            used_route_hint=False,
+            path=str(pdf_path),
+        ),
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5=_md5_for_path(Path(req.path)),
+        ),
+        record_report_source=_record_source,
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+        get_report_download_drive_folder=lambda req, ctx: (
+            ReportDownloadDriveFolderLookupResponse(
+                schema_version="1.0",
+                publisher_name="Example",
+                google_folder="folder123",
+                resolution_source="publisher_insights_url",
+            )
+        ),
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0",
+            folder_id=req.folder_id,
+            files=[],
+        ),
+        upload_local_file=_upload_local_file,
+    )
+
+    for content in [b"%PDF-1.7 first", b"%PDF-1.7 second"]:
+        pdf_path.write_bytes(content)
+        response = run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+        assert response.outcome == "downloaded"
+
+    assert len(source_record_calls) == 2
+    assert len(upload_calls) == 2
+    assert source_record_calls[0].md5 != source_record_calls[1].md5
 
 
 def test_run_report_download_reuses_idempotent_route_record_and_identity_update(

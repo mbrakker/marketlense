@@ -323,6 +323,76 @@ def test_download_report_with_browser_use_probes_report_detail_candidate_for_dir
     assert "Market adoption insight." in capture_path.read_text(encoding="utf-8")
 
 
+def test_download_report_with_browser_use_blocks_mixed_hub_direct_onsite_recovery(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the candidate and click the visible PDF download.",
+        create_pdf=True,
+        email_submission_completed=False,
+    )
+    class FakeHtmlResponse:
+        status_code = 200
+        headers = {"content-type": "text/html; charset=utf-8"}
+        url = "https://data.example/reports"
+        text = "<html><head><title>Reports</title></head><body>Reports</body></html>"
+
+    http_calls: list[str] = []
+
+    def _http_get(url, **kwargs):
+        http_calls.append(str(url))
+        return FakeHtmlResponse()
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", _http_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://data.example/reports",
+            settings=_settings(tmp_path),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://data.example/reports",
+                title="Reports and insights",
+                discovered_on_page_number=1,
+                source_page_urls=["https://data.example/reports"],
+                discovery_provenances=["browser_dom"],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.95,
+            ),
+            route_kind_hint=None,
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert http_calls == ["https://data.example/reports"]
+    decision_events = [
+        event
+        for event in _service_events(caplog)
+        if event.get("event")
+        == "browser_report_download_direct_onsite_recovery_decision"
+    ]
+    assert decision_events
+    assert decision_events[-1]["fields"]["recovery_class"] == (
+        "mixed_content_hub_http_capture"
+    )
+    assert decision_events[-1]["fields"]["recovery_decision"] == "blocked"
+
+
 def test_download_report_with_browser_use_prefers_form_evidence_over_onsite_hint(
     tmp_path: Path,
     run_context,

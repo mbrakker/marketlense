@@ -73,6 +73,28 @@ _EDITORIAL_REPORT_MARKERS = {
     "whitepaper",
     "whitepapers",
 }
+_BROWSER_TO_HTTP_RECOVERY_CLASS = "browser_to_http_pdf_probe"
+_DIRECT_PDF_RECOVERY_CLASS = "direct_pdf_probe"
+_HTTP_PDF_RECOVERY_CLASS = "http_pdf_probe"
+_REPORT_DETAIL_SIGNAL_MARKERS = {
+    "benchmark",
+    "download",
+    "ebook",
+    "e-book",
+    "guide",
+    "market",
+    "outlook",
+    "playbook",
+    "predictions",
+    "report",
+    "research",
+    "study",
+    "survey",
+    "trend",
+    "trends",
+    "whitepaper",
+    "white paper",
+}
 _EMAIL_GATE_PATH_MARKERS = {
     "gated-content-form",
     "download",
@@ -189,6 +211,13 @@ def plan_report_download_routes(
                 "step_names": [step.step_name for step in response.steps],
                 "route_families": [step.route_family for step in response.steps],
                 "attempt_urls": [step.attempt_url or "" for step in response.steps],
+                "recovery_classes": [
+                    step.recovery_class or step.route_family for step in response.steps
+                ],
+                "recovery_decisions": [
+                    step.recovery_decision for step in response.steps
+                ],
+                "blocked_recovery_classes": list(response.blocked_recovery_classes),
                 "route_policy_order": [
                     signal.route_family
                     for signal in (
@@ -208,6 +237,21 @@ def plan_report_download_routes(
             },
         )
     )
+    if response.blocked_recovery_classes:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_recovery_policy_blocked",
+                module=logger.name,
+                fields={
+                    "normalized_url": request.normalized_url,
+                    "blocked_recovery_classes": list(
+                        response.blocked_recovery_classes
+                    ),
+                },
+            )
+        )
     return response
 
 
@@ -215,6 +259,7 @@ def _build_plan(
     request: ReportDownloadRoutePlanRequest,
 ) -> ReportDownloadRoutePlanResponse:
     steps: list[ReportDownloadRoutePlanStep] = []
+    blocked_recovery_classes: list[str] = []
     remembered_route = request.remembered_route
     candidate = request.candidate_trace
     candidate_pdf_url = str(candidate.pdf_url or "").strip() if candidate else ""
@@ -258,6 +303,8 @@ def _build_plan(
                 route_kind_hint=remembered_route.route_kind,
                 uses_memory_route=True,
                 fallback_on_retryable_error=True,
+                recovery_class=remembered_route_family,
+                recovery_decision="primary",
             )
         )
 
@@ -271,6 +318,8 @@ def _build_plan(
                 route_kind_hint="pdf_download",
                 uses_memory_route=False,
                 fallback_on_retryable_error=True,
+                recovery_class=_DIRECT_PDF_RECOVERY_CLASS,
+                recovery_decision="primary",
             )
         )
     elif redirect_target_url and _looks_like_pdf(redirect_target_url):
@@ -283,6 +332,8 @@ def _build_plan(
                 route_kind_hint="pdf_download",
                 uses_memory_route=False,
                 fallback_on_retryable_error=True,
+                recovery_class=_DIRECT_PDF_RECOVERY_CLASS,
+                recovery_decision="primary",
             )
         )
     elif _looks_like_pdf(request.normalized_url):
@@ -295,6 +346,8 @@ def _build_plan(
                 route_kind_hint="pdf_download",
                 uses_memory_route=False,
                 fallback_on_retryable_error=True,
+                recovery_class=_DIRECT_PDF_RECOVERY_CLASS,
+                recovery_decision="primary",
             )
         )
 
@@ -320,6 +373,8 @@ def _build_plan(
         route_kind_hint="pdf_download",
         uses_memory_route=False,
         fallback_on_retryable_error=True,
+        recovery_class=_HTTP_PDF_RECOVERY_CLASS,
+        recovery_decision="primary",
     )
 
     browser_first = recommended_route_kind == "browser_render" or bool(
@@ -343,12 +398,32 @@ def _build_plan(
         steps.append(browser_step)
     elif browser_first and not pdf_first:
         steps.append(browser_step)
-        steps.append(http_step)
+        recovery_decision, recovery_reason = _browser_to_http_recovery_decision(
+            normalized_url=request.normalized_url,
+            candidate=candidate,
+            browser_step=browser_step,
+            source_page_urls=source_page_urls,
+            provenances=provenances,
+            recommended_route_kind=recommended_route_kind,
+            policy_route_family=policy_route_family,
+        )
+        if recovery_decision == "allowed":
+            steps.append(
+                replace(
+                    http_step,
+                    recovery_class=_BROWSER_TO_HTTP_RECOVERY_CLASS,
+                    recovery_decision="allowed",
+                )
+            )
+        else:
+            blocked_recovery_classes.append(
+                f"{_BROWSER_TO_HTTP_RECOVERY_CLASS}:{recovery_decision}:{recovery_reason}"
+            )
     else:
         steps.append(http_step)
         steps.append(browser_step)
 
-    deduped_steps = _dedupe_steps(steps)
+    deduped_steps = _dedupe_steps(_annotate_recovery_steps(steps))
     planning_reason = _planning_reason(
         remembered_route=remembered_route,
         candidate_pdf_url=candidate_pdf_url,
@@ -361,6 +436,7 @@ def _build_plan(
         schema_version="1.0",
         steps=deduped_steps,
         planning_reason=planning_reason,
+        blocked_recovery_classes=blocked_recovery_classes,
     )
 
 
@@ -822,6 +898,85 @@ def _canonical_memory_route_family(*, route_kind: str, route_family: str) -> str
     if not token:
         return _default_route_family_for_kind(route_kind)
     return token
+
+
+def _browser_to_http_recovery_decision(
+    *,
+    normalized_url: str,
+    candidate: PublisherInventoryCandidateTrace | None,
+    browser_step: ReportDownloadRoutePlanStep,
+    source_page_urls: list[str],
+    provenances: set[str],
+    recommended_route_kind: str,
+    policy_route_family: str,
+) -> tuple[str, str]:
+    if policy_route_family in {"direct_pdf_probe", "http_pdf_probe"}:
+        return "allowed", "policy_pdf_probe"
+    if recommended_route_kind == "http_parse":
+        return "allowed", "publisher_recommended_http"
+    if "direct_pdf_source" in provenances:
+        return "allowed", "direct_pdf_source"
+    if browser_step.route_family in {
+        "browser_listing_hub",
+        "browser_tracker_redirect",
+        "browser_email_form",
+    }:
+        return "blocked", f"terminal_browser_family:{browser_step.route_family}"
+    if browser_step.route_family == "browser_onsite_report":
+        return "deferred", "onsite_report_capture_preferred"
+    if _looks_like_listing_url(normalized_url):
+        return "blocked", "candidate_listing_surface"
+    candidate_title = str(candidate.title or "").strip() if candidate else ""
+    if _has_http_probe_signal(
+        normalized_url=normalized_url,
+        candidate_title=candidate_title,
+        source_page_urls=source_page_urls,
+    ):
+        return "allowed", "candidate_has_pdf_probe_signal"
+    return "deferred", "browser_route_without_http_signal"
+
+
+def _has_http_probe_signal(
+    *,
+    normalized_url: str,
+    candidate_title: str,
+    source_page_urls: list[str],
+) -> bool:
+    path = str(urlsplit(str(normalized_url or "").strip()).path or "").casefold()
+    title = str(candidate_title or "").casefold()
+    if "download" in path or "pdf" in path:
+        return True
+    if any(marker in title for marker in _REPORT_DETAIL_SIGNAL_MARKERS):
+        segments = [segment for segment in path.split("/") if segment]
+        if segments:
+            token_count = len([token for token in segments[-1].split("-") if token])
+            if token_count >= 3 or re.search(r"\b20\d{2}\b", path):
+                return True
+    for source_page_url in source_page_urls:
+        source_path = str(
+            urlsplit(str(source_page_url or "").strip()).path or ""
+        ).casefold()
+        if source_path and source_path != path and "download" in path:
+            return True
+    return False
+
+
+def _annotate_recovery_steps(
+    steps: list[ReportDownloadRoutePlanStep],
+) -> list[ReportDownloadRoutePlanStep]:
+    annotated: list[ReportDownloadRoutePlanStep] = []
+    for step in steps:
+        if step.recovery_class:
+            annotated.append(step)
+            continue
+        annotated.append(
+            replace(
+                step,
+                recovery_class=step.route_family,
+                recovery_decision=step.recovery_decision or "primary",
+            )
+        )
+    return annotated
 
 
 def _dedupe_steps(

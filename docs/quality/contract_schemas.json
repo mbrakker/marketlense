@@ -953,6 +953,12 @@
     "src.contracts._browser_download.planning.ReportDownloadRoutePlanResponse": {
       "additionalProperties": false,
       "properties": {
+        "blocked_recovery_classes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "planning_reason": {
           "type": "string"
         },
@@ -988,6 +994,12 @@
         },
         "fallback_on_retryable_error": {
           "type": "boolean"
+        },
+        "recovery_class": {
+          "type": "string"
+        },
+        "recovery_decision": {
+          "type": "string"
         },
         "route_family": {
           "type": "string"
@@ -16681,16 +16693,28 @@
     "src.contracts.run_context.RunContext": {
       "additionalProperties": false,
       "properties": {
+        "parent_span_id": {
+          "type": "string"
+        },
         "run_id": {
           "type": "string"
         },
         "schema_version": {
           "type": "string"
         },
+        "span_depth": {
+          "type": "integer"
+        },
         "span_id": {
           "type": "string"
         },
+        "span_name": {
+          "type": "string"
+        },
         "task_id": {
+          "type": "string"
+        },
+        "trace_id": {
           "type": "string"
         }
       },
@@ -18509,6 +18533,148 @@
       },
       "required": [
         "tag"
+      ],
+      "type": "object"
+    },
+    "src.contracts.tracing.TraceBuildRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "events": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "trace_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "events"
+      ],
+      "type": "object"
+    },
+    "src.contracts.tracing.TraceBuildResult": {
+      "additionalProperties": false,
+      "properties": {
+        "event_count": {
+          "type": "integer"
+        },
+        "root_span_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "span_count": {
+          "type": "integer"
+        },
+        "spans": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.tracing.TraceSpanSummary"
+          },
+          "type": "array"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "trace_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "trace_id",
+        "run_id",
+        "task_id",
+        "event_count",
+        "span_count",
+        "root_span_ids",
+        "spans"
+      ],
+      "type": "object"
+    },
+    "src.contracts.tracing.TraceSpanSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "child_span_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "duration_ms": {
+          "type": "number"
+        },
+        "end_utc": {
+          "type": "string"
+        },
+        "event_count": {
+          "type": "integer"
+        },
+        "module": {
+          "type": "string"
+        },
+        "parent_span_id": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "span_depth": {
+          "type": "integer"
+        },
+        "span_id": {
+          "type": "string"
+        },
+        "span_name": {
+          "type": "string"
+        },
+        "start_utc": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "trace_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "trace_id",
+        "span_id",
+        "parent_span_id",
+        "span_name",
+        "span_depth",
+        "task_id",
+        "role",
+        "module",
+        "event_count",
+        "start_utc",
+        "end_utc",
+        "duration_ms",
+        "child_span_ids"
       ],
       "type": "object"
     },

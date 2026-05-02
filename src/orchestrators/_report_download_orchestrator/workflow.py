@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import mimetypes
+import re
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -164,6 +165,39 @@ _REPORT_SOURCE_PAGE_MARKERS = {
     "research",
     "resources",
     "publications",
+}
+_MIXED_CONTENT_HUB_SEGMENTS = {
+    "insight",
+    "insights",
+    "report",
+    "reports",
+    "research",
+    "resource",
+    "resources",
+    "publication",
+    "publications",
+    "library",
+    "blog",
+    "news",
+}
+_REPORT_DETAIL_TITLE_MARKERS = {
+    "benchmark",
+    "ebook",
+    "e-book",
+    "guide",
+    "market",
+    "outlook",
+    "playbook",
+    "prediction",
+    "predictions",
+    "report",
+    "research",
+    "study",
+    "survey",
+    "trend",
+    "trends",
+    "whitepaper",
+    "white paper",
 }
 
 
@@ -891,6 +925,9 @@ def run_report_download(
                         "step_name": planned_step.step_name,
                         "route_family": planned_step.route_family,
                         "attempt_url": planned_step.attempt_url or "",
+                        "recovery_class": planned_step.recovery_class
+                        or planned_step.route_family,
+                        "recovery_decision": planned_step.recovery_decision,
                         "error_code": exc.code,
                         "error_class": _failure_error_class(exc),
                         "error_message": exc.message,
@@ -1067,7 +1104,10 @@ def run_report_download(
                 "md5": source_record_request.md5,
             }
         )
-        source_record_key = normalize_url(source_record_request.landing_page_url)
+        source_record_key = _idempotency_key_with_checksum(
+            normalize_url(source_record_request.landing_page_url),
+            checksum=source_record_checksum,
+        )
         existing_source_record = _lookup_idempotency_record(
             db_path=request.reports_db,
             scope=_REPORT_DOWNLOAD_SOURCE_RECORD_SCOPE,
@@ -1339,6 +1379,9 @@ def _run_download_attempt(
             "attempt": attempt,
             "retryable": retryable,
             "route_family": planned_step.route_family,
+            "recovery_class": planned_step.recovery_class
+            or planned_step.route_family,
+            "recovery_decision": planned_step.recovery_decision,
             "attempt_url": str(planned_step.attempt_url or request.url).strip(),
             "code": exc.code if isinstance(exc, AppError) else "unexpected_exception",
             "error": (
@@ -1417,6 +1460,7 @@ def _archive_successful_report_artifacts(
                 _archive_single_artifact(
                     request=request,
                     result=result,
+                    normalized_url=normalized_url,
                     local_path=path,
                     folder_id=folder_id,
                     policy=policy,
@@ -1517,6 +1561,7 @@ def _archive_single_artifact(
     *,
     request: ReportDownloadOrchestratorRequest,
     result: BrowserReportDownloadResult,
+    normalized_url: str,
     local_path: str,
     folder_id: str,
     policy: RetryPolicy,
@@ -1535,13 +1580,19 @@ def _archive_single_artifact(
         {
             "schema_version": "1.0",
             "folder_id": folder_id,
+            "normalized_url": normalized_url,
             "file_name": file_name,
             "mime_type": mime_type,
             "size": size,
             "md5": file_hash.md5,
         }
     )
-    upload_key = f"{folder_id}:{file_name}"
+    upload_key = _idempotency_key_with_checksum(
+        folder_id,
+        normalized_url,
+        file_name,
+        checksum=upload_checksum,
+    )
     existing_upload = _lookup_idempotency_record(
         db_path=request.reports_db,
         scope=_REPORT_DOWNLOAD_DRIVE_UPLOAD_SCOPE,
@@ -1972,6 +2023,16 @@ def _evaluate_candidate_download_readiness(
     if any(marker in title for marker in _NON_REPORT_TITLE_MARKERS):
         score -= 0.7
         signals.append("non_report_title_marker")
+    if _is_mixed_content_hub_candidate(
+        url_value=url_value,
+        title=title,
+        source_pages=source_pages,
+        normalized_url=normalized_url,
+        has_pdf_url=bool(str(candidate.pdf_url or "").strip()),
+    ):
+        score -= 0.6
+        signals.append("mixed_content_hub_candidate")
+        return round(score, 3), "candidate_rejected_mixed_content_hub", signals
 
     if score >= 0.35:
         return round(score, 3), None, signals
@@ -1982,6 +2043,56 @@ def _evaluate_candidate_download_readiness(
     ):
         return round(score, 3), "candidate_rejected_non_report", signals
     return round(score, 3), "candidate_rejected_non_report", signals
+
+
+def _is_mixed_content_hub_candidate(
+    *,
+    url_value: str,
+    title: str,
+    source_pages: list[str],
+    normalized_url: str,
+    has_pdf_url: bool,
+) -> bool:
+    if has_pdf_url:
+        return False
+    parsed = urlsplit(str(url_value or normalized_url).strip())
+    path = str(parsed.path or "").strip().casefold()
+    if path.endswith(".pdf"):
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return True
+    last_segment = segments[-1]
+    last_tokens = [token for token in last_segment.replace("_", "-").split("-") if token]
+    title_has_detail_signal = any(
+        marker in str(title or "") for marker in _REPORT_DETAIL_TITLE_MARKERS
+    )
+    path_has_year = re.search(r"\b20\d{2}\b", path) is not None
+    if title_has_detail_signal and (len(last_tokens) >= 3 or path_has_year):
+        return False
+    source_page_set = {
+        _url_surface_key(value) for value in source_pages if str(value or "").strip()
+    }
+    candidate_surface_key = _url_surface_key(str(url_value or normalized_url))
+    source_same_surface = bool(source_page_set) and candidate_surface_key in source_page_set
+    listing_last_segment = last_segment in _MIXED_CONTENT_HUB_SEGMENTS
+    listing_query = any(
+        key in str(parsed.query or "").casefold()
+        for key in ("page=", "offset=", "category=", "tag=", "filter=", "search=")
+    )
+    short_listing_under_context = (
+        len(segments) <= 2
+        and any(segment in _MIXED_CONTENT_HUB_SEGMENTS for segment in segments)
+        and len(last_tokens) < 3
+    )
+    return source_same_surface or listing_last_segment or listing_query or short_listing_under_context
+
+
+def _url_surface_key(url: str) -> str:
+    parsed = urlsplit(str(url or "").strip())
+    host = str(parsed.hostname or "").strip().casefold()
+    path = "/".join(segment for segment in str(parsed.path or "").split("/") if segment)
+    return f"{host}/{path}".rstrip("/")
 
 
 def _report_name_for_result(result: BrowserReportDownloadResult) -> str:

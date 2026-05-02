@@ -178,6 +178,25 @@ def test_write_bytes_uses_atomic_replace_and_cleans_stale_temp(tmp_path: Path) -
     assert list(tmp_path.glob("atomic.bin.tmp-write-*")) == []
 
 
+def test_write_bytes_uses_short_atomic_temp_for_long_target_name(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / f"{'long-report-artifact-name-' * 5}.json"
+
+    response = write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=str(target),
+            content=b'{"status":"ok"}',
+        ),
+        _ctx(),
+    )
+
+    assert response.path == str(target)
+    assert target.read_bytes() == b'{"status":"ok"}'
+    assert list(tmp_path.glob("*.tmp-write-*")) == []
+
+
 def test_write_bytes_preserves_existing_file_when_replace_fails(
     monkeypatch,
     tmp_path: Path,
