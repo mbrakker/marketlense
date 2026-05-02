@@ -149,6 +149,181 @@ Suggested priority order:
     - Default-on criteria are defined and tested against representative publishers.
     - README and the discovery playbook are updated when rollout state changes.
 
+- **Title:** Copy browser-harness style low-level CDP escape hatch into browser-use flows [Impact: 4/5, Effort: 3/5]
+  - Explanation: Confirmed useful for Marketlense. `browser-use` already exposes CDP sessions, and `browser-harness` demonstrates a small raw `cdp()` escape hatch for cases where high-level state or selector actions are too slow, flaky, or incomplete. Copy/adapt the existing `browser-harness` approach into this repo only, with no runtime dependency on `browser-harness`; do not redesign or build a new CDP framework from scratch. Keep it inside the existing browser report download service boundary for targeted inspection, screenshots, event draining, iframe handling, and download confirmation.
+  - Pros: Faster hard-page diagnosis, fewer LLM/browser-agent retries, better observability when browser-use abstractions hide page state.
+  - Cons: Raw CDP can bypass normal browser-use safeguards if it becomes a parallel automation path.
+  - Acceptance Criteria:
+    - A documented allowlist defines which CDP methods Marketlense may call and why.
+    - Implementation is based on copied/adapted `browser-harness` helper behavior, not a new from-scratch CDP subsystem.
+    - Implementation is fully self-contained in the Marketlense repo and does not import, shell out to, or require `browser-harness`.
+    - CDP calls log sanitized method name, target/session context, result status, `run_id`, `task_id`, and `span_id`.
+    - At least one hard publisher route uses the escape hatch for inspection or verification without replacing the normal browser-use route.
+    - Tests assert CDP failures surface as typed `AppError` values and do not silently fall back to incomplete terminal evidence.
+
+- **Title:** Standardize an inspectable minimal browser helper surface [Impact: 4/5, Effort: 2/5]
+  - Explanation: Confirmed useful for Marketlense simplification. `browser-harness` keeps helpers such as `page_info`, `capture_screenshot`, `js`, `wait_for_load`, `ensure_real_tab`, and `http_get` small and auditable. Marketlense should copy/adapt those existing helper patterns into its browser-use service code as self-contained repo code instead of inventing a new helper layer, adding another browser abstraction, or depending on `browser-harness`.
+  - Pros: Easier debugging, smaller approved API surface, less need to understand full browser-use internals for common acquisition tasks.
+  - Cons: Requires discipline to prevent the helper list from becoming a second browser framework.
+  - Acceptance Criteria:
+    - Existing browser-use service code documents the approved helper surface and ownership boundary.
+    - Helper behavior is copied/adapted from `browser-harness` patterns where applicable, not reimplemented from first principles.
+    - Helper code lives in the Marketlense repo and has no runtime dependency on `browser-harness`.
+    - Helpers return typed dataclasses or structured dictionaries with complete semantic fields.
+    - No helper reads prompts, decides retries, or performs orchestration.
+    - Tests cover at least one positive path and one failure path for each approved helper category.
+
+- **Title:** Convert durable browser-route learnings into domain playbooks [Impact: 5/5, Effort: 3/5]
+  - Explanation: Confirmed useful for Marketlense. `browser-harness` domain skills capture reusable site knowledge as opt-in playbooks with URL patterns, stable selectors, traps, and private API notes. Marketlense should copy/adapt that existing file-based playbook pattern into its own repo, not design a new playbook system from scratch. Store playbooks as separate files in a dedicated subdirectory, and continuously improve them from validated route traces and recovery summaries.
+  - Pros: Lower token cost, less repeated exploration, faster onboarding for recurring publisher patterns, more inspectable browser behavior.
+  - Cons: Playbooks can become stale and must not encode secrets, one-off coordinates, or run narration.
+  - Acceptance Criteria:
+    - A playbook format is documented for publisher acquisition routes.
+    - The playbook format starts from the `browser-harness` domain-skill/playbook pattern and is adapted only where Marketlense contracts require it.
+    - Playbooks are stored as separate files in a dedicated repo subdirectory, not embedded in prompts or code.
+    - Playbook loading and updates are fully independent of `browser-harness`.
+    - At least three recurring publisher/domain patterns are converted from existing evidence into reviewable playbooks.
+    - A learning workflow promotes validated successful route evidence into playbook updates with reviewable diffs and version/history metadata.
+    - Browser-use prompts or route planning can cite selected playbook IDs and versions.
+    - Stale playbook behavior fails explicitly or falls back to normal discovery with structured logging.
+
+- **Title:** Add bounded persistent browser-session reuse for developer canaries and same-publisher batches [Impact: 4/5, Effort: 3/5]
+  - Explanation: Confirmed useful but must be bounded. `browser-harness` relies on persistent real-browser sessions for speed and continuity, while Marketlense production currently favors isolated managed profiles. Copy/adapt the existing `browser-harness` session-reuse discipline into Marketlense's browser-use integration only for developer mode, canary runs, or same-publisher batches with explicit session keys, TTLs, and cleanup. Do not create a separate session manager from scratch.
+  - Pros: Reduces startup overhead, avoids repeated consent or navigation setup, speeds iterative publisher route debugging.
+  - Cons: Profile reuse can leak state across publishers or hide first-run failures if used too broadly.
+  - Acceptance Criteria:
+    - Persistent sessions are disabled by default for production acquisition.
+    - Session behavior follows copied/adapted `browser-harness` lifecycle practices where compatible with browser-use.
+    - Session reuse is implemented with Marketlense-owned configuration and lifecycle code, with no `browser-harness` dependency.
+    - Allowed reuse modes require explicit session key, publisher scope, TTL, and cleanup event logs.
+    - Canary metrics compare browser startup time, agent calls, and verified PDF yield against isolated-profile baseline.
+    - Tests assert cross-publisher session reuse is rejected unless explicitly allowed by configuration.
+
+- **Title:** Make post-action verification mandatory for browser-use route steps [Impact: 5/5, Effort: 3/5]
+  - Explanation: Confirmed useful for Marketlense quality. `browser-harness` emphasizes screenshots and page state after meaningful actions. Copy/adapt that existing verification discipline into Marketlense's own terminal evidence contracts so every browser-use action that claims navigation, form submission, report capture, or download has immediate verification evidence. Do not create a separate verification framework from scratch.
+  - Pros: Fewer false-positive completions, better replay diagnostics, stronger confidence in downloaded artifacts.
+  - Cons: More artifacts and logs per browser run unless screenshots and HTML snapshots are sampled carefully.
+  - Acceptance Criteria:
+    - Route steps declare expected verification evidence: screenshot, page info, network event, artifact, DOM hash, or confirmation text.
+    - Verification rules reuse the `browser-harness` post-action pattern and existing Marketlense terminal evidence contracts.
+    - Verification logic is implemented in Marketlense contracts/services and does not call `browser-harness`.
+    - Missing verification raises a typed `AppError` instead of returning partially populated terminal evidence.
+    - Logs include action, expected evidence, observed evidence, and validation result.
+    - Tests cover both successful verification and a deliberately missing-evidence failure path.
+
+- **Title:** Copy browser-harness developer-mode self-healing diagnostics into repo tooling [Impact: 3/5, Effort: 2/5]
+  - Explanation: Confirmed useful for local Marketlense development. `browser-harness` setup and doctor flows detect Chrome remote-debugging state, stale daemon sessions, missing real tabs, and CDP attach failures. Copy/adapt that existing diagnostic process pattern into Marketlense-owned developer tooling around browser-use instead of embedding recovery loops in production generators or designing new diagnostics from scratch.
+  - Pros: Faster local setup, fewer manual browser debugging steps, clearer failure messages for agent operators.
+  - Cons: Self-healing can mask environment issues if enabled in production paths.
+  - Acceptance Criteria:
+    - A developer-only diagnostic command or documented workflow checks CDP availability, active tab, profile path, downloads path, and browser-use connectivity.
+    - Diagnostic checks are copied/adapted from `browser-harness` setup/doctor behavior where applicable.
+    - Diagnostic tooling is fully self-contained in the Marketlense repo and does not require `browser-harness` to be installed.
+    - Stale browser connection cleanup is attempted once and logged.
+    - Setup or verification tabs are activated when opened during manual developer workflows.
+    - Production browser workflows do not depend on developer-mode self-healing.
+
+- **Title:** Reuse screenshot-first coordinate fallbacks for hard UI surfaces [Impact: 4/5, Effort: 2/5]
+  - Explanation: Additional browser-harness practice worth copying. The harness favors screenshot inspection and compositor-level coordinate clicks for cases where selectors fail, especially complex dropdowns, shadow DOM, canvas-like controls, and cross-origin iframes. Browser-use already supports coordinate-style interaction, so Marketlense should copy/adapt this fallback policy inside the repo instead of inventing a new interaction strategy.
+  - Pros: Improves success on difficult publisher portals without adding publisher-specific automation code.
+  - Cons: Coordinate use is brittle if stored as permanent route knowledge.
+  - Acceptance Criteria:
+    - Fallback policy requires selector/state attempts before coordinate interaction unless the page surface is known selector-hostile.
+    - Fallback sequencing is copied/adapted from `browser-harness` screenshot-first interaction practices.
+    - Coordinate fallback implementation and policy are fully independent of `browser-harness`.
+    - Coordinates are derived from current screenshots and never stored as durable playbook facts.
+    - Every coordinate action is followed by screenshot or page-info verification.
+    - Tests or replay fixtures cover at least one selector-failure-to-coordinate-success path.
+
+- **Title:** Add lightweight browser preflight and bounded event-drain probes before full agent runs [Impact: 5/5, Effort: 3/5]
+  - Explanation: Additional reusable practice from browser-harness. Its cheap `page_info`, `js`, `http_get`, and event-drain helpers show that many answers can be obtained without a full agent loop. Copy/adapt that existing probe pattern into Marketlense-owned browser-use service code, while preserving existing HTTP-first discovery, to probe JS-rendered direct links, obvious login gates, network redirects, and terminal confirmation before invoking the expensive browser-use agent. Do not build a new preflight engine from scratch.
+  - Pros: Lower model cost, faster negative decisions, less browser churn, better evidence before escalation.
+  - Cons: Needs tight scope so preflight logic does not duplicate generator decisions or become a separate route planner.
+  - Acceptance Criteria:
+    - Preflight probes run only inside the existing browser service boundary and return typed evidence contracts.
+    - Probe behavior is copied/adapted from `browser-harness` helpers and constrained to Marketlense's existing service contracts.
+    - Probe code is self-contained in the Marketlense repo and has no dependency on `browser-harness`.
+    - Full browser-use agent launch records which preflight evidence required escalation.
+    - Metrics track avoided agent calls, preflight duration, and false-negative rate.
+    - Tests assert preflight can confirm a direct JS-rendered PDF route and can escalate cleanly when evidence is insufficient.
+
+- **Title:** Copy browser-harness dialog and beforeunload handling into terminal evidence capture [Impact: 4/5, Effort: 2/5]
+  - Explanation: Additional reusable practice from browser-harness. Its `page_info` dialog surfacing, bounded event drain, and `Page.handleJavaScriptDialog` pattern handle alert, confirm, prompt, and beforeunload states even when page JavaScript is frozen. Copy/adapt this existing pattern into Marketlense-owned browser-use service code so dialogs become typed terminal evidence or typed blockers, not invisible stalls. Do not create a separate dialog framework from scratch.
+  - Pros: Fewer browser stalls, clearer blocker classification, better recovery from form, navigation, and print-flow interruptions.
+  - Cons: Automatically accepting dialogs can change page state if not scoped to explicit policies.
+  - Acceptance Criteria:
+    - Dialog detection and handling are implemented inside the existing browser service boundary and do not call `browser-harness`.
+    - Behavior is copied/adapted from `browser-harness` pending-dialog and CDP dialog-handling patterns.
+    - Dialog evidence records dialog type, sanitized message, action taken, and validation result.
+    - Beforeunload handling is allowed only for explicit navigation/teardown cases and is logged.
+    - Tests cover alert/confirm detection, beforeunload handling, and a policy-rejected dialog path.
+
+- **Title:** Copy browser-harness native keyboard and autocomplete primitives for form routes [Impact: 4/5, Effort: 2/5]
+  - Explanation: Additional reusable practice from browser-harness. Its `type_text`, `press_key`, and targeted keyboard-event dispatch patterns help with searchable dropdowns, country/location autocompletes, and controls that ignore value assignment. Copy/adapt those primitives into Marketlense's browser-use form-route handling instead of inventing new form automation logic.
+  - Pros: Higher form completion quality, fewer repeated browser-agent attempts, lower cost on email-gated report routes.
+  - Cons: Keyboard flows are stateful and need strict post-input verification to avoid false submissions.
+  - Acceptance Criteria:
+    - Keyboard/autocomplete helpers live in Marketlense-owned code and have no `browser-harness` dependency.
+    - Helper behavior is copied/adapted from `browser-harness` key/input patterns and constrained to form interaction evidence.
+    - Autocomplete actions verify the visible/input value after blur before submission.
+    - Required-field failures surface typed blocker codes instead of being collapsed into generic browser failure.
+    - Tests cover a searchable dropdown success and an unresolved autocomplete blocker.
+
+- **Title:** Copy browser-harness print-to-PDF fallback for printable report pages [Impact: 4/5, Effort: 3/5]
+  - Explanation: Additional reusable practice from browser-harness. Its print-as-PDF guidance covers CDP PDF generation and visible print-button flows. Marketlense already detects printable report pages and on-site longreads; copy/adapt the existing print-to-PDF pattern into the browser download service as a bounded artifact capture fallback, not a new acquisition route engine.
+  - Pros: Captures readable reports that expose print views but no downloadable PDF, improves on-site report durability, reduces weak browser-download retries.
+  - Cons: Generated PDFs may differ from publisher-provided PDFs and need clear artifact provenance.
+  - Acceptance Criteria:
+    - Print-to-PDF fallback is implemented inside the existing browser report download service boundary with no `browser-harness` dependency.
+    - Behavior is copied/adapted from `browser-harness` print-as-PDF guidance and existing Marketlense artifact validation contracts.
+    - Generated PDFs carry provenance indicating they were browser-rendered captures, not publisher-supplied files.
+    - Fallback is attempted only for printable/on-site report evidence, not generic pages.
+    - Tests cover printable longread capture and rejection of a non-report printable page.
+
+- **Title:** Copy browser-harness nested-scroll and virtualized-list probing into publisher inventory browser discovery [Impact: 4/5, Effort: 3/5]
+  - Explanation: Additional reusable practice from browser-harness. Its scrolling guidance separates document scroll, nested containers, dropdown menus, and virtualized lists by identifying which element consumes wheel events. Copy/adapt that existing pattern into Marketlense publisher inventory browser scripts to improve archives where report cards are inside scroll containers rather than the document body.
+  - Pros: Better archive discovery coverage, fewer sparse browser results, less fallback churn to broad HTTP recovery.
+  - Cons: Scroll probing can be slow or loop-prone without bounded iteration and clear stop conditions.
+  - Acceptance Criteria:
+    - Nested-scroll probing lives inside the existing publisher inventory browser service/scripts and has no `browser-harness` dependency.
+    - Behavior is copied/adapted from `browser-harness` scrolling practices, with bounded iteration and explicit stop signals.
+    - Route traces record which scroll surface was used and whether new candidates appeared.
+    - Virtualized-list handling stops on repeated DOM/candidate fingerprints.
+    - Tests cover a nested-scroll archive and a no-growth stop condition.
+
+- **Title:** Copy browser-harness tab and target hygiene for headed and persistent browser runs [Impact: 3/5, Effort: 2/5]
+  - Explanation: Additional reusable practice from browser-harness. Its tab guidance filters internal targets, fake omnibox targets, zero-size surfaces, and explicitly activates known targets when visibility matters. Copy/adapt those target-hygiene rules into Marketlense's browser-use developer, headed, and future persistent-session paths so verification captures the intended tab.
+  - Pros: Fewer wrong-tab screenshots, clearer developer diagnostics, safer future session reuse.
+  - Cons: Mostly benefits headed/developer workflows unless persistent sessions become more common.
+  - Acceptance Criteria:
+    - Target hygiene logic is self-contained in Marketlense-owned browser tooling and does not require `browser-harness`.
+    - Behavior is copied/adapted from `browser-harness` internal-target filtering and target activation practices.
+    - Internal Chrome/devtools/about/omnibox targets are excluded from user-facing browser evidence.
+    - Zero-size or stale targets trigger a typed diagnostic or reattach decision.
+    - Tests cover internal-target filtering and stale/zero-size target handling.
+
+- **Title:** Copy browser-harness safe JavaScript evaluation wrapper for browser inspection scripts [Impact: 4/5, Effort: 3/5]
+  - Explanation: Additional reusable practice from browser-harness. Its `js()` wrapper supports promise-aware evaluation, top-level `return`, unserializable values, concise failing snippets, and explicit JavaScript exception reporting. Copy/adapt that behavior for Marketlense browser inspection scripts instead of continuing to spread ad hoc script execution and error shaping.
+  - Pros: Easier debugging, cleaner typed errors, more reliable publisher inventory and terminal-state inspection.
+  - Cons: Needs careful placement so it remains a service helper and not a cross-layer scripting abstraction.
+  - Acceptance Criteria:
+    - The wrapper is implemented inside the existing browser service boundary with no `browser-harness` dependency.
+    - Behavior is copied/adapted from `browser-harness` `js()` evaluation patterns where compatible with browser-use.
+    - JavaScript exceptions include sanitized snippet, line/column when available, and typed `AppError` mapping.
+    - Existing browser inventory and terminal capture scripts use the wrapper for new inspection work.
+    - Tests cover successful return values, promise resolution, thrown exceptions, and unserializable values.
+
+- **Title:** Promote network-learned private API evidence into browser playbooks and deterministic HTTP routes [Impact: 5/5, Effort: 4/5]
+  - Explanation: Additional reusable practice from browser-harness. Its domain playbook rules explicitly capture private XHR/fetch endpoints, request shapes, URL patterns, waits, and traps so the next run avoids repeated browser exploration. Copy/adapt that learning rule into Marketlense's file-based playbooks and route planning so validated network evidence can become deterministic HTTP-first behavior when safe.
+  - Pros: Highest speed and cost upside for repeat publishers, fewer browser-use calls, stronger explainability for learned routes.
+  - Cons: Private APIs can change and may require conservative validation to avoid brittle hidden coupling.
+  - Acceptance Criteria:
+    - Private API evidence is stored in separate playbook files under the dedicated Marketlense playbook subdirectory.
+    - Learning behavior is copied/adapted from `browser-harness` domain-skill contribution rules and remains independent of `browser-harness`.
+    - Promotion requires validated repeated success, request-shape documentation, and rollback/fallback behavior.
+    - Deterministic HTTP route use logs playbook ID/version, endpoint pattern, validation result, and fallback reason when rejected.
+    - Tests cover promoted private API route success and stale endpoint fallback to normal discovery.
+
 ---
 
 ## 5. Idempotency, Checkpoints & Publish Durability
