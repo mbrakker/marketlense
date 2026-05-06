@@ -149,18 +149,6 @@ Suggested priority order:
     - Default-on criteria are defined and tested against representative publishers.
     - README and the discovery playbook are updated when rollout state changes.
 
-- **Title:** Standardize an inspectable minimal browser helper surface [Impact: 4/5, Effort: 2/5]
-  - Explanation: Confirmed useful for Marketlense simplification. `browser-harness` keeps helpers such as `page_info`, `capture_screenshot`, `js`, `wait_for_load`, `ensure_real_tab`, and `http_get` small and auditable. Marketlense should copy/adapt those existing helper patterns into its browser-use service code as self-contained repo code instead of inventing a new helper layer, adding another browser abstraction, or depending on `browser-harness`.
-  - Pros: Easier debugging, smaller approved API surface, less need to understand full browser-use internals for common acquisition tasks.
-  - Cons: Requires discipline to prevent the helper list from becoming a second browser framework.
-  - Acceptance Criteria:
-    - Existing browser-use service code documents the approved helper surface and ownership boundary.
-    - Helper behavior is copied/adapted from `browser-harness` patterns where applicable, not reimplemented from first principles.
-    - Helper code lives in the Marketlense repo and has no runtime dependency on `browser-harness`.
-    - Helpers return typed dataclasses or structured dictionaries with complete semantic fields.
-    - No helper reads prompts, decides retries, or performs orchestration.
-    - Tests cover at least one positive path and one failure path for each approved helper category.
-
 - **Title:** Add bounded persistent browser-session reuse for developer canaries and same-publisher batches [Impact: 4/5, Effort: 3/5]
   - Explanation: Confirmed useful but must be bounded. `browser-harness` relies on persistent real-browser sessions for speed and continuity, while Marketlense production currently favors isolated managed profiles. Copy/adapt the existing `browser-harness` session-reuse discipline into Marketlense's browser-use integration only for developer mode, canary runs, or same-publisher batches with explicit session keys, TTLs, and cleanup. Do not create a separate session manager from scratch.
   - Pros: Reduces startup overhead, avoids repeated consent or navigation setup, speeds iterative publisher route debugging.

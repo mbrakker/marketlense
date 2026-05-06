@@ -27,8 +27,11 @@ from src.contracts.browser_download import (
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.artifact import BrowserUseAgentResult
 from src.services._browser_report_download.cdp import (
-    capture_terminal_screenshot_via_cdp,
     collect_terminal_network_entries_via_cdp,
+)
+from src.services._browser_report_download.helpers import (
+    browser_helper_capture_screenshot,
+    browser_helper_page_info,
 )
 from src.services._browser_report_download.http import (
     download_pdf_from_url,
@@ -423,13 +426,19 @@ def run_browser_report_download_agent(
                         "downloaded_file_count": len(downloaded_files),
                         "attachment_count": len(attachment_paths),
                         "browser_network_event_count": len(network_events),
-                        "browser_network_resource_url_count": len(network_resource_urls),
+                        "browser_network_resource_url_count": len(
+                            network_resource_urls
+                        ),
                         "browser_screenshot_path": screenshot_path,
                     },
                 )
             )
         else:
-            terminal_snapshot = _capture_terminal_snapshot(browser)
+            terminal_snapshot = _capture_terminal_snapshot(
+                browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
             terminal_snapshot = _stabilize_terminal_snapshot(
                 browser=browser,
                 raw_model_response=raw_model_response,
@@ -728,7 +737,11 @@ def _salvage_timed_out_browser_run_unbounded(
     html_snapshot_path = ""
     screenshot_path = ""
     try:
-        terminal_snapshot = _capture_terminal_snapshot(browser)
+        terminal_snapshot = _capture_terminal_snapshot(
+            browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
         final_page_url = terminal_snapshot.url
         final_page_title = terminal_snapshot.title
         final_page_html = terminal_snapshot.html
@@ -962,7 +975,11 @@ def _attempt_lookup_submission_assist(
             ensure_ascii=True,
         ),
         route_family_hint="browser_email_form",
-        snapshot=_capture_terminal_snapshot(browser),
+        snapshot=_capture_terminal_snapshot(
+            browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        ),
         ctx=ctx,
         normalized_url=normalized_url,
         trigger_reason="lookup_submission_assist",
@@ -1246,21 +1263,24 @@ def _deserialize_browser_agent_run_result(
     )
 
 
-def _capture_terminal_snapshot(browser: Any) -> TerminalSnapshot:
+def _capture_terminal_snapshot(
+    browser: Any,
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+) -> TerminalSnapshot:
     page = _resolve_current_page(browser)
+    page_info = browser_helper_page_info(
+        browser=browser,
+        page=page,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     return TerminalSnapshot(
         page=page,
-        url=(
-            str(getattr(browser, "url", "") or "").strip()
-            or _read_browser_current_page_url(browser)
-            or _read_page_url(page)
-        ),
-        title=(
-            str(getattr(browser, "title", "") or "").strip()
-            or _read_browser_current_page_title(browser)
-            or _read_page_title(page)
-        ),
-        html=str(getattr(browser, "html", "") or "") or _read_page_html(page),
+        url=page_info.url,
+        title=page_info.title,
+        html=page_info.html,
     )
 
 
@@ -1304,7 +1324,11 @@ def _stabilize_terminal_snapshot(
             break
         attempts += 1
         time.sleep(poll_delay_seconds)
-        candidate = _capture_terminal_snapshot(browser)
+        candidate = _capture_terminal_snapshot(
+            browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
         stabilized_snapshot = _merge_terminal_snapshots(
             previous=stabilized_snapshot,
             candidate=candidate,
@@ -2086,7 +2110,9 @@ def _collect_network_events_via_cdp(
     return _network_events_from_raw_events(raw_events)
 
 
-def _network_events_from_raw_events(raw_events: list[Any]) -> list[BrowserDownloadNetworkEvent]:
+def _network_events_from_raw_events(
+    raw_events: list[Any],
+) -> list[BrowserDownloadNetworkEvent]:
     events: list[BrowserDownloadNetworkEvent] = []
     seen: set[tuple[str, str]] = set()
     for raw_event in raw_events:
@@ -2500,30 +2526,15 @@ def _write_terminal_screenshot(
     normalized_url: str,
 ) -> str:
     screenshot_path = download_dir / "terminal_screenshot.png"
-    if _try_screenshot_call(
-        candidate=getattr(browser, "take_screenshot", None),
-        screenshot_path=screenshot_path,
-    ):
-        return str(screenshot_path)
-    if _try_screenshot_call(
-        candidate=getattr(page, "screenshot", None) if page is not None else None,
-        screenshot_path=screenshot_path,
-    ):
-        return str(screenshot_path)
-    if _try_screenshot_call(
-        candidate=getattr(page, "take_screenshot", None) if page is not None else None,
-        screenshot_path=screenshot_path,
-    ):
-        return str(screenshot_path)
-    if capture_terminal_screenshot_via_cdp(
+    result = browser_helper_capture_screenshot(
         browser=browser,
+        page=page,
         screenshot_path=screenshot_path,
         ctx=ctx,
         normalized_url=normalized_url,
         required=False,
-    ):
-        return str(screenshot_path)
-    return ""
+    )
+    return result.path if result.status == "ok" else ""
 
 
 def _try_screenshot_call(*, candidate: Any, screenshot_path: Path) -> bool:
