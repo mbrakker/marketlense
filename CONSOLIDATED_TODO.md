@@ -185,18 +185,6 @@ Suggested priority order:
     - Every coordinate action is followed by screenshot or page-info verification.
     - Tests or replay fixtures cover at least one selector-failure-to-coordinate-success path.
 
-- **Title:** Add lightweight browser preflight and bounded event-drain probes before full agent runs [Impact: 5/5, Effort: 3/5]
-  - Explanation: Additional reusable practice from browser-harness. Its cheap `page_info`, `js`, `http_get`, and event-drain helpers show that many answers can be obtained without a full agent loop. Copy/adapt that existing probe pattern into Marketlense-owned browser-use service code, while preserving existing HTTP-first discovery, to probe JS-rendered direct links, obvious login gates, network redirects, and terminal confirmation before invoking the expensive browser-use agent. Do not build a new preflight engine from scratch.
-  - Pros: Lower model cost, faster negative decisions, less browser churn, better evidence before escalation.
-  - Cons: Needs tight scope so preflight logic does not duplicate generator decisions or become a separate route planner.
-  - Acceptance Criteria:
-    - Preflight probes run only inside the existing browser service boundary and return typed evidence contracts.
-    - Probe behavior is copied/adapted from `browser-harness` helpers and constrained to Marketlense's existing service contracts.
-    - Probe code is self-contained in the Marketlense repo and has no dependency on `browser-harness`.
-    - Full browser-use agent launch records which preflight evidence required escalation.
-    - Metrics track avoided agent calls, preflight duration, and false-negative rate.
-    - Tests assert preflight can confirm a direct JS-rendered PDF route and can escalate cleanly when evidence is insufficient.
-
 - **Title:** Copy browser-harness dialog and beforeunload handling into terminal evidence capture [Impact: 4/5, Effort: 2/5]
   - Explanation: Additional reusable practice from browser-harness. Its `page_info` dialog surfacing, bounded event drain, and `Page.handleJavaScriptDialog` pattern handle alert, confirm, prompt, and beforeunload states even when page JavaScript is frozen. Copy/adapt this existing pattern into Marketlense-owned browser-use service code so dialogs become typed terminal evidence or typed blockers, not invisible stalls. Do not create a separate dialog framework from scratch.
   - Pros: Fewer browser stalls, clearer blocker classification, better recovery from form, navigation, and print-flow interruptions.
@@ -388,7 +376,6 @@ Suggested priority order:
     - A fast static check validates required exported symbols for split boundary families (at minimum `_config_service` and `_pdf/_visual_heuristics`).
     - The check runs before mypy in CI and fails with grouped actionable diagnostics.
     - README documents when to run the check locally during refactors.
-
 
 - **Title:** Repair `config_service` facade split so internal modules compile and preserve one canonical boundary [Impact: 5/5, Effort: 3/5]
   - Explanation: Deep audit plus second-pass rerun showed that `src/services/_config_service/app_settings.py` and `src/services/_config_service/analysis.py` currently reference many missing shared symbols (types, helpers, logger/constants, and dotenv hooks). This indicates an incomplete internal split that broke symbol wiring while keeping `src/services/config_service.py` as the public boundary.

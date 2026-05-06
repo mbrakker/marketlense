@@ -12,4 +12,5 @@ from ._browser_download.identity import *
 from ._browser_download.orchestrator import *
 from ._browser_download.planning import *
 from ._browser_download.playbooks import *
+from ._browser_download.preflight import *
 from ._browser_download.runtime import *

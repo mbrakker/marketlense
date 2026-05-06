@@ -26,6 +26,10 @@ from src.services._browser_report_download.prediction import (
 from src.services._browser_report_download.playbooks import (
     load_browser_route_playbooks,
 )
+from src.services._browser_report_download.preflight import (
+    observe_browser_preflight_agent_outcome,
+    try_browser_preflight_probe,
+)
 from src.services._browser_report_download.prompt import (
     render_browser_report_download_prompt,
 )
@@ -365,6 +369,54 @@ def download_report_with_browser_use(
             return access_challenge_result
 
     validate_browser_runtime_settings(request)
+    browser_preflight_response = try_browser_preflight_probe(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        execution_url=normalized_execution_url,
+        download_dir=download_dir,
+    )
+    if browser_preflight_response.result is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_complete",
+                module=logger.name,
+                fields=asdict(browser_preflight_response.result),
+            )
+        )
+        return browser_preflight_response.result
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_browser_preflight_escalation",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "execution_url": normalized_execution_url,
+                "probe_status": browser_preflight_response.probe.status,
+                "escalation_reason": browser_preflight_response.probe.escalation_reason,
+                "candidate_pdf_url_count": len(
+                    browser_preflight_response.probe.candidate_pdf_urls
+                ),
+                "observed_event_url_count": len(
+                    browser_preflight_response.probe.observed_event_urls
+                ),
+                "preflight_duration_seconds": (
+                    browser_preflight_response.probe.duration_seconds
+                ),
+                "avoided_agent_call": False,
+                "false_negative_rate_sample": (
+                    browser_preflight_response.probe.false_negative_rate_sample
+                ),
+                "evidence_labels": list(
+                    browser_preflight_response.probe.evidence_labels
+                ),
+            },
+        )
+    )
     request = attach_browser_route_playbooks(
         request=request,
         ctx=ctx,
@@ -424,6 +476,12 @@ def download_report_with_browser_use(
             delivery_email=delivery_email_value,
             download_dir=download_dir,
             browser_run=browser_run,
+        )
+        observe_browser_preflight_agent_outcome(
+            probe=browser_preflight_response.probe,
+            result=response,
+            ctx=ctx,
+            normalized_url=normalized_url,
         )
     except AppError as exc:
         raise _with_augmented_error_context(
