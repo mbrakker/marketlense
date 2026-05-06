@@ -409,3 +409,41 @@ Suggested priority order:
 - Durable publish jobs with transactional outbox.
 - Contract compatibility matrix for persisted artifacts and stored rows.
 - End-to-end tracing across orchestrator/generator/service boundaries.
+
+---
+
+## 8. Deep Codebase Audit (2026-05-06)
+
+- **Title:** Restore CI baseline integrity after facade/module splits [Impact: 5/5, Effort: 4/5]
+  - Explanation: A full CI preflight plus a second-pass recheck found the type gate currently failing with 1,365 mypy errors across 43 files. Errors cluster in newly split internal modules (`src/services/_config_service/*`, `src/services/_pdf/_visual_heuristics/*`) and now-unsafe orchestrator/generator typing edges. This is an immediate CI blocker and also signals cross-module contract drift after refactors.
+  - Pros: Unblocks all PRs, restores confidence in type contracts, reduces runtime defect risk from incorrect assumptions.
+  - Cons: Requires disciplined staged fixes and temporary ownership focus across several bounded contexts.
+  - Acceptance Criteria:
+    - `python scripts/ci/run_type_check.py` passes with zero unbaselined errors.
+    - Any remaining baseline entries are intentional, owner-tagged, expiry-dated, and justified.
+    - `src/services/_config_service/*` exports/imports are repaired so split modules resolve shared helpers/constants/types without `name-defined` failures.
+    - `src/services/_pdf/_visual_heuristics/*` re-exports/constants are reconciled so submodules no longer depend on missing symbols.
+    - Critical typed logic fixes land for currently unbaselined failures in:
+      - `src/generators/artifact_normalization.py`
+      - `src/orchestrators/_report_download_orchestrator/workflow.py`
+      - `src/orchestrators/publisher_inventory_orchestrator.py`
+      - `src/orchestrators/publish_orchestrator.py`
+      - `src/services/_report_store_service/common.py`
+
+- **Title:** Add automated post-refactor symbol-linking guard for split service internals [Impact: 4/5, Effort: 2/5]
+  - Explanation: The dominant errors are unresolved names caused by internal module fission where helper symbols are no longer imported/exported coherently. The existing architecture gate checks import direction but does not catch missing symbol wiring early.
+  - Pros: Prevents future large-scale CI failures after mechanical module splits.
+  - Cons: One more CI check to maintain.
+  - Acceptance Criteria:
+    - A fast static check validates required exported symbols for split boundary families (at minimum `_config_service` and `_pdf/_visual_heuristics`).
+    - The check runs before mypy in CI and fails with grouped actionable diagnostics.
+    - README documents when to run the check locally during refactors.
+
+- **Title:** Tighten risk-policy scope so doc-only changes cannot hide repository-wide CI breakage [Impact: 4/5, Effort: 1/5]
+  - Explanation: Current risk classification marks a `CONSOLIDATED_TODO.md`-only change as `docs` while the repository remains red on hard gates. This can create false confidence during maintenance updates.
+  - Pros: Better signal to maintainers, fewer “green-looking” local checks when mainline is failing.
+  - Cons: May mark more changes as higher risk and increase required local preflight work.
+  - Acceptance Criteria:
+    - Risk-policy output surfaces current repository CI health independently from changed-file classification.
+    - For docs-only changes, policy clearly reports whether hard gates are presently failing on mainline baseline.
+    - Operator docs include a “docs-only but repo-red” handling path.
