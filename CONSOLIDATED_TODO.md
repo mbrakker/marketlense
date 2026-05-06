@@ -149,18 +149,6 @@ Suggested priority order:
     - Default-on criteria are defined and tested against representative publishers.
     - README and the discovery playbook are updated when rollout state changes.
 
-- **Title:** Copy browser-harness style low-level CDP escape hatch into browser-use flows [Impact: 4/5, Effort: 3/5]
-  - Explanation: Confirmed useful for Marketlense. `browser-use` already exposes CDP sessions, and `browser-harness` demonstrates a small raw `cdp()` escape hatch for cases where high-level state or selector actions are too slow, flaky, or incomplete. Copy/adapt the existing `browser-harness` approach into this repo only, with no runtime dependency on `browser-harness`; do not redesign or build a new CDP framework from scratch. Keep it inside the existing browser report download service boundary for targeted inspection, screenshots, event draining, iframe handling, and download confirmation.
-  - Pros: Faster hard-page diagnosis, fewer LLM/browser-agent retries, better observability when browser-use abstractions hide page state.
-  - Cons: Raw CDP can bypass normal browser-use safeguards if it becomes a parallel automation path.
-  - Acceptance Criteria:
-    - A documented allowlist defines which CDP methods Marketlense may call and why.
-    - Implementation is based on copied/adapted `browser-harness` helper behavior, not a new from-scratch CDP subsystem.
-    - Implementation is fully self-contained in the Marketlense repo and does not import, shell out to, or require `browser-harness`.
-    - CDP calls log sanitized method name, target/session context, result status, `run_id`, `task_id`, and `span_id`.
-    - At least one hard publisher route uses the escape hatch for inspection or verification without replacing the normal browser-use route.
-    - Tests assert CDP failures surface as typed `AppError` values and do not silently fall back to incomplete terminal evidence.
-
 - **Title:** Standardize an inspectable minimal browser helper surface [Impact: 4/5, Effort: 2/5]
   - Explanation: Confirmed useful for Marketlense simplification. `browser-harness` keeps helpers such as `page_info`, `capture_screenshot`, `js`, `wait_for_load`, `ensure_real_tab`, and `http_get` small and auditable. Marketlense should copy/adapt those existing helper patterns into its browser-use service code as self-contained repo code instead of inventing a new helper layer, adding another browser abstraction, or depending on `browser-harness`.
   - Pros: Easier debugging, smaller approved API surface, less need to understand full browser-use internals for common acquisition tasks.
@@ -186,6 +174,7 @@ Suggested priority order:
     - A learning workflow promotes validated successful route evidence into playbook updates with reviewable diffs and version/history metadata.
     - Browser-use prompts or route planning can cite selected playbook IDs and versions.
     - Stale playbook behavior fails explicitly or falls back to normal discovery with structured logging.
+    - Legacy playbook in DB storage (if it exists) is now removed and playbook files are used instead
 
 - **Title:** Add bounded persistent browser-session reuse for developer canaries and same-publisher batches [Impact: 4/5, Effort: 3/5]
   - Explanation: Confirmed useful but must be bounded. `browser-harness` relies on persistent real-browser sessions for speed and continuity, while Marketlense production currently favors isolated managed profiles. Copy/adapt the existing `browser-harness` session-reuse discipline into Marketlense's browser-use integration only for developer mode, canary runs, or same-publisher batches with explicit session keys, TTLs, and cleanup. Do not create a separate session manager from scratch.
