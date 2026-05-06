@@ -46,6 +46,57 @@ class BrowserRoutePlaybookHistoryEntry:
 
 
 @dataclass(frozen=True)
+class BrowserRoutePrivateApiEvidence:
+    schema_version: str = field(
+        metadata={"doc": "Browser route private-API evidence schema version."}
+    )
+    evidence_id: str = field(
+        metadata={"doc": "Stable private-API evidence identifier within a playbook."}
+    )
+    endpoint_pattern: str = field(
+        metadata={
+            "doc": "Endpoint URL template learned from repeated browser network evidence."
+        }
+    )
+    method: str = field(
+        metadata={"doc": "HTTP method for the deterministic private-API probe."}
+    )
+    request_shape_summary: str = field(
+        metadata={
+            "doc": "Prompt-safe documentation of required request shape, parameters, and safe headers."
+        }
+    )
+    response_pdf_url_json_pointer: str = field(
+        metadata={
+            "doc": "JSON pointer used to extract the PDF URL from the private-API response."
+        }
+    )
+    expected_status_codes: list[int] = field(
+        metadata={
+            "doc": "HTTP statuses accepted before response-shape validation proceeds."
+        }
+    )
+    required_response_markers: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Case-insensitive response-text markers that must be present before using the response."
+        },
+    )
+    success_count: int = field(
+        default=0,
+        metadata={
+            "doc": "Number of validated successful acquisitions observed before promotion."
+        },
+    )
+    fallback_route_family: str = field(
+        default="",
+        metadata={
+            "doc": "Route family to fall back to when the deterministic endpoint is stale."
+        },
+    )
+
+
+@dataclass(frozen=True)
 class BrowserRoutePlaybook:
     schema_version: str = field(
         metadata={"doc": "Browser route playbook schema version."}
@@ -116,6 +167,12 @@ class BrowserRoutePlaybook:
             "doc": "Reviewable source labels for the evidence used to create or update the playbook."
         },
     )
+    private_api_evidence: list[BrowserRoutePrivateApiEvidence] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Validated private XHR/fetch endpoint evidence promoted from browser network observations."
+        },
+    )
     history: list[BrowserRoutePlaybookHistoryEntry] = field(
         default_factory=list,
         metadata={"doc": "Version/history metadata for reviewable playbook diffs."},
@@ -149,6 +206,12 @@ class BrowserRoutePlaybookSelection:
     trap_lines: list[str] = field(
         default_factory=list,
         metadata={"doc": "Prompt-safe route traps to avoid."},
+    )
+    private_api_evidence: list[BrowserRoutePrivateApiEvidence] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Deterministic private-API route evidence available before launching browser-use."
+        },
     )
 
 
@@ -210,6 +273,57 @@ class BrowserRoutePlaybookPromotionRequest:
         metadata={
             "doc": "UTC ISO timestamp for deterministic tests or live promotion metadata."
         },
+    )
+
+
+@dataclass(frozen=True)
+class BrowserRoutePrivateApiPromotionRequest:
+    schema_version: str = field(
+        metadata={"doc": "Private-API playbook promotion request schema version."}
+    )
+    playbook_dir: str = field(
+        metadata={"doc": "Root browser-route playbook directory."}
+    )
+    source_url: str = field(
+        metadata={"doc": "Validated source URL used to derive host/path patterns."}
+    )
+    route_family: str = field(
+        metadata={"doc": "Browser route family replaced by the deterministic route."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Expected result kind produced by the private API route."}
+    )
+    endpoint_pattern: str = field(
+        metadata={"doc": "Endpoint URL template learned from browser network evidence."}
+    )
+    method: str = field(metadata={"doc": "HTTP method for the learned endpoint."})
+    request_shape_summary: str = field(
+        metadata={"doc": "Reviewable request-shape documentation."}
+    )
+    response_pdf_url_json_pointer: str = field(
+        metadata={"doc": "JSON pointer that extracts the PDF URL from the response."}
+    )
+    validated_success_count: int = field(
+        metadata={"doc": "Validated repeated successes backing promotion."}
+    )
+    fallback_route_family: str = field(
+        metadata={"doc": "Route family used when the endpoint is stale or rejected."}
+    )
+    expected_status_codes: list[int] = field(
+        default_factory=lambda: [200],
+        metadata={"doc": "HTTP statuses accepted before response validation."},
+    )
+    required_response_markers: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Required response-text markers for conservative validation."},
+    )
+    evidence_labels: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Evidence labels backing this private-API promotion."},
+    )
+    observed_at: str = field(
+        default="",
+        metadata={"doc": "UTC ISO timestamp for deterministic tests."},
     )
 
 

@@ -26,6 +26,9 @@ from src.services._browser_report_download.prediction import (
 from src.services._browser_report_download.playbooks import (
     load_browser_route_playbooks,
 )
+from src.services._browser_report_download.private_api import (
+    try_private_api_playbook_download,
+)
 from src.services._browser_report_download.preflight import (
     observe_browser_preflight_agent_outcome,
     try_browser_preflight_probe,
@@ -422,6 +425,24 @@ def download_report_with_browser_use(
         ctx=ctx,
         normalized_url=normalized_url,
     )
+    private_api_result = try_private_api_playbook_download(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        execution_url=normalized_execution_url,
+        download_dir=download_dir,
+    )
+    if private_api_result is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_complete",
+                module=logger.name,
+                fields=asdict(private_api_result),
+            )
+        )
+        return private_api_result
     prompt_bundle = render_browser_report_download_prompt(
         request=request,
         ctx=ctx,

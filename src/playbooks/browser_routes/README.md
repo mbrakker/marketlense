@@ -22,8 +22,11 @@ Required fields:
 - `traps`: prompt-safe traps to avoid.
 - `evidence_notes`: durable rationale for why this pattern is reusable.
 - `source_evidence`: reviewable evidence labels.
+- `private_api_evidence`: optional validated network-learned private API evidence. These entries are used only for deterministic HTTP-first attempts before browser-use and must document endpoint pattern, method, request shape, JSON response pointer, accepted status codes, observed success count, and fallback route family.
 - `history`: version/change metadata.
 
 Stale behavior is controlled by `browser_download.route_playbook_stale_policy`. `fallback` logs stale matches and continues normal scoped discovery. `fail` raises a typed `browser_route_playbook_stale` error so stale guidance cannot silently influence acquisition.
 
 Validated successful route evidence can be promoted through `promote_validated_browser_route_result_to_playbook(...)`, which creates or updates a YAML file with version/history metadata and returns a unified diff for review. Promotion rejects unverified or unsuccessful route results.
+
+Network-learned private API evidence is stored in separate YAML files under `private_api/`. Promote it with `promote_private_api_evidence_to_browser_playbook(...)` only after repeated validated successes, documented request shape, and an explicit fallback route family. At runtime the browser-download service validates the endpoint status, response markers, JSON pointer result, and final PDF artifact before accepting the deterministic route; stale endpoints log a fallback reason and continue to the normal browser route.

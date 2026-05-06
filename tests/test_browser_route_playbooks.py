@@ -15,11 +15,13 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
+    BrowserRoutePrivateApiPromotionRequest,
     DownloadTerminalEvidence,
 )
 from src.services import browser_report_download_service
 from src.services._browser_report_download.playbooks import (
     load_browser_route_playbooks,
+    promote_private_api_evidence_to_browser_playbook,
     promote_validated_browser_route_result_to_playbook,
 )
 from src.services._browser_report_download.prompt import (
@@ -168,6 +170,70 @@ def test_validated_route_promotion_writes_reviewable_file_and_rejects_unverified
             observed_at="2026-05-06T12:00:00+00:00",
         )
     assert excinfo.value.code == "browser_route_playbook_promotion_unverified"
+    assert excinfo.value.retryable is False
+
+
+def test_private_api_promotion_writes_dedicated_playbook_and_requires_repeated_success(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    request = BrowserRoutePrivateApiPromotionRequest(
+        schema_version="1.0",
+        playbook_dir=str(tmp_path / "playbooks"),
+        source_url="https://example.com/research/report-2026",
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        endpoint_pattern="/api/reports/{last_path_segment}",
+        method="GET",
+        request_shape_summary="GET with report slug path parameter; no auth headers.",
+        response_pdf_url_json_pointer="/asset/pdfUrl",
+        validated_success_count=2,
+        fallback_route_family="browser_pdf_click",
+        required_response_markers=["pdfUrl"],
+        evidence_labels=["network_document_request"],
+        observed_at="2026-05-06T12:00:00+00:00",
+    )
+
+    response = promote_private_api_evidence_to_browser_playbook(
+        request=request,
+        ctx=run_context,
+    )
+    payload = yaml.safe_load(Path(response.path).read_text(encoding="utf-8"))
+    loaded = load_browser_route_playbooks(
+        playbook_dir=str(tmp_path / "playbooks"),
+        ctx=run_context,
+    )
+
+    assert Path(response.path).parent.name == "private_api"
+    assert response.playbook_id == "private-api-example-com-pdf-download"
+    assert payload["private_api_evidence"][0]["success_count"] == 2
+    assert payload["private_api_evidence"][0]["request_shape_summary"] == (
+        "GET with report slug path parameter; no auth headers."
+    )
+    assert loaded[0].private_api_evidence[0].response_pdf_url_json_pointer == (
+        "/asset/pdfUrl"
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        promote_private_api_evidence_to_browser_playbook(
+            request=BrowserRoutePrivateApiPromotionRequest(
+                schema_version="1.0",
+                playbook_dir=str(tmp_path / "playbooks"),
+                source_url="https://example.com/research/report-2026",
+                route_family="browser_pdf_click",
+                route_kind="pdf_download",
+                endpoint_pattern="/api/reports/{last_path_segment}",
+                method="GET",
+                request_shape_summary="GET with report slug path parameter.",
+                response_pdf_url_json_pointer="/asset/pdfUrl",
+                validated_success_count=1,
+                fallback_route_family="browser_pdf_click",
+            ),
+            ctx=run_context,
+        )
+    assert excinfo.value.code == (
+        "browser_route_private_api_promotion_insufficient_evidence"
+    )
     assert excinfo.value.retryable is False
 
 

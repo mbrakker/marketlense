@@ -251,17 +251,6 @@ Suggested priority order:
     - Existing browser inventory and terminal capture scripts use the wrapper for new inspection work.
     - Tests cover successful return values, promise resolution, thrown exceptions, and unserializable values.
 
-- **Title:** Promote network-learned private API evidence into browser playbooks and deterministic HTTP routes [Impact: 5/5, Effort: 4/5]
-  - Explanation: Additional reusable practice from browser-harness. Its domain playbook rules explicitly capture private XHR/fetch endpoints, request shapes, URL patterns, waits, and traps so the next run avoids repeated browser exploration. Copy/adapt that learning rule into Marketlense's file-based playbooks and route planning so validated network evidence can become deterministic HTTP-first behavior when safe.
-  - Pros: Highest speed and cost upside for repeat publishers, fewer browser-use calls, stronger explainability for learned routes.
-  - Cons: Private APIs can change and may require conservative validation to avoid brittle hidden coupling.
-  - Acceptance Criteria:
-    - Private API evidence is stored in separate playbook files under the dedicated Marketlense playbook subdirectory.
-    - Learning behavior is copied/adapted from `browser-harness` domain-skill contribution rules and remains independent of `browser-harness`.
-    - Promotion requires validated repeated success, request-shape documentation, and rollback/fallback behavior.
-    - Deterministic HTTP route use logs playbook ID/version, endpoint pattern, validation result, and fallback reason when rejected.
-    - Tests cover promoted private API route success and stale endpoint fallback to normal discovery.
-
 ---
 
 ## 5. Idempotency, Checkpoints & Publish Durability

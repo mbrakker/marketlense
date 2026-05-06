@@ -52,6 +52,7 @@ def select_browser_route_playbooks(
                     for index, step in enumerate(playbook.steps[:5], start=1)
                 ],
                 trap_lines=list(playbook.traps[:5]),
+                private_api_evidence=list(playbook.private_api_evidence),
             )
         )
     selected.sort(key=lambda item: _selection_rank_key(item, route_family))

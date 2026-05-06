@@ -14,6 +14,8 @@ import yaml
 from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserReportDownloadResult,
+    BrowserRoutePrivateApiEvidence,
+    BrowserRoutePrivateApiPromotionRequest,
     BrowserRoutePlaybook,
     BrowserRoutePlaybookHistoryEntry,
     BrowserRoutePlaybookPromotionRequest,
@@ -80,6 +82,10 @@ def load_browser_route_playbooks(
     playbooks: list[BrowserRoutePlaybook] = []
     for path in sorted(root.glob("*.yaml")):
         playbooks.append(_load_browser_route_playbook_file(path=path, ctx=ctx))
+    private_api_dir = root / "private_api"
+    if private_api_dir.is_dir():
+        for path in sorted(private_api_dir.glob("*.yaml")):
+            playbooks.append(_load_browser_route_playbook_file(path=path, ctx=ctx))
     logger.info(
         log_event(
             ctx,
@@ -210,6 +216,83 @@ def promote_browser_route_playbook(
     return response
 
 
+def promote_private_api_evidence_to_browser_playbook(
+    *,
+    request: BrowserRoutePrivateApiPromotionRequest,
+    ctx: RunContext,
+) -> BrowserRoutePlaybookPromotionResponse:
+    _validate_private_api_promotion_request(request)
+    observed_at = _resolve_observed_at(request.observed_at)
+    host = urlsplit(request.source_url).netloc.casefold()
+    if not host:
+        raise AppError(
+            code="browser_route_private_api_promotion_invalid_url",
+            message="Private-API playbook promotion requires a URL with a host",
+            retryable=False,
+            context={"source_url": request.source_url},
+        )
+    root = Path(request.playbook_dir).expanduser()
+    if not root.is_absolute():
+        root = root.resolve()
+    private_api_root = root / "private_api"
+    private_api_root.mkdir(parents=True, exist_ok=True)
+    playbook_id = f"private-api-{_slugify(host)}-{_slugify(request.route_kind)}"
+    path = private_api_root / f"{playbook_id}.yaml"
+    before_text = path.read_text(encoding="utf-8") if path.exists() else ""
+    existing = _load_existing_for_promotion(path) if path.exists() else None
+    version = _next_version(existing.version if existing is not None else "")
+    payload = _build_private_api_playbook_payload(
+        request=request,
+        observed_at=observed_at,
+        host=host,
+        playbook_id=playbook_id,
+        version=version,
+        existing=existing,
+    )
+    after_text = yaml.safe_dump(payload, sort_keys=False, allow_unicode=False)
+    path.write_text(after_text, encoding="utf-8")
+    review_diff = "".join(
+        difflib.unified_diff(
+            before_text.splitlines(keepends=True),
+            after_text.splitlines(keepends=True),
+            fromfile=f"{path.name}:before",
+            tofile=f"{path.name}:after",
+        )
+    )
+    response = BrowserRoutePlaybookPromotionResponse(
+        schema_version="1.0",
+        playbook_id=playbook_id,
+        version=version,
+        path=str(path),
+        status="updated" if existing is not None else "created",
+        review_diff=review_diff,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_route_private_api_playbook_promoted",
+            module=logger.name,
+            fields={
+                "playbook_id": response.playbook_id,
+                "version": response.version,
+                "path": response.path,
+                "status": response.status,
+                "source_url": request.source_url,
+                "route_family": request.route_family,
+                "route_kind": request.route_kind,
+                "validated_success_count": request.validated_success_count,
+                "endpoint_pattern": request.endpoint_pattern,
+                "response_pdf_url_json_pointer": (
+                    request.response_pdf_url_json_pointer
+                ),
+                "review_diff_line_count": len(review_diff.splitlines()),
+            },
+        )
+    )
+    return response
+
+
 def _load_browser_route_playbook_file(
     *,
     path: Path,
@@ -315,6 +398,35 @@ def _build_playbook(*, payload: dict[str, Any], path: Path) -> BrowserRoutePlayb
         traps=_string_list(payload.get("traps")),
         evidence_notes=_string_list(payload.get("evidence_notes")),
         source_evidence=_string_list(payload.get("source_evidence")),
+        private_api_evidence=[
+            BrowserRoutePrivateApiEvidence(
+                schema_version=str(item.get("schema_version", "1.0")),
+                evidence_id=str(item.get("evidence_id") or "").strip(),
+                endpoint_pattern=str(item.get("endpoint_pattern") or "").strip(),
+                method=str(item.get("method") or "GET").strip().upper(),
+                request_shape_summary=str(
+                    item.get("request_shape_summary") or ""
+                ).strip(),
+                response_pdf_url_json_pointer=str(
+                    item.get("response_pdf_url_json_pointer") or ""
+                ).strip(),
+                expected_status_codes=[
+                    int(value)
+                    for value in item.get("expected_status_codes", [200])
+                    if str(value).strip().isdigit()
+                ]
+                or [200],
+                required_response_markers=_string_list(
+                    item.get("required_response_markers")
+                ),
+                success_count=int(item.get("success_count", 0) or 0),
+                fallback_route_family=str(
+                    item.get("fallback_route_family") or ""
+                ).strip(),
+            )
+            for item in payload.get("private_api_evidence", [])
+            if isinstance(item, dict)
+        ],
         history=[
             BrowserRoutePlaybookHistoryEntry(
                 schema_version=str(item.get("schema_version", "1.0")),
@@ -386,6 +498,102 @@ def _build_promoted_playbook_payload(
             f"Promoted only after {request.route_status} route evidence with outcome {request.outcome}."
         ],
         "source_evidence": source_evidence,
+        "private_api_evidence": (
+            [asdict(item) for item in existing.private_api_evidence] if existing else []
+        ),
+        "history": history,
+    }
+
+
+def _build_private_api_playbook_payload(
+    *,
+    request: BrowserRoutePrivateApiPromotionRequest,
+    observed_at: str,
+    host: str,
+    playbook_id: str,
+    version: str,
+    existing: BrowserRoutePlaybook | None,
+) -> dict[str, Any]:
+    history = [asdict(item) for item in existing.history] if existing else []
+    history.append(
+        asdict(
+            BrowserRoutePlaybookHistoryEntry(
+                schema_version="1.0",
+                changed_at=observed_at,
+                source="validated_private_api_evidence_promotion",
+                summary=(
+                    f"Promoted private API evidence after "
+                    f"{request.validated_success_count} validated successes."
+                ),
+            )
+        )
+    )
+    source_evidence = list(existing.source_evidence) if existing else []
+    for label in [
+        "browser_network_private_api",
+        "request_shape_documented",
+        "deterministic_http_fallback",
+        *request.evidence_labels,
+    ]:
+        if label and label not in source_evidence:
+            source_evidence.append(label)
+    return {
+        "schema_version": _PLAYBOOK_SCHEMA_VERSION,
+        "playbook_id": playbook_id,
+        "version": version,
+        "status": "active",
+        "updated_at": observed_at,
+        "stale_after_days": existing.stale_after_days if existing else 45,
+        "publisher_pattern": host,
+        "host_patterns": [host],
+        "url_path_markers": _derive_path_markers(request.source_url),
+        "route_family": request.route_family,
+        "route_kind": request.route_kind,
+        "summary": (
+            "Use the validated network-learned private API endpoint before "
+            "launching browser-use; fall back to the normal browser route when "
+            "the response shape or artifact validation fails."
+        ),
+        "steps": [
+            asdict(
+                BrowserRoutePlaybookStep(
+                    schema_version="1.0",
+                    action="http_private_api",
+                    target=request.endpoint_pattern,
+                    verification=(
+                        "response JSON yields a PDF URL and the downloaded "
+                        "artifact validates as application/pdf"
+                    ),
+                )
+            )
+        ],
+        "traps": list(existing.traps) if existing else [],
+        "evidence_notes": [
+            (
+                "Promoted only after repeated validated success, documented "
+                "request shape, and explicit fallback to normal discovery."
+            ),
+            f"Request shape: {request.request_shape_summary}",
+        ],
+        "source_evidence": source_evidence,
+        "private_api_evidence": [
+            asdict(
+                BrowserRoutePrivateApiEvidence(
+                    schema_version="1.0",
+                    evidence_id=f"{playbook_id}-endpoint",
+                    endpoint_pattern=request.endpoint_pattern,
+                    method=request.method.strip().upper(),
+                    request_shape_summary=request.request_shape_summary,
+                    response_pdf_url_json_pointer=(
+                        request.response_pdf_url_json_pointer
+                    ),
+                    expected_status_codes=list(request.expected_status_codes or [200]),
+                    required_response_markers=list(request.required_response_markers),
+                    success_count=request.validated_success_count,
+                    fallback_route_family=request.fallback_route_family,
+                )
+            )
+        ],
         "history": history,
     }
 
@@ -434,6 +642,61 @@ def _validate_promotion_request(request: BrowserRoutePlaybookPromotionRequest) -
         raise AppError(
             code="browser_route_playbook_promotion_steps_invalid",
             message="Browser route playbook promotion requires at least one route step",
+            retryable=False,
+            context={"source_url": request.source_url},
+        )
+
+
+def _validate_private_api_promotion_request(
+    request: BrowserRoutePrivateApiPromotionRequest,
+) -> None:
+    if request.schema_version != "1.0":
+        raise AppError(
+            code="browser_route_private_api_promotion_schema_unsupported",
+            message="Unsupported private-API playbook promotion schema version",
+            retryable=False,
+            context={"schema_version": request.schema_version},
+        )
+    missing = [
+        name
+        for name in (
+            "playbook_dir",
+            "source_url",
+            "route_family",
+            "route_kind",
+            "endpoint_pattern",
+            "method",
+            "request_shape_summary",
+            "response_pdf_url_json_pointer",
+            "fallback_route_family",
+        )
+        if _is_blank(getattr(request, name))
+    ]
+    if missing:
+        raise AppError(
+            code="browser_route_private_api_promotion_contract_invalid",
+            message="Private-API playbook promotion request is missing required fields",
+            retryable=False,
+            context={"missing": missing},
+        )
+    if request.validated_success_count < 2:
+        raise AppError(
+            code="browser_route_private_api_promotion_insufficient_evidence",
+            message="Private-API promotion requires repeated validated successes",
+            retryable=False,
+            context={"validated_success_count": request.validated_success_count},
+        )
+    if request.method.strip().upper() != "GET":
+        raise AppError(
+            code="browser_route_private_api_promotion_method_unsupported",
+            message="Only GET private-API evidence can be promoted automatically",
+            retryable=False,
+            context={"method": request.method},
+        )
+    if not request.expected_status_codes:
+        raise AppError(
+            code="browser_route_private_api_promotion_statuses_missing",
+            message="Private-API promotion requires expected status codes",
             retryable=False,
             context={"source_url": request.source_url},
         )
