@@ -26,6 +26,10 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.artifact import BrowserUseAgentResult
+from src.services._browser_report_download.cdp import (
+    capture_terminal_screenshot_via_cdp,
+    collect_terminal_network_entries_via_cdp,
+)
 from src.services._browser_report_download.http import (
     download_pdf_from_url,
     is_pdf_file,
@@ -394,6 +398,18 @@ def run_browser_report_download_agent(
             final_page_url = history_final_page_url
             final_page_title = history_final_page_title
             screenshot_path = history_screenshot_path
+            (
+                network_resource_urls,
+                network_events,
+                screenshot_path,
+            ) = _capture_completed_history_terminal_assets(
+                browser=browser,
+                download_dir=download_dir,
+                route_family=request.route_family_hint or "",
+                ctx=ctx,
+                normalized_url=normalized_url,
+                fallback_screenshot_path=screenshot_path,
+            )
             logger.info(
                 log_event(
                     ctx,
@@ -406,6 +422,9 @@ def run_browser_report_download_agent(
                         "history_final_page_title": history_final_page_title,
                         "downloaded_file_count": len(downloaded_files),
                         "attachment_count": len(attachment_paths),
+                        "browser_network_event_count": len(network_events),
+                        "browser_network_resource_url_count": len(network_resource_urls),
+                        "browser_screenshot_path": screenshot_path,
                     },
                 )
             )
@@ -433,6 +452,9 @@ def run_browser_report_download_agent(
                 page=current_page,
                 download_dir=download_dir,
                 final_page_html=final_page_html,
+                route_family=request.route_family_hint or "",
+                ctx=ctx,
+                normalized_url=normalized_url,
             )
             if not screenshot_path:
                 screenshot_path = history_screenshot_path
@@ -722,6 +744,9 @@ def _salvage_timed_out_browser_run_unbounded(
                 page=current_page,
                 download_dir=download_dir,
                 final_page_html=final_page_html,
+                route_family=request.route_family_hint or "",
+                ctx=ctx,
+                normalized_url=normalized_url,
             )
     except Exception:
         if not downloaded_files:
@@ -1260,6 +1285,8 @@ def _stabilize_terminal_snapshot(
         snapshot=stabilized_snapshot,
         payload=payload,
         policy=policy,
+        ctx=ctx,
+        normalized_url=normalized_url,
     )
     reason = trigger_reason or _terminal_stabilization_reason(
         raw_model_response=raw_model_response,
@@ -1288,6 +1315,8 @@ def _stabilize_terminal_snapshot(
             snapshot=stabilized_snapshot,
             payload=payload,
             policy=policy,
+            ctx=ctx,
+            normalized_url=normalized_url,
         )
         if (
             previous_assessment is not None
@@ -1398,13 +1427,21 @@ def _assess_terminal_snapshot_quorum(
     snapshot: TerminalSnapshot,
     payload: dict[str, Any],
     policy: TerminalStabilizationPolicy,
+    ctx: RunContext,
+    normalized_url: str,
 ) -> TerminalQuorumAssessment:
     signal_labels: list[str] = []
     transient_labels: list[str] = []
     route_text = _terminal_quorum_text(snapshot)
     lowered_route_text = route_text.casefold()
     lowered_url = str(snapshot.url or "").strip().casefold()
-    network_events = _collect_network_events(snapshot.page)
+    network_events = _collect_network_events(
+        browser=browser,
+        page=snapshot.page,
+        route_family=policy.route_family,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     document_urls = _collect_network_resource_urls(
         page=snapshot.page,
         final_page_html=snapshot.html,
@@ -1889,8 +1926,17 @@ def _capture_terminal_assets(
     page: Any,
     download_dir: Path,
     final_page_html: str,
+    route_family: str,
+    ctx: RunContext,
+    normalized_url: str,
 ) -> tuple[list[str], list[BrowserDownloadNetworkEvent], str, str]:
-    network_events = _collect_network_events(page=page)
+    network_events = _collect_network_events(
+        browser=browser,
+        page=page,
+        route_family=route_family,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     network_resource_urls = _collect_network_resource_urls(
         page=page,
         final_page_html=final_page_html,
@@ -1904,8 +1950,43 @@ def _capture_terminal_assets(
         browser=browser,
         page=page,
         download_dir=download_dir,
+        ctx=ctx,
+        normalized_url=normalized_url,
     )
     return network_resource_urls, network_events, html_snapshot_path, screenshot_path
+
+
+def _capture_completed_history_terminal_assets(
+    *,
+    browser: Any,
+    download_dir: Path,
+    route_family: str,
+    ctx: RunContext,
+    normalized_url: str,
+    fallback_screenshot_path: str,
+) -> tuple[list[str], list[BrowserDownloadNetworkEvent], str]:
+    network_events = _collect_network_events(
+        browser=browser,
+        page=None,
+        route_family=route_family,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    network_resource_urls = _collect_network_resource_urls(
+        page=None,
+        final_page_html="",
+        network_events=network_events,
+    )
+    screenshot_path = str(fallback_screenshot_path or "").strip()
+    if not screenshot_path:
+        screenshot_path = _write_terminal_screenshot(
+            browser=browser,
+            page=None,
+            download_dir=download_dir,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    return network_resource_urls, network_events, screenshot_path
 
 
 def _collect_network_resource_urls(
@@ -1939,9 +2020,22 @@ def _collect_network_resource_urls(
     return normalized
 
 
-def _collect_network_events(page: Any) -> list[BrowserDownloadNetworkEvent]:
+def _collect_network_events(
+    *,
+    browser: Any,
+    page: Any,
+    route_family: str,
+    ctx: RunContext,
+    normalized_url: str,
+) -> list[BrowserDownloadNetworkEvent]:
+    cdp_events = _collect_network_events_via_cdp(
+        browser=browser,
+        route_family=route_family,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     if page is None:
-        return []
+        return cdp_events
     try:
         raw_events = _maybe_await(
             page.evaluate(
@@ -1961,8 +2055,38 @@ def _collect_network_events(page: Any) -> list[BrowserDownloadNetworkEvent]:
             )
         )
     except Exception:
-        return []
+        return cdp_events
     raw_events = _coerce_evaluate_list(raw_events)
+    page_events = _network_events_from_raw_events(raw_events)
+    if not cdp_events:
+        return page_events
+    return _merge_network_events(cdp_events, page_events)
+
+
+def _collect_network_events_via_cdp(
+    *,
+    browser: Any,
+    route_family: str,
+    ctx: RunContext,
+    normalized_url: str,
+) -> list[BrowserDownloadNetworkEvent]:
+    if str(route_family or "").strip() not in {
+        "browser_email_form",
+        "browser_pdf_click",
+        "browser_tracker_redirect",
+        "browser_onsite_report",
+    }:
+        return []
+    raw_events = collect_terminal_network_entries_via_cdp(
+        browser=browser,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        required=False,
+    )
+    return _network_events_from_raw_events(raw_events)
+
+
+def _network_events_from_raw_events(raw_events: list[Any]) -> list[BrowserDownloadNetworkEvent]:
     events: list[BrowserDownloadNetworkEvent] = []
     seen: set[tuple[str, str]] = set()
     for raw_event in raw_events:
@@ -1997,6 +2121,21 @@ def _collect_network_events(page: Any) -> list[BrowserDownloadNetworkEvent]:
             )
         )
     return events[-25:]
+
+
+def _merge_network_events(
+    first: list[BrowserDownloadNetworkEvent],
+    second: list[BrowserDownloadNetworkEvent],
+) -> list[BrowserDownloadNetworkEvent]:
+    merged: list[BrowserDownloadNetworkEvent] = []
+    seen: set[tuple[str, str]] = set()
+    for event in [*first, *second]:
+        key = (event.url.casefold(), event.initiator_type.casefold())
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(event)
+    return merged[-25:]
 
 
 def _classify_network_signal_kind(*, url: str, initiator_type: str) -> str:
@@ -2357,6 +2496,8 @@ def _write_terminal_screenshot(
     browser: Any,
     page: Any,
     download_dir: Path,
+    ctx: RunContext,
+    normalized_url: str,
 ) -> str:
     screenshot_path = download_dir / "terminal_screenshot.png"
     if _try_screenshot_call(
@@ -2372,6 +2513,14 @@ def _write_terminal_screenshot(
     if _try_screenshot_call(
         candidate=getattr(page, "take_screenshot", None) if page is not None else None,
         screenshot_path=screenshot_path,
+    ):
+        return str(screenshot_path)
+    if capture_terminal_screenshot_via_cdp(
+        browser=browser,
+        screenshot_path=screenshot_path,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        required=False,
     ):
         return str(screenshot_path)
     return ""
