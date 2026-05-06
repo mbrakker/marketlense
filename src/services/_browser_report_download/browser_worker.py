@@ -167,6 +167,21 @@ def _build_request(payload: dict) -> BrowserReportDownloadRequest:
                 target_role=str(item.get("target_role") or "").strip(),
                 target_url=str(item.get("target_url") or "").strip(),
                 result=str(item.get("result") or "").strip(),
+                expected_evidence=[
+                    str(value).strip()
+                    for value in item.get("expected_evidence", [])
+                    if str(value or "").strip()
+                ]
+                if isinstance(item.get("expected_evidence"), list)
+                else [],
+                observed_evidence=[
+                    str(value).strip()
+                    for value in item.get("observed_evidence", [])
+                    if str(value or "").strip()
+                ]
+                if isinstance(item.get("observed_evidence"), list)
+                else [],
+                verification_status=str(item.get("verification_status") or "").strip(),
             )
             for item in route_step_hints_payload
             if isinstance(item, dict)

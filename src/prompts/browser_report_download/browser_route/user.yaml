@@ -13,6 +13,7 @@ text: |
   When the report is a longread on the site, capture it locally and return the `onsite_*` fields instead of forcing a PDF classification.
 
   Always return a concise `route_summary` describing the successful clicks or form steps so the system can reuse it later.
+  Every meaningful `route_steps` item must declare `expected_evidence`: use `page_info`, `screenshot`, `network_event`, `artifact`, `dom_hash`, and/or `confirmation_text` to describe how the action was verified after it ran.
 
   Use the following configured identity values when a matching form field is available. Do not invent missing values.
   {% for identity in identity_entries %}

@@ -161,18 +161,6 @@ Suggested priority order:
     - Canary metrics compare browser startup time, agent calls, and verified PDF yield against isolated-profile baseline.
     - Tests assert cross-publisher session reuse is rejected unless explicitly allowed by configuration.
 
-- **Title:** Make post-action verification mandatory for browser-use route steps [Impact: 5/5, Effort: 3/5]
-  - Explanation: Confirmed useful for Marketlense quality. `browser-harness` emphasizes screenshots and page state after meaningful actions. Copy/adapt that existing verification discipline into Marketlense's own terminal evidence contracts so every browser-use action that claims navigation, form submission, report capture, or download has immediate verification evidence. Do not create a separate verification framework from scratch.
-  - Pros: Fewer false-positive completions, better replay diagnostics, stronger confidence in downloaded artifacts.
-  - Cons: More artifacts and logs per browser run unless screenshots and HTML snapshots are sampled carefully.
-  - Acceptance Criteria:
-    - Route steps declare expected verification evidence: screenshot, page info, network event, artifact, DOM hash, or confirmation text.
-    - Verification rules reuse the `browser-harness` post-action pattern and existing Marketlense terminal evidence contracts.
-    - Verification logic is implemented in Marketlense contracts/services and does not call `browser-harness`.
-    - Missing verification raises a typed `AppError` instead of returning partially populated terminal evidence.
-    - Logs include action, expected evidence, observed evidence, and validation result.
-    - Tests cover both successful verification and a deliberately missing-evidence failure path.
-
 - **Title:** Copy browser-harness developer-mode self-healing diagnostics into repo tooling [Impact: 3/5, Effort: 2/5]
   - Explanation: Confirmed useful for local Marketlense development. `browser-harness` setup and doctor flows detect Chrome remote-debugging state, stale daemon sessions, missing real tabs, and CDP attach failures. Copy/adapt that existing diagnostic process pattern into Marketlense-owned developer tooling around browser-use instead of embedding recovery loops in production generators or designing new diagnostics from scratch.
   - Pros: Faster local setup, fewer manual browser debugging steps, clearer failure messages for agent operators.

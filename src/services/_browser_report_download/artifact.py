@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from hashlib import sha256
 import re
 import shutil
@@ -187,6 +188,32 @@ _VERIFIED_EMAIL_SIGNAL_MARKERS = {
     "form_disappeared",
     "network_confirmation_request",
 }
+_ROUTE_STEP_EVIDENCE_CATEGORIES = {
+    "screenshot",
+    "page_info",
+    "network_event",
+    "artifact",
+    "dom_hash",
+    "confirmation_text",
+}
+_POST_ACTION_VERIFICATION_ACTIONS = {
+    "open",
+    "navigate",
+    "goto",
+    "click",
+    "follow",
+    "submit",
+    "download",
+    "save",
+    "extract",
+    "capture",
+    "scroll",
+    "wait",
+    "select",
+    "fill",
+    "type",
+    "input",
+}
 _TERMINAL_BOOLEAN_FIELDS = (
     "email_submission_completed",
     "confirmation_url_changed",
@@ -202,6 +229,9 @@ class BrowserUseRouteStep(BaseModel):
     target_role: str | None = Field(default=None)
     target_url: str | None = Field(default=None)
     result: str | None = Field(default=None)
+    expected_evidence: list[str] = Field(default_factory=list)
+    observed_evidence: list[str] = Field(default_factory=list)
+    verification_status: str | None = Field(default=None)
 
 
 class BrowserUseAgentResult(BaseModel):
@@ -697,6 +727,34 @@ def finalize_browser_report_download_result(
         blocked_reason=blocked_reason,
         onsite_capture_path=onsite_capture_path,
         onsite_completeness_status=onsite_completeness_status,
+    )
+    terminal_evidence = _build_terminal_evidence(
+        agent_result=agent_result,
+        route_steps=route_steps,
+        final_url=final_url,
+        resolved_target_url=resolved_target_url,
+        route_kind=route_kind,
+        downloaded_path=downloaded_path,
+        downloaded_mime_type=downloaded_mime_type,
+        onsite_capture_path=onsite_capture_path,
+        confirmation_signal_count=confirmation_signal_count,
+        artifact_validation_status=artifact_validation_status,
+        artifact_validation_detail=artifact_validation_detail,
+        final_page_title=final_page_title,
+        terminal_text_excerpt=terminal_text_excerpt,
+        dom_snapshot_html=browser_html,
+        html_snapshot_path=html_snapshot_path,
+        screenshot_path=str(browser_run.screenshot_path or ""),
+        network_resource_urls=list(browser_run.network_resource_urls or []),
+        network_events=list(browser_run.network_events or []),
+        evidence_labels=[*confirmation_evidence.signal_labels, "structured_result"],
+    )
+    route_steps = _verify_post_action_route_steps(
+        route_steps=route_steps,
+        terminal_evidence=terminal_evidence,
+        confirmation_evidence=confirmation_evidence,
+        ctx=ctx,
+        normalized_url=normalized_url,
     )
     terminal_evidence = _build_terminal_evidence(
         agent_result=agent_result,
@@ -2025,6 +2083,209 @@ def _build_terminal_evidence(
     )
 
 
+def _verify_post_action_route_steps(
+    *,
+    route_steps: list[BrowserDownloadRouteStep],
+    terminal_evidence: DownloadTerminalEvidence,
+    confirmation_evidence: BrowserDownloadConfirmationEvidence,
+    ctx: RunContext,
+    normalized_url: str,
+) -> list[BrowserDownloadRouteStep]:
+    enriched_steps: list[BrowserDownloadRouteStep] = []
+    missing_steps: list[dict[str, object]] = []
+    for step in route_steps:
+        expected_evidence = _expected_post_action_evidence(step)
+        observed_evidence = _observed_post_action_evidence(
+            expected_evidence=expected_evidence,
+            terminal_evidence=terminal_evidence,
+            confirmation_evidence=confirmation_evidence,
+        )
+        status = (
+            "not_applicable"
+            if not expected_evidence
+            else "verified"
+            if observed_evidence
+            else "missing"
+        )
+        enriched_step = replace(
+            step,
+            expected_evidence=expected_evidence,
+            observed_evidence=observed_evidence,
+            verification_status=status,
+        )
+        enriched_steps.append(enriched_step)
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_route_step_verification",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "step_index": enriched_step.index,
+                    "action": enriched_step.action,
+                    "target_text": enriched_step.target_text,
+                    "target_role": enriched_step.target_role,
+                    "target_url": enriched_step.target_url,
+                    "result": enriched_step.result,
+                    "expected_evidence": list(expected_evidence),
+                    "observed_evidence": list(observed_evidence),
+                    "validation_result": status,
+                    "verification_status": status,
+                },
+            )
+        )
+        if status == "missing":
+            missing_steps.append(
+                {
+                    "index": enriched_step.index,
+                    "action": enriched_step.action,
+                    "target_text": enriched_step.target_text,
+                    "target_role": enriched_step.target_role,
+                    "target_url": enriched_step.target_url,
+                    "result": enriched_step.result,
+                    "expected_evidence": list(expected_evidence),
+                }
+            )
+    if missing_steps:
+        raise AppError(
+            code="browser_download_route_step_verification_missing",
+            message="browser-use route steps are missing required post-action verification evidence",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "missing_steps": missing_steps,
+                "terminal_evidence_labels": list(terminal_evidence.evidence_labels),
+                "terminal_final_page_url": terminal_evidence.final_page_url,
+                "terminal_screenshot_path": terminal_evidence.screenshot_path,
+                "terminal_html_snapshot_path": terminal_evidence.html_snapshot_path,
+                "terminal_dom_snapshot_sha256": terminal_evidence.dom_snapshot_sha256,
+                "terminal_network_event_count": len(terminal_evidence.network_events),
+                "confirmation_signal_labels": list(confirmation_evidence.signal_labels),
+            },
+        )
+    return enriched_steps
+
+
+def _expected_post_action_evidence(step: BrowserDownloadRouteStep) -> list[str]:
+    declared = _normalize_evidence_categories(step.expected_evidence)
+    if declared:
+        return declared
+    action = str(step.action or "").strip().casefold()
+    result = str(step.result or "").strip().casefold()
+    haystack = " ".join(
+        [
+            action,
+            result,
+            str(step.target_role or "").strip().casefold(),
+            str(step.target_text or "").strip().casefold(),
+            str(step.target_url or "").strip().casefold(),
+        ]
+    )
+    if action not in _POST_ACTION_VERIFICATION_ACTIONS and not any(
+        marker in haystack
+        for marker in (
+            "open",
+            "navigate",
+            "click",
+            "submit",
+            "download",
+            "captured",
+            "saved",
+            "redirect",
+        )
+    ):
+        return []
+    if action in {"download", "save"} or any(
+        marker in haystack for marker in ("downloaded", "saved", ".pdf", "pdf")
+    ):
+        return ["artifact", "network_event", "screenshot"]
+    if action in {"submit"} or any(
+        marker in haystack
+        for marker in ("submitted", "confirmation", "thank", "emailed", "sent")
+    ):
+        return ["confirmation_text", "network_event", "screenshot"]
+    if action in {"extract", "capture"} or any(
+        marker in haystack for marker in ("captured", "extracted", "longread")
+    ):
+        return ["artifact", "dom_hash", "screenshot"]
+    return ["page_info", "screenshot", "network_event", "dom_hash", "artifact"]
+
+
+def _observed_post_action_evidence(
+    *,
+    expected_evidence: list[str],
+    terminal_evidence: DownloadTerminalEvidence,
+    confirmation_evidence: BrowserDownloadConfirmationEvidence,
+) -> list[str]:
+    available = set(_available_terminal_evidence_categories(terminal_evidence))
+    if confirmation_evidence.visible_confirmation_text.strip() or any(
+        label in _VERIFIED_EMAIL_SIGNAL_MARKERS
+        for label in confirmation_evidence.signal_labels
+    ):
+        available.add("confirmation_text")
+    return [item for item in expected_evidence if item in available]
+
+
+def _available_terminal_evidence_categories(
+    terminal_evidence: DownloadTerminalEvidence,
+) -> list[str]:
+    categories: list[str] = []
+    if (
+        str(terminal_evidence.final_page_url or "").strip()
+        or str(terminal_evidence.final_page_title or "").strip()
+        or str(terminal_evidence.terminal_text_excerpt or "").strip()
+    ):
+        categories.append("page_info")
+    if _path_exists(terminal_evidence.screenshot_path):
+        categories.append("screenshot")
+    if terminal_evidence.network_events:
+        categories.append("network_event")
+    if (
+        str(terminal_evidence.artifact_validation_status or "").strip()
+        in {"verified", "recovered", "captured", "blocked"}
+        or str(terminal_evidence.artifact_kind or "").strip()
+        in {"application/pdf", "pdf", "onsite_report"}
+        or str(terminal_evidence.artifact_url or "").strip().casefold().endswith(".pdf")
+    ):
+        categories.append("artifact")
+    if str(terminal_evidence.dom_snapshot_sha256 or "").strip() or _path_exists(
+        terminal_evidence.html_snapshot_path
+    ):
+        categories.append("dom_hash")
+    return _normalize_evidence_categories(categories)
+
+
+def _normalize_evidence_categories(raw_values: Iterable[str | None]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_value in raw_values:
+        token = str(raw_value or "").strip().casefold().replace("-", "_")
+        if token == "network":
+            token = "network_event"
+        if token == "page":
+            token = "page_info"
+        if token == "dom":
+            token = "dom_hash"
+        if token == "confirmation":
+            token = "confirmation_text"
+        if token not in _ROUTE_STEP_EVIDENCE_CATEGORIES or token in seen:
+            continue
+        seen.add(token)
+        normalized.append(token)
+    return normalized
+
+
+def _path_exists(raw_path: str | None) -> bool:
+    token = str(raw_path or "").strip()
+    if not token:
+        return False
+    try:
+        return Path(token).exists()
+    except OSError:
+        return False
+
+
 def _normalize_network_events(
     network_events: list[BrowserDownloadNetworkEvent],
 ) -> list[BrowserDownloadNetworkEvent]:
@@ -2244,6 +2505,13 @@ def _resolve_route_steps(
                 target_role=target_role,
                 target_url=target_url,
                 result=result,
+                expected_evidence=_normalize_evidence_categories(
+                    raw_step.expected_evidence
+                ),
+                observed_evidence=_normalize_evidence_categories(
+                    raw_step.observed_evidence
+                ),
+                verification_status=str(raw_step.verification_status or "").strip(),
             )
         )
     if steps:
@@ -2265,6 +2533,9 @@ def _resolve_route_steps(
             target_role="url",
             target_url=resolved_target_url,
             result=fallback_result,
+            expected_evidence=[],
+            observed_evidence=[],
+            verification_status="",
         )
     ]
 
@@ -3462,6 +3733,13 @@ def _normalize_agent_route_steps_for_completeness(
                 target_role=str(raw_step.target_role or "").strip() or "page",
                 target_url=str(raw_step.target_url or "").strip(),
                 result=str(raw_step.result or "").strip() or "completed",
+                expected_evidence=_normalize_evidence_categories(
+                    raw_step.expected_evidence
+                ),
+                observed_evidence=_normalize_evidence_categories(
+                    raw_step.observed_evidence
+                ),
+                verification_status=str(raw_step.verification_status or "").strip(),
             )
         )
     return steps

@@ -20,4 +20,6 @@ text: |
   For on-site longreads, return `onsite_capture_path`, `onsite_capture_format`, `onsite_page_count`, and `onsite_completeness_status`.
   Mark `onsite_completeness_status` as `complete` only when pagination or scrolling reached a clearly bounded end-state; otherwise return `partial` or `bounded_incomplete`.
   Return structured `route_steps` when possible so the system can reuse the exact route.
+  For each meaningful route step, declare `expected_evidence` using only these categories: `screenshot`, `page_info`, `network_event`, `artifact`, `dom_hash`, or `confirmation_text`.
+  After every meaningful action, verify the changed page state before assuming it worked; use screenshot/page info for navigation and clicks, confirmation text or network evidence for submissions, artifact evidence for downloads, and DOM hash/page info for on-site captures.
   Return confirmation evidence fields when possible, including URL changes, submit-button state, and whether the form disappeared.

@@ -19,6 +19,7 @@ from src.utils.coercion import clean_string_list
 
 from .common import _optional_int
 
+
 def _serialize_inventory_run_quality_summary(summary) -> Optional[str]:
     if summary is None:
         return None
@@ -46,6 +47,7 @@ def _parse_inventory_route_trace(payload: Optional[str]):
     if not token:
         return None
     from src.contracts.publisher_inventory import PublisherInventoryRouteTrace
+
     try:
         parsed = json.loads(token)
     except json.JSONDecodeError:
@@ -82,6 +84,7 @@ def _parse_inventory_scenario_summary(payload: Optional[str]):
     if not token:
         return None
     from src.contracts.publisher_inventory import PublisherInventoryScenarioSummary
+
     try:
         parsed = json.loads(token)
     except json.JSONDecodeError:
@@ -111,6 +114,7 @@ def _parse_inventory_run_quality_summary(payload: Optional[str]):
     if not token:
         return None
     from src.contracts.publisher_inventory import PublisherInventoryRunQualitySummary
+
     try:
         parsed = json.loads(token)
     except json.JSONDecodeError:
@@ -189,6 +193,23 @@ def _parse_route_steps(payload: Optional[str]) -> List[BrowserDownloadRouteStep]
                     target_role=str(item.get("target_role") or "").strip(),
                     target_url=str(item.get("target_url") or "").strip(),
                     result=str(item.get("result") or "").strip(),
+                    expected_evidence=[
+                        str(value).strip()
+                        for value in item.get("expected_evidence", [])
+                        if str(value or "").strip()
+                    ]
+                    if isinstance(item.get("expected_evidence"), list)
+                    else [],
+                    observed_evidence=[
+                        str(value).strip()
+                        for value in item.get("observed_evidence", [])
+                        if str(value or "").strip()
+                    ]
+                    if isinstance(item.get("observed_evidence"), list)
+                    else [],
+                    verification_status=str(
+                        item.get("verification_status") or ""
+                    ).strip(),
                 )
             )
         except (TypeError, ValueError):
@@ -385,7 +406,5 @@ def _parse_json_string_list(payload: Optional[str]) -> List[str]:
     if not isinstance(parsed, list):
         return []
     return [
-        str(item).strip()
-        for item in cast(list[object], parsed)
-        if str(item).strip()
+        str(item).strip() for item in cast(list[object], parsed) if str(item).strip()
     ]

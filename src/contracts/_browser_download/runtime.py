@@ -68,6 +68,24 @@ class BrowserDownloadRouteStep:
             "doc": "Observed outcome of the step, for example `opened`, `submitted`, or `downloaded`."
         }
     )
+    expected_evidence: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Post-action evidence categories expected for this step, such as `screenshot`, `page_info`, `network_event`, `artifact`, `dom_hash`, or `confirmation_text`."
+        },
+    )
+    observed_evidence: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Post-action evidence categories actually observed from terminal browser evidence for this step."
+        },
+    )
+    verification_status: str = field(
+        default="",
+        metadata={
+            "doc": "Post-action verification status for this step: `verified`, `missing`, or `not_applicable`."
+        },
+    )
 
 
 @dataclass(frozen=True)
