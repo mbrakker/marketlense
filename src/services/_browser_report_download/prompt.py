@@ -7,6 +7,7 @@ from pathlib import Path
 from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserReportDownloadRequest,
+    BrowserRoutePlaybookSelection,
 )
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
@@ -15,6 +16,7 @@ from src.services._browser_report_download.request import (
 )
 from src.services import prompt_service
 from src.utils.logging import log_event
+from src.utils.browser_route_playbooks import serialize_selected_playbooks_for_prompt
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
@@ -65,6 +67,12 @@ def render_browser_report_download_prompt(
             route_step_hints=request.route_step_hints,
         ),
         "route_family_hint": str(request.route_family_hint or "").strip(),
+        "selected_playbooks": serialize_selected_playbooks_for_prompt(
+            request.selected_playbooks
+        ),
+        "selected_playbook_lines": _build_selected_playbook_lines(
+            selected_playbooks=request.selected_playbooks,
+        ),
         "publisher_discovery_route_kind": str(
             request.publisher_discovery_route_kind or ""
         ).strip(),
@@ -181,6 +189,9 @@ def render_browser_report_download_prompt(
                 ),
                 "route_family_hint": request.route_family_hint or "",
                 "source_page_url_hint": request.source_page_url_hint or "",
+                "selected_playbook_ids": [
+                    item.playbook_id for item in request.selected_playbooks
+                ],
                 "prompt_variables": {
                     "identity_entries": variables["identity_entries"],
                     "delivery_email": variables["delivery_email"],
@@ -188,6 +199,8 @@ def render_browser_report_download_prompt(
                     "route_kind_hint": variables["route_kind_hint"],
                     "route_step_lines": variables["route_step_lines"],
                     "route_family_hint": variables["route_family_hint"],
+                    "selected_playbooks": variables["selected_playbooks"],
+                    "selected_playbook_lines": variables["selected_playbook_lines"],
                     "publisher_discovery_route_kind": variables[
                         "publisher_discovery_route_kind"
                     ],
@@ -253,4 +266,21 @@ def _build_route_step_lines(
         if result:
             line = f"{line} -> {result}"
         lines.append(line)
+    return lines
+
+
+def _build_selected_playbook_lines(
+    *,
+    selected_playbooks: list[BrowserRoutePlaybookSelection],
+) -> list[str]:
+    lines: list[str] = []
+    for playbook in selected_playbooks[:3]:
+        lines.append(
+            f"{playbook.playbook_id}@{playbook.version} "
+            f"({playbook.route_family}/{playbook.route_kind}): {playbook.summary}"
+        )
+        for step_line in playbook.step_lines[:5]:
+            lines.append(f"  - {step_line}")
+        for trap_line in playbook.trap_lines[:5]:
+            lines.append(f"  - Avoid: {trap_line}")
     return lines

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+
 @dataclass(frozen=True)
 class BrowserDownloadIdentityField:
     schema_version: str = field(
@@ -240,4 +241,15 @@ class BrowserDownloadSettings:
             "doc": "Retention policy for failed-attempt forensic artifacts: `copy_artifacts` to persist bounded copies, or `metadata_only` to persist only bundle metadata plus original paths."
         },
     )
-
+    route_playbook_dir: str = field(
+        default="./src/playbooks/browser_routes",
+        metadata={
+            "doc": "Filesystem directory containing Marketlense-owned browser route playbook YAML files."
+        },
+    )
+    route_playbook_stale_policy: str = field(
+        default="fallback",
+        metadata={
+            "doc": "Behavior for matching stale route playbooks: `fallback` logs and uses normal discovery, `fail` raises a typed AppError."
+        },
+    )

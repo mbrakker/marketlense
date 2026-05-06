@@ -14,6 +14,7 @@ from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
+    BrowserRoutePlaybookSelection,
 )
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
@@ -103,6 +104,12 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
             payload.get("retry_backoff_step_seconds", 1.0)
         ),
         retry_jitter_seconds=float(payload.get("retry_jitter_seconds", 0.0)),
+        route_playbook_dir=str(
+            payload.get("route_playbook_dir") or "./src/playbooks/browser_routes"
+        ),
+        route_playbook_stale_policy=str(
+            payload.get("route_playbook_stale_policy") or "fallback"
+        ),
     )
 
 
@@ -140,6 +147,7 @@ def _build_candidate_trace(payload: dict) -> PublisherInventoryCandidateTrace | 
 
 def _build_request(payload: dict) -> BrowserReportDownloadRequest:
     route_step_hints_payload = payload.get("route_step_hints", [])
+    selected_playbooks_payload = payload.get("selected_playbooks", [])
     settings_payload = payload.get("settings")
     candidate_trace_payload = payload.get("candidate_trace")
     return BrowserReportDownloadRequest(
@@ -174,6 +182,29 @@ def _build_request(payload: dict) -> BrowserReportDownloadRequest:
         attempt_url=payload.get("attempt_url"),
         route_family_hint=payload.get("route_family_hint"),
         source_page_url_hint=payload.get("source_page_url_hint"),
+        selected_playbooks=[
+            BrowserRoutePlaybookSelection(
+                schema_version=str(item.get("schema_version", "1.0")),
+                playbook_id=str(item.get("playbook_id") or "").strip(),
+                version=str(item.get("version") or "").strip(),
+                route_family=str(item.get("route_family") or "").strip(),
+                route_kind=str(item.get("route_kind") or "").strip(),
+                match_reason=str(item.get("match_reason") or "").strip(),
+                summary=str(item.get("summary") or "").strip(),
+                step_lines=[
+                    str(line)
+                    for line in item.get("step_lines", [])
+                    if str(line or "").strip()
+                ],
+                trap_lines=[
+                    str(line)
+                    for line in item.get("trap_lines", [])
+                    if str(line or "").strip()
+                ],
+            )
+            for item in selected_playbooks_payload
+            if isinstance(item, dict)
+        ],
     )
 
 

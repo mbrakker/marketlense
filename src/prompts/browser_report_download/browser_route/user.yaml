@@ -43,6 +43,14 @@ text: |
   If the page already matches that remembered terminal state, capture it immediately instead of re-exploring the site.
   {% endif %}
 
+  {% if selected_playbook_lines %}
+  Selected browser-route playbooks for this attempt:
+  {% for selected_playbook_line in selected_playbook_lines %}
+  {{ selected_playbook_line }}
+  {% endfor %}
+  Treat playbooks as reusable route guidance, not proof that the current page is unchanged. If a selected playbook no longer fits the live page, fall back to the normal scoped discovery guidance and report the observed route honestly.
+  {% endif %}
+
   {% if delivery_email %}
   If an email form is required, use this email address and confirm submission: {{ delivery_email }}
   {% else %}

@@ -7,6 +7,8 @@ from src.contracts.drive import DriveFile
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 
 from .identity import BrowserDownloadSettings
+from .playbooks import BrowserRoutePlaybookSelection
+
 
 @dataclass(frozen=True)
 class ReportDownloadDriveUpload:
@@ -337,6 +339,12 @@ class BrowserReportDownloadRequest:
             "doc": "Optional discovery source page URL to revisit when the candidate URL is thin, gated, or tracker-like."
         },
     )
+    selected_playbooks: list[BrowserRoutePlaybookSelection] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Fresh browser route playbooks selected for this attempt and cited in the browser-use prompt."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -472,4 +480,3 @@ class BrowserReportDownloadResult:
             "doc": "On-site capture completeness verdict, for example `complete`, `partial`, or `bounded_incomplete`."
         },
     )
-

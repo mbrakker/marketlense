@@ -148,6 +148,8 @@ browser_download:
   max_steps: 30
   output_dir: "./out/browser_downloads"
   headed: false
+  route_playbook_dir: "./src/playbooks/browser_routes"
+  route_playbook_stale_policy: "fallback"
   drive_upload:
     enabled: true
     required: true

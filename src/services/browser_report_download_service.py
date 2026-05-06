@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict, replace
+from datetime import datetime, timezone
 
 from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
@@ -22,6 +23,9 @@ from src.services._browser_report_download.http import try_static_email_gate_pro
 from src.services._browser_report_download.prediction import (
     predict_pre_browser_doc_type,
 )
+from src.services._browser_report_download.playbooks import (
+    load_browser_route_playbooks,
+)
 from src.services._browser_report_download.prompt import (
     render_browser_report_download_prompt,
 )
@@ -34,6 +38,10 @@ from src.services._browser_report_download.request import (
     validate_common_request,
 )
 from src.utils.errors import AppError
+from src.utils.browser_route_playbooks import (
+    select_browser_route_playbooks,
+    serialize_playbook_selection_for_log,
+)
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
@@ -54,7 +62,9 @@ def _with_augmented_error_context(
     context.setdefault("download_dir", download_dir)
     context.setdefault("route_family_hint", str(route_family_hint or "").strip())
     if browser_run is not None:
-        context.setdefault("final_page_url", str(browser_run.final_page_url or "").strip())
+        context.setdefault(
+            "final_page_url", str(browser_run.final_page_url or "").strip()
+        )
         context.setdefault(
             "final_page_title", str(browser_run.final_page_title or "").strip()
         )
@@ -355,6 +365,11 @@ def download_report_with_browser_use(
             return access_challenge_result
 
     validate_browser_runtime_settings(request)
+    request = attach_browser_route_playbooks(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     prompt_bundle = render_browser_report_download_prompt(
         request=request,
         ctx=ctx,
@@ -429,3 +444,62 @@ def download_report_with_browser_use(
         )
     )
     return response
+
+
+def attach_browser_route_playbooks(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+) -> BrowserReportDownloadRequest:
+    if request.selected_playbooks:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_route_playbook_selection_preserved",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "selected_playbook_ids": [
+                        item.playbook_id for item in request.selected_playbooks
+                    ],
+                },
+            )
+        )
+        return request
+    playbooks = load_browser_route_playbooks(
+        playbook_dir=request.settings.route_playbook_dir,
+        ctx=ctx,
+    )
+    selection = select_browser_route_playbooks(
+        playbooks=playbooks,
+        normalized_url=normalized_url,
+        route_family_hint=request.route_family_hint or "",
+        now=datetime.now(timezone.utc),
+    )
+    fields = {
+        "normalized_url": normalized_url,
+        "route_family_hint": request.route_family_hint or "",
+        "route_playbook_dir": request.settings.route_playbook_dir,
+        "route_playbook_stale_policy": request.settings.route_playbook_stale_policy,
+        **serialize_playbook_selection_for_log(selection),
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_route_playbook_selection",
+            module=logger.name,
+            fields=fields,
+        )
+    )
+    stale_policy = str(request.settings.route_playbook_stale_policy or "").strip()
+    if selection.stale_playbook_ids and stale_policy == "fail":
+        raise AppError(
+            code="browser_route_playbook_stale",
+            message="A matching browser route playbook is stale",
+            retryable=False,
+            context=fields,
+        )
+    return replace(request, selected_playbooks=list(selection.selected_playbooks))

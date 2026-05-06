@@ -5,7 +5,9 @@ from typing import Optional
 
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 
+from .playbooks import BrowserRoutePlaybookSelection
 from .runtime import BrowserDownloadRouteStep
+
 
 @dataclass(frozen=True)
 class ReportDownloadRoutePlanStep:
@@ -70,6 +72,12 @@ class ReportDownloadRoutePlanStep:
         default="primary",
         metadata={
             "doc": "Recovery policy decision for this step: `primary`, `allowed`, `blocked`, or `deferred`."
+        },
+    )
+    selected_playbooks: list[BrowserRoutePlaybookSelection] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Fresh browser route playbooks selected by route planning for this step."
         },
     )
 
@@ -269,4 +277,3 @@ class PublisherDownloadRouteMemory:
             "doc": "Ranked route-family policy signals learned from same-publisher route history outside the exact URL."
         },
     )
-

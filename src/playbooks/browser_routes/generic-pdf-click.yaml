@@ -1,0 +1,44 @@
+schema_version: "1.0"
+playbook_id: "generic-pdf-click"
+version: "1.0.0"
+status: "active"
+updated_at: "2026-05-06T00:00:00+00:00"
+stale_after_days: 180
+publisher_pattern: "Publisher-agnostic report landing pages with visible PDF/download CTAs"
+host_patterns:
+  - "*"
+url_path_markers:
+  - "report"
+  - "whitepaper"
+  - "research"
+  - "download"
+  - "pdf"
+route_family: "browser_pdf_click"
+route_kind: "pdf_download"
+summary: "Use the visible report/PDF/download CTA first, verify a real local PDF artifact, and stop if the path becomes a form instead of a download."
+steps:
+  - schema_version: "1.0"
+    action: "click_cta"
+    target: "visible report, PDF, or download call-to-action on the candidate page"
+    verification: "local PDF artifact or observed document URL"
+  - schema_version: "1.0"
+    action: "verify_artifact"
+    target: "managed browser download directory"
+    verification: "downloaded_file_path, MIME type, and non-empty size"
+  - schema_version: "1.0"
+    action: "classify_form_fallback"
+    target: "lead form reached after CTA"
+    verification: "route_kind changes to email_delivery instead of pretending PDF success"
+traps:
+  - "Do not follow unrelated navigation, blog cards, login links, or consulting CTAs."
+  - "Do not classify success from a button click unless a real artifact or document URL is verified."
+evidence_notes:
+  - "Repeated browser-download runs showed that obvious report CTAs often reveal direct PDF artifacts or form gates without broad site exploration."
+source_evidence:
+  - "README browser-download route-family guidance"
+  - "publisher_download_route_history structured PDF-click route traces"
+history:
+  - schema_version: "1.0"
+    changed_at: "2026-05-06T00:00:00+00:00"
+    source: "seeded_from_existing_route_evidence"
+    summary: "Converted durable PDF CTA guidance from browser-download route-family evidence into a reviewable playbook."

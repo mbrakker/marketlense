@@ -1,0 +1,46 @@
+schema_version: "1.0"
+playbook_id: "generic-onsite-longread"
+version: "1.0.0"
+status: "active"
+updated_at: "2026-05-06T00:00:00+00:00"
+stale_after_days: 180
+publisher_pattern: "Publisher-agnostic on-site report longreads and readable insight pages"
+host_patterns:
+  - "*"
+url_path_markers:
+  - "insight"
+  - "research"
+  - "analysis"
+  - "guide"
+  - "playbook"
+  - "report"
+route_family: "browser_onsite_report"
+route_kind: "onsite_report"
+summary: "When the report body is already readable, capture the on-page longread instead of forcing a PDF or optional lead form."
+steps:
+  - schema_version: "1.0"
+    action: "detect_readable_body"
+    target: "article/report body on the candidate page"
+    verification: "terminal text excerpt and DOM snapshot indicate report content"
+  - schema_version: "1.0"
+    action: "capture_longread"
+    target: "visible report content, pagination, or bounded scroll segments"
+    verification: "onsite_capture_path and traversed_page_urls"
+  - schema_version: "1.0"
+    action: "mark_completeness"
+    target: "pagination end, scroll end, or bounded incomplete state"
+    verification: "onsite_completeness_status is complete, partial, or bounded_incomplete"
+traps:
+  - "Do not submit optional download forms when the article body is already readable."
+  - "Do not use complete unless pagination or scrolling clearly reached the report end."
+  - "Do not loop through endless related articles or recommended content."
+evidence_notes:
+  - "Existing browser-download recovery captures DataReportal-style longreads as onsite_report when browser-use returns thin output."
+source_evidence:
+  - "README browser-download on-site route recovery"
+  - "publisher_download_route_history onsite report route traces"
+history:
+  - schema_version: "1.0"
+    changed_at: "2026-05-06T00:00:00+00:00"
+    source: "seeded_from_existing_route_evidence"
+    summary: "Converted durable on-site longread capture guidance into a reviewable playbook."

@@ -3,6 +3,7 @@ from __future__ import annotations
 from src.services._config_service.common import *
 from src.services._config_service.settings_resolvers import *
 
+
 def load_browser_download_settings(
     request: ConfigLoadRequest, ctx: RunContext
 ) -> BrowserDownloadSettings:
@@ -62,17 +63,20 @@ def load_browser_download_settings(
             True,
         ),
     )
-    failure_forensics_policy = str(
-        failure_forensics_cfg.get("policy")
-        if not _is_missing(failure_forensics_cfg.get("policy"))
-        else _env_value("BROWSER_DOWNLOAD_FAILURE_FORENSICS_POLICY")
-        or _default_config_value(
-            "browser_download",
-            "failure_forensics",
-            "policy",
-            fallback="copy_artifacts",
-        )
-    ).strip() or "copy_artifacts"
+    failure_forensics_policy = (
+        str(
+            failure_forensics_cfg.get("policy")
+            if not _is_missing(failure_forensics_cfg.get("policy"))
+            else _env_value("BROWSER_DOWNLOAD_FAILURE_FORENSICS_POLICY")
+            or _default_config_value(
+                "browser_download",
+                "failure_forensics",
+                "policy",
+                fallback="copy_artifacts",
+            )
+        ).strip()
+        or "copy_artifacts"
+    )
     if failure_forensics_policy not in {"copy_artifacts", "metadata_only"}:
         raise RuntimeError(
             "browser_download.failure_forensics.policy must be one of "
@@ -110,6 +114,25 @@ def load_browser_download_settings(
     if _is_missing(identity_config_path):
         resolver.missing.append(
             "browser_download.identity_config_path|env:BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH"
+        )
+    route_playbook_dir = _resolve_optional_path(
+        browser_download.get("route_playbook_dir")
+        or _env_value("BROWSER_ROUTE_PLAYBOOK_DIR")
+        or "./src/playbooks/browser_routes",
+        base_path=runtime_base_path,
+    )
+    route_playbook_stale_policy = (
+        str(
+            browser_download.get("route_playbook_stale_policy")
+            or _env_value("BROWSER_ROUTE_PLAYBOOK_STALE_POLICY")
+            or "fallback"
+        ).strip()
+        or "fallback"
+    )
+    if route_playbook_stale_policy not in {"fallback", "fail"}:
+        raise RuntimeError(
+            "browser_download.route_playbook_stale_policy must be one of "
+            "`fallback` or `fail`"
         )
     drive_auth_settings: dict[str, str | None] = {
         "drive_auth_mode": "service_account",
@@ -295,6 +318,8 @@ def load_browser_download_settings(
         drive_upload_drive_id=drive_settings["drive_id"],
         failure_forensics_enabled=failure_forensics_enabled,
         failure_forensics_policy=failure_forensics_policy,
+        route_playbook_dir=route_playbook_dir,
+        route_playbook_stale_policy=route_playbook_stale_policy,
     )
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
@@ -326,9 +351,12 @@ def load_browser_download_settings(
                 "drive_upload_auth_mode": settings.drive_upload_auth_mode,
                 "failure_forensics_enabled": settings.failure_forensics_enabled,
                 "failure_forensics_policy": settings.failure_forensics_policy,
+                "route_playbook_dir": settings.route_playbook_dir,
+                "route_playbook_stale_policy": settings.route_playbook_stale_policy,
             },
         )
     )
     return settings
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]
