@@ -240,17 +240,6 @@ Suggested priority order:
     - Zero-size or stale targets trigger a typed diagnostic or reattach decision.
     - Tests cover internal-target filtering and stale/zero-size target handling.
 
-- **Title:** Copy browser-harness safe JavaScript evaluation wrapper for browser inspection scripts [Impact: 4/5, Effort: 3/5]
-  - Explanation: Additional reusable practice from browser-harness. Its `js()` wrapper supports promise-aware evaluation, top-level `return`, unserializable values, concise failing snippets, and explicit JavaScript exception reporting. Copy/adapt that behavior for Marketlense browser inspection scripts instead of continuing to spread ad hoc script execution and error shaping.
-  - Pros: Easier debugging, cleaner typed errors, more reliable publisher inventory and terminal-state inspection.
-  - Cons: Needs careful placement so it remains a service helper and not a cross-layer scripting abstraction.
-  - Acceptance Criteria:
-    - The wrapper is implemented inside the existing browser service boundary with no `browser-harness` dependency.
-    - Behavior is copied/adapted from `browser-harness` `js()` evaluation patterns where compatible with browser-use.
-    - JavaScript exceptions include sanitized snippet, line/column when available, and typed `AppError` mapping.
-    - Existing browser inventory and terminal capture scripts use the wrapper for new inspection work.
-    - Tests cover successful return values, promise resolution, thrown exceptions, and unserializable values.
-
 ---
 
 ## 5. Idempotency, Checkpoints & Publish Durability

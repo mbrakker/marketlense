@@ -31,6 +31,7 @@ from src.services._browser_report_download.cdp import (
 )
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
+    browser_helper_js,
     browser_helper_page_info,
 )
 from src.services._browser_report_download.http import (
@@ -880,11 +881,10 @@ def _attempt_lookup_submission_assist(
     page = _resolve_current_page(browser)
     if page is None:
         return False
-    try:
-        result = _maybe_await(
-            page.evaluate(
-                """
-                () => {
+    js_result = browser_helper_js(
+        page=page,
+        expression="""
+                return await (() => {
                   const normalize = (value) => String(value || '').trim().toLowerCase();
                   const isVisible = (node) =>
                     Boolean(node) &&
@@ -955,12 +955,14 @@ def _attempt_lookup_submission_assist(
                     submitted,
                     final_url: window.location.href,
                   };
-                }
-                """
-            )
-        )
-    except Exception:
+                })();
+                """,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    if js_result.status != "ok":
         return False
+    result = js_result.result
     if not isinstance(result, dict) or result.get("acted") is not True:
         return False
     _stabilize_terminal_snapshot(
@@ -1470,6 +1472,8 @@ def _assess_terminal_snapshot_quorum(
         page=snapshot.page,
         final_page_html=snapshot.html,
         network_events=network_events,
+        ctx=ctx,
+        normalized_url=normalized_url,
     )
     submit_button_state = (
         str(payload.get("submit_button_state") or "").strip().casefold()
@@ -1965,6 +1969,8 @@ def _capture_terminal_assets(
         page=page,
         final_page_html=final_page_html,
         network_events=network_events,
+        ctx=ctx,
+        normalized_url=normalized_url,
     )
     html_snapshot_path = _write_terminal_html_snapshot(
         download_dir=download_dir,
@@ -2000,6 +2006,8 @@ def _capture_completed_history_terminal_assets(
         page=None,
         final_page_html="",
         network_events=network_events,
+        ctx=ctx,
+        normalized_url=normalized_url,
     )
     screenshot_path = str(fallback_screenshot_path or "").strip()
     if not screenshot_path:
@@ -2018,6 +2026,8 @@ def _collect_network_resource_urls(
     page: Any,
     final_page_html: str,
     network_events: list[BrowserDownloadNetworkEvent],
+    ctx: RunContext,
+    normalized_url: str,
 ) -> list[str]:
     normalized: list[str] = []
     seen: set[str] = set()
@@ -2033,9 +2043,17 @@ def _collect_network_resource_urls(
         normalized.append(token)
 
     if page is not None:
-        for raw_url in _collect_page_resource_urls(page):
+        for raw_url in _collect_page_resource_urls(
+            page,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        ):
             add(raw_url)
-        for raw_url in _collect_dom_candidate_urls(page):
+        for raw_url in _collect_dom_candidate_urls(
+            page,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        ):
             add(raw_url)
     for event in network_events:
         add(event.url)
@@ -2060,11 +2078,10 @@ def _collect_network_events(
     )
     if page is None:
         return cdp_events
-    try:
-        raw_events = _maybe_await(
-            page.evaluate(
-                """
-                () => {
+    js_result = browser_helper_js(
+        page=page,
+        expression="""
+                return (() => {
                   const build = (entry, initiatorFallback = 'other') => ({
                     url: String(entry?.name || '').trim(),
                     initiator_type: String(entry?.initiatorType || initiatorFallback || 'other').trim(),
@@ -2074,12 +2091,14 @@ def _collect_network_events(
                   const resourceEntries = (globalThis.performance?.getEntriesByType?.('resource') || [])
                     .map((entry) => build(entry, 'other'));
                   return [...navigationEntries, ...resourceEntries];
-                }
-                """
-            )
-        )
-    except Exception:
+                })();
+                """,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    if js_result.status != "ok":
         return cdp_events
+    raw_events = js_result.result
     raw_events = _coerce_evaluate_list(raw_events)
     page_events = _network_events_from_raw_events(raw_events)
     if not cdp_events:
@@ -2210,12 +2229,16 @@ def _classify_network_signal_kind(*, url: str, initiator_type: str) -> str:
     return "other"
 
 
-def _collect_page_resource_urls(page: Any) -> list[str]:
-    try:
-        resource_urls = _maybe_await(
-            page.evaluate(
-                """
-                () => {
+def _collect_page_resource_urls(
+    page: Any,
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+) -> list[str]:
+    js_result = browser_helper_js(
+        page=page,
+        expression="""
+                return (() => {
                   const entries = globalThis.performance?.getEntriesByType?.('resource') || [];
                   return entries
                     .map((entry) => String(entry?.name || '').trim())
@@ -2228,13 +2251,14 @@ def _collect_page_resource_urls(page: Any) -> list[str]:
                         || lowered.includes('document')
                         || lowered.includes('report');
                     });
-                }
-                """
-            )
-        )
-    except Exception:
+                })();
+                """,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    if js_result.status != "ok":
         return []
-    resource_urls = _coerce_evaluate_list(resource_urls)
+    resource_urls = _coerce_evaluate_list(js_result.result)
     return [
         str(raw_url or "").strip()
         for raw_url in resource_urls
@@ -2242,12 +2266,16 @@ def _collect_page_resource_urls(page: Any) -> list[str]:
     ]
 
 
-def _collect_dom_candidate_urls(page: Any) -> list[str]:
-    try:
-        candidate_urls = _maybe_await(
-            page.evaluate(
-                """
-                () => {
+def _collect_dom_candidate_urls(
+    page: Any,
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+) -> list[str]:
+    js_result = browser_helper_js(
+        page=page,
+        expression="""
+                return (() => {
                   const selectors = [
                     'a[href]',
                     'iframe[src]',
@@ -2272,13 +2300,14 @@ def _collect_dom_candidate_urls(page: Any) -> list[str]:
                     }
                   }
                   return values;
-                }
-                """
-            )
-        )
-    except Exception:
+                })();
+                """,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    if js_result.status != "ok":
         return []
-    candidate_urls = _coerce_evaluate_list(candidate_urls)
+    candidate_urls = _coerce_evaluate_list(js_result.result)
     return [
         str(raw_url or "").strip()
         for raw_url in candidate_urls
@@ -2484,17 +2513,6 @@ def _read_page_html(page: Any) -> str:
             value = _maybe_await(candidate()) if callable(candidate) else candidate
         except Exception:
             continue
-        token = str(value or "")
-        if token.strip():
-            return token
-    evaluate = getattr(page, "evaluate", None)
-    if callable(evaluate):
-        try:
-            value = _maybe_await(
-                evaluate("() => document.documentElement?.outerHTML || ''")
-            )
-        except Exception:
-            return ""
         token = str(value or "")
         if token.strip():
             return token

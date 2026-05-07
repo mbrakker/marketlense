@@ -45,6 +45,13 @@ class FakePage:
     def evaluate(self, expression: str) -> dict[str, Any]:
         if self._evaluate_error is not None:
             raise self._evaluate_error
+        if "__marketlense_js_helper" in str(expression):
+            return {
+                "__marketlense_js_helper": True,
+                "ok": True,
+                "result": {"ok": True},
+                "result_type": "object",
+            }
         return {
             "ok": True,
             "expression_prefix": str(expression)[:16],
@@ -62,6 +69,35 @@ class FakePage:
 class FailingScreenshotPage(FakePage):
     def screenshot(self, path: str, full_page: bool = True) -> None:
         raise RuntimeError("screenshot failed")
+
+
+class PromiseJsPage(FakePage):
+    def evaluate(self, expression: str) -> dict[str, Any]:
+        assert "Promise.resolve" in expression
+        return {
+            "__marketlense_js_helper": True,
+            "ok": True,
+            "result": "resolved",
+            "result_type": "string",
+        }
+
+
+class ThrowingJsPage(FakePage):
+    def evaluate(self, expression: str) -> dict[str, Any]:
+        assert "throw new Error" in expression
+        return {
+            "__marketlense_js_helper": True,
+            "ok": False,
+            "error": "Publisher script exploded",
+            "line": 7,
+            "column": 19,
+            "snippet": "throw new Error('Publisher script exploded')",
+        }
+
+
+class UnserializableJsPage(FakePage):
+    def evaluate(self, expression: str) -> object:
+        return object()
 
 
 class FakeBrowser:
@@ -201,7 +237,8 @@ def test_js_positive_and_required_failure(
 
     assert_no_defaulted_required_fields(result)
     assert result.status == "ok"
-    assert result.result == {"ok": True, "expression_prefix": "async () => { re"}
+    assert result.result == {"ok": True}
+    assert result.result_serializable is True
 
     with pytest.raises(Exception) as exc_info:
         browser_helper_js(
@@ -212,6 +249,52 @@ def test_js_positive_and_required_failure(
             required=True,
         )
     assert_app_error(exc_info.value, code="browser_helper_js_failed", retryable=False)
+
+
+def test_js_promise_exception_and_unserializable_values(
+    run_context,
+    assert_app_error,
+) -> None:
+    promise_result = browser_helper_js(
+        page=PromiseJsPage(),
+        expression="return await Promise.resolve('resolved')",
+        ctx=run_context,
+        normalized_url="https://publisher.example/report",
+    )
+    thrown_result = browser_helper_js(
+        page=ThrowingJsPage(),
+        expression="throw new Error('Publisher script exploded')",
+        ctx=run_context,
+        normalized_url="https://publisher.example/report",
+    )
+    unserializable_result = browser_helper_js(
+        page=UnserializableJsPage(),
+        expression="window",
+        ctx=run_context,
+        normalized_url="https://publisher.example/report",
+    )
+
+    assert promise_result.status == "ok"
+    assert promise_result.result == "resolved"
+    assert thrown_result.status == "failed"
+    assert thrown_result.error == "Publisher script exploded"
+    assert thrown_result.error_line == 7
+    assert thrown_result.error_column == 19
+    assert unserializable_result.status == "ok"
+    assert unserializable_result.result_serializable is False
+    assert "object object at" in str(unserializable_result.result)
+
+    with pytest.raises(Exception) as exc_info:
+        browser_helper_js(
+            page=ThrowingJsPage(),
+            expression="throw new Error('Publisher script exploded')",
+            ctx=run_context,
+            normalized_url="https://publisher.example/report",
+            required=True,
+        )
+    assert_app_error(exc_info.value, code="browser_helper_js_failed", retryable=False)
+    assert exc_info.value.context["error_line"] == 7
+    assert exc_info.value.context["error_column"] == 19
 
 
 def test_wait_positive_and_required_failure(

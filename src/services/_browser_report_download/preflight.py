@@ -33,6 +33,7 @@ from src.services._browser_report_download.http import (
     extract_embedded_pdf_urls,
     try_direct_pdf_download,
 )
+from src.services._browser_report_download.helpers import browser_helper_js_async
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service.preflight")
@@ -90,6 +91,8 @@ def try_browser_preflight_probe(
             request=request,
             target_url=target_url,
             download_dir=download_dir,
+            ctx=ctx,
+            normalized_url=normalized_url,
         )
         candidate_urls = _select_pdf_candidates(
             request=request,
@@ -290,6 +293,8 @@ def _run_preflight_session(
     request: BrowserReportDownloadRequest,
     target_url: str,
     download_dir: Path,
+    ctx: RunContext,
+    normalized_url: str,
 ) -> dict[str, Any]:
     coroutine = asyncio.wait_for(
         _run_preflight_session_async(
@@ -297,6 +302,8 @@ def _run_preflight_session(
             request=request,
             target_url=target_url,
             download_dir=download_dir,
+            ctx=ctx,
+            normalized_url=normalized_url,
         ),
         timeout=_PREFLIGHT_SESSION_TIMEOUT_SECONDS,
     )
@@ -313,6 +320,8 @@ async def _run_preflight_session_async(
     request: BrowserReportDownloadRequest,
     target_url: str,
     download_dir: Path,
+    ctx: RunContext,
+    normalized_url: str,
 ) -> dict[str, Any]:
     browser = browser_use.Browser(
         downloads_path=str(download_dir),
@@ -327,9 +336,21 @@ async def _run_preflight_session_async(
         await asyncio.sleep(_PREFLIGHT_EVENT_DRAIN_SECONDS)
         final_url = await _read_browser_url(browser=browser, page=page)
         final_title = await _read_browser_title(browser=browser, page=page)
-        html = await _read_page_html(page)
-        rendered = await _inspect_rendered_page(page=page)
-        event_urls = await _drain_event_urls(page=page)
+        html = await _read_page_html(
+            page,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        rendered = await _inspect_rendered_page(
+            page=page,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        event_urls = await _drain_event_urls(
+            page=page,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
         return {
             "final_url": final_url or str(rendered.get("location_href") or target_url),
             "final_title": final_title or str(rendered.get("title") or ""),
@@ -342,7 +363,12 @@ async def _run_preflight_session_async(
         await _stop_browser(browser)
 
 
-async def _inspect_rendered_page(*, page: Any) -> dict[str, Any]:
+async def _inspect_rendered_page(
+    *,
+    page: Any,
+    ctx: RunContext,
+    normalized_url: str,
+) -> dict[str, Any]:
     script = """
     () => {
       const values = [];
@@ -369,11 +395,25 @@ async def _inspect_rendered_page(*, page: Any) -> dict[str, Any]:
       };
     }
     """
-    result = await _evaluate_page(page=page, script=script)
-    return result if isinstance(result, dict) else {}
+    result = await browser_helper_js_async(
+        page=page,
+        expression=script,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    return (
+        result.result
+        if result.status == "ok" and isinstance(result.result, dict)
+        else {}
+    )
 
 
-async def _drain_event_urls(*, page: Any) -> list[str]:
+async def _drain_event_urls(
+    *,
+    page: Any,
+    ctx: RunContext,
+    normalized_url: str,
+) -> list[str]:
     script = """
     () => {
       const entries = [
@@ -383,10 +423,15 @@ async def _drain_event_urls(*, page: Any) -> list[str]:
       return entries.map((entry) => String(entry?.name || '').trim()).filter(Boolean);
     }
     """
-    result = await _evaluate_page(page=page, script=script)
-    if not isinstance(result, list):
+    result = await browser_helper_js_async(
+        page=page,
+        expression=script,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    if result.status != "ok" or not isinstance(result.result, list):
         return []
-    return _normalize_urls([str(value or "").strip() for value in result])
+    return _normalize_urls([str(value or "").strip() for value in result.result])
 
 
 def _select_pdf_candidates(
@@ -412,6 +457,8 @@ def _select_pdf_candidates(
         if not token:
             continue
         resolved = urljoin(base_url, token)
+        if any(marker in resolved for marker in ('"', "'", "<", ">", "\n", "\r")):
+            continue
         lowered = resolved.casefold()
         if not (lowered.endswith(".pdf") or ".pdf?" in lowered or ".pdf#" in lowered):
             continue
@@ -664,7 +711,12 @@ async def _read_browser_title(*, browser: Any, page: Any) -> str:
     return ""
 
 
-async def _read_page_html(page: Any) -> str:
+async def _read_page_html(
+    page: Any,
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+) -> str:
     for name in ("content", "get_content"):
         candidate = getattr(page, name, None)
         if not callable(candidate):
@@ -673,15 +725,10 @@ async def _read_page_html(page: Any) -> str:
         html = str(value or "")
         if html:
             return html
-    result = await _evaluate_page(
+    result = await browser_helper_js_async(
         page=page,
-        script="() => document.documentElement?.outerHTML || ''",
+        expression="return document.documentElement?.outerHTML || ''",
+        ctx=ctx,
+        normalized_url=normalized_url,
     )
-    return str(result or "")
-
-
-async def _evaluate_page(*, page: Any, script: str) -> Any:
-    evaluate = getattr(page, "evaluate", None)
-    if not callable(evaluate):
-        return None
-    return await _await_if_needed(evaluate(script))
+    return str(result.result or "") if result.status == "ok" else ""

@@ -66,9 +66,25 @@ class BrowserHelperJsResult:
         metadata={"doc": "Python type name of the adapted result."}
     )
     snippet: str = field(metadata={"doc": "Sanitized bounded JavaScript snippet."})
+    result_serializable: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether the JavaScript result could be represented as JSON without fallback stringification."
+        },
+    )
     error: str = field(
         default="",
         metadata={"doc": "Sanitized JavaScript or browser evaluation error."},
+    )
+    error_line: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Best known JavaScript exception line number when available."},
+    )
+    error_column: Optional[int] = field(
+        default=None,
+        metadata={
+            "doc": "Best known JavaScript exception column number when available."
+        },
     )
 
 
