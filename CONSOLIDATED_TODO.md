@@ -196,17 +196,6 @@ Suggested priority order:
     - Beforeunload handling is allowed only for explicit navigation/teardown cases and is logged.
     - Tests cover alert/confirm detection, beforeunload handling, and a policy-rejected dialog path.
 
-- **Title:** Copy browser-harness native keyboard and autocomplete primitives for form routes [Impact: 4/5, Effort: 2/5]
-  - Explanation: Additional reusable practice from browser-harness. Its `type_text`, `press_key`, and targeted keyboard-event dispatch patterns help with searchable dropdowns, country/location autocompletes, and controls that ignore value assignment. Copy/adapt those primitives into Marketlense's browser-use form-route handling instead of inventing new form automation logic.
-  - Pros: Higher form completion quality, fewer repeated browser-agent attempts, lower cost on email-gated report routes.
-  - Cons: Keyboard flows are stateful and need strict post-input verification to avoid false submissions.
-  - Acceptance Criteria:
-    - Keyboard/autocomplete helpers live in Marketlense-owned code and have no `browser-harness` dependency.
-    - Helper behavior is copied/adapted from `browser-harness` key/input patterns and constrained to form interaction evidence.
-    - Autocomplete actions verify the visible/input value after blur before submission.
-    - Required-field failures surface typed blocker codes instead of being collapsed into generic browser failure.
-    - Tests cover a searchable dropdown success and an unresolved autocomplete blocker.
-
 - **Title:** Copy browser-harness print-to-PDF fallback for printable report pages [Impact: 4/5, Effort: 3/5]
   - Explanation: Additional reusable practice from browser-harness. Its print-as-PDF guidance covers CDP PDF generation and visible print-button flows. Marketlense already detects printable report pages and on-site longreads; copy/adapt the existing print-to-PDF pattern into the browser download service as a bounded artifact capture fallback, not a new acquisition route engine.
   - Pros: Captures readable reports that expose print views but no downloadable PDF, improves on-site report durability, reduces weak browser-download retries.

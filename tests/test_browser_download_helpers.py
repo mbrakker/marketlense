@@ -11,6 +11,7 @@ import pytest
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
     browser_helper_ensure_real_tab,
+    browser_helper_form_autocomplete,
     browser_helper_http_get,
     browser_helper_js,
     browser_helper_page_info,
@@ -149,10 +150,144 @@ def test_helper_surface_documents_owned_approved_helpers() -> None:
         "page_info": "Read bounded URL/title/HTML metadata from the active page.",
         "capture_screenshot": "Persist a screenshot through browser, page, or CDP hooks.",
         "js": "Run bounded JavaScript inspection and return structured values.",
+        "form_autocomplete": "Recover required form autocompletes with keyboard-style input and verified selection.",
         "wait_for_load": "Perform one explicit browser/page load-state wait.",
         "ensure_real_tab": "Diagnose a user-facing page tab and reject internal targets.",
         "http_get": "Fetch a static page through the shared bounded HTTP executor.",
     }
+
+
+class AutocompleteSuccessPage(FakePage):
+    def evaluate(self, expression: str) -> dict[str, Any]:
+        assert "KeyboardEvent" in expression
+        assert "InputEvent" in expression
+        assert "blur()" in expression
+        return {
+            "__marketlense_js_helper": True,
+            "ok": True,
+            "result": {
+                "attempted_count": 1,
+                "selected_count": 1,
+                "selected_fields": ["Location"],
+                "unresolved_fields": [],
+                "submitted": True,
+                "final_url": "https://publisher.example/thanks",
+            },
+            "result_type": "object",
+        }
+
+
+class AutocompleteBlockedPage(FakePage):
+    def evaluate(self, expression: str) -> dict[str, Any]:
+        assert "KeyboardEvent" in expression
+        return {
+            "__marketlense_js_helper": True,
+            "ok": True,
+            "result": {
+                "attempted_count": 1,
+                "selected_count": 0,
+                "selected_fields": [],
+                "unresolved_fields": ["Country"],
+                "submitted": False,
+                "final_url": "https://publisher.example/form",
+            },
+            "result_type": "object",
+        }
+
+
+class NativeSelectSuccessPage(FakePage):
+    def evaluate(self, expression: str) -> dict[str, Any]:
+        assert "'select'" in expression
+        assert "insertReplacementText" in expression
+        assert "blur()" in expression
+        return {
+            "__marketlense_js_helper": True,
+            "ok": True,
+            "result": {
+                "attempted_count": 1,
+                "selected_count": 1,
+                "selected_fields": ["Country"],
+                "unresolved_fields": [],
+                "submitted": False,
+                "final_url": "https://publisher.example/form",
+            },
+            "result_type": "object",
+        }
+
+
+def test_form_autocomplete_helper_verifies_selection_and_submission(
+    run_context,
+    assert_no_defaulted_required_fields,
+) -> None:
+    result = browser_helper_form_autocomplete(
+        page=AutocompleteSuccessPage(),
+        field_values=[
+            {
+                "key": "location",
+                "label": "Location",
+                "value": "Austria",
+                "aliases": ["country"],
+            }
+        ],
+        ctx=run_context,
+        normalized_url="https://publisher.example/form",
+    )
+
+    assert_no_defaulted_required_fields(result)
+    assert result.status == "ok"
+    assert result.selected_count == 1
+    assert result.submitted is True
+    assert result.selected_fields == ("Location",)
+    assert result.blocker_code is None
+
+
+def test_form_autocomplete_helper_handles_native_select_controls(
+    run_context,
+    assert_no_defaulted_required_fields,
+) -> None:
+    result = browser_helper_form_autocomplete(
+        page=NativeSelectSuccessPage(),
+        field_values=[
+            {
+                "key": "country",
+                "label": "Country",
+                "value": "Austria",
+                "aliases": ["location"],
+            }
+        ],
+        ctx=run_context,
+        normalized_url="https://publisher.example/form",
+        submit=False,
+    )
+
+    assert_no_defaulted_required_fields(result)
+    assert result.status == "ok"
+    assert result.selected_count == 1
+    assert result.submitted is False
+    assert result.selected_fields == ("Country",)
+
+
+def test_form_autocomplete_helper_reports_unresolved_enum_blocker(
+    run_context,
+) -> None:
+    result = browser_helper_form_autocomplete(
+        page=AutocompleteBlockedPage(),
+        field_values=[
+            {
+                "key": "country",
+                "label": "Country",
+                "value": "Austria",
+                "aliases": ["location"],
+            }
+        ],
+        ctx=run_context,
+        normalized_url="https://publisher.example/form",
+    )
+
+    assert result.status == "blocked"
+    assert result.selected_count == 0
+    assert result.unresolved_fields == ("Country",)
+    assert result.blocker_code == "blocked_unknown_required_enum"
 
 
 def test_page_info_positive_and_internal_tab_failure(

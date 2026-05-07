@@ -89,6 +89,49 @@ class BrowserHelperJsResult:
 
 
 @dataclass(frozen=True)
+class BrowserHelperAutocompleteResult:
+    schema_version: str = field(
+        metadata={"doc": "Browser helper autocomplete-result schema version."}
+    )
+    status: str = field(
+        metadata={"doc": "Autocomplete status: `ok`, `blocked`, or `failed`."}
+    )
+    attempted_count: int = field(
+        metadata={"doc": "Number of form autocomplete controls attempted."}
+    )
+    selected_count: int = field(
+        metadata={"doc": "Number of controls with a verified selected value."}
+    )
+    submitted: bool = field(
+        metadata={"doc": "Whether the helper clicked a submit control after selection."}
+    )
+    unresolved_fields: tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={
+            "doc": "Labels for required autocomplete fields that still did not verify."
+        }
+    )
+    selected_fields: tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={"doc": "Labels for autocomplete fields that verified successfully."}
+    )
+    final_url: str = field(
+        default="",
+        metadata={"doc": "Page URL after the helper action."},
+    )
+    blocker_code: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Typed blocker code when required autocomplete fields remain unresolved."
+        },
+    )
+    error: str = field(
+        default="",
+        metadata={"doc": "Sanitized helper failure detail when status is `failed`."},
+    )
+
+
+@dataclass(frozen=True)
 class BrowserHelperWaitResult:
     schema_version: str = field(
         metadata={"doc": "Browser helper wait-result schema version."}

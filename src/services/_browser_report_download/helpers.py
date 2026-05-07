@@ -10,6 +10,7 @@ Approved helpers:
 - `browser_helper_page_info`: bounded user-facing page URL/title/HTML metadata.
 - `browser_helper_capture_screenshot`: screenshot-first evidence capture.
 - `browser_helper_js`: bounded JavaScript inspection with typed failures.
+- `browser_helper_form_autocomplete`: keyboard-style form autocomplete recovery.
 - `browser_helper_wait_for_load`: one bounded load-state wait.
 - `browser_helper_ensure_real_tab`: real-tab diagnostics excluding internals.
 - `browser_helper_http_get`: bounded static HTTP fetch for inspection.
@@ -28,6 +29,7 @@ from threading import Thread
 from typing import Any
 
 from src.contracts.browser_download import (
+    BrowserHelperAutocompleteResult,
     BrowserHelperHttpGetResult,
     BrowserHelperJsResult,
     BrowserHelperPageInfo,
@@ -82,6 +84,7 @@ def get_browser_helper_surface() -> dict[str, str]:
         "page_info": "Read bounded URL/title/HTML metadata from the active page.",
         "capture_screenshot": "Persist a screenshot through browser, page, or CDP hooks.",
         "js": "Run bounded JavaScript inspection and return structured values.",
+        "form_autocomplete": "Recover required form autocompletes with keyboard-style input and verified selection.",
         "wait_for_load": "Perform one explicit browser/page load-state wait.",
         "ensure_real_tab": "Diagnose a user-facing page tab and reject internal targets.",
         "http_get": "Fetch a static page through the shared bounded HTTP executor.",
@@ -320,6 +323,366 @@ def browser_helper_js(
                 "snippet": snippet,
                 "result_type": result.result_type,
                 "result_serializable": result.result_serializable,
+            },
+        )
+    )
+    return result
+
+
+def browser_helper_form_autocomplete(
+    *,
+    page: Any,
+    field_values: list[dict[str, object]],
+    ctx: RunContext,
+    normalized_url: str,
+    submit: bool = True,
+) -> BrowserHelperAutocompleteResult:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_helper_form_autocomplete_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "field_value_count": len(field_values),
+                "submit": submit,
+            },
+        )
+    )
+    script_payload = {
+        "fields": field_values,
+        "submit": bool(submit),
+    }
+    js_result = browser_helper_js(
+        page=page,
+        expression=f"""
+        return (() => {{
+          const payload = {json.dumps(script_payload, ensure_ascii=True)};
+          const normalize = (value) =>
+            String(value ?? '').replace(/\\s+/g, ' ').trim();
+          const keyToken = (value) => normalize(value).toLowerCase();
+          const isVisible = (node) => Boolean(
+            node &&
+            !node.hidden &&
+            node.getClientRects &&
+            node.getClientRects().length > 0
+          );
+          const fieldEntries = (payload.fields || [])
+            .map((field) => ({{
+              label: normalize(field.label || field.key || ''),
+              value: normalize(field.value || ''),
+              aliases: [
+                field.key,
+                field.label,
+                ...(Array.isArray(field.aliases) ? field.aliases : []),
+              ].map(keyToken).filter(Boolean),
+            }}))
+            .filter((field) => field.value);
+          const labelsFor = (control) => {{
+            const values = [];
+            const id = control.getAttribute('id') || '';
+            if (id) {{
+              const label = document.querySelector(`label[for="${{CSS.escape(id)}}"]`);
+              if (label) values.push(label.textContent || '');
+            }}
+            values.push(
+              control.getAttribute('aria-label') || '',
+              control.getAttribute('placeholder') || '',
+              control.getAttribute('name') || '',
+              control.getAttribute('id') || ''
+            );
+            const labelledBy = control.getAttribute('aria-labelledby') || '';
+            for (const token of labelledBy.split(/\\s+/).filter(Boolean)) {{
+              const node = document.getElementById(token);
+              if (node) values.push(node.textContent || '');
+            }}
+            const wrapper = control.closest(
+              '.lookupFormFieldBlock, .form-field, .field, label, div, li'
+            );
+            if (wrapper) {{
+              const wrapperText = normalize(wrapper.textContent || '');
+              if (wrapperText.length <= 160) values.push(wrapperText);
+            }}
+            return values.map(keyToken).filter(Boolean);
+          }};
+          const matchField = (control) => {{
+            const labels = labelsFor(control);
+            const joined = labels.join(' ');
+            for (const field of fieldEntries) {{
+              if (field.aliases.some((alias) => joined.includes(alias))) {{
+                return field;
+              }}
+            }}
+            const currentValue = normalize(control.value || '');
+            if (currentValue) {{
+              return {{ label: labels[0] || 'Autocomplete', value: currentValue }};
+            }}
+            return null;
+          }};
+          const controls = Array.from(document.querySelectorAll([
+            'input[role="combobox"]',
+            'input[aria-autocomplete]',
+            'input.lookup-behavior',
+            '.lookupFormFieldBlock input',
+            '[role="combobox"] input',
+            'select',
+          ].join(','))).filter((control, index, collection) =>
+            collection.indexOf(control) === index && isVisible(control)
+          );
+          const visibleOptions = () => Array.from(document.querySelectorAll([
+            '[role="option"]',
+            '[role="listbox"] [role="option"]',
+            '.ui-menu-item-wrapper',
+            '.ui-menu-item',
+            '[data-value]',
+            '[data-testid*="option" i]',
+          ].join(','))).filter((node) =>
+            isVisible(node) && normalize(node.innerText || node.textContent)
+          );
+          const dispatchKey = (control, type, key) => {{
+            control.dispatchEvent(new KeyboardEvent(type, {{
+              key,
+              bubbles: true,
+              cancelable: true,
+            }}));
+          }};
+          const typeText = (control, value) => {{
+            control.focus();
+            control.click();
+            control.value = '';
+            control.dispatchEvent(new Event('input', {{ bubbles: true }}));
+            for (const char of value) {{
+              dispatchKey(control, 'keydown', char);
+              control.value = `${{control.value || ''}}${{char}}`;
+              control.dispatchEvent(new InputEvent('beforeinput', {{
+                inputType: 'insertText',
+                data: char,
+                bubbles: true,
+                cancelable: true,
+              }}));
+              control.dispatchEvent(new InputEvent('input', {{
+                inputType: 'insertText',
+                data: char,
+                bubbles: true,
+              }}));
+              dispatchKey(control, 'keyup', char);
+            }}
+            control.dispatchEvent(new Event('change', {{ bubbles: true }}));
+          }};
+          const clickOption = (node) => {{
+            node.dispatchEvent(new MouseEvent('mousedown', {{ bubbles: true }}));
+            node.dispatchEvent(new MouseEvent('mouseup', {{ bubbles: true }}));
+            node.click();
+          }};
+          const selectNativeOption = (control, field) => {{
+            const wanted = keyToken(field.value);
+            control.focus();
+            control.click();
+            for (const char of field.value) {{
+              dispatchKey(control, 'keydown', char);
+              dispatchKey(control, 'keyup', char);
+            }}
+            const options = Array.from(control.options || []).filter((option) =>
+              !option.disabled && keyToken(option.textContent || option.value)
+            );
+            const option = options.find((node) =>
+              keyToken(node.textContent || node.value) === wanted
+            ) || options.find((node) =>
+              keyToken(node.textContent || node.value).includes(wanted)
+            ) || options.find((node) =>
+              wanted.includes(keyToken(node.textContent || node.value))
+            );
+            if (option) {{
+              control.value = option.value;
+              option.selected = true;
+              control.dispatchEvent(new InputEvent('input', {{
+                inputType: 'insertReplacementText',
+                data: option.textContent || option.value,
+                bubbles: true,
+              }}));
+              control.dispatchEvent(new Event('change', {{ bubbles: true }}));
+            }}
+            dispatchKey(control, 'keydown', 'Tab');
+            dispatchKey(control, 'keyup', 'Tab');
+            control.blur();
+            const persisted = keyToken(
+              (control.selectedOptions && control.selectedOptions[0]
+                ? control.selectedOptions[0].textContent || ''
+                : '') ||
+              control.value ||
+              control.getAttribute('value') ||
+              ''
+            );
+            const invalid = String(control.getAttribute('aria-invalid') || '')
+              .toLowerCase() === 'true';
+            return !invalid && persisted && (
+              persisted === wanted ||
+              persisted.includes(wanted) ||
+              wanted.includes(persisted)
+            );
+          }};
+          const selectedFields = [];
+          const unresolvedFields = [];
+          let attemptedCount = 0;
+          for (const control of controls) {{
+            const field = matchField(control);
+            if (!field || !field.value) continue;
+            const label = normalize(field.label || labelsFor(control)[0] || 'Autocomplete');
+            attemptedCount += 1;
+            if (control.tagName && control.tagName.toLowerCase() === 'select') {{
+              if (selectNativeOption(control, field)) {{
+                selectedFields.push(label);
+              }} else {{
+                unresolvedFields.push(label);
+              }}
+              continue;
+            }}
+            typeText(control, field.value);
+            const wanted = keyToken(field.value);
+            const options = visibleOptions();
+            const option = options.find((node) =>
+              keyToken(node.innerText || node.textContent) === wanted
+            ) || options.find((node) =>
+              keyToken(node.innerText || node.textContent).includes(wanted)
+            );
+            if (option) {{
+              clickOption(option);
+            }} else {{
+              dispatchKey(control, 'keydown', 'Enter');
+              dispatchKey(control, 'keyup', 'Enter');
+            }}
+            dispatchKey(control, 'keydown', 'Tab');
+            dispatchKey(control, 'keyup', 'Tab');
+            control.blur();
+            const persisted = keyToken(
+              control.value ||
+              control.getAttribute('value') ||
+              control.getAttribute('aria-label') ||
+              ''
+            );
+            const invalid = String(control.getAttribute('aria-invalid') || '')
+              .toLowerCase() === 'true';
+            if (!invalid && persisted && (
+              persisted === wanted ||
+              persisted.includes(wanted) ||
+              wanted.includes(persisted)
+            )) {{
+              selectedFields.push(label);
+            }} else {{
+              unresolvedFields.push(label);
+            }}
+          }}
+          let submitted = false;
+          if (payload.submit && selectedFields.length > 0 && unresolvedFields.length === 0) {{
+            const submitButton = Array.from(document.querySelectorAll(
+              'button[type="submit"], input[type="submit"], button'
+            )).find((node) => {{
+              const text = keyToken(node.innerText || node.textContent || node.value || '');
+              return isVisible(node) && (
+                text === 'submit' ||
+                text.includes('submit') ||
+                text.includes('download') ||
+                text.includes('send')
+              );
+            }});
+            if (submitButton) {{
+              submitButton.click();
+              submitted = true;
+            }}
+          }}
+          return {{
+            attempted_count: attemptedCount,
+            selected_count: selectedFields.length,
+            selected_fields: selectedFields,
+            unresolved_fields: unresolvedFields,
+            submitted,
+            final_url: window.location.href || '',
+          }};
+        }})();
+        """,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    if js_result.status != "ok":
+        return _autocomplete_result(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            status="failed",
+            error=js_result.error,
+        )
+    payload = js_result.result if isinstance(js_result.result, dict) else {}
+    unresolved_fields = tuple(
+        normalize
+        for item in payload.get("unresolved_fields", [])
+        if (normalize := str(item or "").strip())
+    )
+    selected_fields = tuple(
+        normalize
+        for item in payload.get("selected_fields", [])
+        if (normalize := str(item or "").strip())
+    )
+    if not selected_fields and int(payload.get("selected_count") or 0) > 0:
+        selected_fields = ("Autocomplete",)
+    status = "ok" if selected_fields and not unresolved_fields else "blocked"
+    return _autocomplete_result(
+        ctx=ctx,
+        normalized_url=normalized_url,
+        status=status,
+        attempted_count=int(payload.get("attempted_count") or 0),
+        selected_count=int(payload.get("selected_count") or 0),
+        submitted=bool(payload.get("submitted")),
+        unresolved_fields=unresolved_fields,
+        selected_fields=selected_fields,
+        final_url=str(payload.get("final_url") or "").strip(),
+        blocker_code=(
+            "blocked_unknown_required_enum" if unresolved_fields else None
+        ),
+    )
+
+
+def _autocomplete_result(
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+    status: str,
+    attempted_count: int = 0,
+    selected_count: int = 0,
+    submitted: bool = False,
+    unresolved_fields: tuple[str, ...] = (),
+    selected_fields: tuple[str, ...] = (),
+    final_url: str = "",
+    blocker_code: str | None = None,
+    error: str = "",
+) -> BrowserHelperAutocompleteResult:
+    result = BrowserHelperAutocompleteResult(
+        schema_version=_HELPER_SCHEMA_VERSION,
+        status=status,
+        attempted_count=attempted_count,
+        selected_count=selected_count,
+        submitted=submitted,
+        unresolved_fields=unresolved_fields,
+        selected_fields=selected_fields,
+        final_url=final_url,
+        blocker_code=blocker_code,
+        error=_excerpt(error, _HTML_EXCERPT_CHARS),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_helper_form_autocomplete_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "status": result.status,
+                "attempted_count": result.attempted_count,
+                "selected_count": result.selected_count,
+                "submitted": result.submitted,
+                "unresolved_fields": list(result.unresolved_fields),
+                "selected_fields": list(result.selected_fields),
+                "blocker_code": result.blocker_code or "",
+                "error": result.error,
             },
         )
     )

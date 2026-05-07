@@ -31,8 +31,12 @@ from src.services._browser_report_download.cdp import (
 )
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
+    browser_helper_form_autocomplete,
     browser_helper_js,
     browser_helper_page_info,
+)
+from src.services._browser_report_download.request import (
+    resolve_effective_identity_fields,
 )
 from src.services._browser_report_download.http import (
     download_pdf_from_url,
@@ -394,6 +398,7 @@ def run_browser_report_download_agent(
             raw_model_response=raw_model_response,
         ):
             lookup_submission_assisted = _attempt_lookup_submission_assist_with_timeout(
+                request=request,
                 browser=browser,
                 ctx=ctx,
                 normalized_url=normalized_url,
@@ -475,6 +480,7 @@ def run_browser_report_download_agent(
                 raw_model_response=raw_model_response,
             ):
                 _attempt_lookup_submission_assist_with_timeout(
+                    request=request,
                     browser=browser,
                     ctx=ctx,
                     normalized_url=normalized_url,
@@ -874,6 +880,7 @@ def _payload_has_lookup_submission_recovery_signal(payload: dict[str, Any]) -> b
 
 def _attempt_lookup_submission_assist(
     *,
+    request: BrowserReportDownloadRequest,
     browser: Any,
     ctx: RunContext,
     normalized_url: str,
@@ -881,89 +888,32 @@ def _attempt_lookup_submission_assist(
     page = _resolve_current_page(browser)
     if page is None:
         return False
-    js_result = browser_helper_js(
+    autocomplete_result = browser_helper_form_autocomplete(
         page=page,
-        expression="""
-                return await (() => {
-                  const normalize = (value) => String(value || '').trim().toLowerCase();
-                  const isVisible = (node) =>
-                    Boolean(node) &&
-                    !node.hidden &&
-                    node.getClientRects &&
-                    node.getClientRects().length > 0;
-                  const collectVisibleOptions = (root) => [
-                    ...(root || document).querySelectorAll(
-                      '.ui-menu-item-wrapper, .ui-menu-item, [role="option"]'
-                    ),
-                  ].filter((node) => {
-                    const text = normalize(node.innerText || node.textContent);
-                    return text && isVisible(node);
-                  });
-                  const lookupBlocks = [...document.querySelectorAll('.lookupFormFieldBlock')];
-                  const globalOptions = collectVisibleOptions(document);
-                  let selectedCount = 0;
-                  for (const block of lookupBlocks) {
-                    const input = block.querySelector('input.lookup-behavior');
-                    if (!input || !input.required || !normalize(input.value)) {
-                      continue;
-                    }
-                    const options = [
-                      ...collectVisibleOptions(block),
-                      ...globalOptions,
-                    ].filter((node, index, collection) => {
-                      if (!node) {
-                        return false;
-                      }
-                      return collection.indexOf(node) === index;
-                    });
-                    if (!options.length) {
-                      continue;
-                    }
-                    const currentValue = normalize(input.value);
-                    const exactMatch =
-                      options.find(
-                        (node) =>
-                          normalize(node.innerText || node.textContent) === currentValue
-                      )
-                      || (options.length === 1 ? options[0] : null);
-                    if (!exactMatch) {
-                      continue;
-                    }
-                    exactMatch.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-                    exactMatch.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-                    exactMatch.click();
-                    selectedCount += 1;
-                  }
-                  const submitButton = [
-                    ...document.querySelectorAll(
-                      'button[type="submit"], input[type="submit"], button'
-                    ),
-                  ].find((node) => {
-                    const text = normalize(
-                      node.innerText || node.textContent || node.value || ''
-                    );
-                    return text === 'submit' || text.includes('submit');
-                  });
-                  let submitted = false;
-                  if (selectedCount > 0 && submitButton) {
-                    submitButton.click();
-                    submitted = true;
-                  }
-                  return {
-                    acted: selectedCount > 0,
-                    selected_count: selectedCount,
-                    submitted,
-                    final_url: window.location.href,
-                  };
-                })();
-                """,
+        field_values=_browser_form_identity_field_values(request),
         ctx=ctx,
         normalized_url=normalized_url,
+        submit=True,
     )
-    if js_result.status != "ok":
+    if autocomplete_result.status == "blocked":
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_lookup_autocomplete_blocked",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "blocker_code": autocomplete_result.blocker_code or "",
+                    "unresolved_fields": list(
+                        autocomplete_result.unresolved_fields
+                    ),
+                    "attempted_count": autocomplete_result.attempted_count,
+                },
+            )
+        )
         return False
-    result = js_result.result
-    if not isinstance(result, dict) or result.get("acted") is not True:
+    if autocomplete_result.status != "ok" or autocomplete_result.selected_count <= 0:
         return False
     _stabilize_terminal_snapshot(
         browser=browser,
@@ -971,7 +921,7 @@ def _attempt_lookup_submission_assist(
             {
                 "route_kind": "email_delivery",
                 "route_family": "browser_email_form",
-                "email_submission_completed": bool(result.get("submitted")),
+                "email_submission_completed": autocomplete_result.submitted,
                 "confirmation_url_changed": True,
             },
             ensure_ascii=True,
@@ -994,17 +944,38 @@ def _attempt_lookup_submission_assist(
             module=logger.name,
             fields={
                 "normalized_url": normalized_url,
-                "selected_count": int(result.get("selected_count") or 0),
-                "submitted": bool(result.get("submitted")),
-                "final_url": str(result.get("final_url") or "").strip(),
+                "selected_count": autocomplete_result.selected_count,
+                "selected_fields": list(autocomplete_result.selected_fields),
+                "submitted": autocomplete_result.submitted,
+                "final_url": autocomplete_result.final_url,
             },
         )
     )
     return True
 
 
+def _browser_form_identity_field_values(
+    request: BrowserReportDownloadRequest,
+) -> list[dict[str, object]]:
+    values: list[dict[str, object]] = []
+    for field in resolve_effective_identity_fields(request):
+        token = str(field.value or "").strip()
+        if not token:
+            continue
+        values.append(
+            {
+                "key": field.key,
+                "label": field.label,
+                "value": token,
+                "aliases": list(field.aliases),
+            }
+        )
+    return values
+
+
 def _attempt_lookup_submission_assist_with_timeout(
     *,
+    request: BrowserReportDownloadRequest,
     browser: Any,
     ctx: RunContext,
     normalized_url: str,
@@ -1013,6 +984,7 @@ def _attempt_lookup_submission_assist_with_timeout(
 
     def runner() -> None:
         payload["result"] = _attempt_lookup_submission_assist(
+            request=request,
             browser=browser,
             ctx=ctx,
             normalized_url=normalized_url,
