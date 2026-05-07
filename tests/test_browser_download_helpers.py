@@ -10,6 +10,7 @@ import pytest
 
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
+    browser_helper_coordinate_fallback_click,
     browser_helper_ensure_real_tab,
     browser_helper_form_autocomplete,
     browser_helper_http_get,
@@ -114,6 +115,35 @@ class FakeBrowser:
         self.html = html
 
 
+class FakeCdpClient:
+    def __init__(self, responses: dict[str, dict[str, Any]]) -> None:
+        self.responses = responses
+        self.calls: list[dict[str, Any]] = []
+
+    async def send_raw(
+        self,
+        method: str,
+        params: dict[str, Any] | None = None,
+        session_id: str | None = None,
+    ) -> dict[str, Any]:
+        self.calls.append(
+            {
+                "method": method,
+                "params": params or {},
+                "session_id": session_id or "",
+            }
+        )
+        if method not in self.responses:
+            raise RuntimeError(f"unhandled CDP method: {method}")
+        return self.responses[method]
+
+
+class RootCdpBrowser(FakeBrowser):
+    def __init__(self, client: FakeCdpClient) -> None:
+        super().__init__()
+        self.cdp_client = client
+
+
 class NoWaitPage:
     url = "https://publisher.example/report"
 
@@ -149,6 +179,7 @@ def test_helper_surface_documents_owned_approved_helpers() -> None:
     assert surface == {
         "page_info": "Read bounded URL/title/HTML metadata from the active page.",
         "capture_screenshot": "Persist a screenshot through browser, page, or CDP hooks.",
+        "coordinate_fallback_click": "Use a current screenshot to perform one transient coordinate click after selector failure or selector-hostile surface evidence.",
         "js": "Run bounded JavaScript inspection and return structured values.",
         "form_autocomplete": "Recover required form autocompletes with keyboard-style input and verified selection.",
         "wait_for_load": "Perform one explicit browser/page load-state wait.",
@@ -356,6 +387,98 @@ def test_screenshot_positive_and_required_failure(
         code="browser_helper_screenshot_failed",
         retryable=True,
     )
+
+
+def test_coordinate_fallback_click_recovers_after_selector_failure(
+    tmp_path: Path,
+    run_context,
+    assert_no_defaulted_required_fields,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "report-target",
+                        "type": "page",
+                        "url": "https://publisher.example/report",
+                    },
+                ]
+            },
+            "Target.attachToTarget": {"sessionId": "report-session"},
+            "Input.dispatchMouseEvent": {},
+            "Target.detachFromTarget": {},
+        }
+    )
+    screenshot_path = tmp_path / "fallback-before.png"
+
+    result = browser_helper_coordinate_fallback_click(
+        browser=RootCdpBrowser(client),
+        page=FakePage(),
+        screenshot_path=screenshot_path,
+        coordinate_x=180,
+        coordinate_y=96,
+        selector_attempted=True,
+        selector_success=False,
+        selector_error="querySelector returned no visible option",
+        surface_labels=("custom-dropdown",),
+        ctx=run_context,
+        normalized_url="https://publisher.example/report",
+        target_url="https://publisher.example/report",
+    )
+
+    assert_no_defaulted_required_fields(result)
+    assert result.status == "ok"
+    assert result.reason == "known_selector_hostile_surface"
+    assert result.coordinate_source == "current_screenshot"
+    assert result.coordinates_persisted is False
+    assert result.before_screenshot_path == str(screenshot_path)
+    assert result.after_screenshot_path == str(tmp_path / "fallback-before-after.png")
+    assert result.verification_status == "screenshot"
+    assert [call["method"] for call in client.calls] == [
+        "Target.getTargets",
+        "Target.attachToTarget",
+        "Input.dispatchMouseEvent",
+        "Input.dispatchMouseEvent",
+        "Target.detachFromTarget",
+    ]
+    assert client.calls[2]["params"]["type"] == "mousePressed"
+    assert client.calls[3]["params"]["type"] == "mouseReleased"
+    assert client.calls[2]["params"]["x"] == 180.0
+    assert client.calls[2]["params"]["y"] == 96.0
+
+
+def test_coordinate_fallback_blocks_unjustified_coordinates(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {"targetInfos": []},
+            "Target.attachToTarget": {"sessionId": "unused-session"},
+            "Input.dispatchMouseEvent": {},
+            "Target.detachFromTarget": {},
+        }
+    )
+
+    result = browser_helper_coordinate_fallback_click(
+        browser=RootCdpBrowser(client),
+        page=FakePage(),
+        screenshot_path=tmp_path / "fallback-before.png",
+        coordinate_x=180,
+        coordinate_y=96,
+        selector_attempted=False,
+        selector_success=False,
+        selector_error="",
+        surface_labels=(),
+        ctx=run_context,
+        normalized_url="https://publisher.example/report",
+    )
+
+    assert result.status == "blocked"
+    assert result.reason == "selector_or_state_attempt_required"
+    assert result.before_screenshot_path
+    assert [call["method"] for call in client.calls] == []
 
 
 def test_js_positive_and_required_failure(

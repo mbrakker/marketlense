@@ -15,6 +15,7 @@ from src.services._browser_report_download.cdp import (
     capture_terminal_screenshot_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
     collect_terminal_network_entries_via_cdp,
+    dispatch_mouse_click_via_cdp,
     ensure_browser_download_target_hygiene_via_cdp,
     get_browser_download_cdp_allowlist,
 )
@@ -118,6 +119,7 @@ def test_browser_download_cdp_allowlist_documents_supported_escape_hatch() -> No
         "Page.printToPDF": "Persist browser-rendered PDF captures for printable on-site reports.",
         "Page.getLayoutMetrics": "Reject zero-size or stale terminal targets before evidence capture.",
         "Page.handleJavaScriptDialog": "Handle terminal JavaScript dialogs according to browser-download policy.",
+        "Input.dispatchMouseEvent": "Issue one transient screenshot-derived compositor click after selector fallback policy allows it.",
         "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
         "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
         "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
@@ -228,8 +230,8 @@ def test_browser_download_cdp_rejects_unapproved_methods(
     with pytest.raises(AppError) as exc_info:
         call_browser_download_cdp(
             browser=browser,
-            method="Input.dispatchMouseEvent",
-            params={"type": "mousePressed"},
+            method="Browser.close",
+            params={},
             ctx=run_context,
             normalized_url="https://example.com/report",
             required=True,
@@ -323,6 +325,60 @@ def test_browser_download_cdp_collects_terminal_network_entries(run_context) -> 
             "initiator_type": "navigation",
         }
     ]
+
+
+def test_browser_download_cdp_dispatches_mouse_click_in_one_session(
+    run_context,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "report-target",
+                        "type": "page",
+                        "url": "https://example.com/report",
+                    },
+                ]
+            },
+            "Target.attachToTarget": {"sessionId": "report-session"},
+            "Input.dispatchMouseEvent": {},
+            "Target.detachFromTarget": {},
+        }
+    )
+
+    class RootOnlyBrowser:
+        cdp_client = client
+
+    clicked = dispatch_mouse_click_via_cdp(
+        browser=RootOnlyBrowser(),
+        coordinate_x=22,
+        coordinate_y=44,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        target_url="https://example.com/report#download",
+        required=True,
+    )
+
+    assert clicked is True
+    assert [call["method"] for call in client.calls] == [
+        "Target.getTargets",
+        "Target.attachToTarget",
+        "Input.dispatchMouseEvent",
+        "Input.dispatchMouseEvent",
+        "Target.detachFromTarget",
+    ]
+    assert client.calls[2]["params"] == {
+        "type": "mousePressed",
+        "x": 22.0,
+        "y": 44.0,
+        "button": "left",
+        "clickCount": 1,
+        "pointerType": "mouse",
+    }
+    assert client.calls[3]["params"]["type"] == "mouseReleased"
+    assert client.calls[2]["session_id"] == "report-session"
+    assert client.calls[3]["session_id"] == "report-session"
 
 
 def test_browser_download_target_hygiene_filters_internal_targets_and_activates_real_page(

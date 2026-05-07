@@ -173,18 +173,6 @@ Suggested priority order:
     - Setup or verification tabs are activated when opened during manual developer workflows.
     - Production browser workflows do not depend on developer-mode self-healing.
 
-- **Title:** Reuse screenshot-first coordinate fallbacks for hard UI surfaces [Impact: 4/5, Effort: 2/5]
-  - Explanation: Additional browser-harness practice worth copying. The harness favors screenshot inspection and compositor-level coordinate clicks for cases where selectors fail, especially complex dropdowns, shadow DOM, canvas-like controls, and cross-origin iframes. Browser-use already supports coordinate-style interaction, so Marketlense should copy/adapt this fallback policy inside the repo instead of inventing a new interaction strategy.
-  - Pros: Improves success on difficult publisher portals without adding publisher-specific automation code.
-  - Cons: Coordinate use is brittle if stored as permanent route knowledge.
-  - Acceptance Criteria:
-    - Fallback policy requires selector/state attempts before coordinate interaction unless the page surface is known selector-hostile.
-    - Fallback sequencing is copied/adapted from `browser-harness` screenshot-first interaction practices.
-    - Coordinate fallback implementation and policy are fully independent of `browser-harness`.
-    - Coordinates are derived from current screenshots and never stored as durable playbook facts.
-    - Every coordinate action is followed by screenshot or page-info verification.
-    - Tests or replay fixtures cover at least one selector-failure-to-coordinate-success path.
-
 ---
 
 ## 5. Idempotency, Checkpoints & Publish Durability

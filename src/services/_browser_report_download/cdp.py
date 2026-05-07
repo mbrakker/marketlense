@@ -11,6 +11,7 @@ Approved CDP method allowlist:
 - `Page.printToPDF`: persist browser-rendered PDF captures for printable on-site reports.
 - `Page.getLayoutMetrics`: reject zero-size or stale terminal targets before evidence capture.
 - `Page.handleJavaScriptDialog`: unblock terminal JavaScript dialogs according to policy.
+- `Input.dispatchMouseEvent`: issue one transient screenshot-derived compositor click.
 - `Target.getTargetInfo`: inspect the focused target during diagnostics.
 - `Target.getTargets`: recover a real page target when browser-use sessions are unavailable.
 - `Target.attachToTarget`: create a transient evidence-only CDP session.
@@ -45,6 +46,7 @@ _CDP_ALLOWLIST: dict[str, str] = {
     "Page.printToPDF": "Persist browser-rendered PDF captures for printable on-site reports.",
     "Page.getLayoutMetrics": "Reject zero-size or stale terminal targets before evidence capture.",
     "Page.handleJavaScriptDialog": "Handle terminal JavaScript dialogs according to browser-download policy.",
+    "Input.dispatchMouseEvent": "Issue one transient screenshot-derived compositor click after selector fallback policy allows it.",
     "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
     "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
     "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
@@ -437,6 +439,102 @@ def capture_terminal_screenshot_via_cdp(
             ) from exc
         return False
     return screenshot_path.exists()
+
+
+def dispatch_mouse_click_via_cdp(
+    *,
+    browser: Any,
+    coordinate_x: float,
+    coordinate_y: float,
+    ctx: RunContext,
+    normalized_url: str,
+    target_url: str = "",
+    required: bool = False,
+) -> bool:
+    x = _coerce_mouse_coordinate(coordinate_x)
+    y = _coerce_mouse_coordinate(coordinate_y)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_cdp_mouse_click_started",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": str(target_url or "").strip(),
+                "coordinate_source": "current_screenshot",
+                "required": required,
+            },
+        )
+    )
+    if x is None or y is None:
+        return _mouse_click_failure(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            target_url=target_url,
+            required=required,
+            error="coordinate values must be finite non-negative numbers",
+            target_id="",
+            session_id="",
+        )
+    target_id = ""
+    session_id = ""
+    try:
+        resolved_session = _resolve_browser_cdp_session(
+            browser,
+            timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+            target_url=target_url,
+        )
+        target_id = resolved_session.target_id
+        session_id = resolved_session.session_id
+        try:
+            for event_type in ("mousePressed", "mouseReleased"):
+                _send_raw_cdp(
+                    client=resolved_session.client,
+                    method="Input.dispatchMouseEvent",
+                    params={
+                        "type": event_type,
+                        "x": x,
+                        "y": y,
+                        "button": "left",
+                        "clickCount": 1,
+                        "pointerType": "mouse",
+                    },
+                    session_id=resolved_session.session_id,
+                    timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+                )
+        finally:
+            if resolved_session.transient:
+                _detach_transient_cdp_session(
+                    client=resolved_session.client,
+                    session_id=resolved_session.session_id,
+                )
+    except Exception as exc:
+        return _mouse_click_failure(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            target_url=target_url,
+            required=required,
+            error=str(exc),
+            target_id=target_id,
+            session_id=session_id,
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_cdp_mouse_click_completed",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": str(target_url or "").strip(),
+                "target_id": target_id,
+                "session_id": session_id,
+                "result_status": "ok",
+            },
+        )
+    )
+    return True
 
 
 def collect_terminal_dialog_evidence_via_cdp(
@@ -869,6 +967,62 @@ def _sanitize_dialog_message(raw_message: Any) -> str:
     if len(token) <= _CDP_DIALOG_MESSAGE_MAX_CHARS:
         return token
     return token[: _CDP_DIALOG_MESSAGE_MAX_CHARS - 3].rstrip() + "..."
+
+
+def _coerce_mouse_coordinate(value: object) -> float | None:
+    try:
+        parsed = float(str(value))
+    except (TypeError, ValueError):
+        return None
+    if parsed < 0:
+        return None
+    if parsed in {float("inf"), float("-inf")} or parsed != parsed:
+        return None
+    return parsed
+
+
+def _mouse_click_failure(
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+    target_url: str,
+    required: bool,
+    error: str,
+    target_id: str,
+    session_id: str,
+) -> bool:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_cdp_mouse_click_failed",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": str(target_url or "").strip(),
+                "target_id": target_id,
+                "session_id": session_id,
+                "required": required,
+                "result_status": "failed",
+                "error": str(error or "").strip(),
+            },
+        )
+    )
+    if required:
+        raise AppError(
+            code="browser_download_cdp_mouse_click_failed",
+            message="A required screenshot-derived coordinate click failed",
+            retryable=True,
+            severity="error",
+            context={
+                "normalized_url": normalized_url,
+                "target_url": str(target_url or "").strip(),
+                "target_id": target_id,
+                "session_id": session_id,
+                "error": str(error or "").strip(),
+            },
+        )
+    return False
 
 
 def _send_browser_download_cdp(

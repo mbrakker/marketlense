@@ -85,6 +85,7 @@ fixtures:
       route_kind_hint: "pdf_download"
       route_step_lines:
         - "1. click Download report -> Download started"
+      selected_playbook_lines: []
       route_family_hint: "browser_pdf_click"
       publisher_discovery_route_kind: "browser_render"
       publisher_recommended_discovery_route_kind: "browser_render"

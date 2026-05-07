@@ -132,6 +132,57 @@ class BrowserHelperAutocompleteResult:
 
 
 @dataclass(frozen=True)
+class BrowserHelperCoordinateFallbackResult:
+    schema_version: str = field(
+        metadata={"doc": "Browser helper coordinate-fallback result schema version."}
+    )
+    status: str = field(
+        metadata={"doc": "Coordinate fallback status: `ok`, `blocked`, or `failed`."}
+    )
+    reason: str = field(
+        metadata={"doc": "Policy or execution reason for the fallback result."}
+    )
+    selector_attempted: bool = field(
+        metadata={"doc": "Whether a selector or state-based action was attempted first."}
+    )
+    selector_success: bool = field(
+        metadata={"doc": "Whether the prior selector or state-based action succeeded."}
+    )
+    selector_error: str = field(
+        metadata={"doc": "Sanitized selector/state failure detail supplied by the caller."}
+    )
+    surface_labels: tuple[str, ...] = field(
+        metadata={"doc": "Normalized transient labels describing the hard UI surface."}
+    )
+    coordinate_source: str = field(
+        metadata={"doc": "Source of the transient coordinate, normally `current_screenshot`."}
+    )
+    coordinates_persisted: bool = field(
+        metadata={"doc": "Always false; raw coordinates are not durable playbook facts."}
+    )
+    before_screenshot_path: str = field(
+        metadata={"doc": "Screenshot captured before the coordinate action."}
+    )
+    after_screenshot_path: str = field(
+        metadata={"doc": "Verification screenshot captured after the coordinate action, else empty."}
+    )
+    verification_status: str = field(
+        metadata={"doc": "Post-action verification status: `screenshot`, `page_info`, or `missing`."}
+    )
+    action_source: str = field(
+        metadata={"doc": "Browser action source used for the coordinate click."}
+    )
+    target_url: str = field(
+        default="",
+        metadata={"doc": "Verified browser target URL used for the click when supplied."},
+    )
+    error: str = field(
+        default="",
+        metadata={"doc": "Sanitized helper failure detail when status is `failed`."},
+    )
+
+
+@dataclass(frozen=True)
 class BrowserHelperWaitResult:
     schema_version: str = field(
         metadata={"doc": "Browser helper wait-result schema version."}
