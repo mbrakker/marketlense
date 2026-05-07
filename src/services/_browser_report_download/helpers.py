@@ -58,10 +58,16 @@ _JS_SNIPPET_CHARS = 240
 _HELPER_AWAIT_TIMEOUT_SECONDS = 8.0
 _INTERNAL_TARGET_URL_PREFIXES = (
     "about:",
+    "brave://",
     "chrome://",
+    "chrome-error://",
     "chrome-extension://",
+    "chrome-search://",
     "chrome-untrusted://",
     "devtools://",
+    "edge://",
+    "opera://",
+    "vivaldi://",
 )
 
 

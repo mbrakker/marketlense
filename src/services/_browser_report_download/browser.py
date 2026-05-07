@@ -31,6 +31,7 @@ from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
     collect_terminal_network_entries_via_cdp,
+    ensure_browser_download_target_hygiene_via_cdp,
 )
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
@@ -434,6 +435,7 @@ def run_browser_report_download_agent(
             ) = _capture_completed_history_terminal_assets(
                 browser=browser,
                 download_dir=download_dir,
+                final_page_url=final_page_url,
                 route_family=request.route_family_hint or "",
                 ctx=ctx,
                 normalized_url=normalized_url,
@@ -495,6 +497,7 @@ def run_browser_report_download_agent(
                 browser=browser,
                 page=current_page,
                 download_dir=download_dir,
+                final_page_url=final_page_url,
                 final_page_html=final_page_html,
                 route_family=request.route_family_hint or "",
                 ctx=ctx,
@@ -833,6 +836,7 @@ def _salvage_timed_out_browser_run_unbounded(
                 browser=browser,
                 page=current_page,
                 download_dir=download_dir,
+                final_page_url=final_page_url,
                 final_page_html=final_page_html,
                 route_family=request.route_family_hint or "",
                 ctx=ctx,
@@ -2026,11 +2030,19 @@ def _capture_terminal_assets(
     browser: Any,
     page: Any,
     download_dir: Path,
+    final_page_url: str,
     final_page_html: str,
     route_family: str,
     ctx: RunContext,
     normalized_url: str,
 ) -> tuple[list[str], list[BrowserDownloadNetworkEvent], str, str]:
+    _ensure_terminal_target_hygiene(
+        browser=browser,
+        final_page_url=final_page_url,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        activate=True,
+    )
     network_events = _collect_network_events(
         browser=browser,
         page=page,
@@ -2084,6 +2096,24 @@ def _capture_terminal_dialog_evidence(
             *cdp_evidence,
             *_read_browser_closed_popup_dialog_evidence(browser),
         ]
+    )
+
+
+def _ensure_terminal_target_hygiene(
+    *,
+    browser: Any,
+    final_page_url: str,
+    ctx: RunContext,
+    normalized_url: str,
+    activate: bool,
+) -> None:
+    ensure_browser_download_target_hygiene_via_cdp(
+        browser=browser,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        target_url=final_page_url,
+        activate=activate,
+        required=False,
     )
 
 
@@ -2282,11 +2312,19 @@ def _capture_completed_history_terminal_assets(
     *,
     browser: Any,
     download_dir: Path,
+    final_page_url: str,
     route_family: str,
     ctx: RunContext,
     normalized_url: str,
     fallback_screenshot_path: str,
 ) -> tuple[list[str], list[BrowserDownloadNetworkEvent], str]:
+    _ensure_terminal_target_hygiene(
+        browser=browser,
+        final_page_url=final_page_url,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        activate=True,
+    )
     network_events = _collect_network_events(
         browser=browser,
         page=None,

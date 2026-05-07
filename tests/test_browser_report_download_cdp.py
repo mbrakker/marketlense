@@ -15,6 +15,7 @@ from src.services._browser_report_download.cdp import (
     capture_terminal_screenshot_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
     collect_terminal_network_entries_via_cdp,
+    ensure_browser_download_target_hygiene_via_cdp,
     get_browser_download_cdp_allowlist,
 )
 from src.utils.errors import AppError
@@ -115,11 +116,13 @@ def test_browser_download_cdp_allowlist_documents_supported_escape_hatch() -> No
         "Page.enable": "Subscribe to bounded terminal Page events such as JavaScript dialogs.",
         "Page.captureScreenshot": "Persist terminal screenshot evidence when browser-use screenshot hooks fail.",
         "Page.printToPDF": "Persist browser-rendered PDF captures for printable on-site reports.",
+        "Page.getLayoutMetrics": "Reject zero-size or stale terminal targets before evidence capture.",
         "Page.handleJavaScriptDialog": "Handle terminal JavaScript dialogs according to browser-download policy.",
         "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
         "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
         "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
         "Target.detachFromTarget": "Clean up a transient evidence-only CDP session.",
+        "Target.activateTarget": "Focus a verified user-facing target when headed evidence needs it.",
     }
 
 
@@ -320,6 +323,148 @@ def test_browser_download_cdp_collects_terminal_network_entries(run_context) -> 
             "initiator_type": "navigation",
         }
     ]
+
+
+def test_browser_download_target_hygiene_filters_internal_targets_and_activates_real_page(
+    run_context,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "omnibox-target",
+                        "type": "page",
+                        "url": "chrome://omnibox-popup",
+                    },
+                    {
+                        "targetId": "blank-target",
+                        "type": "page",
+                        "url": "about:blank",
+                    },
+                    {
+                        "targetId": "real-target",
+                        "type": "page",
+                        "url": "https://example.com/report",
+                        "title": "Example report",
+                    },
+                ]
+            },
+            "Target.attachToTarget": {"sessionId": "real-session"},
+            "Page.getLayoutMetrics": {
+                "cssVisualViewport": {"clientWidth": 1280, "clientHeight": 720}
+            },
+            "Target.activateTarget": {},
+            "Target.detachFromTarget": {},
+        }
+    )
+
+    class RootOnlyBrowser:
+        cdp_client = client
+
+    result = ensure_browser_download_target_hygiene_via_cdp(
+        browser=RootOnlyBrowser(),
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        activate=True,
+    )
+
+    assert result.status == "ok"
+    assert result.selected_target_id == "real-target"
+    assert result.selected_url == "https://example.com/report"
+    assert result.selected_title == "Example report"
+    assert result.viewport_width == 1280
+    assert result.viewport_height == 720
+    assert result.activated is True
+    assert [call["method"] for call in client.calls] == [
+        "Target.getTargets",
+        "Target.attachToTarget",
+        "Page.getLayoutMetrics",
+        "Target.activateTarget",
+        "Target.detachFromTarget",
+    ]
+
+
+def test_browser_download_target_hygiene_rejects_zero_size_target(
+    run_context,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "zero-target",
+                        "type": "page",
+                        "url": "https://example.com/report",
+                        "title": "Example report",
+                    },
+                ]
+            },
+            "Target.attachToTarget": {"sessionId": "zero-session"},
+            "Page.getLayoutMetrics": {
+                "cssVisualViewport": {"clientWidth": 0, "clientHeight": 0}
+            },
+            "Target.detachFromTarget": {},
+        }
+    )
+
+    class RootOnlyBrowser:
+        cdp_client = client
+
+    result = ensure_browser_download_target_hygiene_via_cdp(
+        browser=RootOnlyBrowser(),
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        target_url="https://example.com/report",
+        activate=False,
+    )
+
+    assert result.status == "rejected"
+    assert result.selected_target_id == "zero-target"
+    assert result.reason == "selected page target has zero-size viewport"
+    assert result.viewport_width == 0
+    assert result.viewport_height == 0
+
+
+def test_browser_download_target_hygiene_reports_reattached_focus(
+    run_context,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "real-target",
+                        "type": "page",
+                        "url": "https://example.com/report",
+                        "title": "Example report",
+                    },
+                ]
+            },
+            "Page.getLayoutMetrics": {
+                "cssVisualViewport": {"clientWidth": 1024, "clientHeight": 768}
+            },
+        }
+    )
+
+    class FocusedBrowser(FakeBrowser):
+        agent_focus_target_id = "stale-target"
+
+        def __init__(self, target_client: FakeCdpClient) -> None:
+            super().__init__(target_client)
+            self.cdp_client = target_client
+
+    result = ensure_browser_download_target_hygiene_via_cdp(
+        browser=FocusedBrowser(client),
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        target_url="https://example.com/report",
+        activate=False,
+    )
+
+    assert result.status == "reattached"
+    assert result.selected_target_id == "real-target"
+    assert "differs from previous browser-use focus" in result.reason
 
 
 def test_browser_download_cdp_collects_and_accepts_alert_dialog(

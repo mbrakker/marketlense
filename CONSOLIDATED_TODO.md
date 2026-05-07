@@ -185,17 +185,6 @@ Suggested priority order:
     - Every coordinate action is followed by screenshot or page-info verification.
     - Tests or replay fixtures cover at least one selector-failure-to-coordinate-success path.
 
-- **Title:** Copy browser-harness tab and target hygiene for headed and persistent browser runs [Impact: 3/5, Effort: 2/5]
-  - Explanation: Additional reusable practice from browser-harness. Its tab guidance filters internal targets, fake omnibox targets, zero-size surfaces, and explicitly activates known targets when visibility matters. Copy/adapt those target-hygiene rules into Marketlense's browser-use developer, headed, and future persistent-session paths so verification captures the intended tab.
-  - Pros: Fewer wrong-tab screenshots, clearer developer diagnostics, safer future session reuse.
-  - Cons: Mostly benefits headed/developer workflows unless persistent sessions become more common.
-  - Acceptance Criteria:
-    - Target hygiene logic is self-contained in Marketlense-owned browser tooling and does not require `browser-harness`.
-    - Behavior is copied/adapted from `browser-harness` internal-target filtering and target activation practices.
-    - Internal Chrome/devtools/about/omnibox targets are excluded from user-facing browser evidence.
-    - Zero-size or stale targets trigger a typed diagnostic or reattach decision.
-    - Tests cover internal-target filtering and stale/zero-size target handling.
-
 ---
 
 ## 5. Idempotency, Checkpoints & Publish Durability

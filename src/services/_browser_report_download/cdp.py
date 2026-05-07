@@ -9,11 +9,13 @@ Approved CDP method allowlist:
 - `Page.enable`: subscribe to bounded terminal Page events such as JavaScript dialogs.
 - `Page.captureScreenshot`: persist terminal screenshots when browser-use hooks fail.
 - `Page.printToPDF`: persist browser-rendered PDF captures for printable on-site reports.
+- `Page.getLayoutMetrics`: reject zero-size or stale terminal targets before evidence capture.
 - `Page.handleJavaScriptDialog`: unblock terminal JavaScript dialogs according to policy.
 - `Target.getTargetInfo`: inspect the focused target during diagnostics.
 - `Target.getTargets`: recover a real page target when browser-use sessions are unavailable.
 - `Target.attachToTarget`: create a transient evidence-only CDP session.
 - `Target.detachFromTarget`: clean up a transient evidence-only CDP session.
+- `Target.activateTarget`: focus a verified user-facing target when headed evidence needs it.
 """
 
 from __future__ import annotations
@@ -41,24 +43,33 @@ _CDP_ALLOWLIST: dict[str, str] = {
     "Page.enable": "Subscribe to bounded terminal Page events such as JavaScript dialogs.",
     "Page.captureScreenshot": "Persist terminal screenshot evidence when browser-use screenshot hooks fail.",
     "Page.printToPDF": "Persist browser-rendered PDF captures for printable on-site reports.",
+    "Page.getLayoutMetrics": "Reject zero-size or stale terminal targets before evidence capture.",
     "Page.handleJavaScriptDialog": "Handle terminal JavaScript dialogs according to browser-download policy.",
     "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
     "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
     "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
     "Target.detachFromTarget": "Clean up a transient evidence-only CDP session.",
+    "Target.activateTarget": "Focus a verified user-facing target when headed evidence needs it.",
 }
 _TARGET_LEVEL_METHODS = {
     "Target.getTargetInfo",
     "Target.getTargets",
     "Target.attachToTarget",
     "Target.detachFromTarget",
+    "Target.activateTarget",
 }
 _INTERNAL_TARGET_URL_PREFIXES = (
     "about:",
+    "brave://",
     "chrome://",
+    "chrome-error://",
     "chrome-extension://",
+    "chrome-search://",
     "chrome-untrusted://",
     "devtools://",
+    "edge://",
+    "opera://",
+    "vivaldi://",
 )
 _CDP_OPERATION_TIMEOUT_SECONDS = 8.0
 _CDP_PRINT_TO_PDF_TIMEOUT_SECONDS = 30.0
@@ -79,6 +90,44 @@ class BrowserDownloadCdpCallResult:
     status: str = field(metadata={"doc": "Call status: `ok` or `failed`."})
     result: dict[str, Any] = field(
         metadata={"doc": "Raw CDP result dictionary when the call succeeds, else empty dict."}
+    )
+
+
+@dataclass(frozen=True)
+class BrowserDownloadTargetHygieneResult:
+    schema_version: str = field(
+        metadata={"doc": "Browser target-hygiene result schema version."}
+    )
+    status: str = field(
+        metadata={
+            "doc": "Target hygiene status: `ok`, `reattached`, `rejected`, or `failed`."
+        }
+    )
+    selected_target_id: str = field(
+        metadata={"doc": "Selected user-facing CDP target ID, else empty string."}
+    )
+    selected_url: str = field(
+        metadata={"doc": "Selected target URL, else empty string."}
+    )
+    selected_title: str = field(
+        metadata={"doc": "Selected target title, else empty string."}
+    )
+    reason: str = field(
+        metadata={"doc": "Short diagnostic explaining the target hygiene decision."}
+    )
+    activated: bool = field(
+        metadata={"doc": "Whether the helper explicitly activated the selected target."}
+    )
+    attached: bool = field(
+        metadata={"doc": "Whether the selected target had or received a CDP session."}
+    )
+    viewport_width: int = field(
+        default=0,
+        metadata={"doc": "Observed target viewport width, or 0 when unavailable."},
+    )
+    viewport_height: int = field(
+        default=0,
+        metadata={"doc": "Observed target viewport height, or 0 when unavailable."},
     )
 
 
@@ -252,6 +301,96 @@ def collect_terminal_network_entries_via_cdp(
     if not isinstance(runtime_value, list):
         return []
     return [item for item in runtime_value if isinstance(item, dict)]
+
+
+def ensure_browser_download_target_hygiene_via_cdp(
+    *,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    target_url: str = "",
+    activate: bool = False,
+    required: bool = False,
+) -> BrowserDownloadTargetHygieneResult:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_target_hygiene_started",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": str(target_url or "").strip(),
+                "activate": activate,
+                "required": required,
+            },
+        )
+    )
+    try:
+        result = _ensure_browser_download_target_hygiene_via_cdp(
+            browser=browser,
+            normalized_url=normalized_url,
+            target_url=target_url,
+            activate=activate,
+        )
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_target_hygiene_failed",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "target_url": str(target_url or "").strip(),
+                    "activate": activate,
+                    "error": str(exc),
+                },
+            )
+        )
+        if required:
+            raise AppError(
+                code="browser_download_target_hygiene_failed",
+                message="Browser target hygiene could not resolve a usable page target",
+                cause=exc,
+                retryable=True,
+                severity="error",
+                context={
+                    "normalized_url": normalized_url,
+                    "target_url": str(target_url or "").strip(),
+                },
+            ) from exc
+        result = BrowserDownloadTargetHygieneResult(
+            schema_version="1.0",
+            status="failed",
+            selected_target_id="",
+            selected_url="",
+            selected_title="",
+            reason=str(exc),
+            activated=False,
+            attached=False,
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_target_hygiene_completed",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "status": result.status,
+                "selected_target_id": result.selected_target_id,
+                "selected_url": result.selected_url,
+                "selected_title": result.selected_title,
+                "reason": result.reason,
+                "activated": result.activated,
+                "attached": result.attached,
+                "viewport_width": result.viewport_width,
+                "viewport_height": result.viewport_height,
+            },
+        )
+    )
+    return result
 
 
 def capture_terminal_screenshot_via_cdp(
@@ -536,6 +675,114 @@ def _collect_terminal_dialog_evidence_via_cdp(
     return evidence
 
 
+def _ensure_browser_download_target_hygiene_via_cdp(
+    *,
+    browser: Any,
+    normalized_url: str,
+    target_url: str,
+    activate: bool,
+) -> BrowserDownloadTargetHygieneResult:
+    client = _resolve_root_cdp_client(browser)
+    targets_result = _send_raw_cdp(
+        client=client,
+        method="Target.getTargets",
+        params={},
+        session_id="",
+        timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+    )
+    selected_target = _select_real_page_target_info(
+        targets_result,
+        target_url=target_url,
+        require_url_match=bool(str(target_url or "").strip()),
+    )
+    if selected_target is None:
+        return BrowserDownloadTargetHygieneResult(
+            schema_version="1.0",
+            status="rejected",
+            selected_target_id="",
+            selected_url="",
+            selected_title="",
+            reason="no user-facing page target matched target hygiene policy",
+            activated=False,
+            attached=False,
+        )
+    target_id = str(
+        selected_target.get("targetId") or selected_target.get("target_id") or ""
+    ).strip()
+    selected_url = str(selected_target.get("url") or "").strip()
+    selected_title = str(selected_target.get("title") or "").strip()
+    resolved_session = _resolve_browser_cdp_session_for_target_id(
+        browser=browser,
+        target_id=target_id,
+        timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+    )
+    viewport_width, viewport_height, viewport_status = _read_target_viewport_size(
+        client=resolved_session.client,
+        session_id=resolved_session.session_id,
+    )
+    activated = False
+    previous_focus_target_id = str(
+        getattr(browser, "agent_focus_target_id", "") or ""
+    ).strip()
+    if viewport_status == "zero_size":
+        if resolved_session.transient:
+            _detach_transient_cdp_session(
+                client=resolved_session.client,
+                session_id=resolved_session.session_id,
+            )
+        return BrowserDownloadTargetHygieneResult(
+            schema_version="1.0",
+            status="rejected",
+            selected_target_id=target_id,
+            selected_url=selected_url,
+            selected_title=selected_title,
+            reason="selected page target has zero-size viewport",
+            activated=False,
+            attached=True,
+            viewport_width=viewport_width,
+            viewport_height=viewport_height,
+        )
+    try:
+        if activate:
+            _send_raw_cdp(
+                client=client,
+                method="Target.activateTarget",
+                params={"targetId": target_id},
+                session_id="",
+                timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+            )
+            activated = True
+            _focus_browser_use_target(browser=browser, target_id=target_id)
+    finally:
+        if resolved_session.transient:
+            _detach_transient_cdp_session(
+                client=resolved_session.client,
+                session_id=resolved_session.session_id,
+            )
+    status = (
+        "reattached"
+        if previous_focus_target_id and previous_focus_target_id != target_id
+        else "ok"
+    )
+    reason = (
+        "selected user-facing target differs from previous browser-use focus"
+        if status == "reattached"
+        else f"selected user-facing target with viewport status {viewport_status}"
+    )
+    return BrowserDownloadTargetHygieneResult(
+        schema_version="1.0",
+        status=status,
+        selected_target_id=target_id,
+        selected_url=selected_url,
+        selected_title=selected_title,
+        reason=reason,
+        activated=activated,
+        attached=True,
+        viewport_width=viewport_width,
+        viewport_height=viewport_height,
+    )
+
+
 def _register_page_dialog_opening_handler(client: Any, callback: Any) -> None:
     register = getattr(client, "register", None)
     page_register = getattr(register, "Page", None) if register is not None else None
@@ -770,6 +1017,55 @@ def _resolve_browser_cdp_session_for_target_url(
     )
 
 
+def _resolve_browser_cdp_session_for_target_id(
+    *,
+    browser: Any,
+    target_id: str,
+    timeout_seconds: float,
+) -> _ResolvedCdpSession:
+    token = str(target_id or "").strip()
+    if not token:
+        raise RuntimeError("CDP target ID is required for target hygiene")
+    get_session = getattr(browser, "get_or_create_cdp_session", None)
+    if callable(get_session):
+        try:
+            session = _await_with_timeout(
+                get_session(target_id=token, focus=False),
+                timeout_seconds=timeout_seconds,
+            )
+            client_from_session = getattr(session, "cdp_client", None)
+            session_id = str(getattr(session, "session_id", "") or "")
+            resolved_target_id = str(getattr(session, "target_id", "") or token)
+            if client_from_session is not None and session_id:
+                return _ResolvedCdpSession(
+                    client=client_from_session,
+                    target_id=resolved_target_id,
+                    session_id=session_id,
+                    transient=False,
+                )
+        except TypeError:
+            pass
+        except Exception:
+            pass
+    client = _resolve_root_cdp_client(browser)
+    attach_result = _send_raw_cdp(
+        client=client,
+        method="Target.attachToTarget",
+        params={"targetId": token, "flatten": True},
+        session_id="",
+        timeout_seconds=timeout_seconds,
+    )
+    session_id = str(attach_result.get("sessionId") or "").strip()
+    if not session_id:
+        raise RuntimeError("CDP target attach returned no session ID")
+    return _ResolvedCdpSession(
+        client=client,
+        target_id=token,
+        session_id=session_id,
+        transient=True,
+    )
+
+
 def _attach_transient_cdp_session(
     browser: Any,
     *,
@@ -836,30 +1132,56 @@ def _select_real_page_target_id(
     target_url: str = "",
     require_url_match: bool = False,
 ) -> str:
+    target = _select_real_page_target_info(
+        targets_result,
+        target_url=target_url,
+        require_url_match=require_url_match,
+    )
+    if target is None:
+        return ""
+    return str(target.get("targetId") or target.get("target_id") or "").strip()
+
+
+def _select_real_page_target_info(
+    targets_result: dict[str, Any],
+    *,
+    target_url: str = "",
+    require_url_match: bool = False,
+) -> dict[str, Any] | None:
     raw_targets = targets_result.get("targetInfos")
     if not isinstance(raw_targets, list):
-        return ""
-    candidates: list[str] = []
-    url_candidates: list[str] = []
+        return None
+    candidates: list[dict[str, Any]] = []
+    url_candidates: list[dict[str, Any]] = []
     for raw_target in raw_targets:
         if not isinstance(raw_target, dict):
             continue
-        target_type = str(raw_target.get("type") or raw_target.get("target_type") or "").strip()
-        if target_type != "page":
+        if not _is_user_facing_page_target(raw_target):
             continue
+        candidates.append(raw_target)
         url = str(raw_target.get("url") or "").strip()
-        if any(url.startswith(prefix) for prefix in _INTERNAL_TARGET_URL_PREFIXES):
-            continue
-        target_id = str(raw_target.get("targetId") or raw_target.get("target_id") or "").strip()
-        if target_id:
-            candidates.append(target_id)
-            if _target_url_matches(url, target_url):
-                url_candidates.append(target_id)
+        if _target_url_matches(url, target_url):
+            url_candidates.append(raw_target)
     if target_url:
-        return url_candidates[-1] if url_candidates else ""
+        return url_candidates[-1] if url_candidates else None
     if require_url_match:
-        return ""
-    return candidates[-1] if candidates else ""
+        return None
+    return candidates[-1] if candidates else None
+
+
+def _is_user_facing_page_target(raw_target: dict[str, Any]) -> bool:
+    target_type = str(raw_target.get("type") or raw_target.get("target_type") or "").strip()
+    if target_type != "page":
+        return False
+    target_id = str(raw_target.get("targetId") or raw_target.get("target_id") or "").strip()
+    if not target_id:
+        return False
+    url = str(raw_target.get("url") or "").strip()
+    if not url:
+        return False
+    if any(url.startswith(prefix) for prefix in _INTERNAL_TARGET_URL_PREFIXES):
+        return False
+    return True
 
 
 def _target_url_matches(candidate_url: str, expected_url: str) -> bool:
@@ -874,6 +1196,62 @@ def _target_url_matches(candidate_url: str, expected_url: str) -> bool:
 
 def _without_url_fragment(raw_url: str) -> str:
     return str(raw_url or "").split("#", 1)[0]
+
+
+def _read_target_viewport_size(
+    *,
+    client: Any,
+    session_id: str,
+) -> tuple[int, int, str]:
+    try:
+        result = _send_raw_cdp(
+            client=client,
+            method="Page.getLayoutMetrics",
+            params={},
+            session_id=session_id,
+            timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+        )
+    except Exception:
+        return 0, 0, "unknown"
+    width = _coerce_viewport_dimension(result, "clientWidth", "width")
+    height = _coerce_viewport_dimension(result, "clientHeight", "height")
+    if width < 0 and height < 0:
+        return width, height, "unknown"
+    if width <= 0 or height <= 0:
+        return width, height, "zero_size"
+    return width, height, "ok"
+
+
+def _coerce_viewport_dimension(
+    result: dict[str, Any],
+    primary_key: str,
+    fallback_key: str,
+) -> int:
+    for container_key in ("visualViewport", "layoutViewport", "cssVisualViewport", "cssLayoutViewport"):
+        container = result.get(container_key)
+        if not isinstance(container, dict):
+            continue
+        raw_value = container.get(primary_key, container.get(fallback_key))
+        try:
+            value = int(float(str(raw_value)))
+        except (TypeError, ValueError):
+            continue
+        if value >= 0:
+            return value
+    return -1
+
+
+def _focus_browser_use_target(*, browser: Any, target_id: str) -> None:
+    get_session = getattr(browser, "get_or_create_cdp_session", None)
+    if not callable(get_session):
+        return
+    try:
+        _await_with_timeout(
+            get_session(target_id=target_id, focus=True),
+            timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+        )
+    except Exception:
+        return
 
 
 def _send_raw_cdp(
