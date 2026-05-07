@@ -6,8 +6,10 @@ inspection. It is not a second browser automation route.
 
 Approved CDP method allowlist:
 - `Runtime.evaluate`: read bounded terminal state such as Performance entries.
+- `Page.enable`: subscribe to bounded terminal Page events such as JavaScript dialogs.
 - `Page.captureScreenshot`: persist terminal screenshots when browser-use hooks fail.
 - `Page.printToPDF`: persist browser-rendered PDF captures for printable on-site reports.
+- `Page.handleJavaScriptDialog`: unblock terminal JavaScript dialogs according to policy.
 - `Target.getTargetInfo`: inspect the focused target during diagnostics.
 - `Target.getTargets`: recover a real page target when browser-use sessions are unavailable.
 - `Target.attachToTarget`: create a transient evidence-only CDP session.
@@ -26,6 +28,7 @@ from pathlib import Path
 from threading import Thread
 from typing import Any
 
+from src.contracts.browser_download import BrowserDownloadDialogEvidence
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -35,8 +38,10 @@ logger = logging.getLogger("market_lense.browser_report_download_service.cdp")
 
 _CDP_ALLOWLIST: dict[str, str] = {
     "Runtime.evaluate": "Read bounded terminal page state for evidence capture.",
+    "Page.enable": "Subscribe to bounded terminal Page events such as JavaScript dialogs.",
     "Page.captureScreenshot": "Persist terminal screenshot evidence when browser-use screenshot hooks fail.",
     "Page.printToPDF": "Persist browser-rendered PDF captures for printable on-site reports.",
+    "Page.handleJavaScriptDialog": "Handle terminal JavaScript dialogs according to browser-download policy.",
     "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
     "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
     "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
@@ -57,6 +62,8 @@ _INTERNAL_TARGET_URL_PREFIXES = (
 )
 _CDP_OPERATION_TIMEOUT_SECONDS = 8.0
 _CDP_PRINT_TO_PDF_TIMEOUT_SECONDS = 30.0
+_CDP_DIALOG_DRAIN_SECONDS = 0.75
+_CDP_DIALOG_MESSAGE_MAX_CHARS = 300
 
 
 @dataclass(frozen=True)
@@ -293,6 +300,98 @@ def capture_terminal_screenshot_via_cdp(
     return screenshot_path.exists()
 
 
+def collect_terminal_dialog_evidence_via_cdp(
+    *,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    allow_beforeunload: bool = False,
+    target_url: str = "",
+    required: bool = False,
+) -> list[BrowserDownloadDialogEvidence]:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_dialog_drain_started",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "allow_beforeunload": allow_beforeunload,
+                "target_url": str(target_url or "").strip(),
+            },
+        )
+    )
+    try:
+        evidence = _collect_terminal_dialog_evidence_via_cdp(
+            browser=browser,
+            normalized_url=normalized_url,
+            allow_beforeunload=allow_beforeunload,
+            target_url=target_url,
+        )
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_dialog_drain_failed",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "allow_beforeunload": allow_beforeunload,
+                    "target_url": str(target_url or "").strip(),
+                    "error": str(exc),
+                },
+            )
+        )
+        if required:
+            raise AppError(
+                code="browser_download_dialog_drain_failed",
+                message="Browser terminal dialog drain failed",
+                cause=exc,
+                retryable=True,
+                severity="error",
+                context={
+                    "normalized_url": normalized_url,
+                    "target_url": str(target_url or "").strip(),
+                },
+            ) from exc
+        return []
+    for item in evidence:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_dialog_evidence",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "dialog_type": item.dialog_type,
+                    "message": item.message,
+                    "page_url": item.page_url,
+                    "action_taken": item.action_taken,
+                    "validation_status": item.validation_status,
+                    "target_id": item.target_id,
+                    "session_id": item.session_id,
+                },
+            )
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_dialog_drain_completed",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "dialog_evidence_count": len(evidence),
+                "allow_beforeunload": allow_beforeunload,
+            },
+        )
+    )
+    return evidence
+
+
 def capture_print_pdf_via_cdp(
     *,
     browser: Any,
@@ -356,6 +455,173 @@ def capture_print_pdf_via_cdp(
             )
         return False
     return True
+
+
+def _collect_terminal_dialog_evidence_via_cdp(
+    *,
+    browser: Any,
+    normalized_url: str,
+    allow_beforeunload: bool,
+    target_url: str,
+) -> list[BrowserDownloadDialogEvidence]:
+    resolved_session = _resolve_browser_cdp_session(
+        browser,
+        timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+        target_url=target_url,
+    )
+    evidence: list[BrowserDownloadDialogEvidence] = []
+    client = resolved_session.client
+
+    async def on_dialog_opening(params: Any, event_session_id: str | None = None) -> None:
+        session_id = str(event_session_id or resolved_session.session_id or "").strip()
+        if session_id and session_id != resolved_session.session_id:
+            return
+        event = params if isinstance(params, dict) else {}
+        action_taken, validation_status, accept = _dialog_policy_action(
+            event.get("type"),
+            allow_beforeunload=allow_beforeunload,
+        )
+        handle_status = validation_status
+        try:
+            await client.send_raw(
+                "Page.handleJavaScriptDialog",
+                {"accept": accept},
+                session_id=session_id or None,
+            )
+        except Exception:
+            handle_status = "failed"
+        evidence.append(
+            BrowserDownloadDialogEvidence(
+                schema_version="1.0",
+                dialog_type=_normalize_dialog_type(event.get("type")),
+                message=_sanitize_dialog_message(event.get("message")),
+                page_url=str(event.get("url") or normalized_url or "").strip(),
+                action_taken=action_taken,
+                validation_status=handle_status,
+                target_id=resolved_session.target_id,
+                session_id=session_id,
+            )
+        )
+
+    _register_page_dialog_opening_handler(client, on_dialog_opening)
+    try:
+        _send_raw_cdp(
+            client=client,
+            method="Page.enable",
+            params={},
+            session_id=resolved_session.session_id,
+            timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+        )
+        _await_with_timeout(
+            asyncio.sleep(_CDP_DIALOG_DRAIN_SECONDS),
+            timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+        )
+        if not evidence:
+            unknown_evidence = _try_handle_unknown_terminal_dialog(
+                client=client,
+                normalized_url=normalized_url,
+                allow_beforeunload=allow_beforeunload,
+                target_id=resolved_session.target_id,
+                session_id=resolved_session.session_id,
+            )
+            if unknown_evidence is not None:
+                evidence.append(unknown_evidence)
+    finally:
+        _unregister_cdp_event_handler(client, "Page.javascriptDialogOpening")
+        if resolved_session.transient:
+            _detach_transient_cdp_session(
+                client=resolved_session.client,
+                session_id=resolved_session.session_id,
+            )
+    return evidence
+
+
+def _register_page_dialog_opening_handler(client: Any, callback: Any) -> None:
+    register = getattr(client, "register", None)
+    page_register = getattr(register, "Page", None) if register is not None else None
+    opening_register = (
+        getattr(page_register, "javascriptDialogOpening", None)
+        if page_register is not None
+        else None
+    )
+    if not callable(opening_register):
+        raise RuntimeError("CDP client cannot register Page.javascriptDialogOpening")
+    opening_register(callback)
+
+
+def _unregister_cdp_event_handler(client: Any, method: str) -> None:
+    registry = getattr(client, "_event_registry", None)
+    unregister = getattr(registry, "unregister", None) if registry is not None else None
+    if not callable(unregister):
+        return
+    try:
+        unregister(method)
+    except Exception:
+        return
+
+
+def _try_handle_unknown_terminal_dialog(
+    *,
+    client: Any,
+    normalized_url: str,
+    allow_beforeunload: bool,
+    target_id: str,
+    session_id: str,
+) -> BrowserDownloadDialogEvidence | None:
+    accept = bool(allow_beforeunload)
+    try:
+        _send_raw_cdp(
+            client=client,
+            method="Page.handleJavaScriptDialog",
+            params={"accept": accept},
+            session_id=session_id,
+            timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
+        )
+    except Exception:
+        return None
+    return BrowserDownloadDialogEvidence(
+        schema_version="1.0",
+        dialog_type="unknown",
+        message="",
+        page_url=str(normalized_url or "").strip(),
+        action_taken=(
+            "accepted_without_opening_event" if accept else "dismissed_without_opening_event"
+        ),
+        validation_status="handled_without_opening_event",
+        target_id=target_id,
+        session_id=session_id,
+    )
+
+
+def _dialog_policy_action(
+    raw_dialog_type: Any,
+    *,
+    allow_beforeunload: bool,
+) -> tuple[str, str, bool]:
+    dialog_type = _normalize_dialog_type(raw_dialog_type)
+    if dialog_type == "alert":
+        return "accepted", "handled", True
+    if dialog_type == "beforeunload":
+        if allow_beforeunload:
+            return "accepted_beforeunload_for_teardown", "handled", True
+        return "dismissed_beforeunload_by_policy", "policy_rejected", False
+    if dialog_type in {"confirm", "prompt"}:
+        return f"dismissed_{dialog_type}_by_policy", "policy_rejected", False
+    return "dismissed_unknown_by_policy", "policy_rejected", False
+
+
+def _normalize_dialog_type(raw_dialog_type: Any) -> str:
+    token = str(raw_dialog_type or "").strip().casefold()
+    if token in {"alert", "confirm", "prompt", "beforeunload"}:
+        return token
+    return "unknown"
+
+
+def _sanitize_dialog_message(raw_message: Any) -> str:
+    token = " ".join(str(raw_message or "").replace("\x00", " ").split())
+    if len(token) <= _CDP_DIALOG_MESSAGE_MAX_CHARS:
+        return token
+    return token[: _CDP_DIALOG_MESSAGE_MAX_CHARS - 3].rstrip() + "..."
 
 
 def _send_browser_download_cdp(

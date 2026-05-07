@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
+    BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
     BrowserDownloadRouteStep,
     BrowserReportDownloadRequest,
@@ -195,6 +196,7 @@ _ROUTE_STEP_EVIDENCE_CATEGORIES = {
     "artifact",
     "dom_hash",
     "confirmation_text",
+    "dialog",
 }
 _POST_ACTION_VERIFICATION_ACTIONS = {
     "open",
@@ -758,9 +760,11 @@ def finalize_browser_report_download_result(
         screenshot_path=str(browser_run.screenshot_path or ""),
         network_resource_urls=list(browser_run.network_resource_urls or []),
         network_events=list(browser_run.network_events or []),
+        dialog_evidence=list(browser_run.dialog_evidence or []),
         evidence_labels=[
             *confirmation_evidence.signal_labels,
             "structured_result",
+            *_dialog_evidence_labels(list(browser_run.dialog_evidence or [])),
             *_onsite_capture_evidence_labels(onsite_capture_format),
         ],
     )
@@ -790,9 +794,11 @@ def finalize_browser_report_download_result(
         screenshot_path=str(browser_run.screenshot_path or ""),
         network_resource_urls=list(browser_run.network_resource_urls or []),
         network_events=list(browser_run.network_events or []),
+        dialog_evidence=list(browser_run.dialog_evidence or []),
         evidence_labels=[
             *confirmation_evidence.signal_labels,
             "structured_result",
+            *_dialog_evidence_labels(list(browser_run.dialog_evidence or [])),
             *_onsite_capture_evidence_labels(onsite_capture_format),
         ],
     )
@@ -2067,6 +2073,7 @@ def _build_terminal_evidence(
     screenshot_path: str,
     network_resource_urls: list[str],
     network_events: list[BrowserDownloadNetworkEvent],
+    dialog_evidence: list[BrowserDownloadDialogEvidence],
     evidence_labels: list[str],
 ) -> DownloadTerminalEvidence:
     artifact_url = resolved_target_url if resolved_target_url else final_url
@@ -2108,6 +2115,7 @@ def _build_terminal_evidence(
             ],
         ),
         network_events=_normalize_network_events(network_events),
+        dialog_evidence=_normalize_dialog_evidence(dialog_evidence),
         html_snapshot_path=str(html_snapshot_path or "").strip(),
         screenshot_path=str(screenshot_path or "").strip(),
         dom_snapshot_sha256=_dom_snapshot_sha256(dom_snapshot_html),
@@ -2275,6 +2283,8 @@ def _available_terminal_evidence_categories(
         categories.append("screenshot")
     if terminal_evidence.network_events:
         categories.append("network_event")
+    if terminal_evidence.dialog_evidence:
+        categories.append("dialog")
     if (
         str(terminal_evidence.artifact_validation_status or "").strip()
         in {"verified", "recovered", "captured", "blocked"}
@@ -2348,6 +2358,58 @@ def _normalize_network_events(
             )
         )
     return normalized
+
+
+def _normalize_dialog_evidence(
+    dialog_evidence: list[BrowserDownloadDialogEvidence],
+) -> list[BrowserDownloadDialogEvidence]:
+    normalized: list[BrowserDownloadDialogEvidence] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for item in dialog_evidence:
+        dialog_type = str(item.dialog_type or "unknown").strip() or "unknown"
+        message = str(item.message or "").strip()
+        page_url = str(item.page_url or "").strip()
+        action_taken = str(item.action_taken or "none").strip() or "none"
+        validation_status = (
+            str(item.validation_status or "failed").strip() or "failed"
+        )
+        marker = (
+            dialog_type.casefold(),
+            message.casefold(),
+            page_url.casefold(),
+            action_taken.casefold(),
+        )
+        if marker in seen:
+            continue
+        seen.add(marker)
+        normalized.append(
+            BrowserDownloadDialogEvidence(
+                schema_version=str(item.schema_version or "1.0"),
+                dialog_type=dialog_type,
+                message=message,
+                page_url=page_url,
+                action_taken=action_taken,
+                validation_status=validation_status,
+                target_id=str(item.target_id or "").strip(),
+                session_id=str(item.session_id or "").strip(),
+            )
+        )
+    return normalized
+
+
+def _dialog_evidence_labels(
+    dialog_evidence: list[BrowserDownloadDialogEvidence],
+) -> list[str]:
+    if not dialog_evidence:
+        return []
+    labels = ["javascript_dialog"]
+    if any(item.dialog_type == "beforeunload" for item in dialog_evidence):
+        labels.append("beforeunload_dialog")
+    if any(item.validation_status == "policy_rejected" for item in dialog_evidence):
+        labels.append("dialog_policy_rejected")
+    if any(item.validation_status == "handled" for item in dialog_evidence):
+        labels.append("dialog_handled")
+    return labels
 
 
 def _resolve_visited_url_timeline(

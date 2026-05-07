@@ -1711,6 +1711,165 @@ def test_download_report_with_browser_use_rejects_print_pdf_for_generic_printabl
     assert "Page.printToPDF" not in cdp_calls
 
 
+def test_download_report_with_browser_use_records_terminal_dialog_evidence(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the report page and capture the on-site article.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_browser = runtime.Browser
+    original_agent = runtime.Agent
+    cdp_calls: list[dict[str, object]] = []
+
+    class DialogRegistry:
+        def __init__(self) -> None:
+            self.handlers: dict[str, object] = {}
+
+        def unregister(self, method: str) -> None:
+            self.handlers.pop(method, None)
+
+    class DialogPageRegister:
+        def __init__(self, registry: DialogRegistry) -> None:
+            self.registry = registry
+
+        def javascriptDialogOpening(self, callback: object) -> None:
+            self.registry.handlers["Page.javascriptDialogOpening"] = callback
+
+    class DialogCdpClient:
+        def __init__(self) -> None:
+            self._event_registry = DialogRegistry()
+            self.register = SimpleNamespace(
+                Page=DialogPageRegister(self._event_registry)
+            )
+            self.dialog_events = [
+                {
+                    "url": "https://example.com/research/dialog-report",
+                    "type": "alert",
+                    "message": "Report capture is ready.",
+                }
+            ]
+            self.active_dialog = False
+
+        async def send_raw(
+            self,
+            method: str,
+            params: dict[str, object] | None = None,
+            session_id: str | None = None,
+        ) -> dict[str, object]:
+            cdp_calls.append(
+                {
+                    "method": method,
+                    "params": params or {},
+                    "session_id": session_id or "",
+                }
+            )
+            if method == "Page.enable":
+                events = list(self.dialog_events)
+                self.dialog_events.clear()
+                for event in events:
+                    handler = self._event_registry.handlers.get(
+                        "Page.javascriptDialogOpening"
+                    )
+                    if callable(handler):
+                        self.active_dialog = True
+                        result = handler(event, session_id)
+                        if hasattr(result, "__await__"):
+                            await result
+                return {}
+            if method == "Page.handleJavaScriptDialog":
+                if not self.active_dialog:
+                    raise RuntimeError("No dialog is showing")
+                self.active_dialog = False
+                return {}
+            if method == "Runtime.evaluate":
+                return {"result": {"type": "object", "value": []}}
+            raise RuntimeError(method)
+
+    class DialogSession:
+        def __init__(self, client: DialogCdpClient) -> None:
+            self.cdp_client = client
+            self.target_id = "dialog-target"
+            self.session_id = "dialog-session"
+
+    class DialogBrowser(original_browser):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.cdp_client = DialogCdpClient()
+            self._dialog_session = DialogSession(self.cdp_client)
+
+        async def get_or_create_cdp_session(
+            self,
+            target_id: str | None = None,
+            focus: bool = False,
+        ) -> DialogSession:
+            return self._dialog_session
+
+    class DialogAgent(original_agent):
+        def run_sync(self, max_steps: int):
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            self.browser.url = "https://example.com/research/dialog-report"
+            self.browser.title = "Dialog report"
+            self.browser.html = (
+                "<html><body><article><h1>Dialog report</h1><p>"
+                + ("Market analysis report detail. " * 80)
+                + "</p></article></body></html>"
+            )
+            payload["route_kind"] = "onsite_report"
+            payload["route_family"] = "browser_onsite_report"
+            payload["final_page_url"] = self.browser.url
+            payload["final_page_title"] = self.browser.title
+            payload["terminal_text_excerpt"] = "Dialog report"
+            payload["onsite_capture_path"] = None
+            payload["onsite_capture_format"] = None
+
+            class DialogHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self_nonlocal) -> list[object]:
+                    return []
+
+            return DialogHistory()
+
+    runtime.Browser = DialogBrowser
+    runtime.Agent = DialogAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/dialog-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.terminal_evidence.dialog_evidence
+    assert response.terminal_evidence.dialog_evidence[0].dialog_type == "alert"
+    assert response.terminal_evidence.dialog_evidence[0].message == (
+        "Report capture is ready."
+    )
+    assert response.terminal_evidence.dialog_evidence[0].action_taken == "accepted"
+    assert "javascript_dialog" in response.terminal_evidence.evidence_labels
+    assert "dialog_handled" in response.terminal_evidence.evidence_labels
+    assert {
+        "method": "Page.handleJavaScriptDialog",
+        "params": {"accept": True},
+        "session_id": "dialog-session",
+    } in cdp_calls
+
+
 def test_download_report_with_browser_use_marks_paginated_onsite_capture_partial_without_full_traversal(
     tmp_path: Path,
     run_context,

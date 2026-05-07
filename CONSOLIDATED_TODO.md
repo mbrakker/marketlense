@@ -185,17 +185,6 @@ Suggested priority order:
     - Every coordinate action is followed by screenshot or page-info verification.
     - Tests or replay fixtures cover at least one selector-failure-to-coordinate-success path.
 
-- **Title:** Copy browser-harness dialog and beforeunload handling into terminal evidence capture [Impact: 4/5, Effort: 2/5]
-  - Explanation: Additional reusable practice from browser-harness. Its `page_info` dialog surfacing, bounded event drain, and `Page.handleJavaScriptDialog` pattern handle alert, confirm, prompt, and beforeunload states even when page JavaScript is frozen. Copy/adapt this existing pattern into Marketlense-owned browser-use service code so dialogs become typed terminal evidence or typed blockers, not invisible stalls. Do not create a separate dialog framework from scratch.
-  - Pros: Fewer browser stalls, clearer blocker classification, better recovery from form, navigation, and print-flow interruptions.
-  - Cons: Automatically accepting dialogs can change page state if not scoped to explicit policies.
-  - Acceptance Criteria:
-    - Dialog detection and handling are implemented inside the existing browser service boundary and do not call `browser-harness`.
-    - Behavior is copied/adapted from `browser-harness` pending-dialog and CDP dialog-handling patterns.
-    - Dialog evidence records dialog type, sanitized message, action taken, and validation result.
-    - Beforeunload handling is allowed only for explicit navigation/teardown cases and is logged.
-    - Tests cover alert/confirm detection, beforeunload handling, and a policy-rejected dialog path.
-
 - **Title:** Copy browser-harness tab and target hygiene for headed and persistent browser runs [Impact: 3/5, Effort: 2/5]
   - Explanation: Additional reusable practice from browser-harness. Its tab guidance filters internal targets, fake omnibox targets, zero-size surfaces, and explicitly activates known targets when visibility matters. Copy/adapt those target-hygiene rules into Marketlense's browser-use developer, headed, and future persistent-session paths so verification captures the intended tab.
   - Pros: Fewer wrong-tab screenshots, clearer developer diagnostics, safer future session reuse.

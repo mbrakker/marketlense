@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field as dataclass_field
 from hashlib import sha256
 from importlib import import_module
 from pathlib import Path
@@ -21,14 +21,16 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
+    BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.artifact import BrowserUseAgentResult
 from src.services._browser_report_download.cdp import (
-    collect_terminal_network_entries_via_cdp,
     capture_print_pdf_via_cdp,
+    collect_terminal_dialog_evidence_via_cdp,
+    collect_terminal_network_entries_via_cdp,
 )
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
@@ -172,6 +174,9 @@ class BrowserAgentRunResult:
     screenshot_path: str
     print_pdf_capture_path: str = ""
     print_pdf_capture_provenance: str = ""
+    dialog_evidence: list[BrowserDownloadDialogEvidence] = dataclass_field(
+        default_factory=list
+    )
 
 
 @dataclass(frozen=True)
@@ -333,6 +338,7 @@ def run_browser_report_download_agent(
     screenshot_path = ""
     print_pdf_capture_path = ""
     print_pdf_capture_provenance = ""
+    dialog_evidence: list[BrowserDownloadDialogEvidence] = []
     try:
         browser = browser_use.Browser(
             downloads_path=str(download_dir),
@@ -412,6 +418,15 @@ def run_browser_report_download_agent(
             final_page_url = history_final_page_url
             final_page_title = history_final_page_title
             screenshot_path = history_screenshot_path
+            dialog_evidence.extend(
+                _capture_terminal_dialog_evidence(
+                    browser=browser,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    allow_beforeunload=False,
+                    target_url=final_page_url,
+                )
+            )
             (
                 network_resource_urls,
                 network_events,
@@ -445,6 +460,15 @@ def run_browser_report_download_agent(
                 )
             )
         else:
+            dialog_evidence.extend(
+                _capture_terminal_dialog_evidence(
+                    browser=browser,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    allow_beforeunload=False,
+                    target_url=history_final_page_url,
+                )
+            )
             terminal_snapshot = _capture_terminal_snapshot(
                 browser,
                 ctx=ctx,
@@ -578,6 +602,15 @@ def run_browser_report_download_agent(
         ) from exc
     finally:
         if browser is not None:
+            dialog_evidence.extend(
+                _capture_terminal_dialog_evidence(
+                    browser=browser,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    allow_beforeunload=True,
+                    target_url=final_page_url,
+                )
+            )
             _prepare_browser_for_shutdown(
                 browser,
                 ctx=ctx,
@@ -614,6 +647,7 @@ def run_browser_report_download_agent(
                 "browser_final_html_size": len(final_page_html),
                 "browser_network_resource_url_count": len(network_resource_urls),
                 "browser_network_event_count": len(network_events),
+                "browser_dialog_evidence_count": len(dialog_evidence),
                 "browser_html_snapshot_path": html_snapshot_path,
                 "browser_screenshot_path": screenshot_path,
             },
@@ -633,6 +667,7 @@ def run_browser_report_download_agent(
         screenshot_path=screenshot_path,
         print_pdf_capture_path=print_pdf_capture_path,
         print_pdf_capture_provenance=print_pdf_capture_provenance,
+        dialog_evidence=dialog_evidence,
     )
 
 
@@ -749,6 +784,7 @@ def _build_cached_timed_out_browser_run(
         screenshot_path="",
         print_pdf_capture_path="",
         print_pdf_capture_provenance="",
+        dialog_evidence=[],
     )
 
 
@@ -766,9 +802,18 @@ def _salvage_timed_out_browser_run_unbounded(
     final_page_html = ""
     network_resource_urls: list[str] = []
     network_events: list[BrowserDownloadNetworkEvent] = []
+    dialog_evidence: list[BrowserDownloadDialogEvidence] = []
     html_snapshot_path = ""
     screenshot_path = ""
     try:
+        dialog_evidence.extend(
+            _capture_terminal_dialog_evidence(
+                browser=browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                allow_beforeunload=False,
+            )
+        )
         terminal_snapshot = _capture_terminal_snapshot(
             browser,
             ctx=ctx,
@@ -846,6 +891,7 @@ def _salvage_timed_out_browser_run_unbounded(
         screenshot_path=screenshot_path,
         print_pdf_capture_path="",
         print_pdf_capture_provenance="",
+        dialog_evidence=dialog_evidence,
     )
 
 
@@ -1237,6 +1283,29 @@ def _deserialize_browser_agent_run_result(
                     or "other",
                 )
             )
+    dialog_evidence_payload = payload.get("dialog_evidence")
+    dialog_evidence: list[BrowserDownloadDialogEvidence] = []
+    if isinstance(dialog_evidence_payload, list):
+        for item in dialog_evidence_payload:
+            if not isinstance(item, dict):
+                continue
+            dialog_evidence.append(
+                BrowserDownloadDialogEvidence(
+                    schema_version=str(item.get("schema_version", "1.0")),
+                    dialog_type=str(item.get("dialog_type") or "unknown").strip()
+                    or "unknown",
+                    message=str(item.get("message") or "").strip(),
+                    page_url=str(item.get("page_url") or "").strip(),
+                    action_taken=str(item.get("action_taken") or "none").strip()
+                    or "none",
+                    validation_status=str(
+                        item.get("validation_status") or "failed"
+                    ).strip()
+                    or "failed",
+                    target_id=str(item.get("target_id") or "").strip(),
+                    session_id=str(item.get("session_id") or "").strip(),
+                )
+            )
     return BrowserAgentRunResult(
         schema_version=str(payload.get("schema_version", "1.0")),
         raw_model_response=str(payload.get("raw_model_response") or ""),
@@ -1261,6 +1330,11 @@ def _deserialize_browser_agent_run_result(
         network_events=network_events,
         html_snapshot_path=str(payload.get("html_snapshot_path") or ""),
         screenshot_path=str(payload.get("screenshot_path") or ""),
+        print_pdf_capture_path=str(payload.get("print_pdf_capture_path") or ""),
+        print_pdf_capture_provenance=str(
+            payload.get("print_pdf_capture_provenance") or ""
+        ),
+        dialog_evidence=dialog_evidence,
     )
 
 
@@ -1983,6 +2057,94 @@ def _capture_terminal_assets(
         normalized_url=normalized_url,
     )
     return network_resource_urls, network_events, html_snapshot_path, screenshot_path
+
+
+def _capture_terminal_dialog_evidence(
+    *,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    allow_beforeunload: bool,
+    target_url: str = "",
+) -> list[BrowserDownloadDialogEvidence]:
+    if browser is None:
+        return []
+    browser_use_evidence = _read_browser_closed_popup_dialog_evidence(browser)
+    cdp_evidence = collect_terminal_dialog_evidence_via_cdp(
+        browser=browser,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        allow_beforeunload=allow_beforeunload,
+        target_url=target_url,
+        required=False,
+    )
+    return _dedupe_browser_dialog_evidence(
+        [
+            *browser_use_evidence,
+            *cdp_evidence,
+            *_read_browser_closed_popup_dialog_evidence(browser),
+        ]
+    )
+
+
+def _read_browser_closed_popup_dialog_evidence(
+    browser: Any,
+) -> list[BrowserDownloadDialogEvidence]:
+    raw_messages = getattr(browser, "_closed_popup_messages", None)
+    if raw_messages is None:
+        raw_messages = getattr(
+            getattr(browser, "browser_session", None),
+            "_closed_popup_messages",
+            None,
+        )
+    if not isinstance(raw_messages, list):
+        return []
+    evidence: list[BrowserDownloadDialogEvidence] = []
+    for raw_message in raw_messages:
+        dialog_type, message = _parse_closed_popup_message(raw_message)
+        evidence.append(
+            BrowserDownloadDialogEvidence(
+                schema_version="1.0",
+                dialog_type=dialog_type,
+                message=message,
+                page_url="",
+                action_taken="auto_handled_by_browser_use",
+                validation_status="handled",
+                target_id="",
+                session_id="",
+            )
+        )
+    return evidence
+
+
+def _parse_closed_popup_message(raw_message: Any) -> tuple[str, str]:
+    token = " ".join(str(raw_message or "").replace("\x00", " ").split())
+    match = re.match(r"^\[(?P<type>[A-Za-z]+)]\s*(?P<message>.*)$", token)
+    if match is None:
+        return "unknown", token
+    dialog_type = match.group("type").strip().casefold()
+    if dialog_type not in {"alert", "confirm", "prompt", "beforeunload"}:
+        dialog_type = "unknown"
+    return dialog_type, match.group("message").strip()
+
+
+def _dedupe_browser_dialog_evidence(
+    dialog_evidence: list[BrowserDownloadDialogEvidence],
+) -> list[BrowserDownloadDialogEvidence]:
+    normalized: list[BrowserDownloadDialogEvidence] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for item in dialog_evidence:
+        marker = (
+            str(item.dialog_type or "").casefold(),
+            str(item.message or "").casefold(),
+            str(item.page_url or "").casefold(),
+            str(item.action_taken or "").casefold(),
+        )
+        if marker in seen:
+            continue
+        seen.add(marker)
+        normalized.append(item)
+    return normalized
 
 
 def _maybe_capture_print_pdf_fallback(

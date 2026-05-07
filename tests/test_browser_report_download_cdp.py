@@ -13,6 +13,7 @@ from src.services._browser_report_download.cdp import (
     call_browser_download_cdp,
     capture_print_pdf_via_cdp,
     capture_terminal_screenshot_via_cdp,
+    collect_terminal_dialog_evidence_via_cdp,
     collect_terminal_network_entries_via_cdp,
     get_browser_download_cdp_allowlist,
 )
@@ -23,6 +24,10 @@ class FakeCdpClient:
     def __init__(self, responses: dict[str, dict[str, Any]] | None = None) -> None:
         self.responses = responses or {}
         self.calls: list[dict[str, Any]] = []
+        self.event_handlers: dict[str, Any] = {}
+        self.dialog_events: list[dict[str, Any]] = []
+        self.register = FakeCdpRegistration(self)
+        self._event_registry = FakeEventRegistry(self)
 
     async def send_raw(
         self,
@@ -42,7 +47,35 @@ class FakeCdpClient:
         response = self.responses[method]
         if "raise" in response:
             raise RuntimeError(str(response["raise"]))
+        if method == "Page.enable":
+            for event in self.dialog_events:
+                handler = self.event_handlers.get("Page.javascriptDialogOpening")
+                if callable(handler):
+                    result = handler(event, session_id)
+                    if hasattr(result, "__await__"):
+                        await result
         return response
+
+
+class FakeEventRegistry:
+    def __init__(self, client: FakeCdpClient) -> None:
+        self.client = client
+
+    def unregister(self, method: str) -> None:
+        self.client.event_handlers.pop(method, None)
+
+
+class FakePageRegistration:
+    def __init__(self, client: FakeCdpClient) -> None:
+        self.client = client
+
+    def javascriptDialogOpening(self, callback: Any) -> None:
+        self.client.event_handlers["Page.javascriptDialogOpening"] = callback
+
+
+class FakeCdpRegistration:
+    def __init__(self, client: FakeCdpClient) -> None:
+        self.Page = FakePageRegistration(client)
 
 
 class FakeCdpSession:
@@ -79,8 +112,10 @@ def test_browser_download_cdp_allowlist_documents_supported_escape_hatch() -> No
 
     assert allowlist == {
         "Runtime.evaluate": "Read bounded terminal page state for evidence capture.",
+        "Page.enable": "Subscribe to bounded terminal Page events such as JavaScript dialogs.",
         "Page.captureScreenshot": "Persist terminal screenshot evidence when browser-use screenshot hooks fail.",
         "Page.printToPDF": "Persist browser-rendered PDF captures for printable on-site reports.",
+        "Page.handleJavaScriptDialog": "Handle terminal JavaScript dialogs according to browser-download policy.",
         "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
         "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
         "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
@@ -285,6 +320,97 @@ def test_browser_download_cdp_collects_terminal_network_entries(run_context) -> 
             "initiator_type": "navigation",
         }
     ]
+
+
+def test_browser_download_cdp_collects_and_accepts_alert_dialog(
+    run_context,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Page.enable": {},
+            "Page.handleJavaScriptDialog": {},
+        }
+    )
+    client.dialog_events = [
+        {
+            "url": "https://example.com/report",
+            "type": "alert",
+            "message": "Report export is ready.",
+        }
+    ]
+
+    evidence = collect_terminal_dialog_evidence_via_cdp(
+        browser=FakeBrowser(client),
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+    )
+
+    assert len(evidence) == 1
+    assert evidence[0].dialog_type == "alert"
+    assert evidence[0].message == "Report export is ready."
+    assert evidence[0].action_taken == "accepted"
+    assert evidence[0].validation_status == "handled"
+    assert client.calls[-1]["method"] == "Page.handleJavaScriptDialog"
+    assert client.calls[-1]["params"] == {"accept": True}
+
+
+def test_browser_download_cdp_dismisses_confirm_dialog_by_policy(
+    run_context,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Page.enable": {},
+            "Page.handleJavaScriptDialog": {},
+        }
+    )
+    client.dialog_events = [
+        {
+            "url": "https://example.com/report",
+            "type": "confirm",
+            "message": "Leave this report page?",
+        }
+    ]
+
+    evidence = collect_terminal_dialog_evidence_via_cdp(
+        browser=FakeBrowser(client),
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+    )
+
+    assert evidence[0].dialog_type == "confirm"
+    assert evidence[0].action_taken == "dismissed_confirm_by_policy"
+    assert evidence[0].validation_status == "policy_rejected"
+    assert client.calls[-1]["params"] == {"accept": False}
+
+
+def test_browser_download_cdp_accepts_beforeunload_only_for_teardown(
+    run_context,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Page.enable": {},
+            "Page.handleJavaScriptDialog": {},
+        }
+    )
+    client.dialog_events = [
+        {
+            "url": "https://example.com/report",
+            "type": "beforeunload",
+            "message": "Changes you made may not be saved.",
+        }
+    ]
+
+    evidence = collect_terminal_dialog_evidence_via_cdp(
+        browser=FakeBrowser(client),
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        allow_beforeunload=True,
+    )
+
+    assert evidence[0].dialog_type == "beforeunload"
+    assert evidence[0].action_taken == "accepted_beforeunload_for_teardown"
+    assert evidence[0].validation_status == "handled"
+    assert client.calls[-1]["params"] == {"accept": True}
 
 
 def test_browser_download_cdp_writes_terminal_screenshot(

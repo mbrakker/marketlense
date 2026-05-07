@@ -153,6 +153,44 @@ class BrowserDownloadNetworkEvent:
 
 
 @dataclass(frozen=True)
+class BrowserDownloadDialogEvidence:
+    schema_version: str = field(
+        metadata={"doc": "Browser download dialog-evidence schema version."}
+    )
+    dialog_type: str = field(
+        metadata={
+            "doc": "Observed JavaScript dialog type, for example `alert`, `confirm`, `prompt`, `beforeunload`, or `unknown`."
+        }
+    )
+    message: str = field(
+        metadata={
+            "doc": "Sanitized bounded dialog message when Chrome exposed it, else empty string."
+        }
+    )
+    page_url: str = field(
+        metadata={"doc": "Page URL associated with the dialog when available."}
+    )
+    action_taken: str = field(
+        metadata={
+            "doc": "Action taken by the terminal evidence capture policy, for example `accepted`, `dismissed`, or `none`."
+        }
+    )
+    validation_status: str = field(
+        metadata={
+            "doc": "Dialog handling result: `handled`, `policy_rejected`, `handled_without_opening_event`, or `failed`."
+        }
+    )
+    target_id: str = field(
+        default="",
+        metadata={"doc": "CDP target ID associated with the dialog evidence."},
+    )
+    session_id: str = field(
+        default="",
+        metadata={"doc": "CDP session ID associated with the dialog evidence."},
+    )
+
+
+@dataclass(frozen=True)
 class DownloadTerminalEvidence:
     schema_version: str = field(
         metadata={"doc": "Browser download terminal-evidence schema version."}
@@ -215,6 +253,12 @@ class DownloadTerminalEvidence:
         default_factory=list,
         metadata={
             "doc": "Bounded typed network events captured from browser performance/navigation evidence for terminal-state salvage and auditability."
+        },
+    )
+    dialog_evidence: list[BrowserDownloadDialogEvidence] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Bounded JavaScript dialog and beforeunload evidence captured from terminal browser CDP events."
         },
     )
     html_snapshot_path: str = field(
