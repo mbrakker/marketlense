@@ -196,17 +196,6 @@ Suggested priority order:
     - Beforeunload handling is allowed only for explicit navigation/teardown cases and is logged.
     - Tests cover alert/confirm detection, beforeunload handling, and a policy-rejected dialog path.
 
-- **Title:** Copy browser-harness print-to-PDF fallback for printable report pages [Impact: 4/5, Effort: 3/5]
-  - Explanation: Additional reusable practice from browser-harness. Its print-as-PDF guidance covers CDP PDF generation and visible print-button flows. Marketlense already detects printable report pages and on-site longreads; copy/adapt the existing print-to-PDF pattern into the browser download service as a bounded artifact capture fallback, not a new acquisition route engine.
-  - Pros: Captures readable reports that expose print views but no downloadable PDF, improves on-site report durability, reduces weak browser-download retries.
-  - Cons: Generated PDFs may differ from publisher-provided PDFs and need clear artifact provenance.
-  - Acceptance Criteria:
-    - Print-to-PDF fallback is implemented inside the existing browser report download service boundary with no `browser-harness` dependency.
-    - Behavior is copied/adapted from `browser-harness` print-as-PDF guidance and existing Marketlense artifact validation contracts.
-    - Generated PDFs carry provenance indicating they were browser-rendered captures, not publisher-supplied files.
-    - Fallback is attempted only for printable/on-site report evidence, not generic pages.
-    - Tests cover printable longread capture and rejection of a non-report printable page.
-
 - **Title:** Copy browser-harness tab and target hygiene for headed and persistent browser runs [Impact: 3/5, Effort: 2/5]
   - Explanation: Additional reusable practice from browser-harness. Its tab guidance filters internal targets, fake omnibox targets, zero-size surfaces, and explicitly activates known targets when visibility matters. Copy/adapt those target-hygiene rules into Marketlense's browser-use developer, headed, and future persistent-session paths so verification captures the intended tab.
   - Pros: Fewer wrong-tab screenshots, clearer developer diagnostics, safer future session reuse.

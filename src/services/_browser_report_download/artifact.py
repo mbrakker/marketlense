@@ -371,7 +371,12 @@ def finalize_browser_report_download_result(
         browser_downloaded_files=browser_run.downloaded_files,
         download_dir=download_dir,
     )
+    browser_rendered_capture_path = _resolve_existing_browser_rendered_capture(
+        getattr(browser_run, "print_pdf_capture_path", "")
+    )
     onsite_capture_path = str(agent_result.onsite_capture_path or "").strip() or None
+    if onsite_capture_path is None and browser_rendered_capture_path is not None:
+        onsite_capture_path = str(browser_rendered_capture_path)
     if onsite_capture_path and downloaded_path is not None:
         try:
             if (
@@ -570,6 +575,12 @@ def finalize_browser_report_download_result(
         str(agent_result.onsite_capture_format or "").strip() or None
     )
     if (
+        onsite_capture_format is None
+        and browser_rendered_capture_path is not None
+        and onsite_capture_path == str(browser_rendered_capture_path)
+    ):
+        onsite_capture_format = "browser_rendered_pdf"
+    if (
         route_kind == "onsite_report"
         and not onsite_capture_path
         and browser_html.strip()
@@ -693,8 +704,8 @@ def finalize_browser_report_download_result(
             )
     elif route_kind == "onsite_report":
         artifact_validation_status = "captured"
-        artifact_validation_detail = (
-            "Captured on-site report content without a local PDF."
+        artifact_validation_detail = _onsite_artifact_validation_detail(
+            onsite_capture_format=onsite_capture_format
         )
     elif blocked_reason:
         artifact_validation_status = "blocked"
@@ -747,7 +758,11 @@ def finalize_browser_report_download_result(
         screenshot_path=str(browser_run.screenshot_path or ""),
         network_resource_urls=list(browser_run.network_resource_urls or []),
         network_events=list(browser_run.network_events or []),
-        evidence_labels=[*confirmation_evidence.signal_labels, "structured_result"],
+        evidence_labels=[
+            *confirmation_evidence.signal_labels,
+            "structured_result",
+            *_onsite_capture_evidence_labels(onsite_capture_format),
+        ],
     )
     route_steps = _verify_post_action_route_steps(
         route_steps=route_steps,
@@ -775,7 +790,11 @@ def finalize_browser_report_download_result(
         screenshot_path=str(browser_run.screenshot_path or ""),
         network_resource_urls=list(browser_run.network_resource_urls or []),
         network_events=list(browser_run.network_events or []),
-        evidence_labels=[*confirmation_evidence.signal_labels, "structured_result"],
+        evidence_labels=[
+            *confirmation_evidence.signal_labels,
+            "structured_result",
+            *_onsite_capture_evidence_labels(onsite_capture_format),
+        ],
     )
     downloaded_file_name = downloaded_path.name if downloaded_path else None
     downloaded_size_bytes = downloaded_path.stat().st_size if downloaded_path else None
@@ -1038,6 +1057,9 @@ def _salvage_without_structured_result(
         ),
         final_url=final_url,
     ):
+        browser_rendered_capture_path = _resolve_existing_browser_rendered_capture(
+            getattr(browser_run, "print_pdf_capture_path", "")
+        )
         return _build_salvaged_onsite_result(
             request=request,
             normalized_url=normalized_url,
@@ -1051,6 +1073,10 @@ def _salvage_without_structured_result(
             screenshot_path=str(browser_run.screenshot_path or ""),
             network_resource_urls=list(browser_run.network_resource_urls or []),
             network_events=list(browser_run.network_events or []),
+            onsite_capture_path=str(browser_rendered_capture_path or ""),
+            onsite_capture_format=(
+                "browser_rendered_pdf" if browser_rendered_capture_path is not None else ""
+            ),
         )
     blocked_reason = _resolve_salvaged_blocked_reason(
         request=request,
@@ -1615,13 +1641,18 @@ def _build_salvaged_onsite_result(
     screenshot_path: str,
     network_resource_urls: list[str],
     network_events: list[BrowserDownloadNetworkEvent],
+    onsite_capture_path: str = "",
+    onsite_capture_format: str = "",
 ) -> BrowserReportDownloadResult:
-    capture_path = _capture_salvaged_onsite_html(
-        request=request,
-        normalized_url=normalized_url,
-        final_url=final_url,
-        html=browser_html,
-    )
+    capture_path = Path(onsite_capture_path) if onsite_capture_path else None
+    if capture_path is None or not capture_path.is_file():
+        capture_path = _capture_salvaged_onsite_html(
+            request=request,
+            normalized_url=normalized_url,
+            final_url=final_url,
+            html=browser_html,
+        )
+        onsite_capture_format = onsite_capture_format or "html"
     page_count = max(
         1,
         len(
@@ -1672,7 +1703,9 @@ def _build_salvaged_onsite_result(
             artifact_url=final_url,
             artifact_kind="onsite_report",
             artifact_validation_status="captured",
-            artifact_validation_detail="Recovered an on-site report capture from deterministic browser evidence.",
+            artifact_validation_detail=_onsite_artifact_validation_detail(
+                onsite_capture_format=onsite_capture_format
+            ),
             confirmation_signal_count=confirmation_evidence.confirmation_score,
             traversed_page_urls=_normalize_traversed_page_urls(
                 raw_urls=[request.attempt_url or "", final_url]
@@ -1694,6 +1727,7 @@ def _build_salvaged_onsite_result(
                 "onsite_report",
                 completeness_status,
                 "salvaged_browser_terminal",
+                *_onsite_capture_evidence_labels(onsite_capture_format),
             ],
         ),
         browser_had_structured_result=False,
@@ -1707,7 +1741,7 @@ def _build_salvaged_onsite_result(
         downloaded_mime_type=None,
         downloaded_size_bytes=None,
         onsite_capture_path=str(capture_path),
-        onsite_capture_format="html",
+        onsite_capture_format=onsite_capture_format or "html",
         onsite_page_count=page_count,
         onsite_completeness_status=completeness_status,
     )
@@ -3948,6 +3982,34 @@ def _resolve_browser_html(browser_run: "BrowserAgentRunResult") -> str:
     if not snapshot_path:
         return ""
     return _read_text_if_small(Path(snapshot_path), max_bytes=1024 * 1024)
+
+
+def _resolve_existing_browser_rendered_capture(raw_path: str | None) -> Path | None:
+    token = str(raw_path or "").strip()
+    if not token:
+        return None
+    path = Path(token).expanduser()
+    try:
+        if path.is_file() and path.stat().st_size > 0:
+            return path
+    except OSError:
+        return None
+    return None
+
+
+def _onsite_artifact_validation_detail(*, onsite_capture_format: str | None) -> str:
+    if str(onsite_capture_format or "").strip() == "browser_rendered_pdf":
+        return (
+            "Captured browser-rendered PDF from printable on-site report page; "
+            "this is not a publisher-supplied PDF artifact."
+        )
+    return "Captured on-site report content without a local PDF."
+
+
+def _onsite_capture_evidence_labels(onsite_capture_format: str | None) -> list[str]:
+    if str(onsite_capture_format or "").strip() == "browser_rendered_pdf":
+        return ["browser_rendered_pdf_capture", "not_publisher_supplied_pdf"]
+    return []
 
 
 def _resolve_terminal_html_and_snapshot(

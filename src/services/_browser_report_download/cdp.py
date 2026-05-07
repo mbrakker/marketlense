@@ -7,6 +7,7 @@ inspection. It is not a second browser automation route.
 Approved CDP method allowlist:
 - `Runtime.evaluate`: read bounded terminal state such as Performance entries.
 - `Page.captureScreenshot`: persist terminal screenshots when browser-use hooks fail.
+- `Page.printToPDF`: persist browser-rendered PDF captures for printable on-site reports.
 - `Target.getTargetInfo`: inspect the focused target during diagnostics.
 - `Target.getTargets`: recover a real page target when browser-use sessions are unavailable.
 - `Target.attachToTarget`: create a transient evidence-only CDP session.
@@ -35,6 +36,7 @@ logger = logging.getLogger("market_lense.browser_report_download_service.cdp")
 _CDP_ALLOWLIST: dict[str, str] = {
     "Runtime.evaluate": "Read bounded terminal page state for evidence capture.",
     "Page.captureScreenshot": "Persist terminal screenshot evidence when browser-use screenshot hooks fail.",
+    "Page.printToPDF": "Persist browser-rendered PDF captures for printable on-site reports.",
     "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
     "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
     "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
@@ -54,6 +56,7 @@ _INTERNAL_TARGET_URL_PREFIXES = (
     "devtools://",
 )
 _CDP_OPERATION_TIMEOUT_SECONDS = 8.0
+_CDP_PRINT_TO_PDF_TIMEOUT_SECONDS = 30.0
 
 
 @dataclass(frozen=True)
@@ -94,6 +97,7 @@ def call_browser_download_cdp(
     ctx: RunContext,
     normalized_url: str,
     required: bool,
+    target_url: str = "",
 ) -> BrowserDownloadCdpCallResult:
     normalized_method = str(method or "").strip()
     if normalized_method not in _CDP_ALLOWLIST:
@@ -120,6 +124,7 @@ def call_browser_download_cdp(
                 "method": normalized_method,
                 "allowlist_reason": _CDP_ALLOWLIST[normalized_method],
                 "required": required,
+                "target_url": str(target_url or "").strip(),
             },
         )
     )
@@ -130,6 +135,8 @@ def call_browser_download_cdp(
             browser=browser,
             method=normalized_method,
             params=safe_params,
+            timeout_seconds=_cdp_timeout_seconds(normalized_method),
+            target_url=target_url,
         )
     except Exception as exc:
         logger.info(
@@ -286,23 +293,101 @@ def capture_terminal_screenshot_via_cdp(
     return screenshot_path.exists()
 
 
+def capture_print_pdf_via_cdp(
+    *,
+    browser: Any,
+    pdf_path: Path,
+    ctx: RunContext,
+    normalized_url: str,
+    required: bool = False,
+    target_url: str = "",
+) -> bool:
+    call_result = call_browser_download_cdp(
+        browser=browser,
+        method="Page.printToPDF",
+        params={
+            "printBackground": True,
+            "preferCSSPageSize": True,
+            "displayHeaderFooter": False,
+        },
+        ctx=ctx,
+        normalized_url=normalized_url,
+        required=required,
+        target_url=target_url,
+    )
+    if call_result.status != "ok":
+        return False
+    data = str(call_result.result.get("data") or "").strip()
+    if not data:
+        if required:
+            raise AppError(
+                code="browser_download_cdp_print_pdf_missing",
+                message="CDP print-to-PDF returned no PDF data",
+                retryable=True,
+                severity="error",
+                context={"normalized_url": normalized_url},
+            )
+        return False
+    try:
+        pdf_path.parent.mkdir(parents=True, exist_ok=True)
+        pdf_path.write_bytes(base64.b64decode(data))
+    except Exception as exc:
+        if required:
+            raise AppError(
+                code="browser_download_cdp_print_pdf_write_failed",
+                message="CDP print-to-PDF output could not be written to disk",
+                cause=exc,
+                retryable=True,
+                severity="error",
+                context={"normalized_url": normalized_url, "pdf_path": str(pdf_path)},
+            ) from exc
+        return False
+    if not pdf_path.exists() or pdf_path.stat().st_size <= 0:
+        return False
+    if not pdf_path.read_bytes().startswith(b"%PDF"):
+        pdf_path.unlink(missing_ok=True)
+        if required:
+            raise AppError(
+                code="browser_download_cdp_print_pdf_invalid",
+                message="CDP print-to-PDF output was not a PDF artifact",
+                retryable=True,
+                severity="error",
+                context={"normalized_url": normalized_url, "pdf_path": str(pdf_path)},
+            )
+        return False
+    return True
+
+
 def _send_browser_download_cdp(
     *,
     browser: Any,
     method: str,
     params: dict[str, Any],
+    timeout_seconds: float,
+    target_url: str = "",
 ) -> tuple[dict[str, Any], str, str]:
     if method in _TARGET_LEVEL_METHODS:
         client = _resolve_root_cdp_client(browser)
-        result = _send_raw_cdp(client=client, method=method, params=params, session_id="")
+        result = _send_raw_cdp(
+            client=client,
+            method=method,
+            params=params,
+            session_id="",
+            timeout_seconds=timeout_seconds,
+        )
         return result, "", ""
-    resolved_session = _resolve_browser_cdp_session(browser)
+    resolved_session = _resolve_browser_cdp_session(
+        browser,
+        timeout_seconds=timeout_seconds,
+        target_url=target_url,
+    )
     try:
         result = _send_raw_cdp(
             client=resolved_session.client,
             method=method,
             params=params,
             session_id=resolved_session.session_id,
+            timeout_seconds=timeout_seconds,
         )
         return result, resolved_session.target_id, resolved_session.session_id
     finally:
@@ -313,21 +398,44 @@ def _send_browser_download_cdp(
             )
 
 
-def _resolve_browser_cdp_session(browser: Any) -> _ResolvedCdpSession:
+def _resolve_browser_cdp_session(
+    browser: Any,
+    *,
+    timeout_seconds: float,
+    target_url: str = "",
+) -> _ResolvedCdpSession:
+    if str(target_url or "").strip():
+        return _resolve_browser_cdp_session_for_target_url(
+            browser,
+            target_url=target_url,
+            timeout_seconds=timeout_seconds,
+        )
     get_session = getattr(browser, "get_or_create_cdp_session", None)
     if not callable(get_session):
-        return _attach_transient_cdp_session(browser)
+        return _attach_transient_cdp_session(
+            browser,
+            timeout_seconds=timeout_seconds,
+        )
     try:
-        session = _await_with_timeout(get_session(target_id=None, focus=False))
+        session = _await_with_timeout(
+            get_session(target_id=None, focus=False),
+            timeout_seconds=timeout_seconds,
+        )
     except TypeError:
-        session = _await_with_timeout(get_session())
+        session = _await_with_timeout(get_session(), timeout_seconds=timeout_seconds)
     except Exception:
-        return _attach_transient_cdp_session(browser)
+        return _attach_transient_cdp_session(
+            browser,
+            timeout_seconds=timeout_seconds,
+        )
     client = getattr(session, "cdp_client", None)
     session_id = str(getattr(session, "session_id", "") or "")
     target_id = str(getattr(session, "target_id", "") or "")
     if client is None or not session_id:
-        return _attach_transient_cdp_session(browser)
+        return _attach_transient_cdp_session(
+            browser,
+            timeout_seconds=timeout_seconds,
+        )
     return _ResolvedCdpSession(
         client=client,
         target_id=target_id,
@@ -336,13 +444,78 @@ def _resolve_browser_cdp_session(browser: Any) -> _ResolvedCdpSession:
     )
 
 
-def _attach_transient_cdp_session(browser: Any) -> _ResolvedCdpSession:
+def _resolve_browser_cdp_session_for_target_url(
+    browser: Any,
+    *,
+    target_url: str,
+    timeout_seconds: float,
+) -> _ResolvedCdpSession:
     client = _resolve_root_cdp_client(browser)
     targets_result = _send_raw_cdp(
         client=client,
         method="Target.getTargets",
         params={},
         session_id="",
+        timeout_seconds=timeout_seconds,
+    )
+    target_id = _select_real_page_target_id(
+        targets_result,
+        target_url=target_url,
+        require_url_match=True,
+    )
+    if not target_id:
+        raise RuntimeError("no real page target matched the requested CDP target URL")
+    get_session = getattr(browser, "get_or_create_cdp_session", None)
+    if callable(get_session):
+        try:
+            session = _await_with_timeout(
+                get_session(target_id=target_id, focus=False),
+                timeout_seconds=timeout_seconds,
+            )
+            client_from_session = getattr(session, "cdp_client", None)
+            session_id = str(getattr(session, "session_id", "") or "")
+            resolved_target_id = str(getattr(session, "target_id", "") or target_id)
+            if client_from_session is not None and session_id:
+                return _ResolvedCdpSession(
+                    client=client_from_session,
+                    target_id=resolved_target_id,
+                    session_id=session_id,
+                    transient=False,
+                )
+        except TypeError:
+            pass
+        except Exception:
+            pass
+    attach_result = _send_raw_cdp(
+        client=client,
+        method="Target.attachToTarget",
+        params={"targetId": target_id, "flatten": True},
+        session_id="",
+        timeout_seconds=timeout_seconds,
+    )
+    session_id = str(attach_result.get("sessionId") or "").strip()
+    if not session_id:
+        raise RuntimeError("CDP target attach returned no session ID")
+    return _ResolvedCdpSession(
+        client=client,
+        target_id=target_id,
+        session_id=session_id,
+        transient=True,
+    )
+
+
+def _attach_transient_cdp_session(
+    browser: Any,
+    *,
+    timeout_seconds: float = _CDP_OPERATION_TIMEOUT_SECONDS,
+) -> _ResolvedCdpSession:
+    client = _resolve_root_cdp_client(browser)
+    targets_result = _send_raw_cdp(
+        client=client,
+        method="Target.getTargets",
+        params={},
+        session_id="",
+        timeout_seconds=timeout_seconds,
     )
     target_id = _select_real_page_target_id(targets_result)
     if not target_id:
@@ -352,6 +525,7 @@ def _attach_transient_cdp_session(browser: Any) -> _ResolvedCdpSession:
         method="Target.attachToTarget",
         params={"targetId": target_id, "flatten": True},
         session_id="",
+        timeout_seconds=timeout_seconds,
     )
     session_id = str(attach_result.get("sessionId") or "").strip()
     if not session_id:
@@ -374,6 +548,7 @@ def _detach_transient_cdp_session(*, client: Any, session_id: str) -> None:
             method="Target.detachFromTarget",
             params={"sessionId": token},
             session_id="",
+            timeout_seconds=_CDP_OPERATION_TIMEOUT_SECONDS,
         )
     except Exception:
         return
@@ -389,11 +564,17 @@ def _resolve_root_cdp_client(browser: Any) -> Any:
     return client
 
 
-def _select_real_page_target_id(targets_result: dict[str, Any]) -> str:
+def _select_real_page_target_id(
+    targets_result: dict[str, Any],
+    *,
+    target_url: str = "",
+    require_url_match: bool = False,
+) -> str:
     raw_targets = targets_result.get("targetInfos")
     if not isinstance(raw_targets, list):
         return ""
     candidates: list[str] = []
+    url_candidates: list[str] = []
     for raw_target in raw_targets:
         if not isinstance(raw_target, dict):
             continue
@@ -406,7 +587,27 @@ def _select_real_page_target_id(targets_result: dict[str, Any]) -> str:
         target_id = str(raw_target.get("targetId") or raw_target.get("target_id") or "").strip()
         if target_id:
             candidates.append(target_id)
+            if _target_url_matches(url, target_url):
+                url_candidates.append(target_id)
+    if target_url:
+        return url_candidates[-1] if url_candidates else ""
+    if require_url_match:
+        return ""
     return candidates[-1] if candidates else ""
+
+
+def _target_url_matches(candidate_url: str, expected_url: str) -> bool:
+    candidate = str(candidate_url or "").strip()
+    expected = str(expected_url or "").strip()
+    if not candidate or not expected:
+        return False
+    return _without_url_fragment(candidate).rstrip("/") == _without_url_fragment(
+        expected
+    ).rstrip("/")
+
+
+def _without_url_fragment(raw_url: str) -> str:
+    return str(raw_url or "").split("#", 1)[0]
 
 
 def _send_raw_cdp(
@@ -415,12 +616,14 @@ def _send_raw_cdp(
     method: str,
     params: dict[str, Any],
     session_id: str,
+    timeout_seconds: float,
 ) -> dict[str, Any]:
     send_raw = getattr(client, "send_raw", None)
     if callable(send_raw):
         result = _await_cdp_client_operation(
             client=client,
             value=send_raw(method, params, session_id=session_id or None),
+            timeout_seconds=timeout_seconds,
         )
         return result if isinstance(result, dict) else {}
     send = getattr(client, "send", None)
@@ -435,6 +638,7 @@ def _send_raw_cdp(
     result = _await_cdp_client_operation(
         client=client,
         value=command_sender(**kwargs),
+        timeout_seconds=timeout_seconds,
     )
     return result if isinstance(result, dict) else {}
 
@@ -478,7 +682,11 @@ def _extract_runtime_value(
     return None
 
 
-def _await_with_timeout(value: Any) -> Any:
+def _await_with_timeout(
+    value: Any,
+    *,
+    timeout_seconds: float = _CDP_OPERATION_TIMEOUT_SECONDS,
+) -> Any:
     if not inspect.isawaitable(value):
         return value
     payload: dict[str, Any] = {}
@@ -496,11 +704,11 @@ def _await_with_timeout(value: Any) -> Any:
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.run(asyncio.wait_for(awaitable(), timeout=_CDP_OPERATION_TIMEOUT_SECONDS))
+        return asyncio.run(asyncio.wait_for(awaitable(), timeout=timeout_seconds))
 
     thread = Thread(target=runner, daemon=True)
     thread.start()
-    thread.join(_CDP_OPERATION_TIMEOUT_SECONDS)
+    thread.join(timeout_seconds)
     if thread.is_alive():
         raise TimeoutError("CDP operation timed out")
     if errors:
@@ -508,7 +716,12 @@ def _await_with_timeout(value: Any) -> Any:
     return payload.get("result")
 
 
-def _await_cdp_client_operation(*, client: Any, value: Any) -> Any:
+def _await_cdp_client_operation(
+    *,
+    client: Any,
+    value: Any,
+    timeout_seconds: float = _CDP_OPERATION_TIMEOUT_SECONDS,
+) -> Any:
     if not inspect.isawaitable(value):
         return value
     handler_task = getattr(client, "_message_handler_task", None)
@@ -526,8 +739,14 @@ def _await_cdp_client_operation(*, client: Any, value: Any) -> Any:
         if running_loop is not client_loop:
             future = asyncio.run_coroutine_threadsafe(value, client_loop)
             try:
-                return future.result(timeout=_CDP_OPERATION_TIMEOUT_SECONDS)
+                return future.result(timeout=timeout_seconds)
             except FutureTimeoutError as exc:
                 future.cancel()
                 raise TimeoutError("CDP operation timed out") from exc
-    return _await_with_timeout(value)
+    return _await_with_timeout(value, timeout_seconds=timeout_seconds)
+
+
+def _cdp_timeout_seconds(method: str) -> float:
+    if method == "Page.printToPDF":
+        return _CDP_PRINT_TO_PDF_TIMEOUT_SECONDS
+    return _CDP_OPERATION_TIMEOUT_SECONDS

@@ -1474,6 +1474,243 @@ def test_download_report_with_browser_use_auto_captures_onsite_html_when_agent_o
     assert response.onsite_capture_format == "html"
 
 
+def test_download_report_with_browser_use_prints_printable_onsite_report_to_pdf(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    import base64
+
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the printable report page, inspect the article, and capture the on-site report content.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_browser = runtime.Browser
+    original_agent = runtime.Agent
+    cdp_calls: list[dict[str, object]] = []
+
+    class PrintPdfCdpClient:
+        async def send_raw(
+            self,
+            method: str,
+            params: dict[str, object] | None = None,
+            session_id: str | None = None,
+        ) -> dict[str, object]:
+            cdp_calls.append(
+                {
+                    "method": method,
+                    "params": params or {},
+                    "session_id": session_id or "",
+                }
+            )
+            if method == "Target.getTargets":
+                return {
+                    "targetInfos": [
+                        {
+                            "targetId": "printable-target",
+                            "type": "page",
+                            "url": "https://example.com/research/printable-report",
+                        }
+                    ]
+                }
+            if method == "Target.attachToTarget":
+                return {"sessionId": "printable-session"}
+            if method == "Page.printToPDF":
+                return {
+                    "data": base64.b64encode(
+                        b"%PDF-1.7 browser-rendered onsite report"
+                    ).decode("ascii")
+                }
+            if method == "Target.detachFromTarget":
+                return {}
+            raise RuntimeError(method)
+
+    class PrintableBrowser(original_browser):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.cdp_client = PrintPdfCdpClient()
+
+    class PrintableOnsiteAgent(original_agent):
+        def run_sync(self, max_steps: int):
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            self.browser.url = "https://example.com/research/printable-report"
+            self.browser.title = "Printable research report 2026"
+            self.browser.html = (
+                "<html><head><title>Printable research report 2026</title>"
+                "<style>@media print { article { color: black; } }</style></head>"
+                "<body><article><h1>Printable research report 2026</h1>"
+                "<button>Print this report</button>"
+                "<h2>Executive summary</h2><p>"
+                + ("Market analysis report detail. " * 120)
+                + "</p><h2>Methodology</h2><p>"
+                + ("Survey insight and research evidence. " * 90)
+                + "</p></article></body></html>"
+            )
+            payload["route_kind"] = "onsite_report"
+            payload["route_family"] = "browser_onsite_report"
+            payload["final_page_url"] = self.browser.url
+            payload["final_page_title"] = self.browser.title
+            payload["terminal_text_excerpt"] = "Printable research report 2026"
+            payload["onsite_capture_path"] = None
+            payload["onsite_capture_format"] = None
+            payload["onsite_page_count"] = 1
+            payload["onsite_completeness_status"] = "complete"
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "capture",
+                    "target_text": "printable report page",
+                    "target_role": "article",
+                    "target_url": self.browser.url,
+                    "result": "Captured the longread report content.",
+                }
+            ]
+
+            class PrintableHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return PrintableHistory()
+
+    runtime.Browser = PrintableBrowser
+    runtime.Agent = PrintableOnsiteAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/printable-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.downloaded_file_path is None
+    assert response.onsite_capture_format == "browser_rendered_pdf"
+    assert response.onsite_capture_path is not None
+    assert Path(response.onsite_capture_path).read_bytes().startswith(b"%PDF")
+    assert "browser_rendered_pdf_capture" in response.terminal_evidence.evidence_labels
+    assert "not a publisher-supplied PDF" in response.terminal_evidence.artifact_validation_detail
+    assert "Page.printToPDF" in [str(call["method"]) for call in cdp_calls]
+
+
+def test_download_report_with_browser_use_rejects_print_pdf_for_generic_printable_page(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    import base64
+
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the printable page and inspect the content.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_browser = runtime.Browser
+    original_agent = runtime.Agent
+    cdp_calls: list[str] = []
+
+    class PrintPdfCdpClient:
+        async def send_raw(
+            self,
+            method: str,
+            params: dict[str, object] | None = None,
+            session_id: str | None = None,
+        ) -> dict[str, object]:
+            cdp_calls.append(method)
+            if method == "Page.printToPDF":
+                return {
+                    "data": base64.b64encode(b"%PDF-1.7 generic").decode("ascii")
+                }
+            return {
+                "targetInfos": [
+                    {
+                        "targetId": "generic-target",
+                        "type": "page",
+                        "url": "https://example.com/company/print",
+                    }
+                ],
+                "sessionId": "generic-session",
+            }
+
+    class GenericPrintableBrowser(original_browser):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.cdp_client = PrintPdfCdpClient()
+
+    class GenericPrintableAgent(original_agent):
+        def run_sync(self, max_steps: int):
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            self.browser.url = "https://example.com/company/print"
+            self.browser.title = "Company overview"
+            self.browser.html = (
+                "<html><head><style>@media print { body { color: black; } }</style>"
+                "</head><body><main><h1>Company overview</h1><button>Print</button>"
+                "<p>"
+                + ("Product platform and services detail. " * 120)
+                + "</p></main></body></html>"
+            )
+            payload["route_kind"] = "onsite_report"
+            payload["route_family"] = "browser_onsite_report"
+            payload["final_page_url"] = self.browser.url
+            payload["final_page_title"] = self.browser.title
+            payload["onsite_capture_path"] = None
+            payload["onsite_capture_format"] = None
+            payload["onsite_page_count"] = 1
+            payload["onsite_completeness_status"] = "bounded_incomplete"
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "capture",
+                    "target_text": "company overview page",
+                    "target_role": "page",
+                    "target_url": self.browser.url,
+                    "result": "Captured page content.",
+                }
+            ]
+
+            class GenericHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return GenericHistory()
+
+    runtime.Browser = GenericPrintableBrowser
+    runtime.Agent = GenericPrintableAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/company/print",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_capture_format == "html"
+    assert "Page.printToPDF" not in cdp_calls
+
+
 def test_download_report_with_browser_use_marks_paginated_onsite_capture_partial_without_full_traversal(
     tmp_path: Path,
     run_context,

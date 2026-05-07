@@ -28,6 +28,7 @@ from src.contracts.run_context import RunContext
 from src.services._browser_report_download.artifact import BrowserUseAgentResult
 from src.services._browser_report_download.cdp import (
     collect_terminal_network_entries_via_cdp,
+    capture_print_pdf_via_cdp,
 )
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
@@ -169,6 +170,8 @@ class BrowserAgentRunResult:
     network_events: list[BrowserDownloadNetworkEvent]
     html_snapshot_path: str
     screenshot_path: str
+    print_pdf_capture_path: str = ""
+    print_pdf_capture_provenance: str = ""
 
 
 @dataclass(frozen=True)
@@ -328,6 +331,8 @@ def run_browser_report_download_agent(
     network_events: list[BrowserDownloadNetworkEvent] = []
     html_snapshot_path = ""
     screenshot_path = ""
+    print_pdf_capture_path = ""
+    print_pdf_capture_provenance = ""
     try:
         browser = browser_use.Browser(
             downloads_path=str(download_dir),
@@ -473,6 +478,22 @@ def run_browser_report_download_agent(
             )
             if not screenshot_path:
                 screenshot_path = history_screenshot_path
+            print_pdf_capture_path = _maybe_capture_print_pdf_fallback(
+                request=request,
+                browser=browser,
+                raw_model_response=raw_model_response,
+                final_page_url=final_page_url,
+                final_page_title=final_page_title,
+                final_page_html=final_page_html,
+                download_dir=download_dir,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                downloaded_files=downloaded_files,
+                attachment_paths=attachment_paths,
+            )
+            print_pdf_capture_provenance = (
+                "browser_rendered_print_to_pdf" if print_pdf_capture_path else ""
+            )
     except AppError as exc:
         if exc.code == "browser_download_agent_timeout" and browser is not None:
             if _should_attempt_lookup_submission_assist(
@@ -610,6 +631,8 @@ def run_browser_report_download_agent(
         network_events=network_events,
         html_snapshot_path=html_snapshot_path,
         screenshot_path=screenshot_path,
+        print_pdf_capture_path=print_pdf_capture_path,
+        print_pdf_capture_provenance=print_pdf_capture_provenance,
     )
 
 
@@ -724,6 +747,8 @@ def _build_cached_timed_out_browser_run(
         network_events=[],
         html_snapshot_path=html_snapshot_path,
         screenshot_path="",
+        print_pdf_capture_path="",
+        print_pdf_capture_provenance="",
     )
 
 
@@ -819,6 +844,8 @@ def _salvage_timed_out_browser_run_unbounded(
         network_events=network_events,
         html_snapshot_path=html_snapshot_path,
         screenshot_path=screenshot_path,
+        print_pdf_capture_path="",
+        print_pdf_capture_provenance="",
     )
 
 
@@ -1956,6 +1983,137 @@ def _capture_terminal_assets(
         normalized_url=normalized_url,
     )
     return network_resource_urls, network_events, html_snapshot_path, screenshot_path
+
+
+def _maybe_capture_print_pdf_fallback(
+    *,
+    request: BrowserReportDownloadRequest,
+    browser: Any,
+    raw_model_response: str,
+    final_page_url: str,
+    final_page_title: str,
+    final_page_html: str,
+    download_dir: Path,
+    ctx: RunContext,
+    normalized_url: str,
+    downloaded_files: list[str],
+    attachment_paths: list[str],
+) -> str:
+    if downloaded_files or attachment_paths:
+        return ""
+    if not _should_capture_print_pdf_fallback(
+        request=request,
+        raw_model_response=raw_model_response,
+        final_page_url=final_page_url,
+        final_page_title=final_page_title,
+        final_page_html=final_page_html,
+    ):
+        return ""
+    pdf_path = _browser_rendered_pdf_capture_path(
+        download_dir=download_dir,
+        final_page_url=final_page_url or normalized_url,
+    )
+    if not capture_print_pdf_via_cdp(
+        browser=browser,
+        pdf_path=pdf_path,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        required=False,
+        target_url=final_page_url or normalized_url,
+    ):
+        return ""
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_print_pdf_fallback_captured",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "final_page_url": final_page_url,
+                "pdf_path": str(pdf_path),
+                "provenance": "browser_rendered_print_to_pdf",
+            },
+        )
+    )
+    return str(pdf_path)
+
+
+def _should_capture_print_pdf_fallback(
+    *,
+    request: BrowserReportDownloadRequest,
+    raw_model_response: str,
+    final_page_url: str,
+    final_page_title: str,
+    final_page_html: str,
+) -> bool:
+    if str(final_page_url or "").strip().casefold().endswith(".pdf"):
+        return False
+    payload = _parse_raw_model_response(raw_model_response)
+    route_family = str(
+        request.route_family_hint or payload.get("route_family") or ""
+    ).strip()
+    route_kind = str(payload.get("route_kind") or "").strip()
+    if route_family != "browser_onsite_report" and route_kind != "onsite_report":
+        return False
+    html = str(final_page_html or "")
+    if len(html.strip()) < 800:
+        return False
+    visible_text = _browser_visible_text_from_html(html)
+    haystack = " ".join(
+        [
+            str(final_page_url or ""),
+            str(final_page_title or ""),
+            visible_text,
+            str(request.candidate_trace.title or "") if request.candidate_trace else "",
+        ]
+    ).casefold()
+    if not any(marker in haystack for marker in _TERMINAL_REPORT_TEXT_MARKERS):
+        return False
+    non_report_context = " ".join(
+        [
+            str(final_page_url or ""),
+            str(final_page_title or ""),
+            str(request.candidate_trace.title or "") if request.candidate_trace else "",
+        ]
+    ).casefold()
+    if _browser_text_has_non_report_marker(non_report_context):
+        return False
+    has_print_signal = bool(
+        re.search(
+            r"(?is)(window\.print|@media\s+print|media=[\"']print[\"']|>\s*print\s*<|print this|print page|save as pdf)",
+            html,
+        )
+    )
+    if not has_print_signal:
+        return False
+    return len(visible_text) >= 500
+
+
+def _browser_visible_text_from_html(html: str) -> str:
+    token = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", str(html or ""))
+    token = re.sub(r"(?is)<[^>]+>", " ", token)
+    return " ".join(token.split())
+
+
+def _browser_text_has_non_report_marker(text: str) -> bool:
+    lowered = str(text or "").casefold()
+    non_report_markers = ("case study", "customer story", "press release", "careers")
+    return any(marker in lowered for marker in non_report_markers)
+
+
+def _browser_rendered_pdf_capture_path(
+    *,
+    download_dir: Path,
+    final_page_url: str,
+) -> Path:
+    stem = Path(urlsplit(str(final_page_url or "onsite-report")).path).stem
+    if not stem:
+        stem = "onsite-report"
+    safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "-", stem).strip(".-")
+    if not safe_stem:
+        safe_stem = "onsite-report"
+    return download_dir / f"{safe_stem}-browser-rendered.pdf"
 
 
 def _capture_completed_history_terminal_assets(

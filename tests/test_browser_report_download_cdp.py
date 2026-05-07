@@ -11,6 +11,7 @@ import pytest
 from src.services._browser_report_download.cdp import (
     BrowserDownloadCdpCallResult,
     call_browser_download_cdp,
+    capture_print_pdf_via_cdp,
     capture_terminal_screenshot_via_cdp,
     collect_terminal_network_entries_via_cdp,
     get_browser_download_cdp_allowlist,
@@ -79,6 +80,7 @@ def test_browser_download_cdp_allowlist_documents_supported_escape_hatch() -> No
     assert allowlist == {
         "Runtime.evaluate": "Read bounded terminal page state for evidence capture.",
         "Page.captureScreenshot": "Persist terminal screenshot evidence when browser-use screenshot hooks fail.",
+        "Page.printToPDF": "Persist browser-rendered PDF captures for printable on-site reports.",
         "Target.getTargetInfo": "Inspect focused target identity for diagnostics and logging.",
         "Target.getTargets": "Find a real page target when browser-use session state is unavailable.",
         "Target.attachToTarget": "Create a transient evidence-only CDP session for an allowlisted read.",
@@ -309,3 +311,123 @@ def test_browser_download_cdp_writes_terminal_screenshot(
 
     assert captured is True
     assert screenshot_path.read_bytes() == image_bytes
+
+
+def test_browser_download_cdp_writes_print_pdf_capture(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    pdf_bytes = b"%PDF-1.7 browser-rendered"
+    client = FakeCdpClient(
+        {
+            "Page.printToPDF": {
+                "data": base64.b64encode(pdf_bytes).decode("ascii")
+            }
+        }
+    )
+    pdf_path = tmp_path / "rendered.pdf"
+
+    captured = capture_print_pdf_via_cdp(
+        browser=FakeBrowser(client),
+        pdf_path=pdf_path,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        required=True,
+    )
+
+    assert captured is True
+    assert pdf_path.read_bytes() == pdf_bytes
+    assert client.calls[0]["method"] == "Page.printToPDF"
+    assert client.calls[0]["params"]["printBackground"] is True
+
+
+def test_browser_download_cdp_print_pdf_uses_matching_target_url(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    pdf_bytes = b"%PDF-1.7 report page"
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "report-target",
+                        "type": "page",
+                        "url": "https://example.com/report",
+                    },
+                    {
+                        "targetId": "startup-target",
+                        "type": "page",
+                        "url": "https://example.com/browser-use/start",
+                    },
+                ]
+            },
+            "Target.attachToTarget": {"sessionId": "report-session"},
+            "Page.printToPDF": {
+                "data": base64.b64encode(pdf_bytes).decode("ascii")
+            },
+            "Target.detachFromTarget": {},
+        }
+    )
+
+    class RootOnlyBrowser:
+        cdp_client = client
+
+    pdf_path = tmp_path / "rendered.pdf"
+
+    captured = capture_print_pdf_via_cdp(
+        browser=RootOnlyBrowser(),
+        pdf_path=pdf_path,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        required=True,
+        target_url="https://example.com/report#section",
+    )
+
+    assert captured is True
+    assert pdf_path.read_bytes() == pdf_bytes
+    assert [call["method"] for call in client.calls] == [
+        "Target.getTargets",
+        "Target.attachToTarget",
+        "Page.printToPDF",
+        "Target.detachFromTarget",
+    ]
+    assert client.calls[1]["params"]["targetId"] == "report-target"
+    assert client.calls[2]["session_id"] == "report-session"
+
+
+def test_browser_download_cdp_print_pdf_rejects_unmatched_target_url(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    client = FakeCdpClient(
+        {
+            "Target.getTargets": {
+                "targetInfos": [
+                    {
+                        "targetId": "startup-target",
+                        "type": "page",
+                        "url": "https://example.com/browser-use/start",
+                    },
+                ]
+            },
+        }
+    )
+
+    class RootOnlyBrowser:
+        cdp_client = client
+
+    pdf_path = tmp_path / "rendered.pdf"
+
+    captured = capture_print_pdf_via_cdp(
+        browser=RootOnlyBrowser(),
+        pdf_path=pdf_path,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        required=False,
+        target_url="https://example.com/report",
+    )
+
+    assert captured is False
+    assert not pdf_path.exists()
+    assert [call["method"] for call in client.calls] == ["Target.getTargets"]
