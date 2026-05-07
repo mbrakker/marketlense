@@ -10,14 +10,7 @@ from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     DownloadTerminalEvidence,
 )
-from src.contracts.publisher_inventory import (
-    PublisherInventoryRouteTrace,
-    PublisherInventoryRunQualitySummary,
-    PublisherInventoryScenarioSummary,
-)
 from src.utils.coercion import clean_string_list
-
-from .common import _optional_int
 
 
 def _serialize_inventory_run_quality_summary(summary) -> Optional[str]:
@@ -74,6 +67,14 @@ def _parse_inventory_route_trace(payload: Optional[str]):
             or "none",
             surface_class=str(parsed.get("surface_class") or "unknown").strip()
             or "unknown",
+            scroll_surface=str(parsed.get("scroll_surface") or "document").strip()
+            or "document",
+            scroll_surface_candidate_growth=bool(
+                parsed.get("scroll_surface_candidate_growth", False)
+            ),
+            virtualized_list_detected=bool(
+                parsed.get("virtualized_list_detected", False)
+            ),
         )
     except (TypeError, ValueError):
         return None

@@ -218,17 +218,6 @@ Suggested priority order:
     - Fallback is attempted only for printable/on-site report evidence, not generic pages.
     - Tests cover printable longread capture and rejection of a non-report printable page.
 
-- **Title:** Copy browser-harness nested-scroll and virtualized-list probing into publisher inventory browser discovery [Impact: 4/5, Effort: 3/5]
-  - Explanation: Additional reusable practice from browser-harness. Its scrolling guidance separates document scroll, nested containers, dropdown menus, and virtualized lists by identifying which element consumes wheel events. Copy/adapt that existing pattern into Marketlense publisher inventory browser scripts to improve archives where report cards are inside scroll containers rather than the document body.
-  - Pros: Better archive discovery coverage, fewer sparse browser results, less fallback churn to broad HTTP recovery.
-  - Cons: Scroll probing can be slow or loop-prone without bounded iteration and clear stop conditions.
-  - Acceptance Criteria:
-    - Nested-scroll probing lives inside the existing publisher inventory browser service/scripts and has no `browser-harness` dependency.
-    - Behavior is copied/adapted from `browser-harness` scrolling practices, with bounded iteration and explicit stop signals.
-    - Route traces record which scroll surface was used and whether new candidates appeared.
-    - Virtualized-list handling stops on repeated DOM/candidate fingerprints.
-    - Tests cover a nested-scroll archive and a no-growth stop condition.
-
 - **Title:** Copy browser-harness tab and target hygiene for headed and persistent browser runs [Impact: 3/5, Effort: 2/5]
   - Explanation: Additional reusable practice from browser-harness. Its tab guidance filters internal targets, fake omnibox targets, zero-size surfaces, and explicitly activates known targets when visibility matters. Copy/adapt those target-hygiene rules into Marketlense's browser-use developer, headed, and future persistent-session paths so verification captures the intended tab.
   - Pros: Fewer wrong-tab screenshots, clearer developer diagnostics, safer future session reuse.

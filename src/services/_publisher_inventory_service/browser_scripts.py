@@ -64,6 +64,150 @@ def _browser_scroll_to_ratio_script() -> str:
     }"""
 
 
+def _browser_nested_scroll_probe_script() -> str:
+    helper_bundle = _browser_dom_helper_bundle(lower_case=False)
+    script = """() => {
+        __HELPER_BUNDLE__
+        const normalizeHref = (value) => {
+            const raw = String(value ?? '').trim();
+            if (!raw) return '';
+            try {
+                const parsed = new URL(raw, window.location.href);
+                parsed.hash = '';
+                return parsed.href.replace(/\\/$/, '');
+            } catch (_error) {
+                return raw;
+            }
+        };
+        const visibleAnchors = (root) => Array.from(root.querySelectorAll ? root.querySelectorAll('a[href]') : [])
+            .filter((anchor) => isVisible(anchor))
+            .map((anchor) => ({
+                href: normalizeHref(anchor.href || anchor.getAttribute('href') || ''),
+                label: normalize(anchor.textContent || anchor.getAttribute('aria-label') || anchor.getAttribute('title') || ''),
+            }))
+            .filter((anchor) => anchor.href);
+        const fingerprint = (anchors) => anchors
+            .slice(0, 80)
+            .map((anchor) => `${anchor.href}|${anchor.label}`)
+            .join('\\n');
+        const reportishCount = (anchors) => anchors.filter((anchor) => {
+            const joined = `${anchor.href} ${anchor.label}`.toLowerCase();
+            return /(report|reports|research|whitepaper|white paper|ebook|study|survey|insight|benchmark|guide)/.test(joined);
+        }).length;
+        const describe = (element, index) => {
+            if (!element || element === document.scrollingElement || element === document.documentElement || element === document.body) {
+                return 'document';
+            }
+            const id = element.id ? `#${String(element.id).slice(0, 48)}` : '';
+            const classes = String(element.className || '')
+                .split(/\\s+/)
+                .filter(Boolean)
+                .slice(0, 3)
+                .map((item) => `.${item.slice(0, 32)}`)
+                .join('');
+            const role = element.getAttribute('role') ? `[role="${element.getAttribute('role')}"]` : '';
+            const label = element.getAttribute('aria-label') ? `[aria-label="${element.getAttribute('aria-label').slice(0, 48)}"]` : '';
+            return `${element.tagName.toLowerCase()}${id}${classes}${role}${label}:nth-scroll(${index})`;
+        };
+        const documentAnchorsBefore = visibleAnchors(document);
+        const candidates = Array.from(document.querySelectorAll('body *'))
+            .filter((element) => {
+                if (!isVisible(element)) return false;
+                const style = window.getComputedStyle(element);
+                const overflowY = String(style.overflowY || '').toLowerCase();
+                const overflowX = String(style.overflowX || '').toLowerCase();
+                const scrollableY = /(auto|scroll|overlay)/.test(overflowY) && element.scrollHeight - element.clientHeight > 80;
+                const scrollableX = /(auto|scroll|overlay)/.test(overflowX) && element.scrollWidth - element.clientWidth > 80;
+                return scrollableY || scrollableX;
+            })
+            .map((element, index) => {
+                const anchors = visibleAnchors(element);
+                const style = window.getComputedStyle(element);
+                const descriptor = normalize([
+                    element.id || '',
+                    element.className || '',
+                    element.getAttribute('role') || '',
+                    element.getAttribute('aria-label') || '',
+                    element.getAttribute('data-testid') || '',
+                ].join(' '));
+                const virtualizedSignal = Boolean(
+                    element.getAttribute('aria-rowcount') ||
+                    /(virtual|infinite|recycler|react-window|react-virtualized)/i.test(descriptor) ||
+                    Array.from(element.children || []).some((child) => {
+                        const childStyle = window.getComputedStyle(child);
+                        return /absolute|sticky/i.test(childStyle.position || '') || /translate[3dXY]?\\(/i.test(childStyle.transform || '');
+                    })
+                );
+                const score = (
+                    reportishCount(anchors) * 5 +
+                    Math.min(anchors.length, 20) * 2 +
+                    Math.min(Math.round((element.scrollHeight - element.clientHeight) / 300), 8) +
+                    (virtualizedSignal ? 8 : 0) +
+                    (/(report|reports|research|resource|library|insight|publication|whitepaper|ebook)/i.test(descriptor) ? 8 : 0)
+                );
+                return {
+                    element,
+                    index,
+                    label: describe(element, index),
+                    anchorCountBefore: anchors.length,
+                    fingerprintBefore: fingerprint(anchors),
+                    maxScrollTop: Math.max(0, element.scrollHeight - element.clientHeight),
+                    maxScrollLeft: Math.max(0, element.scrollWidth - element.clientWidth),
+                    score,
+                    virtualizedSignal,
+                };
+            })
+            .filter((entry) => entry.maxScrollTop > 0 || entry.maxScrollLeft > 0)
+            .sort((left, right) => right.score - left.score)
+            .slice(0, 6);
+        const surfaces = [];
+        let consumedSurfaceCount = 0;
+        let bestSurfaceLabel = 'document';
+        let virtualizedListDetected = false;
+        for (const entry of candidates) {
+            const beforeTop = Number(entry.element.scrollTop || 0);
+            const beforeLeft = Number(entry.element.scrollLeft || 0);
+            const targetTop = entry.maxScrollTop > 0 ? Math.round(entry.maxScrollTop * 0.88) : beforeTop;
+            const targetLeft = entry.maxScrollLeft > 0 ? Math.round(entry.maxScrollLeft * 0.88) : beforeLeft;
+            entry.element.scrollTop = targetTop;
+            entry.element.scrollLeft = targetLeft;
+            entry.element.dispatchEvent(new Event('scroll', { bubbles: true }));
+            const afterTop = Number(entry.element.scrollTop || 0);
+            const afterLeft = Number(entry.element.scrollLeft || 0);
+            const scrollDelta = Math.abs(afterTop - beforeTop) + Math.abs(afterLeft - beforeLeft);
+            const anchorsAfter = visibleAnchors(entry.element);
+            const changed = fingerprint(anchorsAfter) !== entry.fingerprintBefore;
+            if (scrollDelta > 0) {
+                consumedSurfaceCount += 1;
+                if (bestSurfaceLabel === 'document') bestSurfaceLabel = entry.label;
+            }
+            if (entry.virtualizedSignal) virtualizedListDetected = true;
+            surfaces.push({
+                label: entry.label,
+                scrollDelta,
+                anchorCountBefore: entry.anchorCountBefore,
+                anchorCountAfter: anchorsAfter.length,
+                candidateChanged: changed || anchorsAfter.length > entry.anchorCountBefore,
+                virtualizedSignal: entry.virtualizedSignal,
+            });
+        }
+        const documentAnchorsAfter = visibleAnchors(document);
+        return JSON.stringify({
+            pageUrl: window.location.href || '',
+            scrollSurface: consumedSurfaceCount > 0 ? (virtualizedListDetected ? 'virtualized_list' : 'nested_container') : 'document',
+            bestSurfaceLabel,
+            probedSurfaceCount: candidates.length,
+            consumedSurfaceCount,
+            virtualizedListDetected,
+            anchorCountBefore: documentAnchorsBefore.length,
+            anchorCountAfter: documentAnchorsAfter.length,
+            candidateGrowth: documentAnchorsAfter.length > documentAnchorsBefore.length || fingerprint(documentAnchorsAfter) !== fingerprint(documentAnchorsBefore) || surfaces.some((surface) => surface.candidateChanged),
+            surfaces: surfaces.slice(0, 4),
+        });
+    }"""
+    return script.replace("__HELPER_BUNDLE__", helper_bundle)
+
+
 def _browser_inventory_growth_probe_script() -> str:
     return """() => JSON.stringify({
         pageUrl: window.location.href || '',

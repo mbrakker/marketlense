@@ -291,6 +291,152 @@ def test_discover_publisher_inventory_browser_scrolls_to_hydrate_load_more(
     assert "Expanded load-more pagination 1 time(s)." in response.route_summary
 
 
+def test_discover_publisher_inventory_browser_probes_nested_scroll_archive(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://publisher.example/research",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://publisher.example/research",
+                "page_title": "Research Library",
+                "anchors": [
+                    {
+                        "href": "https://publisher.example/about",
+                        "text": "About",
+                        "rel": "",
+                    }
+                ],
+            },
+            "nested_scroll_next_state": "nested_scrolled",
+        },
+        "nested_scrolled": {
+            "payload": {
+                "page_url": "https://publisher.example/research",
+                "page_title": "Research Library",
+                "anchors": [
+                    {
+                        "href": "https://publisher.example/research/market-report-2026",
+                        "text": "Market Report 2026",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://publisher.example/research/benchmark-study-2026",
+                        "text": "Benchmark Study 2026",
+                        "rel": "",
+                    },
+                ],
+            }
+        },
+    }
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://publisher.example/research",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert response.route_trace is not None
+    assert response.route_trace.scroll_surface == "nested_container"
+    assert response.route_trace.scroll_surface_candidate_growth is True
+    assert any(
+        candidate.url == "https://publisher.example/research/market-report-2026"
+        for candidate in response.candidates
+    )
+    assert "Probed nested container scroll surfaces" in response.route_summary
+    scroll_events = [
+        event
+        for event in _events(caplog)
+        if event.get("event") == "publisher_inventory_browser_scroll_probe"
+    ]
+    assert scroll_events
+    assert scroll_events[0]["fields"]["candidate_growth"] is True
+    assert_logs_have_required_fields(_events(caplog))
+
+
+def test_discover_publisher_inventory_browser_stops_virtualized_scroll_without_growth(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://publisher.example/resources",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://publisher.example/resources",
+                "page_title": "Resources",
+                "anchors": [
+                    {
+                        "href": "https://publisher.example/resources/annual-report-2026",
+                        "text": "Annual Report 2026",
+                        "rel": "",
+                    }
+                ],
+            },
+            "nested_scroll_probe_payload": {
+                "scrollSurface": "virtualized_list",
+                "bestSurfaceLabel": "div.virtual-list:nth-scroll(0)",
+                "probedSurfaceCount": 1,
+                "consumedSurfaceCount": 1,
+                "virtualizedListDetected": True,
+                "anchorCountBefore": 1,
+                "anchorCountAfter": 1,
+                "candidateGrowth": False,
+            },
+        }
+    }
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://publisher.example/resources",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 1
+    assert len(response.candidates) == 1
+    assert response.route_trace is not None
+    assert response.route_trace.scroll_surface == "virtualized_list"
+    assert response.route_trace.scroll_surface_candidate_growth is False
+    assert response.route_trace.virtualized_list_detected is True
+
+
 def test_discover_publisher_inventory_browser_stops_before_recording_inert_duplicate_load_more_states(
     tmp_path: Path,
     run_context,

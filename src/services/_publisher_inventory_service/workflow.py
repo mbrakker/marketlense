@@ -68,13 +68,16 @@ from src.services._publisher_inventory_service.browser_scripts import (
     _browser_inventory_settle_probe_script,
     _browser_inventory_state_script,
     _browser_named_control_selector,
+    _browser_nested_scroll_probe_script,
     _browser_rendered_html_script,
     _browser_scroll_to_ratio_script,
 )
 from src.services._publisher_inventory_service.browser_traversal_state import (
+    _BrowserScrollProbeResult,
     _BrowserTraversalMetrics,
     _RenderedInventoryState,
     _build_browser_route_trace,
+    _browser_scroll_probe_result_from_payload,
     _increment_browser_traversal_metrics,
     _new_browser_traversal_metrics,
     _rendered_inventory_state_from_payload,
@@ -761,7 +764,11 @@ async def _run_browser_traversal(
             archive_surface=_is_archive_surface(settled_state),
             provenance="browser_dom",
         )
-        await _prime_browser_inventory_surface(page)
+        metrics = _new_browser_traversal_metrics()
+        scroll_probe = await _prime_browser_inventory_surface(
+            page, ctx=ctx, normalized_url=normalized_url
+        )
+        metrics = _record_browser_scroll_probe_metrics(metrics, scroll_probe)
         pre_cookie_state = await _extract_rendered_inventory_state(page)
         pre_cookie_candidates = _extract_candidates_from_html(
             anchors=pre_cookie_state.anchors,
@@ -774,7 +781,6 @@ async def _run_browser_traversal(
             archive_surface=_is_archive_surface(pre_cookie_state),
             provenance="browser_dom",
         )
-        metrics = _new_browser_traversal_metrics()
         dismissed = await _dismiss_cookie_banner(page)
         if dismissed:
             metrics = _increment_browser_traversal_metrics(
@@ -788,7 +794,10 @@ async def _run_browser_traversal(
                 ctx=ctx,
                 reason="cookie_banner",
             )
-        await _prime_browser_inventory_surface(page)
+        scroll_probe = await _prime_browser_inventory_surface(
+            page, ctx=ctx, normalized_url=normalized_url
+        )
+        metrics = _record_browser_scroll_probe_metrics(metrics, scroll_probe)
         initial_state = await _extract_rendered_inventory_state(page)
         if _should_apply_report_filter(normalized_url, initial_state):
             applied = await _apply_report_filter(page)
@@ -804,7 +813,10 @@ async def _run_browser_traversal(
                     ctx=ctx,
                     reason="report_filter",
                 )
-                await _prime_browser_inventory_surface(page)
+                scroll_probe = await _prime_browser_inventory_surface(
+                    page, ctx=ctx, normalized_url=normalized_url
+                )
+                metrics = _record_browser_scroll_probe_metrics(metrics, scroll_probe)
                 initial_state = await _extract_rendered_inventory_state(page)
         if _should_follow_report_listing(normalized_url, initial_state):
             await page.goto(initial_state.report_link_url or normalized_url)
@@ -832,7 +844,10 @@ async def _run_browser_traversal(
                     ctx=ctx,
                     reason="report_route_cookie_banner",
                 )
-            await _prime_browser_inventory_surface(page)
+            scroll_probe = await _prime_browser_inventory_surface(
+                page, ctx=ctx, normalized_url=normalized_url
+            )
+            metrics = _record_browser_scroll_probe_metrics(metrics, scroll_probe)
             initial_state = await _extract_rendered_inventory_state(page)
 
         pages: list[PublisherInventoryPage] = []
@@ -881,7 +896,10 @@ async def _run_browser_traversal(
                     ctx=ctx,
                     reason="archive_expand",
                 )
-                await _prime_browser_inventory_surface(page)
+                scroll_probe = await _prime_browser_inventory_surface(
+                    page, ctx=ctx, normalized_url=normalized_url
+                )
+                metrics = _record_browser_scroll_probe_metrics(metrics, scroll_probe)
                 initial_state = await _extract_rendered_inventory_state(page)
                 seeded_pages = []
                 seeded_candidates = []
@@ -1280,7 +1298,10 @@ async def _collect_browser_inventory_pages(
             ctx=ctx,
             reason="collect_loop",
         )
-        await _prime_browser_inventory_surface(page)
+        scroll_probe = await _prime_browser_inventory_surface(
+            page, ctx=ctx, normalized_url=normalized_url
+        )
+        metrics = _record_browser_scroll_probe_metrics(metrics, scroll_probe)
         state = await _extract_rendered_inventory_state(page)
         if (
             state.empty_results_visible
@@ -1353,7 +1374,10 @@ async def _collect_browser_inventory_pages(
             await _browser_wait_for_settle(
                 page=page, delay_seconds=1.0, timeout_seconds=10.0
             )
-            await _prime_browser_inventory_surface(page)
+            scroll_probe = await _prime_browser_inventory_surface(
+                page, ctx=ctx, normalized_url=normalized_url
+            )
+            metrics = _record_browser_scroll_probe_metrics(metrics, scroll_probe)
             state = await _extract_rendered_inventory_state(page)
             next_page_url = _resolve_next_page_url(
                 current_page_url=state.page_url,
@@ -1896,10 +1920,89 @@ async def _wait_for_inventory_transition(
     )
 
 
-async def _prime_browser_inventory_surface(page: Any) -> None:
+async def _prime_browser_inventory_surface(
+    page: Any,
+    *,
+    ctx: RunContext | None = None,
+    normalized_url: str = "",
+) -> _BrowserScrollProbeResult:
     for ratio in (0.0, 0.35, 0.7, 0.95):
         await page.evaluate(_browser_scroll_to_ratio_script(), ratio)
         await _browser_wait_for_settle(page=page, delay_seconds=0.35)
+    try:
+        payload = json.loads(await page.evaluate(_browser_nested_scroll_probe_script()))
+    except Exception as exc:
+        if ctx is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_scroll_probe_failed",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "error": str(exc),
+                    },
+                )
+            )
+        return _BrowserScrollProbeResult(
+            schema_version="1.0",
+            scroll_surface="document",
+            best_surface_label="document",
+            probed_surface_count=0,
+            consumed_surface_count=0,
+            candidate_growth=False,
+            virtualized_list_detected=False,
+            anchor_count_before=0,
+            anchor_count_after=0,
+        )
+    result = _browser_scroll_probe_result_from_payload(payload)
+    if result.consumed_surface_count > 0:
+        await _browser_wait_for_settle(page=page, delay_seconds=0.35)
+    if ctx is not None and (
+        result.probed_surface_count > 0
+        or result.consumed_surface_count > 0
+        or result.virtualized_list_detected
+    ):
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_browser_scroll_probe",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "scroll_surface": result.scroll_surface,
+                    "best_surface_label": result.best_surface_label,
+                    "probed_surface_count": result.probed_surface_count,
+                    "consumed_surface_count": result.consumed_surface_count,
+                    "candidate_growth": result.candidate_growth,
+                    "virtualized_list_detected": result.virtualized_list_detected,
+                    "anchor_count_before": result.anchor_count_before,
+                    "anchor_count_after": result.anchor_count_after,
+                },
+            )
+        )
+    return result
+
+
+def _record_browser_scroll_probe_metrics(
+    metrics: _BrowserTraversalMetrics,
+    result: _BrowserScrollProbeResult,
+) -> _BrowserTraversalMetrics:
+    if (
+        result.scroll_surface == "document"
+        and not result.candidate_growth
+        and not result.virtualized_list_detected
+    ):
+        return metrics
+    return _increment_browser_traversal_metrics(
+        metrics,
+        nested_scroll_probes=1 if result.consumed_surface_count > 0 else 0,
+        nested_scroll_candidate_growth=1 if result.candidate_growth else 0,
+        virtualized_list_detected=1 if result.virtualized_list_detected else 0,
+        scroll_surface=result.scroll_surface,
+    )
 
 
 async def _browser_wait_for_settle(

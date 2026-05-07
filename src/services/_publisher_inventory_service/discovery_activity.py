@@ -678,9 +678,17 @@ def _build_browser_route_summary(
         steps.append(
             f"Visited {metrics.next_page_visits} additional pagination URL(s)."
         )
+    if getattr(metrics, "nested_scroll_probes", 0):
+        surface = str(getattr(metrics, "scroll_surface", "nested_container")).strip()
+        probe_count = int(getattr(metrics, "nested_scroll_probes", 0))
+        steps.append(
+            f"Probed {surface.replace('_', ' ')} scroll surfaces "
+            f"{probe_count} time(s)."
+        )
     if bounded_by_pagination_limit:
         steps.append(
-            "Stopped at the configured pagination limit after collecting a bounded candidate set."
+            "Stopped at the configured pagination limit after collecting a bounded "
+            "candidate set."
         )
     return " ".join(steps)
 

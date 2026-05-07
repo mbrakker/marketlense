@@ -2343,6 +2343,9 @@ class TestReportStoreService(unittest.TestCase):
                         preferred_control_labels=["load more"],
                         candidate_surface_guard="report_filter",
                         surface_class="archive_feed",
+                        scroll_surface="virtualized_list",
+                        scroll_surface_candidate_growth=True,
+                        virtualized_list_detected=True,
                     ),
                     scenario_summary=PublisherInventoryScenarioSummary(
                         schema_version="1.0",
@@ -2379,6 +2382,13 @@ class TestReportStoreService(unittest.TestCase):
             self.assertEqual("browser_render", state.inventory_route_kind)
             assert state.inventory_route_trace is not None
             self.assertEqual("load_more", state.inventory_route_trace.pagination_mode)
+            self.assertEqual(
+                "virtualized_list", state.inventory_route_trace.scroll_surface
+            )
+            self.assertTrue(
+                state.inventory_route_trace.scroll_surface_candidate_growth
+            )
+            self.assertTrue(state.inventory_route_trace.virtualized_list_detected)
             assert state.inventory_scenario_summary is not None
             self.assertEqual(
                 "filtered_archive", state.inventory_scenario_summary.scenario_class

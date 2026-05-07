@@ -243,6 +243,24 @@ class PublisherInventoryRouteTrace:
             "doc": "Deterministic traversal surface class aligned with scenario/source-surface taxonomy."
         },
     )
+    scroll_surface: str = field(
+        default="document",
+        metadata={
+            "doc": "Primary browser scroll surface used during archive traversal: document, nested_container, or virtualized_list."
+        },
+    )
+    scroll_surface_candidate_growth: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether bounded scroll-surface probing exposed additional or changed candidate anchors."
+        },
+    )
+    virtualized_list_detected: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether traversal detected virtualized-list signals on the scroll surface."
+        },
+    )
 
 
 @dataclass(frozen=True)

@@ -43,6 +43,7 @@ def test_browser_scripts_coerce_non_string_dom_values_before_normalizing() -> No
         service._browser_click_pagination_next_script(),
         service._browser_click_tab_script(),
         service._browser_apply_report_filter_script(),
+        service._browser_nested_scroll_probe_script(),
     ]
     for script in scripts:
         assert "String(value ?? '')" in script
@@ -133,12 +134,17 @@ def test_browser_named_control_selector_covers_anchor_button_controls() -> None:
 def test_browser_inventory_probe_scripts_emit_expected_runtime_keys() -> None:
     growth_probe_script = service._browser_inventory_growth_probe_script()
     settle_probe_script = service._browser_inventory_settle_probe_script()
+    nested_scroll_script = service._browser_nested_scroll_probe_script()
 
     assert "pageUrl" in growth_probe_script
     assert "anchorCount" in growth_probe_script
     assert "readyState" in settle_probe_script
     assert "title" in settle_probe_script
     assert "anchorCount" in settle_probe_script
+    assert "scrollSurface" in nested_scroll_script
+    assert "virtualizedListDetected" in nested_scroll_script
+    assert "consumedSurfaceCount" in nested_scroll_script
+    assert "candidateGrowth" in nested_scroll_script
 
 
 def test_rendered_inventory_state_from_payload_normalizes_payload() -> None:

@@ -78,6 +78,37 @@ class _FakeBrowserPage:
 
     async def evaluate(self, script: str, *args):
         script_name = str(self._states[self._state_id].get("script_name", ""))
+        if script == service._browser_nested_scroll_probe_script():
+            state = self._states[self._state_id]
+            configured_payload = state.get("nested_scroll_probe_payload")
+            next_state = state.get("nested_scroll_next_state")
+            before_payload = self._payload()
+            before_anchors = list(before_payload.get("anchors", []))
+            if next_state:
+                self._state_id = str(next_state)
+            after_payload = self._payload()
+            after_anchors = list(after_payload.get("anchors", []))
+            if isinstance(configured_payload, dict):
+                payload = dict(configured_payload)
+            else:
+                payload = {
+                    "scrollSurface": (
+                        "nested_container" if next_state else "document"
+                    ),
+                    "bestSurfaceLabel": (
+                        "section.report-list:nth-scroll(1)"
+                        if next_state
+                        else "document"
+                    ),
+                    "probedSurfaceCount": 1 if next_state else 0,
+                    "consumedSurfaceCount": 1 if next_state else 0,
+                    "virtualizedListDetected": False,
+                    "anchorCountBefore": len(before_anchors),
+                    "anchorCountAfter": len(after_anchors),
+                    "candidateGrowth": after_anchors != before_anchors,
+                }
+            payload.setdefault("pageUrl", str(after_payload.get("page_url") or ""))
+            return json.dumps(payload)
         if "readyState" in script and "anchorCount" in script:
             payload = self._payload()
             return json.dumps(

@@ -49,6 +49,23 @@ class _BrowserTraversalMetrics:
     next_page_visits: int
     archive_expansion_clicks: int = 0
     button_pagination_clicks: int = 0
+    nested_scroll_probes: int = 0
+    nested_scroll_candidate_growth: int = 0
+    virtualized_list_detected: int = 0
+    scroll_surface: str = "document"
+
+
+@dataclass(frozen=True)
+class _BrowserScrollProbeResult:
+    schema_version: str
+    scroll_surface: str
+    best_surface_label: str
+    probed_surface_count: int
+    consumed_surface_count: int
+    candidate_growth: bool
+    virtualized_list_detected: bool
+    anchor_count_before: int
+    anchor_count_after: int
 
 
 def _new_browser_traversal_metrics() -> _BrowserTraversalMetrics:
@@ -61,6 +78,10 @@ def _new_browser_traversal_metrics() -> _BrowserTraversalMetrics:
         next_page_visits=0,
         archive_expansion_clicks=0,
         button_pagination_clicks=0,
+        nested_scroll_probes=0,
+        nested_scroll_candidate_growth=0,
+        virtualized_list_detected=0,
+        scroll_surface="document",
     )
 
 
@@ -75,7 +96,18 @@ def _increment_browser_traversal_metrics(
     next_page_visits: int = 0,
     archive_expansion_clicks: int = 0,
     button_pagination_clicks: int = 0,
+    nested_scroll_probes: int = 0,
+    nested_scroll_candidate_growth: int = 0,
+    virtualized_list_detected: int = 0,
+    scroll_surface: str | None = None,
 ) -> _BrowserTraversalMetrics:
+    normalized_surface = _normalize_text(scroll_surface or metrics.scroll_surface)
+    if normalized_surface not in {"document", "nested_container", "virtualized_list"}:
+        normalized_surface = metrics.scroll_surface
+    if metrics.scroll_surface in {"nested_container", "virtualized_list"} and normalized_surface == "document":
+        normalized_surface = metrics.scroll_surface
+    if metrics.scroll_surface == "virtualized_list":
+        normalized_surface = "virtualized_list"
     return replace(
         metrics,
         cookies_dismissed=metrics.cookies_dismissed + int(cookies_dismissed),
@@ -89,6 +121,13 @@ def _increment_browser_traversal_metrics(
         + int(archive_expansion_clicks),
         button_pagination_clicks=metrics.button_pagination_clicks
         + int(button_pagination_clicks),
+        nested_scroll_probes=metrics.nested_scroll_probes
+        + int(nested_scroll_probes),
+        nested_scroll_candidate_growth=metrics.nested_scroll_candidate_growth
+        + int(nested_scroll_candidate_growth),
+        virtualized_list_detected=metrics.virtualized_list_detected
+        + int(virtualized_list_detected),
+        scroll_surface=normalized_surface,
     )
 
 
@@ -181,4 +220,29 @@ def _build_browser_route_trace(
             else ("tab_guard" if selected_tab_labels else "candidate_density")
         ),
         surface_class=surface_class,
+        scroll_surface=metrics.scroll_surface,
+        scroll_surface_candidate_growth=metrics.nested_scroll_candidate_growth > 0,
+        virtualized_list_detected=metrics.virtualized_list_detected > 0,
+    )
+
+
+def _browser_scroll_probe_result_from_payload(
+    payload: Mapping[str, Any],
+) -> _BrowserScrollProbeResult:
+    surface = _normalize_text(str(payload.get("scrollSurface") or "document"))
+    if surface not in {"document", "nested_container", "virtualized_list"}:
+        surface = "document"
+    return _BrowserScrollProbeResult(
+        schema_version="1.0",
+        scroll_surface=surface,
+        best_surface_label=_normalize_text(
+            str(payload.get("bestSurfaceLabel") or surface)
+        )
+        or surface,
+        probed_surface_count=int(payload.get("probedSurfaceCount") or 0),
+        consumed_surface_count=int(payload.get("consumedSurfaceCount") or 0),
+        candidate_growth=bool(payload.get("candidateGrowth")),
+        virtualized_list_detected=bool(payload.get("virtualizedListDetected")),
+        anchor_count_before=int(payload.get("anchorCountBefore") or 0),
+        anchor_count_after=int(payload.get("anchorCountAfter") or 0),
     )

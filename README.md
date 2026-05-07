@@ -1270,6 +1270,8 @@ Supported keys:
 
 Any omitted browser settings fall back to the existing `browser_download` section so the discovery flow can share the same OpenRouter/browser defaults without duplicating mandatory configuration.
 
+Browser-render inventory traversal now adapts the browser-harness nested-scroll practice inside the existing publisher inventory browser scripts: each extraction pass still begins with the document hydration scroll, then probes bounded nested and virtualized scroll containers, records the consumed scroll surface in `PublisherInventoryRouteTrace.scroll_surface`, records whether candidate anchors changed, and stops on stable DOM/candidate fingerprints instead of looping through inert virtualized feeds.
+
 Publisher inventory state now persists both the legacy free-text route summary and two typed memory payloads on the `publishers` row:
 
 - `inventory_route_trace_json`
