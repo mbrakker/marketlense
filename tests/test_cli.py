@@ -12,6 +12,8 @@ from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
+    BrowserDeveloperDiagnosticCheck,
+    BrowserDeveloperDiagnosticsResult,
     BrowserDownloadRouteStep,
     BrowserDownloadSettings,
     DownloadTerminalEvidence,
@@ -319,6 +321,60 @@ class TestCli(unittest.TestCase):
         self.assertEqual("./state/index.sqlite", request.state_db)
         self.assertEqual("./state/reports.sqlite", request.reports_db)
         self.assertEqual("openai/gpt-5-mini", request.settings.model)
+
+    def test_browser_doctor_wires_developer_diagnostic_service(self) -> None:
+        import src.cli as cli
+
+        result = BrowserDeveloperDiagnosticsResult(
+            schema_version="1.0",
+            status="ok",
+            profile_path="out/browser_doctor/profile",
+            downloads_path="out/browser_doctor/downloads",
+            cdp_url="http://127.0.0.1:9222",
+            active_tab_url="https://example.com/browser-doctor",
+            active_tab_title="Browser Doctor",
+            browser_use_connected=True,
+            cdp_available=True,
+            real_tab_available=True,
+            cleanup_attempted=True,
+            cleanup_status="ok",
+            verification_tab_activated=True,
+            keep_browser_open=False,
+            checks=(
+                BrowserDeveloperDiagnosticCheck(
+                    schema_version="1.0",
+                    name="browser_use_connectivity",
+                    status="ok",
+                    message="connected",
+                ),
+            ),
+        )
+
+        with patch.object(
+            cli,
+            "run_browser_developer_diagnostics",
+            return_value=result,
+        ) as diagnostics_mock:
+            with patch.object(cli.console, "print"):
+                cli.browser_doctor(
+                    profile_dir="out/browser_doctor/profile",
+                    downloads_dir="out/browser_doctor/downloads",
+                    verification_url="https://example.com/browser-doctor",
+                    cdp_url="",
+                    headed=False,
+                    keep_browser_open=False,
+                    json_output=True,
+                    timeout_seconds=5.0,
+                )
+
+        diagnostics_mock.assert_called_once()
+        request = diagnostics_mock.call_args.args[0]
+        self.assertEqual("out/browser_doctor/profile", request.profile_path)
+        self.assertEqual("out/browser_doctor/downloads", request.downloads_path)
+        self.assertEqual("https://example.com/browser-doctor", request.verification_url)
+        self.assertTrue(request.cleanup_stale_once)
+        self.assertTrue(request.activate_verification_tab)
+        self.assertEqual(5.0, request.timeout_seconds)
 
     def test_sync_publishers_wires_settings_and_orchestrator(self) -> None:
         import src.cli as cli

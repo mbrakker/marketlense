@@ -147,6 +147,20 @@ def get_browser_download_cdp_allowlist() -> dict[str, str]:
     return dict(_CDP_ALLOWLIST)
 
 
+def select_browser_download_real_page_target_info(
+    targets_result: dict[str, Any],
+    *,
+    target_url: str = "",
+    require_url_match: bool = False,
+) -> dict[str, Any]:
+    target = _select_real_page_target_info(
+        targets_result,
+        target_url=target_url,
+        require_url_match=require_url_match,
+    )
+    return dict(target) if target is not None else {}
+
+
 def call_browser_download_cdp(
     *,
     browser: Any,

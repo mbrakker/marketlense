@@ -15,6 +15,7 @@ from src.utils.errors import AppError
 from src.contracts.acquisition_audit import AcquisitionAuditBatchRequest
 from src.contracts.costs import CostReportRequest, CostReportingRequest
 from src.contracts.browser_download import ReportDownloadOrchestratorRequest
+from src.contracts.browser_download import BrowserDeveloperDiagnosticsRequest
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
@@ -61,6 +62,10 @@ from src.services.config_service import (
     load_publisher_inventory_settings,
     load_settings,
     load_publish_settings,
+)
+from src.services.browser_report_download_service import (
+    default_browser_doctor_verification_url,
+    run_browser_developer_diagnostics,
 )
 from src.services.drive_service import authorize_oauth_user
 from src.services.file_service import read_text
@@ -788,6 +793,118 @@ def download_report(
     )
     table.add_row("Summary", result.route_summary)
     console.print(table)
+
+
+@cli_app.command("browser-doctor")
+def browser_doctor(
+    profile_dir: str = typer.Option(
+        "out/browser_doctor/profile",
+        help="Browser-use profile directory for the diagnostic run.",
+    ),
+    downloads_dir: str = typer.Option(
+        "out/browser_doctor/downloads",
+        help="Browser-use downloads directory for the diagnostic run.",
+    ),
+    verification_url: str = typer.Option(
+        "",
+        help="URL opened to verify browser-use tab/CDP state.",
+    ),
+    cdp_url: str = typer.Option(
+        "",
+        help="Optional existing Chrome remote-debugging URL to connect to.",
+    ),
+    headed: bool = typer.Option(
+        False,
+        "--headed",
+        help="Run the diagnostic browser headed for manual inspection.",
+    ),
+    keep_browser_open: bool = typer.Option(
+        False,
+        "--keep-browser-open",
+        help="Leave the diagnostic browser open after checks complete.",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Print the diagnostic result as JSON.",
+    ),
+    timeout_seconds: float = typer.Option(
+        20.0,
+        "--timeout-seconds",
+        help="Per-operation browser diagnostic timeout.",
+    ),
+):
+    ctx = new_run_context(task_id="cli_browser_doctor")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    selected_verification_url = (
+        str(verification_url or "").strip() or default_browser_doctor_verification_url()
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_browser_doctor_start",
+            module=logger.name,
+            fields={
+                "profile_dir": profile_dir,
+                "downloads_dir": downloads_dir,
+                "verification_url": selected_verification_url,
+                "has_cdp_url": bool(str(cdp_url or "").strip()),
+                "headed": headed,
+                "keep_browser_open": keep_browser_open,
+            },
+        )
+    )
+    result = run_browser_developer_diagnostics(
+        BrowserDeveloperDiagnosticsRequest(
+            schema_version="1.0",
+            profile_path=profile_dir,
+            downloads_path=downloads_dir,
+            headed=bool(headed),
+            verification_url=selected_verification_url,
+            cdp_url=str(cdp_url or "").strip(),
+            activate_verification_tab=True,
+            cleanup_stale_once=True,
+            keep_browser_open=bool(keep_browser_open),
+            timeout_seconds=float(timeout_seconds),
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_browser_doctor_complete",
+            module=logger.name,
+            fields={
+                "status": result.status,
+                "browser_use_connected": result.browser_use_connected,
+                "cdp_available": result.cdp_available,
+                "real_tab_available": result.real_tab_available,
+                "cleanup_attempted": result.cleanup_attempted,
+                "cleanup_status": result.cleanup_status,
+                "verification_tab_activated": result.verification_tab_activated,
+            },
+        )
+    )
+    if json_output:
+        console.print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
+    else:
+        table = Table(title="Browser Doctor", box=box.SIMPLE_HEAVY)
+        table.add_column("Check")
+        table.add_column("Status")
+        table.add_column("Message")
+        table.add_column("Detail")
+        for check in result.checks:
+            table.add_row(check.name, check.status, check.message, check.detail)
+        console.print(table)
+        console.print(f"[cyan]Profile:[/cyan] {result.profile_path}")
+        console.print(f"[cyan]Downloads:[/cyan] {result.downloads_path}")
+        console.print(f"[cyan]Active tab:[/cyan] {result.active_tab_url}")
+        console.print(f"[cyan]CDP URL:[/cyan] {result.cdp_url or '(not exposed)'}")
+    if result.status == "failed":
+        raise typer.Exit(code=1)
+    console.print(f"[green]Done: browser doctor {result.status}.[/green]")
 
 
 @cli_app.command("discover-publisher-inventory")

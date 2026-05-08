@@ -5,6 +5,8 @@ from dataclasses import asdict, replace
 from datetime import datetime, timezone
 
 from src.contracts.browser_download import (
+    BrowserDeveloperDiagnosticsRequest,
+    BrowserDeveloperDiagnosticsResult,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
 )
@@ -14,6 +16,10 @@ from src.services._browser_report_download.artifact import (
 )
 from src.services._browser_report_download.browser import (
     run_browser_report_download_agent,
+)
+from src.services._browser_report_download.dev_diagnostics import (
+    default_browser_doctor_verification_url as _default_browser_doctor_verification_url,
+    run_browser_developer_diagnostics as _run_browser_developer_diagnostics,
 )
 from src.services._browser_report_download.http import try_direct_pdf_download
 from src.services._browser_report_download.http import try_direct_onsite_capture
@@ -52,6 +58,23 @@ from src.utils.browser_route_playbooks import (
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
+
+
+def default_browser_doctor_verification_url() -> str:
+    return _default_browser_doctor_verification_url()
+
+
+def run_browser_developer_diagnostics(
+    request: BrowserDeveloperDiagnosticsRequest,
+    ctx: RunContext,
+    *,
+    browser_session_class=None,
+) -> BrowserDeveloperDiagnosticsResult:
+    return _run_browser_developer_diagnostics(
+        request,
+        ctx,
+        browser_session_class=browser_session_class,
+    )
 
 
 def _with_augmented_error_context(

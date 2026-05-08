@@ -940,6 +940,8 @@ After installation, the CLI is available from the project virtualenv as:
 
 The repo-level report download automation uses that same local runtime through `src/services/browser_report_download_service.py`. It now plans each attempt from remembered route memory plus discovery/diff evidence, probes candidate PDFs before browser-use when discovery already exposed them, tailors browser-use prompts per route family, captures structured route steps plus blocker/terminal/on-site evidence, and stores both the best legacy projection and the richer per-attempt route history for later reuse.
 
+Developer browser diagnostics are available through `python -m src.cli browser-doctor`. The command is self-contained in Marketlense tooling, adapts the browser-harness setup/doctor pattern for browser-use, checks profile/download writability, starts browser-use, verifies CDP and a real page target, activates the verification tab, attempts one bounded stale-connection cleanup, and logs each check without adding self-healing to production browser-download paths.
+
 For OpenRouter-backed usage, see `tools/browser-use/examples/models/openrouter.py`, which is configured to use `stepfun/step-3.5-flash:free` through `OPENROUTER_API_KEY`.
 
 Run tests locally:

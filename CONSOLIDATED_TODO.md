@@ -161,20 +161,6 @@ Suggested priority order:
     - Canary metrics compare browser startup time, agent calls, and verified PDF yield against isolated-profile baseline.
     - Tests assert cross-publisher session reuse is rejected unless explicitly allowed by configuration.
 
-- **Title:** Copy browser-harness developer-mode self-healing diagnostics into repo tooling [Impact: 3/5, Effort: 2/5]
-  - Explanation: Confirmed useful for local Marketlense development. `browser-harness` setup and doctor flows detect Chrome remote-debugging state, stale daemon sessions, missing real tabs, and CDP attach failures. Copy/adapt that existing diagnostic process pattern into Marketlense-owned developer tooling around browser-use instead of embedding recovery loops in production generators or designing new diagnostics from scratch.
-  - Pros: Faster local setup, fewer manual browser debugging steps, clearer failure messages for agent operators.
-  - Cons: Self-healing can mask environment issues if enabled in production paths.
-  - Acceptance Criteria:
-    - A developer-only diagnostic command or documented workflow checks CDP availability, active tab, profile path, downloads path, and browser-use connectivity.
-    - Diagnostic checks are copied/adapted from `browser-harness` setup/doctor behavior where applicable.
-    - Diagnostic tooling is fully self-contained in the Marketlense repo and does not require `browser-harness` to be installed.
-    - Stale browser connection cleanup is attempted once and logged.
-    - Setup or verification tabs are activated when opened during manual developer workflows.
-    - Production browser workflows do not depend on developer-mode self-healing.
-
----
-
 ## 5. Idempotency, Checkpoints & Publish Durability
 
 - **Title:** Introduce durable, checkpointed pipeline stages with semantic restart [Impact: 5/5, Effort: 5/5]
