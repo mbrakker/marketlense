@@ -149,18 +149,6 @@ Suggested priority order:
     - Default-on criteria are defined and tested against representative publishers.
     - README and the discovery playbook are updated when rollout state changes.
 
-- **Title:** Add bounded persistent browser-session reuse for developer canaries and same-publisher batches [Impact: 4/5, Effort: 3/5]
-  - Explanation: Confirmed useful but must be bounded. `browser-harness` relies on persistent real-browser sessions for speed and continuity, while Marketlense production currently favors isolated managed profiles. Copy/adapt the existing `browser-harness` session-reuse discipline into Marketlense's browser-use integration only for developer mode, canary runs, or same-publisher batches with explicit session keys, TTLs, and cleanup. Do not create a separate session manager from scratch.
-  - Pros: Reduces startup overhead, avoids repeated consent or navigation setup, speeds iterative publisher route debugging.
-  - Cons: Profile reuse can leak state across publishers or hide first-run failures if used too broadly.
-  - Acceptance Criteria:
-    - Persistent sessions are disabled by default for production acquisition.
-    - Session behavior follows copied/adapted `browser-harness` lifecycle practices where compatible with browser-use.
-    - Session reuse is implemented with Marketlense-owned configuration and lifecycle code, with no `browser-harness` dependency.
-    - Allowed reuse modes require explicit session key, publisher scope, TTL, and cleanup event logs.
-    - Canary metrics compare browser startup time, agent calls, and verified PDF yield against isolated-profile baseline.
-    - Tests assert cross-publisher session reuse is rejected unless explicitly allowed by configuration.
-
 ## 5. Idempotency, Checkpoints & Publish Durability
 
 - **Title:** Introduce durable, checkpointed pipeline stages with semantic restart [Impact: 5/5, Effort: 5/5]

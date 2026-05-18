@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from .session_reuse import BrowserDownloadSessionReusePolicy
+
 
 @dataclass(frozen=True)
 class BrowserDownloadIdentityField:
@@ -251,5 +253,13 @@ class BrowserDownloadSettings:
         default="fallback",
         metadata={
             "doc": "Behavior for matching stale route playbooks: `fallback` logs and uses normal discovery, `fail` raises a typed AppError."
+        },
+    )
+    session_reuse_policy: BrowserDownloadSessionReusePolicy = field(
+        default_factory=lambda: BrowserDownloadSessionReusePolicy(
+            schema_version="1.0"
+        ),
+        metadata={
+            "doc": "Opt-in bounded browser profile reuse policy for developer canaries or same-publisher batches."
         },
     )

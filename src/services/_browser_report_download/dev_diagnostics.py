@@ -26,6 +26,10 @@ from src.contracts.run_context import RunContext
 from src.services._browser_report_download.cdp import (
     select_browser_download_real_page_target_info,
 )
+from src.services._browser_report_download.session_reuse import (
+    disabled_browser_session_reuse_decision,
+    resolve_browser_session_reuse,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -58,16 +62,43 @@ def run_browser_developer_diagnostics(
         )
     )
     checks: list[BrowserDeveloperDiagnosticCheck] = []
-    profile_path = _resolve_directory(
-        raw_path=request.profile_path,
-        check_name="profile_path",
-        label="Profile path",
-        checks=checks,
-    )
     downloads_path = _resolve_directory(
         raw_path=request.downloads_path,
         check_name="downloads_path",
         label="Downloads path",
+        checks=checks,
+    )
+    session_reuse_decision = disabled_browser_session_reuse_decision()
+    if request.session_reuse_policy.enabled:
+        session_reuse_decision = resolve_browser_session_reuse(
+            policy=request.session_reuse_policy,
+            default_base_dir=downloads_path.parent,
+            normalized_url=_normalize_verification_url(request.verification_url),
+            ctx=ctx,
+        )
+        checks.append(
+            _check(
+                name="session_reuse",
+                status="ok" if session_reuse_decision.accepted else "failed",
+                message=(
+                    "Bounded developer browser session reuse was resolved."
+                    if session_reuse_decision.accepted
+                    else "Bounded developer browser session reuse was rejected."
+                ),
+                detail=(
+                    f"mode={session_reuse_decision.mode} scope={session_reuse_decision.publisher_scope} "
+                    f"reused={session_reuse_decision.profile_reused} reason={session_reuse_decision.rejection_reason}"
+                ),
+            )
+        )
+    profile_path = _resolve_directory(
+        raw_path=(
+            session_reuse_decision.profile_path
+            if session_reuse_decision.accepted
+            else request.profile_path
+        ),
+        check_name="profile_path",
+        label="Profile path",
         checks=checks,
     )
     cleanup_attempted = False

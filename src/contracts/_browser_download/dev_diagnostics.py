@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .session_reuse import BrowserDownloadSessionReusePolicy
+
 
 @dataclass(frozen=True)
 class BrowserDeveloperDiagnosticsRequest:
@@ -49,6 +51,14 @@ class BrowserDeveloperDiagnosticsRequest:
     timeout_seconds: float = field(
         default=20.0,
         metadata={"doc": "Bounded timeout for browser-use diagnostic operations."},
+    )
+    session_reuse_policy: BrowserDownloadSessionReusePolicy = field(
+        default_factory=lambda: BrowserDownloadSessionReusePolicy(
+            schema_version="1.0"
+        ),
+        metadata={
+            "doc": "Optional developer-canary profile reuse policy for this diagnostic run."
+        },
     )
 
 

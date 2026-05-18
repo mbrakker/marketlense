@@ -29,6 +29,7 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentityField,
     BrowserDownloadPublisherOverride,
     BrowserDownloadRouteStep,
+    BrowserDownloadSessionReusePolicy,
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
 )

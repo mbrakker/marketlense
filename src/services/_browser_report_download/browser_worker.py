@@ -12,6 +12,7 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentityField,
     BrowserDownloadPublisherOverride,
     BrowserDownloadRouteStep,
+    BrowserDownloadSessionReusePolicy,
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
     BrowserRoutePlaybookSelection,
@@ -82,6 +83,10 @@ def _build_identity(payload: dict) -> BrowserDownloadIdentity:
 
 def _build_settings(payload: dict) -> BrowserDownloadSettings:
     identity_payload = payload.get("identity_profile")
+    session_reuse_payload = payload.get("session_reuse_policy")
+    session_reuse_policy = _build_session_reuse_policy(
+        session_reuse_payload if isinstance(session_reuse_payload, dict) else {}
+    )
     return BrowserDownloadSettings(
         schema_version=str(payload.get("schema_version", "1.0")),
         openrouter_api_key=str(payload.get("openrouter_api_key") or ""),
@@ -110,6 +115,21 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         route_playbook_stale_policy=str(
             payload.get("route_playbook_stale_policy") or "fallback"
         ),
+        session_reuse_policy=session_reuse_policy,
+    )
+
+
+def _build_session_reuse_policy(payload: dict) -> BrowserDownloadSessionReusePolicy:
+    return BrowserDownloadSessionReusePolicy(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        enabled=bool(payload.get("enabled", False)),
+        mode=str(payload.get("mode") or "disabled"),
+        session_key=str(payload.get("session_key") or "").strip(),
+        publisher_scope=str(payload.get("publisher_scope") or "").strip(),
+        ttl_seconds=float(payload.get("ttl_seconds", 0.0)),
+        base_dir=str(payload.get("base_dir") or "").strip(),
+        cleanup_expired=bool(payload.get("cleanup_expired", True)),
+        allow_cross_publisher=bool(payload.get("allow_cross_publisher", False)),
     )
 
 

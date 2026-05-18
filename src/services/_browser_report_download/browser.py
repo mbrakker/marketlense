@@ -47,6 +47,10 @@ from src.services._browser_report_download.http import (
     is_pdf_file,
 )
 from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
+from src.services._browser_report_download.session_reuse import (
+    finalize_browser_session_reuse,
+    resolve_browser_session_reuse,
+)
 from src.utils.coercion import normalize_optional_bool_signal
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -320,12 +324,22 @@ def run_browser_report_download_agent(
     browser: Any | None = None
     _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
     preexisting_temp_dirs = {str(path) for path in _list_browser_use_temp_dirs()}
+    session_reuse_decision = resolve_browser_session_reuse(
+        policy=request.settings.session_reuse_policy,
+        default_base_dir=_default_session_reuse_base_dir(request, download_dir),
+        normalized_url=normalized_url,
+        ctx=ctx,
+    )
     _cleanup_managed_browser_profile_dirs(
         download_dir=download_dir,
         ctx=ctx,
         normalized_url=normalized_url,
     )
-    profile_dir = _new_managed_browser_profile_dir(download_dir)
+    profile_dir = (
+        Path(session_reuse_decision.profile_path).resolve()
+        if session_reuse_decision.accepted and session_reuse_decision.profile_path
+        else _new_managed_browser_profile_dir(download_dir)
+    )
     profile_dir.mkdir(parents=True, exist_ok=True)
     raw_model_response = ""
     final_page_url = ""
@@ -624,11 +638,19 @@ def run_browser_report_download_agent(
                 ctx=ctx,
                 normalized_url=normalized_url,
             )
-        _cleanup_browser_profile_dir(
-            profile_dir,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
+        if session_reuse_decision.accepted:
+            finalize_browser_session_reuse(
+                decision=session_reuse_decision,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                verified_artifact_count=len(downloaded_files),
+            )
+        else:
+            _cleanup_browser_profile_dir(
+                profile_dir,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
         _cleanup_new_browser_use_temp_dirs(
             ctx=ctx,
             normalized_url=normalized_url,
@@ -3623,6 +3645,16 @@ def _new_managed_browser_profile_dir(download_dir: Path) -> Path:
     return download_dir / (
         f"{_BROWSER_PROFILE_DIR_PREFIX}-{os.getpid()}-{int(time.time() * 1000)}"
     )
+
+
+def _default_session_reuse_base_dir(
+    request: BrowserReportDownloadRequest,
+    download_dir: Path,
+) -> Path:
+    output_dir = str(getattr(request.settings, "output_dir", "") or "").strip()
+    if output_dir:
+        return Path(output_dir).expanduser().resolve()
+    return download_dir.parent.resolve()
 
 
 def _cleanup_managed_browser_profile_dirs(

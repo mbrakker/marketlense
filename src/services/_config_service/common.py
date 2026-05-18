@@ -22,6 +22,7 @@ from src.contracts.config import (
 from src.contracts.browser_download import (
     BrowserDownloadIdentityFieldUpsertRequest,
     BrowserDownloadIdentityFieldUpsertResponse,
+    BrowserDownloadSessionReusePolicy,
     BrowserDownloadSettings,
 )
 from src.contracts.publisher_inventory import PublisherInventorySettings

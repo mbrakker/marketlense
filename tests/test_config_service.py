@@ -14,7 +14,6 @@ from src.services.config_service import (
     load_publish_settings,
     load_settings,
 )
-from src.utils.errors import AppError
 
 
 class TestConfigService(unittest.TestCase):
@@ -690,6 +689,16 @@ class TestConfigService(unittest.TestCase):
                     "enabled": True,
                     "policy": "metadata_only",
                 },
+                "session_reuse": {
+                    "enabled": True,
+                    "mode": "same_publisher_batch",
+                    "session_key": "batch-key",
+                    "publisher_scope": "example.com",
+                    "ttl_seconds": 300,
+                    "base_dir": "./out/browser_sessions",
+                    "cleanup_expired": True,
+                    "allow_cross_publisher": False,
+                },
                 "retry": {
                     "retries": 2,
                     "base_delay_seconds": 0.5,
@@ -735,6 +744,17 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("service_account", settings.drive_upload_auth_mode)
         self.assertTrue(settings.failure_forensics_enabled)
         self.assertEqual("metadata_only", settings.failure_forensics_policy)
+        self.assertTrue(settings.session_reuse_policy.enabled)
+        self.assertEqual("same_publisher_batch", settings.session_reuse_policy.mode)
+        self.assertEqual("batch-key", settings.session_reuse_policy.session_key)
+        self.assertEqual("example.com", settings.session_reuse_policy.publisher_scope)
+        self.assertEqual(300.0, settings.session_reuse_policy.ttl_seconds)
+        self.assertEqual(
+            "./out/browser_sessions",
+            settings.session_reuse_policy.base_dir,
+        )
+        self.assertTrue(settings.session_reuse_policy.cleanup_expired)
+        self.assertFalse(settings.session_reuse_policy.allow_cross_publisher)
         self.assertEqual(
             Path(tmp_dir, "sa.json").resolve(),
             Path(settings.drive_upload_google_sa_path).resolve(),

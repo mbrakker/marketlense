@@ -12,6 +12,7 @@ from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
+    BrowserDownloadSessionReusePolicy,
     BrowserDeveloperDiagnosticCheck,
     BrowserDeveloperDiagnosticsResult,
     BrowserDownloadRouteStep,
@@ -365,6 +366,10 @@ class TestCli(unittest.TestCase):
                     keep_browser_open=False,
                     json_output=True,
                     timeout_seconds=5.0,
+                    reuse_session_key="doctor-key",
+                    reuse_publisher_scope="example.com",
+                    reuse_ttl_seconds=120.0,
+                    reuse_base_dir="out/browser_doctor/reuse",
                 )
 
         diagnostics_mock.assert_called_once()
@@ -375,6 +380,20 @@ class TestCli(unittest.TestCase):
         self.assertTrue(request.cleanup_stale_once)
         self.assertTrue(request.activate_verification_tab)
         self.assertEqual(5.0, request.timeout_seconds)
+        self.assertEqual(
+            BrowserDownloadSessionReusePolicy(
+                schema_version="1.0",
+                enabled=True,
+                mode="developer_canary",
+                session_key="doctor-key",
+                publisher_scope="example.com",
+                ttl_seconds=120.0,
+                base_dir="out/browser_doctor/reuse",
+                cleanup_expired=True,
+                allow_cross_publisher=False,
+            ),
+            request.session_reuse_policy,
+        )
 
     def test_sync_publishers_wires_settings_and_orchestrator(self) -> None:
         import src.cli as cli

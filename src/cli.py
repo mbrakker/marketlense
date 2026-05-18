@@ -16,6 +16,7 @@ from src.contracts.acquisition_audit import AcquisitionAuditBatchRequest
 from src.contracts.costs import CostReportRequest, CostReportingRequest
 from src.contracts.browser_download import ReportDownloadOrchestratorRequest
 from src.contracts.browser_download import BrowserDeveloperDiagnosticsRequest
+from src.contracts.browser_download import BrowserDownloadSessionReusePolicy
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
@@ -833,6 +834,26 @@ def browser_doctor(
         "--timeout-seconds",
         help="Per-operation browser diagnostic timeout.",
     ),
+    reuse_session_key: str = typer.Option(
+        "",
+        "--reuse-session-key",
+        help="Optional developer-canary browser session key for bounded profile reuse.",
+    ),
+    reuse_publisher_scope: str = typer.Option(
+        "",
+        "--reuse-publisher-scope",
+        help="Publisher/domain scope allowed to reuse the browser session key.",
+    ),
+    reuse_ttl_seconds: float = typer.Option(
+        0.0,
+        "--reuse-ttl-seconds",
+        help="TTL in seconds for developer-canary browser session profile reuse.",
+    ),
+    reuse_base_dir: str = typer.Option(
+        "",
+        "--reuse-base-dir",
+        help="Optional base directory for reusable browser session profiles.",
+    ),
 ):
     ctx = new_run_context(task_id="cli_browser_doctor")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
@@ -867,6 +888,17 @@ def browser_doctor(
             cleanup_stale_once=True,
             keep_browser_open=bool(keep_browser_open),
             timeout_seconds=float(timeout_seconds),
+            session_reuse_policy=BrowserDownloadSessionReusePolicy(
+                schema_version="1.0",
+                enabled=bool(str(reuse_session_key or "").strip()),
+                mode="developer_canary",
+                session_key=str(reuse_session_key or "").strip(),
+                publisher_scope=str(reuse_publisher_scope or "").strip(),
+                ttl_seconds=float(reuse_ttl_seconds),
+                base_dir=str(reuse_base_dir or "").strip(),
+                cleanup_expired=True,
+                allow_cross_publisher=False,
+            ),
         ),
         ctx,
     )

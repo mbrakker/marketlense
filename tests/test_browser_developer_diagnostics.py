@@ -6,7 +6,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from src.contracts.browser_download import BrowserDeveloperDiagnosticsRequest
+from src.contracts.browser_download import (
+    BrowserDeveloperDiagnosticsRequest,
+    BrowserDownloadSessionReusePolicy,
+)
 from src.services.browser_report_download_service import (
     run_browser_developer_diagnostics,
 )
@@ -192,3 +195,37 @@ def test_browser_developer_diagnostics_reports_unusable_browser(
     assert result.browser_use_connected is False
     assert "Chrome remote debugging unavailable" in result.error
     assert result.checks[-1].name == "diagnostic_runtime"
+
+
+def test_browser_developer_diagnostics_can_use_bounded_reuse_profile(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    FakeBrowserSession.instances.clear()
+
+    result = run_browser_developer_diagnostics(
+        BrowserDeveloperDiagnosticsRequest(
+            schema_version="1.0",
+            profile_path=str(tmp_path / "fallback-profile"),
+            downloads_path=str(tmp_path / "downloads"),
+            headed=False,
+            verification_url="https://example.com/browser-doctor",
+            session_reuse_policy=BrowserDownloadSessionReusePolicy(
+                schema_version="1.0",
+                enabled=True,
+                mode="developer_canary",
+                session_key="doctor-key",
+                publisher_scope="example.com",
+                ttl_seconds=120.0,
+                base_dir=str(tmp_path / "reuse"),
+            ),
+        ),
+        run_context,
+        browser_session_class=FakeBrowserSession,
+    )
+
+    assert result.status == "ok"
+    assert result.profile_path != str(tmp_path / "fallback-profile")
+    assert any(check.name == "session_reuse" for check in result.checks)
+    instance = FakeBrowserSession.instances[-1]
+    assert str(instance.kwargs["user_data_dir"]).startswith(str(tmp_path / "reuse"))

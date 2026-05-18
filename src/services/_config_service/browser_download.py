@@ -29,6 +29,7 @@ def load_browser_download_settings(
     browser_download = data.get("browser_download", {}) or {}
     drive_upload_cfg = browser_download.get("drive_upload", {}) or {}
     failure_forensics_cfg = browser_download.get("failure_forensics", {}) or {}
+    session_reuse_cfg = browser_download.get("session_reuse", {}) or {}
     retry_cfg = browser_download.get("retry", {}) or {}
     drive_upload_enabled = _to_bool(
         drive_upload_cfg.get("enabled")
@@ -134,6 +135,56 @@ def load_browser_download_settings(
             "browser_download.route_playbook_stale_policy must be one of "
             "`fallback` or `fail`"
         )
+    session_reuse_policy = BrowserDownloadSessionReusePolicy(
+        schema_version="1.0",
+        enabled=_to_bool(
+            session_reuse_cfg.get("enabled")
+            if not _is_missing(session_reuse_cfg.get("enabled"))
+            else _env_value("BROWSER_SESSION_REUSE_ENABLED"),
+            False,
+        ),
+        mode=str(
+            session_reuse_cfg.get("mode")
+            or _env_value("BROWSER_SESSION_REUSE_MODE")
+            or "disabled"
+        ).strip(),
+        session_key=str(
+            session_reuse_cfg.get("session_key")
+            or _env_value("BROWSER_SESSION_REUSE_KEY")
+            or ""
+        ).strip(),
+        publisher_scope=str(
+            session_reuse_cfg.get("publisher_scope")
+            or _env_value("BROWSER_SESSION_REUSE_PUBLISHER_SCOPE")
+            or ""
+        ).strip(),
+        ttl_seconds=max(
+            _to_float(
+                session_reuse_cfg.get("ttl_seconds")
+                if not _is_missing(session_reuse_cfg.get("ttl_seconds"))
+                else _env_value("BROWSER_SESSION_REUSE_TTL_SECONDS"),
+                0.0,
+            ),
+            0.0,
+        ),
+        base_dir=str(
+            session_reuse_cfg.get("base_dir")
+            or _env_value("BROWSER_SESSION_REUSE_BASE_DIR")
+            or ""
+        ).strip(),
+        cleanup_expired=_to_bool(
+            session_reuse_cfg.get("cleanup_expired")
+            if not _is_missing(session_reuse_cfg.get("cleanup_expired"))
+            else _env_value("BROWSER_SESSION_REUSE_CLEANUP_EXPIRED"),
+            True,
+        ),
+        allow_cross_publisher=_to_bool(
+            session_reuse_cfg.get("allow_cross_publisher")
+            if not _is_missing(session_reuse_cfg.get("allow_cross_publisher"))
+            else _env_value("BROWSER_SESSION_REUSE_ALLOW_CROSS_PUBLISHER"),
+            False,
+        ),
+    )
     drive_auth_settings: dict[str, str | None] = {
         "drive_auth_mode": "service_account",
         "google_sa_path": "",
@@ -320,6 +371,7 @@ def load_browser_download_settings(
         failure_forensics_policy=failure_forensics_policy,
         route_playbook_dir=route_playbook_dir,
         route_playbook_stale_policy=route_playbook_stale_policy,
+        session_reuse_policy=session_reuse_policy,
     )
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
@@ -353,6 +405,17 @@ def load_browser_download_settings(
                 "failure_forensics_policy": settings.failure_forensics_policy,
                 "route_playbook_dir": settings.route_playbook_dir,
                 "route_playbook_stale_policy": settings.route_playbook_stale_policy,
+                "session_reuse_enabled": settings.session_reuse_policy.enabled,
+                "session_reuse_mode": settings.session_reuse_policy.mode,
+                "session_reuse_has_key": bool(
+                    settings.session_reuse_policy.session_key
+                ),
+                "session_reuse_publisher_scope": (
+                    settings.session_reuse_policy.publisher_scope
+                ),
+                "session_reuse_ttl_seconds": (
+                    settings.session_reuse_policy.ttl_seconds
+                ),
             },
         )
     )
