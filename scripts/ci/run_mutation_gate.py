@@ -22,6 +22,7 @@ class MutationTarget:
     test_paths: tuple[str, ...]
     max_mutants: int
     min_score: float
+    report_module: str | None = None
 
 
 @dataclass(frozen=True)
@@ -342,10 +343,15 @@ def _targets() -> Iterable[MutationTarget]:
             min_score=60.0,
         ),
         MutationTarget(
-            module_path=ROOT / "src" / "generators" / "artifact_generator.py",
+            module_path=ROOT
+            / "src"
+            / "generators"
+            / "_artifact_generator"
+            / "generation.py",
             test_paths=("tests/test_artifact_generator.py",),
             max_mutants=3,
             min_score=60.0,
+            report_module="src/generators/artifact_generator.py",
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "validation_generator.py",
@@ -354,10 +360,15 @@ def _targets() -> Iterable[MutationTarget]:
             min_score=60.0,
         ),
         MutationTarget(
-            module_path=ROOT / "src" / "services" / "openai_service.py",
+            module_path=ROOT
+            / "src"
+            / "services"
+            / "_openai_service"
+            / "vector_store.py",
             test_paths=("tests/test_openai_vector_store.py",),
             max_mutants=3,
             min_score=60.0,
+            report_module="src/services/openai_service.py",
         ),
         MutationTarget(
             module_path=ROOT / "src" / "services" / "drive_service.py",
@@ -394,7 +405,10 @@ def main() -> int:
     report_targets: list[dict[str, object]] = []
     print("Mutation summary:")
     for result in results:
-        rel = result.target.module_path.relative_to(ROOT).as_posix()
+        rel = (
+            result.target.report_module
+            or result.target.module_path.relative_to(ROOT).as_posix()
+        )
         print(f"  - {rel}: {result.killed}/{result.total} killed ({result.score:.2f}%)")
         required_score = max(min_score, result.target.min_score)
         report_targets.append(

@@ -237,15 +237,6 @@ Suggested priority order:
 
 ## 8. Deep Codebase Audit (2026-05-06)
 
-- **Title:** Add automated post-refactor symbol-linking guard for split service internals [Impact: 4/5, Effort: 2/5]
-  - Explanation: The dominant errors are unresolved names caused by internal module fission where helper symbols are no longer imported/exported coherently. The existing architecture gate checks import direction but does not catch missing symbol wiring early.
-  - Pros: Prevents future large-scale CI failures after mechanical module splits.
-  - Cons: One more CI check to maintain.
-  - Acceptance Criteria:
-    - A fast static check validates required exported symbols for split boundary families (at minimum `_config_service` and `_pdf/_visual_heuristics`).
-    - The check runs before mypy in CI and fails with grouped actionable diagnostics.
-    - README documents when to run the check locally during refactors.
-
 - **Title:** Tighten risk-policy scope so doc-only changes cannot hide repository-wide CI breakage [Impact: 4/5, Effort: 1/5]
   - Explanation: Current risk classification marks a `CONSOLIDATED_TODO.md`-only change as `docs` while the repository remains red on hard gates. This can create false confidence during maintenance updates.
   - Pros: Better signal to maintainers, fewer “green-looking” local checks when mainline is failing.

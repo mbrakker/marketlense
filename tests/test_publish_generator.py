@@ -16,6 +16,7 @@ from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 
 
 class _WordPressPublishStubHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
     active_uploads = 0
     max_active_uploads = 0
     upload_headers: list[str] = []
@@ -44,6 +45,9 @@ class _WordPressPublishStubHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         auth_header = str(self.headers.get("Authorization") or "")
+        content_length = int(self.headers.get("Content-Length") or "0")
+        if content_length > 0:
+            self.rfile.read(content_length)
         if self.path == "/wp-json/wp/v2/media":
             with self.lock:
                 type(self).upload_headers.append(auth_header)
@@ -451,4 +455,6 @@ def test_publish_html_uses_pre_resolved_terms_without_term_lookups(
         wordpress_http.calls_for("GET", "https://example.com/wp-json/wp/v2/categories")
         == []
     )
-    assert wordpress_http.calls_for("GET", "https://example.com/wp-json/wp/v2/tags") == []
+    assert (
+        wordpress_http.calls_for("GET", "https://example.com/wp-json/wp/v2/tags") == []
+    )

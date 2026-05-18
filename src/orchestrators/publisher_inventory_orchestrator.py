@@ -1091,15 +1091,11 @@ def run_publisher_inventory_discovery(
                 mime_type="application/json",
                 supports_all_drives=True,
             )
-            snapshot_upload_key = (
-                f"{normalized_url}:{snapshot_upload_request.file_name}:"
-                f"{build_response.snapshot_sha256}"
-            )
+            snapshot_upload_key = f"{normalized_url}:{build_response.snapshot_sha256}"
             snapshot_upload_checksum = sha256_json(
                 {
                     "schema_version": "1.0",
                     "folder_id": snapshot_upload_request.folder_id,
-                    "file_name": snapshot_upload_request.file_name or "",
                     "mime_type": snapshot_upload_request.mime_type,
                     "snapshot_sha256": build_response.snapshot_sha256,
                 }
@@ -1194,9 +1190,7 @@ def run_publisher_inventory_discovery(
                 discovered_at_utc=build_response.snapshot.discovered_at_utc,
                 discovered_on_page_number=item.discovered_on_page_number,
             )
-            source_record_key = (
-                f"{item.canonical_url}:{source_record_request.discovered_at_utc}"
-            )
+            source_record_key = f"{normalized_url}:{item.canonical_url}"
             source_record_checksum = sha256_json(
                 {
                     "schema_version": "1.0",

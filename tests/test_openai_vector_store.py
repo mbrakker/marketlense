@@ -531,6 +531,22 @@ def test_openai_vector_store_upload_missing_file(assert_app_error, tmp_path) -> 
         raise AssertionError("expected AppError")
 
 
+def test_openai_vector_store_upload_unreadable_path(assert_app_error, tmp_path) -> None:
+    try:
+        svc.openai_vector_store_upload_file(
+            OpenAIVectorStoreFileUploadRequest(
+                schema_version="1.0",
+                api_key="key",
+                file_path=str(tmp_path),
+            ),
+            _ctx(),
+        )
+    except Exception as err:
+        assert_app_error(err, code="openai_file_open_failed", retryable=False)
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
+
+
 def test_openai_vector_store_status_reads_dict_response(fake_openai) -> None:
     fake_openai.add(
         "vector_stores.retrieve",

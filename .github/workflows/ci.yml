@@ -26,6 +26,8 @@ jobs:
         run: python scripts/ci/check_formatting.py
       - name: Classify change risk
         run: python scripts/ci/check_risk_policy.py
+      - name: Split symbol-linking gate
+        run: python scripts/ci/check_split_symbol_links.py
       - name: Type check
         run: python scripts/ci/run_type_check.py
       - name: Architecture import gate
