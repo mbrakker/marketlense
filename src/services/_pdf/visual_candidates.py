@@ -357,7 +357,7 @@ def _render_visual_probe_image(
             if probe_cache is not None and cache_key is not None
             else None
         )
-    image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     return (
         probe_cache.record_image(cache_key, image)
         if probe_cache is not None and cache_key is not None

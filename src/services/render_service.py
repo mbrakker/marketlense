@@ -75,7 +75,9 @@ def _split_summary_bullets(text: str, *, max_items: int = 5) -> list[str]:
     elif ";" in normalized:
         parts = [part.strip(" -*\t") for part in normalized.split(";")]
     else:
-        parts = [part.strip(" -*\t") for part in _SENTENCE_SPLIT_PATTERN.split(normalized)]
+        parts = [
+            part.strip(" -*\t") for part in _SENTENCE_SPLIT_PATTERN.split(normalized)
+        ]
     bullets = [part for part in parts if part]
     if len(bullets) <= 1 and len(normalized) > 140:
         words = normalized.split()
@@ -134,7 +136,9 @@ def _resolve_asset_path(out_dir: Path, relative_path: str) -> Path | None:
     return out_dir / path
 
 
-def _detect_asset_dimensions(asset_path: Path | None, default_width: int, default_height: int) -> tuple[int, int]:
+def _detect_asset_dimensions(
+    asset_path: Path | None, default_width: int, default_height: int
+) -> tuple[int, int]:
     if asset_path is None or not asset_path.exists():
         return default_width, default_height
     try:
@@ -165,11 +169,17 @@ def _build_srcset(asset_path: Path | None, relative_path: str) -> str:
         if not variant_path.exists():
             continue
         if asset_path.is_absolute():
-            rel_variant = str(variant_path.relative_to(asset_path.parent.parent)) if len(variant_path.parents) > 1 else variant_path.name
+            rel_variant = (
+                str(variant_path.relative_to(asset_path.parent.parent))
+                if len(variant_path.parents) > 1
+                else variant_path.name
+            )
         else:
             rel_variant = variant_path.name
         if relative:
-            rel_variant = str(Path(relative).with_name(variant_path.name)).replace("\\", "/")
+            rel_variant = str(Path(relative).with_name(variant_path.name)).replace(
+                "\\", "/"
+            )
         candidates.append(f"{rel_variant} {descriptor}")
     unique: list[str] = []
     for candidate in candidates:
@@ -286,7 +296,9 @@ def _coerce_quotes(
     quotes: list[dict[str, str]] = []
     for raw_item in _coerce_list(raw_quotes):
         item = _coerce_dict(raw_item)
-        text = _pick_first_text(item.get("text"), raw_item if isinstance(raw_item, str) else "")
+        text = _pick_first_text(
+            item.get("text"), raw_item if isinstance(raw_item, str) else ""
+        )
         if not text:
             continue
         quotes.append(
@@ -301,7 +313,9 @@ def _coerce_quotes(
                     evidence_id=_s(item.get("evidence_id")),
                     citation=_s(item.get("citation")),
                     evidence_spans=item.get("evidence_spans"),
-                    pages=[item.get("page")] if isinstance(item.get("page"), int) else [],
+                    pages=[item.get("page")]
+                    if isinstance(item.get("page"), int)
+                    else [],
                 ),
             }
         )
@@ -386,9 +400,7 @@ def _build_citation_micro_line(
     ]
     explicit_pages = [
         page
-        for page in (
-            _coerce_positive_int(page) for page in _coerce_list(pages)
-        )
+        for page in (_coerce_positive_int(page) for page in _coerce_list(pages))
         if page is not None
     ]
     all_pages = list(dict.fromkeys([*span_pages, *explicit_pages]))
@@ -419,37 +431,43 @@ def _coerce_topic_briefs(artifacts: dict[str, Any]) -> list[dict[str, Any]]:
             {
                 "title": title,
                 "summary": _s(item.get("summary")),
-                "key_points": [_s(point) for point in _coerce_list(item.get("key_points")) if _s(point)],
+                "key_points": [
+                    _s(point)
+                    for point in _coerce_list(item.get("key_points"))
+                    if _s(point)
+                ],
             }
         )
     return briefs
 
 
-def _coerce_chapters(artifacts: dict[str, Any], doc_map: dict[str, Any]) -> list[dict[str, Any]]:
+def _coerce_chapters(
+    artifacts: dict[str, Any], doc_map: dict[str, Any]
+) -> list[dict[str, Any]]:
     chapters: list[dict[str, Any]] = []
     for raw_item in _coerce_list(artifacts.get("toc_entries")):
         item = _coerce_dict(raw_item)
         title = _pick_first_text(item.get("display_title"), item.get("section_title"))
         if not title:
             continue
-        pages = [
-            str(page).strip()
-            for page in _coerce_list(item.get("pages"))
-            if _s(page)
+        toc_pages = [
+            str(page).strip() for page in _coerce_list(item.get("pages")) if _s(page)
         ]
         chapters.append(
             {
                 "order": int(item.get("order") or len(chapters) + 1),
                 "title": title,
                 "summary": _s(item.get("summary")),
-                "pages": pages,
+                "pages": toc_pages,
             }
         )
     if chapters:
         return chapters
     for index, raw_section in enumerate(_coerce_list(doc_map.get("sections")), start=1):
         section = _coerce_dict(raw_section)
-        title = _pick_first_text(section.get("title"), section.get("heading"), section.get("name"))
+        title = _pick_first_text(
+            section.get("title"), section.get("heading"), section.get("name")
+        )
         if not title:
             continue
         pages: list[str] = []
@@ -469,7 +487,9 @@ def _coerce_chapters(artifacts: dict[str, Any], doc_map: dict[str, Any]) -> list
     return chapters
 
 
-def _coerce_methodology(doc_map: dict[str, Any], evidence_packs: dict[str, Any]) -> list[str]:
+def _coerce_methodology(
+    doc_map: dict[str, Any], evidence_packs: dict[str, Any]
+) -> list[str]:
     methods_pack = _coerce_dict(evidence_packs.get("methods"))
     methods: list[str] = []
     for raw_item in _coerce_list(methods_pack.get("methods")):
@@ -483,21 +503,33 @@ def _coerce_methodology(doc_map: dict[str, Any], evidence_packs: dict[str, Any])
     return methods
 
 
-def _coerce_coverage(doc_map: dict[str, Any], evidence_packs: dict[str, Any]) -> list[str]:
+def _coerce_coverage(
+    doc_map: dict[str, Any], evidence_packs: dict[str, Any]
+) -> list[str]:
     coverage: list[str] = []
     scope = _coerce_dict(_coerce_dict(evidence_packs.get("scope")).get("scope"))
-    jurisdictions = [value for value in (_s(item) for item in _coerce_list(scope.get("jurisdictions"))) if value]
+    jurisdictions = [
+        value
+        for value in (_s(item) for item in _coerce_list(scope.get("jurisdictions")))
+        if value
+    ]
     if jurisdictions:
         coverage.append(f"Jurisdictions: {', '.join(jurisdictions)}")
     sources = []
     for raw_source in _coerce_list(scope.get("sources")):
         source = _coerce_dict(raw_source)
-        title = _pick_first_text(source.get("title"), source.get("id"), source.get("type"))
+        title = _pick_first_text(
+            source.get("title"), source.get("id"), source.get("type")
+        )
         if title:
             sources.append(title)
     if sources:
         coverage.append(f"Sources in scope: {', '.join(sources[:3])}")
-    content_types = [value for value in (_s(item) for item in _coerce_list(scope.get("contentTypes"))) if value]
+    content_types = [
+        value
+        for value in (_s(item) for item in _coerce_list(scope.get("contentTypes")))
+        if value
+    ]
     if content_types:
         coverage.append(f"Content types: {', '.join(content_types[:4])}")
     if _s(scope.get("samplingRate")):
@@ -545,13 +577,17 @@ def _coerce_limitations(evidence_packs: dict[str, Any]) -> list[str]:
     return limitations[:5]
 
 
-def _coerce_contacts(doc_map: dict[str, Any], evidence_packs: dict[str, Any]) -> list[str]:
+def _coerce_contacts(
+    doc_map: dict[str, Any], evidence_packs: dict[str, Any]
+) -> list[str]:
     contacts: list[str] = []
     for collection_key in ("contributors", "authors"):
         for raw_item in _coerce_list(doc_map.get(collection_key)):
             item = _coerce_dict(raw_item)
             line_parts = [
-                _pick_first_text(item.get("name"), item.get("author"), item.get("full_name")),
+                _pick_first_text(
+                    item.get("name"), item.get("author"), item.get("full_name")
+                ),
                 _pick_first_text(item.get("role"), item.get("affiliation")),
                 _pick_first_text(item.get("email"), item.get("contact")),
             ]
@@ -590,7 +626,9 @@ def _coerce_family_status(artifacts: dict[str, Any], family: str) -> dict[str, s
     }
 
 
-def _build_figure_slides(data: dict[str, Any], out_dir: Path, report_title: str) -> list[dict[str, Any]]:
+def _build_figure_slides(
+    data: dict[str, Any], out_dir: Path, report_title: str
+) -> list[dict[str, Any]]:
     figure_assets = _coerce_list(data.get("_figure_assets"))
     slides: list[dict[str, Any]] = []
     if figure_assets:
@@ -633,8 +671,12 @@ def _build_figure_slides(data: dict[str, Any], out_dir: Path, report_title: str)
                 }
             )
         return slides
-    primary_figure = _pick_first_text(data.get("_figure_top"), data.get("_figure_image"))
-    figure_gallery = [_s(item) for item in _coerce_list(data.get("_figure_gallery")) if _s(item)]
+    primary_figure = _pick_first_text(
+        data.get("_figure_top"), data.get("_figure_image")
+    )
+    figure_gallery = [
+        _s(item) for item in _coerce_list(data.get("_figure_gallery")) if _s(item)
+    ]
     seen: set[str] = set()
     ordered_paths: list[str] = []
     for path in [primary_figure, *figure_gallery]:
@@ -668,7 +710,9 @@ def _build_figure_slides(data: dict[str, Any], out_dir: Path, report_title: str)
                     ),
                 ),
                 "caption": (
-                    fallback_caption if index == 1 and fallback_caption else f"Additional figure {index}"
+                    fallback_caption
+                    if index == 1 and fallback_caption
+                    else f"Additional figure {index}"
                 ),
                 "thumb": _build_media(
                     relative_path=image_path,
@@ -683,7 +727,9 @@ def _build_figure_slides(data: dict[str, Any], out_dir: Path, report_title: str)
     return slides
 
 
-def _build_render_view(request: RenderRequest, tag_acronym_map: dict[str, str]) -> dict[str, Any]:
+def _build_render_view(
+    request: RenderRequest, tag_acronym_map: dict[str, str]
+) -> dict[str, Any]:
     data = request.data
     out_dir = Path(request.out_dir)
     artifacts = _coerce_dict(data.get("artifacts"))
@@ -692,11 +738,17 @@ def _build_render_view(request: RenderRequest, tag_acronym_map: dict[str, str]) 
     evidence_packs = _coerce_dict(data.get("evidence_packs"))
     doc_map = _unwrap_doc_map(evidence_packs.get("doc_map"))
     report_title = _pick_first_text(data.get("title"), doc_map.get("title"))
-    publisher = _pick_first_text(data.get("publisher"), doc_map.get("publisher"), _coerce_dict(doc_map.get("publisher")).get("name"))
+    publisher = _pick_first_text(
+        data.get("publisher"),
+        doc_map.get("publisher"),
+        _coerce_dict(doc_map.get("publisher")).get("name"),
+    )
     report_author = _s(data.get("report_identity_author"))
     region = _s(data.get("region"))
     time_period = _s(data.get("time_period"))
-    focus_year = _extract_focus_year(time_period, doc_map.get("year"), doc_map.get("publicationDate"), report_title)
+    focus_year = _extract_focus_year(
+        time_period, doc_map.get("year"), doc_map.get("publicationDate"), report_title
+    )
     methodology_items = _coerce_methodology(doc_map, evidence_packs)
     fieldwork_dates = _extract_fieldwork_dates(
         time_period,
@@ -712,22 +764,34 @@ def _build_render_view(request: RenderRequest, tag_acronym_map: dict[str, str]) 
     )
     if not tldr_text and not_available:
         tldr_text = "Not available from text."
-    executive_summary = _pick_first_text(summary.get("executive_summary"), data.get("commentary"))
+    executive_summary = _pick_first_text(
+        summary.get("executive_summary"), data.get("commentary")
+    )
     source_url = _s(data.get("source"))
     canonical_url = _pick_first_text(data.get("canonical_url"), source_url)
-    topics = [_s(item) for item in _coerce_list(artifacts.get("toc_topics")) if _s(item)]
+    topics = [
+        _s(item) for item in _coerce_list(artifacts.get("toc_topics")) if _s(item)
+    ]
     if not topics:
         for chapter in _coerce_chapters(artifacts, doc_map):
             if chapter["title"]:
                 topics.append(chapter["title"])
     insights = _coerce_insights(
-        artifacts.get("insights_final") if _coerce_list(artifacts.get("insights_final")) else data.get("insights")
+        artifacts.get("insights_final")
+        if _coerce_list(artifacts.get("insights_final"))
+        else data.get("insights")
     )
     quotes = _coerce_quotes(artifacts.get("quotes_final"), data, publisher)
     figure_section_enabled = bool(data.get("_figure_section_enabled", True))
-    figure_slides = _build_figure_slides(data, out_dir, report_title) if figure_section_enabled else []
+    figure_slides = (
+        _build_figure_slides(data, out_dir, report_title)
+        if figure_section_enabled
+        else []
+    )
     hero_image = None
-    hero_src = _pick_first_text(request.preview_png, figure_slides[0]["src"] if figure_slides else "")
+    hero_src = _pick_first_text(
+        request.preview_png, figure_slides[0]["src"] if figure_slides else ""
+    )
     if hero_src:
         hero_image = _build_media(
             relative_path=hero_src,
@@ -790,9 +854,15 @@ def _build_render_view(request: RenderRequest, tag_acronym_map: dict[str, str]) 
         "hero_meta": [
             item
             for item in (
-                f"{len(insights)} insight{'s' if len(insights) != 1 else ''}" if insights else "",
-                f"{len(quotes)} quote{'s' if len(quotes) != 1 else ''}" if quotes else "",
-                f"{len(topics)} topic{'s' if len(topics) != 1 else ''}" if topics else "",
+                f"{len(insights)} insight{'s' if len(insights) != 1 else ''}"
+                if insights
+                else "",
+                f"{len(quotes)} quote{'s' if len(quotes) != 1 else ''}"
+                if quotes
+                else "",
+                f"{len(topics)} topic{'s' if len(topics) != 1 else ''}"
+                if topics
+                else "",
                 "Source linked" if canonical_url else "",
             )
             if item
@@ -809,14 +879,19 @@ def _build_render_view(request: RenderRequest, tag_acronym_map: dict[str, str]) 
             "facts": [
                 item
                 for item in (
-                    {"label": "Report focus year", "value": focus_year} if focus_year else None,
-                    {"label": "Fieldwork", "value": fieldwork_dates} if fieldwork_dates else None,
+                    {"label": "Report focus year", "value": focus_year}
+                    if focus_year
+                    else None,
+                    {"label": "Fieldwork", "value": fieldwork_dates}
+                    if fieldwork_dates
+                    else None,
                     {"label": "Geography", "value": region} if region else None,
                     {"label": "Publisher", "value": publisher} if publisher else None,
                 )
                 if item
             ],
-            "categories": _coerce_list(data.get("categories_display")) or _coerce_list(data.get("categories")),
+            "categories": _coerce_list(data.get("categories_display"))
+            or _coerce_list(data.get("categories")),
             "tags": _coerce_list(data.get("taxonomy")),
         },
         "topics": topics,
@@ -841,7 +916,11 @@ def _build_render_view(request: RenderRequest, tag_acronym_map: dict[str, str]) 
             "linkedin": linkedin_status,
         },
         "display": {
-            "has_metadata": bool(_coerce_list(data.get("categories_display")) or _coerce_list(data.get("categories")) or _coerce_list(data.get("taxonomy"))),
+            "has_metadata": bool(
+                _coerce_list(data.get("categories_display"))
+                or _coerce_list(data.get("categories"))
+                or _coerce_list(data.get("taxonomy"))
+            ),
             "has_topics": bool(topics),
             "has_topic_briefs": bool(_coerce_topic_briefs(artifacts)),
             "has_figures": bool(figure_slides),
@@ -857,16 +936,27 @@ def _build_render_view(request: RenderRequest, tag_acronym_map: dict[str, str]) 
             "has_chapters": bool(chapters),
         },
         "seo": {
-            "description": _pick_first_text(tldr_text, executive_summary, f"Digest for {report_title}")[:180],
+            "description": _pick_first_text(
+                tldr_text, executive_summary, f"Digest for {report_title}"
+            )[:180],
             "title": "",
-            "robots": _s(data.get("robots")) or (
+            "robots": _s(data.get("robots"))
+            or (
                 "index,follow"
-                if ((tldr_text and tldr_text.lower() != "not available from text.") or insights or quotes or executive_summary) and not not_available
+                if (
+                    (tldr_text and tldr_text.lower() != "not available from text.")
+                    or insights
+                    or quotes
+                    or executive_summary
+                )
+                and not not_available
                 else "noindex,nofollow"
             ),
             "primary_image": hero_image["src"] if hero_image else "",
         },
-        "json_ld_keywords": _coerce_list(data.get("taxonomy")) or _coerce_list(data.get("categories_display")) or _coerce_list(data.get("categories")),
+        "json_ld_keywords": _coerce_list(data.get("taxonomy"))
+        or _coerce_list(data.get("categories_display"))
+        or _coerce_list(data.get("categories")),
         "tag_acronym_map": tag_acronym_map,
     }
 
@@ -906,8 +996,12 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
         "@type": "Article",
         "headline": view["report_title"],
         "description": view["seo"]["description"],
-        "author": {"@type": "Organization", "name": view["publisher"]} if view["publisher"] else None,
-        "publisher": {"@type": "Organization", "name": view["publisher"]} if view["publisher"] else None,
+        "author": {"@type": "Organization", "name": view["publisher"]}
+        if view["publisher"]
+        else None,
+        "publisher": {"@type": "Organization", "name": view["publisher"]}
+        if view["publisher"]
+        else None,
         "mainEntityOfPage": view["canonical_url"] if view["canonical_url"] else None,
         "image": [view["seo"]["primary_image"]] if view["seo"]["primary_image"] else [],
         "articleSection": view["topics"],

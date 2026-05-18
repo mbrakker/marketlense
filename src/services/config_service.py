@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dotenv import find_dotenv, load_dotenv
 
-from src.contracts.browser_download import BrowserDownloadIdentityFieldUpsertRequest, BrowserDownloadIdentityFieldUpsertResponse
+from src.contracts.browser_download import (
+    BrowserDownloadIdentityFieldUpsertRequest,
+    BrowserDownloadIdentityFieldUpsertResponse,
+)
 from src.contracts.config import (
     AppConfigReadRequest,
     AppConfigReadResponse,
@@ -46,8 +49,8 @@ def _sync_runtime_patch_points() -> None:
         _browser_download,
         _publisher_discovery,
     ):
-        module.load_dotenv = load_dotenv
-        module.find_dotenv = find_dotenv
+        setattr(module, "load_dotenv", load_dotenv)
+        setattr(module, "find_dotenv", find_dotenv)
 
 
 def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
@@ -55,7 +58,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     return _app_settings.load_settings(request, ctx)
 
 
-def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> PublishSettings:
+def load_publish_settings(
+    request: ConfigLoadRequest, ctx: RunContext
+) -> PublishSettings:
     _sync_runtime_patch_points()
     return _publish.load_publish_settings(request, ctx)
 

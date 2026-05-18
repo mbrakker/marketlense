@@ -305,7 +305,9 @@ def bind_artifact_evidence_spans(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
 ) -> Dict[str, int]:
-    span_index = _build_evidence_span_index(doc_map=doc_map, evidence_packs=evidence_packs)
+    span_index = _build_evidence_span_index(
+        doc_map=doc_map, evidence_packs=evidence_packs
+    )
     bound_count = 0
     unbound_count = 0
 
@@ -320,10 +322,7 @@ def bind_artifact_evidence_spans(
         existing = _normalize_evidence_spans(
             item.get("evidence_spans"), evidence_id=evidence_id
         )
-        derived = [
-            dict(span)
-            for span in span_index.get(evidence_id.casefold(), [])
-        ]
+        derived = [dict(span) for span in span_index.get(evidence_id.casefold(), [])]
         spans = existing or derived
         if not spans:
             fallback_pages: List[int] = []
@@ -371,8 +370,7 @@ def bind_artifact_evidence_spans(
                 claim.get("evidence_spans"), evidence_id=evidence_id
             )
             derived = [
-                dict(span)
-                for span in span_index.get(evidence_id.casefold(), [])
+                dict(span) for span in span_index.get(evidence_id.casefold(), [])
             ]
             spans = existing or derived
             if not spans:
@@ -611,7 +609,9 @@ def _normalize_evidence_spans(
             "evidence_id": span_evidence_id,
             "source_pack": _s(raw_span.get("source_pack")),
         }
-        if isinstance(raw_span.get("section_id"), str) and _s(raw_span.get("section_id")):
+        if isinstance(raw_span.get("section_id"), str) and _s(
+            raw_span.get("section_id")
+        ):
             normalized_span["section_id"] = _s(raw_span.get("section_id"))
         if isinstance(page, int) and page > 0:
             normalized_span["page"] = page
@@ -664,7 +664,9 @@ def _build_evidence_span_index(
             return
         normalized_text = _s(text).strip()
         normalized_section_id = _s(section_id).strip()
-        normalized_pages = [page for page in (pages or []) if isinstance(page, int) and page > 0]
+        normalized_pages = [
+            page for page in (pages or []) if isinstance(page, int) and page > 0
+        ]
         spans: List[Dict[str, Any]] = []
         if normalized_pages:
             for page in list(dict.fromkeys(normalized_pages)):
@@ -721,8 +723,9 @@ def _build_evidence_span_index(
                 if not isinstance(item, dict):
                     continue
                 pages = []
-                if isinstance(item.get("page"), int) and item.get("page") > 0:
-                    pages = [int(item["page"])]
+                page_value = item.get("page")
+                if isinstance(page_value, int) and page_value > 0:
+                    pages = [page_value]
                 _register(
                     evidence_id=item.get("id"),
                     source_pack="quote_candidates",
@@ -733,7 +736,11 @@ def _build_evidence_span_index(
                 )
         for pack_name, root_key, text_keys in (
             ("key_metrics", "key_metrics", ("metric", "value", "unit")),
-            ("risk_register", "risk_register", ("risk", "impact", "likelihood", "mitigation")),
+            (
+                "risk_register",
+                "risk_register",
+                ("risk", "impact", "likelihood", "mitigation"),
+            ),
             ("recommendations", "recommendations", ("recommendation", "rationale")),
         ):
             pack = evidence_packs.get(pack_name)

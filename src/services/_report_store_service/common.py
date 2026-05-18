@@ -22,7 +22,7 @@ def _optional_int(value: object) -> Optional[int]:
     if value is None:
         return None
     try:
-        return int(value)
+        return int(str(value).strip())
     except (TypeError, ValueError):
         return None
 

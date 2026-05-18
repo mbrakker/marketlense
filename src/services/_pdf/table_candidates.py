@@ -9,7 +9,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import replace
 import math
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
 
 import numpy as np
 import pdfplumber
@@ -245,7 +245,7 @@ def _build_table_candidate(
         return None
     rows: list[list[object]] = []
     try:
-        rows = table.extract() or []
+        rows = cast(list[list[object]], table.extract() or [])
     except Exception:
         rows = []
     non_empty_rows = [row for row in rows if row and any(_s(c).strip() for c in row)]

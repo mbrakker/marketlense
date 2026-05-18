@@ -814,9 +814,7 @@ def browser_helper_form_autocomplete(
         unresolved_fields=unresolved_fields,
         selected_fields=selected_fields,
         final_url=str(payload.get("final_url") or "").strip(),
-        blocker_code=(
-            "blocked_unknown_required_enum" if unresolved_fields else None
-        ),
+        blocker_code=("blocked_unknown_required_enum" if unresolved_fields else None),
     )
 
 
@@ -1336,12 +1334,14 @@ def _coordinate_fallback_policy(
     return False, "selector_or_state_attempt_required"
 
 
-def _normalize_surface_labels(surface_labels: tuple[str, ...] | list[str]) -> tuple[str, ...]:
+def _normalize_surface_labels(
+    surface_labels: tuple[str, ...] | list[str],
+) -> tuple[str, ...]:
     normalized: list[str] = []
     for raw_label in surface_labels or ():
-        label = re.sub(r"[^a-z0-9]+", "_", str(raw_label or "").strip().casefold()).strip(
-            "_"
-        )
+        label = re.sub(
+            r"[^a-z0-9]+", "_", str(raw_label or "").strip().casefold()
+        ).strip("_")
         if label and label not in normalized:
             normalized.append(label)
     return tuple(normalized)
@@ -1357,10 +1357,18 @@ def _coordinates_are_usable(coordinate_x: float, coordinate_y: float) -> bool:
         y = float(str(coordinate_y))
     except (TypeError, ValueError):
         return False
-    return x >= 0 and y >= 0 and x not in {float("inf"), float("-inf")} and y not in {
-        float("inf"),
-        float("-inf"),
-    } and x == x and y == y
+    return (
+        x >= 0
+        and y >= 0
+        and x not in {float("inf"), float("-inf")}
+        and y
+        not in {
+            float("inf"),
+            float("-inf"),
+        }
+        and x == x
+        and y == y
+    )
 
 
 def _after_coordinate_screenshot_path(screenshot_path: Path) -> Path:
@@ -1465,7 +1473,7 @@ async def _await_async(value: Any) -> Any:
 
 def _adapt_js_result_value(raw_result: object) -> tuple[object, bool]:
     raw_result = _coerce_json_envelope(raw_result)
-    if _is_js_error_envelope(raw_result):
+    if isinstance(raw_result, dict) and _is_js_error_envelope(raw_result):
         raise _JavaScriptEvaluationError(
             error=str(raw_result.get("error") or "JavaScript evaluation failed"),
             error_line=_coerce_optional_int(raw_result.get("line")),

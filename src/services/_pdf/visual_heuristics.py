@@ -16,7 +16,7 @@ import re
 import statistics
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple
 
 import pdfplumber
 import pymupdf as fitz
@@ -726,12 +726,14 @@ def _find_overlapping_kept(
             return idx
     return None
 
+
 def _rect_overlap_area(left: fitz.Rect, right: fitz.Rect) -> float:
     overlap = fitz.Rect(left)
     overlap &= right
     if overlap.x1 <= overlap.x0 or overlap.y1 <= overlap.y0:
         return 0.0
     return overlap.get_area()
+
 
 def _line_starts_with_caption_hint(text: str, hints: Tuple[str, ...]) -> bool:
     normalized = _s(text).strip().lower()
@@ -748,6 +750,7 @@ def _line_starts_with_caption_hint(text: str, hints: Tuple[str, ...]) -> bool:
             return True
     return False
 
+
 def _alpha_ratio(text: str) -> float:
     if not text:
         return 0.0
@@ -763,6 +766,7 @@ def _is_page_number_text(text: str) -> bool:
     if not _PAGE_NUMBER_RX.match(cleaned):
         return False
     return _alpha_ratio(cleaned) <= 0.3
+
 
 def _horizontal_overlap_ratio(a: fitz.Rect, b: fitz.Rect) -> float:
     left = max(a.x0, b.x0)
@@ -797,6 +801,7 @@ def _pad_rect(rect: fitz.Rect, page_rect: fitz.Rect) -> fitz.Rect:
     y1 = min(page_rect.y1, rect.y1 + pad_y)
     return fitz.Rect(x0, y0, x1, y1)
 
+
 def _save_thumb(
     pix: fitz.Pixmap, out_dir: str, report_name: str, index: int, max_w: int = 480
 ) -> str:
@@ -811,7 +816,7 @@ def _save_thumb(
 
     if img.width > max_w:
         new_h = int(img.height * max_w / img.width)
-        img = img.resize((max_w, new_h), Image.LANCZOS)
+        img = img.resize((max_w, new_h), Image.Resampling.LANCZOS)
 
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     if index == 0:
@@ -1014,14 +1019,198 @@ def _tally_reason(stats: Dict[str, object], reason: str) -> None:
         stats["reasons"] = reasons
     reasons[reason] = int(reasons.get(reason, 0)) + 1
 
-__all__ = [name for name in globals() if not name.startswith("__")]
-__all__ += ['_ChartRect', '_PageTextLine', '_s', '_int_count', '_rect_iou', '_table_normalize_text', '_starts_with_lower_alpha', '_table_page_text_lines', '_rect_containment_ratio', '_rect_seen', '_chart_candidate_score', '_find_overlapping_kept', '_rect_overlap_area', '_line_starts_with_caption_hint', '_alpha_ratio', '_is_page_number_text', '_horizontal_overlap_ratio', '_vertical_overlap_ratio', '_pad_rect', '_save_thumb', '_nearby_text', '_candidate_index_from_id', '_merge_stats', '_split_even_chunks', '_resolve_candidate_parallel_workers', '_text_stats', '_text_line_lengths', '_chart_text_heavy', '_chart_is_label_dense_not_prose', '_infographic_is_label_dense_not_prose', '_trim_top_page_number', '_rect_intersection_area', '_tally_reason']
+
+_LOCAL_PRIVATE_EXPORTS = [
+    "_ChartRect",
+    "_PageTextLine",
+    "_s",
+    "_int_count",
+    "_rect_iou",
+    "_table_normalize_text",
+    "_starts_with_lower_alpha",
+    "_table_page_text_lines",
+    "_rect_containment_ratio",
+    "_rect_seen",
+    "_chart_candidate_score",
+    "_find_overlapping_kept",
+    "_rect_overlap_area",
+    "_line_starts_with_caption_hint",
+    "_alpha_ratio",
+    "_is_page_number_text",
+    "_horizontal_overlap_ratio",
+    "_vertical_overlap_ratio",
+    "_pad_rect",
+    "_save_thumb",
+    "_nearby_text",
+    "_candidate_index_from_id",
+    "_merge_stats",
+    "_split_even_chunks",
+    "_resolve_candidate_parallel_workers",
+    "_text_stats",
+    "_text_line_lengths",
+    "_chart_text_heavy",
+    "_chart_is_label_dense_not_prose",
+    "_infographic_is_label_dense_not_prose",
+    "_trim_top_page_number",
+    "_rect_intersection_area",
+    "_tally_reason",
+]
+_CHART_LAYOUT_EXPORTS = [
+    "_image_block_rects",
+    "_drawing_rects",
+    "_chart_axis_label_band_like",
+    "_compact_top_chart_title_like",
+    "_drawing_caption_rects",
+    "_caption_blocks",
+    "_heading_lines",
+    "_cluster_rects_by_y",
+    "_has_intervening_paragraph",
+    "_heading_chart_rects",
+    "_nearest_caption_block",
+    "_clamp_top_to_caption",
+    "_clamp_top_to_heading",
+    "_heading_top_block_limit",
+    "_caption_top_block_limit",
+    "_extend_with_note_blocks",
+    "_next_chart_blocker_top",
+    "_clamp_bottom_to_next_chart_blocker",
+    "_extend_with_adjacent_text_blocks",
+    "_extend_chart_rect_with_adjacent_drawings",
+    "_has_internal_top_text",
+    "_extend_with_heading_above",
+    "_adjust_rect_for_text_margins",
+    "_expand_rect_into_whitespace",
+    "_caption_near_top",
+    "_merge_caption_above",
+    "_nearest_heading_above",
+    "_note_block_bottom",
+    "_next_block_top_below",
+    "_clamp_bottom_to_note",
+]
+_PANEL_DETECTION_EXPORTS = [
+    "_panel_should_clamp_to_internal_caption",
+    "_panel_candidate_shadowed_by_heading_candidate",
+    "_panel_candidate_shadowed_by_larger_panel",
+    "_panel_stacked_bottom_clip_y",
+    "_panel_neighbor_x_bounds",
+    "_panel_title_lines",
+    "_panel_lowercase_title_has_metric_context",
+    "_panel_local_title_line",
+    "_panel_preferred_local_title_line",
+    "_panel_titles_form_multiline_band",
+    "_shared_row_panel_title_line",
+    "_panel_title_slice_bounds",
+    "_panel_chart_is_label_dense_not_prose",
+    "_numeric_token_hits",
+    "_panel_chart_has_metric_signal",
+    "_extend_panel_rect_with_nearby_label_blocks",
+    "_panel_label_block_looks_like_footer_banner",
+    "_panel_chart_has_data_signal",
+    "_panel_component_text_from_blocks",
+    "_panel_component_has_chart_signal",
+    "_panel_component_looks_like_independent_data_panel",
+    "_panel_component_looks_like_guidance_card",
+    "_panel_chart_has_structured_card_signal",
+    "_panel_caption_looks_metric_stub",
+    "_panel_chart_has_compact_stat_card_signal",
+    "_page_looks_like_contents_layout",
+    "_drawing_components",
+    "_shared_title_component_group",
+    "_stacked_panel_group_has_intervening_text",
+    "_panel_chart_rects",
+    "_merge_panel_title_band_candidates",
+    "_panel_caption_looks_top_band",
+    "_extend_panel_rect_with_adjacent_drawings",
+    "_clamp_panel_rect_to_dominant_fill_rect",
+    "_extend_panel_with_adjacent_text_blocks",
+]
+_COLLECTOR_EXPORTS = ["_collect_chart_rects"]
+
+if TYPE_CHECKING:
+    _adjust_rect_for_text_margins: Any
+    _caption_blocks: Any
+    _caption_near_top: Any
+    _caption_top_block_limit: Any
+    _chart_axis_label_band_like: Any
+    _clamp_bottom_to_next_chart_blocker: Any
+    _clamp_bottom_to_note: Any
+    _clamp_panel_rect_to_dominant_fill_rect: Any
+    _clamp_top_to_caption: Any
+    _clamp_top_to_heading: Any
+    _cluster_rects_by_y: Any
+    _collect_chart_rects: Any
+    _compact_top_chart_title_like: Any
+    _drawing_caption_rects: Any
+    _drawing_components: Any
+    _drawing_rects: Any
+    _expand_rect_into_whitespace: Any
+    _extend_chart_rect_with_adjacent_drawings: Any
+    _extend_panel_rect_with_adjacent_drawings: Any
+    _extend_panel_rect_with_nearby_label_blocks: Any
+    _extend_panel_with_adjacent_text_blocks: Any
+    _extend_with_adjacent_text_blocks: Any
+    _extend_with_heading_above: Any
+    _extend_with_note_blocks: Any
+    _has_internal_top_text: Any
+    _has_intervening_paragraph: Any
+    _heading_chart_rects: Any
+    _heading_lines: Any
+    _heading_top_block_limit: Any
+    _image_block_rects: Any
+    _merge_caption_above: Any
+    _merge_panel_title_band_candidates: Any
+    _nearest_caption_block: Any
+    _nearest_heading_above: Any
+    _next_block_top_below: Any
+    _next_chart_blocker_top: Any
+    _note_block_bottom: Any
+    _numeric_token_hits: Any
+    _page_looks_like_contents_layout: Any
+    _panel_candidate_shadowed_by_heading_candidate: Any
+    _panel_candidate_shadowed_by_larger_panel: Any
+    _panel_caption_looks_metric_stub: Any
+    _panel_caption_looks_top_band: Any
+    _panel_chart_has_compact_stat_card_signal: Any
+    _panel_chart_has_data_signal: Any
+    _panel_chart_has_metric_signal: Any
+    _panel_chart_has_structured_card_signal: Any
+    _panel_chart_is_label_dense_not_prose: Any
+    _panel_chart_rects: Any
+    _panel_component_has_chart_signal: Any
+    _panel_component_looks_like_guidance_card: Any
+    _panel_component_looks_like_independent_data_panel: Any
+    _panel_component_text_from_blocks: Any
+    _panel_label_block_looks_like_footer_banner: Any
+    _panel_local_title_line: Any
+    _panel_lowercase_title_has_metric_context: Any
+    _panel_neighbor_x_bounds: Any
+    _panel_preferred_local_title_line: Any
+    _panel_should_clamp_to_internal_caption: Any
+    _panel_stacked_bottom_clip_y: Any
+    _panel_title_lines: Any
+    _panel_title_slice_bounds: Any
+    _panel_titles_form_multiline_band: Any
+    _shared_row_panel_title_line: Any
+    _shared_title_component_group: Any
+    _stacked_panel_group_has_intervening_text: Any
+
+__all__ = [
+    name
+    for name in globals()
+    if not name.startswith("__")
+    and name
+    not in {
+        "TYPE_CHECKING",
+        "_LOCAL_PRIVATE_EXPORTS",
+        "_CHART_LAYOUT_EXPORTS",
+        "_PANEL_DETECTION_EXPORTS",
+        "_COLLECTOR_EXPORTS",
+    }
+]
+__all__ += _LOCAL_PRIVATE_EXPORTS
 
 from ._visual_heuristics.chart_layout import *
-from ._visual_heuristics.chart_layout import __all__ as _chart_layout_all
 from ._visual_heuristics.panel_detection import *
-from ._visual_heuristics.panel_detection import __all__ as _panel_detection_all
 from ._visual_heuristics.collectors import *
-from ._visual_heuristics.collectors import __all__ as _collectors_all
 
-__all__ += _chart_layout_all + _panel_detection_all + _collectors_all
+__all__ += _CHART_LAYOUT_EXPORTS + _PANEL_DETECTION_EXPORTS + _COLLECTOR_EXPORTS

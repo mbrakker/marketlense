@@ -237,22 +237,6 @@ Suggested priority order:
 
 ## 8. Deep Codebase Audit (2026-05-06)
 
-- **Title:** Restore CI baseline integrity after facade/module splits [Impact: 5/5, Effort: 4/5]
-  - Explanation: A full CI preflight plus a second-pass recheck found the type gate currently failing with 1,365 mypy errors across 43 files. Errors cluster in newly split internal modules (`src/services/_config_service/*`, `src/services/_pdf/_visual_heuristics/*`) and now-unsafe orchestrator/generator typing edges. This is an immediate CI blocker and also signals cross-module contract drift after refactors.
-  - Pros: Unblocks all PRs, restores confidence in type contracts, reduces runtime defect risk from incorrect assumptions.
-  - Cons: Requires disciplined staged fixes and temporary ownership focus across several bounded contexts.
-  - Acceptance Criteria:
-    - `python scripts/ci/run_type_check.py` passes with zero unbaselined errors.
-    - Any remaining baseline entries are intentional, owner-tagged, expiry-dated, and justified.
-    - `src/services/_config_service/*` exports/imports are repaired so split modules resolve shared helpers/constants/types without `name-defined` failures.
-    - `src/services/_pdf/_visual_heuristics/*` re-exports/constants are reconciled so submodules no longer depend on missing symbols.
-    - Critical typed logic fixes land for currently unbaselined failures in:
-      - `src/generators/artifact_normalization.py`
-      - `src/orchestrators/_report_download_orchestrator/workflow.py`
-      - `src/orchestrators/publisher_inventory_orchestrator.py`
-      - `src/orchestrators/publish_orchestrator.py`
-      - `src/services/_report_store_service/common.py`
-
 - **Title:** Add automated post-refactor symbol-linking guard for split service internals [Impact: 4/5, Effort: 2/5]
   - Explanation: The dominant errors are unresolved names caused by internal module fission where helper symbols are no longer imported/exported coherently. The existing architecture gate checks import direction but does not catch missing symbol wiring early.
   - Pros: Prevents future large-scale CI failures after mechanical module splits.
@@ -261,35 +245,6 @@ Suggested priority order:
     - A fast static check validates required exported symbols for split boundary families (at minimum `_config_service` and `_pdf/_visual_heuristics`).
     - The check runs before mypy in CI and fails with grouped actionable diagnostics.
     - README documents when to run the check locally during refactors.
-
-- **Title:** Repair `config_service` facade split so internal modules compile and preserve one canonical boundary [Impact: 5/5, Effort: 3/5]
-  - Explanation: Deep audit plus second-pass rerun showed that `src/services/_config_service/app_settings.py` and `src/services/_config_service/analysis.py` currently reference many missing shared symbols (types, helpers, logger/constants, and dotenv hooks). This indicates an incomplete internal split that broke symbol wiring while keeping `src/services/config_service.py` as the public boundary.
-  - Pros: Restores deterministic config loading and prevents runtime surprises from dead code paths hidden behind import-time failures.
-  - Cons: Requires careful re-stitching of internal helpers without reintroducing monolithic `config_service.py` logic.
-  - Acceptance Criteria:
-    - Internal `_config_service/*` modules import all required shared symbols explicitly and mypy no longer reports `name-defined` errors in this family.
-    - `config_service.py` remains the single canonical public entrypoint while internal modules stay capability-scoped.
-    - Regression tests cover both positive config load and failure taxonomy paths for missing/invalid settings.
-    - `python scripts/ci/run_type_check.py` shows zero unbaselined `_config_service` errors.
-
-- **Title:** Reconcile `_pdf/_visual_heuristics` module fission with explicit constant ownership and exports [Impact: 4/5, Effort: 3/5]
-  - Explanation: The audit found a high-volume cluster of unresolved constants and export issues across `src/services/_pdf/_visual_heuristics/panel_detection.py` and `src/services/_pdf/visual_heuristics.py` (`CHART_CAPTION_HINTS`, title thresholds, regex constants, and missing `__all__`). Current structure suggests ineffective split mechanics where consumers rely on symbols no longer owned or re-exported coherently.
-  - Pros: Reduces fragile cross-file coupling and stabilizes PDF chart/table heuristics behavior.
-  - Cons: Touches dense heuristic code that needs careful non-regression validation.
-  - Acceptance Criteria:
-    - Shared constants are centralized in one internal owner module and imported explicitly by all heuristic submodules.
-    - `visual_heuristics.py` re-export policy is explicit and type-safe (including `__all__` where required).
-    - Type gate and PDF heuristic tests pass without new baselined exceptions.
-    - A short module docstring explains ownership boundaries to prevent repeat drift.
-
-- **Title:** Close unbaselined orchestrator/generator type-safety gaps that can corrupt publish/download behavior [Impact: 5/5, Effort: 2/5]
-  - Explanation: Repeated type-gate runs consistently flagged unbaselined errors in `publish_orchestrator`, `publisher_inventory_orchestrator`, `_report_download_orchestrator/workflow`, and `artifact_normalization` (unsafe `object` assumptions, contract-mismatch assignments, and nullable comparisons). These are high-risk paths where ineffective typing choices can mask functional bugs.
-  - Pros: Prevents silent contract corruption in core side-effecting workflows.
-  - Cons: Requires focused fixes plus small targeted tests instead of broad refactors.
-  - Acceptance Criteria:
-    - All currently unbaselined errors in the listed orchestrator/generator files are resolved (or explicitly owner-tagged with expiry if deferred).
-    - Tests assert corrected contract types for taxonomy/tag ensure flows, post lookup batch handling, checksum hashing inputs, and nullable normalization guards.
-    - A follow-up double-run of `python scripts/ci/run_type_check.py` produces identical clean results for these files.
 
 - **Title:** Tighten risk-policy scope so doc-only changes cannot hide repository-wide CI breakage [Impact: 4/5, Effort: 1/5]
   - Explanation: Current risk classification marks a `CONSOLIDATED_TODO.md`-only change as `docs` while the repository remains red on hard gates. This can create false confidence during maintenance updates.

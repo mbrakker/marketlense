@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.services._openai_service.base import *
 
+
 def _require_api_key(api_key: str, *, operation: str) -> str:
     key = str(api_key or "").strip()
     if not key:
@@ -99,4 +100,12 @@ def _run_vector_store_request(
             context=error_context,
         ) from exc
 
-__all__ = [name for name in globals() if not name.startswith("__")]
+
+__all__ = [
+    "_build_openai_client",
+    "_log_vector_store_event",
+    "_require_api_key",
+    "_require_openai_id",
+    "_run_vector_store_request",
+    "_value_from_response",
+]

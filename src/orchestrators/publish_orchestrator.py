@@ -28,6 +28,7 @@ from src.contracts.report_store import (
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
     StateGetRequest,
+    StateGetResponse,
     StatePublishCheckRequest,
     StatePublishRecordRequest,
 )
@@ -36,11 +37,14 @@ from src.contracts.wordpress import (
     WordPressPostLookupBatchItem,
     WordPressPostLookupBatchRequest,
     WordPressPostLookupRequest,
+    WordPressPostLookupResponse,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
     WordPressTagEnsureRequest,
 )
-from src.services.category_mapping_service import load_mappings as load_category_mappings
+from src.services.category_mapping_service import (
+    load_mappings as load_category_mappings,
+)
 from src.services.file_service import list_html, read_text
 from src.services.report_store_service import list_metadata
 from src.services.state_service import already_published as state_already_published
@@ -77,7 +81,7 @@ class _PublishCandidate:
 @dataclass(frozen=True)
 class _PublishPreflightEntry:
     candidate: _PublishCandidate
-    state_row: object | None
+    state_row: StateGetResponse | None
     validation_status: str
     validation_issues: List[str] = field(default_factory=list)
     existing_post_lookup: WordPressPostLookupBatchItem | None = None
@@ -208,7 +212,7 @@ def _batch_lookup_existing_posts(
     base_url: str,
     auth_header: str,
     candidates: list[_PublishCandidate],
-    state_rows_by_file_id: dict[str, object],
+    state_rows_by_file_id: dict[str, StateGetResponse],
     ctx: RunContext,
 ) -> dict[str, WordPressPostLookupBatchItem]:
     eligible_file_ids = [
@@ -231,9 +235,7 @@ def _batch_lookup_existing_posts(
         ctx,
     )
     return {
-        item.file_id: item
-        for item in response.items
-        if str(item.file_id or "").strip()
+        item.file_id: item for item in response.items if str(item.file_id or "").strip()
     }
 
 
@@ -354,9 +356,11 @@ def _resolve_batch_term_assignments(
                             ),
                             file_ctx,
                         )
-                        publisher_cache[publisher_slug] = [
-                            response.slug_to_id[publisher_slug]
-                        ] if publisher_slug in response.slug_to_id else []
+                        publisher_cache[publisher_slug] = (
+                            [response.slug_to_id[publisher_slug]]
+                            if publisher_slug in response.slug_to_id
+                            else []
+                        )
                     except AppError as exc:
                         logger.info(
                             log_event(
@@ -383,7 +387,7 @@ def _resolve_batch_term_assignments(
             tag_key = tuple(tag_slugs)
             if tag_key not in tag_cache:
                 try:
-                    response = ensure_tags(
+                    tag_response = ensure_tags(
                         WordPressTagEnsureRequest(
                             schema_version="1.0",
                             base_url=base_url,
@@ -395,9 +399,9 @@ def _resolve_batch_term_assignments(
                         file_ctx,
                     )
                     tag_cache[tag_key] = [
-                        response.slug_to_id[tag_slug]
+                        tag_response.slug_to_id[tag_slug]
                         for tag_slug in tag_slugs
-                        if tag_slug in response.slug_to_id
+                        if tag_slug in tag_response.slug_to_id
                     ]
                 except AppError as exc:
                     logger.info(
@@ -451,7 +455,7 @@ def _build_publish_preflight_entries(
     auth_header: str,
     ctx: RunContext,
 ) -> list[_PublishPreflightEntry]:
-    state_rows_by_file_id: dict[str, object] = {}
+    state_rows_by_file_id: dict[str, StateGetResponse] = {}
     validation_by_file_id: dict[str, tuple[str, list[str]]] = {}
     eligible_network_preflight_file_ids: list[str] = []
 
@@ -495,7 +499,8 @@ def _build_publish_preflight_entries(
         candidates=[
             candidate
             for candidate in candidates
-            if str(candidate.file_id or "").strip() in eligible_network_preflight_file_ids
+            if str(candidate.file_id or "").strip()
+            in eligible_network_preflight_file_ids
         ],
         state_rows_by_file_id={
             file_id: state_rows_by_file_id[file_id]
@@ -746,9 +751,7 @@ def run_publish(
             event="publish_auth_source",
             module=logger.name,
             fields={
-                "source": "bearer_token"
-                if settings.wp.bearer_token
-                else "app_password"
+                "source": "bearer_token" if settings.wp.bearer_token else "app_password"
             },
         )
     )
@@ -965,6 +968,7 @@ def run_publish(
 
         def _publish_attempt() -> PublishOutcome:
             nonlocal outcome
+            lookup_resp: WordPressPostLookupBatchItem | WordPressPostLookupResponse
             if existing_post_lookup is not None and not existing_post_lookup.error_code:
                 lookup_resp = existing_post_lookup
             else:

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from src.services._openai_service.base import *
 from src.services._openai_service.client import *
+
 
 @dataclass(frozen=True)
 class _ChatCompletionRun:
@@ -26,12 +29,13 @@ def _legacy_chat_completion_call(
     # fails (e.g., unexpected kwargs like proxies in older dependencies).
     previous_timeout = getattr(openai_legacy, "timeout", None)
     had_timeout_attr = hasattr(openai_legacy, "timeout")
-    openai_legacy.api_key = api_key
+    legacy_openai = cast(Any, openai_legacy)
+    legacy_openai.api_key = api_key
     try:
         if timeout_seconds is not None:
-            openai_legacy.timeout = timeout_seconds
+            legacy_openai.timeout = timeout_seconds
         elif had_timeout_attr:
-            delattr(openai_legacy, "timeout")
+            delattr(legacy_openai, "timeout")
         payload_args = {
             "model": model,
             "messages": [
@@ -43,10 +47,10 @@ def _legacy_chat_completion_call(
         }
         try:
             payload_args["response_format"] = {"type": "json_object"}
-            resp = openai_legacy.ChatCompletion.create(**payload_args)
+            resp = legacy_openai.ChatCompletion.create(**payload_args)
         except TypeError:
             payload_args.pop("response_format", None)
-            resp = openai_legacy.ChatCompletion.create(**payload_args)
+            resp = legacy_openai.ChatCompletion.create(**payload_args)
         payload = resp["choices"][0]["message"]["content"]
         usage = resp.get("usage") or {}
         return _ChatCompletionRun(
@@ -58,10 +62,10 @@ def _legacy_chat_completion_call(
         )
     finally:
         if had_timeout_attr:
-            openai_legacy.timeout = previous_timeout
+            legacy_openai.timeout = previous_timeout
         else:
             try:
-                delattr(openai_legacy, "timeout")
+                delattr(legacy_openai, "timeout")
             except AttributeError:
                 had_timeout_attr = False
 
@@ -601,5 +605,6 @@ def openai_chat_json_with_images(
         response_payload=asdict(result),
     )
     return result
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

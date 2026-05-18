@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import time
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, is_dataclass, replace
 from datetime import datetime, timezone
 from typing import Callable, Optional
 from urllib.parse import urlsplit
@@ -101,9 +101,7 @@ logger = logging.getLogger("market_lense.publisher_inventory_orchestrator")
 
 _SNAPSHOT_PREFIX = "publisher_inventory_snapshot__"
 _SNAPSHOT_LOOKBACK_LIMIT = 10
-_RUN_QUALITY_IDEMPOTENCY_SCOPE = (
-    "publisher_inventory_orchestrator.run_quality_record"
-)
+_RUN_QUALITY_IDEMPOTENCY_SCOPE = "publisher_inventory_orchestrator.run_quality_record"
 _RECOVERY_CACHE_IDEMPOTENCY_SCOPE = (
     "publisher_inventory_orchestrator.recovery_cache_record"
 )
@@ -263,6 +261,8 @@ def _idempotency_key_with_checksum(*parts: str, checksum: str) -> str:
 def _optional_dataclass_payload(value: object) -> dict[str, object] | None:
     if value is None:
         return None
+    if not is_dataclass(value) or isinstance(value, type):
+        return None
     return asdict(value)
 
 
@@ -289,9 +289,7 @@ def _state_record_checksum(
             "route_kind": request.route_kind,
             "route_summary": request.route_summary,
             "route_trace": _optional_dataclass_payload(request.route_trace),
-            "scenario_summary": _optional_dataclass_payload(
-                request.scenario_summary
-            ),
+            "scenario_summary": _optional_dataclass_payload(request.scenario_summary),
             "last_final_page_url": request.last_final_page_url,
             "snapshot_drive_file_id": request.snapshot_drive_file_id,
             "snapshot_drive_file_name": request.snapshot_drive_file_name,
@@ -1672,9 +1670,10 @@ def _load_previous_snapshot(
             ctx,
         )
         snapshot_payload = download_response.content.decode("utf-8")
-        resolved_sha256 = candidate_sha256 or hashlib.sha256(
-            snapshot_payload.encode("utf-8")
-        ).hexdigest()
+        resolved_sha256 = (
+            candidate_sha256
+            or hashlib.sha256(snapshot_payload.encode("utf-8")).hexdigest()
+        )
         try:
             snapshot = dependencies.parse_publisher_inventory_snapshot(
                 snapshot_payload,

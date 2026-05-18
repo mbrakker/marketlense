@@ -25,11 +25,11 @@ import asyncio
 import base64
 import inspect
 import logging
-from concurrent.futures import TimeoutError as FutureTimeoutError
+from concurrent.futures import Future, TimeoutError as FutureTimeoutError
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Thread
-from typing import Any
+from typing import Any, Coroutine, cast
 
 from src.contracts.browser_download import BrowserDownloadDialogEvidence
 from src.contracts.run_context import RunContext
@@ -82,16 +82,24 @@ _CDP_DIALOG_MESSAGE_MAX_CHARS = 300
 @dataclass(frozen=True)
 class BrowserDownloadCdpCallResult:
     schema_version: str = field(metadata={"doc": "CDP call-result schema version."})
-    method: str = field(metadata={"doc": "Allowlisted Chrome DevTools Protocol method."})
+    method: str = field(
+        metadata={"doc": "Allowlisted Chrome DevTools Protocol method."}
+    )
     target_id: str = field(
-        metadata={"doc": "Browser-use target ID used for this CDP call, else empty string."}
+        metadata={
+            "doc": "Browser-use target ID used for this CDP call, else empty string."
+        }
     )
     session_id: str = field(
-        metadata={"doc": "Browser-use CDP session ID used for this CDP call, else empty string."}
+        metadata={
+            "doc": "Browser-use CDP session ID used for this CDP call, else empty string."
+        }
     )
     status: str = field(metadata={"doc": "Call status: `ok` or `failed`."})
     result: dict[str, Any] = field(
-        metadata={"doc": "Raw CDP result dictionary when the call succeeds, else empty dict."}
+        metadata={
+            "doc": "Raw CDP result dictionary when the call succeeds, else empty dict."
+        }
     )
 
 
@@ -449,7 +457,10 @@ def capture_terminal_screenshot_via_cdp(
                 cause=exc,
                 retryable=True,
                 severity="error",
-                context={"normalized_url": normalized_url, "screenshot_path": str(screenshot_path)},
+                context={
+                    "normalized_url": normalized_url,
+                    "screenshot_path": str(screenshot_path),
+                },
             ) from exc
         return False
     return screenshot_path.exists()
@@ -723,7 +734,9 @@ def _collect_terminal_dialog_evidence_via_cdp(
     evidence: list[BrowserDownloadDialogEvidence] = []
     client = resolved_session.client
 
-    async def on_dialog_opening(params: Any, event_session_id: str | None = None) -> None:
+    async def on_dialog_opening(
+        params: Any, event_session_id: str | None = None
+    ) -> None:
         session_id = str(event_session_id or resolved_session.session_id or "").strip()
         if session_id and session_id != resolved_session.session_id:
             return
@@ -944,7 +957,9 @@ def _try_handle_unknown_terminal_dialog(
         message="",
         page_url=str(normalized_url or "").strip(),
         action_taken=(
-            "accepted_without_opening_event" if accept else "dismissed_without_opening_event"
+            "accepted_without_opening_event"
+            if accept
+            else "dismissed_without_opening_event"
         ),
         validation_status="handled_without_opening_event",
         target_id=target_id,
@@ -1338,10 +1353,14 @@ def _select_real_page_target_info(
 
 
 def _is_user_facing_page_target(raw_target: dict[str, Any]) -> bool:
-    target_type = str(raw_target.get("type") or raw_target.get("target_type") or "").strip()
+    target_type = str(
+        raw_target.get("type") or raw_target.get("target_type") or ""
+    ).strip()
     if target_type != "page":
         return False
-    target_id = str(raw_target.get("targetId") or raw_target.get("target_id") or "").strip()
+    target_id = str(
+        raw_target.get("targetId") or raw_target.get("target_id") or ""
+    ).strip()
     if not target_id:
         return False
     url = str(raw_target.get("url") or "").strip()
@@ -1395,7 +1414,12 @@ def _coerce_viewport_dimension(
     primary_key: str,
     fallback_key: str,
 ) -> int:
-    for container_key in ("visualViewport", "layoutViewport", "cssVisualViewport", "cssLayoutViewport"):
+    for container_key in (
+        "visualViewport",
+        "layoutViewport",
+        "cssVisualViewport",
+        "cssLayoutViewport",
+    ):
         container = result.get(container_key)
         if not isinstance(container, dict):
             continue
@@ -1441,7 +1465,9 @@ def _send_raw_cdp(
     send = getattr(client, "send", None)
     domain, command = method.split(".", 1)
     domain_sender = getattr(send, domain, None) if send is not None else None
-    command_sender = getattr(domain_sender, command, None) if domain_sender is not None else None
+    command_sender = (
+        getattr(domain_sender, command, None) if domain_sender is not None else None
+    )
     if not callable(command_sender):
         raise RuntimeError(f"CDP client cannot send {method}")
     kwargs: dict[str, Any] = {"params": params}
@@ -1549,7 +1575,10 @@ def _await_cdp_client_operation(
         except RuntimeError:
             running_loop = None
         if running_loop is not client_loop:
-            future = asyncio.run_coroutine_threadsafe(value, client_loop)
+            future: Future[Any] = asyncio.run_coroutine_threadsafe(
+                cast(Coroutine[Any, Any, Any], value),
+                client_loop,
+            )
             try:
                 return future.result(timeout=timeout_seconds)
             except FutureTimeoutError as exc:

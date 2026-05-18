@@ -2,13 +2,43 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403
 
-from typing import Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, TypeAlias
 
 import pymupdf as fitz
 
 from ..visual_heuristics import *
 from .chart_layout import *
 from .panel_detection import *
+
+if TYPE_CHECKING:
+    _ChartRect: TypeAlias = Any
+    PDF_FIGURE_EXCEPTIONS: tuple[type[BaseException], ...]
+
+    def _image_block_rects(
+        page: fitz.Page,
+        text_dict: Optional[dict[str, Any]] = None,
+    ) -> List[fitz.Rect]: ...
+
+    def _drawing_caption_rects(
+        page: fitz.Page,
+        *,
+        blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
+    ) -> List[Tuple[fitz.Rect, str, fitz.Rect]]: ...
+
+    def _panel_chart_rects(
+        page: fitz.Page,
+        *,
+        text_dict: Optional[dict[str, Any]] = None,
+        blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
+    ) -> List[Tuple[fitz.Rect, str, fitz.Rect]]: ...
+
+    def _heading_chart_rects(
+        page: fitz.Page,
+        *,
+        text_dict: Optional[dict[str, Any]] = None,
+        blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
+    ) -> List[Tuple[fitz.Rect, str, fitz.Rect]]: ...
+
 
 def _collect_chart_rects(
     page: fitz.Page,
@@ -67,4 +97,5 @@ def _collect_chart_rects(
         )
     return rects
 
-__all__ = ['_collect_chart_rects']
+
+__all__ = ["_collect_chart_rects"]

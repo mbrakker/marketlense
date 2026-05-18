@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from typing import List, cast
+from typing import List, Optional, cast
 from urllib.parse import urlsplit
 
 from src.contracts.publisher_inventory import PublisherInventoryRoutePolicySignal
@@ -10,6 +10,7 @@ from src.contracts.report_store import PublisherDownloadRoutePolicySignal
 from src.utils.coercion import clean_string_list
 
 from .serialization import _parse_route_steps
+
 
 def _route_projection_rank(route_status: str, outcome: str) -> int:
     normalized_status = str(route_status or "").strip().lower()

@@ -41,9 +41,9 @@ OpenAI: Any | None = _base.OpenAI
 
 def _sync_runtime_patch_points() -> None:
     for module in (_base, _client, _chat, _responses, _vector_store):
-        module.OpenAI = OpenAI
-        module.file_service = file_service
-        module.openai_accounting_service = openai_accounting_service
+        setattr(module, "OpenAI", OpenAI)
+        setattr(module, "file_service", file_service)
+        setattr(module, "openai_accounting_service", openai_accounting_service)
 
 
 def analyze_report(

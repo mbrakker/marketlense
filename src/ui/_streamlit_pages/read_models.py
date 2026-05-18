@@ -7,7 +7,7 @@ from typing import Any, Callable, MutableMapping, TypeVar
 
 import streamlit as st
 
-from src.contracts.costs import CostRollupRequest
+from src.contracts.costs import CostReportingRequest, CostRollupRequest
 from src.contracts.ops import OpsDashboardSnapshotRequest
 from src.contracts.state import StateGetRequest
 from src.contracts.streamlit_dashboard import (
@@ -219,14 +219,16 @@ def _load_log_events(
         st.session_state,
         view_name="log_events",
         identity=(tuple(log_paths), max_lines_per_file),
-        loader=lambda: load_log_events(
-            LogEventLoadRequest(
-                schema_version="1.0",
-                log_paths=log_paths,
-                max_lines_per_file=max_lines_per_file,
-            ),
-            _ctx("load_log_events"),
-        ).events,
+        loader=lambda: (
+            load_log_events(
+                LogEventLoadRequest(
+                    schema_version="1.0",
+                    log_paths=log_paths,
+                    max_lines_per_file=max_lines_per_file,
+                ),
+                _ctx("load_log_events"),
+            ).events
+        ),
     )
 
 
@@ -337,13 +339,15 @@ def _load_report_rows(settings: Any) -> list[dict[str, Any]]:
         st.session_state,
         view_name="report_rows",
         identity=(settings.reports_db,),
-        loader=lambda: load_report_rows(
-            ReportRowsLoadRequest(
-                schema_version="1.0",
-                reports_db=settings.reports_db,
-            ),
-            _ctx("load_report_rows"),
-        ).rows,
+        loader=lambda: (
+            load_report_rows(
+                ReportRowsLoadRequest(
+                    schema_version="1.0",
+                    reports_db=settings.reports_db,
+                ),
+                _ctx("load_report_rows"),
+            ).rows
+        ),
     )
 
 
@@ -352,15 +356,17 @@ def _load_processed_rows(settings: Any) -> list[dict[str, Any]]:
         st.session_state,
         view_name="processed_rows",
         identity=(settings.state_db, 1000),
-        loader=lambda: load_state_rows(
-            StateRowsLoadRequest(
-                schema_version="1.0",
-                state_db=settings.state_db,
-                kind="processed",
-                limit=1000,
-            ),
-            _ctx("load_processed_rows"),
-        ).rows,
+        loader=lambda: (
+            load_state_rows(
+                StateRowsLoadRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    kind="processed",
+                    limit=1000,
+                ),
+                _ctx("load_processed_rows"),
+            ).rows
+        ),
     )
 
 
@@ -369,15 +375,17 @@ def _load_published_rows(settings: Any) -> list[dict[str, Any]]:
         st.session_state,
         view_name="published_rows",
         identity=(settings.state_db, 1000),
-        loader=lambda: load_state_rows(
-            StateRowsLoadRequest(
-                schema_version="1.0",
-                state_db=settings.state_db,
-                kind="published",
-                limit=1000,
-            ),
-            _ctx("load_published_rows"),
-        ).rows,
+        loader=lambda: (
+            load_state_rows(
+                StateRowsLoadRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    kind="published",
+                    limit=1000,
+                ),
+                _ctx("load_published_rows"),
+            ).rows
+        ),
     )
 
 
@@ -504,7 +512,9 @@ def _load_ledger_entries(
     return response.entries
 
 
-def _cost_rollup_rows(settings: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]], Any]:
+def _cost_rollup_rows(
+    settings: Any,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], Any]:
     ledger_rows = _load_ledger_entries(settings.cost_ledger_path)
     log_files = _discover_log_files()
     event_rows = _load_log_events(
@@ -513,7 +523,7 @@ def _cost_rollup_rows(settings: Any) -> tuple[list[dict[str, Any]], list[dict[st
     )
     duration_rows = compute_task_duration_rollups(event_rows)
     rollup_reporting = run_cost_reporting(
-        src.contracts.costs.CostReportingRequest(
+        CostReportingRequest(
             schema_version="1.0",
             rollup_request=CostRollupRequest(
                 schema_version="1.0",

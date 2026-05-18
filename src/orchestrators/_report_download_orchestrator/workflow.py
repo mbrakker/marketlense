@@ -399,13 +399,15 @@ def _identity_update_checksum(
 def _restore_identity_update_response(
     payload: dict[str, object],
 ) -> BrowserDownloadIdentityFieldUpsertResponse:
+    raw_added_field_keys = payload.get("added_field_keys")
+    added_field_keys = (
+        raw_added_field_keys if isinstance(raw_added_field_keys, list) else []
+    )
     return BrowserDownloadIdentityFieldUpsertResponse(
         schema_version=str(payload.get("schema_version") or "1.0"),
         path=str(payload.get("path") or ""),
         added_field_keys=[
-            str(item)
-            for item in list(payload.get("added_field_keys") or [])
-            if str(item or "").strip()
+            str(item) for item in added_field_keys if str(item or "").strip()
         ],
         total_fields=coerce_int(payload.get("total_fields"), 0),
     )
@@ -510,7 +512,9 @@ def _terminal_evidence_from_error_context(
     blocked_reason_detail = str(context.get("blocked_reason_detail") or "").strip()
     terminal_text_excerpt = str(context.get("terminal_text_excerpt") or "").strip()
     artifact_validation_status = "blocked" if blocked_reason else "none"
-    artifact_validation_detail = blocked_reason_detail or terminal_text_excerpt or exc.code
+    artifact_validation_detail = (
+        blocked_reason_detail or terminal_text_excerpt or exc.code
+    )
     traversed_page_urls: list[str] = []
     for raw_value in (
         planned_step.attempt_url,
@@ -647,7 +651,9 @@ def _with_failure_forensics_context(
     if pack is not None:
         context["failure_forensics_pack_path"] = pack.pack_path
         context["failure_forensics_artifact_policy"] = pack.artifact_policy
-        context["failure_forensics_artifacts"] = [asdict(item) for item in pack.artifacts]
+        context["failure_forensics_artifacts"] = [
+            asdict(item) for item in pack.artifacts
+        ]
     return AppError(
         code=exc.code,
         message=exc.message,
@@ -716,7 +722,8 @@ def _persist_failed_attempt_forensics_pack(
         error_class=_failure_error_class(exc),
         error_retryable=exc.retryable,
         error_severity=exc.severity,
-        blocked_reason=str((exc.context or {}).get("blocked_reason") or "").strip() or None,
+        blocked_reason=str((exc.context or {}).get("blocked_reason") or "").strip()
+        or None,
         blocked_reason_detail=str(
             (exc.context or {}).get("blocked_reason_detail") or ""
         ).strip()
@@ -934,16 +941,14 @@ def run_report_download(
                         "attempt_retryable": attempt_retryable,
                         "fallback_on_retryable_error": planned_step.fallback_on_retryable_error,
                         "failure_forensics_pack_path": str(
-                            (exc.context or {}).get("failure_forensics_pack_path")
-                            or ""
+                            (exc.context or {}).get("failure_forensics_pack_path") or ""
                         ),
                         "failure_forensics_artifact_policy": str(
                             (exc.context or {}).get("failure_forensics_artifact_policy")
                             or ""
                         ),
                         "terminal_html_snapshot_path": str(
-                            (exc.context or {}).get("terminal_html_snapshot_path")
-                            or ""
+                            (exc.context or {}).get("terminal_html_snapshot_path") or ""
                         ),
                         "terminal_screenshot_path": str(
                             (exc.context or {}).get("terminal_screenshot_path") or ""
@@ -1379,14 +1384,11 @@ def _run_download_attempt(
             "attempt": attempt,
             "retryable": retryable,
             "route_family": planned_step.route_family,
-            "recovery_class": planned_step.recovery_class
-            or planned_step.route_family,
+            "recovery_class": planned_step.recovery_class or planned_step.route_family,
             "recovery_decision": planned_step.recovery_decision,
             "attempt_url": str(planned_step.attempt_url or request.url).strip(),
             "code": exc.code if isinstance(exc, AppError) else "unexpected_exception",
-            "error": (
-                exc.message if isinstance(exc, AppError) else str(exc)
-            ),
+            "error": (exc.message if isinstance(exc, AppError) else str(exc)),
             "error_class": _failure_error_class(exc),
             "failure_forensics_pack_path": (
                 str((exc.context or {}).get("failure_forensics_pack_path") or "")
@@ -2063,7 +2065,9 @@ def _is_mixed_content_hub_candidate(
     if not segments:
         return True
     last_segment = segments[-1]
-    last_tokens = [token for token in last_segment.replace("_", "-").split("-") if token]
+    last_tokens = [
+        token for token in last_segment.replace("_", "-").split("-") if token
+    ]
     title_has_detail_signal = any(
         marker in str(title or "") for marker in _REPORT_DETAIL_TITLE_MARKERS
     )
@@ -2074,7 +2078,9 @@ def _is_mixed_content_hub_candidate(
         _url_surface_key(value) for value in source_pages if str(value or "").strip()
     }
     candidate_surface_key = _url_surface_key(str(url_value or normalized_url))
-    source_same_surface = bool(source_page_set) and candidate_surface_key in source_page_set
+    source_same_surface = (
+        bool(source_page_set) and candidate_surface_key in source_page_set
+    )
     listing_last_segment = last_segment in _MIXED_CONTENT_HUB_SEGMENTS
     listing_query = any(
         key in str(parsed.query or "").casefold()
@@ -2085,7 +2091,12 @@ def _is_mixed_content_hub_candidate(
         and any(segment in _MIXED_CONTENT_HUB_SEGMENTS for segment in segments)
         and len(last_tokens) < 3
     )
-    return source_same_surface or listing_last_segment or listing_query or short_listing_under_context
+    return (
+        source_same_surface
+        or listing_last_segment
+        or listing_query
+        or short_listing_under_context
+    )
 
 
 def _url_surface_key(url: str) -> str:

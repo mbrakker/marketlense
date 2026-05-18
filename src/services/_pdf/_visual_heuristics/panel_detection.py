@@ -3,12 +3,146 @@ from __future__ import annotations
 # ruff: noqa: F401,F403
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, TypeAlias
 
 import pymupdf as fitz
 
 from ..visual_heuristics import *
 from .chart_layout import *
+
+if TYPE_CHECKING:
+    from ..visual_heuristics import (
+        CHART_CAPTION_HINTS,
+        CHART_LABEL_COMPACT_TITLE_MAX_AVG_LINE_LEN,
+        CHART_LABEL_COMPACT_TITLE_MAX_CHARS,
+        CHART_LABEL_COMPACT_TITLE_MAX_LINES,
+        CHART_LABEL_MAX_AVG_LINE_LEN,
+        CHART_LABEL_MAX_GAP_FRAC,
+        CHART_LABEL_MAX_HEIGHT_FRAC,
+        CHART_LABEL_MAX_LINES,
+        CHART_LABEL_MAX_V_GAP_FRAC,
+        CHART_LABEL_MIN_H_OVERLAP,
+        CHART_LABEL_MIN_V_OVERLAP,
+        CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN,
+        CHART_LABEL_PARAGRAPH_MIN_LINES,
+        EMAIL_ADDRESS_RX,
+        INFO_HEADING_MIN_ALPHA_RATIO,
+        PAGE_FOOTER_BANNER_LINE_RX,
+        PANEL_CHART_CONNECT_GAP_FRAC,
+        PANEL_CHART_INTERNAL_CAPTION_MAX_AVG_LINE_LEN,
+        PANEL_CHART_INTERNAL_CAPTION_MAX_CHARS,
+        PANEL_CHART_INTERNAL_CAPTION_MAX_LINES,
+        PANEL_CHART_INTERNAL_CAPTION_MIN_WIDTH_RATIO,
+        PANEL_CHART_INTERNAL_CAPTION_TOP_GAP_MAX,
+        PANEL_CHART_LABEL_ATTACH_MAX_AREA_FRAC,
+        PANEL_CHART_LABEL_ATTACH_MAX_AVG_LINE_LEN,
+        PANEL_CHART_LABEL_ATTACH_MAX_CHARS,
+        PANEL_CHART_LABEL_ATTACH_MAX_GAP_X_FRAC,
+        PANEL_CHART_LABEL_ATTACH_MAX_GAP_Y_FRAC,
+        PANEL_CHART_LABEL_ATTACH_MAX_LINES,
+        PANEL_CHART_LABEL_ATTACH_MIN_H_OVERLAP,
+        PANEL_CHART_LABEL_ATTACH_MIN_V_OVERLAP,
+        PANEL_CHART_LABEL_ATTACH_SKIP_OVERLAP_RATIO,
+        PANEL_CHART_LOCAL_TITLE_MAX_HEIGHT_RATIO,
+        PANEL_CHART_LOCAL_TITLE_MAX_WIDTH_RATIO,
+        PANEL_CHART_LOCAL_TITLE_MIN_SIZE,
+        PANEL_CHART_LOCAL_TITLE_MIN_WIDTH_RATIO,
+        PANEL_CHART_LOCAL_TITLE_TOP_FRAC,
+        PANEL_CHART_MAX_AREA_FRAC,
+        PANEL_CHART_MIN_AREA_FRAC,
+        PANEL_CHART_MIN_NUMERIC_HITS,
+        PANEL_CHART_SHARED_COMPONENT_MAX_SIDE_GAP_FRAC,
+        PANEL_CHART_SHARED_COMPONENT_MAX_STACK_GAP_FRAC,
+        PANEL_CHART_SHARED_COMPONENT_MIN_HEIGHT_RATIO,
+        PANEL_CHART_SHARED_COMPONENT_MIN_H_ALIGN,
+        PANEL_CHART_SHARED_COMPONENT_MIN_V_OVERLAP,
+        PANEL_CHART_SHARED_COMPONENT_MIN_WIDTH_RATIO,
+        PANEL_CHART_SPLIT_MIN_CENTER_GAP_FRAC,
+        PANEL_CHART_SPLIT_MIN_WIDTH_RATIO,
+        PANEL_CHART_SPLIT_SLICE_X_PAD_FRAC,
+        PANEL_CHART_TITLE_BAND_MERGE_MAX_AREA_RATIO,
+        PANEL_CHART_TITLE_BAND_MERGE_MAX_GAP_FRAC,
+        PANEL_CHART_TITLE_BAND_MERGE_MIN_H_OVERLAP,
+        PANEL_CHART_TITLE_MAX_CHARS,
+        PANEL_CHART_TITLE_MAX_GAP,
+        PANEL_CHART_TITLE_MAX_SENTENCES,
+        PANEL_CHART_TITLE_MAX_WORDS,
+        PANEL_CHART_TITLE_MIN_SIZE,
+        PANEL_CHART_TITLE_MIN_WORDS,
+        PANEL_CHART_TITLE_NEAREST_TOL,
+        PANEL_CHART_TITLE_SLICE_SIZE_TOL,
+        PANEL_CHART_TITLE_SLICE_X_PAD_FRAC,
+        PANEL_CHART_TITLE_SLICE_Y_TOL,
+        PANEL_CHART_TITLE_STACK_MAX_EDGE_DELTA,
+        PANEL_CHART_TITLE_STACK_MAX_GAP,
+        PANEL_CHART_TITLE_STACK_MIN_H_OVERLAP,
+        PANEL_CHART_TITLE_X_PAD,
+        PANEL_CHART_TOP_TITLE_ATTACH_COMPONENT_MIN_H_OVERLAP,
+        PANEL_CHART_TOP_TITLE_ATTACH_MAX_CENTER_DELTA_FRAC,
+        PANEL_CHART_TOP_TITLE_ATTACH_MAX_GAP_FRAC,
+        PANEL_CHART_TOP_TITLE_ATTACH_MAX_HEIGHT_RATIO,
+        PANEL_CHART_TOP_TITLE_ATTACH_MAX_LEFT_INSET_FRAC,
+        PANEL_CHART_TOP_TITLE_ATTACH_MAX_SPILL_X_FRAC,
+        PANEL_CHART_TOP_TITLE_ATTACH_MAX_WIDTH_RATIO,
+        PANEL_CHART_TOP_TITLE_ATTACH_MIN_WIDTH_RATIO,
+        PANEL_CHART_TOP_TITLE_ATTACH_NARROW_MAX_CENTER_DELTA_FRAC,
+        PANEL_CHART_TOP_TITLE_ATTACH_NARROW_MAX_WIDTH_RATIO,
+        PANEL_CHART_TOP_TITLE_ATTACH_NARROW_MIN_WIDTH_RATIO,
+        PANEL_CONTEXT_CARD_MAX_COMPONENT_OVERLAP,
+        PANEL_CONTEXT_CARD_MAX_SIDE_GAP_FRAC,
+        PANEL_CONTEXT_CARD_MIN_HEIGHT_RATIO,
+        PANEL_CONTEXT_CARD_MIN_TEXT_CHARS,
+        PANEL_CONTEXT_CARD_MIN_V_OVERLAP,
+        PANEL_GUIDANCE_TITLE_RX,
+        PDF_FIGURE_EXCEPTIONS,
+        _PANEL_TITLE_EXCLUDE_RX,
+    )
+
+    _ChartRect: TypeAlias = Any
+    _PageTextLine: TypeAlias = Any
+    _alpha_ratio: Any
+    _horizontal_overlap_ratio: Any
+    _is_page_number_text: Any
+    _line_starts_with_caption_hint: Any
+    _rect_containment_ratio: Any
+    _rect_iou: Any
+    _rect_overlap_area: Any
+    _rect_seen: Any
+    _s: Any
+    _starts_with_lower_alpha: Any
+    _table_normalize_text: Any
+    _table_page_text_lines: Any
+    _text_stats: Any
+    _vertical_overlap_ratio: Any
+
+    def _drawing_rects(page: fitz.Page) -> List[fitz.Rect]: ...
+
+    def _caption_blocks(
+        page: fitz.Page,
+        hints: Tuple[str, ...],
+        *,
+        blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
+    ) -> List[Tuple[fitz.Rect, str]]: ...
+
+    def _compact_top_chart_title_like(
+        text: str,
+        *,
+        block: fitz.Rect,
+        rect: fitz.Rect,
+        max_v_gap: float,
+        lines: int,
+        chars: int,
+        avg_line_len: float,
+    ) -> bool: ...
+
+    def _chart_axis_label_band_like(
+        text: str,
+        *,
+        lines: int,
+        chars: int,
+        avg_line_len: float,
+    ) -> bool: ...
+
 
 def _panel_should_clamp_to_internal_caption(
     rect_item: _ChartRect,
@@ -224,6 +358,7 @@ def _panel_stacked_bottom_clip_y(
             return None
     return candidate_y
 
+
 def _panel_neighbor_x_bounds(
     rect_item: _ChartRect,
     candidates: List[_ChartRect],
@@ -274,6 +409,7 @@ def _panel_neighbor_x_bounds(
             candidate_min = max(page_rect.x0, (other_rect.x1 + left_anchor) / 2.0)
             min_x = candidate_min if min_x is None else max(min_x, candidate_min)
     return min_x, max_x
+
 
 def _panel_title_lines(
     page: fitz.Page,
@@ -343,6 +479,7 @@ def _panel_title_lines(
         )
     return merged_titles
 
+
 def _panel_lowercase_title_has_metric_context(
     line: _PageTextLine,
     component_rect: fitz.Rect,
@@ -375,6 +512,7 @@ def _panel_lowercase_title_has_metric_context(
             continue
         return True
     return False
+
 
 def _panel_local_title_line(
     page: fitz.Page,
@@ -446,6 +584,7 @@ def _panel_local_title_line(
             best = line
             best_key = key
     return best
+
 
 def _panel_preferred_local_title_line(
     page: fitz.Page,
@@ -542,6 +681,7 @@ def _panel_preferred_local_title_line(
             best_key = ranking_key
     return best
 
+
 def _panel_titles_form_multiline_band(
     titles: List[_PageTextLine],
     component_rect: fitz.Rect,
@@ -571,6 +711,7 @@ def _panel_titles_form_multiline_band(
     return (
         band_rect.width / max(1.0, component_rect.width)
     ) >= 0.35 and _horizontal_overlap_ratio(band_rect, component_rect) >= 0.45
+
 
 def _shared_row_panel_title_line(
     component_index: int,
@@ -625,6 +766,7 @@ def _shared_row_panel_title_line(
             best = title
             best_key = key
     return best
+
 
 def _panel_title_slice_bounds(
     page: fitz.Page,
@@ -689,6 +831,7 @@ def _panel_title_slice_bounds(
         min(page.rect.x1, boundaries[target_index + 1] + pad),
     )
 
+
 def _panel_chart_is_label_dense_not_prose(text: str) -> bool:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if len(lines) < 8:
@@ -708,6 +851,7 @@ def _panel_chart_is_label_dense_not_prose(text: str) -> bool:
 
 def _numeric_token_hits(text: str) -> int:
     return len(re.findall(r"\b\d+(?:\.\d+)?%?\b", text))
+
 
 def _panel_chart_has_metric_signal(text: str) -> bool:
     if re.search(r"\b\d+(?:\.\d+)?%", text):
@@ -1185,6 +1329,7 @@ def _panel_chart_has_compact_stat_card_signal(text: str) -> bool:
     sentence_marks = text.count(".") + text.count("!") + text.count("?")
     return sentence_marks <= 2
 
+
 def _page_looks_like_contents_layout(
     page: fitz.Page,
     *,
@@ -1216,6 +1361,7 @@ def _page_looks_like_contents_layout(
     if top_text.startswith("contents") or "\ncontents" in top_text:
         return numeric_hits >= 4 and short_heading_hits >= 3
     return False
+
 
 def _drawing_components(page: fitz.Page) -> List[Tuple[fitz.Rect, List[fitz.Rect]]]:
     rects = list(_drawing_rects(page))
@@ -1257,6 +1403,7 @@ def _drawing_components(page: fitz.Page) -> List[Tuple[fitz.Rect, List[fitz.Rect
             merged |= rect
         components.append((merged, current))
     return sorted(components, key=lambda item: item[0].get_area(), reverse=True)
+
 
 def _shared_title_component_group(
     component_index: int,
@@ -1333,6 +1480,7 @@ def _shared_title_component_group(
             changed = True
     return sorted(grouped)
 
+
 def _stacked_panel_group_has_intervening_text(
     grouped_indices: Tuple[int, ...],
     component_entries: List[
@@ -1369,6 +1517,7 @@ def _stacked_panel_group_has_intervening_text(
                 continue
             return True
     return False
+
 
 def _panel_chart_rects(
     page: fitz.Page,
@@ -1825,6 +1974,7 @@ def _panel_chart_rects(
             deduped.append((rect, text, title_rect))
     return deduped
 
+
 def _merge_panel_title_band_candidates(
     candidates: List[Tuple[fitz.Rect, str, fitz.Rect]],
     *,
@@ -1941,6 +2091,7 @@ def _panel_caption_looks_top_band(
         return False
     return True
 
+
 def _extend_panel_rect_with_adjacent_drawings(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -2020,6 +2171,7 @@ def _extend_panel_rect_with_adjacent_drawings(
         expanded.x1 = min(expanded.x1, max_x)
     return expanded
 
+
 def _clamp_panel_rect_to_dominant_fill_rect(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -2085,6 +2237,7 @@ def _clamp_panel_rect_to_dominant_fill_rect(
         min(page.rect.x1, best_rect.x1 + 2.0),
         min(page.rect.y1, best_rect.y1 + 2.0),
     )
+
 
 def _extend_panel_with_adjacent_text_blocks(
     page: fitz.Page,
@@ -2444,4 +2597,41 @@ def _extend_panel_with_adjacent_text_blocks(
         expanded.x1 = min(expanded.x1, max_x)
     return expanded
 
-__all__ = ['_panel_should_clamp_to_internal_caption', '_panel_candidate_shadowed_by_heading_candidate', '_panel_candidate_shadowed_by_larger_panel', '_panel_stacked_bottom_clip_y', '_panel_neighbor_x_bounds', '_panel_title_lines', '_panel_lowercase_title_has_metric_context', '_panel_local_title_line', '_panel_preferred_local_title_line', '_panel_titles_form_multiline_band', '_shared_row_panel_title_line', '_panel_title_slice_bounds', '_panel_chart_is_label_dense_not_prose', '_numeric_token_hits', '_panel_chart_has_metric_signal', '_extend_panel_rect_with_nearby_label_blocks', '_panel_label_block_looks_like_footer_banner', '_panel_chart_has_data_signal', '_panel_component_text_from_blocks', '_panel_component_has_chart_signal', '_panel_component_looks_like_independent_data_panel', '_panel_component_looks_like_guidance_card', '_panel_chart_has_structured_card_signal', '_panel_caption_looks_metric_stub', '_panel_chart_has_compact_stat_card_signal', '_page_looks_like_contents_layout', '_drawing_components', '_shared_title_component_group', '_stacked_panel_group_has_intervening_text', '_panel_chart_rects', '_merge_panel_title_band_candidates', '_panel_caption_looks_top_band', '_extend_panel_rect_with_adjacent_drawings', '_clamp_panel_rect_to_dominant_fill_rect', '_extend_panel_with_adjacent_text_blocks']
+
+__all__ = [
+    "_panel_should_clamp_to_internal_caption",
+    "_panel_candidate_shadowed_by_heading_candidate",
+    "_panel_candidate_shadowed_by_larger_panel",
+    "_panel_stacked_bottom_clip_y",
+    "_panel_neighbor_x_bounds",
+    "_panel_title_lines",
+    "_panel_lowercase_title_has_metric_context",
+    "_panel_local_title_line",
+    "_panel_preferred_local_title_line",
+    "_panel_titles_form_multiline_band",
+    "_shared_row_panel_title_line",
+    "_panel_title_slice_bounds",
+    "_panel_chart_is_label_dense_not_prose",
+    "_numeric_token_hits",
+    "_panel_chart_has_metric_signal",
+    "_extend_panel_rect_with_nearby_label_blocks",
+    "_panel_label_block_looks_like_footer_banner",
+    "_panel_chart_has_data_signal",
+    "_panel_component_text_from_blocks",
+    "_panel_component_has_chart_signal",
+    "_panel_component_looks_like_independent_data_panel",
+    "_panel_component_looks_like_guidance_card",
+    "_panel_chart_has_structured_card_signal",
+    "_panel_caption_looks_metric_stub",
+    "_panel_chart_has_compact_stat_card_signal",
+    "_page_looks_like_contents_layout",
+    "_drawing_components",
+    "_shared_title_component_group",
+    "_stacked_panel_group_has_intervening_text",
+    "_panel_chart_rects",
+    "_merge_panel_title_band_candidates",
+    "_panel_caption_looks_top_band",
+    "_extend_panel_rect_with_adjacent_drawings",
+    "_clamp_panel_rect_to_dominant_fill_rect",
+    "_extend_panel_with_adjacent_text_blocks",
+]

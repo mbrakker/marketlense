@@ -4,11 +4,104 @@ from __future__ import annotations
 
 import re
 import statistics
-from typing import Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 import pymupdf as fitz
 
 from ..visual_heuristics import *
+
+if TYPE_CHECKING:
+    from ..visual_heuristics import (
+        CHART_AXIS_LABEL_BAND_MAX_AVG_LINE_LEN,
+        CHART_AXIS_LABEL_BAND_MAX_LINES,
+        CHART_AXIS_LABEL_BAND_MIN_ALPHA_RATIO,
+        CHART_AXIS_LABEL_BAND_MIN_TOKEN_HITS,
+        CHART_CAPTION_HINTS,
+        CHART_CAPTION_INTERNAL_TOP_TOL_FRAC,
+        CHART_CAPTION_INTERNAL_TOP_TOL_PX,
+        CHART_CAPTION_MERGE_MAX_GAP_FRAC,
+        CHART_CAPTION_TOP_BLOCK_H_OVERLAP,
+        CHART_CAPTION_TOP_GUARD_FRAC,
+        CHART_CAPTION_TOP_PAD_FRAC,
+        CHART_CAPTION_TOP_PAD_PX,
+        CHART_CAPTION_TOP_SEARCH_FRAC,
+        CHART_CROP_PAD_COMPENSATION,
+        CHART_EDGE_TEXT_MAX_PAD_FRAC,
+        CHART_EDGE_TEXT_MAX_PAD_X_FRAC,
+        CHART_EDGE_TEXT_MIN_GAP_FRAC,
+        CHART_EDGE_TEXT_MIN_GAP_X_FRAC,
+        CHART_HEADING_MERGE_MAX_GAP_FRAC,
+        CHART_HEADING_TOP_BLOCK_H_OVERLAP,
+        CHART_HEADING_TOP_GUARD_FRAC,
+        CHART_HEADING_TOP_MAX_PAD_FRAC,
+        CHART_HEADING_TOP_SEARCH_FRAC,
+        CHART_LABEL_COMPACT_TITLE_MAX_AVG_LINE_LEN,
+        CHART_LABEL_COMPACT_TITLE_MAX_CHARS,
+        CHART_LABEL_COMPACT_TITLE_MAX_LINES,
+        CHART_LABEL_MAX_AVG_LINE_LEN,
+        CHART_LABEL_MAX_GAP_FRAC,
+        CHART_LABEL_MAX_HEIGHT_FRAC,
+        CHART_LABEL_MAX_LINES,
+        CHART_LABEL_MAX_V_GAP_FRAC,
+        CHART_LABEL_MIN_H_OVERLAP,
+        CHART_LABEL_MIN_V_OVERLAP,
+        CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN,
+        CHART_LABEL_PARAGRAPH_MIN_LINES,
+        CHART_NEXT_BLOCKER_GUARD_PX,
+        CHART_NEXT_BLOCKER_MIN_GAP_FRAC,
+        CHART_NEXT_BLOCKER_MIN_GAP_PX,
+        CHART_NEXT_BLOCKER_MIN_H_OVERLAP,
+        CHART_NOTE_BELOW_GUARD_PX,
+        CHART_NOTE_BELOW_MIN_H_OVERLAP,
+        CHART_NOTE_MAX_DIST,
+        CHART_NOTE_MAX_GAP_X_FRAC,
+        CHART_NOTE_PAD_EXTRA,
+        CHART_WHITESPACE_GUARD_GAP_FRAC,
+        CHART_WHITESPACE_GUARD_GAP_X_FRAC,
+        CHART_WHITESPACE_MAX_PAD_FRAC,
+        CHART_WHITESPACE_MAX_PAD_X_FRAC,
+        CHART_WHITESPACE_MIN_OVERLAP,
+        DRAWING_BACKGROUND_MAX_STROKE,
+        DRAWING_BACKGROUND_MIN_AREA_FRAC,
+        DRAWING_MIN_RECT_AREA,
+        DRAWING_MIN_RECT_DIM,
+        INFO_CHART_BAND_FRAC,
+        INFO_CHART_CLUSTER_GAP_FRAC,
+        INFO_CHART_MAX_GAP_FRAC,
+        INFO_CHART_MIN_AREA_FRAC,
+        INFO_CHART_MIN_DRAWINGS,
+        INFO_HEADING_MAX_CHARS,
+        INFO_HEADING_MAX_SENTENCES,
+        INFO_HEADING_MAX_WORDS,
+        INFO_HEADING_MERGE_GAP_FRAC,
+        INFO_HEADING_MERGE_H_OVERLAP,
+        INFO_HEADING_MERGE_SIZE_DELTA,
+        INFO_HEADING_MIN_ALPHA_RATIO,
+        INFO_HEADING_MIN_SIZE,
+        INFO_HEADING_MIN_WORDS,
+        INFO_HEADING_SIZE_DELTA,
+        NOTE_LABEL_PREFIXES,
+        PANEL_CHART_INTERNAL_CAPTION_MAX_AVG_LINE_LEN,
+        PANEL_CHART_INTERNAL_CAPTION_MAX_CHARS,
+        PANEL_CHART_INTERNAL_CAPTION_MAX_LINES,
+        PANEL_CHART_INTERNAL_CAPTION_MIN_WIDTH_RATIO,
+        PANEL_CHART_INTERNAL_CAPTION_TOP_GAP_MAX,
+        PDF_FIGURE_EXCEPTIONS,
+        TABLE_CAPTION_HINTS,
+    )
+
+    _alpha_ratio: Any
+    _horizontal_overlap_ratio: Any
+    _is_page_number_text: Any
+    _line_starts_with_caption_hint: Any
+    _pad_rect: Any
+    _rect_intersection_area: Any
+    _rect_iou: Any
+    _rect_seen: Any
+    _table_normalize_text: Any
+    _text_stats: Any
+    _vertical_overlap_ratio: Any
+
 
 def _image_block_rects(
     page: fitz.Page,
@@ -32,6 +125,7 @@ def _image_block_rects(
         except PDF_FIGURE_EXCEPTIONS:
             continue
     return rects
+
 
 def _drawing_rects(page: fitz.Page) -> List[fitz.Rect]:
     try:
@@ -63,6 +157,7 @@ def _drawing_rects(page: fitz.Page) -> List[fitz.Rect]:
         rects.append(r)
     return rects
 
+
 def _chart_axis_label_band_like(
     text: str,
     *,
@@ -92,8 +187,10 @@ def _chart_axis_label_band_like(
         )
     )
 
+
 def _numeric_token_hits(text: str) -> int:
     return len(re.findall(r"\b\d+(?:\.\d+)?%?\b", text))
+
 
 def _compact_top_chart_title_like(
     text: str,
@@ -123,6 +220,7 @@ def _compact_top_chart_title_like(
     allowed_gap = max(max_v_gap * 1.8, 36.0)
     return rect.y0 - block.y1 <= allowed_gap
 
+
 def _panel_caption_looks_top_band(
     text: str,
     *,
@@ -140,12 +238,16 @@ def _panel_caption_looks_top_band(
         return False
     if rect.height <= 0:
         return False
-    if cap_rect.width / max(1.0, rect.width) < PANEL_CHART_INTERNAL_CAPTION_MIN_WIDTH_RATIO:
+    if (
+        cap_rect.width / max(1.0, rect.width)
+        < PANEL_CHART_INTERNAL_CAPTION_MIN_WIDTH_RATIO
+    ):
         return False
     return cap_rect.y0 <= rect.y0 + min(
         PANEL_CHART_INTERNAL_CAPTION_TOP_GAP_MAX,
         rect.height * 0.22,
     )
+
 
 def _drawing_caption_rects(
     page: fitz.Page,
@@ -230,6 +332,7 @@ def _drawing_caption_rects(
             deduped.append((rect, cap_text, cap_rect))
     return deduped
 
+
 def _caption_blocks(
     page: fitz.Page,
     hints: Tuple[str, ...],
@@ -255,6 +358,7 @@ def _caption_blocks(
         if match_line:
             rects.append((fitz.Rect(x0, y0, x1, y1), match_line))
     return rects
+
 
 def _heading_lines(
     page: fitz.Page,
@@ -347,6 +451,7 @@ def _heading_lines(
         merged.append((rect, text, size))
     return [(rect, text) for rect, text, _ in merged]
 
+
 def _cluster_rects_by_y(rects: List[fitz.Rect], gap: float) -> List[List[fitz.Rect]]:
     if not rects:
         return []
@@ -364,6 +469,7 @@ def _cluster_rects_by_y(rects: List[fitz.Rect], gap: float) -> List[List[fitz.Re
             current_bottom = r.y1
     clusters.append(current)
     return clusters
+
 
 def _has_intervening_paragraph(
     page: fitz.Page,
@@ -402,6 +508,7 @@ def _has_intervening_paragraph(
         ):
             return True
     return False
+
 
 def _heading_chart_rects(
     page: fitz.Page,
@@ -461,6 +568,7 @@ def _heading_chart_rects(
             deduped.append((rect, text, head_rect))
     return deduped
 
+
 def _nearest_caption_block(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -499,6 +607,7 @@ def _nearest_caption_block(
         return None, ""
     return best_rect, best_text
 
+
 def _clamp_top_to_caption(
     rect: fitz.Rect,
     cap_rect: fitz.Rect,
@@ -523,6 +632,7 @@ def _clamp_top_to_caption(
         return fitz.Rect(rect.x0, target_top, rect.x1, rect.y1)
     return rect
 
+
 def _clamp_top_to_heading(
     rect: fitz.Rect,
     head_rect: fitz.Rect,
@@ -539,6 +649,7 @@ def _clamp_top_to_heading(
     if rect.y0 < min_top:
         return fitz.Rect(rect.x0, min_top, rect.x1, rect.y1)
     return rect
+
 
 def _heading_top_block_limit(
     page: fitz.Page,
@@ -573,6 +684,7 @@ def _heading_top_block_limit(
         return None
     return min(page_rect.y1, best_y1 + guard)
 
+
 def _caption_top_block_limit(
     page: fitz.Page,
     cap_rect: fitz.Rect,
@@ -606,6 +718,7 @@ def _caption_top_block_limit(
         return None
     return min(page_rect.y1, best_y1 + guard)
 
+
 def _extend_with_note_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     page_rect = page.rect
     limit = min(page_rect.y1, rect.y1 + CHART_NOTE_MAX_DIST)
@@ -633,6 +746,7 @@ def _extend_with_note_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
             continue
         expanded |= block
     return expanded
+
 
 def _next_chart_blocker_top(
     page: fitz.Page,
@@ -679,6 +793,7 @@ def _next_chart_blocker_top(
 
     return best_y0
 
+
 def _clamp_bottom_to_next_chart_blocker(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -691,6 +806,7 @@ def _clamp_bottom_to_next_chart_blocker(
     if new_bottom <= rect.y0 + 1.0:
         return rect
     return fitz.Rect(rect.x0, rect.y0, rect.x1, new_bottom)
+
 
 def _extend_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     page_rect = page.rect
@@ -785,6 +901,7 @@ def _extend_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.
                 expanded |= block
     return expanded
 
+
 def _extend_chart_rect_with_adjacent_drawings(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -845,6 +962,7 @@ def _extend_chart_rect_with_adjacent_drawings(
             changed = True
     return expanded
 
+
 def _has_internal_top_text(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -881,11 +999,13 @@ def _has_internal_top_text(
         return True
     return False
 
+
 def _extend_with_heading_above(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     head_rect = _nearest_heading_above(page, rect)
     if head_rect is None:
         return rect
     return rect | head_rect
+
 
 def _adjust_rect_for_text_margins(
     page: fitz.Page,
@@ -945,6 +1065,7 @@ def _adjust_rect_for_text_margins(
                 rect.x0, rect.y0, min(page_rect.x1, rect.x1 + pad), rect.y1
             )
     return rect
+
 
 def _expand_rect_into_whitespace(
     page: fitz.Page,
@@ -1031,10 +1152,12 @@ def _expand_rect_into_whitespace(
         min(page_rect.y1, rect.y1 + bottom_pad),
     )
 
+
 def _caption_near_top(rect: fitz.Rect, cap_rect: fitz.Rect, frac: float = 0.35) -> bool:
     if rect.height <= 0:
         return False
     return cap_rect.y0 <= rect.y0 + rect.height * frac
+
 
 def _merge_caption_above(
     rect: fitz.Rect,
@@ -1047,6 +1170,7 @@ def _merge_caption_above(
     if cap_rect.y0 < rect.y0 and cap_rect.y1 > rect.y0:
         return rect | cap_rect
     return rect
+
 
 def _nearest_heading_above(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.Rect]:
     headings = _heading_lines(page)
@@ -1076,6 +1200,7 @@ def _nearest_heading_above(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.Re
                 best_rect = head_rect
                 best_dist = 0.0
     return best_rect
+
 
 def _note_block_bottom(
     page: fitz.Page, rect: fitz.Rect, *, min_y0_frac: float = 0.45
@@ -1108,6 +1233,7 @@ def _note_block_bottom(
             best = y1
     return best
 
+
 def _next_block_top_below(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -1133,6 +1259,7 @@ def _next_block_top_below(
         if best is None or block.y0 < best:
             best = block.y0
     return best
+
 
 def _clamp_bottom_to_note(
     page: fitz.Page,
@@ -1167,4 +1294,36 @@ def _clamp_bottom_to_note(
         return fitz.Rect(rect.x0, rect.y0, rect.x1, max_bottom)
     return rect
 
-__all__ = ['_image_block_rects', '_drawing_rects', '_chart_axis_label_band_like', '_numeric_token_hits', '_compact_top_chart_title_like', '_panel_caption_looks_top_band', '_drawing_caption_rects', '_caption_blocks', '_heading_lines', '_cluster_rects_by_y', '_has_intervening_paragraph', '_heading_chart_rects', '_nearest_caption_block', '_clamp_top_to_caption', '_clamp_top_to_heading', '_heading_top_block_limit', '_caption_top_block_limit', '_extend_with_note_blocks', '_next_chart_blocker_top', '_clamp_bottom_to_next_chart_blocker', '_extend_with_adjacent_text_blocks', '_extend_chart_rect_with_adjacent_drawings', '_has_internal_top_text', '_extend_with_heading_above', '_adjust_rect_for_text_margins', '_expand_rect_into_whitespace', '_caption_near_top', '_merge_caption_above', '_nearest_heading_above', '_note_block_bottom', '_next_block_top_below', '_clamp_bottom_to_note']
+
+__all__ = [
+    "_image_block_rects",
+    "_drawing_rects",
+    "_chart_axis_label_band_like",
+    "_compact_top_chart_title_like",
+    "_drawing_caption_rects",
+    "_caption_blocks",
+    "_heading_lines",
+    "_cluster_rects_by_y",
+    "_has_intervening_paragraph",
+    "_heading_chart_rects",
+    "_nearest_caption_block",
+    "_clamp_top_to_caption",
+    "_clamp_top_to_heading",
+    "_heading_top_block_limit",
+    "_caption_top_block_limit",
+    "_extend_with_note_blocks",
+    "_next_chart_blocker_top",
+    "_clamp_bottom_to_next_chart_blocker",
+    "_extend_with_adjacent_text_blocks",
+    "_extend_chart_rect_with_adjacent_drawings",
+    "_has_internal_top_text",
+    "_extend_with_heading_above",
+    "_adjust_rect_for_text_margins",
+    "_expand_rect_into_whitespace",
+    "_caption_near_top",
+    "_merge_caption_above",
+    "_nearest_heading_above",
+    "_note_block_bottom",
+    "_next_block_top_below",
+    "_clamp_bottom_to_note",
+]

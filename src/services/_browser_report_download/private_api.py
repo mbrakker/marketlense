@@ -85,7 +85,7 @@ def _try_private_api_evidence(
         endpoint_pattern=evidence.endpoint_pattern,
         source_url=execution_url or normalized_url,
     )
-    common_fields = {
+    common_fields: dict[str, object] = {
         "normalized_url": normalized_url,
         "playbook_id": playbook.playbook_id,
         "version": playbook.version,
