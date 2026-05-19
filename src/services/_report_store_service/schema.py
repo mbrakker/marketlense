@@ -4,6 +4,7 @@ import sqlite3
 
 from .common import _normalize_optional_url_key
 
+
 def _ensure_schema(conn: sqlite3.Connection) -> None:
     cur = conn.execute("PRAGMA table_info(reports)")
     cols = {row[1] for row in cur.fetchall()}
@@ -98,6 +99,10 @@ def _ensure_report_sources_schema(conn: sqlite3.Connection) -> None:
         "discovered_on_page_number",
         "downloaded_at_utc",
         "md5",
+        "report_value_score",
+        "report_value_band",
+        "report_value_score_json",
+        "report_value_scored_at_utc",
         "created_at",
         "updated_at",
     }
@@ -118,6 +123,10 @@ def _ensure_report_sources_schema(conn: sqlite3.Connection) -> None:
               discovered_on_page_number INTEGER,
               downloaded_at_utc TEXT,
               md5 TEXT,
+              report_value_score REAL,
+              report_value_band TEXT,
+              report_value_score_json TEXT,
+              report_value_scored_at_utc TEXT,
               created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
               updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
             )
@@ -142,6 +151,18 @@ def _ensure_report_sources_schema(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE report_sources ADD COLUMN discovered_on_page_number INTEGER"
         )
+    if "report_value_score" not in current:
+        conn.execute("ALTER TABLE report_sources ADD COLUMN report_value_score REAL")
+    if "report_value_band" not in current:
+        conn.execute("ALTER TABLE report_sources ADD COLUMN report_value_band TEXT")
+    if "report_value_score_json" not in current:
+        conn.execute(
+            "ALTER TABLE report_sources ADD COLUMN report_value_score_json TEXT"
+        )
+    if "report_value_scored_at_utc" not in current:
+        conn.execute(
+            "ALTER TABLE report_sources ADD COLUMN report_value_scored_at_utc TEXT"
+        )
     missing = expected - current
     unsupported = missing - {
         "normalized_landing_page_url",
@@ -149,6 +170,10 @@ def _ensure_report_sources_schema(conn: sqlite3.Connection) -> None:
         "publisher_name",
         "discovered_at_utc",
         "discovered_on_page_number",
+        "report_value_score",
+        "report_value_band",
+        "report_value_score_json",
+        "report_value_scored_at_utc",
     }
     if unsupported:
         conn.executescript(
@@ -166,6 +191,10 @@ def _ensure_report_sources_schema(conn: sqlite3.Connection) -> None:
               discovered_on_page_number INTEGER,
               downloaded_at_utc TEXT,
               md5 TEXT,
+              report_value_score REAL,
+              report_value_band TEXT,
+              report_value_score_json TEXT,
+              report_value_scored_at_utc TEXT,
               created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
               updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
             );
@@ -182,6 +211,10 @@ def _ensure_report_sources_schema(conn: sqlite3.Connection) -> None:
               discovered_on_page_number,
               downloaded_at_utc,
               md5,
+              report_value_score,
+              report_value_band,
+              report_value_score_json,
+              report_value_scored_at_utc,
               created_at,
               updated_at
             )
@@ -198,6 +231,10 @@ def _ensure_report_sources_schema(conn: sqlite3.Connection) -> None:
               discovered_on_page_number,
               downloaded_at_utc,
               md5,
+              report_value_score,
+              report_value_band,
+              report_value_score_json,
+              report_value_scored_at_utc,
               created_at,
               updated_at
             FROM report_sources;
@@ -226,6 +263,9 @@ def _ensure_report_sources_indexes(conn: sqlite3.Connection) -> None:
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_report_sources_normalized_url ON report_sources(normalized_landing_page_url)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_sources_publisher_score ON report_sources(publisher_name, report_value_score)"
     )
 
 
@@ -313,7 +353,9 @@ def _ensure_publisher_download_route_history_schema(conn: sqlite3.Connection) ->
 def _ensure_publisher_inventory_candidate_recovery_cache_schema(
     conn: sqlite3.Connection,
 ) -> None:
-    cur = conn.execute("PRAGMA table_info(publisher_inventory_candidate_recovery_cache)")
+    cur = conn.execute(
+        "PRAGMA table_info(publisher_inventory_candidate_recovery_cache)"
+    )
     rows = cur.fetchall()
     current = {str(row[1]) for row in rows}
     if not rows:
@@ -364,9 +406,7 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
     if "google_folder" not in cols:
         conn.execute("ALTER TABLE publishers ADD COLUMN google_folder TEXT")
     if "discovery_test_status" not in cols:
-        conn.execute(
-            "ALTER TABLE publishers ADD COLUMN discovery_test_status TEXT"
-        )
+        conn.execute("ALTER TABLE publishers ADD COLUMN discovery_test_status TEXT")
     if "download_route_kind" not in cols:
         conn.execute("ALTER TABLE publishers ADD COLUMN download_route_kind TEXT")
     if "download_route_summary" not in cols:
@@ -414,9 +454,7 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
             "ALTER TABLE publishers ADD COLUMN inventory_snapshot_drive_file_name TEXT"
         )
     if "inventory_snapshot_sha256" not in cols:
-        conn.execute(
-            "ALTER TABLE publishers ADD COLUMN inventory_snapshot_sha256 TEXT"
-        )
+        conn.execute("ALTER TABLE publishers ADD COLUMN inventory_snapshot_sha256 TEXT")
     if "inventory_snapshot_updated_at" not in cols:
         conn.execute(
             "ALTER TABLE publishers ADD COLUMN inventory_snapshot_updated_at INTEGER"

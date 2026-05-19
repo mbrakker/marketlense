@@ -3,6 +3,7 @@ from __future__ import annotations
 from src.services._config_service.common import *
 from src.services._config_service.settings_resolvers import *
 
+
 def load_publisher_inventory_settings(
     request: ConfigLoadRequest, ctx: RunContext
 ) -> PublisherInventorySettings:
@@ -31,6 +32,7 @@ def load_publisher_inventory_settings(
     publisher_discovery = data.get("publisher_discovery", {}) or {}
     candidate_screening_cfg = publisher_discovery.get("candidate_screening", {}) or {}
     candidate_quality_cfg = publisher_discovery.get("candidate_quality_check", {}) or {}
+    resource_quality_cfg = publisher_discovery.get("resource_quality_ranking", {}) or {}
     analysis_cfg = data.get("analysis", {}) or {}
     cost_cfg = data.get("cost", {}) or {}
     retry_cfg = publisher_discovery.get("retry", {}) or browser_retry_cfg
@@ -524,6 +526,127 @@ def load_publisher_inventory_settings(
             ),
             1,
         ),
+        resource_quality_ranking_enabled=_to_bool(
+            resource_quality_cfg.get("enabled")
+            if not _is_missing(resource_quality_cfg.get("enabled"))
+            else _env_value("PUBLISHER_DISCOVERY_RESOURCE_QUALITY_RANKING_ENABLED"),
+            _to_bool(
+                _default_config_value(
+                    "publisher_discovery",
+                    "resource_quality_ranking",
+                    "enabled",
+                    fallback=True,
+                ),
+                True,
+            ),
+        ),
+        resource_quality_score_window_size=max(
+            _to_int(
+                resource_quality_cfg.get("score_window_size")
+                if not _is_missing(resource_quality_cfg.get("score_window_size"))
+                else _env_value(
+                    "PUBLISHER_DISCOVERY_RESOURCE_QUALITY_SCORE_WINDOW_SIZE"
+                ),
+                _to_int(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "resource_quality_ranking",
+                        "score_window_size",
+                        fallback=5,
+                    ),
+                    5,
+                ),
+            ),
+            1,
+        ),
+        resource_quality_min_sample_size=max(
+            _to_int(
+                resource_quality_cfg.get("min_sample_size")
+                if not _is_missing(resource_quality_cfg.get("min_sample_size"))
+                else _env_value("PUBLISHER_DISCOVERY_RESOURCE_QUALITY_MIN_SAMPLE_SIZE"),
+                _to_int(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "resource_quality_ranking",
+                        "min_sample_size",
+                        fallback=2,
+                    ),
+                    2,
+                ),
+            ),
+            1,
+        ),
+        resource_quality_consistency_weight=max(
+            _to_float(
+                resource_quality_cfg.get("consistency_weight")
+                if not _is_missing(resource_quality_cfg.get("consistency_weight"))
+                else _env_value(
+                    "PUBLISHER_DISCOVERY_RESOURCE_QUALITY_CONSISTENCY_WEIGHT"
+                ),
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "resource_quality_ranking",
+                        "consistency_weight",
+                        fallback=0.35,
+                    ),
+                    0.35,
+                ),
+            ),
+            0.0,
+        ),
+        resource_quality_average_weight=max(
+            _to_float(
+                resource_quality_cfg.get("average_weight")
+                if not _is_missing(resource_quality_cfg.get("average_weight"))
+                else _env_value("PUBLISHER_DISCOVERY_RESOURCE_QUALITY_AVERAGE_WEIGHT"),
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "resource_quality_ranking",
+                        "average_weight",
+                        fallback=0.50,
+                    ),
+                    0.50,
+                ),
+            ),
+            0.0,
+        ),
+        resource_quality_confidence_weight=max(
+            _to_float(
+                resource_quality_cfg.get("confidence_weight")
+                if not _is_missing(resource_quality_cfg.get("confidence_weight"))
+                else _env_value(
+                    "PUBLISHER_DISCOVERY_RESOURCE_QUALITY_CONFIDENCE_WEIGHT"
+                ),
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "resource_quality_ranking",
+                        "confidence_weight",
+                        fallback=0.15,
+                    ),
+                    0.15,
+                ),
+            ),
+            0.0,
+        ),
+        resource_quality_low_score_demotion_threshold=_to_float(
+            resource_quality_cfg.get("low_score_demotion_threshold")
+            if not _is_missing(resource_quality_cfg.get("low_score_demotion_threshold"))
+            else _env_value(
+                "PUBLISHER_DISCOVERY_RESOURCE_QUALITY_LOW_SCORE_DEMOTION_THRESHOLD"
+            ),
+            _to_float(
+                _default_config_value(
+                    "publisher_discovery",
+                    "resource_quality_ranking",
+                    "low_score_demotion_threshold",
+                    fallback=45.0,
+                ),
+                45.0,
+            ),
+        ),
         cost_ledger_path=analysis_settings["cost_ledger_path"],
         cost_daily_path=analysis_settings["cost_daily_path"],
         model_pricing=analysis_settings["model_pricing"],
@@ -582,6 +705,13 @@ def load_publisher_inventory_settings(
                 "candidate_quality_check_enabled": settings.candidate_quality_check_enabled,
                 "candidate_quality_check_timeout_seconds": settings.candidate_quality_check_timeout_seconds,
                 "candidate_quality_check_max_workers": settings.candidate_quality_check_max_workers,
+                "resource_quality_ranking_enabled": settings.resource_quality_ranking_enabled,
+                "resource_quality_score_window_size": settings.resource_quality_score_window_size,
+                "resource_quality_min_sample_size": settings.resource_quality_min_sample_size,
+                "resource_quality_consistency_weight": settings.resource_quality_consistency_weight,
+                "resource_quality_average_weight": settings.resource_quality_average_weight,
+                "resource_quality_confidence_weight": settings.resource_quality_confidence_weight,
+                "resource_quality_low_score_demotion_threshold": settings.resource_quality_low_score_demotion_threshold,
                 "llm_retry_retries": llm_runtime["llm_retry_retries"],
                 "llm_retry_base_delay_seconds": llm_runtime[
                     "llm_retry_base_delay_seconds"
@@ -594,5 +724,6 @@ def load_publisher_inventory_settings(
         )
     )
     return settings
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

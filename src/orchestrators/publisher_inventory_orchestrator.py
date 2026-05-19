@@ -43,9 +43,14 @@ from src.contracts.publisher_inventory import (
     PublisherInventorySnapshot,
 )
 from src.contracts.report_store import (
+    PublisherResourceRankingPolicy,
+    PublisherResourceRankingRequest,
+    PublisherResourceRankingResponse,
     PublisherInventoryRecoveryCacheGetRequest,
     PublisherInventoryRecoveryCacheRecordRequest,
     PublisherInventoryRunQualityRecordRequest,
+    ReportSourceQualityHistoryRequest,
+    ReportSourceQualityHistoryResponse,
     ReportSourceDiscoveryRecordRequest,
     ReportSourceDiscoveryRecordResponse,
     PublisherInventoryStateGetRequest,
@@ -70,6 +75,7 @@ from src.generators.publisher_inventory_candidate_screening_generator import (
 from src.generators.publisher_inventory_candidate_quality_generator import (
     qualify_publisher_inventory_candidates,
 )
+from src.generators.report_value_generator import rank_publisher_resources
 from src.orchestrators._publisher_inventory_orchestrator.route_planner import (
     plan_publisher_inventory_routes,
 )
@@ -87,6 +93,7 @@ from src.services.report_store_service import (
     record_publisher_inventory_recovery_cache_record,
     record_publisher_inventory_run_quality,
     record_discovered_report_source,
+    list_report_source_quality_history,
     record_publisher_inventory_state,
     record_publisher_inventory_test_status,
 )
@@ -171,6 +178,14 @@ class PublisherInventoryDependencies:
         [ReportSourceDiscoveryRecordRequest, RunContext],
         ReportSourceDiscoveryRecordResponse,
     ]
+    list_report_source_quality_history: Callable[
+        [ReportSourceQualityHistoryRequest, RunContext],
+        ReportSourceQualityHistoryResponse,
+    ]
+    rank_publisher_resources: Callable[
+        [PublisherResourceRankingRequest, RunContext],
+        PublisherResourceRankingResponse,
+    ]
     list_files_in_folder: Callable[
         [DriveFolderFileListRequest, RunContext],
         DriveFolderFileListResponse,
@@ -201,6 +216,8 @@ class PublisherInventoryDependencies:
             record_publisher_inventory_state=record_publisher_inventory_state,
             record_publisher_inventory_test_status=record_publisher_inventory_test_status,
             record_discovered_report_source=record_discovered_report_source,
+            list_report_source_quality_history=list_report_source_quality_history,
+            rank_publisher_resources=rank_publisher_resources,
             list_files_in_folder=list_files_in_folder,
             download_pdf=download_pdf,
             upload_bytes=upload_bytes,
@@ -853,6 +870,16 @@ def run_publisher_inventory_discovery(
             ctx,
         )
         qualified_items = quality_response.approved_items
+        qualified_items = _rank_qualified_items_by_resource_quality(
+            qualified_items=qualified_items,
+            publisher_name=publisher_state.publisher_name,
+            reports_db=request.reports_db,
+            page_url_by_number=page_url_by_number,
+            fallback_source_url=publisher_state.insights_url,
+            settings=request.settings,
+            ctx=ctx,
+            dependencies=deps,
+        )
         logger.info(
             log_event(
                 ctx,
@@ -1399,6 +1426,111 @@ def _discovery_test_status_for_error_code(code: str) -> str:
     if normalized == "publisher_inventory_browser_pagination_limit":
         return f"bounded:{normalized}"
     return f"failed:{normalized}"
+
+
+def _rank_qualified_items_by_resource_quality(
+    *,
+    qualified_items,
+    publisher_name: str,
+    reports_db: str,
+    page_url_by_number: dict[int, str],
+    fallback_source_url: str,
+    settings,
+    ctx: RunContext,
+    dependencies: PublisherInventoryDependencies,
+):
+    if not qualified_items or not settings.resource_quality_ranking_enabled:
+        return qualified_items
+    source_urls = [
+        page_url_by_number.get(item.discovered_on_page_number, fallback_source_url)
+        for item in qualified_items
+    ]
+    history = dependencies.list_report_source_quality_history(
+        ReportSourceQualityHistoryRequest(
+            schema_version="1.0",
+            db_path=reports_db,
+            publisher_name=publisher_name,
+            limit=max(
+                settings.resource_quality_score_window_size
+                * max(1, len(set(source_urls))),
+                settings.resource_quality_score_window_size,
+            ),
+        ),
+        ctx,
+    )
+    ranking = dependencies.rank_publisher_resources(
+        PublisherResourceRankingRequest(
+            schema_version="1.0",
+            publisher_name=publisher_name,
+            candidate_source_page_urls=source_urls,
+            history_items=history.items,
+            policy=PublisherResourceRankingPolicy(
+                schema_version="1.0",
+                score_window_size=settings.resource_quality_score_window_size,
+                min_sample_size=settings.resource_quality_min_sample_size,
+                consistency_weight=settings.resource_quality_consistency_weight,
+                average_score_weight=settings.resource_quality_average_weight,
+                confidence_weight=settings.resource_quality_confidence_weight,
+                low_score_demotion_threshold=(
+                    settings.resource_quality_low_score_demotion_threshold
+                ),
+            ),
+        ),
+        ctx,
+    )
+    rank_by_url = {item.resource_url: index for index, item in enumerate(ranking.items)}
+    score_by_url = {item.resource_url: item for item in ranking.items}
+
+    def source_url_for_item(item) -> str:
+        source_url = page_url_by_number.get(
+            item.discovered_on_page_number, fallback_source_url
+        )
+        return normalize_url(source_url) or source_url
+
+    def sort_key(item) -> tuple[int, int, str]:
+        normalized_source_url = source_url_for_item(item)
+        return (
+            rank_by_url.get(normalized_source_url, len(rank_by_url)),
+            item.discovered_on_page_number,
+            item.canonical_url,
+        )
+
+    ranked_items = sorted(qualified_items, key=sort_key)
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="publisher_inventory_resource_quality_ranking_applied",
+            module=logger.name,
+            fields={
+                "publisher_name": publisher_name,
+                "history_sample_count": len(history.items),
+                "score_window_size": settings.resource_quality_score_window_size,
+                "min_sample_size": settings.resource_quality_min_sample_size,
+                "ranked_resource_count": len(ranking.items),
+                "resource_rankings": [
+                    {
+                        "resource_url": item.resource_url,
+                        "sample_size": item.sample_size,
+                        "confidence": item.confidence,
+                        "rank_score": item.rank_score,
+                        "demotion_reason": item.demotion_reason,
+                    }
+                    for item in ranking.items
+                ],
+                "ordered_candidate_urls": [item.canonical_url for item in ranked_items],
+                "candidate_resource_scores": {
+                    item.canonical_url: score_by_url[
+                        source_url_for_item(item)
+                    ].rank_score
+                    if source_url_for_item(item) in score_by_url
+                    else 0.0
+                    for item in ranked_items
+                },
+            },
+        )
+    )
+    return ranked_items
 
 
 def _candidate_provenance_counts(

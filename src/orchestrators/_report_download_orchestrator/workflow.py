@@ -52,6 +52,9 @@ from src.contracts.report_store import (
     ReportDownloadDriveFolderLookupResponse,
     ReportSourceRecordRequest,
     ReportSourceRecordResponse,
+    ReportValueScoreRecordRequest,
+    ReportValueScoreRequest,
+    ReportValueScoreResponse,
 )
 from src.contracts.run_context import RunContext
 from src.orchestrators.retry_orchestrator import (
@@ -62,6 +65,7 @@ from src.orchestrators.retry_orchestrator import (
 from src.orchestrators._report_download_orchestrator.route_planner import (
     plan_report_download_routes,
 )
+from src.generators.report_value_generator import score_report_value
 from src.services.browser_report_download_service import (
     download_report_with_browser_use,
 )
@@ -73,6 +77,7 @@ from src.services.report_store_service import (
     get_report_download_drive_folder,
     get_publisher_download_route,
     record_publisher_download_route,
+    record_report_value_score,
     record_report_source,
 )
 from src.services.config_service import upsert_browser_download_identity_fields
@@ -225,6 +230,14 @@ class ReportDownloadDependencies:
         BrowserDownloadIdentityFieldUpsertResponse,
     ]
     sleep_fn: Callable[[float], None]
+    score_report_value: Callable[
+        [ReportValueScoreRequest, RunContext],
+        ReportValueScoreResponse,
+    ] = score_report_value
+    record_report_value_score: Callable[
+        [ReportValueScoreRecordRequest, RunContext],
+        None,
+    ] = record_report_value_score
     read_bytes: Callable[[ReadBytesRequest, RunContext], ReadBytesResponse] = read_bytes
     write_bytes: Callable[[WriteBytesRequest, RunContext], WriteBytesResponse] = (
         write_bytes
@@ -250,6 +263,8 @@ class ReportDownloadDependencies:
             record_publisher_download_route=record_publisher_download_route,
             file_md5=file_md5,
             record_report_source=record_report_source,
+            score_report_value=score_report_value,
+            record_report_value_score=record_report_value_score,
             read_bytes=read_bytes,
             write_bytes=write_bytes,
             get_report_download_drive_folder=get_report_download_drive_folder,
@@ -1179,6 +1194,61 @@ def run_report_download(
                     "landing_page_url": source_record.landing_page_url,
                     "downloaded_at_utc": source_record.downloaded_at_utc,
                     "md5": source_record.md5,
+                },
+            )
+        )
+        report_value_score = deps.score_report_value(
+            ReportValueScoreRequest(
+                schema_version="1.0",
+                publisher_name="",
+                source_domain=source_record.source_domain,
+                report_name=source_record.report_name,
+                landing_page_url=source_record.landing_page_url,
+                source_page_url=source_record.landing_page_url,
+                source_status="downloaded",
+                discovered_at_utc="",
+                downloaded_at_utc=source_record.downloaded_at_utc,
+                md5=source_record.md5,
+                evaluation_year=_utc_now_year(),
+            ),
+            ctx,
+        )
+        run_with_retry(
+            step_name="report_download_source_value_score_record",
+            operation=lambda: deps.record_report_value_score(
+                ReportValueScoreRecordRequest(
+                    schema_version="1.0",
+                    db_path=request.reports_db,
+                    record_id=source_record.record_id,
+                    score=report_value_score,
+                    scored_at_utc=_utc_now_iso(),
+                ),
+                ctx,
+            ),
+            ctx=ctx,
+            logger=logger,
+            module_name=logger.name,
+            policy=policy,
+            retry_event="report_download_source_value_score_record_retry",
+            failure_event="report_download_source_value_score_record_failed",
+            sleep_fn=deps.sleep_fn,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_source_value_scored",
+                module=logger.name,
+                fields={
+                    "record_id": source_record.record_id,
+                    "landing_page_url": source_record.landing_page_url,
+                    "overall_score": report_value_score.overall_score,
+                    "value_band": report_value_score.value_band,
+                    "component_scores": {
+                        component.dimension: component.score
+                        for component in report_value_score.components
+                    },
+                    "rationale": report_value_score.rationale,
                 },
             )
         )
@@ -2125,6 +2195,10 @@ def _utc_now_iso() -> str:
         .isoformat()
         .replace("+00:00", "Z")
     )
+
+
+def _utc_now_year() -> int:
+    return datetime.now(timezone.utc).year
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]

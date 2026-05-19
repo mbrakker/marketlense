@@ -26,8 +26,12 @@ from src.contracts.report_store import (
     ReportDownloadDriveFolderLookupRequest,
     ReportMetadataDbAccessRequest,
     ReportSourceDiscoveryRecordRequest,
+    ReportSourceQualityHistoryRequest,
     ReportMetadataGetRequest,
     ReportSourceRecordRequest,
+    ReportValueScoreComponent,
+    ReportValueScoreRecordRequest,
+    ReportValueScoreResponse,
     ReportMetadataUpsertRequest,
 )
 from src.contracts.publisher_inventory import (
@@ -42,7 +46,9 @@ from src.services.report_store_service import (
     get_report_download_drive_folder,
     get_metadata,
     get_publisher_inventory_recovery_cache_record,
+    list_report_source_quality_history,
     record_discovered_report_source,
+    record_report_value_score,
     get_publisher_download_route,
     get_publisher_inventory_state,
     list_publishers,
@@ -416,6 +422,66 @@ class TestReportStoreService(unittest.TestCase):
                     ),
                     ctx,
                 )
+
+    def test_record_report_value_score_and_list_resource_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_report_value_score_history")
+            discovered = record_discovered_report_source(
+                ReportSourceDiscoveryRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    publisher_name="Example Research",
+                    source_domain="research.example.com",
+                    report_name="2026 Global Retail Market Outlook",
+                    landing_page_url="https://research.example.com/reports/retail-2026",
+                    source_page_url="https://research.example.com/research/reports",
+                    discovered_at_utc="2026-05-19T08:00:00Z",
+                    discovered_on_page_number=1,
+                ),
+                ctx,
+            )
+            record_report_value_score(
+                ReportValueScoreRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    record_id=discovered.record_id,
+                    score=ReportValueScoreResponse(
+                        schema_version="1.0",
+                        overall_score=86.0,
+                        value_band="high",
+                        components=[
+                            ReportValueScoreComponent(
+                                schema_version="1.0",
+                                dimension="market_insight_depth",
+                                score=90.0,
+                                rationale="strong market outlook",
+                            )
+                        ],
+                        rationale="high value",
+                    ),
+                    scored_at_utc="2026-05-19T08:05:00Z",
+                ),
+                ctx,
+            )
+
+            history = list_report_source_quality_history(
+                ReportSourceQualityHistoryRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    publisher_name="Example Research",
+                    limit=10,
+                ),
+                ctx,
+            )
+
+            self.assertEqual(1, len(history.items))
+            self.assertEqual(
+                "https://research.example.com/research/reports",
+                history.items[0].source_page_url,
+            )
+            self.assertEqual(86.0, history.items[0].overall_score)
+            self.assertEqual("high", history.items[0].value_band)
 
     def test_replace_publishers_replaces_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2194,8 +2260,8 @@ class TestReportStoreService(unittest.TestCase):
                 ],
                 columns,
             )
-            self.assertEqual((10,), schema_version)
-            self.assertEqual(10, ledger_count)
+            self.assertEqual((11,), schema_version)
+            self.assertEqual(11, ledger_count)
             self.assertEqual(
                 (
                     "Activate Consulting",
@@ -2385,9 +2451,7 @@ class TestReportStoreService(unittest.TestCase):
             self.assertEqual(
                 "virtualized_list", state.inventory_route_trace.scroll_surface
             )
-            self.assertTrue(
-                state.inventory_route_trace.scroll_surface_candidate_growth
-            )
+            self.assertTrue(state.inventory_route_trace.scroll_surface_candidate_growth)
             self.assertTrue(state.inventory_route_trace.virtualized_list_detected)
             assert state.inventory_scenario_summary is not None
             self.assertEqual(

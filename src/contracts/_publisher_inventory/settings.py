@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+
 @dataclass(frozen=True)
 class PublisherInventorySettings:
     schema_version: str = field(
@@ -195,6 +196,42 @@ class PublisherInventorySettings:
             "doc": "Maximum parallel landing-page fetch workers used by the candidate quality-check service."
         },
     )
+    resource_quality_ranking_enabled: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether qualified publisher candidates should be ordered by rolling source-page value consistency before report_sources persistence."
+        },
+    )
+    resource_quality_score_window_size: int = field(
+        default=5,
+        metadata={
+            "doc": "Maximum recent scored reports per publisher resource used for consistency ranking."
+        },
+    )
+    resource_quality_min_sample_size: int = field(
+        default=2,
+        metadata={
+            "doc": "Minimum scored report count before a publisher resource can be promoted by consistency."
+        },
+    )
+    resource_quality_consistency_weight: float = field(
+        default=0.35,
+        metadata={"doc": "Ranking weight assigned to rolling value-score consistency."},
+    )
+    resource_quality_average_weight: float = field(
+        default=0.50,
+        metadata={"doc": "Ranking weight assigned to average report value score."},
+    )
+    resource_quality_confidence_weight: float = field(
+        default=0.15,
+        metadata={"doc": "Ranking weight assigned to sample-size confidence."},
+    )
+    resource_quality_low_score_demotion_threshold: float = field(
+        default=45.0,
+        metadata={
+            "doc": "Average report value score below which a publisher resource is demoted."
+        },
+    )
     cost_ledger_path: str = field(
         default="./out/cost-ledger.jsonl",
         metadata={
@@ -249,4 +286,3 @@ class PublisherInventorySettings:
             "doc": "Cooldown in seconds before the candidate-screening LLM circuit breaker allows a probe call."
         },
     )
-

@@ -4318,6 +4318,27 @@
         "reports_db": {
           "type": "string"
         },
+        "resource_quality_average_weight": {
+          "type": "number"
+        },
+        "resource_quality_confidence_weight": {
+          "type": "number"
+        },
+        "resource_quality_consistency_weight": {
+          "type": "number"
+        },
+        "resource_quality_low_score_demotion_threshold": {
+          "type": "number"
+        },
+        "resource_quality_min_sample_size": {
+          "type": "integer"
+        },
+        "resource_quality_ranking_enabled": {
+          "type": "boolean"
+        },
+        "resource_quality_score_window_size": {
+          "type": "integer"
+        },
         "retry_backoff_step_seconds": {
           "type": "number"
         },
@@ -6167,6 +6188,147 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.sources.PublisherResourceRankingItem": {
+      "additionalProperties": false,
+      "properties": {
+        "average_value_score": {
+          "type": "number"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "consistency_score": {
+          "type": "number"
+        },
+        "demotion_reason": {
+          "type": "string"
+        },
+        "latest_value_score": {
+          "type": "number"
+        },
+        "rank_score": {
+          "type": "number"
+        },
+        "resource_url": {
+          "type": "string"
+        },
+        "sample_size": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score_window_size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "resource_url",
+        "sample_size",
+        "score_window_size",
+        "average_value_score",
+        "latest_value_score",
+        "consistency_score",
+        "confidence",
+        "rank_score",
+        "demotion_reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.PublisherResourceRankingPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "average_score_weight": {
+          "type": "number"
+        },
+        "confidence_weight": {
+          "type": "number"
+        },
+        "consistency_weight": {
+          "type": "number"
+        },
+        "low_score_demotion_threshold": {
+          "type": "number"
+        },
+        "min_sample_size": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score_window_size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "score_window_size",
+        "min_sample_size",
+        "consistency_weight",
+        "average_score_weight",
+        "confidence_weight",
+        "low_score_demotion_threshold"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.PublisherResourceRankingRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_source_page_urls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "history_items": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.sources.ReportSourceQualityHistoryItem"
+          },
+          "type": "array"
+        },
+        "policy": {
+          "$ref": "#/$defs/src.contracts._report_store.sources.PublisherResourceRankingPolicy"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_name",
+        "candidate_source_page_urls",
+        "history_items",
+        "policy"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.PublisherResourceRankingResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.sources.PublisherResourceRankingItem"
+          },
+          "type": "array"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_name",
+        "items"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.sources.ReportDownloadDriveFolderLookupRequest": {
       "additionalProperties": false,
       "properties": {
@@ -6313,6 +6475,108 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.sources.ReportSourceQualityHistoryItem": {
+      "additionalProperties": false,
+      "properties": {
+        "discovered_at_utc": {
+          "type": "string"
+        },
+        "downloaded_at_utc": {
+          "type": "string"
+        },
+        "landing_page_url": {
+          "type": "string"
+        },
+        "overall_score": {
+          "type": "number"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scored_at_utc": {
+          "type": "string"
+        },
+        "source_domain": {
+          "type": "string"
+        },
+        "source_page_url": {
+          "type": "string"
+        },
+        "source_status": {
+          "type": "string"
+        },
+        "value_band": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_name",
+        "source_domain",
+        "source_page_url",
+        "landing_page_url",
+        "report_name",
+        "overall_score",
+        "value_band",
+        "source_status",
+        "discovered_at_utc",
+        "downloaded_at_utc",
+        "scored_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.ReportSourceQualityHistoryRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "publisher_name"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.ReportSourceQualityHistoryResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.sources.ReportSourceQualityHistoryItem"
+          },
+          "type": "array"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_name",
+        "items"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.sources.ReportSourceRecordRequest": {
       "additionalProperties": false,
       "properties": {
@@ -6382,6 +6646,137 @@
         "landing_page_url",
         "downloaded_at_utc",
         "md5"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.ReportValueScoreComponent": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "type": "string"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "dimension",
+        "score",
+        "rationale"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.ReportValueScoreRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "record_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score": {
+          "$ref": "#/$defs/src.contracts._report_store.sources.ReportValueScoreResponse"
+        },
+        "scored_at_utc": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "record_id",
+        "score",
+        "scored_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.ReportValueScoreRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "discovered_at_utc": {
+          "type": "string"
+        },
+        "downloaded_at_utc": {
+          "type": "string"
+        },
+        "evaluation_year": {
+          "type": "integer"
+        },
+        "landing_page_url": {
+          "type": "string"
+        },
+        "md5": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_domain": {
+          "type": "string"
+        },
+        "source_page_url": {
+          "type": "string"
+        },
+        "source_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_name",
+        "source_domain",
+        "report_name",
+        "landing_page_url",
+        "source_page_url",
+        "source_status"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.ReportValueScoreResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.sources.ReportValueScoreComponent"
+          },
+          "type": "array"
+        },
+        "overall_score": {
+          "type": "number"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "value_band": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "overall_score",
+        "value_band",
+        "components",
+        "rationale"
       ],
       "type": "object"
     },

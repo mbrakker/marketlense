@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import sqlite3
+from dataclasses import asdict
 from typing import Optional
 
 from src.contracts.report_store import (
@@ -8,16 +10,223 @@ from src.contracts.report_store import (
     ReportDownloadDriveFolderLookupResponse,
     ReportSourceDiscoveryRecordRequest,
     ReportSourceDiscoveryRecordResponse,
+    ReportSourceQualityHistoryItem,
+    ReportSourceQualityHistoryRequest,
+    ReportSourceQualityHistoryResponse,
     ReportSourceRecordRequest,
     ReportSourceRecordResponse,
+    ReportValueScoreRecordRequest,
 )
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
 
-from .common import logger, _normalize_optional_url_key
+from .common import _normalize_optional_url_key, logger
 from .connection import _metadata_conn
+
+
+def record_report_value_score(
+    request: ReportValueScoreRecordRequest, ctx: RunContext
+) -> None:
+    db_path = request.db_path.strip()
+    record_id = int(request.record_id)
+    scored_at_utc = request.scored_at_utc.strip()
+    if not db_path:
+        raise AppError(
+            code="report_value_score_db_missing",
+            message="Report metadata DB path is required for report value-score persistence",
+            retryable=False,
+            severity="error",
+        )
+    if record_id <= 0:
+        raise AppError(
+            code="report_value_score_record_id_invalid",
+            message="record_id must be positive for report value-score persistence",
+            retryable=False,
+            severity="error",
+        )
+    if not scored_at_utc:
+        raise AppError(
+            code="report_value_score_timestamp_missing",
+            message="scored_at_utc is required for report value-score persistence",
+            retryable=False,
+            severity="error",
+        )
+    score_json = json.dumps(
+        asdict(request.score),
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_value_score_record_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "record_id": record_id,
+                "overall_score": request.score.overall_score,
+                "value_band": request.score.value_band,
+                "scored_at_utc": scored_at_utc,
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path, ctx) as conn:
+            cur = conn.execute(
+                """
+                UPDATE report_sources
+                SET report_value_score=?,
+                    report_value_band=?,
+                    report_value_score_json=?,
+                    report_value_scored_at_utc=?,
+                    updated_at=strftime('%s','now')
+                WHERE id=?
+                """,
+                (
+                    float(request.score.overall_score),
+                    request.score.value_band,
+                    score_json,
+                    scored_at_utc,
+                    record_id,
+                ),
+            )
+            if cur.rowcount == 0:
+                raise AppError(
+                    code="report_value_score_source_not_found",
+                    message="Report source row was not found for value-score persistence",
+                    retryable=False,
+                    severity="error",
+                    context={"db_path": db_path, "record_id": record_id},
+                )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="report_value_score_record_failed",
+            message="Failed to persist report value score",
+            cause=exc,
+            retryable=True,
+            context={"db_path": db_path, "record_id": record_id},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_value_score_record_complete",
+            module=logger.name,
+            fields={
+                "record_id": record_id,
+                "overall_score": request.score.overall_score,
+                "value_band": request.score.value_band,
+            },
+        )
+    )
+
+
+def list_report_source_quality_history(
+    request: ReportSourceQualityHistoryRequest, ctx: RunContext
+) -> ReportSourceQualityHistoryResponse:
+    db_path = request.db_path.strip()
+    publisher_name = request.publisher_name.strip()
+    limit = max(1, int(request.limit))
+    if not db_path:
+        raise AppError(
+            code="report_source_quality_history_db_missing",
+            message="Report metadata DB path is required for report source quality history",
+            retryable=False,
+            severity="error",
+        )
+    if not publisher_name:
+        raise AppError(
+            code="report_source_quality_history_publisher_missing",
+            message="publisher_name is required for report source quality history",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_quality_history_list_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "publisher_name": publisher_name,
+                "limit": limit,
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path, ctx) as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    publisher_name,
+                    source_domain,
+                    source_page_url,
+                    landing_page_url,
+                    report_name,
+                    report_value_score,
+                    report_value_band,
+                    source_status,
+                    discovered_at_utc,
+                    downloaded_at_utc,
+                    report_value_scored_at_utc
+                FROM report_sources
+                WHERE lower(trim(publisher_name)) = lower(trim(?))
+                  AND report_value_score IS NOT NULL
+                ORDER BY COALESCE(report_value_scored_at_utc, downloaded_at_utc, discovered_at_utc, '') DESC,
+                         id DESC
+                LIMIT ?
+                """,
+                (publisher_name, limit),
+            ).fetchall()
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="report_source_quality_history_list_failed",
+            message="Failed to list report source quality history",
+            cause=exc,
+            retryable=True,
+            context={"db_path": db_path, "publisher_name": publisher_name},
+        ) from exc
+    items = [
+        ReportSourceQualityHistoryItem(
+            schema_version="1.0",
+            publisher_name=str(row[0] or "").strip(),
+            source_domain=str(row[1] or "").strip(),
+            source_page_url=str(row[2] or "").strip(),
+            landing_page_url=str(row[3] or "").strip(),
+            report_name=str(row[4] or "").strip(),
+            overall_score=float(row[5] or 0.0),
+            value_band=str(row[6] or "").strip(),
+            source_status=str(row[7] or "").strip(),
+            discovered_at_utc=str(row[8] or "").strip(),
+            downloaded_at_utc=str(row[9] or "").strip(),
+            scored_at_utc=str(row[10] or "").strip(),
+        )
+        for row in rows
+    ]
+    response = ReportSourceQualityHistoryResponse(
+        schema_version="1.0",
+        publisher_name=publisher_name,
+        items=items,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_quality_history_list_complete",
+            module=logger.name,
+            fields={
+                "publisher_name": response.publisher_name,
+                "item_count": len(response.items),
+            },
+        )
+    )
+    return response
+
 
 def record_report_source(
     request: ReportSourceRecordRequest, ctx: RunContext

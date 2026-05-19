@@ -334,9 +334,10 @@ def test_route_plan_recovery_classes_cover_allowed_blocked_and_deferred(
         if event.get("event") == "report_download_route_plan_complete"
     ]
     assert route_plan_events
-    assert "browser_to_http_pdf_probe" in route_plan_events[0]["fields"][
-        "recovery_classes"
-    ]
+    assert (
+        "browser_to_http_pdf_probe"
+        in route_plan_events[0]["fields"]["recovery_classes"]
+    )
     blocked_events = [
         event
         for event in _events(caplog, "market_lense.report_download_route_planner")
@@ -376,6 +377,7 @@ def test_run_report_download_rejects_mixed_content_hub_candidate(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
@@ -421,9 +423,10 @@ def test_run_report_download_rejects_mixed_content_hub_candidate(
         rejection_events[-1]["fields"]["readiness_rejection_reason"]
         == "candidate_rejected_mixed_content_hub"
     )
-    assert "mixed_content_hub_candidate" in rejection_events[-1]["fields"][
-        "readiness_signals"
-    ]
+    assert (
+        "mixed_content_hub_candidate"
+        in rejection_events[-1]["fields"]["readiness_signals"]
+    )
 
 
 def test_run_report_download_uses_memory_and_records_route(
@@ -540,6 +543,7 @@ def test_run_report_download_uses_memory_and_records_route(
         file_md5=_file_md5,
         record_report_source=_record_source,
         upsert_browser_download_identity_fields=_upsert_identity,
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
@@ -701,6 +705,7 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
         file_md5=_file_md5,
         record_report_source=_record_source,
         upsert_browser_download_identity_fields=_upsert_identity,
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: sleep_calls.append(float(seconds)),
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
@@ -794,6 +799,7 @@ def test_run_report_download_does_not_retry_timed_out_browser_step(
         file_md5=_file_md5,
         record_report_source=_record_source,
         upsert_browser_download_identity_fields=_upsert_identity,
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
@@ -885,6 +891,7 @@ def test_run_report_download_does_not_retry_failed_http_probe_before_browser_fal
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
@@ -995,6 +1002,7 @@ def test_run_report_download_persists_failure_forensics_pack(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
@@ -1021,9 +1029,7 @@ def test_run_report_download_persists_failure_forensics_pack(
     assert pack_payload["terminal_evidence"]["html_snapshot_path"] == str(
         html_snapshot_path
     )
-    assert pack_payload["terminal_evidence"]["screenshot_path"] == str(
-        screenshot_path
-    )
+    assert pack_payload["terminal_evidence"]["screenshot_path"] == str(screenshot_path)
     artifact_actions = {
         artifact["artifact_label"]: artifact["retention_action"]
         for artifact in pack_payload["artifacts"]
@@ -1055,9 +1061,7 @@ def test_run_report_download_persists_failure_forensics_pack(
     assert failure_events
     assert failure_events[-1]["fields"]["route_family"] == "browser_pdf_click"
     assert failure_events[-1]["fields"]["error_class"] == "permanent_app_error"
-    assert failure_events[-1]["fields"]["failure_forensics_pack_path"] == str(
-        pack_path
-    )
+    assert failure_events[-1]["fields"]["failure_forensics_pack_path"] == str(pack_path)
     assert step_failed_events
     assert step_failed_events[-1]["fields"]["failure_forensics_pack_path"] == str(
         pack_path
@@ -1189,6 +1193,7 @@ def test_run_report_download_does_not_fallback_after_non_retryable_memory_browse
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
@@ -1280,6 +1285,7 @@ def test_run_report_download_does_not_retry_weak_browser_route_summary(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
@@ -1405,6 +1411,7 @@ def test_run_report_download_does_not_fallback_after_non_retryable_memory_failur
         upsert_browser_download_identity_fields=lambda req, ctx: (_ for _ in ()).throw(
             AssertionError("should not update identity fields")
         ),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
 
@@ -1475,6 +1482,7 @@ def test_run_report_download_is_idempotent_for_route_memory(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
 
@@ -1575,6 +1583,7 @@ def test_run_report_download_reuses_idempotent_source_record_and_drive_upload(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
         get_report_download_drive_folder=lambda req, ctx: (
             ReportDownloadDriveFolderLookupResponse(
@@ -1699,6 +1708,7 @@ def test_run_report_download_drive_upload_idempotency_is_scoped_by_report_url(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
         get_report_download_drive_folder=lambda req, ctx: (
             ReportDownloadDriveFolderLookupResponse(
@@ -1731,7 +1741,9 @@ def test_run_report_download_drive_upload_idempotency_is_scoped_by_report_url(
         assert response.outcome == "captured"
 
     assert len(upload_calls) == 6
-    assert [call.file_name for call in upload_calls].count("terminal_screenshot.png") == 2
+    assert [call.file_name for call in upload_calls].count(
+        "terminal_screenshot.png"
+    ) == 2
 
 
 def test_run_report_download_idempotency_allows_changed_artifact_for_same_url(
@@ -1796,6 +1808,7 @@ def test_run_report_download_idempotency_allows_changed_artifact_for_same_url(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
         get_report_download_drive_folder=lambda req, ctx: (
             ReportDownloadDriveFolderLookupResponse(
@@ -1884,6 +1897,7 @@ def test_run_report_download_reuses_idempotent_route_record_and_identity_update(
             AssertionError("email-required flow should not persist a report source")
         ),
         upsert_browser_download_identity_fields=_upsert_identity,
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
 
@@ -1984,6 +1998,7 @@ def test_run_report_download_does_not_record_source_for_email_outcome(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
 
@@ -2063,6 +2078,7 @@ def test_run_report_download_uploads_downloaded_pdf_to_publisher_drive_folder(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
         list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
             schema_version="1.0", folder_id=req.folder_id, files=[]
@@ -2154,6 +2170,7 @@ def test_run_report_download_uploads_all_captured_terminal_artifacts(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
         get_report_download_drive_folder=lambda req, ctx: (
             ReportDownloadDriveFolderLookupResponse(
@@ -2255,6 +2272,7 @@ def test_run_report_download_skips_duplicate_drive_file_by_name_and_md5(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
         list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
             schema_version="1.0",
@@ -2331,6 +2349,7 @@ def test_run_report_download_requires_drive_folder_when_upload_enabled(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
         get_report_download_drive_folder=lambda req, ctx: None,
     )
@@ -2412,6 +2431,7 @@ def test_run_report_download_retries_and_propagates_drive_upload_failure(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: sleep_calls.append(float(seconds)),
         list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
             schema_version="1.0", folder_id=req.folder_id, files=[]
@@ -2491,6 +2511,7 @@ def test_run_report_download_prefers_candidate_pdf_before_generic_browser(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
 
@@ -2551,6 +2572,7 @@ def test_run_report_download_rejects_non_report_candidate_with_typed_reason(
         upsert_browser_download_identity_fields=lambda req, ctx: (_ for _ in ()).throw(
             AssertionError("should not update identity")
         ),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
@@ -2670,6 +2692,7 @@ def test_run_report_download_allows_report_like_resource_candidates(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
 
@@ -2744,6 +2767,7 @@ def test_run_report_download_allows_thin_candidate_when_pdf_url_is_present(
                 "total_fields": len(settings.identity_profile.fields),
             },
         )(),
+        record_report_value_score=lambda req, ctx: None,
         sleep_fn=lambda seconds: None,
     )
 

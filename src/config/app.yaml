@@ -193,6 +193,14 @@ publisher_discovery:
     enabled: true
     timeout_seconds: 15
     max_workers: 6
+  resource_quality_ranking:
+    enabled: true
+    score_window_size: 5
+    min_sample_size: 2
+    consistency_weight: 0.35
+    average_weight: 0.50
+    confidence_weight: 0.15
+    low_score_demotion_threshold: 45.0
 
 analysis:
   vector_store_keep: true

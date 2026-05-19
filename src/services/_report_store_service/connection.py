@@ -15,6 +15,7 @@ from .common import (
     _configure_sqlite_connection,
 )
 
+
 @contextmanager
 def _metadata_conn(path: str, ctx: RunContext):
     if not path:
@@ -47,7 +48,7 @@ def _metadata_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="reports_db",
                     db_path=path,
-                    target_version=10,
+                    target_version=11,
                     ctx=ctx,
                 ),
                 conn,

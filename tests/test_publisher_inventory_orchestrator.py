@@ -31,8 +31,11 @@ from src.contracts.publisher_inventory import (
     PublisherInventorySettings,
 )
 from src.contracts.report_store import (
+    PublisherResourceRankingItem,
+    PublisherResourceRankingResponse,
     PublisherInventoryStateResponse,
     PublishersReplaceRequest,
+    ReportSourceQualityHistoryResponse,
     ReportSourceDiscoveryRecordResponse,
 )
 from src.contracts.publisher_profiles import PublisherProfileRecord
@@ -423,6 +426,32 @@ def _dependencies(**overrides) -> PublisherInventoryDependencies:
                 created_new=True,
             )
         ),
+        "list_report_source_quality_history": lambda req, ctx: (
+            ReportSourceQualityHistoryResponse(
+                schema_version="1.0",
+                publisher_name=req.publisher_name,
+                items=[],
+            )
+        ),
+        "rank_publisher_resources": lambda req, ctx: PublisherResourceRankingResponse(
+            schema_version="1.0",
+            publisher_name=req.publisher_name,
+            items=[
+                PublisherResourceRankingItem(
+                    schema_version="1.0",
+                    resource_url=url,
+                    sample_size=0,
+                    score_window_size=req.policy.score_window_size,
+                    average_value_score=0.0,
+                    latest_value_score=0.0,
+                    consistency_score=0.0,
+                    confidence=0.0,
+                    rank_score=0.0,
+                    demotion_reason="insufficient_history",
+                )
+                for url in req.candidate_source_page_urls
+            ],
+        ),
         "list_files_in_folder": lambda req, ctx: DriveFolderFileListResponse(
             schema_version="1.0", folder_id=req.folder_id, files=[]
         ),
@@ -512,7 +541,9 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
         logging.INFO, logger="market_lense.publisher_inventory_orchestrator"
     )
 
-    result = run_publisher_inventory_discovery(_request(settings), ctx=run_context, dependencies=deps)
+    result = run_publisher_inventory_discovery(
+        _request(settings), ctx=run_context, dependencies=deps
+    )
 
     assert result.publisher_name == "Activate Consulting"
     assert result.snapshot_changed is True
@@ -570,7 +601,9 @@ def test_run_publisher_inventory_discovery_falls_back_after_memory_route_failure
         ),
     )
 
-    result = run_publisher_inventory_discovery(_request(settings), ctx=run_context, dependencies=deps)
+    result = run_publisher_inventory_discovery(
+        _request(settings), ctx=run_context, dependencies=deps
+    )
 
     assert attempts["memory"] >= 1
     assert attempts["fresh"] == 1
@@ -683,9 +716,9 @@ def test_run_publisher_inventory_discovery_skips_mismatched_drive_snapshot(
         download_pdf=lambda req, ctx: DriveDownloadResponse(
             schema_version="1.0",
             file=req.file,
-            content=_snapshot_json("https://www.activate.com/reports/old-report").encode(
-                "utf-8"
-            ),
+            content=_snapshot_json(
+                "https://www.activate.com/reports/old-report"
+            ).encode("utf-8"),
             md5="activate-md5",
             size=100,
         ),
@@ -761,7 +794,9 @@ def test_run_publisher_inventory_discovery_does_not_fallback_after_non_retryable
     )
 
     with pytest.raises(AppError) as err:
-        run_publisher_inventory_discovery(_request(settings), ctx=run_context, dependencies=deps)
+        run_publisher_inventory_discovery(
+            _request(settings), ctx=run_context, dependencies=deps
+        )
 
     assert attempts["memory"] == 1
     assert attempts["fresh"] == 0
@@ -953,7 +988,9 @@ def test_run_publisher_inventory_discovery_does_not_retry_or_fallback_on_paginat
     )
 
     with pytest.raises(AppError) as exc_info:
-        run_publisher_inventory_discovery(_request(settings), ctx=run_context, dependencies=deps)
+        run_publisher_inventory_discovery(
+            _request(settings), ctx=run_context, dependencies=deps
+        )
 
     assert exc_info.value.code == "publisher_inventory_browser_pagination_limit"
     assert attempts == {"memory": 1, "fresh": 0}

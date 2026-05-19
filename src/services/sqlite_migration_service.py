@@ -133,6 +133,10 @@ CREATE TABLE IF NOT EXISTS report_sources (
   discovered_on_page_number INTEGER,
   downloaded_at_utc TEXT,
   md5 TEXT,
+  report_value_score REAL,
+  report_value_band TEXT,
+  report_value_score_json TEXT,
+  report_value_scored_at_utc TEXT,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
@@ -1345,6 +1349,37 @@ def _reports_db_010_create_analytics_projection_tables(
     )
 
 
+def _reports_db_011_add_report_source_value_scores(conn: sqlite3.Connection) -> None:
+    conn.execute(_REPORT_SOURCES_TABLE_SQL)
+    _add_column_if_missing(
+        conn,
+        table_name="report_sources",
+        column_name="report_value_score",
+        column_type="REAL",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="report_sources",
+        column_name="report_value_band",
+        column_type="TEXT",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="report_sources",
+        column_name="report_value_score_json",
+        column_type="TEXT",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="report_sources",
+        column_name="report_value_scored_at_utc",
+        column_type="TEXT",
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_sources_publisher_score ON report_sources(publisher_name, report_value_score)"
+    )
+
+
 def _state_db_001_create_base_tables(conn: sqlite3.Connection) -> None:
     conn.execute(_STATE_PROCESSED_TABLE_SQL)
     conn.execute(_STATE_INGEST_STATE_TABLE_SQL)
@@ -1492,6 +1527,11 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_010_create_analytics_projection_tables",
         version=10,
         apply_fn=_reports_db_010_create_analytics_projection_tables,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_011_add_report_source_value_scores",
+        version=11,
+        apply_fn=_reports_db_011_add_report_source_value_scores,
     ),
 )
 

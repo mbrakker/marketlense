@@ -30,7 +30,9 @@ from src.services._report_store_service.publishers import (
 )
 from src.services._report_store_service.sources import (
     get_report_download_drive_folder,
+    list_report_source_quality_history,
     record_discovered_report_source,
+    record_report_value_score,
     record_report_source,
 )
 
@@ -42,8 +44,10 @@ __all__ = [
     "get_publisher_inventory_state",
     "get_report_download_drive_folder",
     "list_metadata",
+    "list_report_source_quality_history",
     "list_publishers",
     "record_discovered_report_source",
+    "record_report_value_score",
     "record_publisher_download_route",
     "record_publisher_inventory_recovery_cache_record",
     "record_publisher_inventory_run_quality",
