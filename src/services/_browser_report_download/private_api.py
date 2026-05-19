@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urljoin, urlsplit
 
-import requests  # type: ignore[import-untyped]
+import requests
 
 from src.contracts.browser_download import (
     BrowserDownloadRouteStep,

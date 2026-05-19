@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-import requests  # type: ignore[import-untyped]
+import requests
 
 from src.contracts.http_acquisition import (
     HttpAcquisitionRequest,
@@ -2028,7 +2028,6 @@ async def _browser_wait_for_settle(
         anchor_count = int(payload.get("anchorCount") or 0)
         if ready_state == "complete" and (title or anchor_count > 0):
             return
-
 
 
 def _extract_browser_http_supplement_candidates(

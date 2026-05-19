@@ -1,5 +1,152 @@
 {
   "contracts": {
+    "src.contracts._browser_download.dev_diagnostics.BrowserDeveloperDiagnosticCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "status",
+        "message"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.dev_diagnostics.BrowserDeveloperDiagnosticsRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "activate_verification_tab": {
+          "type": "boolean"
+        },
+        "cdp_url": {
+          "type": "string"
+        },
+        "cleanup_stale_once": {
+          "type": "boolean"
+        },
+        "downloads_path": {
+          "type": "string"
+        },
+        "headed": {
+          "type": "boolean"
+        },
+        "keep_browser_open": {
+          "type": "boolean"
+        },
+        "profile_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "session_reuse_policy": {
+          "$ref": "#/$defs/src.contracts._browser_download.session_reuse.BrowserDownloadSessionReusePolicy"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        },
+        "verification_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile_path",
+        "downloads_path",
+        "headed",
+        "verification_url"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.dev_diagnostics.BrowserDeveloperDiagnosticsResult": {
+      "additionalProperties": false,
+      "properties": {
+        "active_tab_title": {
+          "type": "string"
+        },
+        "active_tab_url": {
+          "type": "string"
+        },
+        "browser_use_connected": {
+          "type": "boolean"
+        },
+        "cdp_available": {
+          "type": "boolean"
+        },
+        "cdp_url": {
+          "type": "string"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.dev_diagnostics.BrowserDeveloperDiagnosticCheck"
+          },
+          "type": "array"
+        },
+        "cleanup_attempted": {
+          "type": "boolean"
+        },
+        "cleanup_status": {
+          "type": "string"
+        },
+        "downloads_path": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "keep_browser_open": {
+          "type": "boolean"
+        },
+        "profile_path": {
+          "type": "string"
+        },
+        "real_tab_available": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "verification_tab_activated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "profile_path",
+        "downloads_path",
+        "cdp_url",
+        "active_tab_url",
+        "active_tab_title",
+        "browser_use_connected",
+        "cdp_available",
+        "real_tab_available",
+        "cleanup_attempted",
+        "cleanup_status",
+        "verification_tab_activated",
+        "keep_browser_open",
+        "checks"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.forensics.FailedAcquisitionForensicsArtifact": {
       "additionalProperties": false,
       "properties": {
@@ -177,6 +324,369 @@
         "error_class",
         "error_retryable",
         "error_severity"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.helpers.BrowserHelperAutocompleteResult": {
+      "additionalProperties": false,
+      "properties": {
+        "attempted_count": {
+          "type": "integer"
+        },
+        "blocker_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "final_url": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_count": {
+          "type": "integer"
+        },
+        "selected_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        },
+        "submitted": {
+          "type": "boolean"
+        },
+        "unresolved_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "attempted_count",
+        "selected_count",
+        "submitted"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.helpers.BrowserHelperCoordinateFallbackResult": {
+      "additionalProperties": false,
+      "properties": {
+        "action_source": {
+          "type": "string"
+        },
+        "after_screenshot_path": {
+          "type": "string"
+        },
+        "before_screenshot_path": {
+          "type": "string"
+        },
+        "coordinate_source": {
+          "type": "string"
+        },
+        "coordinates_persisted": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selector_attempted": {
+          "type": "boolean"
+        },
+        "selector_error": {
+          "type": "string"
+        },
+        "selector_success": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        },
+        "surface_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target_url": {
+          "type": "string"
+        },
+        "verification_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "reason",
+        "selector_attempted",
+        "selector_success",
+        "selector_error",
+        "surface_labels",
+        "coordinate_source",
+        "coordinates_persisted",
+        "before_screenshot_path",
+        "after_screenshot_path",
+        "verification_status",
+        "action_source"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.helpers.BrowserHelperHttpGetResult": {
+      "additionalProperties": false,
+      "properties": {
+        "body_excerpt": {
+          "type": "string"
+        },
+        "body_size_bytes": {
+          "type": "integer"
+        },
+        "body_truncated": {
+          "type": "boolean"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "final_url": {
+          "type": "string"
+        },
+        "request_url": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "status_code": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "request_url",
+        "final_url",
+        "status_code",
+        "content_type",
+        "body_size_bytes",
+        "body_excerpt",
+        "body_truncated"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.helpers.BrowserHelperJsResult": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "error_column": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error_line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "result": {},
+        "result_serializable": {
+          "type": "boolean"
+        },
+        "result_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "snippet": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "result",
+        "result_type",
+        "snippet"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.helpers.BrowserHelperPageInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "html": {
+          "type": "string"
+        },
+        "html_excerpt": {
+          "type": "string"
+        },
+        "html_size": {
+          "type": "integer"
+        },
+        "is_real_tab": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "url",
+        "title",
+        "html_size",
+        "html",
+        "html_excerpt",
+        "is_real_tab",
+        "source_labels"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.helpers.BrowserHelperRealTabResult": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "is_real_tab": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "is_real_tab",
+        "url",
+        "title"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.helpers.BrowserHelperScreenshot": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "path",
+        "source",
+        "size_bytes"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.helpers.BrowserHelperWaitResult": {
+      "additionalProperties": false,
+      "properties": {
+        "elapsed_seconds": {
+          "type": "number"
+        },
+        "error": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "waited_for": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "waited_for",
+        "elapsed_seconds"
       ],
       "type": "object"
     },
@@ -428,8 +938,17 @@
         "retry_retries": {
           "type": "integer"
         },
+        "route_playbook_dir": {
+          "type": "string"
+        },
+        "route_playbook_stale_policy": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
+        },
+        "session_reuse_policy": {
+          "$ref": "#/$defs/src.contracts._browser_download.session_reuse.BrowserDownloadSessionReusePolicy"
         },
         "state_db": {
           "type": "string"
@@ -1033,6 +1552,12 @@
         "schema_version": {
           "type": "string"
         },
+        "selected_playbooks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePlaybookSelection"
+          },
+          "type": "array"
+        },
         "source_page_url_hint": {
           "anyOf": [
             {
@@ -1054,6 +1579,555 @@
         "schema_version",
         "step_name",
         "route_family"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybook": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_notes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "history": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePlaybookHistoryEntry"
+          },
+          "type": "array"
+        },
+        "host_patterns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "playbook_id": {
+          "type": "string"
+        },
+        "private_api_evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePrivateApiEvidence"
+          },
+          "type": "array"
+        },
+        "publisher_pattern": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "stale_after_days": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePlaybookStep"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "traps": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "url_path_markers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "playbook_id",
+        "version",
+        "status",
+        "updated_at",
+        "stale_after_days",
+        "publisher_pattern",
+        "host_patterns",
+        "url_path_markers",
+        "route_family",
+        "route_kind",
+        "summary",
+        "steps"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybookHistoryEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "changed_at": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "changed_at",
+        "source",
+        "summary"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybookPromotionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "observed_at": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "playbook_dir": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "route_status": {
+          "type": "string"
+        },
+        "route_steps": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePlaybookStep"
+          },
+          "type": "array"
+        },
+        "route_summary": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "playbook_dir",
+        "source_url",
+        "route_family",
+        "route_kind",
+        "route_summary",
+        "route_status",
+        "outcome",
+        "route_steps"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybookPromotionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "playbook_id": {
+          "type": "string"
+        },
+        "review_diff": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "playbook_id",
+        "version",
+        "path",
+        "status",
+        "review_diff"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybookSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "match_reason": {
+          "type": "string"
+        },
+        "playbook_id": {
+          "type": "string"
+        },
+        "private_api_evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePrivateApiEvidence"
+          },
+          "type": "array"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "step_lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "trap_lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "playbook_id",
+        "version",
+        "route_family",
+        "route_kind",
+        "match_reason",
+        "summary",
+        "step_lines"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybookSelectionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "fallback_to_discovery": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_playbooks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePlaybookSelection"
+          },
+          "type": "array"
+        },
+        "stale_playbook_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "selected_playbooks"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybookStep": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "verification": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "action",
+        "target",
+        "verification"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePrivateApiEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "endpoint_pattern": {
+          "type": "string"
+        },
+        "evidence_id": {
+          "type": "string"
+        },
+        "expected_status_codes": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "fallback_route_family": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "request_shape_summary": {
+          "type": "string"
+        },
+        "required_response_markers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "response_pdf_url_json_pointer": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "success_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "evidence_id",
+        "endpoint_pattern",
+        "method",
+        "request_shape_summary",
+        "response_pdf_url_json_pointer",
+        "expected_status_codes"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePrivateApiPromotionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "endpoint_pattern": {
+          "type": "string"
+        },
+        "evidence_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expected_status_codes": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "fallback_route_family": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "observed_at": {
+          "type": "string"
+        },
+        "playbook_dir": {
+          "type": "string"
+        },
+        "request_shape_summary": {
+          "type": "string"
+        },
+        "required_response_markers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "response_pdf_url_json_pointer": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        },
+        "validated_success_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "playbook_dir",
+        "source_url",
+        "route_family",
+        "route_kind",
+        "endpoint_pattern",
+        "method",
+        "request_shape_summary",
+        "response_pdf_url_json_pointer",
+        "validated_success_count",
+        "fallback_route_family"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.preflight.BrowserPreflightProbeResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "probe": {
+          "$ref": "#/$defs/src.contracts._browser_download.preflight.BrowserPreflightProbeResult"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._browser_download.runtime.BrowserReportDownloadResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "probe"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.preflight.BrowserPreflightProbeResult": {
+      "additionalProperties": false,
+      "properties": {
+        "avoided_agent_call": {
+          "type": "boolean"
+        },
+        "candidate_pdf_urls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "duration_seconds": {
+          "type": "number"
+        },
+        "escalation_reason": {
+          "type": "string"
+        },
+        "event_drain_seconds": {
+          "type": "number"
+        },
+        "evidence_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "false_negative_rate_sample": {
+          "type": "number"
+        },
+        "final_title": {
+          "type": "string"
+        },
+        "final_url": {
+          "type": "string"
+        },
+        "html_size": {
+          "type": "integer"
+        },
+        "network_event_count": {
+          "type": "integer"
+        },
+        "observed_event_urls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_pdf_url": {
+          "type": "string"
+        },
+        "started_url": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "started_url",
+        "final_url",
+        "final_title",
+        "html_size",
+        "event_drain_seconds",
+        "duration_seconds",
+        "candidate_pdf_urls",
+        "selected_pdf_url",
+        "observed_event_urls",
+        "network_event_count",
+        "evidence_labels",
+        "escalation_reason",
+        "avoided_agent_call",
+        "false_negative_rate_sample"
       ],
       "type": "object"
     },
@@ -1098,6 +2172,44 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.runtime.BrowserDownloadDialogEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "action_taken": {
+          "type": "string"
+        },
+        "dialog_type": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "page_url": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "dialog_type",
+        "message",
+        "page_url",
+        "action_taken",
+        "validation_status"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.runtime.BrowserDownloadNetworkEvent": {
       "additionalProperties": false,
       "properties": {
@@ -1128,8 +2240,20 @@
         "action": {
           "type": "string"
         },
+        "expected_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "index": {
           "type": "integer"
+        },
+        "observed_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "result": {
           "type": "string"
@@ -1144,6 +2268,9 @@
           "type": "string"
         },
         "target_url": {
+          "type": "string"
+        },
+        "verification_status": {
           "type": "string"
         }
       },
@@ -1249,6 +2376,12 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "selected_playbooks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePlaybookSelection"
+          },
+          "type": "array"
         },
         "settings": {
           "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadSettings"
@@ -1477,6 +2610,12 @@
         "confirmation_signal_count": {
           "type": "integer"
         },
+        "dialog_evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.runtime.BrowserDownloadDialogEvidence"
+          },
+          "type": "array"
+        },
         "dom_snapshot_sha256": {
           "type": "string"
         },
@@ -1632,6 +2771,97 @@
         "size",
         "md5",
         "drive_file"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.session_reuse.BrowserDownloadSessionReuseDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "cleanup_removed_count": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "expires_at_epoch_seconds": {
+          "type": "number"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "profile_path": {
+          "type": "string"
+        },
+        "profile_reused": {
+          "type": "boolean"
+        },
+        "publisher_scope": {
+          "type": "string"
+        },
+        "rejection_reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "session_key_hash": {
+          "type": "string"
+        },
+        "ttl_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "enabled",
+        "accepted",
+        "mode",
+        "session_key_hash",
+        "publisher_scope",
+        "profile_path",
+        "profile_reused",
+        "ttl_seconds",
+        "expires_at_epoch_seconds",
+        "cleanup_removed_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.session_reuse.BrowserDownloadSessionReusePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_cross_publisher": {
+          "type": "boolean"
+        },
+        "base_dir": {
+          "type": "string"
+        },
+        "cleanup_expired": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "publisher_scope": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "session_key": {
+          "type": "string"
+        },
+        "ttl_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version"
       ],
       "type": "object"
     },
@@ -2263,6 +3493,12 @@
         "schema_version": {
           "type": "string"
         },
+        "scroll_surface": {
+          "type": "string"
+        },
+        "scroll_surface_candidate_growth": {
+          "type": "boolean"
+        },
         "selected_filters": {
           "items": {
             "type": "string"
@@ -2277,6 +3513,9 @@
         },
         "surface_class": {
           "type": "string"
+        },
+        "virtualized_list_detected": {
+          "type": "boolean"
         }
       },
       "required": [

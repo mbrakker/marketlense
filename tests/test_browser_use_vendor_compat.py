@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 from pydantic import BaseModel
+
+VENDORED_BROWSER_USE_ROOT = (
+    Path(__file__).resolve().parents[1] / "tools" / "browser-use"
+)
+if str(VENDORED_BROWSER_USE_ROOT) not in sys.path:
+    sys.path.insert(0, str(VENDORED_BROWSER_USE_ROOT))
 
 from browser_use.agent.service import Agent
 from browser_use.tools.views import StructuredOutputAction

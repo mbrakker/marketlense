@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urljoin, urlsplit
 
-import requests  # type: ignore[import-untyped]
+import requests
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -103,6 +103,8 @@ class DirectOnsiteRecoveryDecision:
     allowed: bool
     recovery_class: str
     reason: str
+
+
 _ONSITE_CAPTURE_BLOCKED_MARKERS = (
     "captcha",
     "cloudflare",
@@ -1819,7 +1821,9 @@ def _looks_like_mixed_content_hub_candidate(
     if not segments:
         return True
     last_segment = segments[-1]
-    last_tokens = [token for token in last_segment.replace("_", "-").split("-") if token]
+    last_tokens = [
+        token for token in last_segment.replace("_", "-").split("-") if token
+    ]
     title = str(candidate.title or "").casefold() if candidate is not None else ""
     title_has_detail_signal = any(
         marker in title
@@ -1846,7 +1850,9 @@ def _looks_like_mixed_content_hub_candidate(
         for value in (candidate.source_page_urls if candidate is not None else [])
         if str(value or "").strip()
     }
-    same_as_source = bool(source_surfaces) and _url_surface_key(target_url) in source_surfaces
+    same_as_source = (
+        bool(source_surfaces) and _url_surface_key(target_url) in source_surfaces
+    )
     listing_last_segment = last_segment in _MIXED_CONTENT_HUB_SEGMENTS
     short_listing = (
         len(segments) <= 2

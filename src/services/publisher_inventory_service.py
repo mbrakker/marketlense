@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from importlib import import_module
 
-import requests  # type: ignore[import-untyped]
+import requests
 
 from src.contracts.publisher_inventory import (
     PublisherInventoryLandingPageInspectionRequest,

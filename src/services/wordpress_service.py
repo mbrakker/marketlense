@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterator, NoReturn, Optional
 from urllib.parse import urlsplit
 
-import requests  # type: ignore[import-untyped]
+import requests
 import urllib3
 
 from src.contracts.run_context import RunContext
@@ -1091,7 +1091,10 @@ def update_post_categories(
         request_error_event="wp_post_update_request_error",
         request_error_code="wp_post_update_failed",
         request_error_message="Failed to update WordPress post",
-        request_error_fields={"post_id": request.post_id, "post_type": post_type_endpoint},
+        request_error_fields={
+            "post_id": request.post_id,
+            "post_type": post_type_endpoint,
+        },
     )
     resp = request_result.response
 
@@ -1181,19 +1184,19 @@ def _update_media_alt_text(
 
     if resp.status_code >= 400:
         logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="wp_media_alt_text_failed",
-            module=logger.name,
-            fields={
-                "media_id": media_id,
-                "status": resp.status_code,
-                "used_pooled_session": request_result.used_pooled_session,
-                "pool_key": request_result.pool_key,
-                "pool_reused": request_result.pool_reused,
-            },
-        )
+            log_event(
+                ctx,
+                role="service",
+                event="wp_media_alt_text_failed",
+                module=logger.name,
+                fields={
+                    "media_id": media_id,
+                    "status": resp.status_code,
+                    "used_pooled_session": request_result.used_pooled_session,
+                    "pool_key": request_result.pool_key,
+                    "pool_reused": request_result.pool_reused,
+                },
+            )
         )
 
 

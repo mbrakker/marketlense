@@ -312,7 +312,7 @@ def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
                 },
             }
         )
-    summary_clean = {
+    summary_clean: dict[str, Any] = {
         "tldr": s(summary.get("tldr")) if isinstance(summary, dict) else "",
         "executive_summary": sanitize_citation_tokens(
             s(summary.get("executive_summary"))

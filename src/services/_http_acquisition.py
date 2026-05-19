@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
-import requests  # type: ignore[import-untyped]
+import requests
 
 from src.contracts.http_acquisition import (
     HttpAcquisitionRequest,
@@ -245,8 +245,8 @@ def execute_http_acquisition(
                 pass
 
 
-def _request_kwargs(request: HttpAcquisitionRequest) -> dict[str, object]:
-    kwargs: dict[str, object] = {
+def _request_kwargs(request: HttpAcquisitionRequest) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {
         "headers": {
             str(key): str(value) for key, value in dict(request.headers).items()
         },
