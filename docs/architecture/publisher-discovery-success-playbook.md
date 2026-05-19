@@ -188,6 +188,42 @@ This playbook is now a fixated implementation record plus a hardening checklist 
 - deferred recovery caching and typed recovery recipes are landed; continue measuring whether real challenge/protected/transient cases justify broader second-pass investment
 - `publisher_discovery.force_browser: true` remains the archive-default posture, but validated preflight exceptions now allow direct PDF and high-confidence direct-detail short-circuits before browser traversal
 
+### Default-on rollout guardrails
+
+The three rollout flags are now measured defaults:
+
+- `enable_deferred_candidate_recovery: true`
+- `enable_structured_route_reuse: true`
+- `enable_preflight_classifier_and_direct_detail: true`
+
+Canary sequence before broad operation:
+
+1. Capgemini-style direct-detail URL: confirm `scenario_class == direct_detail_html`, direct-detail candidate provenance, coverage verdict `accepted`, and no browser archive churn.
+2. Bain-style filtered archive: confirm browser/archive traversal still runs when needed, coverage verdict `accepted`, and remembered route data is persisted.
+3. Cardlytics-style mixed-content hub: confirm generic editorial/blog pages are rejected while strong report-detail pages qualify.
+4. Structured-memory rerun: confirm `used_memory_route=true` or host route policy applies only with run-quality `requires_review=false`.
+5. Ten-publisher mixed batch: confirm no `undercoverage_regression` / `unreachable_delta_failure` spike versus the previous baseline.
+
+KPI set logged by `publisher_inventory_rollout_guardrails_evaluated`:
+
+- rollout flag states
+- coverage verdict
+- run-quality band and review requirement
+- raw, screened, qualified, and rejected new-report counts
+- candidate provenance counts
+- scenario class and memory-route usage
+- deferred-recovery scheduled count
+- `precision_guardrail_passed`, `coverage_guardrail_passed`, and `kpi_guardrail_status`
+
+Rollback conditions:
+
+- `kpi_guardrail_status == "review_required"` on representative canaries
+- any accepted run where false-positive review shows generic blog/article broadening
+- repeated mixed-content scenario drift with unstable scenario summaries
+- deferred-recovery volume grows without recovered high-value reports
+
+Rollback action is to disable the three rollout flags together for the affected config or set `publisher_discovery.force_browser=true` for the affected publisher cohort until reviewed.
+
 ## What the latest evidence says now
 
 The current bottleneck order is different from the earlier version of this playbook.

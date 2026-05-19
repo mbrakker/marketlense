@@ -91,19 +91,19 @@ class PublisherInventorySettings:
         },
     )
     enable_deferred_candidate_recovery: bool = field(
-        default=False,
+        default=True,
         metadata={
             "doc": "Whether the orchestrator may schedule deferred second-pass recovery for strong candidates rejected only due to recoverable landing-page failures."
         },
     )
     enable_structured_route_reuse: bool = field(
-        default=False,
+        default=True,
         metadata={
             "doc": "Whether discovery route planning may prefer typed remembered route traces over legacy free-text route summaries."
         },
     )
     enable_preflight_classifier_and_direct_detail: bool = field(
-        default=False,
+        default=True,
         metadata={
             "doc": "Whether discovery may use cheap scenario classification and direct-detail short-circuiting before broader archive traversal."
         },

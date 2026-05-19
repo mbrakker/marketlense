@@ -23,7 +23,7 @@ def test_discover_publisher_inventory_http_parse_handles_multipage(
     </body></html>
     """
 
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         assert timeout == 10.0
         assert headers["User-Agent"].startswith("Mozilla/5.0")
         assert headers["Accept-Language"] == "en-US,en;q=0.9"
@@ -76,7 +76,7 @@ def test_discover_publisher_inventory_http_parse_stops_on_duplicate_page_fingerp
     """
     requested_urls: list[str] = []
 
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         requested_urls.append(url)
         assert timeout == 10.0
         assert headers["User-Agent"].startswith("Mozilla/5.0")
@@ -130,7 +130,7 @@ def test_discover_publisher_inventory_http_parse_rejects_low_confidence_candidat
     </body></html>
     """
 
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         assert timeout == 10.0
         assert headers["User-Agent"].startswith("Mozilla/5.0")
         assert headers["Accept-Language"] == "en-US,en;q=0.9"
@@ -199,7 +199,7 @@ def test_discover_publisher_inventory_http_parse_recovers_wordpress_ajax_archive
         }
     )
 
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         normalized_url = str(url).rstrip("/")
         if normalized_url == "https://example.com/resources":
             return _FakeResponse(url="https://example.com/resources", text=page_html)
@@ -242,7 +242,7 @@ def test_discover_publisher_inventory_http_parse_retries_with_trailing_slash(
     run_context,
     external_boundary_mocks_only,
 ) -> None:
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         if str(url) == "https://example.com/resources":
             raise service.requests.RequestException("redirect timeout")
         if str(url) == "https://example.com/resources/":
@@ -314,7 +314,7 @@ def test_discover_publisher_inventory_http_parse_supplements_sparse_archive_with
         }
     )
 
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         normalized_url = str(url).rstrip("/")
         if normalized_url == "https://example.com/resources":
             return _FakeResponse(url="https://example.com/resources/", text=page_html)

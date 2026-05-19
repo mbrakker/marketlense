@@ -24,6 +24,9 @@ browser_download:
 
 publisher_discovery:
   model: "google/gemini-2.5-flash-lite"
+  enable_deferred_candidate_recovery: true
+  enable_structured_route_reuse: true
+  enable_preflight_classifier_and_direct_detail: true
   resource_quality_ranking:
     enabled: true
     score_window_size: 5

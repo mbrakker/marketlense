@@ -720,7 +720,7 @@ def test_discover_publisher_inventory_browser_uses_http_supplement_when_browser_
     run_context,
     external_boundary_mocks_only,
 ) -> None:
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         assert timeout == 10.0
         assert headers["User-Agent"].startswith("Mozilla/5.0")
         assert headers["Accept-Language"] == "en-US,en;q=0.9"
@@ -780,7 +780,7 @@ def test_discover_publisher_inventory_browser_uses_http_supplement_for_archive_r
     run_context,
     external_boundary_mocks_only,
 ) -> None:
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         assert timeout == 10.0
         assert headers["User-Agent"].startswith("Mozilla/5.0")
         assert headers["Accept-Language"] == "en-US,en;q=0.9"
@@ -840,7 +840,7 @@ def test_discover_publisher_inventory_browser_invalid_http_supplement_html_fails
     external_boundary_mocks_only,
     assert_app_error,
 ) -> None:
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         assert timeout == 10.0
         assert headers["User-Agent"].startswith("Mozilla/5.0")
         assert headers["Accept-Language"] == "en-US,en;q=0.9"
@@ -1286,7 +1286,7 @@ def test_discover_publisher_inventory_browser_falls_back_to_direct_http_when_bro
 ) -> None:
     call_counts: dict[str, int] = {}
 
-    def _get(url, timeout, headers):
+    def _get(url, timeout, headers, allow_redirects=True):
         key = str(url)
         call_counts[key] = call_counts.get(key, 0) + 1
         assert timeout == 10.0

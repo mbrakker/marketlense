@@ -13,7 +13,7 @@ Deep-analysis evidence used for this consolidation:
 - CI already runs formatting, typing, architecture-import, forbidden-patching, repository-hygiene, quality-ledger, remediation-runbook, backlog-source, contract-schema, coverage, mutation, quality-regression, and prompt-fixture regression gates through `.github/workflows/ci.yml`.
 - Prompt dry-run infrastructure and fixture-corpus regression are already landed through `src/contracts/prompts.py`, `src/services/prompt_service.py`, `scripts/ci/check_prompt_fixture_regression.py`, `tests/test_prompt_dry_run_validation.py`, and `tests/test_prompt_fixture_corpus_regression.py`.
 - `docs/quality/initiative_ledger.yaml` now marks `ocr-confidence-gating` as completed. Native-text confidence thresholds and OCR fallback controls already exist in `src/config/app.yaml` and `src/generators/report_source_generator.py`.
-- Publisher-discovery typed route traces, scenario summaries, deferred recovery recipes, recovery-cache persistence, and direct-detail handling are already landed in code, tests, and docs, but rollout flags remain disabled by default in `src/config/app.yaml`.
+- Publisher-discovery typed route traces, scenario summaries, deferred recovery recipes, recovery-cache persistence, direct-detail handling, default-on rollout flags, and KPI guardrail logs are already landed in code, tests, and docs.
 - Targeted validation regeneration and claim/evidence binding are already landed through `src/generators/report_regeneration_generator.py`, `src/generators/validation/*`, and the current README validation sections.
 - `src/services/idempotency_service.py` is already live and now backs the publish boundary plus the remaining side-effecting write steps in `report_download_orchestrator` and `publisher_inventory_orchestrator`, with checksum/outcome/artifact-reference persistence documented in `README.md`.
 - Candidate extraction already performs binary page triage and shared page-artifact/fingerprint caching through `src/services/_pdf/figures.py`, `src/services/_pdf/page_artifacts.py`, and `src/services/_pdf/fingerprint_cache.py`.
@@ -138,16 +138,6 @@ Suggested priority order:
 ---
 
 ## 4. Publisher Discovery Rollout & Precision
-
-- **Title:** Promote structured discovery memory, deferred recovery, and direct-detail routing from gated code to measured defaults [Impact: 5/5, Effort: 3/5]
-  - Explanation: Typed route traces, scenario summaries, deferred recovery recipes, recovery-cache persistence, and direct-detail routing already exist, but the rollout flags `enable_deferred_candidate_recovery`, `enable_structured_route_reuse`, and `enable_preflight_classifier_and_direct_detail` remain disabled by default in `src/config/app.yaml`.
-  - Pros: Unlocks already-built acquisition improvements and reduces repeated exploratory browser churn.
-  - Cons: Needs KPI guardrails so memory or rescue logic does not broaden false positives.
-  - Acceptance Criteria:
-    - Each flag has a documented canary sequence, KPI set, and rollback condition.
-    - Logs and run-quality outputs surface scenario, memory, and recovery decisions clearly.
-    - Default-on criteria are defined and tested against representative publishers.
-    - README and the discovery playbook are updated when rollout state changes.
 
 ## 5. Idempotency, Checkpoints & Publish Durability
 

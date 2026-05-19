@@ -174,9 +174,9 @@ publisher_discovery:
   command_time_budget_seconds: 570
   headed: false
   force_browser: false
-  enable_deferred_candidate_recovery: false
-  enable_structured_route_reuse: false
-  enable_preflight_classifier_and_direct_detail: false
+  enable_deferred_candidate_recovery: true
+  enable_structured_route_reuse: true
+  enable_preflight_classifier_and_direct_detail: true
   retry:
     retries: 1
     base_delay_seconds: 1.0

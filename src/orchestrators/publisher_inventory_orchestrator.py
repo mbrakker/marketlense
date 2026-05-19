@@ -896,7 +896,7 @@ def run_publisher_inventory_discovery(
                 },
             )
         )
-        _record_deferred_candidate_recovery_cache(
+        deferred_recovery_scheduled_count = _record_deferred_candidate_recovery_cache(
             request=request,
             normalized_url=normalized_url,
             publisher_name=publisher_state.publisher_name,
@@ -1051,6 +1051,20 @@ def run_publisher_inventory_discovery(
                 run_quality_summary,
                 scenario_class=discovery_result.scenario_summary.scenario_class,
             )
+        _log_rollout_guardrails(
+            request=request,
+            normalized_url=normalized_url,
+            publisher_name=publisher_state.publisher_name,
+            discovery_result=discovery_result,
+            run_quality_summary=run_quality_summary,
+            coverage_response=coverage_response,
+            raw_new_report_count=len(build_response.new_items),
+            screened_new_report_count=len(approved_items),
+            qualified_new_report_count=len(qualified_items),
+            quality_rejected_new_report_count=len(quality_response.rejected_items),
+            deferred_recovery_scheduled_count=deferred_recovery_scheduled_count,
+            ctx=ctx,
+        )
         _assert_time_budget_remaining(
             deadline_monotonic=deadline_monotonic,
             normalized_url=normalized_url,
@@ -1552,7 +1566,8 @@ def _record_deferred_candidate_recovery_cache(
     quality_response: PublisherInventoryCandidateQualityResponse,
     ctx: RunContext,
     dependencies: PublisherInventoryDependencies,
-) -> None:
+) -> int:
+    scheduled_count = 0
     for decision in quality_response.decisions:
         recipe = decision.recovery_recipe
         if recipe is None:
@@ -1593,6 +1608,8 @@ def _record_deferred_candidate_recovery_cache(
             if request.settings.enable_deferred_candidate_recovery
             else "skipped"
         )
+        if last_outcome == "scheduled":
+            scheduled_count += 1
         _record_recovery_cache_if_needed(
             request=PublisherInventoryRecoveryCacheRecordRequest(
                 schema_version="1.0",
@@ -1629,6 +1646,89 @@ def _record_deferred_candidate_recovery_cache(
                 },
             )
         )
+    return scheduled_count
+
+
+def _log_rollout_guardrails(
+    *,
+    request: PublisherInventoryDiscoveryRequest,
+    normalized_url: str,
+    publisher_name: str,
+    discovery_result: PublisherInventoryServiceResponse,
+    run_quality_summary,
+    coverage_response: PublisherInventoryCoverageValidationResponse,
+    raw_new_report_count: int,
+    screened_new_report_count: int,
+    qualified_new_report_count: int,
+    quality_rejected_new_report_count: int,
+    deferred_recovery_scheduled_count: int,
+    ctx: RunContext,
+) -> None:
+    precision_guardrail_passed = (
+        0
+        <= qualified_new_report_count
+        <= screened_new_report_count
+        <= raw_new_report_count
+    )
+    coverage_guardrail_passed = coverage_response.verdict not in {
+        "undercoverage_regression",
+        "unreachable_delta_failure",
+    }
+    kpi_guardrail_status = (
+        "pass"
+        if precision_guardrail_passed
+        and coverage_guardrail_passed
+        and not run_quality_summary.requires_review
+        else "review_required"
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="publisher_inventory_rollout_guardrails_evaluated",
+            module=logger.name,
+            fields={
+                "publisher_name": publisher_name,
+                "normalized_url": normalized_url,
+                "rollout_flags": {
+                    "enable_deferred_candidate_recovery": (
+                        request.settings.enable_deferred_candidate_recovery
+                    ),
+                    "enable_structured_route_reuse": (
+                        request.settings.enable_structured_route_reuse
+                    ),
+                    "enable_preflight_classifier_and_direct_detail": (
+                        request.settings.enable_preflight_classifier_and_direct_detail
+                    ),
+                },
+                "canary_kpi_set": {
+                    "coverage_verdict": coverage_response.verdict,
+                    "run_quality_band": run_quality_summary.quality_band,
+                    "raw_new_report_count": raw_new_report_count,
+                    "screened_new_report_count": screened_new_report_count,
+                    "qualified_new_report_count": qualified_new_report_count,
+                    "quality_rejected_new_report_count": quality_rejected_new_report_count,
+                    "candidate_provenance_counts": (
+                        run_quality_summary.candidate_provenance_counts
+                    ),
+                },
+                "scenario_class": (
+                    discovery_result.scenario_summary.scenario_class
+                    if discovery_result.scenario_summary is not None
+                    else ""
+                ),
+                "used_memory_route": discovery_result.used_route_hint,
+                "deferred_recovery_scheduled_count": deferred_recovery_scheduled_count,
+                "precision_guardrail_passed": precision_guardrail_passed,
+                "coverage_guardrail_passed": coverage_guardrail_passed,
+                "run_quality_requires_review": run_quality_summary.requires_review,
+                "kpi_guardrail_status": kpi_guardrail_status,
+                "rollback_condition": (
+                    "disable rollout flags or force browser review when status is review_required"
+                ),
+            },
+        )
+    )
 
 
 def _run_discovery_attempt(

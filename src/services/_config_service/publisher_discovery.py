@@ -283,9 +283,9 @@ def load_publisher_inventory_settings(
                 _default_config_value(
                     "publisher_discovery",
                     "enable_deferred_candidate_recovery",
-                    fallback=False,
+                    fallback=True,
                 ),
-                False,
+                True,
             ),
         ),
         enable_structured_route_reuse=_to_bool(
@@ -296,9 +296,9 @@ def load_publisher_inventory_settings(
                 _default_config_value(
                     "publisher_discovery",
                     "enable_structured_route_reuse",
-                    fallback=False,
+                    fallback=True,
                 ),
-                False,
+                True,
             ),
         ),
         enable_preflight_classifier_and_direct_detail=_to_bool(
@@ -313,9 +313,9 @@ def load_publisher_inventory_settings(
                 _default_config_value(
                     "publisher_discovery",
                     "enable_preflight_classifier_and_direct_detail",
-                    fallback=False,
+                    fallback=True,
                 ),
-                False,
+                True,
             ),
         ),
         retry_retries=max(

@@ -1182,6 +1182,7 @@ def test_run_publisher_inventory_discovery_reuses_idempotent_snapshot_and_source
 def test_run_publisher_inventory_discovery_reuses_idempotent_auxiliary_writes(
     tmp_path,
     run_context,
+    caplog,
 ) -> None:
     reports_db = str(tmp_path / "reports.sqlite")
     current_url = "https://www.activate.com/reports/new-report"
@@ -1297,6 +1298,9 @@ def test_run_publisher_inventory_discovery_reuses_idempotent_auxiliary_writes(
             md5="abc123",
         ),
     )
+    caplog.set_level(
+        logging.INFO, logger="market_lense.publisher_inventory_orchestrator"
+    )
 
     first = run_publisher_inventory_discovery(
         _request(settings),
@@ -1349,6 +1353,21 @@ def test_run_publisher_inventory_discovery_reuses_idempotent_auxiliary_writes(
     assert publisher_row is not None
     assert str(publisher_row[0] or "") == "passed:no_report_assets"
     assert len(str(publisher_row[1] or "")) == 64
+    guardrail_events = [
+        event
+        for event in _events(caplog, "market_lense.publisher_inventory_orchestrator")
+        if event["event"] == "publisher_inventory_rollout_guardrails_evaluated"
+    ]
+    assert guardrail_events
+    guardrail_fields = guardrail_events[0]["fields"]
+    assert guardrail_fields["rollout_flags"] == {
+        "enable_deferred_candidate_recovery": True,
+        "enable_structured_route_reuse": True,
+        "enable_preflight_classifier_and_direct_detail": True,
+    }
+    assert guardrail_fields["deferred_recovery_scheduled_count"] == 1
+    assert guardrail_fields["run_quality_requires_review"] is False
+    assert guardrail_fields["kpi_guardrail_status"] == "pass"
 
 
 def test_run_publisher_inventory_discovery_does_not_commit_raw_only_snapshot_drift(
