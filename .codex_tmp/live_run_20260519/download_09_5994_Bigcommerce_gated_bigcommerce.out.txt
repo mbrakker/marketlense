@@ -1,0 +1,17 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://www.bigcommerce.com/resources/reports/gl…  
+  Normalized URL            https://www.bigcommerce.com/resources/reports/gl…  
+  Route                     email_delivery                                     
+  Outcome                   email_required                                     
+  Used memory route         no                                                 
+  Final page                https://www.bigcommerce.com/resources/reports/gl…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                                                                         
+  Drive uploads                                                                
+  Summary                   Detected an email-gated report form in the         
+                            landing-page HTML before browser interaction.      
+                                                                               

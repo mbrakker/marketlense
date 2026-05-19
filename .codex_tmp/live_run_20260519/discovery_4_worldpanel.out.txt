@@ -1,0 +1,22 @@
+                  Publisher Inventory Discovery                   
+                                                                  
+  Field               Value                                       
+ ──────────────────────────────────────────────────────────────── 
+  Publisher           Worldpanel                                  
+  Insights URL        https://worldpanelbynumerator.com/insights  
+  Normalized URL      https://worldpanelbynumerator.com/insights  
+  Current reports     2                                           
+  Previous reports    0                                           
+  Used memory route   yes                                         
+  Snapshot changed    no                                          
+  Run quality         medium                                      
+  Run outcome         no_report_assets                            
+  Next route          browser_render                              
+                                                                  
+   New Report URLs    
+                      
+  Page   Title   URL  
+ ──────────────────── 
+                      
+
+

@@ -1,0 +1,18 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://www.robeco.com/en-int/insights/2026/04/s…  
+  Normalized URL            https://www.robeco.com/en-int/insights/2026/04/s…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://www.robeco.com/files/docm/docu-202604-ro…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\www.robeco.com\71da3…  
+  Drive uploads             uploaded:19AhAOR9_LLHyvKvzvT6ac7sFGQZEYNLk         
+  Summary                   Fetch the report page HTML, extract the embedded   
+                            PDF link, and save the verified PDF locally.       
+                                                                               

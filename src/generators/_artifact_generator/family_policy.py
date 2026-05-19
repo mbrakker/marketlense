@@ -62,6 +62,7 @@ from src.utils.analysis_family import (
     serialize_family_status,
 )
 from src.utils.cache_utils import sha256_json
+from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 logger = logging.getLogger("market_lense.artifact_generator")
 
@@ -237,10 +238,14 @@ def _summary_confidence_score(summary: Dict[str, Any]) -> float:
         for claim in claim_map:
             if not isinstance(claim, dict):
                 continue
-            if claim.get("evidence_spans"):
+            if _summary_claim_has_structured_support(claim):
                 supported_claims += 1
         score += 0.36 * (supported_claims / max(1, len(claim_map)))
     return score
+
+
+def _summary_claim_has_structured_support(claim: Dict[str, Any]) -> bool:
+    return bool(claim.get("evidence_spans") or _s(claim.get("evidence_id")).strip())
 
 
 def _summary_confidence_reason(summary: Dict[str, Any]) -> str:
@@ -265,7 +270,7 @@ def _summary_confidence_reason(summary: Dict[str, Any]) -> str:
     if any(
         isinstance(claim, dict)
         and _s(claim.get("claim")).strip()
-        and not (claim.get("evidence_spans") or [])
+        and not _summary_claim_has_structured_support(claim)
         for claim in claim_map
     ):
         return "summary_claim_span_missing"
@@ -326,9 +331,9 @@ def _quotes_confidence_score(quotes_final: List[Dict[str, Any]]) -> float:
     first_quote = quotes_final[0] if isinstance(quotes_final[0], dict) else {}
     score = 0.0
     if _s(first_quote.get("text")).strip():
-        score += 0.55
-    if _s(first_quote.get("evidence_id")).strip():
-        score += 0.25
+        score += 0.45
+    if _quote_has_verbatim_source(first_quote):
+        score += 0.35
     if (
         _s(first_quote.get("speaker")).strip()
         or _s(first_quote.get("citation")).strip()
@@ -344,12 +349,45 @@ def _quotes_confidence_reason(quotes_final: List[Dict[str, Any]]) -> str:
     first_quote = quotes_final[0] if isinstance(quotes_final[0], dict) else {}
     if not _s(first_quote.get("text")).strip():
         return "quotes_missing_text"
-    if not (
-        _s(first_quote.get("evidence_id")).strip()
-        or _s(first_quote.get("citation")).strip()
-    ):
-        return "quotes_missing_support"
+    if not _quote_has_verbatim_source(first_quote):
+        return "quotes_missing_verbatim_source"
     return ""
+
+
+def _quote_has_verbatim_source(quote: Dict[str, Any]) -> bool:
+    text = _s(quote.get("text")).strip()
+    if not text:
+        return False
+    if _quote_is_marked_paraphrase(quote):
+        return False
+    spans = quote.get("evidence_spans")
+    if isinstance(spans, list):
+        for span in spans:
+            if not isinstance(span, dict):
+                continue
+            source_pack = _s(span.get("source_pack")).strip().casefold()
+            if source_pack == "quote_candidates":
+                return True
+            span_text = _s(span.get("text")).strip()
+            if span_text and _normalized_contains(span_text, text):
+                return True
+    source_pack = _s(quote.get("source_pack")).strip().casefold()
+    return source_pack == "quote_candidates"
+
+
+def _quote_is_marked_paraphrase(quote: Dict[str, Any]) -> bool:
+    if quote.get("is_paraphrase") is True or quote.get("paraphrase") is True:
+        return True
+    flags = [quote.get("style"), quote.get("mode"), quote.get("label")]
+    return any("paraphrase" in normalize_text(_s(flag)) for flag in flags)
+
+
+def _normalized_contains(container: str, needle: str) -> bool:
+    container_norm = normalize_for_lookup(container)
+    needle_norm = normalize_for_lookup(needle)
+    if not container_norm or not needle_norm:
+        return False
+    return needle_norm in container_norm
 
 
 def _soft_text_confidence_score(

@@ -753,6 +753,65 @@ def test_run_report_analysis_fails_on_incomplete_report_payload_contract(
     assert "quote.text" in exc_info.value.context["missing_fields"]
 
 
+def test_run_report_analysis_allows_abstained_quote_family(tmp_path):
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(_runtime(tmp_path).settings, figure_caption_enabled=False),
+    )
+    source = _source(runtime)
+    source.payload.quote.text = ""
+    selection = _selection(runtime, source)
+    validation_calls = []
+    artifacts = _artifacts(
+        quotes_final=[],
+        family_status={
+            "quotes": {
+                "schema_version": "1.0",
+                "family": "quotes",
+                "source": "artifact",
+                "status": "abstained",
+                "confidence_score": 0.65,
+                "policy_action": "regenerate",
+                "reason": "quotes_missing_verbatim_source",
+            }
+        },
+    )
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
+        },
+        generate_artifacts=lambda **kwargs: artifacts,
+        run_validation=lambda *args, **kwargs: (
+            validation_calls.append(args[0])
+            or ValidationReport(
+                schema_version="1.1",
+                status="pass",
+                issues=[],
+                severity="pass",
+                source_path=str(tmp_path / "out" / "validation.json"),
+            )
+        ),
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert validation_calls
+    assert state.payload.quote.text == ""
+    assert state.artifacts_payload["family_status"]["quotes"]["status"] == "abstained"
+
+
 def test_run_report_analysis_regenerates_failed_section_until_pass(
     tmp_path,
     caplog,

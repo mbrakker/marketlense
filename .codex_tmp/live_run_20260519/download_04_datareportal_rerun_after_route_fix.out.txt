@@ -1,0 +1,20 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://datareportal.com/reports/digital-2023-no…  
+  Normalized URL            https://datareportal.com/reports/digital-2023-no…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://datareportal.com/reports/digital-2023-no…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\datareportal.com\d02…  
+  Drive uploads             uploaded:1WLer4SiSdQEmWS3wtzEGhHcpr5lxyocA,        
+                            uploaded:1r1clIkJWdVNl-I5e8m-0VFwoGyUetvvp         
+  Summary                   Dismissed cookie consent (second click) to reveal  
+                            the article, then saved the page as a PDF          
+                            artifact.                                          
+                                                                               

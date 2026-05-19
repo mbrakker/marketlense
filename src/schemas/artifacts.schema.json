@@ -196,6 +196,10 @@
           "citation": { "type": "string" },
           "page": { "type": "integer" },
           "evidence_id": { "type": "string" },
+          "is_paraphrase": { "type": "boolean" },
+          "style": { "type": "string" },
+          "mode": { "type": "string" },
+          "label": { "type": "string" },
           "evidence_spans": {
             "type": "array",
             "items": {

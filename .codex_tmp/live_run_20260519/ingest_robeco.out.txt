@@ -1,0 +1,9 @@
+Loading settings...
+Running ingest pipeline...
+                               Processed Reports                               
+                                                                               
+  File                        ID                           MD5           HTML  
+ ───────────────────────────────────────────────────────────────────────────── 
+  docu-202604-robeco-stewa…   19AhAOR9_LLHyvKvzvT6ac7sF…   fa1249e68d:         
+                                                                               
+Done: 0 file(s).

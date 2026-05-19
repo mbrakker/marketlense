@@ -721,7 +721,7 @@ def run_publisher_inventory_discovery(
             ctx,
         )
         discovery_result: PublisherInventoryServiceResponse | None = None
-        for planned_step in route_plan.steps:
+        for step_index, planned_step in enumerate(route_plan.steps):
             try:
                 _assert_time_budget_remaining(
                     deadline_monotonic=deadline_monotonic,
@@ -743,9 +743,20 @@ def run_publisher_inventory_discovery(
             except AppError as exc:
                 if exc.code == "publisher_inventory_browser_pagination_limit":
                     raise
+                has_next_route = step_index < len(route_plan.steps) - 1
+                should_fallback = (
+                    planned_step.fallback_on_retryable_error
+                    and has_next_route
+                    and (
+                        is_retryable_app_error(exc)
+                        or (
+                            planned_step.route_kind_hint == "http_parse"
+                            and exc.code == "publisher_inventory_http_empty"
+                        )
+                    )
+                )
                 if (
-                    not planned_step.fallback_on_retryable_error
-                    or not is_retryable_app_error(exc)
+                    not should_fallback
                 ):
                     raise
                 fallback_event = (

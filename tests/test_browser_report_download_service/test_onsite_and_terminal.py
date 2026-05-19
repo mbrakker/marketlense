@@ -194,6 +194,68 @@ def test_download_report_with_browser_use_short_circuits_planned_onsite_candidat
     )
 
 
+def test_download_report_with_browser_use_short_circuits_planned_extract_step_without_candidate_trace(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/html; charset=utf-8"}
+        url = "https://data.example/reports/digital-2023-norfolk-island"
+        text = (
+            "<html><head><title>Digital 2023: Norfolk Island</title></head>"
+            "<body><article><h1>Digital 2023: Norfolk Island</h1>"
+            "<p>This page contains the complete report findings.</p>"
+            "<p>" + ("Population and connectivity insight. " * 160) + "</p>"
+            "</article></body></html>"
+        )
+
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for planned extract step")
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://data.example/reports/digital-2023-norfolk-island",
+            settings=_settings(tmp_path),
+            route_kind_hint="onsite_report",
+            route_family_hint="browser_onsite_report",
+            route_step_hints=[
+                BrowserDownloadRouteStep(
+                    schema_version="1.0",
+                    index=0,
+                    action="extract",
+                    target_text="https://data.example/reports/digital-2023-norfolk-island",
+                    target_role="html",
+                    target_url="https://data.example/reports/digital-2023-norfolk-island",
+                    result="Capture the on-site report HTML.",
+                )
+            ],
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.route_family == "browser_onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_capture_path is not None
+    assert (
+        "Population and connectivity insight."
+        in Path(response.onsite_capture_path).read_text(encoding="utf-8")
+    )
+
+
 def test_download_report_with_browser_use_directly_captures_route_confirmed_non_article_longread(
     tmp_path: Path,
     run_context,

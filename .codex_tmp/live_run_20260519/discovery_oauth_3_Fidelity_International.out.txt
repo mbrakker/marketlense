@@ -1,0 +1,21 @@
+                    Publisher Inventory Discovery                     
+                                                                      
+  Field               Value                                           
+ ──────────────────────────────────────────────────────────────────── 
+  Publisher           Fidelity International                          
+  Insights URL        https://www.fidelityinternational.com/insights  
+  Normalized URL      https://www.fidelityinternational.com/insights  
+  Current reports     12                                              
+  Previous reports    0                                               
+  Used memory route   yes                                             
+  Snapshot changed    yes                                             
+  Run quality         high                                            
+  Run outcome         accepted                                        
+  Next route          browser_render                                  
+                                                                      
+                                New Report URLs                                
+                                                                               
+  Page   Title                    URL                                          
+ ───────────────────────────────────────────────────────────────────────────── 
+  1      Fidelity International   https://www.fidelityinternational.com/dive…  
+                                                                               

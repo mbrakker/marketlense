@@ -136,6 +136,23 @@ class _FakeOpenAIClient:
                 },
                 request_id="req-summary",
             )
+        if "system::report_vs/artifacts/regenerate/quotes" in req.system_prompt:
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"quotes_final":[{"text":"A paraphrased section summary","speaker":"Unknown","citation":"Topic","page":1,"evidence_id":"sec-1"}]}',
+                parsed_json={
+                    "quotes_final": [
+                        {
+                            "text": "A paraphrased section summary",
+                            "speaker": "Unknown",
+                            "citation": "Topic",
+                            "page": 1,
+                            "evidence_id": "sec-1",
+                        }
+                    ]
+                },
+                request_id="req-quotes",
+            )
         raise AssertionError(
             f"Unexpected prompt payload: {req.system_prompt} {req.user_prompt}"
         )
@@ -470,6 +487,63 @@ def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_pa
         response.updated_artifacts["insights_final"][0]["text"] == "Old final insight"
     )
     assert response.updated_artifacts["quotes_final"][0]["text"] == "Old quote"
+
+
+def test_regenerate_artifacts_applies_family_policy_to_unsupported_quotes(
+    tmp_path,
+):
+    prompt_client = _FakePromptClient()
+    openai_client = _FakeOpenAIClient()
+    evidence_packs = _evidence_packs()
+    evidence_packs["quote_candidates"] = {"quote_candidates": []}
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="quotes",
+                        regenerate_steps=["quotes"],
+                        prompt_namespaces=["report_vs/artifacts/regenerate/quotes"],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="quotes",
+                                affected_section="quotes:1",
+                                message="[quotes] Quote not verbatim",
+                                severity="error",
+                                evidence_ids=["sec-1"],
+                                pages=[1],
+                            )
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=True,
+            ),
+            current_artifacts=_current_artifacts(),
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=_current_artifacts()["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+
+    assert response.regenerated_sections == ["quotes"]
+    assert response.updated_artifacts["quotes_final"] == []
+    assert response.updated_artifacts["family_status"]["quotes"]["status"] == "abstained"
+    assert (
+        response.updated_artifacts["family_status"]["quotes"]["reason"]
+        == "quotes_missing_verbatim_source"
+    )
 
 
 def test_regenerate_artifacts_topics_rebuilds_topic_briefs_without_model_calls(

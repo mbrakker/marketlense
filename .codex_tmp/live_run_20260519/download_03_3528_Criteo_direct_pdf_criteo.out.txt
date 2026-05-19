@@ -1,0 +1,19 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://www.criteo.com/wp-content/uploads/2020/0…  
+  Normalized URL            https://www.criteo.com/wp-content/uploads/2020/0…  
+  Route                     email_delivery                                     
+  Outcome                   email_required                                     
+  Used memory route         no                                                 
+  Final page                https://www.criteo.com/wp-content/uploads/2020/0…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                                                                         
+  Drive uploads                                                                
+  Summary                   Opened the direct PDF URL; the navigation          
+                            resolved to a site "Page Not Found" page instead   
+                            of serving a PDF. No local PDF was downloaded;     
+                            run blocked due to missing resource.               
+                                                                               

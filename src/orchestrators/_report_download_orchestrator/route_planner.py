@@ -6,6 +6,7 @@ from dataclasses import replace
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from src.contracts.browser_download import (
+    BrowserDownloadRouteStep,
     PublisherDownloadRouteMemory,
     PublisherDownloadRoutePolicySignal,
     ReportDownloadRoutePlanRequest,
@@ -149,6 +150,9 @@ _DIRECT_ONSITE_REPORT_SEGMENTS = {
 _DIRECT_ONSITE_REPORT_PATH_PHRASES = {
     "year-in-review",
 }
+_DIRECT_ONSITE_DIGITAL_YEAR_SEGMENT_RX = re.compile(
+    r"^(?:digital|global-digital)-20\d{2}(?:-|$)"
+)
 _ONSITE_EXCLUDED_SEGMENTS = {
     "resources",
     "reports",
@@ -562,11 +566,13 @@ def _build_browser_step(
             fallback_on_retryable_error=False,
         )
     if _looks_like_direct_onsite_report_url(redirect_target_url or normalized_url):
+        attempt_url = redirect_target_url or normalized_url
         return ReportDownloadRoutePlanStep(
             schema_version="1.0",
             step_name="report_download_browser_onsite_report",
             route_family="browser_onsite_report",
-            attempt_url=redirect_target_url or normalized_url,
+            attempt_url=attempt_url,
+            route_step_hints=_onsite_capture_route_steps(attempt_url),
             route_kind_hint="onsite_report",
             source_page_url_hint=source_page_url,
             uses_memory_route=False,
@@ -588,11 +594,13 @@ def _build_browser_step(
             fallback_on_retryable_error=False,
         )
     if _looks_like_onsite_longread_url(redirect_target_url or normalized_url):
+        attempt_url = redirect_target_url or normalized_url
         return ReportDownloadRoutePlanStep(
             schema_version="1.0",
             step_name="report_download_browser_onsite_report",
             route_family="browser_onsite_report",
-            attempt_url=redirect_target_url or normalized_url,
+            attempt_url=attempt_url,
+            route_step_hints=_onsite_capture_route_steps(attempt_url),
             route_kind_hint="onsite_report",
             source_page_url_hint=source_page_url,
             uses_memory_route=False,
@@ -1160,10 +1168,10 @@ def _looks_like_direct_onsite_report_url(url: str | None) -> bool:
     segments = [segment for segment in path.split("/") if segment]
     if not segments:
         return False
+    if _path_has_direct_onsite_report_phrase(path=path, segments=segments):
+        return True
     if any(segment in _ONSITE_EXCLUDED_SEGMENTS for segment in segments):
         return False
-    if any(phrase in path for phrase in _DIRECT_ONSITE_REPORT_PATH_PHRASES):
-        return True
     return any(
         segment in _DIRECT_ONSITE_REPORT_SEGMENTS
         or any(
@@ -1172,6 +1180,42 @@ def _looks_like_direct_onsite_report_url(url: str | None) -> bool:
         )
         for segment in segments
     )
+
+
+def _path_has_direct_onsite_report_phrase(
+    *,
+    path: str,
+    segments: list[str],
+) -> bool:
+    if any(phrase in path for phrase in _DIRECT_ONSITE_REPORT_PATH_PHRASES):
+        return True
+    if not ({"report", "reports"} & set(segments)):
+        return False
+    return any(
+        _DIRECT_ONSITE_DIGITAL_YEAR_SEGMENT_RX.match(segment) is not None
+        for segment in segments
+    )
+
+
+def _onsite_capture_route_steps(attempt_url: str | None) -> list[BrowserDownloadRouteStep]:
+    target_url = str(attempt_url or "").strip()
+    return [
+        BrowserDownloadRouteStep(
+            schema_version="1.0",
+            index=0,
+            action="extract",
+            target_text=target_url,
+            target_role="html",
+            target_url=target_url,
+            result="Capture the on-site report HTML when it is complete report content.",
+            expected_evidence=[
+                "long-form report text",
+                "complete on-site report content",
+            ],
+            observed_evidence=[],
+            verification_status="planned",
+        )
+    ]
 
 
 def _path_has_email_gate_marker(path: str) -> bool:

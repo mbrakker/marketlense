@@ -1,0 +1,44 @@
+{
+  "ok": true,
+  "outcome": {
+    "schema_version": "1.0",
+    "file_id": "19AhAOR9_LLHyvKvzvT6ac7sFGQZEYNLk",
+    "name": "docu-202604-robeco-stewardship-report-2025.pdf",
+    "md5": "fa1249e68d5b6f642066079cb70ffb24",
+    "html_path": "out\\docu-202604-robeco-stewardship-report-2025-pdf.html",
+    "status": "processed",
+    "error": null,
+    "vector_store_id": "vs_6a0cafd576ec8191a84aef36de924a7a",
+    "vector_store_status": "completed",
+    "indexed_at_utc": "1779216341",
+    "openai_file_id": "file-4NHqSNY7RH4zzKdCv4niU5",
+    "evidence_packs": {
+      "doc_map": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\doc_map.json",
+      "scope": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\scope.json",
+      "methods": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\methods.json",
+      "findings": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\findings.json",
+      "limitations": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\limitations.json",
+      "quote_candidates": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\quote_candidates.json",
+      "report_context": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\report_context.json",
+      "context_category_fit": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\context_category_fit.json",
+      "artifacts": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\artifacts.json",
+      "validation": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\validation.json",
+      "artifacts_regen_attempt_1": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\artifacts_regen_attempt_1.json",
+      "validation_regen_attempt_1": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\validation_regen_attempt_1.json",
+      "artifacts_regen_attempt_2": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\artifacts_regen_attempt_2.json",
+      "validation_regen_attempt_2": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\validation_regen_attempt_2.json",
+      "analysis_vector_store": "out\\docu-202604-robeco-stewardship-report-2025-pdf\\report_analysis\\analysis_vector_store.json"
+    },
+    "vector_store_last_error": null,
+    "text_validation_status": "pass",
+    "text_validation_reason": "",
+    "text_validation_pages": [
+      24,
+      38,
+      43
+    ],
+    "doc_map_summary": null,
+    "ocr_fallback_used": false,
+    "ocr_pdf_path": null
+  }
+}

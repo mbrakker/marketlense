@@ -29,8 +29,8 @@ from src.generators.artifact_normalization import (
     strip_artifact_inline_reference_ids,
 )
 from src.generators.artifact_generator import (
+    apply_artifact_family_policy,
     assemble_artifacts_payload,
-    build_artifact_family_status,
     build_toc_artifacts,
     render_artifact_json_model,
     store_artifacts_payload,
@@ -215,6 +215,23 @@ def regenerate_artifacts(
             )
         )
 
+    (
+        summary,
+        insights_candidates,
+        insights_final,
+        quotes_final,
+        expert_comment,
+        linkedin_post,
+        family_status,
+    ) = apply_artifact_family_policy(
+        summary=state.summary,
+        insights_candidates=state.insights_candidates,
+        insights_final=state.insights_final,
+        quotes_final=state.quotes_final,
+        expert_comment=state.expert_comment,
+        linkedin_post=state.linkedin_post,
+    )
+
     updated_artifacts = assemble_artifacts_payload(
         report_id=request.report_id,
         report_name=request.report_name,
@@ -225,21 +242,14 @@ def regenerate_artifacts(
             "toc_topics": state.toc_topics,
             "toc_topics_expanded": state.topic_briefs,
         },
-        summary=state.summary,
-        insights_candidates=state.insights_candidates,
-        insights_final=state.insights_final,
-        quotes_final=state.quotes_final,
-        expert_comment=state.expert_comment,
-        linkedin_post=state.linkedin_post,
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        expert_comment=expert_comment,
+        linkedin_post=linkedin_post,
         source_status=availability,
-        family_status=build_artifact_family_status(
-            summary=state.summary,
-            insights_candidates=state.insights_candidates,
-            insights_final=state.insights_final,
-            quotes_final=state.quotes_final,
-            expert_comment=state.expert_comment,
-            linkedin_post=state.linkedin_post,
-        ),
+        family_status=family_status,
         ctx=ctx,
     )
     artifacts_path = store_artifacts_payload(

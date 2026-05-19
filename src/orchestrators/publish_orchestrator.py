@@ -716,6 +716,7 @@ def run_publish(
     settings: PublishSettings,
     *,
     limit: Optional[int] = None,
+    html_paths: Optional[List[str]] = None,
     ctx: Optional[RunContext] = None,
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
@@ -725,15 +726,23 @@ def run_publish(
             role="orchestrator",
             event="publish_start",
             module=logger.name,
-            fields={"limit": limit},
+            fields={
+                "limit": limit,
+                "explicit_html_paths": len(html_paths) if html_paths is not None else 0,
+            },
         )
     )
 
-    list_resp = list_html(
-        ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir), root_ctx
-    )
-    max_n = limit if limit is not None else len(list_resp.html_paths)
-    selected_html_paths = list_resp.html_paths[:max_n]
+    if html_paths is None:
+        list_resp = list_html(
+            ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir),
+            root_ctx,
+        )
+        discovered_html_paths = list_resp.html_paths
+    else:
+        discovered_html_paths = [str(path) for path in html_paths]
+    max_n = limit if limit is not None else len(discovered_html_paths)
+    selected_html_paths = discovered_html_paths[:max_n]
 
     outcomes: List[PublishOutcome] = []
     attempted = 0

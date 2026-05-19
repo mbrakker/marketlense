@@ -64,7 +64,9 @@ from src.utils.analysis_family import (
 from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.artifact_generator")
-from src.generators._artifact_generator.family_policy import build_artifact_family_status
+from src.generators._artifact_generator.family_policy import (
+    apply_artifact_family_policy,
+)
 from src.generators._artifact_generator.toc import (
     TOC_STRUCTURE_VERSION,
     TOPIC_BRIEF_MAPPING_VERSION,
@@ -408,8 +410,6 @@ def _adapt_cached_artifacts_payload(
 def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(payload, dict):
         return {}
-    if isinstance(payload.get("family_status"), dict):
-        return payload
     raw_summary = payload.get("summary")
     raw_insights_candidates = payload.get("insights_candidates")
     raw_insights_final = payload.get("insights_final")
@@ -430,8 +430,15 @@ def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, 
         if isinstance(raw_quotes_final, list)
         else []
     )
-    enriched = dict(payload)
-    enriched["family_status"] = build_artifact_family_status(
+    (
+        summary,
+        insights_candidates,
+        insights_final,
+        quotes_final,
+        expert_comment,
+        linkedin_post,
+        family_status,
+    ) = apply_artifact_family_policy(
         summary=summary,
         insights_candidates=insights_candidates,
         insights_final=insights_final,
@@ -439,6 +446,14 @@ def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, 
         expert_comment=_s(payload.get("expert_comment")),
         linkedin_post=_s(payload.get("linkedin_post")),
     )
+    enriched = dict(payload)
+    enriched["summary"] = summary
+    enriched["insights_candidates"] = insights_candidates
+    enriched["insights_final"] = insights_final
+    enriched["quotes_final"] = quotes_final
+    enriched["expert_comment"] = expert_comment
+    enriched["linkedin_post"] = linkedin_post
+    enriched["family_status"] = family_status
     return enriched
 
 

@@ -1,0 +1,22 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://www.gwi.com/reports/online-dating          
+  Normalized URL            https://www.gwi.com/reports/online-dating          
+  Route                     email_delivery                                     
+  Outcome                   email_required                                     
+  Used memory route         no                                                 
+  Final page                https://www.gwi.com/reports/online-dating          
+  Encountered form fields   First name, Last name, Work email, Company size    
+                            (select), Country (select)                         
+  Identity fields added     company_size_select, country_select                
+  File                                                                         
+  Drive uploads                                                                
+  Summary                   Clicked the page 'Download now' CTA which opened   
+                            a lead form requiring First name, Last name, Work  
+                            email, Company size (select), and Country;         
+                            submission was not attempted because the required  
+                            'Company size' select options do not include the   
+                            configured value '***REDACTED***'.                         
+                                                                               

@@ -81,7 +81,11 @@ from src.utils.gui_utils import extract_log_date_from_filename, parse_structured
 from src.utils.logging import child_context, log_event, new_run_context
 
 
-cli_app = typer.Typer(add_completion=False, help="PDF -> Structured HTML digests")
+cli_app = typer.Typer(
+    add_completion=False,
+    help="PDF -> Structured HTML digests",
+    pretty_exceptions_show_locals=False,
+)
 console = Console()
 logger = logging.getLogger("market_lense.cli")
 

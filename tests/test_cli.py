@@ -46,6 +46,11 @@ from src.utils.errors import AppError
 
 
 class TestCli(unittest.TestCase):
+    def test_cli_pretty_exceptions_do_not_render_locals(self) -> None:
+        import src.cli as cli
+
+        self.assertFalse(cli.cli_app.pretty_exceptions_show_locals)
+
     def test_ingest_wires_settings_and_orchestrator(self) -> None:
         # Avoid importing heavy dependencies during test import.
         dummy_fitz = types.ModuleType("fitz")

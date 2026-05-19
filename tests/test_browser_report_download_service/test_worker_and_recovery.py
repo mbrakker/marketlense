@@ -948,6 +948,126 @@ def test_browser_worker_subprocess_forces_utf8_and_captures_output(
     assert_logs_have_required_fields(_service_events(caplog))
 
 
+def test_browser_worker_subprocess_discards_sensitive_request_payload_after_run(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=_settings(tmp_path),
+    )
+    prompt_bundle = prompt_runtime.BrowserDownloadPromptBundle(
+        schema_version="1.0",
+        namespace="browser_report_download/browser_route",
+        system_prompt_path="system.yaml",
+        user_prompt_path="user.yaml",
+        system_prompt_sha256="system",
+        user_prompt_sha256="user",
+        rendered_system_prompt="system",
+        rendered_user_prompt="user with Market Lense",
+        task_prompt="task with openrouter-key and Market Lense",
+    )
+    download_dir = tmp_path / "worker-download"
+    payload_path = download_dir / "browser_agent_worker_request.json"
+    response_path = download_dir / "browser_agent_worker_response.json"
+
+    def fake_run(*args, **kwargs):
+        assert payload_path.exists()
+        payload_text = payload_path.read_text(encoding="utf-8")
+        assert "openrouter-key" in payload_text
+        assert "Market Lense" in payload_text
+        response_path = Path(args[0][-1])
+        response_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": "1.0",
+                    "status": "ok",
+                    "result": {
+                        "schema_version": "1.0",
+                        "raw_model_response": "{}",
+                        "final_page_url": "https://example.com/final",
+                        "final_page_title": "Final",
+                        "final_page_html": "<html></html>",
+                        "downloaded_files": [],
+                        "attachment_paths": [],
+                        "network_resource_urls": [],
+                        "network_events": [],
+                        "html_snapshot_path": "",
+                        "screenshot_path": "",
+                    },
+                    "error": None,
+                }
+            ),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(args=args[0], returncode=0, stdout="")
+
+    external_boundary_mocks_only.setattr(browser_runtime.subprocess, "run", fake_run)
+
+    result = browser_runtime._run_browser_report_download_agent_subprocess(
+        request=request,
+        ctx=run_context,
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=download_dir,
+        prompt_bundle=prompt_bundle,
+    )
+
+    assert result.final_page_url == "https://example.com/final"
+    assert response_path.exists()
+    assert not payload_path.exists()
+
+
+def test_browser_worker_subprocess_discards_sensitive_request_payload_after_timeout(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=_settings(tmp_path),
+    )
+    prompt_bundle = prompt_runtime.BrowserDownloadPromptBundle(
+        schema_version="1.0",
+        namespace="browser_report_download/browser_route",
+        system_prompt_path="system.yaml",
+        user_prompt_path="user.yaml",
+        system_prompt_sha256="system",
+        user_prompt_sha256="user",
+        rendered_system_prompt="system",
+        rendered_user_prompt="user with Market Lense",
+        task_prompt="task with openrouter-key and Market Lense",
+    )
+    download_dir = tmp_path / "worker-download"
+    payload_path = download_dir / "browser_agent_worker_request.json"
+
+    def fake_run(*args, **kwargs):
+        assert payload_path.exists()
+        raise subprocess.TimeoutExpired(
+            cmd=args[0],
+            timeout=kwargs["timeout"],
+            output="INFO browser_use.Agent still running",
+        )
+
+    external_boundary_mocks_only.setattr(browser_runtime.subprocess, "run", fake_run)
+
+    with pytest.raises(AppError) as exc_info:
+        browser_runtime._run_browser_report_download_agent_subprocess(
+            request=request,
+            ctx=run_context,
+            normalized_url=request.url,
+            execution_url=request.url,
+            download_dir=download_dir,
+            prompt_bundle=prompt_bundle,
+        )
+
+    assert exc_info.value.code == "browser_download_agent_timeout"
+    assert not payload_path.exists()
+
+
 def test_browser_worker_subprocess_sanitizes_failure_output_excerpt(
     tmp_path: Path,
     run_context,

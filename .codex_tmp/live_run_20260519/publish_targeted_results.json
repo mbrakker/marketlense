@@ -1,0 +1,87 @@
+[
+  {
+    "schema_version": "1.0",
+    "html_path": "out\\cm-agencyfactsheet-updated-12-4-2024-1-pdf.html",
+    "file_id": "1NRM3hEHNRGv_GEfaZOZmX5D35sGdA9dl",
+    "status": "published",
+    "post_id": 890,
+    "post_url": "https://marketlense.medianewsonline.com/reports/cm-agencyfactsheet-updated-12-4-2024-1/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[family_confidence] Evidence pack 'limitations' abstained at confidence=0.00 because insufficient_pack_content.",
+      "[metrics] Metric value '7' not verbatim but semantically supported (confidence=1.00) for IC_F3",
+      "[metrics] Metric value '17' not verbatim but semantically supported (confidence=1.00) for IC_F5"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out\\2023-email-sms-and-push-report-pdf.html",
+    "file_id": "1nM_RjcK5EUQVDkYEgxMBCWedV-oSNxhu",
+    "status": "published",
+    "post_id": 895,
+    "post_url": "https://marketlense.medianewsonline.com/reports/email-sms-and-push-marketing-statistics-for-ecommerce-in-2024/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": []
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out\\digital-2023-norfolk-island-pdf.html",
+    "file_id": "1WLer4SiSdQEmWS3wtzEGhHcpr5lxyocA",
+    "status": "published",
+    "post_id": 897,
+    "post_url": "https://marketlense.medianewsonline.com/reports/digital-2023-norfolk-island/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": []
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out\\bain-report-global-private-equity-report-2026-pdf.html",
+    "file_id": "1kGVPIU1wWjbf1OW2xSFUvpYfOHr18uKG",
+    "status": "published",
+    "post_id": 904,
+    "post_url": "https://marketlense.medianewsonline.com/reports/global-private-equity-report-2026/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[metrics] Metric timeframe 'through 2025' not verbatim but semantically supported (confidence=1.00) for insight_F2_distributions_lp_constraints",
+      "[metrics] Metric timeframe 'current environment (2025\u20132026)' not verbatim but semantically supported (confidence=1.00) for insight_F3_k_shaped_and_12_is_new_5"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out\\docu-202604-robeco-stewardship-report-2025-pdf.html",
+    "file_id": "19AhAOR9_LLHyvKvzvT6ac7sFGQZEYNLk",
+    "status": "error",
+    "post_id": null,
+    "post_url": null,
+    "error": "validation_failed",
+    "validation_status": "fail",
+    "validation_issues": [
+      "[family_confidence] Evidence pack 'scope' abstained at confidence=0.00 because insufficient_pack_content.",
+      "[family_confidence] Evidence pack 'methods' abstained at confidence=0.00 because insufficient_pack_content.",
+      "[family_confidence] Evidence pack 'findings' abstained at confidence=0.00 because insufficient_pack_content.",
+      "[family_confidence] Evidence pack 'quote_candidates' abstained at confidence=0.00 because insufficient_pack_content.",
+      "[quotes] Quote not verbatim in evidence (Evidence explicitly notes Robeco partnered with academics from Rotterdam School of Management on an engagement-effectiveness study.): An engagement effectiveness study was conducted with academics from Rotterdam School of Management (RSM).",
+      "[quotes] Quote not verbatim in evidence (Evidence describes expansion to soy, cattle, pulp & paper and explicitly states six companies were included in the enhanced engagement.): Expanded program includes companies linked to cattle products and pulp & paper; six companies were included in the enhan"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out\\year-in-review-2022-pdf.html",
+    "file_id": "1Wm4HRYQ0ImIAEx4-tw2vz1T2i2ignIBD",
+    "status": "published",
+    "post_id": 911,
+    "post_url": "https://marketlense.medianewsonline.com/reports/year-in-review-2022/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[metrics] Metric timeframe '2020 to 2023 (peak periods)' not verbatim but semantically supported (confidence=1.00) for insight_fba_fee_increase_2020_2023",
+      "[metrics] Metric timeframe 'end of 2022; 5\u2011year growth window' not verbatim but semantically supported (confidence=1.00) for insight_amazon_ads_runrate_and_metrics_end_2022",
+      "[metrics] Metric timeframe '2021 to 2022' not verbatim but semantically supported (confidence=1.00) for insight_aggregator_funding_drop_2022",
+      "[metrics] Metric timeframe '2022 (TTM)' not verbatim but semantically supported (confidence=1.00) for insight_us_ecommerce_1trn_ttm_2022"
+    ]
+  }
+]

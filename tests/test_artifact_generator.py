@@ -11,10 +11,14 @@ from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.generators.artifact_normalization import normalize_artifact_quotes
 from src.generators.artifact_generator import (
     _load_cached_artifacts,
     build_topic_briefs,
     generate_artifacts,
+)
+from src.generators._artifact_generator.family_policy import (
+    build_artifact_family_status,
 )
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
@@ -537,6 +541,84 @@ def test_generate_artifacts_abstains_low_confidence_families_and_marks_regenerat
     assert payload["family_status"]["expert_comment"]["policy_action"] == "keep"
     assert payload["family_status"]["linkedin_post"]["status"] == "generated"
     assert payload["family_status"]["linkedin_post"]["policy_action"] == "keep"
+
+
+def test_summary_family_status_accepts_claim_evidence_ids_without_spans() -> None:
+    status = build_artifact_family_status(
+        summary={
+            "tldr": "Grounded short summary.",
+            "executive_summary": "Grounded executive summary.",
+            "claim_evidence_map": [
+                {
+                    "claim": "Engagement drove measurable practice changes.",
+                    "evidence_id": "sec-07",
+                    "evidence": "The report says engagement led to tangible changes.",
+                    "pages": [16],
+                }
+            ],
+        },
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert status["summary"]["status"] == "generated"
+    assert status["summary"]["policy_action"] == "keep"
+
+
+def test_quote_family_abstains_doc_map_only_nonverbatim_quotes() -> None:
+    status = build_artifact_family_status(
+        summary={},
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[
+            {
+                "text": (
+                    "Expanded program includes companies linked to cattle products "
+                    "and pulp and paper."
+                ),
+                "speaker": "Unknown",
+                "citation": "Deforestation program",
+                "page": 40,
+                "evidence_id": "sec-10",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "sec-10",
+                        "source_pack": "doc_map",
+                        "page": 40,
+                        "text": (
+                            "Describes the expansion of the program to forest-risk "
+                            "commodities and selected companies."
+                        ),
+                    }
+                ],
+            }
+        ],
+        expert_comment="",
+        linkedin_post="",
+    )
+
+    assert status["quotes"]["status"] == "abstained"
+    assert status["quotes"]["policy_action"] == "regenerate"
+    assert status["quotes"]["reason"] == "quotes_missing_verbatim_source"
+
+
+def test_normalize_artifact_quotes_preserves_paraphrase_marker() -> None:
+    quotes = normalize_artifact_quotes(
+        [
+            {
+                "text": "The evidence says revenue improved.",
+                "speaker": "Analyst",
+                "citation": "Findings",
+                "evidence_id": "f1",
+                "is_paraphrase": True,
+            }
+        ]
+    )
+
+    assert quotes[0]["is_paraphrase"] is True
 
 
 def test_generate_artifacts_expands_topic_briefs_from_doc_map(tmp_path):
@@ -1442,6 +1524,132 @@ def test_load_cached_artifacts_rejects_schema_invalid_payload(tmp_path):
     )
 
     assert cached is None
+
+
+def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
+    report_name = "artifact cache status"
+    cache_path = tmp_path / slugify(report_name) / "report_analysis" / "artifacts.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": "1.0",
+        "_cache": {"key": "cache-key"},
+        "toc_entries": [],
+        "toc_topics": [],
+        "toc_topics_expanded": [],
+        "summary": {
+            "tldr": "Grounded TLDR.",
+            "executive_summary": "Grounded executive summary.",
+            "claim_evidence_map": [
+                {
+                    "claim": "Engagement drove measurable practice changes.",
+                    "evidence_id": "sec-07",
+                    "evidence": "The report says engagement led to tangible changes.",
+                    "pages": [16],
+                }
+            ],
+        },
+        "insights_candidates": [],
+        "insights_final": [],
+        "quotes_final": [],
+        "expert_comment": "",
+        "linkedin_post": "",
+        "source_status": {"not_available": False, "reason": ""},
+        "family_status": {
+            "summary": {
+                "schema_version": "1.0",
+                "family": "summary",
+                "source": "artifact",
+                "status": "abstained",
+                "confidence_score": 0.64,
+                "policy_action": "regenerate",
+                "reason": "summary_claim_span_missing",
+            }
+        },
+    }
+    cache_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    cached = _load_cached_artifacts(
+        output_dir=str(tmp_path),
+        report_id="artifact-cache-status",
+        report_name=report_name,
+        cache_key="cache-key",
+        ctx=_ctx(),
+        analysis_store=None,
+    )
+
+    assert cached is not None
+    assert cached["family_status"]["summary"]["status"] == "generated"
+
+
+def test_load_cached_artifacts_clears_doc_map_only_quotes_after_policy_refresh(
+    tmp_path,
+):
+    report_name = "artifact cache unsupported quotes"
+    cache_path = tmp_path / slugify(report_name) / "report_analysis" / "artifacts.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": "1.0",
+        "_cache": {"key": "cache-key"},
+        "toc_entries": [],
+        "toc_topics": [],
+        "toc_topics_expanded": [],
+        "summary": {
+            "tldr": "",
+            "executive_summary": "",
+            "claim_evidence_map": [],
+        },
+        "insights_candidates": [],
+        "insights_final": [],
+        "quotes_final": [
+            {
+                "text": "Expanded program includes forest-risk commodities.",
+                "speaker": "Unknown",
+                "citation": "Deforestation",
+                "page": 40,
+                "evidence_id": "sec-10",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "sec-10",
+                        "source_pack": "doc_map",
+                        "page": 40,
+                        "text": "Describes the expanded forest-risk engagement program.",
+                    }
+                ],
+            }
+        ],
+        "expert_comment": "",
+        "linkedin_post": "",
+        "source_status": {"not_available": False, "reason": ""},
+        "family_status": {
+            "quotes": {
+                "schema_version": "1.0",
+                "family": "quotes",
+                "source": "artifact",
+                "status": "generated",
+                "confidence_score": 1.0,
+                "policy_action": "keep",
+                "reason": "",
+            }
+        },
+    }
+    cache_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    cached = _load_cached_artifacts(
+        output_dir=str(tmp_path),
+        report_id="artifact-cache-unsupported-quotes",
+        report_name=report_name,
+        cache_key="cache-key",
+        ctx=_ctx(),
+        analysis_store=None,
+    )
+
+    assert cached is not None
+    assert cached["quotes_final"] == []
+    assert cached["family_status"]["quotes"]["status"] == "abstained"
+    assert (
+        cached["family_status"]["quotes"]["reason"]
+        == "quotes_missing_verbatim_source"
+    )
 
 
 def test_generate_artifacts_with_auto_context_preserves_input_evidence(tmp_path):

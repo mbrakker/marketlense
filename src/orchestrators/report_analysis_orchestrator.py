@@ -54,6 +54,7 @@ from src.generators.report_generation_shared import (
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.utils.errors import AppError
+from src.utils.analysis_family import family_is_abstained
 from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.report_analysis_orchestrator")
@@ -320,11 +321,16 @@ def _await_vector_store_indexing(
 def _ensure_report_payload_complete(
     payload,
     *,
+    artifacts: Optional[Dict[str, Any]] = None,
     ctx,
     file_id: str,
     stage: str,
 ) -> None:
     missing_fields: List[str] = []
+    artifact_payload = artifacts if isinstance(artifacts, dict) else {}
+    summary_abstained = family_is_abstained(artifact_payload, "summary")
+    insights_abstained = family_is_abstained(artifact_payload, "insights_bundle")
+    quotes_abstained = family_is_abstained(artifact_payload, "quotes")
 
     def _missing_text(value: Any) -> bool:
         text = str(value or "").strip()
@@ -332,18 +338,19 @@ def _ensure_report_payload_complete(
 
     if _missing_text(payload.title):
         missing_fields.append("title")
-    if _missing_text(payload.tldr):
+    if not summary_abstained and _missing_text(payload.tldr):
         missing_fields.append("tldr")
-    if _missing_text(payload.commentary):
+    if not summary_abstained and _missing_text(payload.commentary):
         missing_fields.append("commentary")
     insights = list(payload.insights or [])
-    if len(insights) < 5:
+    if not insights_abstained and len(insights) < 5:
         missing_fields.append("insights")
-    for index in range(5):
-        insight = insights[index] if index < len(insights) else ""
-        if _missing_text(insight):
-            missing_fields.append(f"insights[{index}]")
-    if _missing_text(payload.quote.text):
+    if not insights_abstained:
+        for index in range(5):
+            insight = insights[index] if index < len(insights) else ""
+            if _missing_text(insight):
+                missing_fields.append(f"insights[{index}]")
+    if not quotes_abstained and _missing_text(payload.quote.text):
         missing_fields.append("quote.text")
     if bool(getattr(payload, "_figure_section_enabled", True)):
         if _missing_text(payload.figure.title):
@@ -737,6 +744,7 @@ def run_report_analysis(
         )
     _ensure_report_payload_complete(
         normalized_payload,
+        artifacts=artifacts_payload or {},
         ctx=mode_ctx,
         file_id=runtime.file.file_id,
         stage="pre_validation",
@@ -1007,6 +1015,7 @@ def _run_validation_regeneration_loop(
         )
         _ensure_report_payload_complete(
             regenerated_payload,
+            artifacts=current_artifacts,
             ctx=attempt_ctx,
             file_id=runtime.file.file_id,
             stage=f"regeneration_attempt_{attempt_index}",

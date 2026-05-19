@@ -1,0 +1,9 @@
+Loading settings...
+Running ingest pipeline...
+                               Processed Reports                               
+                                                                               
+  File                 ID                    MD5           HTML                
+ ───────────────────────────────────────────────────────────────────────────── 
+  digital_2023_norf…   1WLer4SiSdQEmWS3wt…   34b27b2106:   out\digital-2023-…  
+                                                                               
+Done: 1 file(s).

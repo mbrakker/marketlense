@@ -55,6 +55,7 @@ from src.services.state_service import (
     already_processed_batch as state_already_processed_batch,
 )
 from src.services.state_service import already_processed as state_already_processed
+from src.services.state_service import get as state_get
 from src.services.state_service import (
     check_state_db_access,
     get_ingest_cursor,
@@ -66,6 +67,7 @@ from src.contracts.state import (
     StateBatchCheckRequest,
     StateCheckRequest,
     StateDbAccessRequest,
+    StateGetRequest,
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
 )
@@ -78,6 +80,7 @@ logger = logging.getLogger("market_lense.ingest_orchestrator")
 DB_ACCESS_TIMEOUT_SECONDS = 0.0
 EOF_RETRY_LIMIT = 1
 STATE_PREFILTER_BATCH_SIZE = 200
+DOC_MAP_EMPTY_ERROR_PREFIX = "doc_map_empty:"
 
 
 @dataclass(frozen=True)
@@ -114,7 +117,60 @@ def _should_skip(
         file_id=file.file_id,
         md5=md5,
     )
-    return state_already_processed(req, ctx)
+    if not state_already_processed(req, ctx):
+        return False
+    return _processed_state_should_skip(file.file_id, md5, state_db, ctx)
+
+
+def _processed_state_should_skip(
+    file_id: str,
+    md5: str,
+    state_db: str,
+    ctx: RunContext,
+) -> bool:
+    record = state_get(
+        StateGetRequest(schema_version="1.0", state_db=state_db, file_id=file_id),
+        ctx,
+    )
+    if record is None or record.md5 != md5:
+        return False
+    last_error = str(record.last_error or "").strip()
+    text_validation_status = str(record.text_validation_status or "").strip().lower()
+    if not last_error and text_validation_status not in {"pass", "fail"}:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="processed_state_progress_retry_selected",
+                module=logger.name,
+                fields={
+                    "file_id": file_id,
+                    "md5": md5,
+                    "vector_store_status": record.vector_store_status or "",
+                },
+            )
+        )
+        return False
+    if (
+        last_error.startswith(DOC_MAP_EMPTY_ERROR_PREFIX)
+        and text_validation_status == "pass"
+    ):
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="processed_state_doc_map_retry_selected",
+                module=logger.name,
+                fields={
+                    "file_id": file_id,
+                    "md5": md5,
+                    "last_error": last_error,
+                    "text_validation_status": text_validation_status,
+                },
+            )
+        )
+        return False
+    return True
 
 
 def _batch_should_skip(
@@ -142,16 +198,33 @@ def _batch_should_skip(
     )
     processed = {(item.file_id, item.md5) for item in response.processed_items}
     lookup: dict[tuple[str, str], bool] = {}
+    retryable_matches = 0
     for item in items:
         key = (item.file_id, item.md5)
-        lookup[key] = key in processed
+        if key not in processed:
+            lookup[key] = False
+            continue
+        should_skip = _processed_state_should_skip(
+            item.file_id,
+            item.md5,
+            state_db,
+            ctx,
+        )
+        if not should_skip:
+            retryable_matches += 1
+        lookup[key] = should_skip
     logger.info(
         log_event(
             ctx,
             role="orchestrator",
             event="drive_list_state_batch_checked",
             module=logger.name,
-            fields={"checked": len(items), "matched": len(processed)},
+            fields={
+                "checked": len(items),
+                "matched": len(processed),
+                "skipped": sum(1 for should_skip in lookup.values() if should_skip),
+                "retryable_matches": retryable_matches,
+            },
         )
     )
     return lookup

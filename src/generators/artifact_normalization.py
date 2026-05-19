@@ -159,18 +159,23 @@ def normalize_artifact_quotes(items: Any) -> List[Dict[str, Any]]:
         page_val = item.get("page")
         page = page_val if isinstance(page_val, int) else 0
         evidence_id = _s(item.get("evidence_id"))
-        normalized.append(
-            {
-                "text": _s(item.get("text")),
-                "speaker": _s(item.get("speaker") or "Unknown"),
-                "citation": _s(item.get("citation")),
-                "page": page,
-                "evidence_id": evidence_id,
-                "evidence_spans": _normalize_evidence_spans(
-                    item.get("evidence_spans"), evidence_id=evidence_id
-                ),
-            }
-        )
+        quote = {
+            "text": _s(item.get("text")),
+            "speaker": _s(item.get("speaker") or "Unknown"),
+            "citation": _s(item.get("citation")),
+            "page": page,
+            "evidence_id": evidence_id,
+            "evidence_spans": _normalize_evidence_spans(
+                item.get("evidence_spans"), evidence_id=evidence_id
+            ),
+        }
+        if item.get("is_paraphrase") is True or item.get("paraphrase") is True:
+            quote["is_paraphrase"] = True
+        for key in ("style", "mode", "label"):
+            value = _s(item.get(key)).strip()
+            if value:
+                quote[key] = value
+        normalized.append(quote)
     return normalized
 
 

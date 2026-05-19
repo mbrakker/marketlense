@@ -2215,6 +2215,107 @@ def test_run_report_download_uploads_all_captured_terminal_artifacts(
     assert response.drive_uploads[2].mime_type == "image/png"
 
 
+def test_run_report_download_deduplicates_equivalent_drive_artifact_paths(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _drive_enabled_settings(_settings(tmp_path))
+    pdf_path = Path(settings.output_dir) / "report.pdf"
+    redundant_dir = pdf_path.parent / "redundant"
+    redundant_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path.write_bytes(b"%PDF-1.7 rendered onsite report")
+    equivalent_pdf_path = redundant_dir / ".." / pdf_path.name
+    uploaded_paths: list[str] = []
+
+    def _upload_file(req, ctx):
+        uploaded_paths.append(req.source_path)
+        return DriveUploadLocalFileResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id="drive-report",
+                name=req.file_name,
+                modified_time="2026-04-22T00:00:00Z",
+                md5_checksum=_md5_for_path(Path(req.source_path)),
+                mime_type=req.mime_type,
+            ),
+            source_path=req.source_path,
+            size=Path(req.source_path).stat().st_size,
+            md5=_md5_for_path(Path(req.source_path)),
+        )
+
+    def _download(req, ctx):
+        return replace(
+            _result(
+                url="https://example.com/year-in-review",
+                used_route_hint=False,
+                path=str(pdf_path),
+            ),
+            onsite_capture_path=str(equivalent_pdf_path),
+            onsite_capture_format="browser_rendered_pdf",
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5=_md5_for_path(Path(req.path)),
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        record_report_value_score=lambda req, ctx: None,
+        sleep_fn=lambda seconds: None,
+        get_report_download_drive_folder=lambda req, ctx: (
+            ReportDownloadDriveFolderLookupResponse(
+                schema_version="1.0",
+                publisher_name="Example Publisher",
+                google_folder="folder456",
+                resolution_source="publisher_insights_url",
+            )
+        ),
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0", folder_id=req.folder_id, files=[]
+        ),
+        upload_local_file=_upload_file,
+    )
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/year-in-review",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+            publisher_insights_url="https://example.com/insights",
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert uploaded_paths == [str(pdf_path)]
+    assert len(response.drive_uploads) == 1
+    assert response.drive_uploads[0].file_name == "report.pdf"
+
+
 def test_run_report_download_skips_duplicate_drive_file_by_name_and_md5(
     tmp_path: Path,
     run_context,

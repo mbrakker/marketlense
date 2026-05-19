@@ -15,7 +15,7 @@ from src.services._browser_report_download.request import (
     resolve_effective_identity_fields,
 )
 from src.services import prompt_service
-from src.utils.logging import log_event
+from src.utils.logging import REDACTED, log_event
 from src.utils.browser_route_playbooks import serialize_selected_playbooks_for_prompt
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
@@ -142,6 +142,16 @@ def render_browser_report_download_prompt(
         rendered_user_prompt=rendered_user.text,
         task_prompt=task_prompt,
     )
+    log_rendered_user_prompt = redact_browser_report_download_prompt_for_log(
+        request=request,
+        text=bundle.rendered_user_prompt,
+        delivery_email=delivery_email,
+    )
+    log_task_prompt = redact_browser_report_download_prompt_for_log(
+        request=request,
+        text=bundle.task_prompt,
+        delivery_email=delivery_email,
+    )
     logger.info(
         log_event(
             ctx,
@@ -155,8 +165,8 @@ def render_browser_report_download_prompt(
                 "system_prompt_sha256": bundle.system_prompt_sha256,
                 "user_prompt_sha256": bundle.user_prompt_sha256,
                 "rendered_system_prompt": bundle.rendered_system_prompt,
-                "rendered_user_prompt": bundle.rendered_user_prompt,
-                "task_prompt": bundle.task_prompt,
+                "rendered_user_prompt": log_rendered_user_prompt,
+                "task_prompt": log_task_prompt,
                 "model": request.settings.model,
                 "temperature": request.settings.temperature,
                 "timeout_seconds": request.settings.timeout_seconds,
@@ -193,8 +203,12 @@ def render_browser_report_download_prompt(
                     item.playbook_id for item in request.selected_playbooks
                 ],
                 "prompt_variables": {
-                    "identity_entries": variables["identity_entries"],
-                    "delivery_email": variables["delivery_email"],
+                    "identity_entries": _redact_identity_entries_for_log(
+                        variables["identity_entries"]
+                    ),
+                    "delivery_email": (
+                        REDACTED if variables["delivery_email"] else ""
+                    ),
                     "route_hint": variables["route_hint"],
                     "route_kind_hint": variables["route_kind_hint"],
                     "route_step_lines": variables["route_step_lines"],
@@ -223,6 +237,52 @@ def render_browser_report_download_prompt(
         )
     )
     return bundle
+
+
+def redact_browser_report_download_prompt_for_log(
+    *,
+    request: BrowserReportDownloadRequest,
+    text: str,
+    delivery_email: str | None,
+) -> str:
+    redacted = str(text or "")
+    values = _identity_values_for_log_redaction(
+        request=request,
+        delivery_email=delivery_email,
+    )
+    for value in sorted(values, key=len, reverse=True):
+        redacted = redacted.replace(value, REDACTED)
+    return redacted
+
+
+def _identity_values_for_log_redaction(
+    *,
+    request: BrowserReportDownloadRequest,
+    delivery_email: str | None,
+) -> set[str]:
+    values: set[str] = set()
+    for field in resolve_effective_identity_fields(request):
+        value = str(field.value or "").strip()
+        if field.key == "work_email" and delivery_email:
+            value = delivery_email.strip()
+        if value:
+            values.add(value)
+    delivery = str(delivery_email or "").strip()
+    if delivery:
+        values.add(delivery)
+    return values
+
+
+def _redact_identity_entries_for_log(
+    entries: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    redacted_entries: list[dict[str, str]] = []
+    for entry in entries:
+        redacted_entry = dict(entry)
+        if str(redacted_entry.get("value") or "").strip():
+            redacted_entry["value"] = REDACTED
+        redacted_entries.append(redacted_entry)
+    return redacted_entries
 
 
 def _build_identity_entries(

@@ -107,6 +107,110 @@ def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
     assert "return `blocked_email_domain` immediately" in bundle.task_prompt
 
 
+def test_download_report_with_browser_use_redacts_identity_values_from_prompt_logs(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the landing page and save the PDF.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    settings = replace(
+        _settings(tmp_path, work_email="alice.private@example.com"),
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="full_name",
+                    label="Full name",
+                    value="Alice Private",
+                    aliases=["name"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="work_email",
+                    label="Work email",
+                    value="alice.private@example.com",
+                    aliases=["email"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="phone",
+                    label="Phone",
+                    value="555-123-9876",
+                    aliases=["phone"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="company",
+                    label="Company",
+                    value="Private Company",
+                    aliases=["company"],
+                ),
+            ],
+        ),
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            delivery_email="alice.delivery@example.com",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    events = _service_events(caplog)
+    prompt_event = next(
+        event
+        for event in events
+        if event["event"] == "browser_report_download_prompt_prepared"
+    )
+    request_event = next(
+        event
+        for event in events
+        if event["event"] == "browser_report_download_request"
+    )
+    prompt_fields_json = json.dumps(prompt_event["fields"])
+    request_fields_json = json.dumps(request_event["fields"])
+
+    for forbidden in [
+        "Alice Private",
+        "alice.private@example.com",
+        "alice.delivery@example.com",
+        "555-123-9876",
+        "Private Company",
+    ]:
+        assert forbidden not in prompt_fields_json
+        assert forbidden not in request_fields_json
+
+    assert prompt_event["fields"]["prompt_variables"]["identity_entries"] == [
+        {"label": "Full name", "aliases": "name", "value": "***REDACTED***"},
+        {"label": "Work email", "aliases": "email", "value": "***REDACTED***"},
+        {"label": "Phone", "aliases": "phone", "value": "***REDACTED***"},
+        {"label": "Company", "aliases": "company", "value": "***REDACTED***"},
+    ]
+    assert prompt_event["fields"]["prompt_variables"]["delivery_email"] == (
+        "***REDACTED***"
+    )
+    assert "***REDACTED***" in prompt_event["fields"]["rendered_user_prompt"]
+    assert "***REDACTED***" in request_event["fields"]["task_prompt"]
+
+
 def test_browser_report_download_prompt_templates_fail_on_missing_variables(
     run_context,
     assert_app_error,

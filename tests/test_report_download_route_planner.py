@@ -672,6 +672,26 @@ def test_plan_report_download_routes_treats_year_in_review_as_onsite_longread(
     assert response.steps[-1].route_kind_hint == "onsite_report"
 
 
+def test_plan_report_download_routes_marks_digital_year_report_detail_as_onsite_capture(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://data.example/reports/digital-2023-norfolk-island",
+            remembered_route=None,
+            candidate_trace=None,
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_onsite_report"
+    assert response.steps[-1].route_kind_hint == "onsite_report"
+    assert any(step.action == "extract" for step in response.steps[-1].route_step_hints)
+
+
 def test_plan_report_download_routes_uses_direct_detail_url_instead_of_source_listing(
     run_context,
 ) -> None:

@@ -1236,6 +1236,56 @@ def test_validation_fails_on_regenerable_abstained_artifact_family(tmp_path):
     )
 
 
+def test_validation_warns_on_abstained_quote_family_without_failing(tmp_path):
+    settings = _settings(tmp_path)
+    report = _report()
+    report.quote = Quote(text="", author="Unknown")
+    artifacts = {
+        "summary": {
+            "tldr": "TLDR",
+            "executive_summary": "Exec",
+            "claim_evidence_map": [],
+        },
+        "insights_final": [],
+        "quotes_final": [],
+        "family_status": {
+            "quotes": {
+                "schema_version": "1.0",
+                "family": "quotes",
+                "source": "artifact",
+                "status": "abstained",
+                "confidence_score": 0.65,
+                "policy_action": "regenerate",
+                "reason": "quotes_missing_verbatim_source",
+            }
+        },
+    }
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r1",
+            report=report,
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI({"unsupported": []}),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "pass"
+    assert result.severity == "warning"
+    assert any(
+        issue.rule_id == "family_confidence"
+        and issue.affected_section == "quotes"
+        and issue.severity == "warning"
+        for issue in result.issues
+    )
+
+
 def test_validation_fails_when_summary_claim_is_missing_span_support(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {

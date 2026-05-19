@@ -124,6 +124,33 @@ def test_publish_runs_when_processed(
     assert publish_row.wp_post_url == "https://example.com/post/10"
 
 
+def test_publish_uses_explicit_html_paths_over_output_listing(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(settings.output_dir, "aaa-first.html", "Drive fileId: first")
+    target = _write_html(settings.output_dir, "zzz-target.html", "Drive fileId: target")
+    _record_processed(settings.state_db, "target", run_context)
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 10, "link": "https://example.com/post/10", "status": "publish"},
+    )
+
+    results = orch.run_publish(settings, limit=1, html_paths=[str(target)])
+
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].file_id == "target"
+
+
 def test_publish_reuses_idempotent_outcome_without_second_post(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:

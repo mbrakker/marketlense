@@ -1,0 +1,30 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://www.proximic.com/layout/set/proximic/Ins…  
+  Normalized URL            https://www.proximic.com/layout/set/proximic/Ins…  
+  Route                     email_delivery                                     
+  Outcome                   email_required                                     
+  Used memory route         no                                                 
+  Final page                https://www.proximic.com/layout/set/proximic/Ins…  
+  Encountered form fields   Email, First Name, Last Name, Job Title, Company,  
+                            Country, State or Province, Zip Code, Industry,    
+                            Department, Level, Preferred Language, Phone,      
+                            Number of Employees, Website, I have read,         
+                            understand and agree to Comscore's (Privacy        
+                            Policy/Terms of Use/Product Terms/Comscore         
+                            Markets Terms) (consent checkbox), Yes, I would    
+                            like to receive Comscore communications (opt-in    
+                            checkbox)                                          
+  Identity fields added     zip_code, level, preferred_language,               
+                            i_have_read_understand_and_agree_to_comscore_s_p…  
+                            yes_i_would_like_to_receive_comscore_communicati…  
+  File                                                                         
+  Drive uploads                                                                
+  Summary                   Clicked 'Download the Guide' CTA (index 35);       
+                            modal registration form (iframe) opened requiring  
+                            multiple required fields. Did not submit because   
+                            several required fields lack configured identity   
+                            values.                                            
+                                                                               

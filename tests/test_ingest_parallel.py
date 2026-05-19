@@ -12,7 +12,7 @@ from src.contracts.file_cache import (
 )
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.ingest import IngestOutcome
-from src.contracts.state import StateProcessedListRequest
+from src.contracts.state import StateProcessedListRequest, StateRecordRequest
 from src.orchestrators import ingest_orchestrator as orch
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
@@ -304,6 +304,116 @@ def test_ingest_uses_batch_state_prefilter(ingest_settings) -> None:
 
     assert batch_calls["count"] == 1
     assert [row.file_id for row in results] == ["file_b", "file_c"]
+
+
+def test_ingest_retries_doc_map_empty_state_when_text_validation_passed(
+    ingest_settings,
+) -> None:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    retry_file = DriveFile(
+        schema_version="1.0",
+        file_id="file_retry",
+        name="retry.pdf",
+        modified_time=None,
+        md5_checksum="md5-retry",
+    )
+    next_file = DriveFile(
+        schema_version="1.0",
+        file_id="file_next",
+        name="next.pdf",
+        modified_time=None,
+        md5_checksum="md5-next",
+    )
+    state_record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id=retry_file.file_id,
+            md5="md5-retry",
+            last_error="doc_map_empty:no_content",
+            text_validation_status="pass",
+            doc_map_summary={"has_content": False, "not_found_reason": "no_content"},
+        ),
+        orch.new_run_context(),
+    )
+
+    def _fake_process_file(file, index, settings, root_ctx):
+        return orch._FileProcessResult(
+            index=index,
+            outcome=IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path=f"out/{file.file_id}.html",
+                status="processed",
+            ),
+            processed=1,
+            had_error=False,
+        )
+
+    deps = _batch_dependencies(
+        list_pdfs=lambda req, ctx: [retry_file, next_file],
+        process_file=_fake_process_file,
+    )
+
+    results = orch.run_ingest(settings, limit=1, dependencies=deps)
+
+    assert [row.file_id for row in results] == ["file_retry"]
+
+
+def test_ingest_retries_progress_state_without_final_text_validation(
+    ingest_settings,
+) -> None:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    progress_file = DriveFile(
+        schema_version="1.0",
+        file_id="file_progress",
+        name="progress.pdf",
+        modified_time=None,
+        md5_checksum="md5-progress",
+    )
+    next_file = DriveFile(
+        schema_version="1.0",
+        file_id="file_next",
+        name="next.pdf",
+        modified_time=None,
+        md5_checksum="md5-next",
+    )
+    state_record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id=progress_file.file_id,
+            md5="md5-progress",
+            vector_store_status="completed",
+        ),
+        orch.new_run_context(),
+    )
+
+    def _fake_process_file(file, index, settings, root_ctx):
+        return orch._FileProcessResult(
+            index=index,
+            outcome=IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path=f"out/{file.file_id}.html",
+                status="processed",
+            ),
+            processed=1,
+            had_error=False,
+        )
+
+    deps = _batch_dependencies(
+        list_pdfs=lambda req, ctx: [progress_file, next_file],
+        process_file=_fake_process_file,
+    )
+
+    results = orch.run_ingest(settings, limit=1, dependencies=deps)
+
+    assert [row.file_id for row in results] == ["file_progress"]
 
 
 def test_ingest_does_not_repeat_drive_md5_single_state_check(ingest_settings) -> None:

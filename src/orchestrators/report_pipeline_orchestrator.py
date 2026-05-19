@@ -47,6 +47,13 @@ def _is_retryable_doc_map_reason(reason: str) -> bool:
     return normalized.startswith("retryable_error:")
 
 
+def _is_retryable_doc_map_outcome(outcome: IngestOutcome, reason: str) -> bool:
+    if _is_retryable_doc_map_reason(reason):
+        return True
+    text_validation_status = str(outcome.text_validation_status or "").strip().lower()
+    return reason.strip() == "no_content" and text_validation_status == "pass"
+
+
 def _invoke_report_fn(
     report_fn: Callable[..., IngestOutcome],
     *,
@@ -164,7 +171,7 @@ def run_report_pipeline(
         doc_map_reason = _doc_map_reason(outcome)
         should_retry_doc_map = (
             outcome.status == "error"
-            and _is_retryable_doc_map_reason(doc_map_reason)
+            and _is_retryable_doc_map_outcome(outcome, doc_map_reason)
             and current_attempt < doc_map_max_attempts - 1
         )
         logger.info(

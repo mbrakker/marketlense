@@ -41,12 +41,16 @@ from src.services._browser_report_download.helpers import (
 )
 from src.services._browser_report_download.request import (
     resolve_effective_identity_fields,
+    resolve_delivery_email_value,
 )
 from src.services._browser_report_download.http import (
     download_pdf_from_url,
     is_pdf_file,
 )
-from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
+from src.services._browser_report_download.prompt import (
+    BrowserDownloadPromptBundle,
+    redact_browser_report_download_prompt_for_log,
+)
 from src.services._browser_report_download.session_reuse import (
     finalize_browser_session_reuse,
     resolve_browser_session_reuse,
@@ -294,7 +298,11 @@ def run_browser_report_download_agent(
                 "execution_url": execution_url,
                 "route_family_hint": request.route_family_hint or "",
                 "prompt_namespace": prompt_bundle.namespace,
-                "task_prompt": prompt_bundle.task_prompt,
+                "task_prompt": redact_browser_report_download_prompt_for_log(
+                    request=request,
+                    text=prompt_bundle.task_prompt,
+                    delivery_email=resolve_delivery_email_value(request),
+                ),
                 "agent_use_judge": _BROWSER_AGENT_USE_JUDGE,
             },
         )
@@ -1169,44 +1177,52 @@ def _run_browser_report_download_agent_subprocess(
         )
     )
     try:
-        completed = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "src.services._browser_report_download.browser_worker",
-                str(payload_path),
-                str(response_path),
-            ],
-            check=False,
-            cwd=str(Path.cwd()),
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout_seconds,
+        try:
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "src.services._browser_report_download.browser_worker",
+                    str(payload_path),
+                    str(response_path),
+                ],
+                check=False,
+                cwd=str(Path.cwd()),
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            worker_output_excerpt = _normalize_browser_worker_output_excerpt(
+                exc.stdout if isinstance(exc.stdout, str) else ""
+            )
+            raise AppError(
+                code="browser_download_agent_timeout",
+                message="browser-use did not return within the configured execution budget",
+                cause=exc,
+                retryable=True,
+                context={
+                    "normalized_url": normalized_url,
+                    "timeout_seconds": timeout_seconds,
+                    "max_steps": request.settings.max_steps,
+                    "worker_output_excerpt": worker_output_excerpt,
+                },
+            ) from exc
+    finally:
+        _discard_browser_agent_worker_payload(
+            payload_path=payload_path,
+            ctx=ctx,
+            normalized_url=normalized_url,
         )
-    except subprocess.TimeoutExpired as exc:
-        worker_output_excerpt = _normalize_browser_worker_output_excerpt(
-            exc.stdout if isinstance(exc.stdout, str) else ""
-        )
-        raise AppError(
-            code="browser_download_agent_timeout",
-            message="browser-use did not return within the configured execution budget",
-            cause=exc,
-            retryable=True,
-            context={
-                "normalized_url": normalized_url,
-                "timeout_seconds": timeout_seconds,
-                "max_steps": request.settings.max_steps,
-                "worker_output_excerpt": worker_output_excerpt,
-            },
-        ) from exc
     worker_output_excerpt = _normalize_browser_worker_output_excerpt(completed.stdout)
     completion_fields: dict[str, Any] = {
         "normalized_url": normalized_url,
         "payload_path": str(payload_path),
+        "payload_retained": False,
         "response_path": str(response_path),
         "return_code": completed.returncode,
         "response_exists": response_path.exists(),
@@ -1265,6 +1281,55 @@ def _run_browser_report_download_agent_subprocess(
         message="browser-use worker failed to complete the report download task",
         retryable=True,
         context={"normalized_url": normalized_url},
+    )
+
+
+def _discard_browser_agent_worker_payload(
+    *,
+    payload_path: Path,
+    ctx: RunContext,
+    normalized_url: str,
+) -> None:
+    payload_existed = payload_path.exists()
+    try:
+        payload_path.unlink(missing_ok=True)
+    except OSError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_worker_payload_cleanup_failed",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "payload_path": str(payload_path),
+                    "payload_existed": payload_existed,
+                    "error": str(exc),
+                },
+            )
+        )
+        raise AppError(
+            code="browser_download_worker_payload_cleanup_failed",
+            message="Browser worker request payload could not be removed",
+            cause=exc,
+            retryable=False,
+            context={
+                "normalized_url": normalized_url,
+                "payload_path": str(payload_path),
+            },
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_worker_payload_discarded",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "payload_path": str(payload_path),
+                "payload_existed": payload_existed,
+            },
+        )
     )
 
 

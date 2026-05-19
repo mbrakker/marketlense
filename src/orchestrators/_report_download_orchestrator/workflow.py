@@ -1869,12 +1869,20 @@ def _local_terminal_artifact_paths(result: BrowserReportDownloadResult) -> list[
         value = str(candidate or "").strip()
         if not value:
             continue
-        key = str(Path(value))
+        key = _local_artifact_identity_key(value)
         if key in seen:
             continue
         seen.add(key)
         paths.append(value)
     return paths
+
+
+def _local_artifact_identity_key(value: str) -> str:
+    path = Path(value)
+    try:
+        return str(path.resolve(strict=False)).casefold()
+    except OSError:
+        return str(path).casefold()
 
 
 def _mime_type_for_artifact(*, result: BrowserReportDownloadResult, path: Path) -> str:

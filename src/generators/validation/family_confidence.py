@@ -28,6 +28,7 @@ def run_family_confidence_rule(runtime: ValidationRuntime) -> List[ValidationIss
         reason = s(status.get("reason")).strip() or "insufficient_evidence_support"
         confidence = status.get("confidence_score")
         if policy_action == "regenerate":
+            severity = "warning" if family == "quotes" else "error"
             issues.append(
                 issue(
                     rule_id=RULE_ID,
@@ -35,7 +36,7 @@ def run_family_confidence_rule(runtime: ValidationRuntime) -> List[ValidationIss
                         f"Artifact family '{family}' abstained at confidence="
                         f"{_format_confidence(confidence)} because {reason}."
                     ),
-                    severity="error",
+                    severity=severity,
                     section=section,
                     repair_target=repair_target,
                 )

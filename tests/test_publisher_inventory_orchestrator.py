@@ -610,6 +610,37 @@ def test_run_publisher_inventory_discovery_falls_back_after_memory_route_failure
     assert result.used_memory_route is False
 
 
+def test_run_publisher_inventory_discovery_falls_back_after_http_empty(
+    run_context,
+):
+    settings = _settings()
+    attempts: list[str] = []
+
+    def _discover(req, ctx):
+        attempts.append(req.route_kind_hint or "")
+        if req.route_kind_hint == "http_parse":
+            raise AppError(
+                code="publisher_inventory_http_empty",
+                message="Direct HTTP parsing found no valid report inventory items",
+                retryable=False,
+            )
+        return _service_response(
+            used_route_hint=False,
+            new_url="https://www.activate.com/reports/new-report",
+        )
+
+    deps = _dependencies(discover_publisher_inventory=_discover)
+
+    result = run_publisher_inventory_discovery(
+        _request(settings), ctx=run_context, dependencies=deps
+    )
+
+    assert attempts == ["http_parse", "browser_render"]
+    assert result.new_report_urls[0].canonical_url == (
+        "https://www.activate.com/reports/new-report"
+    )
+
+
 def test_run_publisher_inventory_discovery_skips_invalid_drive_snapshot(
     run_context,
     caplog,

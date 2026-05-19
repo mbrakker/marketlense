@@ -273,6 +273,57 @@ def test_run_report_pipeline_retries_doc_map_transition_with_logs(
     assert transition_events[0]["role"] == "orchestrator"
 
 
+def test_run_report_pipeline_retries_doc_map_no_content_with_valid_text(
+    monkeypatch,
+) -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    calls = {"count": 0}
+    retry_outcome = IngestOutcome(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        md5="md5",
+        html_path=None,
+        status="error",
+        error="doc_map_empty:no_content",
+        text_validation_status="pass",
+        doc_map_summary={"not_found_reason": "no_content"},
+    )
+    success_outcome = IngestOutcome(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        md5="md5",
+        html_path="./out/a.html",
+        status="processed",
+    )
+
+    def _gen(file, local_pdf_path, settings, md5, ctx):
+        calls["count"] += 1
+        return retry_outcome if calls["count"] == 1 else success_outcome
+
+    monkeypatch.setattr(orch.time, "sleep", lambda _: None)
+
+    response = orch.run_report_pipeline(
+        file,
+        local_pdf_path="./cache/a.pdf",
+        settings=_settings(),
+        md5="md5",
+        ctx=_ctx(),
+        retries=2,
+        generate_report_fn=_gen,
+    )
+
+    assert response.status == "processed"
+    assert calls["count"] == 2
+
+
 def test_run_report_pipeline_doc_map_retry_is_bounded(monkeypatch) -> None:
     file = DriveFile(
         schema_version="1.0",

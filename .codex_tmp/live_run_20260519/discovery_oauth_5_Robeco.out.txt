@@ -1,0 +1,24 @@
+                         Publisher Inventory Discovery                         
+                                                                               
+  Field               Value                                                    
+ ───────────────────────────────────────────────────────────────────────────── 
+  Publisher           Robeco                                                   
+  Insights URL        https://www.robeco.com/en-int/insights/monthly-newslet…  
+  Normalized URL      https://www.robeco.com/en-int/insights/monthly-newslet…  
+  Current reports     2                                                        
+  Previous reports    0                                                        
+  Used memory route   yes                                                      
+  Snapshot changed    yes                                                      
+  Run quality         high                                                     
+  Run outcome         accepted                                                 
+  Next route          browser_render                                           
+                                                                               
+                                New Report URLs                                
+                                                                               
+  Page   Title                              URL                                
+ ───────────────────────────────────────────────────────────────────────────── 
+  1      Stewardship Report 2025:           https://www.robeco.com/en-int/in…  
+         Unwavering commitment to drive                                        
+         change                                                                
+  1      Market view & outlook              https://www.robeco.com/en-int/in…  
+                                                                               

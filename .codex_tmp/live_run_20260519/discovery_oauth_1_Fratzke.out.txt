@@ -1,0 +1,24 @@
+                        Publisher Inventory Discovery                         
+                                                                              
+  Field               Value                                                   
+ ──────────────────────────────────────────────────────────────────────────── 
+  Publisher           Fratzke                                                 
+  Insights URL        https://www.fratzkemedia.com/solutions/market-research  
+  Normalized URL      https://www.fratzkemedia.com/solutions/market-research  
+  Current reports     6                                                       
+  Previous reports    0                                                       
+  Used memory route   yes                                                     
+  Snapshot changed    yes                                                     
+  Run quality         high                                                    
+  Run outcome         accepted                                                
+  Next route          http_parse                                              
+                                                                              
+                                New Report URLs                                
+                                                                               
+  Page   Title                              URL                                
+ ───────────────────────────────────────────────────────────────────────────── 
+  1      The 2026 Brand Strategy Playbook   https://www.fratzkemedia.com/res…  
+  1      2026 Digital Marketing Trends      https://www.fratzkemedia.com/res…  
+         Report                                                                
+  1      Digital Marketing Audit Services   https://www.fratzkemedia.com/sol…  
+                                                                               
