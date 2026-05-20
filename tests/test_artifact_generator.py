@@ -1005,7 +1005,16 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
         },
         "quotes": {
             "quotes_final": [
-                {"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1}
+                {
+                    "text": "Quote",
+                    "speaker": "Analyst",
+                    "citation": "",
+                    "page": 1,
+                    "evidence_id": "q1",
+                    "evidence_spans": [
+                        {"evidence_id": "q1", "source_pack": "quote_candidates"}
+                    ],
+                }
             ]
         },
         "expert_comment": {"expert_comment": "Comment"},
@@ -1031,8 +1040,10 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
     assert payload["insights_final"] == []
     assert payload["family_status"]["insights_bundle"]["status"] == "abstained"
     assert payload["family_status"]["insights_bundle"]["policy_action"] == "regenerate"
-    assert payload["quotes_final"][0]["evidence_id"] == ""
-    assert payload["quotes_final"][0]["evidence_spans"] == []
+    assert payload["quotes_final"][0]["evidence_id"] == "q1"
+    assert payload["quotes_final"][0]["evidence_spans"][0]["source_pack"] == (
+        "quote_candidates"
+    )
     validate_schema(
         SchemaValidateRequest(
             schema_version="1.0", payload=payload, schema_name="artifacts"
@@ -1647,8 +1658,7 @@ def test_load_cached_artifacts_clears_doc_map_only_quotes_after_policy_refresh(
     assert cached["quotes_final"] == []
     assert cached["family_status"]["quotes"]["status"] == "abstained"
     assert (
-        cached["family_status"]["quotes"]["reason"]
-        == "quotes_missing_verbatim_source"
+        cached["family_status"]["quotes"]["reason"] == "quotes_missing_verbatim_source"
     )
 
 

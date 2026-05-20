@@ -669,6 +669,19 @@ This plan assumes no architectural shortcuts. New behavior should stay inside th
 - new route-trace contracts must remain backward-compatible with existing stored route summaries unless an explicit migration is added
 - route reuse must keep final snapshot quality equal to or better than fresh traversal on the same publisher
 
+**Promotion decision**
+
+- report-download browser routes are eligible for reviewable YAML promotion because they end in terminal acquisition evidence:
+  - verified/recovered route status
+  - successful outcome
+  - structured browser route steps
+  - concrete terminal artifact, email, or on-site capture evidence
+- publisher-inventory route traces and scenario summaries remain SQLite/KPI memory for this phase:
+  - they describe archive traversal and candidate discovery, not terminal acquisition instructions
+  - promoting them into browser-download playbooks would mix publisher-discovery and report-download responsibilities
+  - their rollout remains guarded by structured route reuse metrics, coverage verdicts, and run-quality summaries
+- operators can review report-download promotion candidates by setting `browser_download.route_playbook_promotion_mode` to `dry_run`; only `write` persists YAML under `src/playbooks/browser_routes/`.
+
 ### Phase 3 - Scenario-aware planning and recovery budget control
 
 **Status**

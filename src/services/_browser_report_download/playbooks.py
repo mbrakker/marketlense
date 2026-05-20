@@ -108,6 +108,7 @@ def promote_validated_browser_route_result_to_playbook(
     result: BrowserReportDownloadResult,
     ctx: RunContext,
     observed_at: str = "",
+    write_file: bool = True,
 ) -> BrowserRoutePlaybookPromotionResponse:
     route_steps = [
         _adapt_route_step_for_playbook(
@@ -139,6 +140,7 @@ def promote_validated_browser_route_result_to_playbook(
             route_steps=route_steps,
             evidence_labels=list(result.terminal_evidence.evidence_labels),
             observed_at=observed_at,
+            write_file=write_file,
         ),
         ctx=ctx,
     )
@@ -162,7 +164,6 @@ def promote_browser_route_playbook(
     root = Path(request.playbook_dir).expanduser()
     if not root.is_absolute():
         root = root.resolve()
-    root.mkdir(parents=True, exist_ok=True)
     playbook_id = f"learned-{_slugify(host)}-{_slugify(request.route_family)}"
     path = root / f"{playbook_id}.yaml"
     before_text = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -177,7 +178,6 @@ def promote_browser_route_playbook(
         existing=existing,
     )
     after_text = yaml.safe_dump(payload, sort_keys=False, allow_unicode=False)
-    path.write_text(after_text, encoding="utf-8")
     review_diff = "".join(
         difflib.unified_diff(
             before_text.splitlines(keepends=True),
@@ -186,12 +186,23 @@ def promote_browser_route_playbook(
             tofile=f"{path.name}:after",
         )
     )
+    if request.write_file:
+        root.mkdir(parents=True, exist_ok=True)
+        path.write_text(after_text, encoding="utf-8")
     response = BrowserRoutePlaybookPromotionResponse(
         schema_version="1.0",
         playbook_id=playbook_id,
         version=version,
         path=str(path),
-        status="updated" if existing is not None else "created",
+        status=(
+            "updated"
+            if existing is not None and request.write_file
+            else "created"
+            if request.write_file
+            else "dry_run_updated"
+            if existing is not None
+            else "dry_run_created"
+        ),
         review_diff=review_diff,
     )
     logger.info(
@@ -205,6 +216,7 @@ def promote_browser_route_playbook(
                 "version": response.version,
                 "path": response.path,
                 "status": response.status,
+                "write_file": request.write_file,
                 "source_url": request.source_url,
                 "route_family": request.route_family,
                 "route_kind": request.route_kind,

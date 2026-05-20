@@ -173,6 +173,26 @@ def test_validated_route_promotion_writes_reviewable_file_and_rejects_unverified
     assert excinfo.value.retryable is False
 
 
+def test_validated_route_promotion_dry_run_returns_review_diff_without_write(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    playbook_dir = tmp_path / "playbooks"
+
+    response = promote_validated_browser_route_result_to_playbook(
+        playbook_dir=str(playbook_dir),
+        result=_result(route_status="verified"),
+        ctx=run_context,
+        observed_at="2026-05-06T12:00:00+00:00",
+        write_file=False,
+    )
+
+    assert response.status == "dry_run_created"
+    assert response.path == str(playbook_dir.resolve() / f"{response.playbook_id}.yaml")
+    assert "validated_route_promotion" in response.review_diff
+    assert not Path(response.path).exists()
+
+
 def test_private_api_promotion_writes_dedicated_playbook_and_requires_repeated_success(
     tmp_path: Path,
     run_context,

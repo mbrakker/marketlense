@@ -269,6 +269,7 @@ def _current_artifacts() -> dict:
                 "citation": "Section",
                 "page": 1,
                 "evidence_id": "q1",
+                "source_pack": "quote_candidates",
             }
         ],
         "expert_comment": "Old expert",
@@ -539,7 +540,9 @@ def test_regenerate_artifacts_applies_family_policy_to_unsupported_quotes(
 
     assert response.regenerated_sections == ["quotes"]
     assert response.updated_artifacts["quotes_final"] == []
-    assert response.updated_artifacts["family_status"]["quotes"]["status"] == "abstained"
+    assert (
+        response.updated_artifacts["family_status"]["quotes"]["status"] == "abstained"
+    )
     assert (
         response.updated_artifacts["family_status"]["quotes"]["reason"]
         == "quotes_missing_verbatim_source"

@@ -17,6 +17,7 @@ from src.contracts.browser_download import (
     DownloadTerminalEvidence,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
+    BrowserRoutePlaybookPromotionResponse,
     FailedAcquisitionForensicsArtifact,
     FailedAcquisitionForensicsPack,
     PublisherDownloadRouteMemory,
@@ -68,6 +69,7 @@ from src.orchestrators._report_download_orchestrator.route_planner import (
 from src.generators.report_value_generator import score_report_value
 from src.services.browser_report_download_service import (
     download_report_with_browser_use,
+    promote_validated_browser_route_result_to_playbook,
 )
 from src.services import idempotency_service
 from src.services.file_service import file_md5, read_bytes, write_bytes
@@ -94,6 +96,9 @@ _REPORT_DOWNLOAD_SOURCE_RECORD_SCOPE = "report_download_orchestrator.source_reco
 _REPORT_DOWNLOAD_DRIVE_UPLOAD_SCOPE = "report_download_orchestrator.drive_upload"
 _REPORT_DOWNLOAD_IDENTITY_UPDATE_SCOPE = "report_download_orchestrator.identity_update"
 _MAX_FORENSICS_CONTEXT_CHARS = 500
+_ROUTE_PLAYBOOK_PROMOTION_MODES = {"disabled", "dry_run", "write"}
+_ROUTE_PLAYBOOK_SUCCESS_OUTCOMES = {"downloaded", "email_requested", "captured"}
+_ROUTE_PLAYBOOK_VERIFIED_STATUSES = {"verified", "recovered"}
 _NON_REPORT_URL_MARKERS = {
     "blog",
     "news",
@@ -230,6 +235,9 @@ class ReportDownloadDependencies:
         BrowserDownloadIdentityFieldUpsertResponse,
     ]
     sleep_fn: Callable[[float], None]
+    promote_validated_browser_route_result_to_playbook: Callable[
+        ..., BrowserRoutePlaybookPromotionResponse
+    ] = promote_validated_browser_route_result_to_playbook
     score_report_value: Callable[
         [ReportValueScoreRequest, RunContext],
         ReportValueScoreResponse,
@@ -442,6 +450,114 @@ def _identity_update_response_payload(
         ],
         "total_fields": coerce_int(getattr(response, "total_fields", 0), 0),
     }
+
+
+def _evaluate_route_playbook_promotion(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    result: BrowserReportDownloadResult,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+    route_record_reused: bool,
+) -> None:
+    mode = str(
+        getattr(request.settings, "route_playbook_promotion_mode", "disabled")
+        or "disabled"
+    ).strip()
+    if mode not in _ROUTE_PLAYBOOK_PROMOTION_MODES:
+        mode = "disabled"
+    fields: dict[str, object] = {
+        "promotion_mode": mode,
+        "route_playbook_dir": request.settings.route_playbook_dir,
+        "normalized_url": result.normalized_url,
+        "route_family": result.route_family,
+        "route_kind": result.route_kind,
+        "route_status": result.route_status,
+        "outcome": result.outcome,
+        "route_step_count": len(result.route_steps),
+        "browser_had_structured_result": result.browser_had_structured_result,
+    }
+    skip_reason = _route_playbook_promotion_skip_reason(
+        mode=mode,
+        result=result,
+        route_record_reused=route_record_reused,
+    )
+    if skip_reason:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_route_playbook_promotion_evaluated",
+                module=logger.name,
+                fields={**fields, "skip_reason": skip_reason},
+            )
+        )
+        return
+    try:
+        response = dependencies.promote_validated_browser_route_result_to_playbook(
+            playbook_dir=request.settings.route_playbook_dir,
+            result=result,
+            ctx=ctx,
+            observed_at=_utc_now_iso(),
+            write_file=mode == "write",
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_route_playbook_promotion_evaluated",
+                module=logger.name,
+                fields={
+                    **fields,
+                    "skip_reason": "promotion_app_error",
+                    "error_code": exc.code,
+                    "error_retryable": exc.retryable,
+                },
+            )
+        )
+        return
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_route_playbook_promotion_evaluated",
+            module=logger.name,
+            fields={
+                **fields,
+                "playbook_id": response.playbook_id,
+                "playbook_path": response.path,
+                "playbook_version": response.version,
+                "promotion_status": response.status,
+                "review_diff_line_count": len(response.review_diff.splitlines()),
+            },
+        )
+    )
+
+
+def _route_playbook_promotion_skip_reason(
+    *,
+    mode: str,
+    result: BrowserReportDownloadResult,
+    route_record_reused: bool,
+) -> str:
+    if mode == "disabled":
+        return "promotion_disabled"
+    if route_record_reused:
+        return "route_record_idempotency_reused"
+    if not str(result.route_family or "").startswith("browser_"):
+        return "non_browser_route_family"
+    if result.route_status not in _ROUTE_PLAYBOOK_VERIFIED_STATUSES:
+        return "unverified_route_status"
+    if result.outcome not in _ROUTE_PLAYBOOK_SUCCESS_OUTCOMES:
+        return "unsuccessful_route_outcome"
+    if not result.browser_had_structured_result:
+        return "insufficient_structured_browser_evidence"
+    if not result.route_steps:
+        return "insufficient_route_steps"
+    if not str(result.route_summary or "").strip():
+        return "missing_route_summary"
+    return ""
 
 
 def _failure_error_class(exc: Exception) -> str:
@@ -1084,6 +1200,13 @@ def run_report_download(
             },
             ctx=ctx,
         )
+    _evaluate_route_playbook_promotion(
+        request=request,
+        result=result,
+        ctx=ctx,
+        dependencies=deps,
+        route_record_reused=existing_route_record is not None,
+    )
     logger.info(
         log_event(
             ctx,

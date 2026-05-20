@@ -255,10 +255,14 @@ class BrowserDownloadSettings:
             "doc": "Behavior for matching stale route playbooks: `fallback` logs and uses normal discovery, `fail` raises a typed AppError."
         },
     )
+    route_playbook_promotion_mode: str = field(
+        default="disabled",
+        metadata={
+            "doc": "Promotion policy for verified browser-route memory: `disabled` logs skips, `dry_run` logs review diffs without writing files, and `write` persists reviewable playbook YAML."
+        },
+    )
     session_reuse_policy: BrowserDownloadSessionReusePolicy = field(
-        default_factory=lambda: BrowserDownloadSessionReusePolicy(
-            schema_version="1.0"
-        ),
+        default_factory=lambda: BrowserDownloadSessionReusePolicy(schema_version="1.0"),
         metadata={
             "doc": "Opt-in bounded browser profile reuse policy for developer canaries or same-publisher batches."
         },

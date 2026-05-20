@@ -941,6 +941,9 @@
         "route_playbook_dir": {
           "type": "string"
         },
+        "route_playbook_promotion_mode": {
+          "type": "string"
+        },
         "route_playbook_stale_policy": {
           "type": "string"
         },
@@ -1746,6 +1749,9 @@
         },
         "source_url": {
           "type": "string"
+        },
+        "write_file": {
+          "type": "boolean"
         }
       },
       "required": [

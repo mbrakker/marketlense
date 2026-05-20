@@ -274,6 +274,12 @@ class BrowserRoutePlaybookPromotionRequest:
             "doc": "UTC ISO timestamp for deterministic tests or live promotion metadata."
         },
     )
+    write_file: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether the promotion service should persist the reviewable playbook YAML. False returns the same target path and diff metadata without writing."
+        },
+    )
 
 
 @dataclass(frozen=True)

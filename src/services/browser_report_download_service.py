@@ -31,6 +31,7 @@ from src.services._browser_report_download.prediction import (
 )
 from src.services._browser_report_download.playbooks import (
     load_browser_route_playbooks,
+    promote_validated_browser_route_result_to_playbook as _promote_validated_browser_route_result_to_playbook,
 )
 from src.services._browser_report_download.private_api import (
     try_private_api_playbook_download,
@@ -74,6 +75,23 @@ def run_browser_developer_diagnostics(
         request,
         ctx,
         browser_session_class=browser_session_class,
+    )
+
+
+def promote_validated_browser_route_result_to_playbook(
+    *,
+    playbook_dir: str,
+    result: BrowserReportDownloadResult,
+    ctx: RunContext,
+    observed_at: str = "",
+    write_file: bool = True,
+):
+    return _promote_validated_browser_route_result_to_playbook(
+        playbook_dir=playbook_dir,
+        result=result,
+        ctx=ctx,
+        observed_at=observed_at,
+        write_file=write_file,
     )
 
 

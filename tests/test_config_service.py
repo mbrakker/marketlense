@@ -685,6 +685,7 @@ class TestConfigService(unittest.TestCase):
                 "max_steps": 12,
                 "output_dir": "./out/browser_downloads",
                 "headed": True,
+                "route_playbook_promotion_mode": "dry_run",
                 "failure_forensics": {
                     "enabled": True,
                     "policy": "metadata_only",
@@ -744,6 +745,7 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("service_account", settings.drive_upload_auth_mode)
         self.assertTrue(settings.failure_forensics_enabled)
         self.assertEqual("metadata_only", settings.failure_forensics_policy)
+        self.assertEqual("dry_run", settings.route_playbook_promotion_mode)
         self.assertTrue(settings.session_reuse_policy.enabled)
         self.assertEqual("same_publisher_batch", settings.session_reuse_policy.mode)
         self.assertEqual("batch-key", settings.session_reuse_policy.session_key)

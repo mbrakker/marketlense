@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -2888,3 +2889,183 @@ def test_run_report_download_allows_thin_candidate_when_pdf_url_is_present(
     assert response.outcome == "downloaded"
     assert seen_requests[0].attempt_url == candidate_trace.pdf_url
     assert seen_requests[0].candidate_trace == candidate_trace
+
+
+def test_run_report_download_promotes_verified_browser_route_playbook_idempotently(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    assert_logs_have_required_fields,
+) -> None:
+    playbook_dir = tmp_path / "playbooks"
+    settings = replace(
+        _settings(tmp_path),
+        route_playbook_dir=str(playbook_dir),
+        route_playbook_promotion_mode="write",
+    )
+    pdf_path = Path(settings.output_dir) / "browser-report.pdf"
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    pdf_path.write_bytes(b"%PDF-1.4\nbrowser route\n%%EOF")
+    browser_result = replace(
+        _result(
+            url="https://example.com/reports/annual-market-report",
+            used_route_hint=False,
+            path=str(pdf_path),
+        ),
+        route_family="browser_pdf_click",
+        browser_had_structured_result=True,
+    )
+    download_calls: list[str] = []
+
+    def _download(req, ctx):
+        download_calls.append(req.url)
+        return browser_result
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=get_publisher_download_route,
+        record_publisher_download_route=record_publisher_download_route,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5=_md5_for_path(Path(req.path)),
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        record_report_value_score=lambda req, ctx: None,
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    request = ReportDownloadOrchestratorRequest(
+        schema_version="1.0",
+        url=browser_result.source_url,
+        settings=settings,
+        state_db=settings.state_db,
+        reports_db=settings.reports_db,
+    )
+    first = run_report_download(request, ctx=run_context, dependencies=deps)
+    second = run_report_download(request, ctx=run_context, dependencies=deps)
+
+    assert first.outcome == "downloaded"
+    assert second.outcome == "downloaded"
+    assert download_calls == [browser_result.source_url, browser_result.source_url]
+    playbook_path = playbook_dir / "learned-example-com-browser-pdf-click.yaml"
+    payload = yaml.safe_load(playbook_path.read_text(encoding="utf-8"))
+    assert payload["version"] == "1.0.0"
+    assert payload["route_family"] == "browser_pdf_click"
+    assert payload["route_kind"] == "pdf_download"
+    assert payload["steps"][0]["action"] == "open"
+    assert len(payload["history"]) == 1
+
+    events = _events(caplog, "market_lense.report_download_orchestrator")
+    assert_logs_have_required_fields(events)
+    promotion_events = [
+        event
+        for event in events
+        if event["event"] == "report_download_route_playbook_promotion_evaluated"
+    ]
+    assert promotion_events[0]["fields"]["promotion_mode"] == "write"
+    assert promotion_events[0]["fields"]["promotion_status"] == "created"
+    assert promotion_events[0]["fields"]["review_diff_line_count"] > 0
+    assert any(
+        event["fields"].get("skip_reason") == "route_record_idempotency_reused"
+        for event in promotion_events
+    )
+
+
+def test_run_report_download_skips_unverified_browser_route_playbook_promotion(
+    tmp_path: Path,
+    caplog,
+    run_context,
+) -> None:
+    settings = replace(
+        _settings(tmp_path),
+        route_playbook_dir=str(tmp_path / "playbooks"),
+        route_playbook_promotion_mode="write",
+    )
+    pdf_path = Path(settings.output_dir) / "browser-report.pdf"
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    pdf_path.write_bytes(b"%PDF-1.4\nunverified route\n%%EOF")
+    unverified_result = replace(
+        _result(
+            url="https://example.com/reports/unverified",
+            used_route_hint=False,
+            path=str(pdf_path),
+        ),
+        route_family="browser_pdf_click",
+        route_status="inferred",
+        browser_had_structured_result=True,
+    )
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: unverified_result,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5=_md5_for_path(Path(req.path)),
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        record_report_value_score=lambda req, ctx: None,
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url=unverified_result.source_url,
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert response.outcome == "downloaded"
+    assert not (
+        Path(settings.route_playbook_dir) / "learned-example-com-browser-pdf-click.yaml"
+    ).exists()
+    events = _events(caplog, "market_lense.report_download_orchestrator")
+    promotion_events = [
+        event
+        for event in events
+        if event["event"] == "report_download_route_playbook_promotion_evaluated"
+    ]
+    assert promotion_events[-1]["fields"]["promotion_mode"] == "write"
+    assert promotion_events[-1]["fields"]["skip_reason"] == "unverified_route_status"

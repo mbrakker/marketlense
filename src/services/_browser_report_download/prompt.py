@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
@@ -204,11 +205,9 @@ def render_browser_report_download_prompt(
                 ],
                 "prompt_variables": {
                     "identity_entries": _redact_identity_entries_for_log(
-                        variables["identity_entries"]
+                        cast(list[dict[str, str]], variables["identity_entries"])
                     ),
-                    "delivery_email": (
-                        REDACTED if variables["delivery_email"] else ""
-                    ),
+                    "delivery_email": (REDACTED if variables["delivery_email"] else ""),
                     "route_hint": variables["route_hint"],
                     "route_kind_hint": variables["route_kind_hint"],
                     "route_step_lines": variables["route_step_lines"],
