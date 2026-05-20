@@ -1,0 +1,41 @@
+schema_version: '1.0'
+playbook_id: learned-www-criteo-com-browser-pdf-click
+version: 1.0.0
+status: active
+updated_at: '2026-05-20T06:32:07Z'
+stale_after_days: 120
+publisher_pattern: www.criteo.com
+host_patterns:
+- www.criteo.com
+url_path_markers:
+- wp-content
+- uploads
+- '2020'
+- guide-coronavirus-impact-rebound-strategiespdf
+route_family: browser_pdf_click
+route_kind: pdf_download
+summary: Opened the direct PDF URL; browser displayed the PDF in its built-in viewer
+  and a local PDF artifact was saved to the configured downloads directory.
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: direct PDF URL
+  verification: Opened PDF in browser's built-in viewer (rendered thumbnails and pages
+    visible).
+- schema_version: '1.0'
+  action: verify_download
+  target: check configured download path
+  verification: Local PDF file present at the configured downloads path.
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-05-20T06:32:07Z'
+  source: validated_route_promotion
+  summary: Promoted browser_pdf_click/pdf_download after downloaded evidence.

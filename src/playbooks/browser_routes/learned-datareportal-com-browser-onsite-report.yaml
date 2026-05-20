@@ -1,0 +1,49 @@
+schema_version: '1.0'
+playbook_id: learned-datareportal-com-browser-onsite-report
+version: 1.0.1
+status: active
+updated_at: '2026-05-20T06:28:27Z'
+stale_after_days: 120
+publisher_pattern: datareportal.com
+host_patterns:
+- datareportal.com
+url_path_markers:
+- reports
+- digital-2022-sweden
+route_family: browser_onsite_report
+route_kind: pdf_download
+summary: Opened cookie preferences, closed the cookie modal to reveal the on-page
+  report, then saved the full page as a PDF (on-site capture).
+steps:
+- schema_version: '1.0'
+  action: click
+  target: Change cookie preferences
+  verification: Cookie preferences modal opened (manage cookies) showing toggles and
+    Save Preferences control.
+- schema_version: '1.0'
+  action: click
+  target: Close
+  verification: Cookie modal dismissed; on-page report content (text 'Full report'
+    and SlideShare embed) became visible.
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Save full page as PDF
+  verification: 'Full page saved as PDF artifact: digital-2022-sweden.pdf'
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- network_submission_request
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-05-20T06:03:19Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-05-20T06:28:27Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.

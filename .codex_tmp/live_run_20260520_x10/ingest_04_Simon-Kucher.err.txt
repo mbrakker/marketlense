@@ -1,0 +1,213 @@
+09:09:37 | INFO | market_lense.logging_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.312658+00:00", "module": "market_lense.logging_service", "role": "service", "event": "logging_setup_complete", "fields": {"level": 20, "log_dir": "logs", "log_path": "logs\\market_lense_2026-05-20.log", "use_rich": false}}
+09:09:37 | INFO | market_lense.cli | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.316395+00:00", "module": "market_lense.cli", "role": "orchestrator", "event": "cli_load_settings_start", "fields": {}}
+09:09:37 | INFO | market_lense.config_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.327053+00:00", "module": "market_lense.config_service", "role": "service", "event": "config_load_start", "fields": {"path": "C:\\Programing\\Market lense\\src\\config\\app.yaml"}}
+09:09:37 | INFO | market_lense.config_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.383596+00:00", "module": "market_lense.config_service", "role": "service", "event": "config_load_complete", "fields": {"output_dir": "./out", "cache_dir": "./cache", "state_db": "./state/index.sqlite", "reports_db": "./state/reports.sqlite", "publisher_profiles_path": "./Wordpress/config/publisher-profiles.json", "category_mapping_path": "./src/config/category-mappings.yaml", "html_tag_acronyms_path": "./src/config/html-tag-acronyms.yaml", "ingest_lock_path": "./state/ingest.lock", "ingest_lock_ttl_seconds": 7200.0, "drive_supports_all_drives": true, "drive_include_items_from_all_drives": true, "drive_id": "", "drive_list_mode": "metadata", "openai_model": "gpt-5-mini", "openai_models": {"report_vs/artifacts": "gpt-5-mini", "report_vs/artifacts/summary": "gpt-5-mini", "report_vs/artifacts/insights_candidates": "gpt-5-mini", "report_vs/artifacts/insights_final": "gpt-5-mini", "report_vs/artifacts/quotes": "gpt-5-mini", "report_vs/artifacts/expert_comment": "gpt-5-mini", "report_vs/artifacts/linkedin_post": "gpt-5-mini", "report_vs/doc_map": "gpt-5-mini", "report_vs/evidence_packs": "gpt-5-mini", "report_vs/evidence_packs/scope": "gpt-5-mini", "report_vs/evidence_packs/findings": "gpt-5-mini", "report_vs/evidence_packs/limitations": "gpt-5-mini", "report_vs/evidence_packs/methods": "gpt-5-mini", "report_vs/evidence_packs/quote_candidates": "gpt-5-mini", "report_vs/figure_caption": "gpt-5-mini", "report_vs/validate/grounding": "gpt-5-mini", "report_vs/taxonomy": "gpt-5-mini", "rank_candidates": "gpt-5-mini", "rank_candidates/crop_refine": "gpt-5-mini"}, "temperature": 1.0, "taxonomy_temperature": 1.0, "ingest_worker_limit": 2, "report_worker_limit": 2, "openai_seed": null, "rank_model": "gpt-5-mini", "rank_temperature": 1.0, "rank_seed": null, "rank_max_candidates": 40, "rank_selected_max": 5, "rank_min_overall_score": 78, "rank_min_quality_score": 75, "rank_min_insight_score": 75, "rank_min_data_score": 70, "crop_refine_enabled": true, "crop_refine_mode": "adaptive", "crop_refine_page_dpi": 110, "crop_refine_temperature": 0.0, "crop_refine_timeout_seconds": 7200.0, "figure_caption_enabled": false, "figure_caption_temperature": 0.2, "figure_caption_timeout_seconds": 600.0, "figure_caption_prompt_namespace": "report_vs/figure_caption", "figure_caption_max_chars": 500, "pdf_text_max_pages": 5, "pdf_text_max_chars": 80000, "pdf_text_min_density": 250.0, "pdf_text_sample_pages": 3, "pdf_text_native_confidence_threshold": 0.55, "pdf_text_native_page_confidence_threshold": 0.35, "pdf_text_ocr_enabled": true, "pdf_text_ocr_policy": "native_first_selective", "pdf_text_ocr_model": "gpt-5-mini", "pdf_text_ocr_timeout_seconds": 600.0, "pdf_text_ocr_prompt_namespace": "pdf_text/ocr_fallback", "pdf_text_ocr_cache_enabled": true, "pdf_text_ocr_chunk_page_count": 8, "openai_timeout_seconds": 600.0, "llm_retry_retries": 1, "llm_retry_base_delay_seconds": 1.0, "llm_retry_backoff_step_seconds": 1.0, "llm_retry_jitter_seconds": 0.25, "llm_circuit_breaker_failure_threshold": 3, "llm_circuit_breaker_recovery_seconds": 30.0, "rank_timeout_seconds": 7200.0, "contents_max_pages": 8, "contents_min_headings": 3, "contents_keywords": ["table of contents", "contents", "index"], "contents_preview_enabled": true, "contents_preview_dpi": 144, "evidence_pack_parallel_workers": 3, "evidence_pack_global_max_in_flight": 2, "evidence_pack_global_min_interval_ms": 250, "evidence_pack_doc_map_max_attempts": 3, "evidence_pack_doc_map_retry_delay_ms": 500, "evidence_pack_registry": ["doc_map", "scope", "methods", "findings", "limitations", "quote_candidates"], "evidence_pack_enable_new_variety_packs": false, "artifact_parallel_workers": 4, "artifact_global_max_in_flight": 2, "artifact_global_min_interval_ms": 250, "vector_store_keep": true, "artifacts_use_vector_store": false, "validation_grounding_use_vector_store": false, "strict_schema_validation": true, "cover_cache_enabled": true, "cost_ledger_path": "./out/cost-ledger.jsonl", "cost_daily_path": "./out/cost-daily.json", "html_tag_acronyms": ["AI", "ROI", "ROAS", "CPC", "CPM", "CPA", "CPL", "CTR", "CVR", "CPG", "FMCG", "B2B", "B2C", "D2C", "CRM", "ERP", "SEO", "SEM", "PPC", "LLM", "ML", "NLP", "API", "KPI", "GMV", "AOV", "CLV", "LTV", "CAC", "SKU", "COGS", "GenAI", "AMC", "APAC", "AR", "ARPU", "AVN", "AVOD", "AVS", "BOPUS", "CRO", "CRP", "CTV", "DOOH", "DSP", "FAST", "FBA", "FBS", "GDP", "GDPR", "GEO", "IP", "IRL", "JD", "MMM", "MTA", "NBA", "NFL", "OTT", "RMN", "SPO", "SSP", "SVOD", "TV", "UGC", "UK", "VPN", "VR", "RM"], "html_tag_acronyms_count": 69, "validation_data_gap_policy": "warn", "validation_regeneration_max_attempts": 3}}
+09:09:37 | INFO | market_lense.config_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.384513+00:00", "module": "market_lense.config_service", "role": "service", "event": "ingest_settings_build_start", "fields": {"output_dir": "./out", "cache_dir": "./cache", "state_db": "./state/index.sqlite", "reports_db": "./state/reports.sqlite"}}
+09:09:37 | INFO | market_lense.config_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.384873+00:00", "module": "market_lense.config_service", "role": "service", "event": "ingest_settings_build_complete", "fields": {"gdrive_folder_id": "11eruy9ojkd6HdOXK_Uwqvq1TWEKiINTW", "openai_model": "gpt-5-mini", "batch_limit": 20, "ingest_worker_limit": 2, "report_worker_limit": 2}}
+09:09:37 | INFO | market_lense.lock_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_lock", "span_id": "630c07a7-c5a0-42ab-870a-3bed9428a993", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_lock", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.385649+00:00", "module": "market_lense.lock_service", "role": "service", "event": "lock_acquire_start", "fields": {"lock_path": "./state/ingest.lock", "owner_id": "ingest:192642e8-65f9-443f-82fa-fc2cd81ceb4f", "pid": 22536, "ttl_seconds": 7200.0}}
+09:09:37 | INFO | market_lense.lock_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_lock", "span_id": "630c07a7-c5a0-42ab-870a-3bed9428a993", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_lock", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.387224+00:00", "module": "market_lense.lock_service", "role": "service", "event": "lock_acquire_complete", "fields": {"lock_path": "./state/ingest.lock", "owner_id": "ingest:192642e8-65f9-443f-82fa-fc2cd81ceb4f", "pid": 22536}}
+09:09:37 | INFO | market_lense.ingest_orchestrator | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_lock", "span_id": "630c07a7-c5a0-42ab-870a-3bed9428a993", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_lock", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.387519+00:00", "module": "market_lense.ingest_orchestrator", "role": "orchestrator", "event": "ingest_lock_acquired", "fields": {"lock_path": "./state/ingest.lock", "owner_id": "ingest:192642e8-65f9-443f-82fa-fc2cd81ceb4f", "pid": 22536}}
+09:09:37 | INFO | market_lense.ingest_orchestrator | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.387669+00:00", "module": "market_lense.ingest_orchestrator", "role": "orchestrator", "event": "ingest_db_access_start", "fields": {"state_db": "./state/index.sqlite", "reports_db": "./state/reports.sqlite"}}
+09:09:37 | INFO | market_lense.state_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.387775+00:00", "module": "market_lense.state_service", "role": "service", "event": "state_db_access_start", "fields": {"state_db": "./state/index.sqlite", "timeout_seconds": 0.0}}
+09:09:37 | INFO | market_lense.state_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.387853+00:00", "module": "market_lense.state_service", "role": "service", "event": "state_db_access_config", "fields": {"timeout_seconds": 0.0}}
+09:09:37 | INFO | market_lense.state_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.391429+00:00", "module": "market_lense.state_service", "role": "service", "event": "state_db_access_probe", "fields": {"state_db": "./state/index.sqlite"}}
+09:09:37 | INFO | market_lense.state_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.392763+00:00", "module": "market_lense.state_service", "role": "service", "event": "state_db_access_complete", "fields": {"state_db": "./state/index.sqlite", "accessible": true, "locked": false, "message": ""}}
+09:09:37 | INFO | market_lense.report_store_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.392979+00:00", "module": "market_lense.report_store_service", "role": "service", "event": "report_db_access_start", "fields": {"db_path": "./state/reports.sqlite", "timeout_seconds": 0.0}}
+09:09:37 | INFO | market_lense.report_store_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.393064+00:00", "module": "market_lense.report_store_service", "role": "service", "event": "report_db_access_config", "fields": {"timeout_seconds": 0.0}}
+09:09:37 | INFO | market_lense.report_store_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.396720+00:00", "module": "market_lense.report_store_service", "role": "service", "event": "report_db_access_probe", "fields": {"db_path": "./state/reports.sqlite"}}
+09:09:37 | INFO | market_lense.report_store_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.398050+00:00", "module": "market_lense.report_store_service", "role": "service", "event": "report_db_access_complete", "fields": {"db_path": "./state/reports.sqlite", "accessible": true, "locked": false, "message": ""}}
+09:09:37 | INFO | market_lense.ingest_orchestrator | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_db_access", "span_id": "02b751fa-721d-4df1-8a5c-74ccd1ce7b73", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_db_access", "span_depth": 1, "timestamp_utc": "2026-05-20T07:09:37.398261+00:00", "module": "market_lense.ingest_orchestrator", "role": "orchestrator", "event": "ingest_db_access_complete", "fields": {"state_db": "./state/index.sqlite", "reports_db": "./state/reports.sqlite"}}
+09:09:37 | INFO | market_lense.ingest_orchestrator | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.398344+00:00", "module": "market_lense.ingest_orchestrator", "role": "orchestrator", "event": "ingest_start", "fields": {"folder_id": "18ovwe6DMyYV-2iLqUg05aOa8W8Uhb80l", "limit": 1}}
+09:09:37 | INFO | market_lense.ingest_orchestrator | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.398418+00:00", "module": "market_lense.ingest_orchestrator", "role": "orchestrator", "event": "ingest_modified_after_ignored", "fields": {"reason": "limit_override", "limit": 1}}
+09:09:37 | INFO | market_lense.drive_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.398511+00:00", "module": "market_lense.drive_service", "role": "service", "event": "drive_list_start", "fields": {"folder_id": "18ovwe6DMyYV-2iLqUg05aOa8W8Uhb80l", "page_size": 1, "order_by": "modifiedTime desc", "modified_after": "", "list_mode": "metadata", "supports_all_drives": true, "include_items_from_all_drives": true, "drive_id": "", "auth_mode": "oauth_user"}}
+09:09:37 | INFO | market_lense.drive_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:09:37.440958+00:00", "module": "market_lense.drive_service", "role": "service", "event": "drive_client_created", "fields": {"auth_mode": "oauth_user", "credential_path": "C:\\Programing\\Market lense\\google_oauth_token.json", "thread_id": 23600, "expired_evictions": 0, "max_entry_evictions": 0, "cache_size": 1}}
+09:10:03 | INFO | market_lense.drive_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:10:03.168070+00:00", "module": "market_lense.drive_service", "role": "service", "event": "drive_list_error", "fields": {"folder_id": "18ovwe6DMyYV-2iLqUg05aOa8W8Uhb80l", "error": "[WinError 10060] \u041f\u043e\u043f\u044b\u0442\u043a\u0430 \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0431\u044b\u043b\u0430 \u0431\u0435\u0437\u0443\u0441\u043f\u0435\u0448\u043d\u043e\u0439, \u0442.\u043a. \u043e\u0442 \u0434\u0440\u0443\u0433\u043e\u0433\u043e \u043a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440\u0430 \u0437\u0430 \u0442\u0440\u0435\u0431\u0443\u0435\u043c\u043e\u0435 \u0432\u0440\u0435\u043c\u044f \u043d\u0435 \u043f\u043e\u043b\u0443\u0447\u0435\u043d \u043d\u0443\u0436\u043d\u044b\u0439 \u043e\u0442\u043a\u043b\u0438\u043a, \u0438\u043b\u0438 \u0431\u044b\u043b\u043e \u0440\u0430\u0437\u043e\u0440\u0432\u0430\u043d\u043e \u0443\u0436\u0435 \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u043d\u043e\u0435 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0438\u0437-\u0437\u0430 \u043d\u0435\u0432\u0435\u0440\u043d\u043e\u0433\u043e \u043e\u0442\u043a\u043b\u0438\u043a\u0430 \u0443\u0436\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u043d\u043e\u0433\u043e \u043a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440\u0430"}}
+09:10:03 | INFO | market_lense.category_mapping_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:10:03.169635+00:00", "module": "market_lense.category_mapping_service", "role": "service", "event": "category_uncategorized_flush_start", "fields": {"path": "C:\\Programing\\Market lense\\src\\config\\category-mappings.yaml", "cached": false, "dirty": false}}
+09:10:03 | INFO | market_lense.category_mapping_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "cli_ingest", "span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "", "span_name": "cli_ingest", "span_depth": 0, "timestamp_utc": "2026-05-20T07:10:03.169956+00:00", "module": "market_lense.category_mapping_service", "role": "service", "event": "category_uncategorized_flush_skipped", "fields": {"path": "C:\\Programing\\Market lense\\src\\config\\category-mappings.yaml", "reason": "no_pending_changes"}}
+09:10:03 | INFO | market_lense.lock_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_lock", "span_id": "630c07a7-c5a0-42ab-870a-3bed9428a993", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_lock", "span_depth": 1, "timestamp_utc": "2026-05-20T07:10:03.170175+00:00", "module": "market_lense.lock_service", "role": "service", "event": "lock_release_start", "fields": {"lock_path": "./state/ingest.lock", "owner_id": "ingest:192642e8-65f9-443f-82fa-fc2cd81ceb4f", "pid": 22536}}
+09:10:03 | INFO | market_lense.lock_service | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_lock", "span_id": "630c07a7-c5a0-42ab-870a-3bed9428a993", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_lock", "span_depth": 1, "timestamp_utc": "2026-05-20T07:10:03.185172+00:00", "module": "market_lense.lock_service", "role": "service", "event": "lock_release_complete", "fields": {"lock_path": "./state/ingest.lock", "owner_id": "ingest:192642e8-65f9-443f-82fa-fc2cd81ceb4f", "pid": 22536}}
+09:10:03 | INFO | market_lense.ingest_orchestrator | {"run_id": "192642e8-65f9-443f-82fa-fc2cd81ceb4f", "task_id": "ingest_lock", "span_id": "630c07a7-c5a0-42ab-870a-3bed9428a993", "trace_id": "89f4f649-c57e-444c-8d46-851dcf1ebaa8", "parent_span_id": "b630f753-07cc-42cc-af78-72947bb6edf5", "span_name": "ingest_lock", "span_depth": 1, "timestamp_utc": "2026-05-20T07:10:03.185420+00:00", "module": "market_lense.ingest_orchestrator", "role": "orchestrator", "event": "ingest_lock_released", "fields": {"lock_path": "./state/ingest.lock"}}
+┌───────────────────── Traceback (most recent call last) ─────────────────────┐
+│ C:\Programing\Market lense\src\services\drive_service.py:356 in             │
+│ _iter_list_files_paginated                                                  │
+│                                                                             │
+│    353 │   │   try:                                                         │
+│    354 │   │   │   kwargs = dict(list_kwargs)                               │
+│    355 │   │   │   kwargs["pageToken"] = page_token                         │
+│ >  356 │   │   │   resp = drive.files().list(**kwargs).execute()            │
+│    357 │   │   except DRIVE_BOUNDARY_EXCEPTIONS as exc:                     │
+│    358 │   │   │   logger.info(                                             │
+│    359 │   │   │   │   log_event(                                           │
+│                                                                             │
+│ C:\Users\Михаил\AppData\Roaming\Python\Python314\site-packages\googleapicli │
+│ ent\_helpers.py:130 in positional_wrapper                                   │
+│                                                                             │
+│   127 │   │   │   │   │   raise TypeError(message)                          │
+│   128 │   │   │   │   elif positional_parameters_enforcement == POSITIONAL_ │
+│   129 │   │   │   │   │   logger.warning(message)                           │
+│ > 130 │   │   │   return wrapped(*args, **kwargs)                           │
+│   131 │   │                                                                 │
+│   132 │   │   return positional_wrapper                                     │
+│   133                                                                       │
+│                                                                             │
+│ C:\Users\Михаил\AppData\Roaming\Python\Python314\site-packages\googleapicli │
+│ ent\http.py:923 in execute                                                  │
+│                                                                             │
+│    920 │   │   │   self.headers["content-length"] = str(len(self.body))     │
+│    921 │   │                                                                │
+│    922 │   │   # Handle retries for server-side errors.                     │
+│ >  923 │   │   resp, content = _retry_request(                              │
+│    924 │   │   │   http,                                                    │
+│    925 │   │   │   num_retries,                                             │
+│    926 │   │   │   "request",                                               │
+│                                                                             │
+│ C:\Users\Михаил\AppData\Roaming\Python\Python314\site-packages\googleapicli │
+│ ent\http.py:222 in _retry_request                                           │
+│                                                                             │
+│    219 │   │                                                                │
+│    220 │   │   if exception:                                                │
+│    221 │   │   │   if retry_num == num_retries:                             │
+│ >  222 │   │   │   │   raise exception                                      │
+│    223 │   │   │   else:                                                    │
+│    224 │   │   │   │   continue                                             │
+│    225                                                                      │
+│                                                                             │
+│ C:\Users\Михаил\AppData\Roaming\Python\Python314\site-packages\googleapicli │
+│ ent\http.py:191 in _retry_request                                           │
+│                                                                             │
+│    188 │   │                                                                │
+│    189 │   │   try:                                                         │
+│    190 │   │   │   exception = None                                         │
+│ >  191 │   │   │   resp, content = http.request(uri, method, *args, **kwarg │
+│    192 │   │   # Retry on SSL errors and socket timeout errors.             │
+│    193 │   │   except _ssl_SSLError as ssl_error:                           │
+│    194 │   │   │   exception = ssl_error                                    │
+│                                                                             │
+│ C:\Users\Михаил\AppData\Roaming\Python\Python314\site-packages\google_auth_ │
+│ httplib2.py:216 in request                                                  │
+│                                                                             │
+│   213 │   │   │   body_stream_position = body.tell()                        │
+│   214 │   │                                                                 │
+│   215 │   │   # Make the request.                                           │
+│ > 216 │   │   response, content = self.http.request(                        │
+│   217 │   │   │   uri,                                                      │
+│   218 │   │   │   method,                                                   │
+│   219 │   │   │   body=body,                                                │
+│                                                                             │
+│ C:\Users\Михаил\AppData\Roaming\Python\Python314\site-packages\httplib2\__i │
+│ nit__.py:1727 in request                                                    │
+│                                                                             │
+│   1724 │   │   │   │   │   response = Response(info)                        │
+│   1725 │   │   │   │   │   content = b""                                    │
+│   1726 │   │   │   │   else:                                                │
+│ > 1727 │   │   │   │   │   (response, content) = self._request(             │
+│   1728 │   │   │   │   │   │   conn, authority, uri, request_uri, method, b │
+│   1729 │   │   │   │   │   )                                                │
+│   1730 │   │   except Exception as e:                                       │
+│                                                                             │
+│ C:\Users\Михаил\AppData\Roaming\Python\Python314\site-packages\httplib2\__i │
+│ nit__.py:1447 in _request                                                   │
+│                                                                             │
+│   1444 │   │   if auth:                                                     │
+│   1445 │   │   │   auth.request(method, request_uri, headers, body)         │
+│   1446 │   │                                                                │
+│ > 1447 │   │   (response, content) = self._conn_request(conn, request_uri,  │
+│   1448 │   │                                                                │
+│   1449 │   │   if auth:                                                     │
+│   1450 │   │   │   if auth.response(response, body):                        │
+│                                                                             │
+│ C:\Users\Михаил\AppData\Roaming\Python\Python314\site-packages\httplib2\__i │
+│ nit__.py:1369 in _conn_request                                              │
+│                                                                             │
+│   1366 │   │   │   i += 1                                                   │
+│   1367 │   │   │   try:                                                     │
+│   1368 │   │   │   │   if conn.sock is None:                                │
+│ > 1369 │   │   │   │   │   conn.connect()                                   │
+│   1370 │   │   │   │   conn.request(method, request_uri, body, headers)     │
+│   1371 │   │   │   except socket.timeout:                                   │
+│   1372 │   │   │   │   conn.close()                                         │
+│                                                                             │
+│ C:\Users\Михаил\AppData\Roaming\Python\Python314\site-packages\httplib2\__i │
+│ nit__.py:1159 in connect                                                    │
+│                                                                             │
+│   1156 │   │   │   │   │   sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_N │
+│   1157 │   │   │   │   if has_timeout(self.timeout):                        │
+│   1158 │   │   │   │   │   sock.settimeout(self.timeout)                    │
+│ > 1159 │   │   │   │   sock.connect((self.host, self.port))                 │
+│   1160 │   │   │   │                                                        │
+│   1161 │   │   │   │   self.sock = self._context.wrap_socket(sock, server_h │
+│   1162                                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+TimeoutError: [WinError 10060] Попытка установить соединение была безуспешной, 
+т.к. от другого компьютера за требуемое время не получен нужный отклик, или 
+было разорвано уже установленное соединение из-за неверного отклика уже 
+подключенного компьютера
+
+The above exception was the direct cause of the following exception:
+
+┌───────────────────── Traceback (most recent call last) ─────────────────────┐
+│ C:\Programing\Market lense\src\cli.py:275 in ingest                         │
+│                                                                             │
+│    272 │                                                                    │
+│    273 │   console.print("[cyan]Running ingest pipeline...[/cyan]")         │
+│    274 │   try:                                                             │
+│ >  275 │   │   outcomes = run_ingest(settings, folder_id=folder, limit=limi │
+│    276 │   except AppError as exc:                                          │
+│    277 │   │   if exc.code == "ingest_locked":                              │
+│    278 │   │   │   console.print(                                           │
+│                                                                             │
+│ C:\Programing\Market lense\src\orchestrators\ingest_orchestrator.py:909 in  │
+│ run_ingest                                                                  │
+│                                                                             │
+│   906 │   │   │   limit=limit,                                              │
+│   907 │   │   │   modified_after=modified_after,                            │
+│   908 │   │   )                                                             │
+│ > 909 │   │   files_to_process = _materialize_files_to_process(             │
+│   910 │   │   │   list_req,                                                 │
+│   911 │   │   │   settings=settings,                                        │
+│   912 │   │   │   max_n=max_n,                                              │
+│                                                                             │
+│ C:\Programing\Market lense\src\orchestrators\ingest_orchestrator.py:620 in  │
+│ _materialize_files_to_process                                               │
+│                                                                             │
+│   617 │   │   │   │   break                                                 │
+│   618 │   │   pending_md5_files = []                                        │
+│   619 │                                                                     │
+│ > 620 │   for file in deps.list_pdfs(list_req, root_ctx):                   │
+│   621 │   │   drive_md5 = file.md5_checksum.strip() if file.md5_checksum el │
+│   622 │   │   if drive_md5:                                                 │
+│   623 │   │   │   pending_md5_files.append(file)                            │
+│                                                                             │
+│ C:\Programing\Market lense\src\services\drive_service.py:567 in list_pdfs   │
+│                                                                             │
+│    564 │   │   oauth_token_path=request.oauth_token_path,                   │
+│    565 │   │   ctx=ctx,                                                     │
+│    566 │   )                                                                │
+│ >  567 │   folder_ids = _resolve_folder_scope(drive, request, ctx)          │
+│    568 │   list_mode = (request.list_mode or "full").strip().lower()        │
+│    569 │   fields = "files(id,modifiedTime,md5Checksum),nextPageToken"      │
+│    570 │   if list_mode == "full":                                          │
+│                                                                             │
+│ C:\Programing\Market lense\src\services\drive_service.py:493 in             │
+│ _resolve_folder_scope                                                       │
+│                                                                             │
+│    490 │   │   if request.drive_id:                                         │
+│    491 │   │   │   list_kwargs["driveId"] = request.drive_id                │
+│    492 │   │   │   list_kwargs["corpora"] = "drive"                         │
+│ >  493 │   │   for subfolder in _iter_list_files_paginated(drive, list_kwar │
+│    494 │   │   │   subfolder_id = subfolder.get("id", "")                   │
+│    495 │   │   │   if not subfolder_id or subfolder_id in seen:             │
+│    496 │   │   │   │   continue                                             │
+│                                                                             │
+│ C:\Programing\Market lense\src\services\drive_service.py:367 in             │
+│ _iter_list_files_paginated                                                  │
+│                                                                             │
+│    364 │   │   │   │   │   fields={"folder_id": request.folder_id, "error": │
+│    365 │   │   │   │   )                                                    │
+│    366 │   │   │   )                                                        │
+│ >  367 │   │   │   raise AppError(                                          │
+│    368 │   │   │   │   code="drive_list_failed",                            │
+│    369 │   │   │   │   message="Drive list failed",                         │
+│    370 │   │   │   │   cause=exc,                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+AppError: Drive list failed

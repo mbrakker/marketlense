@@ -1,0 +1,25 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://internetretailing.net/report-hub/retailx…  
+  Normalized URL            https://internetretailing.net/report-hub/retailx…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://internetretailing.net/report-hub/retailx…  
+  Encountered form fields   business email address                             
+  Identity fields added                                                        
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\internetretailing.ne…  
+  Drive uploads             uploaded:17zylzMiAOAAWOVJU5XlkaQ_fpmBNEEGl,        
+                            uploaded:1yLaAxCPlx_qW7wPT96hnllDPwAkxyrK5         
+  Summary                   navigate page load (Landed on the RetailX Global   
+                            Sustainability Report 2024 landing page; report    
+                            summary and sample pages visible; cookie overlay   
+                            present.); then click Accept All (Cookie banner    
+                            dismissed, allowing unobstructed access to page    
+                            content.); then save_as_pdf                        
+                            RetailX_Global_Sustainability_Report_2024.pdf      
+                            (Saved page as PDF and produced local artifact.)   
+                                                                               

@@ -1,0 +1,9 @@
+Loading settings...
+Running ingest pipeline...
+                               Processed Reports                               
+                                                                               
+  File                 ID                    MD5           HTML                
+ ───────────────────────────────────────────────────────────────────────────── 
+  WP-2024-11-ID-Dou…   11Xe0ZcfXQpFFP0USe…   1c3e29f609:   out\wp-2024-11-id…  
+                                                                               
+Done: 1 file(s).

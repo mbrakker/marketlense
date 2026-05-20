@@ -906,12 +906,17 @@ def run_ingest(
             limit=limit,
             modified_after=modified_after,
         )
-        files_to_process = _materialize_files_to_process(
-            list_req,
-            settings=settings,
-            max_n=max_n,
-            deps=deps,
-            root_ctx=root_ctx,
+        files_to_process = _run_step_with_retry(
+            "materialize_drive_files",
+            root_ctx,
+            lambda: _materialize_files_to_process(
+                list_req,
+                settings=settings,
+                max_n=max_n,
+                deps=deps,
+                root_ctx=root_ctx,
+            ),
+            2,
         )
         results = _process_ingest_batch(
             files_to_process,

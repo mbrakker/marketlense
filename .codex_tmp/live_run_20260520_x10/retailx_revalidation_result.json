@@ -1,0 +1,25 @@
+{
+  "status": "pass",
+  "severity": "pass",
+  "issues": [
+    {
+      "message": "[family_confidence] Evidence pack 'limitations' abstained at confidence=0.00 because insufficient_pack_content.",
+      "severity": "info",
+      "affected_section": "evidence_pack:limitations",
+      "rule_id": "family_confidence",
+      "repair_target": "",
+      "entity_id": "",
+      "schema_version": "1.0"
+    },
+    {
+      "message": "[metrics] Metric timeframe '2024' not verbatim but semantically supported (confidence=1.00) for insight_4",
+      "severity": "info",
+      "affected_section": "insights:insight_4",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "schema_version": "1.0"
+    }
+  ],
+  "source_path": "out\\retailx-global-sustainability-report-2024\\report_analysis\\validation.json"
+}

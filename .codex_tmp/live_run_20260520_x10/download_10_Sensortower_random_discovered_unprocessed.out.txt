@@ -1,0 +1,17 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://sensortower.com/report/q4-2025-market-in…  
+  Normalized URL            https://sensortower.com/report/q4-2025-market-in…  
+  Route                     email_delivery                                     
+  Outcome                   email_required                                     
+  Used memory route         no                                                 
+  Final page                https://sensortower.com/report/q4-2025-market-in…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                                                                         
+  Drive uploads                                                                
+  Summary                   Detected an email-gated report form in the         
+                            landing-page HTML before browser interaction.      
+                                                                               

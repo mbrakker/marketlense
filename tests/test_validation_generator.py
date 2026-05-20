@@ -13,6 +13,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationRequest
 from src.contracts.openai import OpenAIResponseResult
 from src.generators.validation.cache import load_cached_validation
+from src.generators.validation.numbers import validate_new_numbers
 from src.generators.validation.registry import build_validation_rule_registry
 from src.generators.validation_generator import validate_report
 from src.utils.errors import AppError
@@ -228,6 +229,25 @@ def test_validation_flags_metric_and_quote_mismatches(tmp_path):
     assert any("Metric value" in issue.message for issue in result.issues)
     assert any("Quote not verbatim" in issue.message for issue in result.issues)
     assert analysis_store.stored and analysis_store.stored[0][2] == "validation"
+
+
+def test_number_validation_ignores_soft_planning_timeframes():
+    artifacts = {
+        "linkedin_post": (
+            "Actions for the next 12 months: integrate verification into "
+            "product and marketing release cycles."
+        )
+    }
+
+    issues = validate_new_numbers(
+        artifacts=artifacts,
+        insights=[],
+        report=_report(),
+        evidence_texts=[],
+        evidence_windows=[],
+    )
+
+    assert not any(issue.rule_id == "numbers" for issue in issues)
 
 
 def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):

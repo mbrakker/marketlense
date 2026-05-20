@@ -1,0 +1,112 @@
+[
+  {
+    "id": 2640,
+    "publisher_name": "Activate Consulting",
+    "publisher_insights_url": "https://www.activate.com/insights",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1UKaCLZBE3lM-nRoLtUkC2as8p9YMX9Qq",
+    "report_name": "2020 Outlook",
+    "landing_page_url": "https://cdn.sanity.io/files/bw8wgpyt/production/cf091e263a2b6ed29222c5c60b6ed133a90fbe0c.pdf",
+    "source_page_url": "https://www.activate.com/insights",
+    "source_domain": "cdn.sanity.io",
+    "scenario": "direct_pdf"
+  },
+  {
+    "id": 4663,
+    "publisher_name": "Datareportal",
+    "publisher_insights_url": "https://datareportal.com/reports/",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1xzPef4fVGQ9Hi1yZCEG7kfjyphk1zdVv",
+    "report_name": "Digital 2025: Luxembourg",
+    "landing_page_url": "https://datareportal.com/reports/digital-2025-luxembourg",
+    "source_page_url": "https://datareportal.com/reports?offset=1740966391554",
+    "source_domain": "datareportal.com",
+    "scenario": "datareportal_onsite_longread"
+  },
+  {
+    "id": 3400,
+    "publisher_name": "Centric Market Intelligence",
+    "publisher_insights_url": "https://www.centricsoftware.com/learning-tools/",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1pNiUbnV3W5aAW_jeSKtDeF__WDBT6hPd",
+    "report_name": "Understanding Product Lifecycle Management for Cosmetics and Personal Care",
+    "landing_page_url": "https://www.centricsoftware.com/whitepapers/understanding-product-lifecycle-management",
+    "source_page_url": "https://www.centricsoftware.com/learning-tools",
+    "source_domain": "www.centricsoftware.com",
+    "scenario": "gated_whitepaper_form"
+  },
+  {
+    "id": 5821,
+    "publisher_name": "YouGov",
+    "publisher_insights_url": "https://business.yougov.com/white-papers",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1Yht88lc5qZ2CeBO6U8WizC4jHDM_S2Na",
+    "report_name": "Indonesia Singles' Day and Double 12 Consumer Report 2024",
+    "landing_page_url": "https://yougov.com/reports/50829-indonesia-singles-day-and-double-12-consumer-report-2024",
+    "source_page_url": "https://yougov.com/reports",
+    "source_domain": "yougov.com",
+    "scenario": "report_detail_pdf_link"
+  },
+  {
+    "id": 5756,
+    "publisher_name": "Simon-Kucher",
+    "publisher_insights_url": "https://www.simon-kucher.com/en/insights",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/18ovwe6DMyYV-2iLqUg05aOa8W8Uhb80l",
+    "report_name": "From AI to LMICs: Four global and regional trends impacting pharma P&MA",
+    "landing_page_url": "https://www.simon-kucher.com/en/insights/ai-lmics-four-global-and-regional-trends-impacting-pharma-pma",
+    "source_page_url": "https://www.simon-kucher.com/en/what-we-think?page=12",
+    "source_domain": "www.simon-kucher.com",
+    "scenario": "consulting_insight_detail"
+  },
+  {
+    "id": 6055,
+    "publisher_name": "Cushman & Wakefield",
+    "publisher_insights_url": "https://www.cushmanwakefield.com/en/insights",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1G4jnuMGx6CK1WiaVgS3fLo7gPHAL6vnM",
+    "report_name": "Asia Pacific Data Centre Construction Cost Guide 2026",
+    "landing_page_url": "https://www.cushmanwakefield.com/en/insights/apac-data-centre-construction-cost-guide",
+    "source_page_url": "https://www.cushmanwakefield.com/en/insights",
+    "source_domain": "www.cushmanwakefield.com",
+    "scenario": "real_estate_marketbeat"
+  },
+  {
+    "id": 3082,
+    "publisher_name": "Bright Local",
+    "publisher_insights_url": "https://www.brightlocal.com/research/",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1Gnm5wAnxY1IQBqhfLcWwAdy7P3rN64ML",
+    "report_name": "[POLL] Are Local Marketers Ready for SGE?",
+    "landing_page_url": "https://www.brightlocal.com/research/are-local-marketers-ready-for-sge",
+    "source_page_url": "https://www.brightlocal.com/research/page/2",
+    "source_domain": "www.brightlocal.com",
+    "scenario": "local_research_html"
+  },
+  {
+    "id": 5692,
+    "publisher_name": "Pubmatic",
+    "publisher_insights_url": "https://pubmatic.com/reports/",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1ocTDJq0MYCURR6Igj7Qium5MnNB0gjHX",
+    "report_name": "The State of Performance Marketing",
+    "landing_page_url": "https://pubmatic.com/reports/the-state-of-performance-marketing",
+    "source_page_url": "https://pubmatic.com/reports",
+    "source_domain": "pubmatic.com",
+    "scenario": "adtech_report_detail"
+  },
+  {
+    "id": 5724,
+    "publisher_name": "Retail X",
+    "publisher_insights_url": "https://internetretailing.net/browse-all-reports/#",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1lB7nNn4nzC8pdB97MhVCqQv6qIDedx1D",
+    "report_name": "RetailX Global Sustainability Report 2024",
+    "landing_page_url": "https://internetretailing.net/report-hub/retailx-sustainability-annual-report-2024",
+    "source_page_url": "https://internetretailing.net/browse-all-reports",
+    "source_domain": "internetretailing.net",
+    "scenario": "commerce_report_detail"
+  },
+  {
+    "id": 5734,
+    "publisher_name": "Sensortower",
+    "publisher_insights_url": "https://sensortower.com/resources",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1p6ITqLs7EYKJCFDklrMZBR7cxap1KB0p",
+    "report_name": "Report: Q4 Digital Market Index",
+    "landing_page_url": "https://sensortower.com/report/q4-2025-market-index",
+    "source_page_url": "https://sensortower.com/resources",
+    "source_domain": "sensortower.com",
+    "scenario": "random_discovered_unprocessed"
+  }
+]

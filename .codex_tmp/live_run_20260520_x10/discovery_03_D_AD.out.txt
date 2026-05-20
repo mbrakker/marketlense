@@ -1,0 +1,20 @@
+                         Publisher Inventory Discovery                         
+                                                                               
+  Field               Value                                                    
+ ───────────────────────────────────────────────────────────────────────────── 
+  Publisher           D&AD                                                     
+  Insights URL        https://www.dandad.org/insights/case-studies-and-partn…  
+  Normalized URL      https://www.dandad.org/insights/case-studies-and-partn…  
+  Current reports     8                                                        
+  Previous reports    0                                                        
+  Used memory route   yes                                                      
+  Snapshot changed    no                                                       
+  Run quality         medium                                                   
+  Run outcome         no_report_assets                                         
+  Next route          http_parse                                               
+                                                                               
+   New Report URLs    
+                      
+  Page   Title   URL  
+ ──────────────────── 
+                      

@@ -1,0 +1,47 @@
+schema_version: '1.0'
+playbook_id: learned-www-cushmanwakefield-com-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-05-20T06:11:48Z'
+stale_after_days: 120
+publisher_pattern: www.cushmanwakefield.com
+host_patterns:
+- www.cushmanwakefield.com
+url_path_markers:
+- insights
+- apac-data-centre-construction-cost-guide
+route_family: browser_onsite_report
+route_kind: pdf_download
+summary: Navigated to the article URL, dismissed cookie banner, extracted the on-page
+  article content, and saved the page as a PDF; did not submit any lead/download form.
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Open execution URL
+  verification: Loaded article page with visible hero and article content
+- schema_version: '1.0'
+  action: click
+  target: Agree and Close (cookie/privacy banner)
+  verification: Cookie/privacy banner dismissed, article content fully visible
+- schema_version: '1.0'
+  action: extract
+  target: Article HTML/text (title, author/date, body, captions, images)
+  verification: Extracted title, author, publication date, full article paragraphs,
+    inline headings and main image URLs
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Save full page as PDF
+  verification: Page saved as a PDF artifact locally
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-05-20T06:11:48Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.

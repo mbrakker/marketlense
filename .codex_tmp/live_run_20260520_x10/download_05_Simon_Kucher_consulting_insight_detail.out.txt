@@ -1,0 +1,25 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://www.simon-kucher.com/en/insights/ai-lmic…  
+  Normalized URL            https://www.simon-kucher.com/en/insights/ai-lmic…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://www.simon-kucher.com/en/insights/ai-lmic…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\www.simon-kucher.com…  
+  Drive uploads             uploaded:1ob46VYjJJs4hBbxjZm36BqvwbUle3xHF,        
+                            uploaded:1ob46VYjJJs4hBbxjZm36BqvwbUle3xHF,        
+                            uploaded:1Xqo4Qu85Ca2RW_fFsmVyFa598v6T3gE7         
+  Summary                   navigate Open execution URL (Page loaded with      
+                            readable article content visible); then click      
+                            Accept All Cookies (cookie banner) (Cookie modal   
+                            dismissed enabling full interaction with page);    
+                            then scroll Scroll article body to end (Scrolled   
+                            through the article (agent recorded 10.0 pages     
+                            scrolled) to ensure bounded capture)               
+                                                                               

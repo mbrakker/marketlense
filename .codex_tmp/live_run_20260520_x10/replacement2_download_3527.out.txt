@@ -1,0 +1,21 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://www.criteo.com/wp-content/uploads/2020/0…  
+  Normalized URL            https://www.criteo.com/wp-content/uploads/2020/0…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://www.criteo.com/wp-content/uploads/2020/0…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\www.criteo.com\85cfc…  
+  Drive uploads             uploaded:1_d98OqzAtn-44sUUemNx5rqHtMP3ZIjc,        
+                            uploaded:1lGnMDviIZAGHtN94GXhdC7eAbSUJOt6X         
+  Summary                   Opened the direct PDF URL; browser displayed the   
+                            PDF in its built-in viewer and a local PDF         
+                            artifact was saved to the configured downloads     
+                            directory.                                         
+                                                                               

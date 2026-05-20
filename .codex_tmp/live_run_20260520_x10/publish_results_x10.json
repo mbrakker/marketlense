@@ -1,0 +1,161 @@
+[
+  {
+    "schema_version": "1.0",
+    "html_path": "out/cf091e263a2b6ed29222c5c60b6ed133a90fbe0c-pdf.html",
+    "file_id": "1iMmqocOUBzzgzM_Eqtu_NgPezptVlWi_",
+    "status": "published",
+    "post_id": 954,
+    "post_url": "https://marketlense.medianewsonline.com/reports/activate-technology-media-outlook-2020/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[metrics] Metric timeframe 'report (2019/2020 analysis)' not verbatim but semantically supported (confidence=1.00) for insight-02",
+      "[metrics] Metric timeframe 'survey (Activate 2019)' not verbatim but semantically supported (confidence=1.00) for insight-03",
+      "[metrics] Metric timeframe '2019E to 2023E' not verbatim but semantically supported (confidence=1.00) for insight-07"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out/90bbb6f141259489c1a1cfebc200a905a628186c-pdf.html",
+    "file_id": "1VooWIbaZG6_RtRMcCgfU_reDZgrsit3L",
+    "status": "published",
+    "post_id": 961,
+    "post_url": "https://marketlense.medianewsonline.com/reports/activate-2023-consumer-technology-media-research-study/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[metrics] Metric timeframe 'by 2027 (forecast)' not verbatim but semantically supported (confidence=1.00) for IC006",
+      "[metrics] Metric timeframe '2023 → 2027' not verbatim but semantically supported (confidence=1.00) for IC005",
+      "[metrics] Metric timeframe '2027 (forecast)' not verbatim but semantically supported (confidence=1.00) for IC004"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out/digital-2022-sweden-pdf.html",
+    "file_id": "1VjpLrz_05XjQbCot8CHXCf-JO2e3H1m4",
+    "status": "published",
+    "post_id": 963,
+    "post_url": "https://marketlense.medianewsonline.com/reports/digital-2022-sweden/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": []
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out/digital-2025-luxembourg-pdf.html",
+    "file_id": "15PFCdF-Lofj8sWcveFlnCKAKk-PI4Ni2",
+    "status": "published",
+    "post_id": 965,
+    "post_url": "https://marketlense.medianewsonline.com/reports/digital-2025-luxembourg/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[family_confidence] Artifact family 'quotes' abstained at confidence=0.65 because quotes_missing_verbatim_source.",
+      "[semantic] Semantic check: quote f1 not supported (Quote text is empty, so there is no claim to verify against the evidence (though evidence f1 contains the population statement).)",
+      "[metrics] Metric timeframe 'January 2025 / year-on-year' not verbatim but semantically supported (confidence=1.00) for insight_01_population_2025",
+      "[metrics] Metric timeframe 'January 2025 / year-on-year' not verbatim but semantically supported (confidence=1.00) for insight_02_internet_penetration",
+      "[metrics] Metric timeframe 'start of 2025 (January 2025)' not verbatim but semantically supported (confidence=1.00) for insight_03_mobile_connections",
+      "[metrics] Metric timeframe 'early 2025 (year-on-year change vs early 2024)' not verbatim but semantically supported (confidence=1.00) for insight_04_connection_speeds",
+      "[metrics] Metric timeframe 'January 2025 / year-on-year' not verbatim but semantically supported (confidence=1.00) for insight_05_social_media_identities"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out/wp-2024-11-id-double-day-report-v2-pdf.html",
+    "file_id": "11Xe0ZcfXQpFFP0USeuAghacdRvN59NpF",
+    "status": "published",
+    "post_id": 971,
+    "post_url": "https://marketlense.medianewsonline.com/reports/singles-day-and-double-12-consumer-report-2024/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[metrics] Metric timeframe 'Survey fieldwork: July 12–30, 2024' not verbatim but semantically supported (confidence=1.00) for IC3",
+      "[metrics] Metric timeframe 'Survey fieldwork: July 12–30, 2024' not verbatim but semantically supported (confidence=1.00) for IC1",
+      "[metrics] Metric timeframe '2024 (survey: July 12–30, 2024)' not verbatim but semantically supported (confidence=1.00) for IC2",
+      "[metrics] Metric timeframe 'Survey fieldwork: July 12–30, 2024' not verbatim but semantically supported (confidence=1.00) for IC4",
+      "[metrics] Metric timeframe 'YouGov BrandIndex: Nov 1–Dec 31, 2023 (net buzz for Nov 2023 reported)' not verbatim but semantically supported (confidence=1.00) for IC8"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out/from-ai-to-lmics-four-trends-pdf.html",
+    "file_id": "1ob46VYjJJs4hBbxjZm36BqvwbUle3xHF",
+    "status": "published",
+    "post_id": 974,
+    "post_url": "https://marketlense.medianewsonline.com/reports/from-ai-to-lmics-four-global-and-regional-trends-impacting-pharma-p-ma/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[family_confidence] Artifact family 'quotes' abstained at confidence=0.65 because quotes_missing_verbatim_source.",
+      "[semantic] Semantic check: quote F1 not supported (Quote text is empty/missing in the input, so its content cannot be verified against the evidence.)",
+      "[metrics] Metric timeframe '2025–2030' not verbatim but semantically supported (confidence=0.90) for IC-01",
+      "[metrics] Metric timeframe 'as of Jan 2025 → 2028 → 2030' not verbatim but semantically supported (confidence=1.00) for IC-02",
+      "[metrics] Metric timeframe 'pre-launch (Phase II → launch)' not verbatim but semantically supported (confidence=1.00) for IC-03",
+      "[metrics] Metric timeframe 'immediate (2025+)' not verbatim but semantically supported (confidence=1.00) for IC-04",
+      "[metrics] Metric timeframe 'pre-launch (~3 years)' not verbatim but semantically supported (confidence=1.00) for IC-06"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out/asia-pacific-data-centre-construction-cost-guide-2026-pdf.html",
+    "file_id": "1g6X2LTCUAUu6YjM2sumz9JZaKPwf5RCM",
+    "status": "published",
+    "post_id": 976,
+    "post_url": "https://marketlense.medianewsonline.com/reports/asia-pacific-data-centre-construction-cost-guide-2026/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[family_confidence] Evidence pack 'limitations' abstained at confidence=0.00 because insufficient_pack_content.",
+      "[metrics] Metric timeframe '2026 edition (data through 2025)' not verbatim but semantically supported (confidence=1.00) for insight_1",
+      "[metrics] Metric timeframe '2025 year‑on‑year' not verbatim but semantically supported (confidence=1.00) for insight_2",
+      "[metrics] Metric timeframe '2026 guide (mid‑specification, mid‑range costs)' not verbatim but semantically supported (confidence=1.00) for insight_3",
+      "[metrics] Metric timeframe 'through end of the decade' not verbatim but semantically supported (confidence=1.00) for insight_6",
+      "[metrics] Metric timeframe 'observed in 2025' not verbatim but semantically supported (confidence=0.90) for insight_5"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out/retailx-global-sustainability-report-2024-pdf.html",
+    "file_id": "17zylzMiAOAAWOVJU5XlkaQ_fpmBNEEGl",
+    "status": "published",
+    "post_id": 978,
+    "post_url": "https://marketlense.medianewsonline.com/reports/retailx-global-sustainability-report-2024/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[family_confidence] Evidence pack 'limitations' abstained at confidence=0.00 because insufficient_pack_content.",
+      "[metrics] Metric timeframe '2024' not verbatim but semantically supported (confidence=1.00) for insight_4"
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out/payments-nz-environmental-scan-2025-pdf.html",
+    "file_id": "1ZqyQClFRsdKFB3a9fTSn92nxjKt14om0",
+    "status": "published",
+    "post_id": 981,
+    "post_url": "https://marketlense.medianewsonline.com/reports/developments-in-the-global-payments-landscape-2025-environmental-scan-report/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[family_confidence] Artifact family 'quotes' abstained at confidence=0.65 because quotes_missing_verbatim_source."
+    ]
+  },
+  {
+    "schema_version": "1.0",
+    "html_path": "out/guide-coronavirus-impact-rebound-strategies-pdf.html",
+    "file_id": "1_d98OqzAtn-44sUUemNx5rqHtMP3ZIjc",
+    "status": "published",
+    "post_id": 984,
+    "post_url": "https://marketlense.medianewsonline.com/reports/2020-rebound-7-advertising-strategies-for-the-social-distancing-economy-quick-guide/",
+    "error": null,
+    "validation_status": "pass",
+    "validation_issues": [
+      "[family_confidence] Artifact family 'quotes' abstained at confidence=0.65 because quotes_missing_verbatim_source.",
+      "[metrics] Metric timeframe '2020 (survey referenced in guide)' not verbatim but semantically supported (confidence=1.00) for ic_01",
+      "[metrics] Metric timeframe 'Starting January 2020' not verbatim but semantically supported (confidence=1.00) for ic_02",
+      "[metrics] Metric timeframe 'weekly monitoring recommended' not verbatim but semantically supported (confidence=1.00) for ic_04",
+      "[metrics] Metric timeframe '2020 (analysis referenced in guide)' not verbatim but semantically supported (confidence=1.00) for ic_05",
+      "[metrics] Metric timeframe '2020 (guide recommendation)' not verbatim but semantically supported (confidence=1.00) for ic_07"
+    ]
+  }
+]

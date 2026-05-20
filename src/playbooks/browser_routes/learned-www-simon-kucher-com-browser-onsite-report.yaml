@@ -1,0 +1,49 @@
+schema_version: '1.0'
+playbook_id: learned-www-simon-kucher-com-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-05-20T06:08:53Z'
+stale_after_days: 120
+publisher_pattern: www.simon-kucher.com
+host_patterns:
+- www.simon-kucher.com
+url_path_markers:
+- insights
+- ai-lmics-four-global-and-regional-trends-impacting-pharma-pma
+route_family: browser_onsite_report
+route_kind: pdf_download
+summary: navigate Open execution URL (Page loaded with readable article content visible);
+  then click Accept All Cookies (cookie banner) (Cookie modal dismissed enabling full
+  interaction with page); then scroll Scroll article body to end (Scrolled through
+  the article (agent recorded 10.0 pages scrolled) to ensure bounded capture)
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Open execution URL
+  verification: Page loaded with readable article content visible
+- schema_version: '1.0'
+  action: click
+  target: Accept All Cookies (cookie banner)
+  verification: Cookie modal dismissed enabling full interaction with page
+- schema_version: '1.0'
+  action: scroll
+  target: Scroll article body to end
+  verification: Scrolled through the article (agent recorded 10.0 pages scrolled)
+    to ensure bounded capture
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Save full page as PDF
+  verification: Saved PDF artifact of the on-site article
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-05-20T06:08:53Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.

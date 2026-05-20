@@ -1,0 +1,82 @@
+[
+  {
+    "id": 193,
+    "name": "SITA",
+    "insights_url": "https://www.sita.aero/resources/surveys-reports/2024-sita-passenger-it-insights/",
+    "google_folder": "https://drive.google.com/drive/folders/1HeUC2ErhN5aEQAjUMzANqdbZj9rPC1Uw",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  },
+  {
+    "id": 182,
+    "name": "Payments NZ",
+    "insights_url": "https://www.paymentsnz.co.nz/resources/research-reports/",
+    "google_folder": "https://drive.google.com/drive/folders/1DdcwA9Oq1_UZ2duN0_z9FjsVAyYaLNCr",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  },
+  {
+    "id": 111,
+    "name": "D&AD",
+    "insights_url": "https://www.dandad.org/insights/case-studies-and-partnerships",
+    "google_folder": "https://drive.google.com/drive/folders/1eelxBUUD849Z49r123o-H1TKcIWioTZH",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  },
+  {
+    "id": 153,
+    "name": "Ipsos",
+    "insights_url": "https://www.ipsos.com/en/insights-hub",
+    "google_folder": "https://drive.google.com/drive/folders/1YfQWvgV6-4-ah_Kwe1C2vXuA8Wqt1-5B",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  },
+  {
+    "id": 133,
+    "name": "Garden Media",
+    "insights_url": "https://gardenmediagroup.com/2026-garden-trends-report/",
+    "google_folder": "https://drive.google.com/drive/folders/1_MFQb_8BxjYhSRBwVZHvqRxNUMbrbDK8",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  },
+  {
+    "id": 213,
+    "name": "WGSN",
+    "insights_url": "https://www.wgsn.com:443/reports/users/login",
+    "google_folder": "https://drive.google.com/drive/folders/1wmVoDhMIUksAwIFq46d0tQMWuo1ewW-s",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  },
+  {
+    "id": 163,
+    "name": "The Moore Agency",
+    "insights_url": "https://themooreagency.com/moore-leaders-named-top-women-in-pr/",
+    "google_folder": "https://drive.google.com/drive/folders/1H7_V0ZO135A6hW92qfHF1uhpU2ikEXM7",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  },
+  {
+    "id": 147,
+    "name": "The International Renewable Energy Agency (IRENA)",
+    "insights_url": "https://www.irena.org/News/expertinsights/2026/Mar/How-Auctions-Can-Distribute-Risks-More-Equitably-and-Maximise-Benefits",
+    "google_folder": "https://drive.google.com/drive/folders/1_78NI6C3VERNQdi70gLrknOGd0gLQ9Up",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  },
+  {
+    "id": 184,
+    "name": "Pinterest",
+    "insights_url": "https://www.pinterest.com/insights/",
+    "google_folder": "https://drive.google.com/drive/folders/1RHVuLUIHX9rbjSPiryhnnoPDQ4tyWrvM",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  },
+  {
+    "id": 203,
+    "name": "TLC Lions",
+    "insights_url": "https://tlclions.com/2026-trends-report/",
+    "google_folder": "https://drive.google.com/drive/folders/1S3mUDFmx6IZAM70R6NOVJqPtL28z61Z8",
+    "discovery_test_status": null,
+    "inventory_snapshot_drive_file_id": null
+  }
+]

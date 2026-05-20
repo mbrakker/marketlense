@@ -1,0 +1,38 @@
+[
+  {
+    "id": 6104,
+    "publisher_name": "Payments NZ",
+    "publisher_insights_url": "https://www.paymentsnz.co.nz/resources/research-reports/",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1DdcwA9Oq1_UZ2duN0_z9FjsVAyYaLNCr",
+    "report_name": "Payments NZ Environmental Scan 2025",
+    "landing_page_url": "https://www.paymentsnz.co.nz/documents/432/Payments_NZ_Environmental_Scan_2025.pdf",
+    "source_page_url": "https://www.paymentsnz.co.nz/resources/research-reports",
+    "source_domain": "www.paymentsnz.co.nz",
+    "scenario": "replacement_direct_pdf",
+    "returncode": 0,
+    "timeout": false,
+    "started_at": "2026-05-20T06:25:01.548588+00:00",
+    "finished_at": "2026-05-20T06:25:11.981606+00:00",
+    "duration_seconds": 10.43,
+    "stdout_path": ".codex_tmp\\live_run_20260520_x10\\download_replacement_01_Payments_NZ_replacement_direct_pdf.out.txt",
+    "stderr_path": ".codex_tmp\\live_run_20260520_x10\\download_replacement_01_Payments_NZ_replacement_direct_pdf.err.txt"
+  },
+  {
+    "id": 3975,
+    "publisher_name": "Datareportal",
+    "publisher_insights_url": "https://datareportal.com/reports/",
+    "publisher_google_folder": "https://drive.google.com/drive/folders/1xzPef4fVGQ9Hi1yZCEG7kfjyphk1zdVv",
+    "report_name": "Digital 2022: Sweden",
+    "landing_page_url": "https://datareportal.com/reports/digital-2022-sweden",
+    "source_page_url": "https://datareportal.com/reports?offset=1644908203138",
+    "source_domain": "datareportal.com",
+    "scenario": "replacement_report_detail_pdf_link",
+    "returncode": 0,
+    "timeout": false,
+    "started_at": "2026-05-20T06:25:11.981778+00:00",
+    "finished_at": "2026-05-20T06:28:32.350916+00:00",
+    "duration_seconds": 200.37,
+    "stdout_path": ".codex_tmp\\live_run_20260520_x10\\download_replacement_02_Datareportal_replacement_report_detail_pdf_link.out.txt",
+    "stderr_path": ".codex_tmp\\live_run_20260520_x10\\download_replacement_02_Datareportal_replacement_report_detail_pdf_link.err.txt"
+  }
+]

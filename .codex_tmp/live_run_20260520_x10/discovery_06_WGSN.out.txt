@@ -1,0 +1,21 @@
+                   Publisher Inventory Discovery                    
+                                                                    
+  Field               Value                                         
+ ────────────────────────────────────────────────────────────────── 
+  Publisher           WGSN                                          
+  Insights URL        https://www.wgsn.com:443/reports/users/login  
+  Normalized URL      https://www.wgsn.com:443/reports/users/login  
+  Current reports     1                                             
+  Previous reports    0                                             
+  Used memory route   no                                            
+  Snapshot changed    yes                                           
+  Run quality         high                                          
+  Run outcome         accepted                                      
+  Next route          browser_render                                
+                                                                    
+                        New Report URLs                        
+                                                               
+  Page   Title   URL                                           
+ ───────────────────────────────────────────────────────────── 
+  1      login   https://www.wgsn.com:443/reports/users/login  
+                                                               

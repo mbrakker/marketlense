@@ -15,7 +15,7 @@ _COMP_RE = (
     r"more than|over|above|greater than|at least|"
     r"less than|under|below|at most|about|around|approximately)"
 )
-_MAG_RE = r"(?:k|m|mm|mn|b|bn|tn|thousand|million|billion|trillion)"
+_MAG_RE = r"(?:k|m|mm|mn|b|bn|tn|thousand|million|billion|trillion)\b"
 
 _RANGE_RE = re.compile(
     rf"\b(?:between\s+)?(?P<low>{_NUMBER_RE})\s*(?:-|to|and)\s*(?P<high>{_NUMBER_RE})\s*"
@@ -191,6 +191,8 @@ def should_ground_quantity(
         ):
             return False
         return True
+    if quantity.unit_family == "time" and not metric_context:
+        return False
     if explicit_unit:
         return not _looks_like_non_metric_token(quantity, sentence_norm)
     if metric_context:

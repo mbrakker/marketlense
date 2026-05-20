@@ -1,0 +1,23 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://datareportal.com/reports/digital-2022-sw…  
+  Normalized URL            https://datareportal.com/reports/digital-2022-sw…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://datareportal.com/reports/digital-2022-sw…  
+  Encountered form fields   Save Preferences (cookie modal), cookie toggles    
+                            (privacy preferences)                              
+  Identity fields added     save_preferences_cookie_modal,                     
+                            cookie_toggles_privacy_preferences                 
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\datareportal.com\c50…  
+  Drive uploads             uploaded:1VjpLrz_05XjQbCot8CHXCf-JO2e3H1m4,        
+                            uploaded:1VjpLrz_05XjQbCot8CHXCf-JO2e3H1m4,        
+                            uploaded:1fyjYpuAhlgUR8D36B8AgPjy1H_ILPcQ4         
+  Summary                   Opened cookie preferences, closed the cookie       
+                            modal to reveal the on-page report, then saved     
+                            the full page as a PDF (on-site capture).          
+                                                                               

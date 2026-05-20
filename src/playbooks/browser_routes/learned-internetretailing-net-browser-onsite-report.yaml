@@ -1,0 +1,47 @@
+schema_version: '1.0'
+playbook_id: learned-internetretailing-net-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-05-20T06:23:09Z'
+stale_after_days: 120
+publisher_pattern: internetretailing.net
+host_patterns:
+- internetretailing.net
+url_path_markers:
+- report-hub
+- retailx-sustainability-annual-report-2024
+route_family: browser_onsite_report
+route_kind: pdf_download
+summary: navigate page load (Landed on the RetailX Global Sustainability Report 2024
+  landing page; report summary and sample pages visible; cookie overlay present.);
+  then click Accept All (Cookie banner dismissed, allowing unobstructed access to
+  page content.); then save_as_pdf RetailX_Global_Sustainability_Report_2024.pdf (Saved
+  page as PDF and produced local artifact.)
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: page load
+  verification: Landed on the RetailX Global Sustainability Report 2024 landing page;
+    report summary and sample pages visible; cookie overlay present.
+- schema_version: '1.0'
+  action: click
+  target: Accept All
+  verification: Cookie banner dismissed, allowing unobstructed access to page content.
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: RetailX_Global_Sustainability_Report_2024.pdf
+  verification: Saved page as PDF and produced local artifact.
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- network_submission_request
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-05-20T06:23:09Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.

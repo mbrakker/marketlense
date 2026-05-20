@@ -1,0 +1,373 @@
+[
+  {
+    "log": ".codex_tmp\\live_run_20260520_x10\\discovery_01_SITA.err.txt",
+    "publisher_name": "SITA",
+    "history_sample_count": 0,
+    "score_window_size": 5,
+    "min_sample_size": 2,
+    "ranked_resource_count": 1,
+    "resource_rankings": [
+      {
+        "resource_url": "https://www.sita.aero/resources/surveys-reports/2024-sita-passenger-it-insights",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      }
+    ]
+  },
+  {
+    "log": ".codex_tmp\\live_run_20260520_x10\\discovery_02_Payments_NZ.err.txt",
+    "publisher_name": "Payments NZ",
+    "history_sample_count": 0,
+    "score_window_size": 5,
+    "min_sample_size": 2,
+    "ranked_resource_count": 1,
+    "resource_rankings": [
+      {
+        "resource_url": "https://www.paymentsnz.co.nz/resources/research-reports",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      }
+    ]
+  },
+  {
+    "log": ".codex_tmp\\live_run_20260520_x10\\discovery_04_Ipsos.err.txt",
+    "publisher_name": "Ipsos",
+    "history_sample_count": 0,
+    "score_window_size": 5,
+    "min_sample_size": 2,
+    "ranked_resource_count": 37,
+    "resource_rankings": [
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=1",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=10",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=11",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=12",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=14",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=15",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=16",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=17",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=18",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=19",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=20",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=21",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=23",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=25",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=28",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=29",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=3",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=30",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=32",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=35",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=39",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=40",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=45",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=47",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=5",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=50",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=52",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=57",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=6",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=67",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=68",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=7",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=71",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=72",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=73",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      },
+      {
+        "resource_url": "https://www.ipsos.com/en/insights-hub?page=9",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      }
+    ]
+  },
+  {
+    "log": ".codex_tmp\\live_run_20260520_x10\\discovery_05_Garden_Media.err.txt",
+    "publisher_name": "Garden Media",
+    "history_sample_count": 0,
+    "score_window_size": 5,
+    "min_sample_size": 2,
+    "ranked_resource_count": 1,
+    "resource_rankings": [
+      {
+        "resource_url": "https://gardenmediagroup.com/2026-garden-trends-report",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      }
+    ]
+  },
+  {
+    "log": ".codex_tmp\\live_run_20260520_x10\\discovery_06_WGSN.err.txt",
+    "publisher_name": "WGSN",
+    "history_sample_count": 0,
+    "score_window_size": 5,
+    "min_sample_size": 2,
+    "ranked_resource_count": 1,
+    "resource_rankings": [
+      {
+        "resource_url": "https://www.wgsn.com:443/reports/users/login",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      }
+    ]
+  },
+  {
+    "log": ".codex_tmp\\live_run_20260520_x10\\discovery_08_The_International_Renewable_Energy_Agency__IRENA_.err.txt",
+    "publisher_name": "The International Renewable Energy Agency (IRENA)",
+    "history_sample_count": 0,
+    "score_window_size": 5,
+    "min_sample_size": 2,
+    "ranked_resource_count": 1,
+    "resource_rankings": [
+      {
+        "resource_url": "https://www.irena.org/News/expertinsights/2026/Mar/How-Auctions-Can-Distribute-Risks-More-Equitably-and-Maximise-Benefits",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      }
+    ]
+  },
+  {
+    "log": ".codex_tmp\\live_run_20260520_x10\\discovery_10_TLC_Lions.err.txt",
+    "publisher_name": "TLC Lions",
+    "history_sample_count": 0,
+    "score_window_size": 5,
+    "min_sample_size": 2,
+    "ranked_resource_count": 1,
+    "resource_rankings": [
+      {
+        "resource_url": "https://tlclions.com/2026-trends-report",
+        "sample_size": 0,
+        "confidence": 0.0,
+        "rank_score": 0.0,
+        "demotion_reason": "insufficient_history"
+      }
+    ]
+  }
+]

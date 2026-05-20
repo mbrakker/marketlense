@@ -11,11 +11,13 @@ from src.contracts.file_cache import (
     FileCacheMd5SidecarWriteResponse,
 )
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
+from src.contracts.ingest import IngestOutcome
 from src.contracts.pdf_utils import PdfEofCheckResponse
 from src.orchestrators import ingest_orchestrator as orch
 from src.orchestrators import report_pipeline_orchestrator as report_pipeline_orch
 from src.orchestrators import retry_orchestrator as retry_orch
 from src.orchestrators.ingest_file_orchestrator import (
+    FileProcessResult,
     IngestFileDependencies,
     run_ingest_file,
 )
@@ -194,3 +196,82 @@ def test_retry_on_retryable_app_error(
     assert outcomes[0].error == "retry"
     assert attempt_count["value"] == 3
     assert sleep_calls == [1, 2]
+
+
+def test_retry_on_retryable_drive_list_error(
+    ingest_settings,
+    app_paths,
+    external_boundary_mocks_only,
+) -> None:
+    settings = replace(
+        ingest_settings,
+        batch_limit=1,
+        ingest_worker_limit=1,
+        output_dir=app_paths["output_dir"],
+        cache_dir=app_paths["cache_dir"],
+    )
+    drive_file = DriveFile(
+        schema_version="1.0",
+        file_id="file-drive-list-retry",
+        name="drive-list-retry.pdf",
+        modified_time=None,
+        md5_checksum="md5-drive-list-retry",
+    )
+    retry_error = AppError(
+        code="drive_list_failed",
+        message="Drive list failed",
+        retryable=True,
+    )
+    list_attempt_count = {"value": 0}
+    sleep_calls: list[int] = []
+
+    external_boundary_mocks_only.setattr(
+        retry_orch.random,
+        "uniform",
+        lambda _a, _b: 0.0,
+    )
+    external_boundary_mocks_only.setattr(
+        orch.time,
+        "sleep",
+        lambda seconds: sleep_calls.append(int(seconds)),
+    )
+
+    def _list_pdfs(_req, _ctx):
+        list_attempt_count["value"] += 1
+        if list_attempt_count["value"] == 1:
+            raise retry_error
+        return [drive_file]
+
+    def _process_file(file, index, _current_settings, _root_ctx):
+        return FileProcessResult(
+            index=index,
+            outcome=IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path="out/drive-list-retry.html",
+                status="processed",
+                error=None,
+            ),
+            processed=1,
+            had_error=False,
+        )
+
+    outcomes = orch.run_ingest(
+        settings,
+        limit=1,
+        dependencies=orch.IngestBatchDependencies(
+            list_pdfs=_list_pdfs,
+            batch_should_skip=lambda *_args, **_kwargs: {},
+            process_file=_process_file,
+            thread_pool_executor_factory=orch.ThreadPoolExecutor,
+            flush_uncategorized_tags=lambda req, ctx: None,
+        ),
+    )
+
+    assert len(outcomes) == 1
+    assert outcomes[0].file_id == "file-drive-list-retry"
+    assert outcomes[0].status == "processed"
+    assert list_attempt_count["value"] == 2
+    assert sleep_calls == [1]

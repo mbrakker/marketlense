@@ -45,6 +45,12 @@ def test_currency_magnitude_forms_match() -> None:
     assert _any_match("£333mn annual spend", "333 million GBP annual spend")
 
 
+def test_month_unit_is_not_parsed_as_million_magnitude() -> None:
+    parsed = extract_quantities("Actions for the next 12 months: integrate checks.")
+    assert any(q.unit_family == "time" and q.unit == "months" for q in parsed)
+    assert not any(q.value == 12_000_000 for q in parsed)
+
+
 def test_percentage_points_require_change_context() -> None:
     assert not _any_match("Satisfaction is 3pp.", "Satisfaction is 3%.")
     assert _any_match(

@@ -301,6 +301,16 @@ fields:
   label: Sustainability perceptions of brands
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: save_preferences_cookie_modal
+  label: Save Preferences (cookie modal)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: cookie_toggles_privacy_preferences
+  label: cookie toggles (privacy preferences)
+  value: null
+  aliases: []
 publisher_overrides:
 - schema_version: '1.0'
   host_pattern: centricsoftware.com
