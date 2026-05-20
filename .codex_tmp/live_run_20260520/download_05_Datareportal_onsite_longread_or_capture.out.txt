@@ -1,0 +1,23 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://datareportal.com/reports/digital-2021-na…  
+  Normalized URL            https://datareportal.com/reports/digital-2021-na…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://datareportal.com/reports/digital-2021-na…  
+  Encountered form fields   capInput (name=answer) placeholder='Enter          
+                            characters' (CAPTCHA input visible in Fastly       
+                            captcha iframe)                                    
+  Identity fields added     capinput_name_answer_placeholder_enter_character…  
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\datareportal.com\2c2…  
+  Drive uploads             uploaded:1LnGVq_QiYgRl2LxlxBdxKgp6JLVhIz3G,        
+                            uploaded:1jxJ29nxhDR_ySV7yIgm63jb65I2j32mB         
+  Summary                   Navigated to the report URL; attempted to dismiss  
+                            cookie consent; encountered Fastly CAPTCHA iframe  
+                            blocking the page; saved the current page as a     
+                            PDF artifact.                                      
+                                                                               

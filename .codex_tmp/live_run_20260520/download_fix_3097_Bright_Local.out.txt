@@ -1,0 +1,20 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://www.brightlocal.com/research/consumer-se…  
+  Normalized URL            https://www.brightlocal.com/research/consumer-se…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://www.brightlocal.com/research/consumer-se…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\www.brightlocal.com\…  
+  Drive uploads             uploaded:1j8t57AmlfNxXUrgBHgbSIsaOQuV_7_hk,        
+                            uploaded:1kgS7-bFdGjNeDf5phyQ9-6mZawXWdbhR         
+  Summary                   Navigated to the article, dismissed cookie         
+                            consent, saved the page as a PDF                   
+                            (consumer-search-behavior.pdf).                    
+                                                                               

@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last compiled: 2026-05-01
+Last compiled: 2026-05-20
 
 This file is the single source of truth for open backlog items. It supersedes the remaining backlog plus the archived planning work from `docs/quality/deep-analysis-x10-plan-2026-04-15.md`.
 
@@ -138,6 +138,17 @@ Suggested priority order:
 ---
 
 ## 4. Publisher Discovery Rollout & Precision
+
+- **Title:** Wire verified route memory into reviewable browser/publisher playbook promotion [Impact: 4/5, Effort: 3/5]
+  - Explanation: Browser-route playbook contracts, YAML loading, selection, and promotion helpers exist, but live report-download and publisher-discovery runs only persist route memory in SQLite. The missing gap is an orchestrated promotion path that turns verified, reusable route evidence into reviewable playbook files or explicit skip records.
+  - Pros: Converts successful live runs into durable reusable guidance, reduces repeated browser exploration, and makes route learning reviewable in git.
+  - Cons: Needs conservative promotion gates so one-off or noisy routes do not become misleading durable guidance.
+  - Acceptance Criteria:
+    - Report-download orchestration invokes playbook promotion, or records a typed skip reason, after verified/recovered successful routes with usable route steps.
+    - Promotion is idempotent and writes reviewable YAML diffs under `src/playbooks/browser_routes/` without duplicating existing generic playbooks.
+    - Publisher-inventory route traces/scenario summaries either get an equivalent playbook export path or an explicit documented decision to keep them as SQLite-only route memory.
+    - Config controls promotion mode (`disabled`, `dry_run`, `write`) and logs selected policy, playbook path, version, and review diff metadata.
+    - Pipeline tests prove eligible live-style route evidence creates/updates a playbook, while unverified, unsuccessful, or insufficient-history routes are skipped with typed reasons.
 
 ## 5. Idempotency, Checkpoints & Publish Durability
 

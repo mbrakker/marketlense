@@ -631,8 +631,10 @@ def finalize_browser_report_download_result(
             onsite_capture_format,
         ) = _ensure_onsite_capture_artifact(
             request=request,
+            ctx=ctx,
             normalized_url=normalized_url,
             download_dir=download_dir,
+            agent_result=agent_result,
             final_url=final_url,
             final_page_title=final_page_title,
             terminal_text_excerpt=terminal_text_excerpt,
@@ -2852,8 +2854,10 @@ def _agent_result_indicates_report_not_found(
 def _ensure_onsite_capture_artifact(
     *,
     request: BrowserReportDownloadRequest,
+    ctx: RunContext,
     normalized_url: str,
     download_dir: Path,
+    agent_result: BrowserUseAgentResult,
     final_url: str,
     final_page_title: str,
     terminal_text_excerpt: str,
@@ -2865,7 +2869,22 @@ def _ensure_onsite_capture_artifact(
     existing_path = str(onsite_capture_path or "").strip()
     if existing_path and Path(existing_path).is_file():
         return existing_path, onsite_capture_format
-    if str(browser_html or "").strip():
+    capture_html = str(browser_html or "")
+    if not capture_html.strip():
+        fetched_html = _try_fetch_onsite_capture_html(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            final_url=final_url,
+        )
+        if _looks_like_onsite_report_html(
+            wrapper_html=fetched_html,
+            request=request,
+            agent_result=agent_result,
+            final_url=final_url,
+        ):
+            capture_html = fetched_html
+    if capture_html.strip():
         capture_path = _safe_onsite_capture_path(
             download_dir=download_dir,
             claimed_path=existing_path,
@@ -2873,7 +2892,7 @@ def _ensure_onsite_capture_artifact(
             suffix=".html",
         )
         capture_path.parent.mkdir(parents=True, exist_ok=True)
-        capture_path.write_text(str(browser_html or ""), encoding="utf-8")
+        capture_path.write_text(capture_html, encoding="utf-8")
         return str(capture_path), str(onsite_capture_format or "html").strip() or "html"
     capture_text = str(terminal_text_excerpt or "").strip()
     extracted_text = _extract_onsite_capture_text_from_steps(route_steps)

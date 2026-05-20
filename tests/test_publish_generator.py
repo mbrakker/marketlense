@@ -7,6 +7,8 @@ from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from PIL import Image
+
 from src.contracts.publish import PublishRequest, PublishResolvedTerms
 from src.contracts.report_store import ReportMetadataUpsertRequest
 from src.generators import publish_generator as pg
@@ -337,6 +339,79 @@ def test_publish_html_rewrites_uploaded_images_to_media_proxy(
     assert "wp-content/uploads/cover.png" not in post_call.json_data["content"]
     assert "srcset=" not in post_call.json_data["content"]
     assert "sizes=" not in post_call.json_data["content"]
+
+
+def test_publish_html_optimizes_oversized_media_before_upload(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    assert_no_defaulted_required_fields,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_path = Path(settings.output_dir) / "large-report.html"
+    assets_dir = Path(settings.output_dir) / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    image_path = assets_dir / "large-cover.png"
+    Image.effect_noise((2200, 1600), 90).convert("RGB").save(image_path, format="PNG")
+    original_size = image_path.stat().st_size
+    html_path.write_text(
+        "<html><head><title>Report</title></head>"
+        "<body>Drive fileId: file123"
+        '<img src="assets/large-cover.png" alt="cover"></body></html>',
+        encoding="utf-8",
+    )
+
+    def _assert_optimized_media(call: RecordedHttpRequest) -> FakeHttpResponse:
+        filename, data, mime_type = call.files["file"]
+        assert filename == "large-cover.jpg"
+        assert mime_type == "image/jpeg"
+        assert isinstance(data, bytes)
+        assert data.startswith(b"\xff\xd8")
+        assert len(data) < original_size
+        return FakeHttpResponse.from_payload(
+            status_code=201,
+            payload={
+                "id": 56,
+                "source_url": "https://example.com/wp-content/uploads/large-cover.jpg",
+            },
+        )
+
+    wordpress_http.add(
+        "POST",
+        "https://example.com/wp-json/wp/v2/media",
+        _assert_optimized_media,
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/media/56",
+        status_code=200,
+        payload={"id": 56},
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    outcome = pg.publish_html(
+        PublishRequest(
+            schema_version="1.0",
+            html_path=str(html_path),
+            auth_header="Bearer token",
+            file_id="file123",
+            html_text=None,
+        ),
+        settings,
+        run_context,
+    )
+
+    assert_no_defaulted_required_fields(outcome)
+    assert outcome.status == "published"
+    post_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )[0]
+    assert post_call.json_data["featured_media"] == 56
 
 
 def test_publish_html_parallelizes_media_uploads_and_uses_request_auth_header(

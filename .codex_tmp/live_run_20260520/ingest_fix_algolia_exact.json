@@ -1,0 +1,41 @@
+[
+  {
+    "schema_version": "1.0",
+    "file_id": "1nlUXikmhL3sVKzp3TrjqEVVkrzCcy3zB",
+    "name": "multi-signal-ranking-transforming-ranking-for-ecommerce-search.pdf",
+    "md5": "21d25be395a195a837ac578ffa6f16a7",
+    "html_path": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf.html",
+    "status": "processed",
+    "error": null,
+    "vector_store_id": "vs_6a0cfa02e438819194b3a402e0a4fd5d",
+    "vector_store_status": "completed",
+    "indexed_at_utc": "1779235331",
+    "openai_file_id": "file-81KenHmfrpBtgTqwPQfLL5",
+    "evidence_packs": {
+      "doc_map": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\doc_map.json",
+      "scope": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\scope.json",
+      "methods": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\methods.json",
+      "findings": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\findings.json",
+      "limitations": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\limitations.json",
+      "quote_candidates": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\quote_candidates.json",
+      "report_context": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\report_context.json",
+      "context_category_fit": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\context_category_fit.json",
+      "artifacts": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\artifacts.json",
+      "validation": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\validation.json",
+      "artifacts_regen_attempt_1": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\artifacts_regen_attempt_1.json",
+      "validation_regen_attempt_1": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\validation_regen_attempt_1.json",
+      "analysis_vector_store": "out\\multi-signal-ranking-transforming-ranking-for-ecommerce-search-pdf\\report_analysis\\analysis_vector_store.json"
+    },
+    "vector_store_last_error": null,
+    "text_validation_status": "pass",
+    "text_validation_reason": "",
+    "text_validation_pages": [
+      1,
+      7,
+      9
+    ],
+    "doc_map_summary": null,
+    "ocr_fallback_used": true,
+    "ocr_pdf_path": "cache\\pdf_cache\\21d25be395a195a837ac578ffa6f16a7\\ocr_text_e23ab1e6909417af32cc1c042f215e100350a8a403d79755e7d8ce7c29644b8c.pdf"
+  }
+]

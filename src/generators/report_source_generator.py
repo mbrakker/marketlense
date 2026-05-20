@@ -11,6 +11,7 @@ from src.contracts.pdf_contents import (
     PdfContentsDetectionResponse,
 )
 from src.contracts.pdf_context import PdfContext, PdfContextBuildRequest
+from src.contracts.pdf_ocr import PdfOcrFallbackResponse
 from src.contracts.pdf_text import (
     PdfTextExtractRequest,
     PdfTextExtractResponse,
@@ -432,6 +433,52 @@ def _load_contents(
         return local_contents_page, local_contents_heading, local_contents_image
 
 
+def _build_text_status(
+    runtime: ReportRuntimeState, text_resp: PdfTextExtractResponse
+) -> TextStatus:
+    text_status: TextStatus = {
+        "schema_version": "1.0",
+        "text_density": float(text_resp.text_density or 0.0),
+        "density_threshold": float(
+            getattr(runtime.settings, "pdf_text_min_density", 0.0)
+        ),
+        "pages_sampled": text_resp.pages_extracted,
+        "char_count": text_resp.char_count,
+        "not_available": False,
+        "reason": "",
+        "native_sample_confidence_score": 0.0,
+        "native_density_confidence_score": 0.0,
+        "native_confidence_score": 0.0,
+        "native_confidence_threshold": float(
+            getattr(runtime.settings, "pdf_text_native_confidence_threshold", 0.55)
+        ),
+        "native_page_confidence_threshold": float(
+            getattr(
+                runtime.settings,
+                "pdf_text_native_page_confidence_threshold",
+                0.35,
+            )
+        ),
+        "low_confidence_pages": [],
+        "ocr_recommended": False,
+        "ocr_recommendation_reason": "",
+        "ocr_policy": str(
+            getattr(runtime.settings, "pdf_text_ocr_policy", "native_first_selective")
+            or "native_first_selective"
+        ),
+        "native_text_density": float(text_resp.text_density or 0.0),
+        "native_text_not_available": False,
+    }
+    if (
+        text_status["density_threshold"]
+        and text_status["text_density"] < text_status["density_threshold"]
+    ):
+        text_status["not_available"] = True
+        text_status["reason"] = "text_density_below_threshold"
+        text_status["native_text_not_available"] = True
+    return text_status
+
+
 def _load_text(
     runtime: ReportRuntimeState,
     *,
@@ -481,46 +528,7 @@ def _load_text(
             ctx=text_ctx,
             dependencies=dependencies,
         )
-    text_status: TextStatus = {
-        "schema_version": "1.0",
-        "text_density": float(text_resp.text_density or 0.0),
-        "density_threshold": float(
-            getattr(runtime.settings, "pdf_text_min_density", 0.0)
-        ),
-        "pages_sampled": text_resp.pages_extracted,
-        "char_count": text_resp.char_count,
-        "not_available": False,
-        "reason": "",
-        "native_sample_confidence_score": 0.0,
-        "native_density_confidence_score": 0.0,
-        "native_confidence_score": 0.0,
-        "native_confidence_threshold": float(
-            getattr(runtime.settings, "pdf_text_native_confidence_threshold", 0.55)
-        ),
-        "native_page_confidence_threshold": float(
-            getattr(
-                runtime.settings,
-                "pdf_text_native_page_confidence_threshold",
-                0.35,
-            )
-        ),
-        "low_confidence_pages": [],
-        "ocr_recommended": False,
-        "ocr_recommendation_reason": "",
-        "ocr_policy": str(
-            getattr(runtime.settings, "pdf_text_ocr_policy", "native_first_selective")
-            or "native_first_selective"
-        ),
-        "native_text_density": float(text_resp.text_density or 0.0),
-        "native_text_not_available": False,
-    }
-    if (
-        text_status["density_threshold"]
-        and text_status["text_density"] < text_status["density_threshold"]
-    ):
-        text_status["not_available"] = True
-        text_status["reason"] = "text_density_below_threshold"
-        text_status["native_text_not_available"] = True
+    text_status = _build_text_status(runtime, text_resp)
     logger.info(
         log_event(
             text_ctx,
@@ -538,6 +546,66 @@ def _load_text(
         )
     )
     return text_resp, text_status
+
+
+def _text_response_from_ocr_pages(
+    runtime: ReportRuntimeState,
+    ocr_result: PdfOcrFallbackResponse,
+) -> PdfTextExtractResponse:
+    pages = sorted(
+        ocr_result.ocr_response.pages,
+        key=lambda page: page.page_number,
+    )
+    chunks = []
+    for page in pages:
+        text = str(page.text or "").strip()
+        if text:
+            chunks.append(f"Source page {page.page_number}\n{text}")
+    raw_text = "\n\n".join(chunks)
+    text_out = raw_text[: max(runtime.settings.pdf_text_max_chars, 0)]
+    density = (len(raw_text) / float(len(pages))) if pages else 0.0
+    return PdfTextExtractResponse(
+        schema_version="1.0",
+        text=text_out,
+        pages_extracted=len(pages),
+        char_count=len(text_out),
+        text_density=density,
+    )
+
+
+def _select_ocr_text_response(
+    runtime: ReportRuntimeState,
+    *,
+    ocr_result: PdfOcrFallbackResponse,
+    rendered_text_resp: PdfTextExtractResponse,
+    rendered_text_status: TextStatus,
+) -> tuple[PdfTextExtractResponse, TextStatus]:
+    structured_text_resp = _text_response_from_ocr_pages(runtime, ocr_result)
+    if structured_text_resp.char_count > rendered_text_resp.char_count:
+        selected_resp = structured_text_resp
+        selected_status = _build_text_status(runtime, structured_text_resp)
+        source = "structured_ocr_pages"
+    else:
+        selected_resp = rendered_text_resp
+        selected_status = rendered_text_status
+        source = "rendered_ocr_pdf"
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="generator",
+            event="ocr_text_source_selected",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "source": source,
+                "structured_char_count": structured_text_resp.char_count,
+                "structured_text_density": structured_text_resp.text_density,
+                "rendered_char_count": rendered_text_resp.char_count,
+                "rendered_text_density": rendered_text_resp.text_density,
+            },
+        )
+    )
+    return selected_resp, selected_status
 
 
 def _raise_text_unextractable(
@@ -572,6 +640,119 @@ def _raise_text_unextractable(
             **extra_fields,
         },
     )
+
+
+def _validate_ocr_text_pages(
+    runtime: ReportRuntimeState,
+    *,
+    ocr_result: PdfOcrFallbackResponse,
+    text_status: TextStatus,
+) -> _NativeTextValidationResult:
+    pages = sorted(
+        ocr_result.ocr_response.pages,
+        key=lambda page: page.page_number,
+    )
+    if not pages:
+        _raise_text_unextractable(
+            runtime,
+            reason="no_ocr_pages",
+            pages=[],
+            extra_fields={"ocr_pdf_path": ocr_result.render_response.output_path},
+        )
+    text_pages = [page for page in pages if str(page.text or "").strip()]
+    text_page_numbers = [page.page_number for page in text_pages]
+    total_chars = sum(len(str(page.text or "").strip()) for page in pages)
+    blank_page_numbers = [
+        page.page_number for page in pages if not str(page.text or "").strip()
+    ]
+    sample_count = min(runtime.settings.pdf_text_sample_pages, len(pages))
+    validation_pages = text_page_numbers[:sample_count] or [
+        page.page_number for page in pages[:sample_count]
+    ]
+    logger.info(
+        log_event(
+            child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:text_sample"),
+            role="generator",
+            event="ocr_text_extractability_checked",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "validation_pages": validation_pages,
+                "text_page_count": len(text_pages),
+                "blank_page_count": len(blank_page_numbers),
+                "total_page_count": len(pages),
+                "char_count": total_chars,
+                "text_density": text_status["text_density"],
+                "density_threshold": text_status["density_threshold"],
+                "ocr_pdf_path": ocr_result.render_response.output_path,
+            },
+        )
+    )
+    if not text_pages:
+        _raise_text_unextractable(
+            runtime,
+            reason="no_text_in_ocr_pages",
+            pages=validation_pages,
+            extra_fields={
+                "ocr_pdf_path": ocr_result.render_response.output_path,
+                "char_count": total_chars,
+            },
+        )
+    sample_confidence_score = (
+        round(min(len(text_pages) / float(sample_count), 1.0), 3)
+        if sample_count
+        else 0.0
+    )
+    density_confidence_score = _density_confidence_score(
+        text_density=float(text_status["text_density"]),
+        density_threshold=float(text_status["density_threshold"]),
+    )
+    native_confidence_score = round(
+        (sample_confidence_score * 0.75) + (density_confidence_score * 0.25),
+        3,
+    )
+    reason = ""
+    if bool(text_status["not_available"]):
+        reason = "ocr_text_density_below_threshold"
+    return _NativeTextValidationResult(
+        schema_version="1.0",
+        status="fail" if reason else "pass",
+        reason=reason,
+        pages=validation_pages,
+        sample_confidence_score=sample_confidence_score,
+        density_confidence_score=density_confidence_score,
+        native_confidence_score=native_confidence_score,
+        low_confidence_pages=blank_page_numbers,
+        ocr_recommended=False,
+    )
+
+
+def _load_validated_ocr_text(
+    runtime: ReportRuntimeState,
+    *,
+    analysis_pdf_path: str,
+    ocr_result: PdfOcrFallbackResponse,
+    dependencies: ReportSourceDependencies,
+) -> tuple[PdfTextExtractResponse, TextStatus, _NativeTextValidationResult]:
+    rendered_text_resp, rendered_text_status = _load_text(
+        runtime,
+        analysis_pdf_path=analysis_pdf_path,
+        pdf_context_for_tasks=None,
+        cache_prefix="ocr_text",
+        dependencies=dependencies,
+    )
+    text_resp, text_status = _select_ocr_text_response(
+        runtime,
+        ocr_result=ocr_result,
+        rendered_text_resp=rendered_text_resp,
+        rendered_text_status=rendered_text_status,
+    )
+    ocr_validation = _validate_ocr_text_pages(
+        runtime,
+        ocr_result=ocr_result,
+        text_status=text_status,
+    )
+    return text_resp, text_status, ocr_validation
 
 
 def _density_confidence_score(*, text_density: float, density_threshold: float) -> float:
@@ -836,19 +1017,10 @@ def prepare_report_source(
         ocr_fallback_used = True
         ocr_pdf_path = analysis_pdf_path
         try:
-            text_resp, text_status = _load_text(
+            text_resp, text_status, ocr_validation = _load_validated_ocr_text(
                 runtime,
                 analysis_pdf_path=analysis_pdf_path,
-                pdf_context_for_tasks=None,
-                cache_prefix="ocr_text",
-                dependencies=dependencies,
-            )
-            ocr_validation = _validate_extractable_text(
-                runtime,
-                pdf_path=analysis_pdf_path,
-                page_count=info_resp.page_count,
-                pdf_context=None,
-                text_status=text_status,
+                ocr_result=ocr_result,
                 dependencies=dependencies,
             )
             text_validation_status = ocr_validation.status
@@ -920,21 +1092,29 @@ def prepare_report_source(
         analysis_pdf_path = ocr_result.render_response.output_path
         ocr_fallback_used = True
         ocr_pdf_path = analysis_pdf_path
-        text_resp, text_status = _load_text(
-            runtime,
-            analysis_pdf_path=analysis_pdf_path,
-            pdf_context_for_tasks=None,
-            cache_prefix="ocr_text",
-            dependencies=dependencies,
-        )
-        ocr_validation = _validate_extractable_text(
-            runtime,
-            pdf_path=analysis_pdf_path,
-            page_count=info_resp.page_count,
-            pdf_context=None,
-            text_status=text_status,
-            dependencies=dependencies,
-        )
+        try:
+            text_resp, text_status, ocr_validation = _load_validated_ocr_text(
+                runtime,
+                analysis_pdf_path=analysis_pdf_path,
+                ocr_result=ocr_result,
+                dependencies=dependencies,
+            )
+        except AppError as ocr_exc:
+            if ocr_exc.code != "pdf_text_unextractable":
+                raise
+            raise AppError(
+                code="pdf_text_ocr_failed",
+                message="OCR fallback produced no extractable text",
+                retryable=False,
+                context={
+                    "text_validation_status": "fail",
+                    "text_validation_reason": "ocr_output_unextractable",
+                    "text_validation_pages": list(
+                        ocr_exc.context.get("text_validation_pages") or []
+                    ),
+                    "ocr_pdf_path": analysis_pdf_path,
+                },
+            ) from ocr_exc
         text_validation_status = ocr_validation.status
         text_validation_reason = ocr_validation.reason
         text_validation_pages = ocr_validation.pages
@@ -986,20 +1166,11 @@ def prepare_report_source(
         analysis_pdf_path = ocr_result.render_response.output_path
         ocr_fallback_used = True
         ocr_pdf_path = analysis_pdf_path
-        text_resp, text_status = _load_text(
-            runtime,
-            analysis_pdf_path=analysis_pdf_path,
-            pdf_context_for_tasks=None,
-            cache_prefix="ocr_text",
-            dependencies=dependencies,
-        )
         try:
-            ocr_validation = _validate_extractable_text(
+            text_resp, text_status, ocr_validation = _load_validated_ocr_text(
                 runtime,
-                pdf_path=analysis_pdf_path,
-                page_count=info_resp.page_count,
-                pdf_context=None,
-                text_status=text_status,
+                analysis_pdf_path=analysis_pdf_path,
+                ocr_result=ocr_result,
                 dependencies=dependencies,
             )
         except AppError as ocr_exc:

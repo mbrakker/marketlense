@@ -1,0 +1,18 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://consumergoods.com/retail-and-consumer-go…  
+  Normalized URL            https://consumergoods.com/retail-and-consumer-go…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://assets1.consumergoods.com/direct-upload/…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\consumergoods.com\af…  
+  Drive uploads             uploaded:1TQiVkhjflf5UQjV8bXtEoP0zQkogV-1f         
+  Summary                   Fetch the report page HTML, extract the embedded   
+                            PDF link, and save the verified PDF locally.       
+                                                                               

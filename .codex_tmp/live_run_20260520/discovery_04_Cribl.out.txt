@@ -1,0 +1,20 @@
+               Publisher Inventory Discovery               
+                                                           
+  Field               Value                                
+ ───────────────────────────────────────────────────────── 
+  Publisher           Cribl                                
+  Insights URL        https://cribl.io/products/insights/  
+  Normalized URL      https://cribl.io/products/insights   
+  Current reports     40                                   
+  Previous reports    0                                    
+  Used memory route   yes                                  
+  Snapshot changed    no                                   
+  Run quality         medium                               
+  Run outcome         no_report_assets                     
+  Next route          browser_render                       
+                                                           
+   New Report URLs    
+                      
+  Page   Title   URL  
+ ──────────────────── 
+                      

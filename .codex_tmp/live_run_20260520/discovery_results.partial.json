@@ -1,0 +1,52 @@
+[
+  {
+    "id": 55,
+    "name": "McKinsey",
+    "insights_url": "https://www.mckinsey.com/featured-insights",
+    "returncode": 1,
+    "stdout_path": ".codex_tmp\\live_run_20260520\\discovery_01_McKinsey.out.txt",
+    "stderr_path": ".codex_tmp\\live_run_20260520\\discovery_01_McKinsey.err.txt",
+    "stdout_tail": null,
+    "stderr_tail": null
+  },
+  {
+    "id": 80,
+    "name": "TransUnion",
+    "insights_url": "https://www.transunion.com/insights",
+    "returncode": 1,
+    "stdout_path": ".codex_tmp\\live_run_20260520\\discovery_02_TransUnion.out.txt",
+    "stderr_path": ".codex_tmp\\live_run_20260520\\discovery_02_TransUnion.err.txt",
+    "stdout_tail": null,
+    "stderr_tail": null
+  },
+  {
+    "id": 86,
+    "name": "AXA",
+    "insights_url": "https://www.axa.com/en/commitments/publications-reportings-and-policies",
+    "returncode": 1,
+    "stdout_path": ".codex_tmp\\live_run_20260520\\discovery_03_AXA.out.txt",
+    "stderr_path": ".codex_tmp\\live_run_20260520\\discovery_03_AXA.err.txt",
+    "stdout_tail": null,
+    "stderr_tail": null
+  },
+  {
+    "id": 109,
+    "name": "Cribl",
+    "insights_url": "https://cribl.io/products/insights/",
+    "returncode": 0,
+    "stdout_path": ".codex_tmp\\live_run_20260520\\discovery_04_Cribl.out.txt",
+    "stderr_path": ".codex_tmp\\live_run_20260520\\discovery_04_Cribl.err.txt",
+    "stdout_tail": null,
+    "stderr_tail": null
+  },
+  {
+    "id": 110,
+    "name": "Cushman & Wakefield",
+    "insights_url": "https://www.cushmanwakefield.com/en/insights",
+    "returncode": 1,
+    "stdout_path": ".codex_tmp\\live_run_20260520\\discovery_05_Cushman_Wakefield.out.txt",
+    "stderr_path": ".codex_tmp\\live_run_20260520\\discovery_05_Cushman_Wakefield.err.txt",
+    "stdout_tail": null,
+    "stderr_tail": null
+  }
+]

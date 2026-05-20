@@ -1,0 +1,18 @@
+                                Report Download                                
+                                                                               
+  Field                     Value                                              
+ ───────────────────────────────────────────────────────────────────────────── 
+  URL                       https://assets1.consumergoods.com/direct-upload/…  
+  Normalized URL            https://assets1.consumergoods.com/direct-upload/…  
+  Route                     pdf_download                                       
+  Outcome                   downloaded                                         
+  Used memory route         no                                                 
+  Final page                https://assets1.consumergoods.com/direct-upload/…  
+  Encountered form fields                                                      
+  Identity fields added                                                        
+  File                      C:\Programing\Market                               
+                            lense\out\browser_downloads\assets1.consumergood…  
+  Drive uploads             uploaded:12OVKVo8UQkjFLlgUOFeOplyj9qmVk6-4         
+  Summary                   Open the direct PDF URL and save the returned PDF  
+                            file locally.                                      
+                                                                               

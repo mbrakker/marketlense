@@ -147,7 +147,7 @@ def openai_ocr_pdf(
             },
         )
     )
-    if not pages or not any(page.text.strip() for page in pages):
+    if not pages:
         raise AppError(
             code="openai_ocr_invalid_response",
             message="OpenAI OCR returned no structured pages",

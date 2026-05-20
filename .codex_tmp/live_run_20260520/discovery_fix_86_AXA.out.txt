@@ -1,0 +1,23 @@
+                         Publisher Inventory Discovery                         
+                                                                               
+  Field               Value                                                    
+ ───────────────────────────────────────────────────────────────────────────── 
+  Publisher           AXA                                                      
+  Insights URL        https://www.axa.com/en/commitments/publications-report…  
+  Normalized URL      https://www.axa.com/en/commitments/publications-report…  
+  Current reports     5                                                        
+  Previous reports    0                                                        
+  Used memory route   yes                                                      
+  Snapshot changed    yes                                                      
+  Run quality         high                                                     
+  Run outcome         accepted                                                 
+  Next route          http_parse                                               
+                                                                               
+                                New Report URLs                                
+                                                                               
+  Page   Title         URL                                                     
+ ───────────────────────────────────────────────────────────────────────────── 
+  1      Commitments   https://www.axa.com/commitments/publications-reportin…  
+  1      Commitments   https://www.axa.com/en/commitments/publications-repor…  
+  1      Investors     https://www.axa.com/en/investor/annual-and-interim-re…  
+                                                                               

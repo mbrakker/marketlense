@@ -3163,6 +3163,103 @@ def test_download_report_with_browser_use_materializes_claimed_onsite_capture(
     )
 
 
+def test_download_report_with_browser_use_fetches_terminal_html_for_missing_onsite_capture(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Opened the report page and extracted the on-site report body.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+    report_html = (
+        "<html><head><title>Consumer Search Behavior Research Report</title></head>"
+        "<body><article><h1>Consumer Search Behavior Research Report</h1>"
+        "<p>This research report analyzes how consumers discover local businesses.</p>"
+        "<p>"
+        + ("Local search behavior survey findings and analysis. " * 80)
+        + "</p></article></body></html>"
+    )
+
+    class MissingCaptureAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "onsite_report"
+            payload["route_family"] = "browser_onsite_report"
+            payload["final_page_url"] = (
+                "https://example.com/research/consumer-search-behavior/"
+            )
+            payload["resolved_target_url"] = payload["final_page_url"]
+            payload["terminal_text_excerpt"] = "Consumer search behavior research."
+            payload["onsite_capture_path"] = "extracted_content_0.md"
+            payload["onsite_capture_format"] = "markdown"
+            payload["onsite_page_count"] = 1
+            payload["onsite_completeness_status"] = "complete"
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "extract",
+                    "target_text": "Capture full on-site report content",
+                    "target_role": "page",
+                    "target_url": payload["final_page_url"],
+                    "result": "Content extracted to extracted_content_0.md",
+                }
+            ]
+            self.browser.url = payload["final_page_url"]
+            self.browser.title = "Consumer Search Behavior Research Report"
+            self.browser.html = ""
+
+            class MissingCaptureHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return MissingCaptureHistory()
+
+    runtime.Agent = MissingCaptureAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            content=report_html.encode("utf-8"),
+            headers={"content-type": "text/html; charset=utf-8"},
+            url="https://example.com/research/consumer-search-behavior/",
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/consumer-search-behavior",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_capture_path is not None
+    capture_path = Path(response.onsite_capture_path)
+    assert capture_path.exists()
+    assert capture_path.name == "consumer-search-behavior.html"
+    assert "Local search behavior survey findings" in capture_path.read_text(
+        encoding="utf-8"
+    )
+
+
 def test_download_report_with_browser_use_ignores_worker_metadata_when_materializing_onsite_extract(
     tmp_path: Path,
     run_context,

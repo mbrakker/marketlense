@@ -120,7 +120,44 @@ def test_openai_ocr_service_missing_key_raises_typed_error(
     )
 
 
-def test_openai_ocr_service_rejects_invalid_structured_response(
+def test_openai_ocr_service_accepts_blank_structured_page(
+    tmp_path: Path,
+    fake_openai,
+    assert_no_defaulted_required_fields,
+) -> None:
+    pdf_path = tmp_path / "scan.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 test")
+    fake_openai.add(
+        "responses.create",
+        FakeOpenAIResult(
+            output_text='{"pages":[{"page_number":1,"text":""}]}',
+            usage={"input_tokens": 10, "output_tokens": 2, "total_tool_calls": 0},
+            id="resp_invalid",
+        ),
+    )
+
+    response = openai_ocr_pdf(
+        OpenAIPdfOcrRequest(
+            schema_version="1.0",
+            api_key="openai-key",
+            pdf_path=str(pdf_path),
+            model="gpt-5-mini",
+            system_prompt="system",
+            user_prompt="user",
+            timeout_seconds=30.0,
+            cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+            cost_daily_path=str(tmp_path / "daily.json"),
+            model_pricing={},
+        ),
+        _ctx(),
+    )
+
+    assert response.request_id == "resp_invalid"
+    assert [(page.page_number, page.text) for page in response.pages] == [(1, "")]
+    assert_no_defaulted_required_fields(response)
+
+
+def test_openai_ocr_service_rejects_missing_structured_pages(
     tmp_path: Path,
     fake_openai,
     assert_app_error,
@@ -130,7 +167,7 @@ def test_openai_ocr_service_rejects_invalid_structured_response(
     fake_openai.add(
         "responses.create",
         FakeOpenAIResult(
-            output_text='{"pages":[{"page_number":1,"text":""}]}',
+            output_text='{"pages":[]}',
             usage={"input_tokens": 10, "output_tokens": 2, "total_tool_calls": 0},
             id="resp_invalid",
         ),
