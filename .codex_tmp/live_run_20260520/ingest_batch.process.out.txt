@@ -1,5 +1,0 @@
-Windows PowerShell
-(C) Корпорация Майкрософт (Microsoft Corporation). Все права защищены.
-
-Установите последнюю версию PowerShell для новых функций и улучшения! https://aka.ms/PSWindows
-

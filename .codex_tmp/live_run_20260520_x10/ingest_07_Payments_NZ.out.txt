@@ -1,9 +1,0 @@
-Loading settings...
-Running ingest pipeline...
-                               Processed Reports                               
-                                                                               
-  File                 ID                    MD5           HTML                
- ───────────────────────────────────────────────────────────────────────────── 
-  Payments_NZ_Envir…   1ZqyQClFRsdKFB3a9f…   4da1deb0d0:   out\payments-nz-e…  
-                                                                               
-Done: 1 file(s).

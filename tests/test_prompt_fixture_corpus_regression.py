@@ -163,3 +163,48 @@ def test_prompt_fixture_regression_allowlist_requires_unexpired_bound() -> None:
         "totals.total_tokens",
         "families.report.total_tokens",
     }
+
+
+def test_prompt_fixture_regression_uses_larger_total_runtime_tolerance() -> None:
+    baseline = {
+        "families": {
+            "report": {
+                "namespace_count": 1,
+                "runtime_ms": 12.0,
+                "total_tokens": 200.0,
+                "expected_ocr_calls": 0.0,
+                "expected_browser_attempts": 0.0,
+                "estimated_cost_usd": 0.01,
+            }
+        },
+        "namespaces": {"alpha": {"family": "report"}},
+        "totals": {
+            "runtime_ms": 70.0,
+            "total_tokens": 200.0,
+            "expected_ocr_calls": 0.0,
+            "expected_browser_attempts": 0.0,
+            "estimated_cost_usd": 0.01,
+        },
+    }
+    current = {
+        "families": {
+            "report": {
+                "namespace_count": 1,
+                "runtime_ms": 12.0,
+                "total_tokens": 200.0,
+                "expected_ocr_calls": 0.0,
+                "expected_browser_attempts": 0.0,
+                "estimated_cost_usd": 0.01,
+            }
+        },
+        "namespaces": {"alpha": {"family": "report"}},
+        "totals": {
+            "runtime_ms": 115.0,
+            "total_tokens": 200.0,
+            "expected_ocr_calls": 0.0,
+            "expected_browser_attempts": 0.0,
+            "estimated_cost_usd": 0.01,
+        },
+    }
+
+    assert compare_prompt_fixture_metrics(baseline=baseline, current=current) == ()

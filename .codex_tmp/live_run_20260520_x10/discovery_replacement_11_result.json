@@ -1,9 +1,0 @@
-{
-  "id": 214,
-  "name": "WPP Media",
-  "insights_url": "https://www.wppmedia.com/thought-leadership/research-business-intelligence",
-  "returncode": 0,
-  "duration_seconds": 16.23,
-  "stdout": ".codex_tmp\\live_run_20260520_x10\\discovery_replacement_11_WPP_Media.out.txt",
-  "stderr": ".codex_tmp\\live_run_20260520_x10\\discovery_replacement_11_WPP_Media.err.txt"
-}

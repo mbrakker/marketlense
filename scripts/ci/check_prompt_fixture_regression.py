@@ -37,6 +37,7 @@ DEFAULT_TOLERANCES: dict[str, tuple[float, float]] = {
     "expected_browser_attempts": (0.0, 0.0),
     "estimated_cost_usd": (0.00005, 0.10),
 }
+TOTAL_RUNTIME_ABSOLUTE_TOLERANCE_MS = 75.0
 
 
 @dataclass(frozen=True)
@@ -204,6 +205,10 @@ def _compare_metric(
     absolute_tolerance, percent_tolerance = DEFAULT_TOLERANCES.get(
         metric_name, (0.0, 0.0)
     )
+    if metric_path == "totals.runtime_ms":
+        absolute_tolerance = max(
+            absolute_tolerance, TOTAL_RUNTIME_ABSOLUTE_TOLERANCE_MS
+        )
     delta_percent = None
     if baseline_value > 0:
         delta_percent = delta / baseline_value

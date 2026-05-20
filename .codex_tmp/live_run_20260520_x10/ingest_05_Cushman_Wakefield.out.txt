@@ -1,9 +1,0 @@
-Loading settings...
-Running ingest pipeline...
-                               Processed Reports                               
-                                                                               
-  File                 ID                    MD5           HTML                
- ───────────────────────────────────────────────────────────────────────────── 
-  Asia_Pacific_Data…   1g6X2LTCUAUu6YjM2s…   7915ff001e:   out\asia-pacific-…  
-                                                                               
-Done: 1 file(s).

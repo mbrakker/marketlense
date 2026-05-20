@@ -1,9 +1,0 @@
-{
-  "publisher": "Simon-Kucher",
-  "folder_id": "18ovwe6DMyYV-2iLqUg05aOa8W8Uhb80l",
-  "limit": 1,
-  "returncode": 0,
-  "duration_seconds": 268.62,
-  "stdout": ".codex_tmp\\live_run_20260520_x10\\ingest_04b_Simon-Kucher.out.txt",
-  "stderr": ".codex_tmp\\live_run_20260520_x10\\ingest_04b_Simon-Kucher.err.txt"
-}

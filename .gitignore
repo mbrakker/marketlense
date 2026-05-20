@@ -48,6 +48,7 @@ out/
 cache/
 debug/
 state/
+.codex_tmp/
 tools/*
 !tools/browser-use/
 !tools/browser-use/**
@@ -86,3 +87,4 @@ logs/*.json
 # Local artifacts
 sa.json
 src/config/app.local.yaml
+src.zip

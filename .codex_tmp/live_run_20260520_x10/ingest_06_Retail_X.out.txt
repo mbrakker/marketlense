@@ -1,9 +1,0 @@
-Loading settings...
-Running ingest pipeline...
-                               Processed Reports                               
-                                                                               
-  File                 ID                    MD5           HTML                
- ───────────────────────────────────────────────────────────────────────────── 
-  RetailX_Global_Su…   17zylzMiAOAAWOVJU5…   4d4dda1ba9:   out\retailx-globa…  
-                                                                               
-Done: 1 file(s).

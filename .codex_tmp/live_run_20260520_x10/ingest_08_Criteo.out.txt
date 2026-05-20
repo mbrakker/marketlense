@@ -1,9 +1,0 @@
-Loading settings...
-Running ingest pipeline...
-                               Processed Reports                               
-                                                                               
-  File                 ID                    MD5           HTML                
- ───────────────────────────────────────────────────────────────────────────── 
-  Guide-Coronavirus…   1_d98OqzAtn-44sUUe…   4ff6bcff4e:   out\guide-coronav…  
-                                                                               
-Done: 1 file(s).

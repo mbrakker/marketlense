@@ -1,9 +1,0 @@
-Loading settings...
-Running ingest pipeline...
-                               Processed Reports                               
-                                                                               
-  File                 ID                   MD5           HTML                 
- ───────────────────────────────────────────────────────────────────────────── 
-  From-AI-To-LMICs-…   1ob46VYjJJs4hBbxj…   c6ad7c33cd:   out\from-ai-to-lmi…  
-                                                                               
-Done: 1 file(s).

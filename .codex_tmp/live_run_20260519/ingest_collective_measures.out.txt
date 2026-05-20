@@ -1,9 +1,0 @@
-Loading settings...
-Running ingest pipeline...
-                               Processed Reports                               
-                                                                               
-  File                 ID                    MD5           HTML                
- ───────────────────────────────────────────────────────────────────────────── 
-  CM_AgencyFactShee…   1NRM3hEHNRGv_GEfaZ…   823685613b:   out\cm-agencyfact…  
-                                                                               
-Done: 1 file(s).
