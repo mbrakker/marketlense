@@ -1,0 +1,122 @@
+{
+  "schema": "DocMap-1.0",
+  "title": "Generative Realities — Dentsu Creative Trends 2026",
+  "publisher": "Dentsu Creative",
+  "overview": "A trends report framing what’s trending, timely, and timeless amid an algorithm-accelerated culture cycle, highlighting cost-of-living pressures, declining social connectedness, and complex relationships with technology and nostalgia. ",
+  "sections": [
+    {
+      "id": "trend-1",
+      "title": "Escape Velocity",
+      "summary": "Consumers seek escape from adult responsibilities through fantasies, fandoms, and ‘cuteification,’ with comfort tinged by uncertainty. ",
+      "subsections": [
+        {
+          "title": "Adventures in Toyland",
+          "summary": "The rise of adult collectibles. "
+        },
+        {
+          "title": "Fantastical Fandoms",
+          "summary": "The power of immersive fictional universes. "
+        },
+        {
+          "title": "The Cult of Cute",
+          "summary": "The unstoppable cuteification of culture. "
+        }
+      ],
+      "data_points": [
+        "70% agree modern life is so stressful they need to escape; 63% say cute products/packaging bring joy; 36% define themselves by fandoms. "
+      ]
+    },
+    {
+      "id": "trend-2",
+      "title": "Electric Dreams",
+      "summary": "As AI accelerates, emotional ties to AI deepen, ‘slop’ content rises, and slow, crafted media gains appeal; AI influencers raise ethics and disclosure questions. ",
+      "subsections": [
+        {
+          "title": "The AI Situationship",
+          "summary": "Intense pseudo-relationships formed with AI. "
+        },
+        {
+          "title": "Slowing the Slop",
+          "summary": "A backlash against mass-produced ‘slop.’ "
+        },
+        {
+          "title": "AI-Influencers Assemble",
+          "summary": "The ethics of hyper-realistic AI influencers. "
+        }
+      ],
+      "data_points": [
+        "53% use AI-enabled chat in personal life; 51% ask it questions once asked of humans; 32% sometimes feel an AI chatbot understands them better than friends/family; 46% confident spotting AI content; 43% not interested in following AI influencers. "
+      ],
+      "implications": [
+        "Avoiding ‘workslop,’ prioritizing how interactions feel, and designing for difference at scale. "
+      ]
+    },
+    {
+      "id": "trend-3",
+      "title": "Trad Lives",
+      "summary": "A turn to nature, hyperlocal living, and renewed spirituality; the countryside and craft re-emerge as aspirational. ",
+      "subsections": [
+        {
+          "title": "The Land Grab",
+          "summary": "A powerful desire to connect with the earth. "
+        },
+        {
+          "title": "No Place Like Home",
+          "summary": "The rise of hyperlocal. "
+        },
+        {
+          "title": "Spiritual Quests",
+          "summary": "A newfound interest in religion and spirituality. "
+        }
+      ],
+      "data_points": [
+        "Examples span foraging, farmstays, gardening, and a rise in young National Trust members; brands and culture foreground soil, fungi, and fermentation. "
+      ]
+    },
+    {
+      "id": "trend-4",
+      "title": "Alone Together",
+      "summary": "Loneliness and fragmentation spur new ways to socialize, NoLo ‘natural highs,’ and influencer/streamer roles as connective tissue. ",
+      "subsections": [
+        {
+          "title": "Village People",
+          "summary": "New forms of socializing rebuild the ‘village.’ "
+        },
+        {
+          "title": "Natural Highs",
+          "summary": "New behaviors require new possibilities (e.g., NoLo, daytime raves). "
+        },
+        {
+          "title": "Islands in the Stream",
+          "summary": "Creators provide much-needed connection amid fragmented media. "
+        }
+      ],
+      "implications": [
+        "Everyday party people; Empower the connectors; Connections that count. "
+      ]
+    },
+    {
+      "id": "trend-5",
+      "title": "Analog Futures",
+      "summary": "Younger generations embrace simpler, tactile devices and anti-algorithm strategies; nostalgia and craft regain cultural value. ",
+      "subsections": [
+        {
+          "title": "Neo-Luddites",
+          "summary": "The desire to disconnect from devices. "
+        },
+        {
+          "title": "The Anti-Algorithm",
+          "summary": "A search for taste, individuality, serendipity. "
+        },
+        {
+          "title": "The Way We Were",
+          "summary": "Nostalgia for simpler, more connected times. "
+        }
+      ],
+      "data_points": [
+        "40% say the online world feels so stressful they try to switch off; 50% try to ration their own screen time. "
+      ]
+    }
+  ],
+  "conclusion": "Macro forces—cost-of-living pressures, fragmentation, and AI acceleration—simultaneously intensify tech ties and drive reconnection with the outdoors and craft. To lead, solve for the trend behind the trend and win with the algorithm, not follow it. "
+}

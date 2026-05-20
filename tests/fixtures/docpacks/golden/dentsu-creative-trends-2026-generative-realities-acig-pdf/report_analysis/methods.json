@@ -1,0 +1,20 @@
+{
+  "methods": [
+    {
+      "name": "Dentsu Creative Quantitative Research 2025",
+      "description": "Global online survey of consumers (n≈20k across 18 markets) that provides the statistical backbone for the report – e.g., 53 % of respondents say they use AI-enabled chat platforms in their personal lives and 32 % feel their chatbot sometimes understands them better than friends/family.",
+      "citations": [
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "Desk Research & Cultural Trend Scanning",
+      "description": "Continuous secondary research that aggregates brand case-studies, media coverage and cultural signals into themed trend narratives (Escape Velocity, Electric Dreams, Trad Lives, Alone Together, Analog Futures). Examples include the rise of ultra-realistic AI influencers and the growth of individual streamers winning sports-broadcast rights.",
+      "citations": [
+        "",
+        ""
+      ]
+    }
+  ]
+}

@@ -1,0 +1,541 @@
+{
+  "tldr": "Consumers are simultaneously deepening ties with AI and seeking analog, nature-led and community-grounded antidotes to stress, pushing brands to win with—rather than follow—the algorithm.",
+  "title": "DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG",
+  "insights": [
+    "AI chat is mainstream: 53% use it in personal life, rising to 70% among Gen Z.",
+    "Emotional bonds with chatbots: 32% sometimes feel an AI chatbot understands them better than friends/family (46% Millennials; 42% Gen Z).",
+    "Escapism is widespread: 70% say modern life is so stressful they need to escape; 63% say cute products bring joy; 36% define themselves by fandoms.",
+    "Pushback against constant connectivity: 40% try to switch off and 50% ration screen time; 47% of UK 16–21s would prefer a pre‑internet childhood.",
+    "Reconnection with nature: the UK National Trust saw a 39% rise in 18–25-year-old members last year, signaling youth interest in the outdoors and hyperlocal experiences."
+  ],
+  "quote": {
+    "text": "With ultra-realistic AI influencers and creators on the increase, fascinating ethical dilemmas around copyright, ownership and disclosure emerge.",
+    "author": "Unknown",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "The most common use of AI platfor | ms today noted in our survey is for practical support and advice - | Overall, w\n40% of global respondent",
+    "evidence": "The most common use of AI platfor | ms today noted in our survey is for practical support and advice - | Overall, w\n40% of global respondents who use | AI in their personal lives use it “To learn about a specific topic.” | guidance,\nHowever, significant generational di | fferences emerge. Gen Z respondents using AI in their personal | practical",
+    "schema_version": "1.0"
+  },
+  "commentary": "Generative Realities frames an algorithm-accelerated culture cycle shaped by cost-of-living pressures, declining social connectedness, and complex relationships with technology and nostalgia. Consumers pursue ‘Escape Velocity’ through cuteification, collectibles and fandoms, while ‘Electric Dreams’ captures deepening emotional ties to AI amid low confidence in spotting AI content and rising ethics/disclosure questions around hyper-realistic AI influencers. In parallel, ‘Trad Lives’ and ‘Alone Together’ reveal a pivot toward nature, hyperlocal living, spirituality, and new social formats and NoLo ‘natural highs,’ with creators acting as connective tissue across fragmented media. ‘Analog Futures’ shows younger cohorts embracing simpler, tactile devices and anti-algorithm strategies; to lead, the report urges avoiding ‘workslop,’ designing for difference at scale, and solving for the trend behind the trend to win with the algorithm, not follow it.",
+  "source": "",
+  "publisher": "",
+  "taxonomy": [
+    "Generative AI and AI agents",
+    "ai",
+    "ai_agents",
+    "ar_vr",
+    "immersive_experiences",
+    "Creator economy and creator-led content",
+    "social_commerce",
+    "user_generated_content",
+    "consumer_trends"
+  ],
+  "categories": [
+    "ai_automation",
+    "consumer_behavior",
+    "social_video_creator"
+  ],
+  "region": "",
+  "time_period": "2026",
+  "contents_page_number": 0,
+  "contents_heading": "",
+  "_figure_image": "",
+  "_figure_gallery": [
+    "dentsu-creative-trends-2026-generative-realities-acig-pdf/slices/dentsu-creative-trends-2026-generative-realities-acig-pdf.png",
+    "dentsu-creative-trends-2026-generative-realities-acig-pdf/slices/dentsu-creative-trends-2026-generative-realities-acig-pdf1.png",
+    "dentsu-creative-trends-2026-generative-realities-acig-pdf/slices/dentsu-creative-trends-2026-generative-realities-acig-pdf2.png"
+  ],
+  "_figure_top": "dentsu-creative-trends-2026-generative-realities-acig-pdf/slices/dentsu-creative-trends-2026-generative-realities-acig-pdf.png",
+  "_contents_image": "",
+  "_vector_store_id": "vs_698262bbc5cc8191a1429a1cf26e1981",
+  "_evidence_packs": {
+    "doc_map": "out\\dentsu-creative-trends-2026-generative-realities-acig-pdf\\report_analysis\\doc_map.json",
+    "scope": "out\\dentsu-creative-trends-2026-generative-realities-acig-pdf\\report_analysis\\scope.json",
+    "methods": "out\\dentsu-creative-trends-2026-generative-realities-acig-pdf\\report_analysis\\methods.json",
+    "findings": "out\\dentsu-creative-trends-2026-generative-realities-acig-pdf\\report_analysis\\findings.json",
+    "limitations": "out\\dentsu-creative-trends-2026-generative-realities-acig-pdf\\report_analysis\\limitations.json",
+    "quote_candidates": "out\\dentsu-creative-trends-2026-generative-realities-acig-pdf\\report_analysis\\quote_candidates.json",
+    "artifacts": "out\\dentsu-creative-trends-2026-generative-realities-acig-pdf\\report_analysis\\artifacts.json",
+    "validation": "out\\dentsu-creative-trends-2026-generative-realities-acig-pdf\\report_analysis\\validation.json"
+  },
+  "_text_density": 0.0,
+  "_text_pages_sampled": 0,
+  "_text_char_count": 0,
+  "_text_not_available": false,
+  "schema_version": "1.1",
+  "artifacts": {
+    "schema_version": "1.0",
+    "toc_topics": [
+      "Escape Velocity fantasies and fandoms",
+      "Electric Dreams emotional AI and slop",
+      "Trad Lives nature, hyperlocal, spirituality",
+      "Alone Together new social and NoLo",
+      "Analog Futures anti-algorithm nostalgia"
+    ],
+    "summary": {
+      "tldr": "Consumers are simultaneously deepening ties with AI and seeking analog, nature-led and community-grounded antidotes to stress, pushing brands to win with—rather than follow—the algorithm.",
+      "executive_summary": "Generative Realities frames an algorithm-accelerated culture cycle shaped by cost-of-living pressures, declining social connectedness, and complex relationships with technology and nostalgia. Consumers pursue ‘Escape Velocity’ through cuteification, collectibles and fandoms, while ‘Electric Dreams’ captures deepening emotional ties to AI amid low confidence in spotting AI content and rising ethics/disclosure questions around hyper-realistic AI influencers. In parallel, ‘Trad Lives’ and ‘Alone Together’ reveal a pivot toward nature, hyperlocal living, spirituality, and new social formats and NoLo ‘natural highs,’ with creators acting as connective tissue across fragmented media. ‘Analog Futures’ shows younger cohorts embracing simpler, tactile devices and anti-algorithm strategies; to lead, the report urges avoiding ‘workslop,’ designing for difference at scale, and solving for the trend behind the trend to win with the algorithm, not follow it.",
+      "claim_evidence_map": [
+        {
+          "claim": "Escapism via cuteification, collectibles, and fandoms is widespread.",
+          "evidence_id": "trend-1",
+          "evidence": "70% agree modern life is so stressful they need to escape; 63% say cute products/packaging bring joy; 36% define themselves by fandoms.",
+          "pages": []
+        },
+        {
+          "claim": "Emotional ties to AI are deepening while confidence in spotting AI content remains modest.",
+          "evidence_id": "trend-2",
+          "evidence": "53% use AI-enabled chat in personal life; 51% ask it questions once asked of humans; 32% sometimes feel an AI chatbot understands them better than friends/family; 46% confident spotting AI content.",
+          "pages": []
+        },
+        {
+          "claim": "Consumers are turning to nature, locality, and spirituality as grounding forces.",
+          "evidence_id": "trad_lives",
+          "evidence": "75% globally are drawn to spending more time in nature and 64% to traditional values.",
+          "pages": []
+        },
+        {
+          "claim": "Loneliness and fragmentation are catalyzing new social formats and NoLo ‘natural highs,’ with creators acting as connective tissue.",
+          "evidence_id": "trend-4",
+          "evidence": "Loneliness and fragmentation spur new ways to socialize, NoLo ‘natural highs,’ and influencer/streamer roles as connective tissue.",
+          "pages": []
+        },
+        {
+          "claim": "Younger generations are adopting analog and anti-algorithm behaviors.",
+          "evidence_id": "trend-5",
+          "evidence": "40% say the online world feels so stressful they try to switch off; 50% try to ration their own screen time.",
+          "pages": []
+        }
+      ]
+    },
+    "insights_candidates": [
+      {
+        "id": "ins-001-electric-chat-uptake",
+        "text": "AI-enabled chat is already mainstream: 53% of respondents report using AI chat in their personal lives, rising to 70% among Gen Z.",
+        "evidence_id": "electric_dreams",
+        "evidence": "53% of respondents say they are using AI-enabled chat in their personal lives; rises to 70% among Gen Z. ",
+        "metric": {
+          "value": "53",
+          "unit": "%",
+          "trend": "increasing",
+          "timeframe": "2025 (Dentsu Creative Quantitative Research)",
+          "geography": "Global (18 markets)",
+          "segment": "All respondents; Gen Z subgroup noted",
+          "sample_size": "≈20,000",
+          "confidence": "0.85"
+        },
+        "pages": [],
+        "score": 0.95
+      },
+      {
+        "id": "ins-002-ai-emotional-ties",
+        "text": "Many users form emotionally significant bonds with chatbots: 32% say they sometimes feel an AI chatbot understands them better than friends/family (46% Millennials; 42% Gen Z).",
+        "evidence_id": "electric_dreams",
+        "evidence": "32% agree “I sometimes feel my AI chatbot understands me better than my friends and family”, rising to 46% among Millennials and 42% among Gen Z. ",
+        "metric": {
+          "value": "32",
+          "unit": "%",
+          "trend": "substantial (notable among younger cohorts)",
+          "timeframe": "2025 (Dentsu Creative Quantitative Research)",
+          "geography": "Global (18 markets)",
+          "segment": "Overall; Millennials and Gen Z highlighted",
+          "sample_size": "≈20,000",
+          "confidence": "0.82"
+        },
+        "pages": [],
+        "score": 0.92
+      },
+      {
+        "id": "ins-003-ai-content-detection-gap",
+        "text": "Less than half (46%) of respondents feel confident they can spot AI-generated content, with a wide generational gap (64% Gen Z vs 24% Boomers).",
+        "evidence_id": "electric_dreams",
+        "evidence": "Just 46% of respondents are confident they can spot AI-generated content; 64% of Gen Z vs 24% of Boomers. ",
+        "metric": {
+          "value": "46",
+          "unit": "%",
+          "trend": "concern / vulnerability",
+          "timeframe": "2025 (Dentsu Creative Quantitative Research)",
+          "geography": "Global (18 markets)",
+          "segment": "All respondents; generational gap noted",
+          "sample_size": "≈20,000",
+          "confidence": "0.8"
+        },
+        "pages": [],
+        "score": 0.9
+      },
+      {
+        "id": "ins-004-resistance-ai-influencers",
+        "text": "A sizable share of consumers resist AI influencers: 43% say they aren’t interested in following AI-generated influencers.",
+        "evidence_id": "electric_dreams",
+        "evidence": "43% agree “I’m not interested in following AI-generated influencers”. ",
+        "metric": {
+          "value": "43",
+          "unit": "%",
+          "trend": "resistant / cautious",
+          "timeframe": "2025 (Dentsu Creative Quantitative Research)",
+          "geography": "Global (markets vary: India/China more receptive; UK/Spain/Japan more resistant)",
+          "segment": "All respondents; market-level differences noted",
+          "sample_size": "≈20,000",
+          "confidence": "0.8"
+        },
+        "pages": [],
+        "score": 0.82
+      },
+      {
+        "id": "ins-005-escape-velocity-cute-fandom",
+        "text": "Escape behaviors are widespread: major shares say modern life is stressful (70%), cute products bring joy (63%), and 36% define themselves by fandoms.",
+        "evidence_id": "escape_velocity",
+        "evidence": "Data points cited for Escape Velocity include: 70% agree modern life is so stressful they need to escape; 63% say cute products/packaging bring joy; 36% define themselves by fandoms.  ",
+        "metric": {
+          "value": "70",
+          "unit": "%",
+          "trend": "high prevalence of escapism",
+          "timeframe": "2025 (Dentsu Creative Trends 2026 framing)",
+          "geography": "Global (report-level)",
+          "segment": "Primarily Gen Z & Millennials called out in narrative",
+          "sample_size": "≈20,000 (survey backbone)",
+          "confidence": "0.78"
+        },
+        "pages": [],
+        "score": 0.88
+      },
+      {
+        "id": "ins-006-analog-futures-disconnect",
+        "text": "Pushback against constant connectivity is significant: 40% try to switch off as much as possible and 50% try to ration their screen time (47% of UK 16–21s would prefer a pre-internet childhood).",
+        "evidence_id": "analog_futures",
+        "evidence": "40% agree “The online world feels so stressful that I try to switch off”; 50% agree “I try to ration my own screen time”; 47% of 16–21-year-old Brits would prefer to grow up in a pre-internet era.  ",
+        "metric": {
+          "value": "40",
+          "unit": "%",
+          "trend": "growing anti-connectivity / neo-Luddite interest",
+          "timeframe": "2025 (Dentsu Creative Quantitative Research & cited sources)",
+          "geography": "Global headline; UK stat for 16–21 cohort",
+          "segment": "Younger cohorts (Gen Z, 16–21 UK subgroup)",
+          "sample_size": "≈20,000 (survey backbone); BSI source for UK stat",
+          "confidence": "0.8"
+        },
+        "pages": [],
+        "score": 0.86
+      },
+      {
+        "id": "ins-007-trad-lives-nature-reconnection",
+        "text": "Reconnection with nature is measurable: the UK National Trust reported a 39% rise in 18–25-year-old members last year, illustrating youth-driven interest in outdoors and hyperlocal experiences.",
+        "evidence_id": "trad_lives",
+        "evidence": "The National Trust reported a 39% rise in 18–25-year-old members last year, reflecting youth appeal of nature-based activities. ",
+        "metric": {
+          "value": "39",
+          "unit": "%",
+          "trend": "notable increase (youth engagement with nature)",
+          "timeframe": "reported in the period prior to the 2026 Trends report (\"last year\" as cited)",
+          "geography": "UK (National Trust membership stat)",
+          "segment": "18–25-year-olds (UK)",
+          "sample_size": "",
+          "confidence": "0.75"
+        },
+        "pages": [],
+        "score": 0.78
+      }
+    ],
+    "insights_final": [
+      {
+        "id": "ins-001-electric-chat-uptake",
+        "text": "AI chat is mainstream: 53% use it in personal life, rising to 70% among Gen Z.",
+        "evidence_id": "electric_dreams",
+        "evidence": "53% of respondents say they are using AI-enabled chat in their personal lives; rises to 70% among Gen Z. ",
+        "metric": {
+          "value": "53",
+          "unit": "%",
+          "trend": "increasing",
+          "timeframe": "2025 (Dentsu Creative Quantitative Research)",
+          "geography": "Global (18 markets)",
+          "segment": "All respondents; Gen Z subgroup noted",
+          "sample_size": "≈20,000",
+          "confidence": "0.85"
+        },
+        "pages": []
+      },
+      {
+        "id": "ins-002-ai-emotional-ties",
+        "text": "Emotional bonds with chatbots: 32% sometimes feel an AI chatbot understands them better than friends/family (46% Millennials; 42% Gen Z).",
+        "evidence_id": "electric_dreams",
+        "evidence": "32% agree “I sometimes feel my AI chatbot understands me better than my friends and family”, rising to 46% among Millennials and 42% among Gen Z. ",
+        "metric": {
+          "value": "32",
+          "unit": "%",
+          "trend": "substantial (notable among younger cohorts)",
+          "timeframe": "2025 (Dentsu Creative Quantitative Research)",
+          "geography": "Global (18 markets)",
+          "segment": "Overall; Millennials and Gen Z highlighted",
+          "sample_size": "≈20,000",
+          "confidence": "0.82"
+        },
+        "pages": []
+      },
+      {
+        "id": "ins-005-escape-velocity-cute-fandom",
+        "text": "Escapism is widespread: 70% say modern life is so stressful they need to escape; 63% say cute products bring joy; 36% define themselves by fandoms.",
+        "evidence_id": "escape_velocity",
+        "evidence": "Data points cited for Escape Velocity include: 70% agree modern life is so stressful they need to escape; 63% say cute products/packaging bring joy; 36% define themselves by fandoms.  ",
+        "metric": {
+          "value": "70",
+          "unit": "%",
+          "trend": "high prevalence of escapism",
+          "timeframe": "2025 (Dentsu Creative Trends 2026 framing)",
+          "geography": "Global (report-level)",
+          "segment": "Primarily Gen Z & Millennials called out in narrative",
+          "sample_size": "≈20,000 (survey backbone)",
+          "confidence": "0.78"
+        },
+        "pages": []
+      },
+      {
+        "id": "ins-006-analog-futures-disconnect",
+        "text": "Pushback against constant connectivity: 40% try to switch off and 50% ration screen time; 47% of UK 16–21s would prefer a pre‑internet childhood.",
+        "evidence_id": "analog_futures",
+        "evidence": "40% agree “The online world feels so stressful that I try to switch off”; 50% agree “I try to ration my own screen time”; 47% of 16–21-year-old Brits would prefer to grow up in a pre-internet era.  ",
+        "metric": {
+          "value": "40",
+          "unit": "%",
+          "trend": "growing anti-connectivity / neo-Luddite interest",
+          "timeframe": "2025 (Dentsu Creative Quantitative Research & cited sources)",
+          "geography": "Global headline; UK stat for 16–21 cohort",
+          "segment": "Younger cohorts (Gen Z, 16–21 UK subgroup)",
+          "sample_size": "≈20,000 (survey backbone); BSI source for UK stat",
+          "confidence": "0.8"
+        },
+        "pages": []
+      },
+      {
+        "id": "ins-007-trad-lives-nature-reconnection",
+        "text": "Reconnection with nature: the UK National Trust saw a 39% rise in 18–25-year-old members last year, signaling youth interest in the outdoors and hyperlocal experiences.",
+        "evidence_id": "trad_lives",
+        "evidence": "The National Trust reported a 39% rise in 18–25-year-old members last year, reflecting youth appeal of nature-based activities. ",
+        "metric": {
+          "value": "39",
+          "unit": "%",
+          "trend": "notable increase (youth engagement with nature)",
+          "timeframe": "reported in the period prior to the 2026 Trends report (\"last year\" as cited)",
+          "geography": "UK (National Trust membership stat)",
+          "segment": "18–25-year-olds (UK)",
+          "sample_size": "",
+          "confidence": "0.75"
+        },
+        "pages": []
+      }
+    ],
+    "quotes_final": [
+      {
+        "text": "With ultra-realistic AI influencers and creators on the increase, fascinating ethical dilemmas around copyright, ownership and disclosure emerge.",
+        "speaker": "Unknown",
+        "citation": "Trend 2 — Electric Dreams / AI-Influencers Assemble — DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG.pdf ",
+        "page": 19,
+        "evidence_id": "quote_1"
+      },
+      {
+        "text": "The rise of “slop” - low-quality, mass-produced content - is accelerating so quickly that platforms from YouTube to Spotify have been forced to take action to protect the integrity of the user experience.",
+        "speaker": "Unknown",
+        "citation": "Trend 2 — Electric Dreams / Slowing the Slop — DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG.pdf ",
+        "page": 14,
+        "evidence_id": "quote_2"
+      },
+      {
+        "text": "I sometimes feel my AI chatbot understands me better than my friends and family.",
+        "speaker": "Unknown",
+        "citation": "Trend 2 — Electric Dreams / The AI Situationship — DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG.pdf ",
+        "page": 15,
+        "evidence_id": "quote_3"
+      },
+      {
+        "text": "As AI accelerates, we see new patterns in how consumers are engaging with AI-generated content, advice and influencers.",
+        "speaker": "Unknown",
+        "citation": "Trend 2 — Electric Dreams / Introduction to subtrends — DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG.pdf ",
+        "page": 14,
+        "evidence_id": "quote_4"
+      }
+    ],
+    "expert_comment": "The signals point to a split-screen consumer: deeper emotional ties to AI alongside a pivot to analog, nature-led and community-grounded antidotes. With modest confidence in spotting AI content and rising ethics and disclosure questions around hyper-realistic AI influencers, leaders need to win with the algorithm while actively building trust. In parallel, cost-of-living stress and fragmentation are channeling demand into escapism, collectibles, and creator-led social formats. The operational challenge is serving both paths without contributing to low-quality workslop.\n\nThe scale is clear: 53% use AI chat in their personal lives, 51% ask it questions once asked of humans, and 32% sometimes feel a chatbot understands them better, while only 46% feel confident spotting AI content. Escapism is pronounced, with 70% saying modern life is so stressful they need to escape, 63% finding joy in cute products, and 36% defining themselves by fandoms. Pushback against constant connectivity is evident, with 40% trying to switch off, 50% rationing screen time, and 47% of UK 16–21-year-olds preferring a pre‑internet childhood. Grounding impulses are strong as 75% are drawn to more time in nature and 64% to traditional values, echoed by a 39% rise in 18–25-year-old National Trust members in the UK.\n\nImplications: move quickly on content governance, with clear disclosure and ownership practices for AI-generated content and influencers; as the report observes, “The rise of ‘slop’ … is accelerating so quickly that platforms from YouTube to Spotify have been forced to take action to protect the integrity of the user experience.” Design for difference at scale by pairing algorithmic convenience with simpler, tactile options and nature or hyperlocal formats that respect screen‑time rationing. Use creators as connective tissue across fragmented media, and develop social experiences and NoLo “natural highs” that channel escapism in healthier ways. Above all, solve for the trend behind the trend to win with the algorithm, not follow it.",
+    "linkedin_post": "Winning growth now requires designing to win with the algorithm while delivering analog and nature‑grounded relief. The data shows consumers deepening emotional ties to AI even as they actively seek tactile, local, and community‑led escapes. \n\nWhy this matters now\n- AI chat is mainstream: 53% use AI chat in their personal lives; usage rises to 70% among Gen Z. 32% sometimes feel a chatbot understands them better than friends or family. Confidence in spotting AI content sits at 46% (with 51% asking AI questions they once asked humans).\n- Escapism is a core demand signal: 70% say modern life is so stressful they need to escape; 63% say cute products or packaging bring joy; 36% define themselves by fandoms.\n- Nature and tradition are resurgent: 75% are drawn to spending more time in nature and 64% to traditional values. In the UK, the National Trust saw a 39% rise in 18–25 memberships, signaling youth appetite for the outdoors.\n- Analog pushback is real: 40% say the online world is so stressful they try to switch off; 50% ration their screen time. Among UK 16–21s, 47% would prefer to have grown up pre‑internet.\n- Creators are the connective tissue: loneliness and fragmentation are catalyzing new social formats and NoLo “natural highs,” with influencers and streamers helping audiences connect.\n\nWhat to do now\n- Win with the algorithm: build AI interactions that deliver real care and utility, and be transparent to address modest confidence in spotting AI content and rising disclosure questions.\n- Design for escapism: lean into cuteification, collectibles, and fandom‑friendly formats that give stressed consumers joyful outlets.\n- Program for analog relief: invest in nature‑aligned, hyperlocal, and simpler tactile experiences that meet the desire to switch off without abandoning your digital edge.\n- Orchestrate creator networks: use creators to stitch together fragmented media moments and community touchpoints.\n- Avoid workslop: differentiate and design for difference at scale. Solve for the trend behind the trend to lead, not follow.\n\nThis is a split‑screen market. Brands that respect both sides of consumer reality—emotionally intelligent AI and intentional analog escapes—will take share.\n\n#ecommerce #digitalstrategy #consumertrends",
+    "source_status": {
+      "schema_version": "1.0",
+      "text_density": 1809.2,
+      "density_threshold": 0.0,
+      "pages_sampled": 5,
+      "char_count": 9046,
+      "not_available": false,
+      "reason": "",
+      "evidence_present": true
+    }
+  },
+  "validation_report": {
+    "schema_version": "1.1",
+    "status": "fail",
+    "severity": "error",
+    "source_path": "out\\dentsu-creative-trends-2026-generative-realities-acig-pdf\\report_analysis\\validation.json",
+    "issues": [
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2025 (Dentsu Creative Quantitative Research)' not verbatim but semantically supported (confidence=1.00) for ins-001-electric-chat-uptake",
+        "severity": "info",
+        "affected_section": "insights:ins-001-electric-chat-uptake"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2025 (Dentsu Creative Quantitative Research)' not verbatim but semantically supported (confidence=1.00) for ins-002-ai-emotional-ties",
+        "severity": "info",
+        "affected_section": "insights:ins-002-ai-emotional-ties"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2025 (Dentsu Creative Trends 2026 framing)' not verbatim but semantically supported (confidence=1.00) for ins-005-escape-velocity-cute-fandom",
+        "severity": "info",
+        "affected_section": "insights:ins-005-escape-velocity-cute-fandom"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2025 (Dentsu Creative Quantitative Research & cited sources)' not verbatim but semantically supported (confidence=1.00) for ins-006-analog-futures-disconnect",
+        "severity": "info",
+        "affected_section": "insights:ins-006-analog-futures-disconnect"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'reported in the period prior to the 2026 Trends report (\"last year\" as cited)' not verbatim but semantically supported (confidence=1.00) for ins-007-trad-lives-nature-reconnection",
+        "severity": "info",
+        "affected_section": "insights:ins-007-trad-lives-nature-reconnection"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence supports AI ties and some analog/nature pushback, but does not mention “community-grounded antidotes” or the need for brands to “win with—rather than follow—the algorithm.”: Consumers are simultaneously deepening ties with AI and seeking analog, nature-led and community-grounded antidotes to stress, pushing brands to win with—rather than follow—the algorithm.",
+        "severity": "error",
+        "affected_section": "tldr"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The 39 % membership rise is supported, but no evidence is provided for “hyperlocal experiences.”: Reconnection with nature: the UK National Trust saw a 39% rise in 18–25-year-old members last year, signaling youth interest in the outdoors and hyperlocal experiences.",
+        "severity": "error",
+        "affected_section": "ins-007-trad-lives-nature-reconnection"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippets mention cost-of-living pressures, declining social connectedness, or nostalgia.: Generative Realities frames an algorithm-accelerated culture cycle shaped by cost-of-living pressures, declining social connectedness, and complex relationships with technology and nostalgia.",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence covers nature, NoLo and creators, but not “hyperlocal living” or “spirituality.”: In parallel, ‘Trad Lives’ and ‘Alone Together’ reveal a pivot toward nature, hyperlocal living, spirituality, and new social formats and NoLo ‘natural highs,’ with creators acting as connective tissue",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence supports anti-algorithm behaviors but does not mention “simpler, tactile devices” or the strategic prescriptions about ‘workslop.’: ‘Analog Futures’ shows younger cohorts embracing simpler, tactile devices and anti-algorithm strategies; to lead, the report urges avoiding ‘workslop,’ designing for difference at scale, and solving f",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Nature is evidenced, but no snippets refer to “locality” or “spirituality.”: Consumers are turning to nature, locality, and spirituality as grounding forces.",
+        "severity": "error",
+        "affected_section": "claim_evidence_map"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "“Community-grounded antidotes” are not supported by evidence snippets.: The signals point to a split-screen consumer: deeper emotional ties to AI alongside a pivot to analog, nature-led and community-grounded antidotes.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Prescriptive statement about what leaders need to do is not evidenced.: With modest confidence in spotting AI content and rising ethics and disclosure questions around hyper-realistic AI influencers, leaders need to win with the algorithm while actively building trust.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence is provided about cost-of-living stress driving these behaviors.: In parallel, cost-of-living stress and fragmentation are channeling demand into escapism, collectibles, and creator-led social formats.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence supports this operational claim.: The operational challenge is serving both paths without contributing to low-quality workslop.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Prescriptive guidance on governance is unsupported (the quoted sentence itself is supported, but the recommendation is not).: Implications: move quickly on content governance, with clear disclosure and ownership practices for AI-generated content and influencers; as the report observes, “The rise of ‘slop’ … is accelerating ",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence supports the recommendation for “simpler, tactile options” or “hyperlocal formats.”: Design for difference at scale by pairing algorithmic convenience with simpler, tactile options and nature or hyperlocal formats that respect screen-time rationing.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "This is a recommendation without supporting evidence.: Use creators as connective tissue across fragmented media, and develop social experiences and NoLo “natural highs” that channel escapism in healthier ways.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Strategic prescription lacks evidentiary support.: Above all, solve for the trend behind the trend to win with the algorithm, not follow it.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippets support this growth requirement statement.: Winning growth now requires designing to win with the algorithm while delivering analog and nature-grounded relief.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence supports AI ties; “tactile, local, and community-led escapes” are not evidenced.: The data shows consumers deepening emotional ties to AI even as they actively seek tactile, local, and community-led escapes.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Prescriptive recommendation without supporting evidence.: Win with the algorithm: build AI interactions that deliver real care and utility, and be transparent to address modest confidence in spotting AI content and rising disclosure questions.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Recommendation not backed by evidence snippets.: Design for escapism: lean into cuteification, collectibles, and fandom-friendly formats that give stressed consumers joyful outlets.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence supports the need for “hyperlocal” or “simpler tactile” investments.: Program for analog relief: invest in nature-aligned, hyperlocal, and simpler tactile experiences that meet the desire to switch off without abandoning your digital edge.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Strategic advice without evidence.: Orchestrate creator networks: use creators to stitch together fragmented media moments and community touchpoints.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence supports these recommendations.: Avoid workslop: differentiate and design for difference at scale. Solve for the trend behind the trend to lead, not follow.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      }
+    ]
+  },
+  "categories_display": [
+    "AI & Automation",
+    "Consumer Behavior & Insights",
+    "Social, Short Video & Creator"
+  ],
+  "analysis_mode": "vector_store"
+}

@@ -1,0 +1,57 @@
+{
+  "quote_candidates": [
+    {
+      "id": "qc-001",
+      "text": "Intermediate-dated bonds—those maturing in five to 10 years—look like the sweet spot. They offer yields comparable with cash rates, benefit from capital appreciation as they “roll down the yield curve” toward maturity, and stand to gain further if central banks begin cutting rates.",
+      "author": "Morningstar Investment Management",
+      "context": "Investing for Income in an Uncertain Market — discussion of fixed-income positioning",
+      "source_citation": "",
+      "confidence": 0.95,
+      "tags": [
+        "fixed income",
+        "bonds",
+        "yield",
+        "duration"
+      ]
+    },
+    {
+      "id": "qc-002",
+      "text": "Diversification remains the only “free lunch” in investing.",
+      "author": "Morningstar Research / 2026 Global Outlook Report",
+      "context": "Discussion of market concentration and the risks of concentrated leadership",
+      "source_citation": "",
+      "confidence": 0.98,
+      "tags": [
+        "portfolio construction",
+        "diversification",
+        "risk"
+      ]
+    },
+    {
+      "id": "qc-003",
+      "text": "The US dollar weakened sharply in 2025, driven by fiscal concerns and reduced confidence in policy. Despite the decline, the dollar remains overvalued relative to most global currencies.",
+      "author": "Hong Cheng, Mike Coop, Michael Malseed (Morningstar Investment Management)",
+      "context": "The Dollar’s Decline: Implications of a Weaker USD for Investors — currency outlook and positioning implications",
+      "source_citation": "",
+      "confidence": 0.92,
+      "tags": [
+        "currency",
+        "USD",
+        "macro"
+      ]
+    },
+    {
+      "id": "qc-004",
+      "text": "Private market assets have grown rapidly, now exceeding 15 trillion dollars globally.",
+      "author": "Morningstar Research (2026 Global Outlook Report)",
+      "context": "US Outlook: Private Markets Go Mainstream — scale and implications of private markets",
+      "source_citation": "",
+      "confidence": 0.9,
+      "tags": [
+        "private markets",
+        "assets under management",
+        "alternative investments"
+      ]
+    }
+  ]
+}

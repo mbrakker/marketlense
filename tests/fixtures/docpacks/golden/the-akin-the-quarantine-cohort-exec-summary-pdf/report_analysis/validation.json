@@ -1,0 +1,170 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: quote qc_002 not supported (No evidence snippet contains or paraphrases this participant quote.)",
+      "severity": "warning",
+      "affected_section": "quotes:qc_002"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: quote qc_007 not supported (Evidence includes the opening and closing lines but not the clause about ‘AI companions’ and ‘recovery’ (snippet 5).)",
+      "severity": "error",
+      "affected_section": "quotes:qc_007"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '200+; 400–450' not verbatim but semantically supported (confidence=0.96) for insight-01",
+      "severity": "info",
+      "affected_section": "insights:insight-01"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'million (people); billion USD (spend)' not verbatim but semantically supported (confidence=0.96) for insight-01",
+      "severity": "info",
+      "affected_section": "insights:insight-01"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'cohort birth years 2003–2012; current spend estimate (report 2025)' not verbatim but semantically supported (confidence=0.96) for insight-01",
+      "severity": "info",
+      "affected_section": "insights:insight-01"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '88; 97; 83; 72' not verbatim but semantically supported (confidence=1.00) for insight-02",
+      "severity": "info",
+      "affected_section": "insights:insight-02"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'as reported in the executive summary' not verbatim but semantically supported (confidence=1.00) for insight-02",
+      "severity": "info",
+      "affected_section": "insights:insight-02"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'pandemic-era mediated development' not verbatim but semantically supported (confidence=0.95) for insight-03",
+      "severity": "info",
+      "affected_section": "insights:insight-03"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'post-pandemic development window' not verbatim but semantically supported (confidence=0.96) for insight-04",
+      "severity": "info",
+      "affected_section": "insights:insight-04"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'post-pandemic developmental period' not verbatim but semantically supported (confidence=0.97) for insight-06",
+      "severity": "info",
+      "affected_section": "insights:insight-06"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote not verbatim in evidence (No evidence snippet contains or paraphrases this participant quote.): “I missed proms, formals, and graduation. I'd never been to a house party, kissed anyone, or gone on a date. I'd just go",
+      "severity": "warning",
+      "affected_section": "quotes:qc_002"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote not verbatim in evidence (Evidence includes the opening and closing lines but not the clause about ‘AI companions’ and ‘recovery’ (snippet 5).): Each month that passes makes physical reality feel more foreign, AI companions more appealing, and recovery more distant",
+      "severity": "error",
+      "affected_section": "quotes:qc_007"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet or report excerpt was provided that discusses engagement strategy or the idea that identity formation sits upstream of purchase behaviour.: This audience is economically material, but engagement must account for identity formation that sits upstream of purchase behavior and brand affinity.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No explicit evidence was supplied that tells leaders what they 'should expect'; the statement is an inference rather than a cited report finding.: Leaders should expect persistent tension between online self-presentation and offline competence.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While evidence supports culture-creation decline and short-lived AI cycles, no snippet addresses the claimed reduction of “durable cultural scaffolding for maturation.”: Culture creation is faltering, with identity fragmentation and short-lived AI content cycles, which reduces durable cultural scaffolding for maturation.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet discusses strategic risks of ‘leaning further into algorithmic dependency.’: Strategies that lean further into algorithmic dependency risk amplifying the very dynamics that hold this cohort back.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence backs the phrase “sweat, not screens” and rising urgency, but no snippet supports the need to rebuild “social fluency.”: Shift resources toward embodied, offline experiences to rebuild competence and social fluency, as the report states the path back to culture starts with “sweat, not screens,” and urgency increases eac",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The evidence shows success is redefined around digital metrics, but no excerpt recommends ‘rebalancing’ those definitions.: Rebalance success definitions away from “success defined by digital metrics” toward real-world participation and capability-building outcomes.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet makes this operational recommendation or cites algorithmic environments that ‘entrench safety, predictability, and passive consumption.’: Operate with a dual-lens that recognizes stable contradictions at the core of Gen Q identities while reducing reliance on algorithmic environments that entrench safety, predictability, and passive con",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This prescriptive claim lacks direct support in the supplied evidence.: Growth with Gen Q will not be won by more screen time.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet offers this specific strategic instruction.: Rebalance from digital-only engagement to embodied experiences.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The supplied evidence does not contain this design recommendation.: Design programs, events, and services that build physical-world competence and connection.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Although the report mentions mutations becoming super-powers, no snippet recommends specific ‘pathways’ to translate fluency into capability.: Offer pathways that translate online fluency into real-world capability, converting “mutations” into strengths.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence excerpt provides guidance on measurement practices.: Measure beyond vanity metrics.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet offers this prescriptive direction to builders or brands.: Build for creation, not just consumption.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet supplies this product-design recommendation.: Design for contradiction.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The evidence describes platform-induced harms and a trust crisis but does not instruct brands to ‘acknowledge’ them in communications.: Acknowledge platform-induced harms and the trust crisis in your experiences and communications.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

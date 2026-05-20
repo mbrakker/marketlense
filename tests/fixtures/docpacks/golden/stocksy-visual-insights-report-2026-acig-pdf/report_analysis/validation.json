@@ -1,0 +1,200 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_evidencepacks_docmap_missing not supported (Only 'model_returned_no_json' appears; no evidence ties it to doc_map.)",
+      "severity": "warning",
+      "affected_section": "insights:insight_evidencepacks_docmap_missing"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_scope_missing not supported (No snippet links 'model_returned_no_json' specifically to scope.)",
+      "severity": "warning",
+      "affected_section": "insights:insight_scope_missing"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_quote_candidates_missing not supported (No snippet mentions quote_candidates or its not_found_reason.)",
+      "severity": "warning",
+      "affected_section": "insights:insight_quote_candidates_missing"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: quote quote_1 not supported (No evidence snippet references quote_candidates being [].)",
+      "severity": "warning",
+      "affected_section": "quotes:quote_1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: quote quote_2 not supported (We see 'DocMap JSON' and 'model_returned_no_json' separately, but not linked.)",
+      "severity": "warning",
+      "affected_section": "quotes:quote_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: quote quote_3 not supported (Snippets support parts ('methods: []', 'findings: []', 'model_returned_no_json') but not the full structured claim.)",
+      "severity": "warning",
+      "affected_section": "quotes:quote_3"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote not verbatim in evidence (No evidence snippet references quote_candidates being [].): Quote candidates JSON (may be empty): []",
+      "severity": "warning",
+      "affected_section": "quotes:quote_1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote not verbatim in evidence (We see 'DocMap JSON' and 'model_returned_no_json' separately, but not linked.): DocMap JSON: {\"doc_id\": \"\", \"title\": \"\", \"sections\": [], \"not_found_reason\": \"model_returned_no_json\"}",
+      "severity": "warning",
+      "affected_section": "quotes:quote_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote not verbatim in evidence (Snippets support parts ('methods: []', 'findings: []', 'model_returned_no_json') but not the full structured claim.): Evidence packs JSON: {\"doc_map\": {\"doc_id\": \"\", \"title\": \"\", \"sections\": [], \"not_found_reason\": \"model_returned_no_json",
+      "severity": "warning",
+      "affected_section": "quotes:quote_3"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The evidence snippets do not mention \"insufficient evidence\" or support this evaluative conclusion.: Insufficient evidence was provided to generate a grounded executive summary.",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While the snippet \"model_returned_no_json\" exists, there is no explicit statement that the doc_map is missing or that mapping is blocked.: Evidence pack doc_map is missing (not_found_reason = 'model_returned_no_json'), blocking mapping between findings and the source document.",
+      "severity": "error",
+      "affected_section": "insights_final"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet explicitly confirms that scope is missing.: Evidence pack scope is missing (scope.not_found_reason = 'model_returned_no_json').",
+      "severity": "error",
+      "affected_section": "insights_final"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet confirms quote candidates are missing.: Quote candidates are missing (quote_candidates.not_found_reason = 'model_returned_no_json').",
+      "severity": "error",
+      "affected_section": "insights_final"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The snippets do not contain this sentence or evidence that quote candidates JSON is empty.: Quote candidates JSON (may be empty): []",
+      "severity": "error",
+      "affected_section": "quotes_final"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Snippets mention \"model_returned_no_json\" but do not state that the DocMap and packs are empty or unavailable.: The supplied DocMap and evidence packs are empty or unavailable (not_found_reason: model_returned_no_json).",
+      "severity": "error",
+      "affected_section": "summary.executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports this evaluative statement.: Without populated sections, methods, findings, or limitations, no substantiated claims can be made.",
+      "severity": "error",
+      "affected_section": "summary.executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports this recommendation.: Please provide a complete DocMap and evidence packs so a concise, evidence-backed executive summary can be produced.",
+      "severity": "error",
+      "affected_section": "summary.executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports the claim that the evidence base is nonfunctional.: The evidence base is nonfunctional, which removes any ability to substantiate conclusions or decisions.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Snippets do not show the executive summary making such statements.: The executive summary flags insufficient evidence and unavailable packs, so no substantiated claims can be made.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet explicitly states this relationship or impact.: The absence of a DocMap and scope, coupled with empty methods and findings, breaks traceability and blocks mapping between findings and sources.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet characterizes the issue as an integrity issue.: This is an integrity issue, not a minor gap.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports this assertion.: The current state precludes auditability and increases the risk of misinterpretation, since there is no chain from scope to method to finding.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet provides evidence for this recommendation.: This calls for a gating criterion that halts publication and decision workflows when any of these fields return an empty or error state.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Recommendation not supported by snippets.: Reinstate the DocMap first, then populate methods and findings, and only then surface synthesized insights.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports this prescription.: Operating models should embed automated checks for not_found_reason states and empty arrays, with stop conditions tied to evidence completeness.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports this recommendation.: Require provenance at the unit level so that findings cannot exist without mapped methods and source references.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports this recommendation.: Treat quote candidates as a required artifact to cross-verify claims before leadership review.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports this claim.: These controls convert a failure point into a predictable quality gate that preserves trust in analytical outputs.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports this evaluative statement.: No substantiated claims can be made from this package.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet states that the evidence base is missing.: The evidence base required for an executive summary is missing.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet supports this conclusion.: What this means for decision-makers: there is no defensible basis to draw conclusions from the current file set.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No snippet provides evidence for this implication.: Implication: a complete DocMap and evidence packs are required before any evidence-backed summary or recommendation can be produced.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

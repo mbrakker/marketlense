@@ -1,0 +1,34 @@
+{
+  "methods": [
+    {
+      "index": 0,
+      "description": "Mobile metrics aggregate iOS App Store and Google Play data worldwide; for China, only iOS is counted.",
+      "citation": ""
+    },
+    {
+      "index": 1,
+      "description": "All 2025 values are projections through the remainder of the calendar year, while 2026 values are Sensor Tower forecasts.",
+      "citation": ""
+    },
+    {
+      "index": 2,
+      "description": "App and game categories are assigned using Sensor Tower’s App IQ and Game IQ taxonomies as of December 2025.",
+      "citation": ""
+    },
+    {
+      "index": 3,
+      "description": "Digital-advertising spend charts reflect spend in the United States across a specified set of digital ad channels (social, mobile, desktop, OTT, etc.).",
+      "citation": ""
+    },
+    {
+      "index": 4,
+      "description": "Website-traffic analysis covers the top 1,000 US sites ranked by total visits between October 2024 and October 2025.",
+      "citation": ""
+    },
+    {
+      "index": 5,
+      "description": "Steam release counts treat 2025 figures as year-to-date through 4 December 2025.",
+      "citation": ""
+    }
+  ]
+}

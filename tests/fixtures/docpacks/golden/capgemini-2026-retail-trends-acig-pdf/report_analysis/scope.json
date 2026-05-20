@@ -1,0 +1,50 @@
+{
+  "scope": {
+    "title": "EvidencePack: Retail Trends (focus: AI, trust, private labels, searchless retail)",
+    "description": "This EvidencePack will collect and synthesise evidence on major retail trends (invisible AI/GenAI, trust & data practices, private-label growth, experience-led retail, and searchless/GEO) from the uploaded source documents. The uploaded Capgemini report (Retail trends 2026) is included as a primary source: CAPGEMINI - 2026-Retail-Trends_ACIG.pdf .",
+    "objectives": [
+      "Identify and summarize the key retail trends described in the provided documents.",
+      "Extract quantitative metrics and claims (e.g., percentages on AI adoption, trust measures, private-label uptake) and record their sources.",
+      "Derive implications and practical recommendations for retail stakeholders based on the evidence.",
+      "Produce a concise evidence summary and an annotated list of source excerpts for verification."
+    ],
+    "research_questions": [
+      "What are the primary retail trends described in the provided documents for 2024–2026 (AI adoption, trust, private labels, experience economy, searchless retail)?",
+      "What quantitative metrics and claims are presented (with exact phrasing and page references) regarding consumer attitudes and adoption?",
+      "What risks, trust concerns, and recommended guardrails are identified for AI in retail?",
+      "What operational or strategic recommendations do the sources propose for retailers?"
+    ],
+    "inclusion_criteria": [
+      "Uploaded documents and attachments provided by the user (PDFs, reports, presentations).",
+      "Materials published 2019–2026 that address retail trends, AI/GenAI in retail, consumer trust, private labels, or searchless/GEO retail.",
+      "Documents containing primary statistics, explicit claims, or actionable recommendations."
+    ],
+    "exclusion_criteria": [
+      "Social media posts, short-form marketing copy, or opinion pieces without supporting evidence.",
+      "Materials unrelated to retail trends or outside the 2019–2026 timeframe unless directly relevant background.",
+      "Duplicative files with identical content (only the canonical source will be used)."
+    ],
+    "population": "Retail industry stakeholders (retailers, brands, digital commerce teams) and consumers referenced in the source materials.",
+    "timeframe": {
+      "primary_period": "2024–2026",
+      "historical_context_window": "2019–2023 (as needed for trend context)"
+    },
+    "data_sources": [
+      {
+        "name": "CAPGEMINI - 2026-Retail-Trends_ACIG.pdf",
+        "role": "Primary industry report (contains quantitative findings and recommendations)",
+        "citation": ""
+      }
+    ],
+    "expected_deliverables": [
+      "Executive summary (1 page) of key findings and recommendations",
+      "Annotated evidence table: extracted claims, numeric metrics, exact quotes, and source citation/page",
+      "Short slide-style summary of strategic implications (3–5 slides) or equivalent text"
+    ],
+    "constraints_and_assumptions": [
+      "Analysis limited to uploaded files and excerpts contained therein unless user provides additional sources.",
+      "All extracted claims will be attributed to their source; where page numbers are unavailable, the filename and citation marker will be recorded.",
+      "No primary data collection (surveys/interviews) will be performed."
+    ]
+  }
+}

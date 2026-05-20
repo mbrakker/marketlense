@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'percent' not verbatim but semantically supported (confidence=0.97) for ins-001",
+      "severity": "info",
+      "affected_section": "insights:ins-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026 (survey fielded October 2025)' not verbatim but semantically supported (confidence=0.97) for ins-001",
+      "severity": "info",
+      "affected_section": "insights:ins-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'percent' not verbatim but semantically supported (confidence=0.97) for ins-002",
+      "severity": "info",
+      "affected_section": "insights:ins-002"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026 (survey fielded October 2025)' not verbatim but semantically supported (confidence=0.97) for ins-002",
+      "severity": "info",
+      "affected_section": "insights:ins-002"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'percent' not verbatim but semantically supported (confidence=0.93) for ins-003",
+      "severity": "info",
+      "affected_section": "insights:ins-003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026 (survey fielded October 2025)' not verbatim but semantically supported (confidence=0.93) for ins-003",
+      "severity": "info",
+      "affected_section": "insights:ins-003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'percent' not verbatim but semantically supported (confidence=0.97) for ins-004",
+      "severity": "info",
+      "affected_section": "insights:ins-004"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026 (survey fielded October 2025)' not verbatim but semantically supported (confidence=0.97) for ins-004",
+      "severity": "info",
+      "affected_section": "insights:ins-004"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'percent' not verbatim but semantically supported (confidence=0.96) for ins-005",
+      "severity": "info",
+      "affected_section": "insights:ins-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026 (survey fielded October 2025)' not verbatim but semantically supported (confidence=0.96) for ins-005",
+      "severity": "info",
+      "affected_section": "insights:ins-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The evidence substantiates the prioritization of digital video and social media, but it does not show that experts are \"tightening quality controls\" across AI, CTV, and retail media or that these controls aim to protect specific metrics.: UK media experts are prioritizing digital video and social media for 2026 while tightening quality controls across AI, CTV, and retail media to protect attention, suitability, and safety.",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The figures for digital-video priority and social media ranking are supported, but the statement that leaders are \"concentrating budgets\" is not evidenced.: UK media leaders are concentrating budgets in digital video and social, with 87% naming digital video as a primary format for 2026 while social remains the top digital environment.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This is a forward-looking prediction with no supporting data in the provided material.: Expect planning to tilt toward adjacency-first controls inside video and social activation.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No explicit evidence is provided that directly links generative AI to an increase in overall tension beyond general challenges already cited.: Generative AI intensifies this tension.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This is a prescriptive recommendation without supporting evidence.: Governance should codify gen-AI adjacency policies and apply consistent quality controls across buying and optimization workflows.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No data is supplied to show that these channels are definitively scaling or that performance will depend on the stated controls.: CTV and retail media are scaling, but performance will hinge on attention and safety controls.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This statement is advisory and lacks evidentiary backing.: Operating models should elevate attention measurement and suitability governance to the same level as reach, with supply decisions anchored in these thresholds.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While digital video leadership is supported, the claim that performance \"will hinge on\" tighter quality controls across these channels is not corroborated by the evidence.: Digital video is set to lead the UK market in 2026, but performance will hinge on tighter quality controls across AI, CTV, social, and retail media to protect attention, suitability, and safety.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

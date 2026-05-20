@@ -1,0 +1,74 @@
+{
+  "scope": {
+    "id": "evidencepack-scope-001",
+    "title": "EvidencePack Scope",
+    "description": "Defines the scope for collecting, analyzing, and packaging evidence relevant to the stated objectives. This scope sets boundaries for what evidence will be gathered, how it will be handled, and the expected deliverables.",
+    "objectives": [
+      "Collect and consolidate all relevant evidence necessary to support the project requirements or investigation.",
+      "Ensure evidence is documented, verifiable, and traceable to original sources.",
+      "Produce a consumable EvidencePack containing metadata, provenance, and prioritized artifacts for stakeholder review."
+    ],
+    "in_scope": [
+      "Identification and collection of electronic files and documents uploaded by the user that are relevant to the objectives.",
+      "Extraction of metadata and provenance information from collected files.",
+      "Classification and prioritization of evidence items (e.g., high/medium/low relevance).",
+      "Creation of a structured EvidencePack deliverable containing evidence items, metadata, and a summary index.",
+      "Documentation of handling and confidentiality requirements for included items."
+    ],
+    "out_of_scope": [
+      "Performing external investigations that require access to systems, accounts, or data not provided by the user.",
+      "Legal advice or determination of legal liability.",
+      "Long-term storage, custodial chain-of-custody beyond delivery of the EvidencePack, or physical evidence collection.",
+      "Automated remediation or changes to the source systems that produced the evidence."
+    ],
+    "stakeholders": [
+      {
+        "role": "Requestor",
+        "responsibilities": "Define objectives, provide initial files and contextual information, approve final EvidencePack."
+      },
+      {
+        "role": "Analyst",
+        "responsibilities": "Identify, collect, analyze, and package evidence according to this scope."
+      },
+      {
+        "role": "Reviewer",
+        "responsibilities": "Validate the EvidencePack contents and acceptance criteria."
+      }
+    ],
+    "timeframe": {
+      "start_date": null,
+      "end_date": null,
+      "notes": "Dates to be agreed with Requestor prior to work commencement; typical turnaround depends on volume and complexity."
+    },
+    "success_criteria": [
+      "All evidence items relevant to the stated objectives are identified and included or an explicit justification is provided for exclusions.",
+      "Each evidence item includes source, timestamp (when available), and basic provenance metadata.",
+      "EvidencePack delivered in the agreed format and reviewed/accepted by the Requestor or Reviewer."
+    ],
+    "deliverables": [
+      "Structured EvidencePack (file package) containing collected artifacts and metadata index.",
+      "Summary report describing methods used, scope applied, and any notable findings or gaps.",
+      "Manifest listing items included, their relevance rating, and handling instructions."
+    ],
+    "acceptance_criteria": [
+      "Requestor confirms that deliverables meet objectives or provides a list of required changes.",
+      "No unresolved critical gaps in evidence coverage as defined by the Requestor."
+    ],
+    "constraints": [
+      "Work limited to materials explicitly provided by the Requestor or otherwise authorized.",
+      "Analysis constrained by the quality and completeness of supplied files and metadata."
+    ],
+    "assumptions": [
+      "User-provided files are authentic and representative of the data to be analyzed.",
+      "Requestor will provide any contextual information necessary to resolve ambiguities."
+    ],
+    "confidentiality_and_handling": "All collected evidence will be treated as confidential. Access should be restricted to authorized stakeholders. Handling and transfer will use secure channels agreed with the Requestor.",
+    "data_sources": [
+      "Files uploaded by the user (to be enumerated in the EvidencePack manifest).",
+      "Metadata extracted from included files (timestamps, authorship, file hashes)."
+    ],
+    "priority": "High",
+    "version": "1.0",
+    "notes": "If you want the scope adapted to a specific project or to include specific schema fields required by your system, provide the EvidencePack schema or additional instructions and the list of uploaded files to be considered."
+  }
+}

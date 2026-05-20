@@ -1,0 +1,6 @@
+{
+  "quote_candidates": [],
+  "schema_found": false,
+  "schema_search_result": "No EvidencePack schema was found in the uploaded files. The only uploaded file located by my search is the Pinterest Predicts 2026 report .",
+  "notes": "Please upload or paste the EvidencePack schema (or an example EvidencePack JSON) or confirm the required fields for each quote candidate. Once I have the schema I will return a JSON object that exactly adheres to it and populate quote_candidates as requested."
+}

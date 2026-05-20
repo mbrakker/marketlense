@@ -1,0 +1,52 @@
+{
+  "findings": [
+    {
+      "uid": "finding-1",
+      "title": "Consumers demand actionable guidance over raw data",
+      "description": "The report notes that first-generation quantification tools delivered “all information, no transformation,” pushing today’s brands to translate metrics into bite-size direction. Oura’s new “One Big Thing” feature embodies this shift by showing users a single, attainable goal drawn from their biometrics.",
+      "evidence": [
+        {
+          "text": "The question today isn't whether we can track something… it’s whether we should care. That calorie-tracking app you haven’t opened in three years is the perfect metaphor for first-generation quantification tech: all information, no transformation. STATE OF BRAND, CH 1.1” "
+        },
+        {
+          "text": "Oura… went bigger by going smaller. “One Big Thing”… provides a singular, attainable goal. Instead of plying users with more numbers and figures, this push makes long-term Oura use feel targeted, not overwhelming. Example Oura” "
+        }
+      ],
+      "confidence": 0.9
+    },
+    {
+      "uid": "finding-2",
+      "title": "Proof beats promises: transparency is the new currency of trust",
+      "description": "Consumers increasingly distrust value statements that aren’t backed by visible proof. The report argues that loyalty now accrues to brands willing to expose their back-end processes, as illustrated by The Ordinary’s ingredient-first campaigns and Sweetgreen’s farmer-focused billboards.",
+      "evidence": [
+        {
+          "text": "The brands building loyalty aren't crafting better stories about their values. They’re making the back-end transparent enough that the proof becomes undeniable. STATE OF BRAND, CH 3.1” "
+        },
+        {
+          "text": "The Ordinary… foregrounds clinical evidence and ingredient transparency… elevat[ing] the value of its products and set[ting] itself apart from the rest of the industry. Example The Ordinary” "
+        },
+        {
+          "text": "Sweetgreen… put actual farmers in Times Square billboards rather than polishing another statement about sourcing practices, proving commitment through visibility. Example Sweetgreen” "
+        }
+      ],
+      "confidence": 0.88
+    },
+    {
+      "uid": "finding-3",
+      "title": "Brands must take an explicit stance on AI—neutrality is punished",
+      "description": "The dichotomy economy forces companies either to fully embrace AI or openly reject it. Quiet or partial adoption provokes backlash, as shown by J.Crew’s undisclosed AI imagery, while Aerie earned praise for pledging never to use AI-generated women in ads.",
+      "evidence": [
+        {
+          "text": "You’re either all-in on AI or you’re not. The middle ground is gone. Brands attempting to quietly integrate AI… are getting caught in limbo and catching flack from customers. STATE OF BRAND, CH 1.3” "
+        },
+        {
+          "text": "When J.Crew… used undisclosed AI images, the backlash was instant… The controversy laid bare that the issue is bigger than if a brand uses AI. STATE OF BRAND, CH 1.3” "
+        },
+        {
+          "text": "Aerie doubling down on its 10-year-old commitment to showing real bodies… declared it would never use AI-generated women in its advertising. Example Aerie” "
+        }
+      ],
+      "confidence": 0.87
+    }
+  ]
+}

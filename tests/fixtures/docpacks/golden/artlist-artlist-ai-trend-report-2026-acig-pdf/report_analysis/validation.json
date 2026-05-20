@@ -1,0 +1,206 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for IC-01 not supported (87%/66% usage figures are directly supported, but the stated survey timeframe (Sept 2025) is not evidenced.)",
+      "severity": "error",
+      "affected_section": "insights:IC-01"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '87 / 66' not found in evidence for IC-01 (87%/66% usage figures are directly supported, but the stated survey timeframe (Sept 2025) is not evidenced.)",
+      "severity": "error",
+      "affected_section": "insights:IC-01"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'percent (active / weekly)' not present in evidence for IC-01",
+      "severity": "warning",
+      "affected_section": "insights:IC-01"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'Survey fielded September 2025' not present in evidence for IC-01",
+      "severity": "warning",
+      "affected_section": "insights:IC-01"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026 report (survey Sept 2025)' not verbatim but semantically supported (confidence=0.90) for IC-03",
+      "severity": "info",
+      "affected_section": "insights:IC-03"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026 report (survey Sept 2025)' not verbatim but semantically supported (confidence=0.90) for IC-04",
+      "severity": "info",
+      "affected_section": "insights:IC-04"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026 report (survey Sept 2025)' not verbatim but semantically supported (confidence=0.90) for IC-06",
+      "severity": "info",
+      "affected_section": "insights:IC-06"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026 report (survey Sept 2025)' not verbatim but semantically supported (confidence=0.88) for IC-07",
+      "severity": "info",
+      "affected_section": "insights:IC-07"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence covers commoditized polish and the importance of vision/authenticity, but makes no reference to “fast orchestration of tools” or to “real-world experiences” as decisive edges.: As AI commoditizes polish, advantage shifts to clear vision and fast orchestration of tools, with authenticity and real-world experiences emerging as the decisive edges.",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence mentions an accessible, unified AI studio, but not that it “collapses full production pipelines” or explicitly “democratizes pro video creation.”: The 'In-the-Box' revolution collapses full production pipelines into accessible, unified AI studios, democratizing pro video creation.",
+      "severity": "error",
+      "affected_section": "insights_final IC-03"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This is a placeholder; no matching evidence snippet is provided.: Example quote text extracted from the source document identifying a key claim or statement.",
+      "severity": "error",
+      "affected_section": "quotes_final qc-1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This is a placeholder; no matching evidence snippet is provided.: Another example quote candidate highlighting a separate assertion or datum.",
+      "severity": "error",
+      "affected_section": "quotes_final qc-2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports the accessibility of an In-the-Box studio and the commoditization of polish, but contains no mention of a “third wave of democratization” or a shift to “access to intelligence.”: Artlist’s 2026 report contends the third wave of democratization is shifting from access to tools and audiences toward access to intelligence, as an “In-the-Box” AI studio makes full-stack creation ac",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The usage statistics are supported, but there is no evidence for the claims about iterative workflows, instant visualization, faster concept cycles, or Z-to-A testing.: With 87% of creators using AI and 66% using it weekly (from Artlist’s 2026 User Survey of 6,500+ creators in Sept 2025), workflows are moving from linear to iterative, enabling instant visualization, ",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence backs the human edge in vision/strategy/taste/empathy, but not the statement about “10x creators” multiplying impact.: This elevates the AI creative director: vision/strategy, taste, and empathy become the key human edge, empowering 10x creators who multiply impact through direction.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports transparency as critical, but does not mention synthetic content, “Authenticity 3.0,” or building community.: As synthetic content erodes trust, Authenticity 3.0 requires radical transparency about how work is made and clear disclosure to build credibility and community.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports the resurgence of physical experiences, but not the idea of “designing meaningful friction” to convert audiences into participants.: Finally, physical experiences resurge as an antidote to digital overwhelm; designing meaningful friction turns audiences into participants and powers an IRL → URL amplification flywheel.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence references a shift to “access to intelligence.”: The center of gravity is shifting from access to tools and audiences to access to intelligence as full-stack “In-the-Box” AI studios make pro-grade creation broadly accessible and turn polish into a c",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence mentions vision but not the “ability to orchestrate tools at speed.”: That reframes differentiation around clarity of vision and the ability to orchestrate tools at speed.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence shows mainstream adoption but not that it “compresses any remaining advantage.”: Adoption is already mainstream, compressing any remaining advantage from mere tooling.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence supports iterative workflows, instant visualization, or Z-to-A testing.: Operating models should assume iterative workflows by default, with instant visualization, faster concept cycles, and Z-to-A testing as the cadence.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence does not support the claim about “10x creators” multiplying impact.: This elevates the AI creative director, where vision and strategy, taste, and empathy become the decisive human edge, enabling 10x creators who multiply impact through direction.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence is provided for this recommendation about team design.: Team design should shift from software skills toward direction and taste, with leaders emphasizing orchestration across an integrated AI studio.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No supporting evidence for this assertion.: Trust becomes a product feature.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports transparency’s importance but does not link it to the proliferation of synthetic content or describe it as a 'prerequisite for credibility.': As synthetic content proliferates, radical transparency about how AI shaped the work and clear disclosure are now prerequisites for credibility.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence is provided for this recommendation.: Leaders should codify disclosure practices and invest in meaningful friction in IRL activations to turn audiences into participants.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence omits the idea of 'fast orchestration of AI tools.': Advantage shifts to leaders with clear vision and fast orchestration of AI tools.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "There is no evidence of a 'third wave of democratization' or a shift to 'access to intelligence.': Artlist’s 2026 report signals a third wave of democratization: from access to tools and audiences to access to intelligence.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence supports claims about iterative workflows or Z-to-A testing.: Workflows move from linear to iterative, enabling instant visualization, faster concept cycles, and Z-to-A testing.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence references the human edge of creative directors but does not endorse this organizational prescription.: Put a creative director at the center of AI: Elevate the human edge that AI cannot replace.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While an In-the-Box studio is mentioned, the directive to 'collapse production' and standardize polish lacks supporting evidence.: Collapse production into an In-the-Box studio: Unify creation inside AI-first workflows to accelerate concepting and iteration. Treat the pipeline as a digital studio where polish is standardized and ",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence supports iterative redesign, instant visualization, or Z-to-A testing.: Redesign processes from linear to iterative: Build fast loops for instant visualization, tighter concept cycles, and Z-to-A testing so ideas are validated earlier and improved continuously.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports transparency but not the term 'Authenticity 3.0' or the link to 'building community.': Operationalize Authenticity 3.0: Be radically transparent about how AI shapes the work. Disclose methods and show process to earn trust and build community.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

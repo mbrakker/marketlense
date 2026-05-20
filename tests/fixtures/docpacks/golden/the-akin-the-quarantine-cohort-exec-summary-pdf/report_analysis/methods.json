@@ -1,0 +1,70 @@
+{
+  "methods": [
+    {
+      "name": "file_search.msearch",
+      "description": "Initial search across all uploaded files attempting to locate any mention of the EvidencePack schema or a definition of the required methods array.",
+      "args": {
+        "queries": [
+          "EvidencePack schema methods array",
+          "\"methods\" array EvidencePack",
+          "EvidencePack json schema methods",
+          "methods array schema EvidencePack format",
+          "methods section EvidencePack specification"
+        ]
+      }
+    },
+    {
+      "name": "file_search.msearch",
+      "description": "Broadened the search to capture alternate phrasings that might reference the EvidencePack specification.",
+      "args": {
+        "queries": [
+          "EvidencePack",
+          "Evidence Pack specification",
+          "evidence pack schema json",
+          "EvidencePack methods fields",
+          "evidencepack instrumentation",
+          "methods json array schema evidencepack"
+        ]
+      }
+    },
+    {
+      "name": "file_search.msearch",
+      "description": "Looked explicitly for JSON or other structured files that could contain the schema itself.",
+      "args": {
+        "queries": [
+          ".json",
+          "schema file",
+          "evidencepack.json",
+          "methods array example",
+          "Filename evidencepack",
+          "Evidencepack metadata"
+        ]
+      }
+    },
+    {
+      "name": "file_search.msearch",
+      "description": "Searched for README-style documentation that might describe the EvidencePack format.",
+      "args": {
+        "queries": [
+          "README EvidencePack",
+          "evidence pack README",
+          "evidence pack usage",
+          "EP_SPEC",
+          "methods.json",
+          "evidence-pack"
+        ]
+      }
+    },
+    {
+      "name": "file_search.msearch",
+      "description": "Searched for literal occurrences of a “methods” array within any uploaded file to infer the schema structure.",
+      "args": {
+        "queries": [
+          "\"methods\": [",
+          "\"methods\"[",
+          "\"EvidencePack\" \"methods\""
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,606 @@
+{
+  "tldr": "En 2026, la ventaja competitiva se concentrará en personalización adaptativa, decisiones guiadas por valores y transparencia radical, con IA/datos como tejido conectivo y sostenibilidad alineada con la rentabilidad.",
+  "title": "ALLEGRO - 2026-Trends-MacroTrends-ES_ACIG",
+  "insights": [
+    "La personalización adaptativa es la expectativa por defecto en B2C y B2B.",
+    "Ecosistemas omnicanal y plataformas integradas están definiendo la competencia en comercio y experiencia del cliente.",
+    "La IA y los datos son el tejido conectivo entre sectores, marcas y personas, habilitando personalización, analítica y operaciones.",
+    "Sostenibilidad y rentabilidad convergen: pasa de RSC a pilar operativo con valor económico y reputacional.",
+    "La transparencia demostrable (supply chain, datos, sostenibilidad) es diferenciador competitivo y base de la confianza."
+  ],
+  "quote": {
+    "text": "La confianza debe ganarse mediante acciones demostrables, no con afirmaciones de marketing.",
+    "author": "Allegro 234",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "Este análisis de macrotendencias ofrece una visión realista y orientada al futuro sobre cómo",
+    "evidence": "Este análisis de macrotendencias ofrece una visión realista y orientada al futuro sobre cómo",
+    "schema_version": "1.0"
+  },
+  "commentary": "La personalización adaptativa, habilitada por IA y datos, se convierte en el estándar de experiencia también en B2B, reflejando expectativas de relevancia en tiempo real. Las decisiones de compra y la lealtad se inclinan hacia la autenticidad, la sostenibilidad y la contribución social, penalizando la desalineación ética. La transparencia radical pasa de ser deseable a diferenciador competitivo y base de la confianza. En paralelo, la IA y los datos conectan analítica, operaciones y contenido, mientras la convergencia entre sostenibilidad y rentabilidad se afianza y los ecosistemas omnicanal redefinen la competencia.",
+  "source": "",
+  "publisher": "",
+  "taxonomy": [
+    "ecommerce",
+    "online_marketplaces",
+    "marketplaces",
+    "ai",
+    "machine_learning",
+    "retail_logistics",
+    "fulfillment",
+    "digital_payments",
+    "consumer_trends",
+    "shopper_journey"
+  ],
+  "categories": [
+    "ai_automation",
+    "consumer_behavior",
+    "omnichannel_commerce"
+  ],
+  "region": "",
+  "time_period": "2026",
+  "contents_page_number": 0,
+  "contents_heading": "",
+  "_figure_image": "allegro-2026-trends-macrotrends-es-acig-pdf/assets/allegro-2026-trends-macrotrends-es-acig-pdf.png",
+  "_figure_gallery": [
+    "allegro-2026-trends-macrotrends-es-acig-pdf/slices/allegro-2026-trends-macrotrends-es-acig-pdf.png"
+  ],
+  "_figure_top": "allegro-2026-trends-macrotrends-es-acig-pdf/slices/allegro-2026-trends-macrotrends-es-acig-pdf.png",
+  "_contents_image": "",
+  "_vector_store_id": "vs_6982fe5fff2481919472f98a5756653f",
+  "_evidence_packs": {
+    "doc_map": "out\\allegro-2026-trends-macrotrends-es-acig-pdf\\report_analysis\\doc_map.json",
+    "scope": "out\\allegro-2026-trends-macrotrends-es-acig-pdf\\report_analysis\\scope.json",
+    "methods": "out\\allegro-2026-trends-macrotrends-es-acig-pdf\\report_analysis\\methods.json",
+    "findings": "out\\allegro-2026-trends-macrotrends-es-acig-pdf\\report_analysis\\findings.json",
+    "limitations": "out\\allegro-2026-trends-macrotrends-es-acig-pdf\\report_analysis\\limitations.json",
+    "quote_candidates": "out\\allegro-2026-trends-macrotrends-es-acig-pdf\\report_analysis\\quote_candidates.json",
+    "artifacts": "out\\allegro-2026-trends-macrotrends-es-acig-pdf\\report_analysis\\artifacts.json",
+    "validation": "out\\allegro-2026-trends-macrotrends-es-acig-pdf\\report_analysis\\validation.json"
+  },
+  "_text_density": 0.0,
+  "_text_pages_sampled": 0,
+  "_text_char_count": 0,
+  "_text_not_available": false,
+  "schema_version": "1.1",
+  "artifacts": {
+    "schema_version": "1.0",
+    "toc_topics": [
+      "Personalización adaptativa en tiempo real",
+      "Alineación ética y consumo por valores",
+      "Participación activa y co-creación",
+      "Ecosistemas digital-first y omnicanal",
+      "Sostenibilidad como motor de crecimiento",
+      "IA y datos como tejido conectivo",
+      "Transparencia radical y confianza de marca",
+      "Experiencias híbridas e inmersivas de marca"
+    ],
+    "summary": {
+      "tldr": "En 2026, la ventaja competitiva se concentrará en personalización adaptativa, decisiones guiadas por valores y transparencia radical, con IA/datos como tejido conectivo y sostenibilidad alineada con la rentabilidad.",
+      "executive_summary": "La personalización adaptativa, habilitada por IA y datos, se convierte en el estándar de experiencia también en B2B, reflejando expectativas de relevancia en tiempo real. Las decisiones de compra y la lealtad se inclinan hacia la autenticidad, la sostenibilidad y la contribución social, penalizando la desalineación ética. La transparencia radical pasa de ser deseable a diferenciador competitivo y base de la confianza. En paralelo, la IA y los datos conectan analítica, operaciones y contenido, mientras la convergencia entre sostenibilidad y rentabilidad se afianza y los ecosistemas omnicanal redefinen la competencia.",
+      "claim_evidence_map": [
+        {
+          "claim": "La personalización adaptativa se ha convertido en el valor predeterminado de la experiencia.",
+          "evidence_id": "F1",
+          "evidence": "La personalización ha avanzado mucho más allá de la simple segmentación; está evolucionando hacia una adaptación conductual continua.",
+          "pages": []
+        },
+        {
+          "claim": "Las decisiones de compra se orientan cada vez más por la alineación ética y de valores.",
+          "evidence_id": "F2",
+          "evidence": "Las personas priorizan la autenticidad, la sostenibilidad y la contribución social, independientemente de si compran una botella de champú, un electrodoméstico, un servicio de entrega de comidas o utilizan una plataforma B2B.",
+          "pages": []
+        },
+        {
+          "claim": "La transparencia radical es un diferenciador competitivo y base de confianza.",
+          "evidence_id": "F6",
+          "evidence": "La transparencia no es opcional; es un diferenciador competitivo.",
+          "pages": []
+        },
+        {
+          "claim": "La IA y los datos son el tejido conectivo entre sectores, marcas y personas.",
+          "evidence_id": "F4",
+          "evidence": "La expansión de la IA y las herramientas basadas en datos en diversos sectores está cambiando fundamentalmente la forma en que las marcas interactúan con sus mercados.",
+          "pages": []
+        },
+        {
+          "claim": "La sostenibilidad y la rentabilidad son cada vez más interdependientes.",
+          "evidence_id": "F5",
+          "evidence": "La investigación sectorial muestra que la sostenibilidad y la rentabilidad son cada vez más interdependientes.",
+          "pages": []
+        }
+      ]
+    },
+    "insights_candidates": [
+      {
+        "id": "IC-001",
+        "text": "La personalización adaptativa se ha convertido en la expectativa por defecto, aplicable tanto en B2C como en B2B.",
+        "evidence_id": "F1",
+        "evidence": "La personalización adaptativa se convierte en el valor predeterminado.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "B2C; B2B",
+          "sample_size": "",
+          "confidence": "0.95"
+        },
+        "pages": [
+          6
+        ],
+        "score": 0.95
+      },
+      {
+        "id": "IC-002",
+        "text": "Las decisiones de compra están cada vez más guiadas por la alineación ética y de valores (autenticidad, sostenibilidad, impacto social).",
+        "evidence_id": "F2",
+        "evidence": "Los consumidores modernos ... toman decisiones basadas no solo en la calidad del producto, sino en los valores que una empresa encarna.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "Consumidores urbanos/modernos; categorías B2C",
+          "sample_size": "",
+          "confidence": "0.92"
+        },
+        "pages": [
+          7
+        ],
+        "score": 0.92
+      },
+      {
+        "id": "IC-003",
+        "text": "Los ecosistemas omnicanal y las plataformas integradas están configurando la dinámica competitiva en el comercio y la experiencia del cliente.",
+        "evidence_id": "F3",
+        "evidence": "Ecosistemas omnicanal ... plataformas interconectadas donde minoristas, fabricantes, proveedores tecnológicos y marcas de servicios moldean colectivamente el recorrido del consumidor.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "Retail, FMCG, durables, servicios",
+          "sample_size": "",
+          "confidence": "0.93"
+        },
+        "pages": [
+          23
+        ],
+        "score": 0.93
+      },
+      {
+        "id": "IC-004",
+        "text": "La IA y los datos actúan como el tejido conectivo entre sectores, marcas y personas, habilitando personalización, analítica y operaciones.",
+        "evidence_id": "F4",
+        "evidence": "La expansión de la IA y las herramientas basadas en datos ... está cambiando fundamentalmente la forma en que las marcas interactúan con sus mercados.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "Multisectorial",
+          "sample_size": "",
+          "confidence": "0.93"
+        },
+        "pages": [
+          25
+        ],
+        "score": 0.93
+      },
+      {
+        "id": "IC-005",
+        "text": "La sostenibilidad y la rentabilidad convergen: la sostenibilidad deja de ser solo RSC y se incorpora como pilar operativo con valor económico y reputacional.",
+        "evidence_id": "F5",
+        "evidence": "La sostenibilidad se está convirtiendo en un requisito innegociable en todas las industrias relacionadas con el consumidor.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "Industrias relacionadas con el consumidor (FMCG, durables, servicios)",
+          "sample_size": "",
+          "confidence": "0.94"
+        },
+        "pages": [
+          10
+        ],
+        "score": 0.94
+      },
+      {
+        "id": "IC-006",
+        "text": "La transparencia demostrable (cadena de suministro, datos, sostenibilidad) se ha vuelto un diferenciador competitivo y base de la confianza.",
+        "evidence_id": "F6",
+        "evidence": "La confianza debe ganarse mediante acciones demostrables, no con afirmaciones de marketing.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "Marcas con interacción directa al consumidor; cadenas de suministro",
+          "sample_size": "",
+          "confidence": "0.95"
+        },
+        "pages": [
+          12
+        ],
+        "score": 0.95
+      }
+    ],
+    "insights_final": [
+      {
+        "id": "IC-001",
+        "text": "La personalización adaptativa es la expectativa por defecto en B2C y B2B.",
+        "evidence_id": "F1",
+        "evidence": "La personalización adaptativa se convierte en el valor predeterminado.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "B2C; B2B",
+          "sample_size": "",
+          "confidence": "0.95"
+        },
+        "pages": [
+          6
+        ]
+      },
+      {
+        "id": "IC-003",
+        "text": "Ecosistemas omnicanal y plataformas integradas están definiendo la competencia en comercio y experiencia del cliente.",
+        "evidence_id": "F3",
+        "evidence": "Ecosistemas omnicanal ... plataformas interconectadas donde minoristas, fabricantes, proveedores tecnológicos y marcas de servicios moldean colectivamente el recorrido del consumidor.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "Retail, FMCG, durables, servicios",
+          "sample_size": "",
+          "confidence": "0.93"
+        },
+        "pages": [
+          23
+        ]
+      },
+      {
+        "id": "IC-004",
+        "text": "La IA y los datos son el tejido conectivo entre sectores, marcas y personas, habilitando personalización, analítica y operaciones.",
+        "evidence_id": "F4",
+        "evidence": "La expansión de la IA y las herramientas basadas en datos ... está cambiando fundamentalmente la forma en que las marcas interactúan con sus mercados.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "Multisectorial",
+          "sample_size": "",
+          "confidence": "0.93"
+        },
+        "pages": [
+          25
+        ]
+      },
+      {
+        "id": "IC-005",
+        "text": "Sostenibilidad y rentabilidad convergen: pasa de RSC a pilar operativo con valor económico y reputacional.",
+        "evidence_id": "F5",
+        "evidence": "La sostenibilidad se está convirtiendo en un requisito innegociable en todas las industrias relacionadas con el consumidor.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "Industrias relacionadas con el consumidor (FMCG, durables, servicios)",
+          "sample_size": "",
+          "confidence": "0.94"
+        },
+        "pages": [
+          10
+        ]
+      },
+      {
+        "id": "IC-006",
+        "text": "La transparencia demostrable (supply chain, datos, sostenibilidad) es diferenciador competitivo y base de la confianza.",
+        "evidence_id": "F6",
+        "evidence": "La confianza debe ganarse mediante acciones demostrables, no con afirmaciones de marketing.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing",
+          "timeframe": "hasta 2026",
+          "geography": "",
+          "segment": "Marcas con interacción directa al consumidor; cadenas de suministro",
+          "sample_size": "",
+          "confidence": "0.95"
+        },
+        "pages": [
+          12
+        ]
+      }
+    ],
+    "quotes_final": [
+      {
+        "text": "La confianza debe ganarse mediante acciones demostrables, no con afirmaciones de marketing.",
+        "speaker": "Allegro 234",
+        "citation": "Transparencia radical y comportamiento auténtico de marca — Macrotendencias (Allegro 234); p.12 ",
+        "page": 12,
+        "evidence_id": "qc-001"
+      },
+      {
+        "text": "La personalización adaptativa se convierte en el valor predeterminado.",
+        "speaker": "Allegro 234",
+        "citation": "El auge de la personalización adaptativa y la relevancia contextual — Macrotendencias (Allegro 234); p.6 ",
+        "page": 6,
+        "evidence_id": "qc-003"
+      },
+      {
+        "text": "La sostenibilidad se está convirtiendo en un requisito innegociable en todas las industrias relacionadas con el consumidor.",
+        "speaker": "Allegro 234",
+        "citation": "Sostenibilidad integrada en la transformación sectorial — Macrotendencias (Allegro 234); p.10 ",
+        "page": 10,
+        "evidence_id": "qc-006"
+      }
+    ],
+    "expert_comment": "En 2026, la ventaja se concentra en experiencias adaptativas por defecto, compras guiadas por valores y transparencia que sostiene la confianza, con IA y datos conectando analítica, operaciones y contenido. Los ecosistemas omnicanal y las plataformas integradas están redefiniendo cómo compiten retailers, fabricantes y servicios al moldear de forma conjunta el recorrido del cliente. Este cambio penaliza la desalineación ética y prioriza relevancia en tiempo real basada en adaptación conductual continua. La competencia se reconfigura hacia ecosistemas, no hacia canales aislados.\n\nPara la toma de decisiones, esto exige integrar capacidades de IA y datos que habiliten respuestas contextuales en B2C y B2B, y gobernar la transparencia de extremo a extremo en cadena de suministro, datos y sostenibilidad. La sostenibilidad deja de ser un esfuerzo periférico y se convierte en pilar operativo con impacto económico y reputacional. Operativamente, competir en ecosistemas implica colaboración con socios tecnológicos y de canal en plataformas interconectadas. La priorización de inversiones debe anclar en la interdependencia entre personalización, transparencia y sostenibilidad, porque refuerzan confianza y lealtad.\n\nDatos de soporte del informe:\n- Personalización adaptativa como expectativa por defecto en B2C y B2B; tendencia en aumento; hasta 2026; confianza 0.95.\n- Ecosistemas omnicanal y plataformas interconectadas definen la competencia en comercio y experiencia; tendencia en aumento; hasta 2026; confianza 0.93.\n- IA y datos actúan como tejido conectivo habilitando personalización, analítica y operaciones; tendencia en aumento; hasta 2026; confianza 0.93.\n- Sostenibilidad y rentabilidad convergen; pasa de RSC a pilar operativo con valor económico y reputacional; tendencia en aumento; hasta 2026; confianza 0.94.\n- Transparencia demostrable en supply chain, datos y sostenibilidad es diferenciador competitivo y base de la confianza; tendencia en aumento; hasta 2026; confianza 0.95.",
+    "linkedin_post": "En 2026, la ventaja competitiva se decide en tres frentes: personalización adaptativa por defecto, decisiones guiadas por valores y transparencia radical. La gente espera relevancia en tiempo real, premia la autenticidad y penaliza cualquier desalineación ética, mientras la transparencia deja de ser opcional para convertirse en diferenciador claro   .\n\n¿Qué significa esto para líderes de ecommerce y experiencia?\nIA y datos se convierten en el tejido que une analítica, experiencia y operaciones. Permiten previsión, personalización en tiempo real y eficiencia operativa, pero exigen prácticas responsables y claras sobre su uso . A nivel estratégico, el mercado se organiza en ecosistemas omnicanal y plataformas, y la sostenibilidad se consolida como motor económico y reputacional, no como un apéndice de RSC  .\n\nDatos clave del informe:\n- Personalización adaptativa: pasa de segmentación estática a adaptación conductual continua. La expectativa también aplica a B2B .\n- Decisiones por valores: autenticidad, sostenibilidad y contribución social influyen en compras en FMCG, durables, servicios y plataformas B2B .\n- Transparencia demostrable: supply chain, uso de datos, condiciones laborales y desempeño sostenible. Es base de confianza y diferenciación competitiva .\n- IA y datos como tejido conectivo: habilitan análisis, personalización, operaciones y soporte. Su mal uso erosiona la confianza; la transparencia es crítica .\n- Sostenibilidad y rentabilidad convergen: interdependencia creciente que impulsa eficiencia, resiliencia y preferencia de marca  .\n- Ecosistemas omnicanal redefinen la competencia: se compite dentro de sistemas impulsados por plataformas; el modelo de Alibaba lo ejemplifica  .\n\nQué hacer ahora\n- Integrar IA de forma profunda y transparente, combinarla con juicio humano y tratar los datos como un activo que se protege y usa con respeto a derechos y expectativas .\n- Operar con transparencia visible: origen de ingredientes, estructura de la cadena, uso de datos y resultados en sostenibilidad. La autenticidad sostenida construye lealtad .\n- Diseñar para ecosistemas omnicanal: coordinar descubrimiento, compra y servicio en plataformas interconectadas, optimizando presencia, pricing y entrega en cada canal  .\n- Hacer de la sostenibilidad un pilar operativo y estratégico: integrar en posicionamiento, innovación y decisiones de capital para mejorar eficiencia y resiliencia del negocio  .\n\nEl punto de partida es claro: experiencia adaptativa, valores demostrados y transparencia radical, conectados por IA y datos, y alineados con sostenibilidad rentable. Quien ejecute esto con rigor ganará preferencia y margen en 2026   .\n\n#Ecommerce #ExperienciaDeCliente #Sostenibilidad",
+    "source_status": {
+      "schema_version": "1.0",
+      "text_density": 2799.4,
+      "density_threshold": 0.0,
+      "pages_sampled": 5,
+      "char_count": 13997,
+      "not_available": false,
+      "reason": "",
+      "evidence_present": true
+    }
+  },
+  "validation_report": {
+    "schema_version": "1.1",
+    "status": "fail",
+    "severity": "error",
+    "source_path": "out\\allegro-2026-trends-macrotrends-es-acig-pdf\\report_analysis\\validation.json",
+    "issues": [
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for IC-001 not supported (Evidence says adaptive personalization becomes the default, but it does not mention B2C/B2B explicitly nor the 'hasta 2026' timeframe.)",
+        "severity": "error",
+        "affected_section": "insights:IC-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for IC-003 not supported (Evidence describes omnichannel ecosystems and interconnected platforms shaping the consumer journey, but not that they 'define competition' or any 'hasta 2026' timeframe.)",
+        "severity": "error",
+        "affected_section": "insights:IC-003"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for IC-004 not supported (Evidence shows AI/data expanding across sectors and changing brand–market interactions, but does not state they are the 'tecido conectivo' enabling personalization/analytics/operations or cite a timeframe.)",
+        "severity": "error",
+        "affected_section": "insights:IC-004"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for IC-005 not supported (Evidence supports sustainability–profitability interdependence, but not the shift 'from CSR to operational pillar' nor the 'hasta 2026' timeframe.)",
+        "severity": "error",
+        "affected_section": "insights:IC-005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for IC-006 not supported (Evidence states transparency is a competitive differentiator and trust stems from demonstrable actions, but it does not include the 'hasta 2026' timeframe or specify supply chain/data/sustainability domains.)",
+        "severity": "error",
+        "affected_section": "insights:IC-006"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-001",
+        "severity": "warning",
+        "affected_section": "insights:IC-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-003",
+        "severity": "warning",
+        "affected_section": "insights:IC-003"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-004",
+        "severity": "warning",
+        "affected_section": "insights:IC-004"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-005",
+        "severity": "warning",
+        "affected_section": "insights:IC-005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-006",
+        "severity": "warning",
+        "affected_section": "insights:IC-006"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Number 0.95 not present in report or evidence",
+        "severity": "warning",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Number 0.93 not present in report or evidence",
+        "severity": "warning",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Number 0.93 not present in report or evidence",
+        "severity": "warning",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Number 0.94 not present in report or evidence",
+        "severity": "warning",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Number 0.95 not present in report or evidence",
+        "severity": "warning",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Los fragmentos suministrados sólo confirman que la personalización adaptativa es el valor predeterminado; no existe evidencia que extienda esa expectativa al ámbito B2B.: La personalización adaptativa es la expectativa por defecto en B2C y B2B.",
+        "severity": "error",
+        "affected_section": "insights_final IC-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Las evidencias mencionan la expansión de IA y datos y su impacto en la interacción marca-mercado, pero no señalan explícitamente que habiliten simultáneamente personalización, analítica y operaciones.: La IA y los datos son el tejido conectivo entre sectores, marcas y personas, habilitando personalización, analítica y operaciones.",
+        "severity": "error",
+        "affected_section": "insights_final IC-004"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Hay evidencia de interdependencia entre sostenibilidad y rentabilidad, pero no de que la sostenibilidad haya 'pasado de RSC a pilar operativo' ni de su ‘valor económico y reputacional’. : Sostenibilidad y rentabilidad convergen: pasa de RSC a pilar operativo con valor económico y reputacional.",
+        "severity": "error",
+        "affected_section": "insights_final IC-005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Las evidencias avalan que la transparencia es un diferenciador competitivo y fuente de confianza, pero no mencionan explícitamente la cadena de suministro ni los datos como ámbitos incluidos.: La transparencia demostrable (supply chain, datos, sostenibilidad) es diferenciador competitivo y base de la confianza.",
+        "severity": "error",
+        "affected_section": "insights_final IC-006"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No se aporta evidencia que extienda el ‘estándar de experiencia’ a B2B.: La personalización adaptativa, habilitada por IA y datos, se convierte en el estándar de experiencia también en B2B, reflejando expectativas de relevancia en tiempo real.",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Se documenta la creciente importancia de autenticidad y sostenibilidad, pero no que la desalineación ética sea específicamente penalizada.: Las decisiones de compra y la lealtad se inclinan hacia la autenticidad, la sostenibilidad y la contribución social, penalizando la desalineación ética.",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "La evidencia no corrobora que IA y datos conecten «analítica, operaciones y contenido».: En paralelo, la IA y los datos conectan analítica, operaciones y contenido, mientras la convergencia entre sostenibilidad y rentabilidad se afianza y los ecosistemas omnicanal redefinen la competencia",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "La parte relativa a IA y datos conectando analítica, operaciones y contenido carece de respaldo explícito.: En 2026, la ventaja se concentra en experiencias adaptativas por defecto, compras guiadas por valores y transparencia que sostiene la confianza, con IA y datos conectando analítica, operaciones y cont",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No hay evidencia de una penalización concreta por desalineación ética ni de la prioridad explícita de relevancia en tiempo real.: Este cambio penaliza la desalineación ética y prioriza relevancia en tiempo real basada en adaptación conductual continua.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No se presenta evidencia que exija dichas acciones ni que incluya la referencia a B2B o al gobierno de la transparencia en toda la cadena de suministro.: Para la toma de decisiones, esto exige integrar capacidades de IA y datos que habiliten respuestas contextuales en B2C y B2B, y gobernar la transparencia de extremo a extremo en cadena de suministro, ",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Las fuentes sólo señalan que la sostenibilidad es un requisito o que converge con la rentabilidad; no que sea ya un ‘pilar operativo’ con impacto económico y reputacional.: La sostenibilidad deja de ser un esfuerzo periférico y se convierte en pilar operativo con impacto económico y reputacional.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No hay evidencia presentada que demuestre la relación directa entre esa interdependencia y la confianza o lealtad.: La priorización de inversiones debe anclar en la interdependencia entre personalización, transparencia y sostenibilidad, porque refuerzan confianza y lealtad.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Se respalda la importancia de autenticidad y transparencia, pero no que los consumidores penalicen explícitamente la desalineación ética ni que demanden relevancia en tiempo real.: La gente espera relevancia en tiempo real, premia la autenticidad y penaliza cualquier desalineación ética, mientras la transparencia deja de ser opcional para convertirse en diferenciador claro.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No existe evidencia que indique que IA y datos unan simultáneamente analítica, experiencia y operaciones.: IA y datos se convierten en el tejido que une analítica, experiencia y operaciones.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No se aporta respaldo para la capacidad de IA/datos de proporcionar previsión ni para la exigencia de prácticas responsables.: Permiten previsión, personalización en tiempo real y eficiencia operativa, pero exigen prácticas responsables y claras sobre su uso.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "La evidencia no muestra la afirmación sobre sostenibilidad ‘como motor económico y reputacional’ ni la referencia a RSC.: A nivel estratégico, el mercado se organiza en ecosistemas omnicanal y plataformas, y la sostenibilidad se consolida como motor económico y reputacional, no como un apéndice de RSC.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No hay evidencia que extienda la expectativa de personalización adaptativa al ámbito B2B.: La expectativa también aplica a B2B.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No se aporta evidencia que incluya los sectores citados ni la referencia a plataformas B2B.: Decisiones por valores: autenticidad, sostenibilidad y contribución social influyen en compras en FMCG, durables, servicios y plataformas B2B.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Las evidencias no mencionan condiciones laborales ni especifican supply chain y uso de datos dentro de transparencia demostrable.: Transparencia demostrable: supply chain, uso de datos, condiciones laborales y desempeño sostenible.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No se proporcionan pruebas sobre la erosión de la confianza por mal uso ni sobre la habilitación específica de análisis, operaciones y soporte.: IA y datos como tejido conectivo: habilitan análisis, personalización, operaciones y soporte. Su mal uso erosiona la confianza; la transparencia es crítica.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Las evidencias sostienen la interdependencia entre sostenibilidad y rentabilidad pero no que ello impulse eficiencia, resiliencia o preferencia de marca.: Sostenibilidad y rentabilidad convergen: interdependencia creciente que impulsa eficiencia, resiliencia y preferencia de marca.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No existe evidencia que cite el modelo de Alibaba ni que describa la competencia específicamente ‘dentro de sistemas impulsados por plataformas’.: Ecosistemas omnicanal redefinen la competencia: se compite dentro de sistemas impulsados por plataformas; el modelo de Alibaba lo ejemplifica.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      }
+    ]
+  },
+  "categories_display": [
+    "AI & Automation",
+    "Consumer Behavior & Insights",
+    "Omnichannel Commerce"
+  ],
+  "analysis_mode": "vector_store"
+}

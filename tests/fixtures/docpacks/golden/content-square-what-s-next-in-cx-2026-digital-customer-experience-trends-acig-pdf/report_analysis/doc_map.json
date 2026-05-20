@@ -1,0 +1,178 @@
+{
+  "title": "What’s Next in CX: 2026 Digital Customer Experience Trends ",
+  "subtitle": "Insights, strategies, and customer stories to plan and stay ahead ",
+  "publisher": "Contentsquare ",
+  "summary": "This report outlines the top 5 digital experience trends for 2026 and provides tools, expert insights, and real-world case studies to help leaders act with confidence; it draws on a global survey of 1,692 CX leaders across roles and industries  . The trends are: 1) AI & automation, 2) Omnichannel experience, 3) Digital innovation, 4) Personalization, 5) Data-driven insights .",
+  "sections": [
+    {
+      "title": "Everything you need to know about the future of CX",
+      "page": 3
+    },
+    {
+      "title": "The top 5 digital experience trends for 2026",
+      "page": 4
+    },
+    {
+      "title": "2026 CX trends by job role",
+      "page": 5
+    },
+    {
+      "title": "Evolving trends: 2025 vs 2026",
+      "page": 6
+    },
+    {
+      "title": "Trend 1: AI & automation",
+      "page": 7
+    },
+    {
+      "title": "Trend 2: Omnichannel experience",
+      "page": 12
+    },
+    {
+      "title": "Trend 3: Digital innovation",
+      "page": 16
+    },
+    {
+      "title": "Trend 4: Personalization",
+      "page": 20
+    },
+    {
+      "title": "Trend 5: Data-driven insights",
+      "page": 25
+    },
+    {
+      "title": "The future of CX starts here and now",
+      "page": 30
+    },
+    {
+      "title": "About Contentsquare",
+      "page": 31
+    },
+    {
+      "title": "Research methodology",
+      "page": 32
+    }
+  ],
+  "trends": [
+    {
+      "name": "AI & automation",
+      "priority_percent_2026": 40.6,
+      "description": "AI and automation dominate 2026, nearly 3x any other trend; momentum centers on automation, conversational agents, and generative AI .",
+      "subtrends": [
+        {
+          "name": "Automation",
+          "note": "Automation is the fastest path to scale, accelerating decision-making and surfacing insights for next best actions ."
+        },
+        {
+          "name": "Conversational agents",
+          "note": "Conversational AI handles routine tasks; it’s predicted 70% of customer interactions will begin and end with assistants by 2028 ."
+        },
+        {
+          "name": "Generative AI",
+          "note": "GenAI speeds creation of tailored content and knowledge assets, improving support quality and consistency ."
+        }
+      ]
+    },
+    {
+      "name": "Omnichannel experience",
+      "priority_percent_2026": 13.8,
+      "description": "Climbs to second place as companies focus on better journeys across every channel and platform; connected data prevents breaks at handoffs .",
+      "subtrends": [
+        {
+          "name": "Connected journeys",
+          "note": "Analyze end-to-end journeys across platforms and channels to design seamless experiences ."
+        },
+        {
+          "name": "Touchpoint consistency",
+          "note": "Unify guidelines and ensure similar experiences across digital and physical channels to build trust and loyalty ."
+        }
+      ]
+    },
+    {
+      "name": "Digital innovation",
+      "description": "Innovation focuses on agility and embedding AI into products; teams move from quick pilots to scaled features, enabled by modern tech stacks and ways of working .",
+      "subtrends": [
+        {
+          "name": "Faster piloting and productizing",
+          "note": "Scale successful AI-powered features quickly to win attention ."
+        },
+        {
+          "name": "Modern tech stacks",
+          "note": "Experience intelligence platforms unify data, automation, and collaboration; value requires evolving workflows too ."
+        }
+      ]
+    },
+    {
+      "name": "Personalization",
+      "priority_percent_2026": 10.8,
+      "description": "Now a baseline powered by AI; analytics/data teams lead efforts to operationalize models at scale .",
+      "subtrends": [
+        {
+          "name": "Segmentation and targeting",
+          "note": "Backbone of personalization; groups customers by behaviors/preferences and sets up predictive models ."
+        },
+        {
+          "name": "Hyper-personalization",
+          "note": "Delivers relevance at scale by adapting in real time to context and intent ."
+        }
+      ]
+    },
+    {
+      "name": "Data-driven insights",
+      "priority_percent_2026": 8.8,
+      "description": "Leaders prioritize actionable analytics, faster testing, and real-time data to move from analysis to execution .",
+      "subtrends": [
+        {
+          "name": "Actionable analytics",
+          "note": "Clean, unified, governed data turns insights into faster, smarter decisions ."
+        },
+        {
+          "name": "Real-time data",
+          "note": "Live behavioral signals power predictive CX and proactive interventions ."
+        },
+        {
+          "name": "Testing velocity",
+          "note": "Rapid experimentation boosts ROI by scaling winners and cutting losses quickly ."
+        }
+      ]
+    }
+  ],
+  "case_studies": [
+    {
+      "brand": "Calendly",
+      "focus": "Conversational AI for support",
+      "outcome": "Reduced costs-per-case by -23% and cut average handle time by >3 minutes ."
+    },
+    {
+      "brand": "Sonepar",
+      "focus": "Omnichannel journey unification",
+      "outcome": "Platform adoption +300% and active users +44% after insights-led refinements ."
+    },
+    {
+      "brand": "INKEY",
+      "focus": "Personalization via Skincare Quiz",
+      "outcome": "Converters +258% higher; +40% AOV; +31% retention for quiz completers ."
+    },
+    {
+      "brand": "Škoda UK",
+      "focus": "Data-driven landing page optimization",
+      "outcome": "+44.5% YoY increase in conversions on stock locator page ."
+    },
+    {
+      "brand": "IDM Südtirol",
+      "focus": "AI-assisted insights",
+      "outcome": "Cut analysis from hours to minutes; enabled proactive innovation ."
+    }
+  ],
+  "evolving_trends_2025_vs_2026": {
+    "highlights": [
+      "AI remains top, with new focus on automation .",
+      "Omnichannel experience rises to second, emphasizing connected journeys and touchpoint consistency .",
+      "Digital innovation enters top 5, reflecting AI-driven differentiation .",
+      "Personalization falls from second to fourth .",
+      "Data shifts to actionable insights and faster testing/decisions ."
+    ]
+  },
+  "methodology": "Based on 1,692 responses to Contentsquare’s global survey of digital professionals across marketing, UX, product, ecommerce, and technology; responses were cleaned (unified terms, translated) and grouped into 5 themes and 12 sub-trends to clarify priorities for 2026 .",
+  "about_publisher": "Contentsquare is an all-in-one experience intelligence platform used to optimize experiences on 1.3M+ websites; its AI-powered insights help teams move faster and improve digital journeys "
+}

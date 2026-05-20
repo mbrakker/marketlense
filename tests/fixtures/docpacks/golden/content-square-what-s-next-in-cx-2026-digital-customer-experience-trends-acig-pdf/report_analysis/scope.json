@@ -1,0 +1,76 @@
+{
+  "scope": {
+    "title": "EvidencePack — Incident Investigation (example)",
+    "description": "Collect, preserve, and analyze digital evidence relating to a suspected unauthorized access and data exfiltration incident affecting corporate systems. This scope defines the objects, timeframe, jurisdictions, evidence types, handling rules, and objectives for the pack.",
+    "objectives": [
+      "Identify affected systems and accounts",
+      "Preserve forensic artifacts for legal/disciplinary review",
+      "Establish timeline of events",
+      "Extract indicators of compromise (IOCs) for containment"
+    ],
+    "subject": {
+      "type": "organization",
+      "id": "org-12345",
+      "name": "Example Corp"
+    },
+    "timeframe": {
+      "start": "2026-01-01T00:00:00Z",
+      "end": "2026-01-31T23:59:59Z"
+    },
+    "jurisdictions": [
+      "US",
+      "EU"
+    ],
+    "inclusion_criteria": [
+      "Server and endpoint system images (forensic)",
+      "Authentication logs (syslog, AD, cloud auth)",
+      "Network logs and flow records",
+      "Application logs for impacted apps",
+      "Email headers and attachments for relevant accounts",
+      "Related documents and configuration files",
+      "Relevant IM/chat transcripts and ticketing records"
+    ],
+    "exclusion_criteria": [
+      "Personal data unrelated to the incident",
+      "Irrelevant archived datasets older than retention policy unless containing indicators",
+      "Third-party confidential material without proper legal access"
+    ],
+    "evidence_types": [
+      "forensic_image",
+      "log_files",
+      "email_export",
+      "database_dump",
+      "network_capture",
+      "screenshots",
+      "configuration_files"
+    ],
+    "sensitivity": "restricted",
+    "handling_instructions": "All evidence must be hashed (SHA-256) at collection, stored encrypted at rest, chain-of-custody recorded, and access restricted to authorized investigators. Maintain original copies; work only on verified copies.",
+    "retention_policy": "Retain for 7 years or until legal hold released; destruction requires documented approval.",
+    "collection_methods": [
+      "forensic_imaging (bit-for-bit)",
+      "secure_log_export (TLS)",
+      "cloud_provider_api_export",
+      "preservation_via_legal_hold"
+    ],
+    "lead": {
+      "name": "Incident Lead Name",
+      "email": "incident.lead@example.com",
+      "role": "Incident Response Manager"
+    },
+    "reviewers": [
+      {
+        "name": "Legal Reviewer",
+        "role": "Legal Counsel"
+      }
+    ],
+    "related_case_ids": [
+      "CASE-2026-0001"
+    ],
+    "notes": "This scope is a template. Adjust timeframe, jurisdictions, and inclusion/exclusion criteria to match the actual investigation and any legal holds or regulatory constraints."
+  },
+  "meta": {
+    "schema_search_note": "No EvidencePack schema file was found among uploaded documents; search returned a Contentsquare CX report instead.",
+    "file_reference": ""
+  }
+}

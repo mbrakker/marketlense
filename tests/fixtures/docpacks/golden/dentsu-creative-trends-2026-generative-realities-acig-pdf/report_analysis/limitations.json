@@ -1,0 +1,16 @@
+{
+  "limitations": [
+    {
+      "text": "Trends are subject to rapid change: the report itself notes that culture now \"ebbs and flows at the speed of the algorithm,\" so some insights may lose relevance sooner than expected ."
+    },
+    {
+      "text": "Many data points come from self-reported surveys (e.g., 50 % say they try to ration their own screen-time and 40 % try to switch off as much as possible), which can suffer from social-desirability and recall bias ."
+    },
+    {
+      "text": "Geographic representation is uneven: several statistics highlight specific markets such as Brazil, the US, the UK, China and Japan, so findings may not generalize to regions that were under-sampled or omitted  ."
+    },
+    {
+      "text": "Evidence often relies on isolated brand case-studies (e.g., IKEA “Bonding Instruction” or Tusker Lager’s micro-LED kit) that may illustrate edge cases rather than widespread consumer behavior  ."
+    }
+  ]
+}

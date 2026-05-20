@@ -1,0 +1,535 @@
+{
+  "tldr": "Diversify beyond US mega-caps, tilt modestly toward non-US assets amid a still-overvalued dollar, favor intermediate-term bonds and income-friendly markets like the UK and Brazil, and selectively expand private-market exposure while staying disciplined as AI reshapes the landscape.",
+  "title": "MORNINGSTAR - 2026_Outlook_ACIG",
+  "insights": [
+    "The US dollar depreciated sharply in 2025—DXY fell nearly 10% through September, with the dollar down ~13.5% vs the euro and ~13.9% vs the Swiss franc—creating potential FX tailwinds in non‑US assets.",
+    "Intermediate‑dated bonds (5–10 years) are the fixed‑income 'sweet spot'—cash‑like yields, roll‑down capital appreciation, and upside if central banks cut; currency‑hedged global sovereigns currently out‑yield US Treasuries for some investors.",
+    "Income opportunities skew outside the US: UK equities yield ~4.0%–4.5%, Brazilian equities ~5.0%–5.5%, and select local‑currency EM sovereigns can deliver all‑in yields above 9%.",
+    "Private markets have scaled and can modestly lift long‑term portfolio returns: global private‑asset AUM now exceeds $15 trillion, and simulations show adding a 5%–10% diversified private sleeve can raise median lifetime returns by 20–40 bps annually.",
+    "Market concentration risk is elevated: the top 10 US stocks account for over one‑third of market capitalization, increasing diversification benefits from allocations to US small caps and non‑US equities."
+  ],
+  "quote": {
+    "text": "Intermediate-dated bonds—those maturing in five to 10 years—look like the sweet spot. They offer yields comparable with cash rates, benefit from capital appreciation as they “roll down the yield curve” toward maturity, and stand to gain further if central banks begin cutting rates.",
+    "author": "Morningstar Investment Management",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "Capital Expenditures (USD millions) 2025e 2026e |  | \nHyperscalers | 375,654 | 452,783\nMicrosoft 78,124 95,991 |  |",
+    "evidence": "Capital Expenditures (USD millions) 2025e 2026e |  | \nHyperscalers | 375,654 | 452,783\nMicrosoft 78,124 95,991 |  |",
+    "schema_version": "1.0"
+  },
+  "commentary": "The 2026 Global Outlook advises staying disciplined—avoiding headline-driven reactions—and notes that AI, more than politics, is likely to shape macro outcomes. With the US dollar still overvalued versus most peers, the report suggests modest reallocations to non-US assets and measured currency hedging based on local rates, while diversification beyond concentrated US market leadership is prudent. For income, intermediate-term bonds are the current sweet spot, and equity income opportunities remain attractive in the UK (and Brazil), with UK assets also supported by high dividend yields and the highest G7 government bond yields. Access to private markets is broadening; adding a 5%–10% diversified sleeve can raise median lifetime returns, though investors must weigh higher costs, lower transparency, and liquidity limits.",
+  "source": "",
+  "publisher": "",
+  "taxonomy": [
+    "macroeconomic_outlook",
+    "ai_and_productivity",
+    "country_analysis",
+    "country_forecasts",
+    "gdp_growth",
+    "interest_rates",
+    "forecasts",
+    "digital_economy"
+  ],
+  "categories": [
+    "macroeconomics",
+    "measurement_attribution",
+    "technology"
+  ],
+  "region": "Global",
+  "time_period": "2026 (Outlook for 2026; report data dated Aug.–Sept. 2025)",
+  "contents_page_number": 2,
+  "contents_heading": "table of contents",
+  "_figure_image": "morningstar-2026-outlook-acig-pdf/assets/morningstar-2026-outlook-acig-pdf.png",
+  "_figure_gallery": [
+    "morningstar-2026-outlook-acig-pdf/slices/morningstar-2026-outlook-acig-pdf.png",
+    "morningstar-2026-outlook-acig-pdf/slices/morningstar-2026-outlook-acig-pdf1.png",
+    "morningstar-2026-outlook-acig-pdf/slices/morningstar-2026-outlook-acig-pdf2.png"
+  ],
+  "_figure_top": "morningstar-2026-outlook-acig-pdf/slices/morningstar-2026-outlook-acig-pdf.png",
+  "_contents_image": "morningstar-2026-outlook-acig-pdf/assets/morningstar-2026-outlook-acig-pdf-contents.png",
+  "_vector_store_id": "vs_6980f93939488191bd138a12057590ca",
+  "_evidence_packs": {
+    "doc_map": "out\\morningstar-2026-outlook-acig-pdf\\report_analysis\\doc_map.json",
+    "scope": "out\\morningstar-2026-outlook-acig-pdf\\report_analysis\\scope.json",
+    "methods": "out\\morningstar-2026-outlook-acig-pdf\\report_analysis\\methods.json",
+    "findings": "out\\morningstar-2026-outlook-acig-pdf\\report_analysis\\findings.json",
+    "limitations": "out\\morningstar-2026-outlook-acig-pdf\\report_analysis\\limitations.json",
+    "quote_candidates": "out\\morningstar-2026-outlook-acig-pdf\\report_analysis\\quote_candidates.json",
+    "artifacts": "out\\morningstar-2026-outlook-acig-pdf\\report_analysis\\artifacts.json",
+    "validation": "out\\morningstar-2026-outlook-acig-pdf\\report_analysis\\validation.json"
+  },
+  "_text_density": 0.0,
+  "_text_pages_sampled": 0,
+  "_text_char_count": 0,
+  "_text_not_available": false,
+  "schema_version": "1.1",
+  "artifacts": {
+    "schema_version": "1.0",
+    "toc_topics": [
+      "Navigating Uncertainty Without Overreacting",
+      "Weaker Dollar Implications",
+      "AI Infrastructure Arms Race",
+      "Diversifying Beyond Mega-Caps",
+      "Income Investing Strategies",
+      "UK Assets Opportunity",
+      "Private Markets Mainstreaming",
+      "China’s Quiet Reset"
+    ],
+    "summary": {
+      "tldr": "Diversify beyond US mega-caps, tilt modestly toward non-US assets amid a still-overvalued dollar, favor intermediate-term bonds and income-friendly markets like the UK and Brazil, and selectively expand private-market exposure while staying disciplined as AI reshapes the landscape.",
+      "executive_summary": "The 2026 Global Outlook advises staying disciplined—avoiding headline-driven reactions—and notes that AI, more than politics, is likely to shape macro outcomes. With the US dollar still overvalued versus most peers, the report suggests modest reallocations to non-US assets and measured currency hedging based on local rates, while diversification beyond concentrated US market leadership is prudent. For income, intermediate-term bonds are the current sweet spot, and equity income opportunities remain attractive in the UK (and Brazil), with UK assets also supported by high dividend yields and the highest G7 government bond yields. Access to private markets is broadening; adding a 5%–10% diversified sleeve can raise median lifetime returns, though investors must weigh higher costs, lower transparency, and liquidity limits.",
+      "claim_evidence_map": [
+        {
+          "claim": "The US dollar remains overvalued versus most currencies; consider modest reallocation to non-US assets and measured currency hedging.",
+          "evidence_id": "DocMap: The Dollar’s Decline: Implications of a Weaker USD for Investors",
+          "evidence": "Only nine of 34 tracked currencies are more overvalued than the USD; consider modest reallocation to non-US assets and measured currency hedging based on local rates.",
+          "pages": [
+            4
+          ]
+        },
+        {
+          "claim": "Intermediate-term bonds are the sweet spot for income and potential total return upside.",
+          "evidence_id": "qc-001",
+          "evidence": "“Intermediate-dated bonds—those maturing in five to 10 years—look like the sweet spot. They offer yields comparable with cash rates, benefit from capital appreciation as they roll down the yield curve, and stand to gain further if central banks begin cutting rates.”",
+          "pages": [
+            15
+          ]
+        },
+        {
+          "claim": "Diversification beyond concentrated US market leadership is warranted, with better valuations in US small caps and select international markets.",
+          "evidence_id": "DocMap: Beyond the Magnificent Seven: Unlocking Value in a Concentrated Market",
+          "evidence": "Rising concentration risk argues for diversification; US small caps and select international markets offer better valuations and broader return drivers.",
+          "pages": [
+            11
+          ]
+        },
+        {
+          "claim": "Adding 5%–10% diversified private-market exposure can raise median lifetime returns, but higher costs and liquidity limits matter.",
+          "evidence_id": "DocMap: US Outlook: Private Markets Go Mainstream",
+          "evidence": "Semiliquid structures expand access to private assets; adding 5%–10% diversified private exposure can raise median lifetime returns, but higher costs, less transparency, and liquidity limits matter.",
+          "pages": [
+            24
+          ]
+        },
+        {
+          "claim": "UK assets look attractive: equities at a deep discount with high dividends, significant overseas revenue exposure, and the highest G7 gilt yields.",
+          "evidence_id": "DocMap: Beyond the Budget, Black Holes, and Brexit—Investing in UK Assets",
+          "evidence": "UK equities trade at a deep discount to US peers with high dividends; roughly 80% of UK Index revenues come from abroad; UK government bond yields are the highest in the G7.",
+          "pages": [
+            18
+          ]
+        }
+      ]
+    },
+    "insights_candidates": [
+      {
+        "id": "insight-001",
+        "text": "The US dollar experienced a pronounced depreciation in 2025—DXY fell nearly 10% through September, with the dollar down ~13.5% vs the euro and ~13.9% vs the Swiss franc—creating potential currency appreciation opportunities in non‑US assets.",
+        "evidence_id": "qc-003",
+        "evidence": "“The US Dollar Index (DXY) fell nearly 10% through September; the dollar depreciated 13.5% vs the euro and 13.9% vs the Swiss franc.” ",
+        "metric": {
+          "value": "-10",
+          "unit": "percent (DXY, through Sept. 2025)",
+          "trend": "decrease",
+          "timeframe": "through September 2025",
+          "geography": "Global / USD vs major currencies",
+          "segment": "Major FX basket",
+          "sample_size": "DXY and selected major currencies (as reported)",
+          "confidence": "0.85"
+        },
+        "pages": [
+          7,
+          8
+        ],
+        "score": 0.93
+      },
+      {
+        "id": "insight-002",
+        "text": "Valuation still favours non‑USD currencies: among 34 tracked developed and emerging currencies, only 9 are more overvalued than the US dollar—implying many currencies remain cheaper and could add value for US investors.",
+        "evidence_id": "finding-USD-valuation",
+        "evidence": "“Among the 34 major developed- and emerging-market currencies we track, only nine are currently more overvalued than the US dollar.” ",
+        "metric": {
+          "value": "9",
+          "unit": "currencies more overvalued than USD",
+          "trend": "relative undervaluation of non-USD currencies",
+          "timeframe": "Data as of Sept./Oct. 2025",
+          "geography": "Global (34 currencies tracked)",
+          "segment": "Developed & Emerging market currencies",
+          "sample_size": "34",
+          "confidence": "0.78"
+        },
+        "pages": [
+          9
+        ],
+        "score": 0.88
+      },
+      {
+        "id": "insight-003",
+        "text": "Intermediate‑dated bonds (5–10 year maturities) are the fixed‑income 'sweet spot' today—yields comparable to cash, roll‑down capital appreciation potential, and upside if central banks cut rates; currency‑hedged global sovereigns currently out‑yield US Treasuries for some investors.",
+        "evidence_id": "qc-001",
+        "evidence": "“Intermediate-dated bonds—those maturing in five to 10 years—look like the sweet spot… currency‑hedged global sovereign bonds yield more than US Treasuries.” ",
+        "metric": {
+          "value": "5",
+          "unit": "to 10 years (maturity range)",
+          "trend": "favourable relative yields and price upside on roll‑down",
+          "timeframe": "As of Sept./Oct. 2025",
+          "geography": "Global fixed‑income markets (investor-domicile dependent)",
+          "segment": "Intermediate‑dated sovereign and aggregate bonds; hedged sovereigns",
+          "sample_size": "",
+          "confidence": "0.82"
+        },
+        "pages": [
+          15,
+          18,
+          19
+        ],
+        "score": 0.92
+      },
+      {
+        "id": "insight-004",
+        "text": "Income opportunities are concentrated outside the US: UK equities yield roughly 4.0%–4.5%, Brazilian equities roughly 5.0%–5.5%, and select local‑currency emerging‑market sovereigns can offer all‑in yields above 9%.",
+        "evidence_id": "finding-income-yields",
+        "evidence": "“UK equities offer income yields of roughly 4.0–4.5%… Brazilian equities provide yields around 5.0–5.5%… select local‑currency EM sovereigns can offer all‑in yields above 9%.” ",
+        "metric": {
+          "value": "",
+          "unit": "percent (range by market)",
+          "trend": "higher nominal yields outside US (in select markets)",
+          "timeframe": "Data as of Sept./Oct. 2025",
+          "geography": "United Kingdom, Brazil, Emerging Markets (local currency)",
+          "segment": "Equities (dividend yield), local-currency sovereign debt",
+          "sample_size": "",
+          "confidence": "0.8"
+        },
+        "pages": [
+          18,
+          19
+        ],
+        "score": 0.9
+      },
+      {
+        "id": "insight-005",
+        "text": "Private markets have grown materially and can modestly lift long‑term portfolio returns: global private‑asset AUM now exceeds $15 trillion, semiliquid vehicles hold about $450 billion, and simulations show adding a 5%–10% diversified private sleeve can raise median lifetime returns by 20–40 basis points annually.",
+        "evidence_id": "qc-004",
+        "evidence": "“Private market assets have grown rapidly, now exceeding 15 trillion dollars globally.”  “Adding 5%–10% diversified private exposure… can raise median lifetime returns by 20–40 basis points annually.” ",
+        "metric": {
+          "value": "15000000000000",
+          "unit": "USD (AUM)",
+          "trend": "growth (tripled since 2015 per evidence pack)",
+          "timeframe": "as of 2025",
+          "geography": "Global private markets",
+          "segment": "Private equity, private credit, real assets; semiliquid vehicles",
+          "sample_size": "",
+          "confidence": "0.75"
+        },
+        "pages": [
+          28,
+          30
+        ],
+        "score": 0.87
+      },
+      {
+        "id": "insight-006",
+        "text": "South African assets look especially compelling for local investors: local banks and diversified miners are positioned to deliver higher expected real returns—Morningstar highlights ~8% expected real returns for certain local banks and that SA equities are priced for higher expected returns than EM/DM peers.",
+        "evidence_id": "finding-SA-8pct",
+        "evidence": "“Local banks offer ~8% expected real returns; SA equities are priced for higher expected returns than EM/DM peers.” ",
+        "metric": {
+          "value": "8",
+          "unit": "percent (expected real returns)",
+          "trend": "higher expected returns vs EM/DM peers",
+          "timeframe": "As reported in 2025/2026 outlook",
+          "geography": "South Africa (rand‑based investors)",
+          "segment": "Local banks; diversified miners",
+          "sample_size": "",
+          "confidence": "0.72"
+        },
+        "pages": [
+          32
+        ],
+        "score": 0.82
+      },
+      {
+        "id": "insight-007",
+        "text": "For US investors, modest reallocation to non‑US assets and measured currency hedging can add value—foreign exposure now offers both superior risk‑adjusted returns and potential currency appreciation versus the dollar.",
+        "evidence_id": "finding-rebalance-nonUS",
+        "evidence": "“For US-based investors, this is an opportune time to add more exposure to non-US markets—not only because many are priced to deliver superior risk-adjusted returns but also because foreign-currency exposure now offers greater potential for appreciation compared with the US dollar.” ",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "recommend modest reallocation",
+          "timeframe": "Heading into 2026",
+          "geography": "US investors reallocating to non‑US markets",
+          "segment": "International equities and bonds (hedged/unhedged)",
+          "sample_size": "",
+          "confidence": "0.8"
+        },
+        "pages": [
+          9
+        ],
+        "score": 0.89
+      },
+      {
+        "id": "insight-008",
+        "text": "Market concentration risk is elevated: the top 10 US stocks account for over one‑third of market capitalization, increasing diversification benefits from allocations to US small caps and non‑US equities.",
+        "evidence_id": "finding-concentration",
+        "evidence": "“The top 10 US stocks now account for over one-third of the market… Diversification remains the only ‘free lunch’ in investing.” ",
+        "metric": {
+          "value": "35",
+          "unit": "percent (approx. top‑10 market share)",
+          "trend": "increasing concentration",
+          "timeframe": "as of 2025",
+          "geography": "United States (US market cap)",
+          "segment": "Top‑10 large‑cap stocks",
+          "sample_size": "10",
+          "confidence": "0.81"
+        },
+        "pages": [
+          15
+        ],
+        "score": 0.86
+      }
+    ],
+    "insights_final": [
+      {
+        "id": "insight-001",
+        "text": "The US dollar depreciated sharply in 2025—DXY fell nearly 10% through September, with the dollar down ~13.5% vs the euro and ~13.9% vs the Swiss franc—creating potential FX tailwinds in non‑US assets.",
+        "evidence_id": "qc-003",
+        "evidence": "“The US Dollar Index (DXY) fell nearly 10% through September; the dollar depreciated 13.5% vs the euro and 13.9% vs the Swiss franc.”  ",
+        "metric": {
+          "value": "-10",
+          "unit": "percent (DXY, through Sept. 2025)",
+          "trend": "decrease",
+          "timeframe": "through September 2025",
+          "geography": "Global / USD vs major currencies",
+          "segment": "Major FX basket",
+          "sample_size": "DXY and selected major currencies (as reported)",
+          "confidence": "0.85"
+        },
+        "pages": [
+          7,
+          8
+        ]
+      },
+      {
+        "id": "insight-003",
+        "text": "Intermediate‑dated bonds (5–10 years) are the fixed‑income 'sweet spot'—cash‑like yields, roll‑down capital appreciation, and upside if central banks cut; currency‑hedged global sovereigns currently out‑yield US Treasuries for some investors.",
+        "evidence_id": "qc-001",
+        "evidence": "“Intermediate-dated bonds—those maturing in five to 10 years—look like the sweet spot… currency‑hedged global sovereign bonds yield more than US Treasuries.”  ",
+        "metric": {
+          "value": "5",
+          "unit": "to 10 years (maturity range)",
+          "trend": "favourable relative yields and price upside on roll‑down",
+          "timeframe": "As of Sept./Oct. 2025",
+          "geography": "Global fixed‑income markets (investor-domicile dependent)",
+          "segment": "Intermediate‑dated sovereign and aggregate bonds; hedged sovereigns",
+          "sample_size": "",
+          "confidence": "0.82"
+        },
+        "pages": [
+          15,
+          18,
+          19
+        ]
+      },
+      {
+        "id": "insight-004",
+        "text": "Income opportunities skew outside the US: UK equities yield ~4.0%–4.5%, Brazilian equities ~5.0%–5.5%, and select local‑currency EM sovereigns can deliver all‑in yields above 9%.",
+        "evidence_id": "finding-income-yields",
+        "evidence": "“UK equities offer income yields of roughly 4.0–4.5%… Brazilian equities provide yields around 5.0–5.5%… select local‑currency EM sovereigns can offer all‑in yields above 9%.”  ",
+        "metric": {
+          "value": "",
+          "unit": "percent (range by market)",
+          "trend": "higher nominal yields outside US (in select markets)",
+          "timeframe": "Data as of Sept./Oct. 2025",
+          "geography": "United Kingdom, Brazil, Emerging Markets (local currency)",
+          "segment": "Equities (dividend yield), local-currency sovereign debt",
+          "sample_size": "",
+          "confidence": "0.8"
+        },
+        "pages": [
+          18,
+          19
+        ]
+      },
+      {
+        "id": "insight-005",
+        "text": "Private markets have scaled and can modestly lift long‑term portfolio returns: global private‑asset AUM now exceeds $15 trillion, and simulations show adding a 5%–10% diversified private sleeve can raise median lifetime returns by 20–40 bps annually.",
+        "evidence_id": "qc-004",
+        "evidence": "“Private market assets have grown rapidly, now exceeding 15 trillion dollars globally.”    “Adding 5%–10% diversified private exposure… can raise median lifetime returns by 20–40 basis points annually.”  ",
+        "metric": {
+          "value": "15000000000000",
+          "unit": "USD (AUM)",
+          "trend": "growth (tripled since 2015 per evidence pack)",
+          "timeframe": "as of 2025",
+          "geography": "Global private markets",
+          "segment": "Private equity, private credit, real assets; semiliquid vehicles",
+          "sample_size": "",
+          "confidence": "0.75"
+        },
+        "pages": [
+          28,
+          30
+        ]
+      },
+      {
+        "id": "insight-008",
+        "text": "Market concentration risk is elevated: the top 10 US stocks account for over one‑third of market capitalization, increasing diversification benefits from allocations to US small caps and non‑US equities.",
+        "evidence_id": "finding-concentration",
+        "evidence": "“The top 10 US stocks now account for over one-third of the market… Diversification remains the only ‘free lunch’ in investing.”  ",
+        "metric": {
+          "value": "35",
+          "unit": "percent (approx. top‑10 market share)",
+          "trend": "increasing concentration",
+          "timeframe": "as of 2025",
+          "geography": "United States (US market cap)",
+          "segment": "Top‑10 large‑cap stocks",
+          "sample_size": "10",
+          "confidence": "0.81"
+        },
+        "pages": [
+          15
+        ]
+      }
+    ],
+    "quotes_final": [
+      {
+        "text": "Intermediate-dated bonds—those maturing in five to 10 years—look like the sweet spot. They offer yields comparable with cash rates, benefit from capital appreciation as they “roll down the yield curve” toward maturity, and stand to gain further if central banks begin cutting rates.",
+        "speaker": "Morningstar Investment Management",
+        "citation": "Investing for Income in an Uncertain Market — 2026 Global Outlook Report; page 15. ",
+        "page": 15,
+        "evidence_id": "qc-001"
+      },
+      {
+        "text": "Diversification remains the only “free lunch” in investing.",
+        "speaker": "Morningstar Research / 2026 Global Outlook Report",
+        "citation": "Beyond the Magnificent Seven: Unlocking Value in a Concentrated Market — 2026 Global Outlook Report; page 11. ",
+        "page": 11,
+        "evidence_id": "qc-002"
+      },
+      {
+        "text": "The US dollar weakened sharply in 2025, driven by fiscal concerns and reduced confidence in policy. Despite the decline, the dollar remains overvalued relative to most global currencies.",
+        "speaker": "Hong Cheng, Mike Coop, Michael Malseed (Morningstar Investment Management)",
+        "citation": "The Dollar’s Decline: Implications of a Weaker USD for Investors — 2026 Global Outlook Report; page 7. ",
+        "page": 7,
+        "evidence_id": "qc-003"
+      },
+      {
+        "text": "Private market assets have grown rapidly, now exceeding 15 trillion dollars globally.",
+        "speaker": "Morningstar Research (2026 Global Outlook Report)",
+        "citation": "US Outlook: Private Markets Go Mainstream — 2026 Global Outlook Report; page 28. ",
+        "page": 28,
+        "evidence_id": "qc-004"
+      }
+    ],
+    "expert_comment": "The portfolio signals line up: the dollar weakened materially in 2025 (DXY down nearly 10% through September, about 13.5% versus the euro and 13.9% versus the Swiss franc) yet remains overvalued versus most peers, so the case is for incremental reallocations to non‑US assets with measured hedging based on local rates. At the same time, US market concentration has risen, with the top 10 stocks now representing over one‑third of market cap, which strengthens the rationale to diversify into US small caps and select international markets where valuations are more attractive. The common thread is discipline rather than headline‑chasing, acknowledging that AI is more likely than politics to drive macro outcomes in this cycle.\n\nIncome and defensiveness can be sourced without surrendering total‑return potential. Intermediate‑dated bonds in the 5–10 year range offer cash‑like yields with roll‑down carry and upside if central banks cut, and currency‑hedged global sovereigns currently out‑yield US Treasuries for some investors. Equity income skews outside the US, with the UK yielding roughly 4.0%–4.5% and Brazil around 5.0%–5.5%; select local‑currency EM sovereigns can exceed 9% all‑in. UK assets add a further margin of safety via discounted equity valuations, high dividends, significant overseas revenue exposure, and the highest G7 government bond yields.\n\nPrivate markets now have the scale to play a defined role rather than a peripheral one, but only with clear-eyed tradeoffs. Global private‑asset AUM exceeds $15 trillion, and adding a diversified 5%–10% sleeve can raise median lifetime portfolio returns by 20–40 bps annually, balanced against higher costs, lower transparency, and liquidity limits. In combination with modest non‑US tilts, measured currency hedging, and a focus on intermediate duration, this creates a coherent, income‑aware allocation that reduces concentration risk while preserving flexibility as the AI transition unfolds.",
+    "linkedin_post": "2026 portfolio decisions should shift away from concentrated US leadership and cash-like exposures toward non-US income and intermediate-term bonds, with measured FX hedging and selective private markets. This is a practical allocation playbook for operators who need resilient returns without chasing headlines  .\n\nData points that inform the playbook:\n- The dollar fell sharply in 2025 (DXY nearly 10% through September; down 13.5% vs the euro and 13.9% vs the Swiss franc), creating FX tailwinds. Yet only nine of 34 tracked currencies are more overvalued than the USD, so a modest, disciplined reallocation to non‑US assets with calibrated hedging is warranted  .\n- Intermediate‑dated bonds (5–10 years) look like the sweet spot: cash‑like yields, roll‑down potential, and upside if central banks cut; currency‑hedged global sovereigns currently yield more than US Treasuries for some US‑based investors .\n- UK assets screen attractively: equities trade at a deep discount with high dividends, around 80% of index revenues come from abroad, and gilt yields are the highest in the G7 . For income, UK equities yield roughly 4.0–4.5% and Brazil around 5.0–5.5% .\n- Concentration risk is elevated. Diversification remains the only free lunch, with opportunities in small caps and outside the US as leadership broadens .\n- Access to private markets is broadening. Adding a 5%–10% diversified sleeve can raise median lifetime returns by 20–40 bps annually, but higher costs, less transparency, and liquidity limits must be weighed; global private-asset AUM now exceeds $15 trillion  .\n\nWhat leaders should do now:\n- Rebalance a modest slice from US to non‑US assets and tailor FX hedging to local rate differentials, rather than running unhedged by default  .\n- Extend core fixed‑income duration toward 5–10 years and consider currency‑hedged global sovereigns for incremental yield and diversification .\n- Tilt equity income toward the UK (and Brazil) while using UK gilts as a high‑yield G7 ballast  .\n- Introduce a 5%–10% diversified private‑markets sleeve with clear governance on fees, transparency, and liquidity .\n- Stay disciplined. Avoid headline‑driven reactions, and monitor AI as a key macro swing factor in 2026 .\n\n#AssetAllocation #GlobalMarkets #PortfolioStrategy",
+    "source_status": {
+      "schema_version": "1.0",
+      "text_density": 1681.8,
+      "density_threshold": 0.0,
+      "pages_sampled": 5,
+      "char_count": 8409,
+      "not_available": false,
+      "reason": "",
+      "evidence_present": true
+    }
+  },
+  "validation_report": {
+    "schema_version": "1.1",
+    "status": "pass",
+    "severity": "pass",
+    "source_path": "out\\morningstar-2026-outlook-acig-pdf\\report_analysis\\validation.json",
+    "issues": [
+      {
+        "schema_version": "1.0",
+        "message": "Metric value '-10' not verbatim but semantically supported (confidence=1.00) for insight-001",
+        "severity": "info",
+        "affected_section": "insights:insight-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric unit 'percent (DXY, through Sept. 2025)' not verbatim but semantically supported (confidence=1.00) for insight-001",
+        "severity": "info",
+        "affected_section": "insights:insight-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'through September 2025' not verbatim but semantically supported (confidence=1.00) for insight-001",
+        "severity": "info",
+        "affected_section": "insights:insight-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric value '5' not verbatim but semantically supported (confidence=1.00) for insight-003",
+        "severity": "info",
+        "affected_section": "insights:insight-003"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric unit 'to 10 years (maturity range)' not verbatim but semantically supported (confidence=1.00) for insight-003",
+        "severity": "info",
+        "affected_section": "insights:insight-003"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'As of Sept./Oct. 2025' not verbatim but semantically supported (confidence=1.00) for insight-003",
+        "severity": "info",
+        "affected_section": "insights:insight-003"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric unit 'percent (range by market)' not verbatim but semantically supported (confidence=1.00) for insight-004",
+        "severity": "info",
+        "affected_section": "insights:insight-004"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'Data as of Sept./Oct. 2025' not verbatim but semantically supported (confidence=1.00) for insight-004",
+        "severity": "info",
+        "affected_section": "insights:insight-004"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric value '15000000000000' not verbatim but semantically supported (confidence=1.00) for insight-005",
+        "severity": "info",
+        "affected_section": "insights:insight-005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric unit 'USD (AUM)' not verbatim but semantically supported (confidence=1.00) for insight-005",
+        "severity": "info",
+        "affected_section": "insights:insight-005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'as of 2025' not verbatim but semantically supported (confidence=1.00) for insight-005",
+        "severity": "info",
+        "affected_section": "insights:insight-005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric value '35' not verbatim but semantically supported (confidence=0.96) for insight-008",
+        "severity": "info",
+        "affected_section": "insights:insight-008"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric unit 'percent (approx. top‑10 market share)' not verbatim but semantically supported (confidence=0.96) for insight-008",
+        "severity": "info",
+        "affected_section": "insights:insight-008"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'as of 2025' not verbatim but semantically supported (confidence=0.96) for insight-008",
+        "severity": "info",
+        "affected_section": "insights:insight-008"
+      }
+    ]
+  },
+  "categories_display": [
+    "Macroeconomics & Regional Outlooks",
+    "Measurement & Attribution",
+    "Technology & Innovation"
+  ],
+  "analysis_mode": "vector_store"
+}

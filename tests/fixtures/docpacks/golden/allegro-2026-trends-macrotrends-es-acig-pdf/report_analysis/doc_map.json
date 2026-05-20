@@ -1,0 +1,186 @@
+{
+  "schema": "DocMap",
+  "lang": "es",
+  "title": "Otro más hablando de tendencias de 2026 | Sobre macrotendencias",
+  "date": "Diciembre de 2025",
+  "authors": [
+    "Allegro 234"
+  ],
+  "publisher": "Allegro 234 SL",
+  "summary": {
+    "personas": [
+      "La personalización adaptativa se convierte en el valor predeterminado.",
+      "Los valores influyen en las decisiones.",
+      "La participación sustituye al consumo pasivo."
+    ],
+    "sector": [
+      "Lo digital primero se convierte en infraestructura estructural.",
+      "La sostenibilidad se convierte en un motor de crecimiento.",
+      "La tecnología se integra profundamente a través de las cadenas de valor."
+    ],
+    "marca": [
+      "La transparencia como base de la confianza.",
+      "Innovación basada en la experiencia.",
+      "Los ecosistemas colaborativos redefinen la construcción de marca."
+    ]
+  },
+  "sections": [
+    {
+      "id": 1,
+      "title": "El auge de la personalización adaptativa y la relevancia contextual",
+      "summary": "La personalización evoluciona hacia una adaptación conductual continua, con expectativas en tiempo real impulsadas por IA, también en B2B."
+    },
+    {
+      "id": 2,
+      "title": "Consumo impulsado por el valor y alineación ética",
+      "summary": "La autenticidad, sostenibilidad e impacto social guían decisiones y lealtad; la alineación de valores se extiende entre demografías."
+    },
+    {
+      "id": 3,
+      "title": "Participación activa y concreción en la cultura del consumo",
+      "summary": "Las personas pasan de receptoras pasivas a cocreadoras, influyendo en diseño, narrativa y evolución de productos y servicios."
+    },
+    {
+      "id": 4,
+      "title": "Ecosistemas digital-first y la aceleración del comercio electrónico",
+      "summary": "El comercio digital es infraestructura central, habilitada por pagos, IA y logística predictiva, con expectativas de fluidez sin fricciones."
+    },
+    {
+      "id": 5,
+      "title": "Sostenibilidad integrada en la transformación sectorial",
+      "summary": "La sostenibilidad pasa de RSC a pilar operativo: circularidad, longevidad y operaciones de bajo impacto como ventaja competitiva."
+    },
+    {
+      "id": 6,
+      "title": "Integración tecnológica entre operaciones, productos y servicios",
+      "summary": "IA, ML, IoT y XR optimizan operaciones, personalizan ofertas y transforman la interacción con bienes duraderos y servicios."
+    },
+    {
+      "id": 7,
+      "title": "Transparencia radical y comportamiento auténtico de marca",
+      "summary": "La transparencia demostrable en cadena de suministro, datos y sostenibilidad es diferenciador y base de la confianza."
+    },
+    {
+      "id": 8,
+      "title": "Innovación orientada a la experiencia e inmersión en la marca",
+      "summary": "El branding se centra en experiencias híbridas físico-digitales; RA/VR e IA elevan el compromiso multisensorial."
+    },
+    {
+      "id": 9,
+      "title": "Colaboraciones estratégicas y marca del ecosistema",
+      "summary": "Ecosistemas y alianzas amplían capacidades, alcance y legitimidad social, conectando con públicos urbanos interplataforma."
+    },
+    {
+      "id": 10,
+      "title": "Expectativa de viajes digitales sin fricciones en todas las categorías",
+      "summary": "Se exige simplicidad y fluidez end-to-end: recompras, autoservicio y seguimiento transparente en FMCG, duraderos y servicios."
+    },
+    {
+      "id": 11,
+      "title": "Mayor demanda de agencia personal e influencia colaborativa",
+      "summary": "Las personas esperan co-desarrollar y modular productos y servicios; las marcas rezagadas se perciben poco receptivas."
+    },
+    {
+      "id": 12,
+      "title": "La prioridad de la alineación de valor en las decisiones de compra",
+      "summary": "Valores como sostenibilidad, ética y acceso equitativo moldean decisiones en categorías B2C; la desalineación se penaliza rápido."
+    },
+    {
+      "id": 13,
+      "title": "Expectativa de comunicación bidireccional y diálogo en tiempo real",
+      "summary": "Respuestas inmediatas, empáticas y consistentes humanizan la marca y fortalecen la afinidad."
+    },
+    {
+      "id": 14,
+      "title": "Lealtad basada en valores compartidos y contribuciones significativas",
+      "summary": "La lealtad emocional basada en valores supera a la transaccional; se premian posturas y contribución social."
+    },
+    {
+      "id": 15,
+      "title": "Deseo de experiencias digitales e híbridas inmersivas",
+      "summary": "Experiencias ricas y sin fricciones con AR, showrooms virtuales y ecosistemas conectados elevan expectativas."
+    },
+    {
+      "id": 16,
+      "title": "Convergencia de sostenibilidad y rentabilidad en la estrategia de marca",
+      "summary": "Modelos circulares y eficiencia operativa crean valor económico y reputacional a la vez."
+    },
+    {
+      "id": 17,
+      "title": "Ecosistemas omnicanal y competencia basada en plataformas",
+      "summary": "Plataformas integradas requieren coherencia de contenido, precio y soporte a lo largo del journey."
+    },
+    {
+      "id": 18,
+      "title": "IA y datos como tejido conectivo entre sectores, marcas y personas",
+      "summary": "IA sustenta analítica, personalización, operaciones y contenido, con exigencias de transparencia y ética."
+    }
+  ],
+  "examples": [
+    "Netflix",
+    "Spotify",
+    "IKEA (AR)",
+    "Alibaba (Nuevo Retail)",
+    "Amazon",
+    "Salesforce Einstein",
+    "Siemens",
+    "Sephora (Prueba Virtual)",
+    "GoPro",
+    "Ben & Jerry's",
+    "TOMS",
+    "Interface (Suelos de Interface)",
+    "Unilever",
+    "Nike × Apple"
+  ],
+  "sources": [
+    "Allegro 234 – Tendencias e Perspectivas 2025",
+    "TrendWatching – Plataforma y encuadre de tendencias (2026+)",
+    "Mintel – Global Food & Drink Trends (2024–2026)",
+    "McKinsey – Western Europe’s consumer goods industry in 2030",
+    "McKinsey – Omnichannel shopping in 2030"
+  ],
+  "citations": {
+    "meta": "",
+    "summary": {
+      "personas_y_sector": "",
+      "marca": ""
+    },
+    "sections": {
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+      "6": "",
+      "7": "",
+      "8": "",
+      "9": "",
+      "10": "",
+      "11": "",
+      "12": "",
+      "13": "",
+      "14": "",
+      "15": "",
+      "16": "",
+      "17": "",
+      "18": ""
+    },
+    "examples": {
+      "Netflix": "",
+      "Spotify": "",
+      "IKEA (AR)": "",
+      "Alibaba (Nuevo Retail)": "",
+      "Amazon": "",
+      "Salesforce Einstein": "",
+      "Siemens": "",
+      "Sephora (Prueba Virtual)": "",
+      "GoPro": "",
+      "Ben & Jerry's": "",
+      "TOMS": "",
+      "Interface (Suelos de Interface)": "",
+      "Unilever": "",
+      "Nike × Apple": ""
+    },
+    "sources": ""
+  }
+}

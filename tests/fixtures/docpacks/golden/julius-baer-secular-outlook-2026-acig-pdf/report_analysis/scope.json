@@ -1,0 +1,61 @@
+{
+  "scope": {
+    "title": "EvidencePack: Structured extraction from 'Secular Outlook — Economic and investment trends shaping the current decade' (Julius Baer)",
+    "purpose": "Create a structured EvidencePack that extracts, summarizes, and packages the publication's key findings, charts, data, metadata and risk points to support investment research, review, and compliance use-cases.",
+    "objectives": [
+      "Extract publication metadata (title, authors, publication date, imprint/disclaimer).",
+      "Summarize the executive/editorial overview and each major section (Historical secular trends; Key macroeconomic trends; Key capital market trends; Key risk factors).",
+      "Identify and extract each chart/figure and capture underlying numeric data where present (tables or digitizable chart data).",
+      "Capture key risk factors and highlighted assumptions.",
+      "Produce machine-readable outputs: JSON summaries, CSVs for extracted tables/data, and PNGs for charts/images.",
+      "Record source citations for every extracted item."
+    ],
+    "in_scope": [
+      "All main content sections listed in the document's table of contents (editorial; historical secular trends; key macroeconomic trends; key capital market trends; key risk factors; imprint) as present in the uploaded file .",
+      "All charts and figures appearing in the publication (capture images and attempt to extract numeric data).",
+      "Publication metadata (title page and publication date) and listed authors/contacts on the imprint page .",
+      "Textual summaries (paraphrases and short extracts) necessary to convey findings and support analysis.",
+      "References and footnotes included in the file."
+    ],
+    "out_of_scope": [
+      "Full verbatim reproduction of the publication beyond short fair-use excerpts (no wholesale copying of copyrighted text).",
+      "Any third-party materials not embedded in the uploaded file.",
+      "Providing legal, tax, or individualized investment advice based on the extracted material."
+    ],
+    "timeframe": {
+      "publication_date": "2025-12-02",
+      "data_coverage": "Content and data included in the uploaded publication (up to Q4 2025 as documented in the file) ."
+    },
+    "data_sources": [
+      "Uploaded file: JULIUS BAER - Secular-outlook-2026_ACIG.pdf ",
+      "Document table of contents previewed in the uploaded file "
+    ],
+    "stakeholders": [
+      "Requesting analyst / uploader",
+      "Investment research team",
+      "Compliance / legal review",
+      "Portfolio managers (consumers of the EvidencePack)"
+    ],
+    "deliverables": [
+      "EvidencePack JSON containing: metadata, section summaries, extracted chart metadata and data pointers, extracted risk matrix, and a references list.",
+      "CSV files for any tabular/chart numeric data extracted.",
+      "PNG files for each chart/figure extracted from the PDF.",
+      "A short extraction log documenting any pages or elements that could not be machine-extracted and require manual review."
+    ],
+    "constraints": [
+      "Respect copyright and only include summaries or short quoted excerpts as permitted; link to source citation for each item.",
+      "Extraction quality may vary for complex charts/low-resolution images; manual validation may be required.",
+      "Do not fabricate numeric values — where chart data cannot be reliably digitized, flag for manual transcription."
+    ],
+    "acceptance_criteria": [
+      "EvidencePack JSON populated with publication metadata and a summary for each in-scope section.",
+      "All charts present in the PDF captured as image files and annotated with page/figure identifiers.",
+      "Numeric data available for at least the top 10 charts (where digitizable); otherwise flagged for manual extraction.",
+      "References field lists the original uploaded file with citation markers used in the pack."
+    ],
+    "assumptions": [
+      "The uploaded PDF is the authoritative source for this EvidencePack and contains the sections referenced in the TOC .",
+      "No additional documents are required beyond the uploaded file unless requested."
+    ]
+  }
+}

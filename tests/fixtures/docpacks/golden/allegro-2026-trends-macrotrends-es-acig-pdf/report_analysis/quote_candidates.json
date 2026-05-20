@@ -1,0 +1,88 @@
+{
+  "quote_candidates": [
+    {
+      "id": "qc-001",
+      "text": "La confianza debe ganarse mediante acciones demostrables, no con afirmaciones de marketing.",
+      "author": "Allegro 234",
+      "source_title": "Macrotendencias (Allegro 234)",
+      "page": 12,
+      "source_citation": "",
+      "confidence": 0.95,
+      "tags": [
+        "transparencia",
+        "confianza",
+        "marca"
+      ]
+    },
+    {
+      "id": "qc-002",
+      "text": "Los consumidores modernos ... toman decisiones basadas no solo en la calidad del producto, sino en los valores que una empresa encarna.",
+      "author": "Allegro 234",
+      "source_title": "Macrotendencias (Allegro 234)",
+      "page": 7,
+      "source_citation": "",
+      "confidence": 0.92,
+      "tags": [
+        "valores",
+        "decisión de compra",
+        "ética"
+      ]
+    },
+    {
+      "id": "qc-003",
+      "text": "La personalización adaptativa se convierte en el valor predeterminado.",
+      "author": "Allegro 234",
+      "source_title": "Macrotendencias (Allegro 234)",
+      "page": 6,
+      "source_citation": "",
+      "confidence": 0.95,
+      "tags": [
+        "personalización",
+        "experiencia",
+        "IA"
+      ]
+    },
+    {
+      "id": "qc-004",
+      "text": "La expansión de la IA y las herramientas basadas en datos ... está cambiando fundamentalmente la forma en que las marcas interactúan con sus mercados.",
+      "author": "Allegro 234",
+      "source_title": "Macrotendencias (Allegro 234)",
+      "page": 25,
+      "source_citation": "",
+      "confidence": 0.93,
+      "tags": [
+        "IA",
+        "datos",
+        "interacción"
+      ]
+    },
+    {
+      "id": "qc-005",
+      "text": "Ecosistemas omnicanal ... En lugar de marcas y canales aislados, vemos plataformas interconectadas donde minoristas, fabricantes, proveedores tecnológicos y marcas de servicios moldean colectivamente el recorrido del consumidor.",
+      "author": "Allegro 234",
+      "source_title": "Macrotendencias (Allegro 234)",
+      "page": 23,
+      "source_citation": "",
+      "confidence": 0.93,
+      "tags": [
+        "omnicanal",
+        "plataformas",
+        "ecosistema"
+      ]
+    },
+    {
+      "id": "qc-006",
+      "text": "La sostenibilidad se está convirtiendo en un requisito innegociable en todas las industrias relacionadas con el consumidor.",
+      "author": "Allegro 234",
+      "source_title": "Macrotendencias (Allegro 234)",
+      "page": 10,
+      "source_citation": "",
+      "confidence": 0.94,
+      "tags": [
+        "sostenibilidad",
+        "estrategia",
+        "industria"
+      ]
+    }
+  ]
+}

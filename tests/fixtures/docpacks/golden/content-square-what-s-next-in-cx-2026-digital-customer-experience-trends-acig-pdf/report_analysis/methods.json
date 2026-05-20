@@ -1,0 +1,27 @@
+{
+  "methods": [
+    {
+      "name": "Global survey of digital-experience practitioners",
+      "alternateNames": [
+        "What’s Next in CX global survey"
+      ],
+      "description": "The core data source for the report is an online survey of 1,692 professionals working in marketing, UX, product, ecommerce and technology roles worldwide. Each respondent answered the question “What’s the biggest digital experience trend you’re focusing on next year?”"
+    },
+    {
+      "name": "Data cleaning and normalisation",
+      "alternateNames": [
+        "Translation & acronym unification",
+        "Response standardisation"
+      ],
+      "description": "After collection, responses were translated from non-English languages and common variants or acronyms were merged (e.g., “gen AI” → “generative AI”) to ensure that results were clear and comparable."
+    },
+    {
+      "name": "Automated text-analysis & thematic clustering",
+      "alternateNames": [
+        "Trend grouping",
+        "Theme identification"
+      ],
+      "description": "Cleaned responses were run through text-analysis to surface the most talked-about topics. The algorithm grouped answers into five major digital-experience themes and twelve sub-trends that frame the report’s findings."
+    }
+  ]
+}

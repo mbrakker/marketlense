@@ -1,0 +1,182 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: quote quote_2 not supported (No evidence contains this statement or its conditional claim about adoption stalling.)",
+      "severity": "warning",
+      "affected_section": "quotes:quote_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit '% (annual growth)' not verbatim but semantically supported (confidence=1.00) for insight-1",
+      "severity": "info",
+      "affected_section": "insights:insight-1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '20' not verbatim but semantically supported (confidence=1.00) for insight-5",
+      "severity": "info",
+      "affected_section": "insights:insight-5"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit '% of referral clicks' not verbatim but semantically supported (confidence=1.00) for insight-5",
+      "severity": "info",
+      "affected_section": "insights:insight-5"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'August (month referenced)' not verbatim but semantically supported (confidence=1.00) for insight-5",
+      "severity": "info",
+      "affected_section": "insights:insight-5"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit '%, year-over-year increase (from 56%)' not verbatim but semantically supported (confidence=1.00) for insight-6",
+      "severity": "info",
+      "affected_section": "insights:insight-6"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'current vs last year' not verbatim but semantically supported (confidence=1.00) for insight-6",
+      "severity": "info",
+      "affected_section": "insights:insight-6"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote not verbatim in evidence (No evidence contains this statement or its conditional claim about adoption stalling.): Early adoption of AI-powered search is surging, but it may stall—or even retreat—if AI recommendations fail to meet expe",
+      "severity": "warning",
+      "affected_section": "quotes:quote_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote paraphrased but semantically supported (confidence=0.85): Transparency builds confidence, even when the tech stays in the background.",
+      "severity": "info",
+      "affected_section": "quotes:quote_3"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The supplied evidence lists some headings but never states that these five forces collectively “redefine how customers discover, decide, and buy in 2026.”: Five forces—experience-led retail, premium private labels, searchless shopping, invisible AI, and trust—are redefining how customers discover, decide, and buy in 2026.",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While the 5.8 % growth rate and flat U.S. unit sales are supported, the conclusion that this ‘underscores an experience-led growth opportunity’ is not found in the evidence.: Global travel will grow 5.8% annually through 2032, underscoring an experience-led growth opportunity as U.S. unit sales remain flat.",
+      "severity": "error",
+      "affected_section": "insight-1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This quotation is not present in the supplied evidence snippets.: Early adoption of AI-powered search is surging, but it may stall—or even retreat—if AI recommendations fail to meet expectations.",
+      "severity": "error",
+      "affected_section": "quote_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This quotation is not present in the supplied evidence snippets.: Transparency builds confidence, even when the tech stays in the background.",
+      "severity": "error",
+      "affected_section": "quote_3"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet explicitly states that Capgemini identifies exactly these five forces or describes trust as a profit driver.: Capgemini identifies five forces reshaping retail in 2026: moments over merchandise, the rise of private labels, searchless retail, invisible AI, and trust as a profit driver.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence confirms a lasting shift toward experiences but does not state that it is ‘pushing retailers to find margin in experience-led propositions’.: Experiences have become a lasting shift, pushing retailers to find margin in experience-led propositions.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports private-label choice and GEO traffic, but there is no support for generative tools ‘influencing purchase decisions.’: Private labels are now a key choice driver—even for high earners—while retail discovery moves from SEO to GEO, with generative tools already influencing traffic and purchase decisions.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While some supporting numbers exist, the broader claim that trust ‘becomes a differentiator’ and that consumers ‘demand transparency and human oversight’ is not explicitly evidenced.: Consumers expect seamless, AI-enabled journeys but demand transparency and human oversight; trust becomes a differentiator, with clear explanations materially increasing confidence in AI-assisted shop",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet characterises experience spending as ‘the core of growth.’: Experience has shifted from a discretionary add-on to the core of growth.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Data are supported, but the claim that this dynamic is ‘pushing retailers to find margin in experience-led propositions’ is not in evidence.: The demand signal aligns: global travel is projected to grow 5.8% annually through 2032 while U.S. unit sales remain flat, pushing retailers to find margin in experience-led propositions.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence links private labels and trust metrics separately but never states they operate as ‘a single system of choice.’: Private label and trust now operate as a single system of choice, even for affluent shoppers.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence ties consumer confidence to the future rate of GEO adoption.: Discovery is moving from search to suggestion, but confidence will determine the slope of adoption.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The quoted warning is not present in the supplied evidence.: As one leader cautions, “Early adoption of AI-powered search is surging, but it may stall—or even retreat—if AI recommendations fail to meet expectations.”",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The quotation and the prescriptive recommendations are not backed by evidence snippets.: Make product content and feeds GEO-ready, and implement transparent explanations, strong data protection, and visible guardrails with human oversight, since “Transparency builds confidence, even when ",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This metaphorical claim has no supporting evidence.: That is the new shelf.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Same unsupported enumeration noted earlier; not explicitly stated in evidence.: Capgemini sees five forces reshaping retail in 2026: moments over merchandise, the rise of private labels, searchless retail, invisible AI, and trust as a profit driver.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence shows GEO traffic growth and some trust metrics, but not that consumers specifically ‘want transparency and human oversight.’: Retail discovery is moving from SEO to GEO, and consumers want seamless AI with transparency and human oversight.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports influence on traffic but not on purchase ‘decisions.’: Generative platforms already influence traffic and decisions, so prepare product and content for searchless discovery.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence shows 52 % would switch for better data protection (choice), but no data link to ‘conversion.’: Strong data protection and transparent assistants are not compliance tasks, they are drivers of choice and conversion.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This predictive statement is not supported by the evidence.: Retail winners in 2026 will be the ones who operationalize these five forces with discipline and clarity.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

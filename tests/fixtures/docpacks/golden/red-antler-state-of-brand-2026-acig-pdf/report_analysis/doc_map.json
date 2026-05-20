@@ -1,0 +1,111 @@
+{
+  "schema": "DocMap",
+  "document": {
+    "title": "2026 State of Brand: Branding at the Edge — How to avoid the murky middle and thrive in today's Dichotomy Economy ",
+    "publisher": "Presented by Red Antler; featuring insights from McKinsey & Company ",
+    "overview": "In today’s two-seconds-til-swipe attention economy, being pleasant but unremarkable will only get you left behind; this report explores the polarities reshaping culture and the opportunities for brands that live at the edges ",
+    "contributors": [
+      "Emily Heyward (Red Antler CEO) ",
+      "Kathryn Rathje (Partner, McKinsey & Company) "
+    ],
+    "keywords": [
+      "Dichotomy Economy ",
+      "attention economy ",
+      "AI ",
+      "proof and transparency "
+    ]
+  },
+  "sections": [
+    {
+      "heading": "Chapter 1: To Optimize or Opt Out? ",
+      "subsections": [
+        {
+          "heading": "Turn Data Into Doing",
+          "summary": "Smart brands are pivoting from passive metrics to active guidance; not all trackable data is worth caring about "
+        },
+        {
+          "heading": "Help Out Human Potential",
+          "summary": "Use analytics to fuel improvement rather than overwhelm with information "
+        },
+        {
+          "heading": "Pick a Side on AI",
+          "summary": "You’re either all‑in on AI or you’re not; undisclosed or hedged uses trigger backlash, as seen in the J.Crew controversy "
+        },
+        {
+          "heading": "Engineer an Escape Hatch",
+          "summary": "Brands are going all‑in on reclaiming IRL time or on digital optimization—hedging no longer cuts it "
+        }
+      ]
+    },
+    {
+      "heading": "Chapter 2: The Rules & The Rebels ",
+      "summary": "Unapologetic approaches are winning; being neutral and likeable but unremarkable gets you left behind "
+    },
+    {
+      "heading": "Chapter 3: The Truth Needs Proof ",
+      "subsections": [
+        {
+          "heading": "Show What You Stand For",
+          "summary": "The gap between what brands say and do is wider than ever; transparency makes proof undeniable "
+        },
+        {
+          "heading": "Authority You Can’t Buy",
+          "summary": "Amid AI hallucinations and deepfakes, people seek validation and verification from trusted, reality‑anchored sources "
+        }
+      ]
+    },
+    {
+      "heading": "Spotlight Q&A: One Size Fits None — The future of audience engagement",
+      "summary": "Consumption does not equal attention; quality attention depends on intention and context, requiring moment‑relevant messaging "
+    }
+  ],
+  "evidence": [
+    {
+      "type": "case_study",
+      "name": "USAFacts",
+      "detail": "Non‑partisan activation used giant inflated bananas to spotlight bias and urge verification of underlying data "
+    },
+    {
+      "type": "case_study",
+      "name": "Daydream",
+      "detail": "AI‑powered search‑to‑shop engine with a brand world built on innovation; AI asset generation was a natural extension "
+    },
+    {
+      "type": "case_study",
+      "name": "The Ordinary",
+      "detail": "Foregrounds clinical evidence and ingredient transparency; ‘Periodic Fable’ called out industry sleight of hand "
+    },
+    {
+      "type": "case_study",
+      "name": "Sweetgreen",
+      "detail": "Put real farmers on Times Square billboards, proving commitment through visibility rather than statements "
+    },
+    {
+      "type": "case_study",
+      "name": "Thesis",
+      "detail": "Positions around ‘owning your mind’ and long‑term improvement; retention increased after reframing the journey "
+    },
+    {
+      "type": "case_study",
+      "name": "Lindt",
+      "detail": "Pivoted toward unapologetic indulgence (Dubai‑style chocolate), aligning with pleasure without shame "
+    },
+    {
+      "type": "case_study",
+      "name": "Oura",
+      "detail": "‘One Big Thing’ feature provides a single, attainable goal based on biometrics to reduce overwhelm "
+    },
+    {
+      "type": "case_study",
+      "name": "Knix",
+      "detail": "‘You’re good’ campaign spoke directly to period‑having consumers, willingly alienating the uninitiated "
+    }
+  ],
+  "quotes": [
+    "“We are drenched in data… The question today isn't whether we can track something—it’s whether we should care.” ",
+    "“Consumption does not equal attention.” "
+  ],
+  "references": [
+    "McKinsey & Company: The Attention Equation (cited in the report’s Q&A) "
+  ]
+}

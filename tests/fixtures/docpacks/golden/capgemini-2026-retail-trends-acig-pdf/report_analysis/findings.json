@@ -1,0 +1,68 @@
+{
+  "findings": [
+    {
+      "id": "finding-1",
+      "title": "Moments over merchandise – the rise of the experience economy",
+      "summary": "Capgemini predicts that sustainable retail growth will come from experience-led propositions rather than purely product sales, calling the experience economy a “necessity” for retailers that want to keep margins as unit sales plateau.",
+      "confidence": 0.88,
+      "evidence": [
+        {
+          "citation": "turn1file7",
+          "snippet": "What started as a wave of post-pandemic “revenge spending” on experiences has become a lasting shift in consumer behavior … Retailers shouldn’t think of the experience economy as an opportunity. It’s a necessity."
+        }
+      ]
+    },
+    {
+      "id": "finding-2",
+      "title": "Invisible AI will underpin frictionless retail experiences",
+      "summary": "Consumers expect AI to work quietly in the background, with 71 % wanting Gen-AI-integrated shopping interactions, while remaining concerned about data transparency. Capgemini urges retailers to build trust, keep humans in the loop and establish clear guardrails for ‘invisible’ AI.",
+      "confidence": 0.86,
+      "evidence": [
+        {
+          "citation": "turn0file2",
+          "snippet": "AI is transforming every aspect of retail—yet consumers still want the same things as before: seamless, frictionless, relevant, personalized experiences … 71 % of consumers want Gen AI-integrated shopping interactions compared to 56 % last year."
+        },
+        {
+          "citation": "turn1file3",
+          "snippet": "3 ways retailers can win with invisible AI experiences: … Establish visible guardrails … Keep humans in the loop."
+        }
+      ]
+    },
+    {
+      "id": "finding-3",
+      "title": "Searchless retail and the shift to Generative Engine Optimisation (GEO)",
+      "summary": "Capgemini highlights a move away from traditional SEO toward GEO, noting that one-fifth of Walmart’s referral clicks already come from ChatGPT. Retail success will depend on being chosen by algorithms that surface products proactively.",
+      "confidence": 0.87,
+      "evidence": [
+        {
+          "citation": "turn1file1",
+          "snippet": "One in five of Walmart’s referral clicks in August came from ChatGPT … the industry is rapidly moving from SEO (search engine optimization) to GEO (generative engine optimization)."
+        }
+      ]
+    },
+    {
+      "id": "finding-4",
+      "title": "2026 will be the year of the premium private label",
+      "summary": "Private labels are growing beyond budget positioning: 70 % of shoppers earning over $100 k choose grocery stores based on them, and quality signals like reviews, guarantees and certifications now drive switching behaviour.",
+      "confidence": 0.85,
+      "evidence": [
+        {
+          "citation": "turn1file2",
+          "snippet": "Private labels are no longer just budget buys—70 % of shoppers earning over $100,000 now choose their grocery store based on them … the most important factors for consumers are: 66 % positive user reviews, 60 % money-back guarantees, 58 % clear quality certifications."
+        }
+      ]
+    },
+    {
+      "id": "finding-5",
+      "title": "Trust is emerging as a primary profit driver",
+      "summary": "Retail margins are increasingly earned through consumers’ trust, not just efficiency and scale. Only 36 % trust Gen-AI suggestions today, but 66 % trust assistants more when explanations are clear, making consistency, care, contextualisation and clarity critical.",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "citation": "turn1file4",
+          "snippet": "Retail margins are no longer driven by efficiency and scale alone—they’re increasingly earned through trust … 36 % trust products and suggestions shared by Gen AI tools; 66 % trust a digital assistant more when it provides clear explanations."
+        }
+      ]
+    }
+  ]
+}

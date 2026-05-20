@@ -1,0 +1,461 @@
+{
+  "tldr": "Julius Baer’s Secular Outlook frames a multipolar, innovation-led decade with normalized rates, policy-driven shifts in China and Europe, and rising roles for gold and CHF assets amid elevated systemic risks.",
+  "title": "JULIUS BAER - Secular-outlook-2026_ACIG",
+  "insights": [
+    "Gold breached USD 4,000/oz in October 2025 amid structural demand for out‑of‑system assets.",
+    "By Nov 2025, the Fed had cut 150 bp to a 3.75–4.0% range; the 10‑year UST traded near 4%.",
+    "India’s economy is ~60% domestic demand, and its equities have materially outperformed global peers.",
+    "US private‑sector balance sheets are markedly stronger post‑GFC—household net wealth has more than doubled—while federal interest outlays now exceed defence spending, underscoring fiscal‑dominance risks.",
+    "An AI‑led super‑cycle is driving record data‑centre capex, with power/grid capacity the binding constraint—“energy is the new currency” for scaling AI."
+  ],
+  "quote": {
+    "text": "Gold’s most valuable characteristic – when held in physical form – is that it does not represent a claim against anyone else.",
+    "author": "Julius Baer Secular Outlook (2026)",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "chart 10: gold decoupled from its habitual drivers following the weaponisation of the usd-based",
+    "evidence": "chart 10: gold decoupled from its habitual drivers following the weaponisation of the usd-based",
+    "schema_version": "1.0"
+  },
+  "commentary": "The Outlook updates a mid‑2020s shift toward multipolarity—accelerated by tariffs announced on “Liberation Day”—alongside a US return to fiscal spending and Germany’s fiscal/defence pivot, with market leadership rotating as shown in the decade‑to‑date asset returns. The core macro themes emphasize strategic reshoring over broad deglobalisation, interest‑rate normalisation (Fed at 3.75–4% by Nov 2025; 10‑year UST near 4%), and an AI‑driven innovation super‑cycle constrained by energy and grid capacity. China remains in a balance‑sheet recession with weak consumer confidence, while policy aims to engineer a managed, sustainable domestic equity bull market; India’s equity outperformance aligns with its domestic‑demand‑driven growth profile. Capital‑market implications include strong private‑sector versus weaker public‑sector balance sheets, structurally supported demand for out‑of‑system assets such as gold, and CHF‑denominated Swiss assets as store‑of‑value diversifiers, set against interlinked risks spanning climate, cyber, shadow banking/private credit, geopolitics, and infrastructure vulnerabilities.",
+  "source": "",
+  "publisher": "",
+  "taxonomy": [
+    "macroeconomic_outlook",
+    "gdp_growth",
+    "interest_rates",
+    "innovation",
+    "ai",
+    "emerging_tech",
+    "country_analysis",
+    "risk_assessment",
+    "digital_economy",
+    "european_economy",
+    "consumer_trends"
+  ],
+  "categories": [
+    "macroeconomics",
+    "technology",
+    "ai_automation"
+  ],
+  "region": "Global —",
+  "time_period": "2020s (mid-2020s, through 2026) —",
+  "contents_page_number": 6,
+  "contents_heading": "index",
+  "_figure_image": "",
+  "_figure_gallery": [
+    "julius-baer-secular-outlook-2026-acig-pdf/slices/julius-baer-secular-outlook-2026-acig-pdf.png",
+    "julius-baer-secular-outlook-2026-acig-pdf/slices/julius-baer-secular-outlook-2026-acig-pdf1.png",
+    "julius-baer-secular-outlook-2026-acig-pdf/slices/julius-baer-secular-outlook-2026-acig-pdf2.png"
+  ],
+  "_figure_top": "julius-baer-secular-outlook-2026-acig-pdf/slices/julius-baer-secular-outlook-2026-acig-pdf.png",
+  "_contents_image": "julius-baer-secular-outlook-2026-acig-pdf/assets/julius-baer-secular-outlook-2026-acig-pdf-contents.png",
+  "_vector_store_id": "vs_6982741dfaf881918a41a5d345de6cc3",
+  "_evidence_packs": {
+    "doc_map": "out\\julius-baer-secular-outlook-2026-acig-pdf\\report_analysis\\doc_map.json",
+    "scope": "out\\julius-baer-secular-outlook-2026-acig-pdf\\report_analysis\\scope.json",
+    "methods": "out\\julius-baer-secular-outlook-2026-acig-pdf\\report_analysis\\methods.json",
+    "findings": "out\\julius-baer-secular-outlook-2026-acig-pdf\\report_analysis\\findings.json",
+    "limitations": "out\\julius-baer-secular-outlook-2026-acig-pdf\\report_analysis\\limitations.json",
+    "quote_candidates": "out\\julius-baer-secular-outlook-2026-acig-pdf\\report_analysis\\quote_candidates.json",
+    "artifacts": "out\\julius-baer-secular-outlook-2026-acig-pdf\\report_analysis\\artifacts.json",
+    "validation": "out\\julius-baer-secular-outlook-2026-acig-pdf\\report_analysis\\validation.json"
+  },
+  "_text_density": 0.0,
+  "_text_pages_sampled": 0,
+  "_text_char_count": 0,
+  "_text_not_available": false,
+  "schema_version": "1.1",
+  "artifacts": {
+    "schema_version": "1.0",
+    "toc_topics": [
+      "Historical secular trends",
+      "Multipolarity and strategic reshoring",
+      "Active industrial and fiscal policies",
+      "Interest rate normalisation",
+      "Innovation super cycle",
+      "China’s balance sheet recession",
+      "Gold and digital assets",
+      "Key risk factors"
+    ],
+    "summary": {
+      "tldr": "Julius Baer’s Secular Outlook frames a multipolar, innovation-led decade with normalized rates, policy-driven shifts in China and Europe, and rising roles for gold and CHF assets amid elevated systemic risks.",
+      "executive_summary": "The Outlook updates a mid‑2020s shift toward multipolarity—accelerated by tariffs announced on “Liberation Day”—alongside a US return to fiscal spending and Germany’s fiscal/defence pivot, with market leadership rotating as shown in the decade‑to‑date asset returns. The core macro themes emphasize strategic reshoring over broad deglobalisation, interest‑rate normalisation (Fed at 3.75–4% by Nov 2025; 10‑year UST near 4%), and an AI‑driven innovation super‑cycle constrained by energy and grid capacity. China remains in a balance‑sheet recession with weak consumer confidence, while policy aims to engineer a managed, sustainable domestic equity bull market; India’s equity outperformance aligns with its domestic‑demand‑driven growth profile. Capital‑market implications include strong private‑sector versus weaker public‑sector balance sheets, structurally supported demand for out‑of‑system assets such as gold, and CHF‑denominated Swiss assets as store‑of‑value diversifiers, set against interlinked risks spanning climate, cyber, shadow banking/private credit, geopolitics, and infrastructure vulnerabilities.",
+      "claim_evidence_map": [
+        {
+          "claim": "Gold breached USD 4,000/oz in Oct 2025 and its strength reflects structural demand amid weak public balance sheets and the weaponisation of the financial system.",
+          "evidence_id": "Chart 10",
+          "evidence": "Gold reached new nominal highs (breached USD 4,000/oz in Oct 2025); strength tied to weak public balance sheets and weaponisation of the financial system, spurring structural demand, notably from non‑Western investors.",
+          "pages": []
+        },
+        {
+          "claim": "Swiss franc–denominated assets provide store‑of‑value diversification benefits in a multipolar world.",
+          "evidence_id": "qc-003",
+          "evidence": "“Store‑of‑value assets … particularly the CHF and Swiss assets more broadly, offering investors an additional source of risk premium and enhanced portfolio diversification.”",
+          "pages": [
+            28
+          ]
+        },
+        {
+          "claim": "By November 2025 the Fed had cut policy rates to 3.75–4% and the 10‑year UST was near 4%, underscoring interest‑rate normalisation.",
+          "evidence_id": "findings[2]",
+          "evidence": "Western central banks reset the cost of capital; by Nov‑2025 the federal funds rate was lowered to 3.75%–4%, with debate on whether rates return to pre‑2020 lows.",
+          "pages": []
+        },
+        {
+          "claim": "An AI‑led innovation super‑cycle is underway, with power availability becoming the critical bottleneck.",
+          "evidence_id": "findings[3]",
+          "evidence": "US equity markets led by AI hyperscalers are fuelling an unprecedented data‑centre capex cycle; in scaling AI, “energy is the new currency.”",
+          "pages": []
+        },
+        {
+          "claim": "China is pursuing a managed, sustainable domestic equity bull market to repair household balance sheets amid depressed consumer confidence.",
+          "evidence_id": "findings[4]",
+          "evidence": "Policy aims to shift household savings into equities to restore confidence; conditions for the first secular Chinese equity bull market are “slowly falling into place.”",
+          "pages": []
+        }
+      ]
+    },
+    "insights_candidates": [
+      {
+        "id": "insight-001",
+        "text": "Gold breached USD 4,000 per troy ounce in October 2025, reflecting structural demand for out‑of‑system assets.",
+        "evidence_id": "finding-1",
+        "evidence": "It broke through the USD 4000 per troy ounce threshold in mid-October (Oct‑2025).",
+        "metric": {
+          "value": "4000",
+          "unit": "USD/oz",
+          "trend": "up",
+          "timeframe": "Oct-2025",
+          "geography": "Global",
+          "segment": "Gold (physical & central bank demand)",
+          "sample_size": "",
+          "confidence": "0.9"
+        },
+        "pages": [
+          27
+        ],
+        "score": 0.93
+      },
+      {
+        "id": "insight-002",
+        "text": "By November 2025 the US Federal Reserve had cut the policy rate by a cumulative 150 basis points to a 3.75–4.0% range, with the 10‑year UST trading near 4%.",
+        "evidence_id": "finding-3",
+        "evidence": "By November 2025, the federal funds rate had been lowered by a cumulative 150 basis points … to 3.75%–4%. 10‑year UST near 4%.",
+        "metric": {
+          "value": "3.75-4.0",
+          "unit": "%",
+          "trend": "down (policy easing in 2024-25)",
+          "timeframe": "as of Nov-2025",
+          "geography": "United States",
+          "segment": "Policy rate / sovereign yield",
+          "sample_size": "",
+          "confidence": "0.88"
+        },
+        "pages": [],
+        "score": 0.92
+      },
+      {
+        "id": "insight-003",
+        "text": "India is a predominantly domestic‑demand economy (~60% of GDP) and its equities have materially outperformed global peers.",
+        "evidence_id": "finding-? (India and China entry)",
+        "evidence": "India: domestic‑demand‑driven (~60% of GDP) with strong equity outperformance.",
+        "metric": {
+          "value": "60",
+          "unit": "% of GDP",
+          "trend": "structural domestic demand",
+          "timeframe": "up to 2025",
+          "geography": "India",
+          "segment": "Macroeconomic composition / equities",
+          "sample_size": "",
+          "confidence": "0.8"
+        },
+        "pages": [],
+        "score": 0.85
+      },
+      {
+        "id": "insight-004",
+        "text": "Europe has shifted to fiscal activism: NATO member nations committed to a 5% of GDP defence‑spending target by 2035—more than double the prior 2% guideline.",
+        "evidence_id": "finding-6",
+        "evidence": "Member nations committed to a new defence spending target amounting to 5% of GDP by 2035, more than double the previous 2% guideline.",
+        "metric": {
+          "value": "5",
+          "unit": "% of GDP",
+          "trend": "up",
+          "timeframe": "target by 2035",
+          "geography": "NATO / Europe (notably Germany)",
+          "segment": "Defence spending / fiscal policy",
+          "sample_size": "",
+          "confidence": "0.86"
+        },
+        "pages": [],
+        "score": 0.86
+      },
+      {
+        "id": "insight-005",
+        "text": "US private‑sector balance sheets are markedly stronger post‑GFC—US households have ‘more than doubled’ net wealth—while public‑sector debt service costs now exceed defence spending, highlighting fiscal‑dominance risks.",
+        "evidence_id": "finding-7",
+        "evidence": "US households have moved from balance sheet recession to balance sheet strength, more than doubling their net wealth … Today, the US has reached a tipping point where it spends more on interest payments on its federal debt than on defence.",
+        "metric": {
+          "value": "more than 2x",
+          "unit": "times (net wealth)",
+          "trend": "up (household net wealth since GFC)",
+          "timeframe": "post-GFC to 2025",
+          "geography": "United States",
+          "segment": "Households vs public sector",
+          "sample_size": "",
+          "confidence": "0.78"
+        },
+        "pages": [],
+        "score": 0.89
+      },
+      {
+        "id": "insight-006",
+        "text": "An AI‑led innovation super‑cycle is driving record data‑centre capex, with energy/grid capacity emerging as the binding constraint—'energy is the new currency' in scaling AI.",
+        "evidence_id": "finding-4",
+        "evidence": "US equity markets, led by AI hyperscalers, have surged … spending on data centres is now close to overtaking investment in new office buildings in the US. If 2025 made anything clear, it is this: in the race to scale AI, energy is the new currency.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "strong up (data-centre capex)",
+          "timeframe": "2025",
+          "geography": "United States / global AI hyperscalers",
+          "segment": "Capex: data centres / energy",
+          "sample_size": "",
+          "confidence": "0.82"
+        },
+        "pages": [],
+        "score": 0.84
+      },
+      {
+        "id": "insight-007",
+        "text": "China remains in a balance‑sheet recession: consumer confidence has not recovered from the real‑estate shock, and policy is attempting to engineer a managed domestic equity bull market to repair household balance sheets.",
+        "evidence_id": "finding-5",
+        "evidence": "China’s consumer confidence has not recovered from the real‑estate shock. This should incentivise Chinese households to shift some of their savings into equities … policy aims for a managed and sustainable domestic equity bull market to restore consumer confidence.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "stagnant/attempting recovery",
+          "timeframe": "up to Dec-2025",
+          "geography": "China",
+          "segment": "Household confidence / equity policy",
+          "sample_size": "",
+          "confidence": "0.77"
+        },
+        "pages": [],
+        "score": 0.81
+      }
+    ],
+    "insights_final": [
+      {
+        "id": "insight-001",
+        "text": "Gold breached USD 4,000/oz in October 2025 amid structural demand for out‑of‑system assets.",
+        "evidence_id": "finding-1",
+        "evidence": "It broke through the USD 4000 per troy ounce threshold in mid-October (Oct‑2025).",
+        "metric": {
+          "value": "4000",
+          "unit": "USD/oz",
+          "trend": "up",
+          "timeframe": "Oct-2025",
+          "geography": "Global",
+          "segment": "Gold (physical & central bank demand)",
+          "sample_size": "",
+          "confidence": "0.9"
+        },
+        "pages": [
+          27
+        ]
+      },
+      {
+        "id": "insight-002",
+        "text": "By Nov 2025, the Fed had cut 150 bp to a 3.75–4.0% range; the 10‑year UST traded near 4%.",
+        "evidence_id": "finding-3",
+        "evidence": "By November 2025, the federal funds rate had been lowered by a cumulative 150 basis points … to 3.75%–4%. 10‑year UST near 4%.",
+        "metric": {
+          "value": "3.75-4.0",
+          "unit": "%",
+          "trend": "down (policy easing in 2024-25)",
+          "timeframe": "as of Nov-2025",
+          "geography": "United States",
+          "segment": "Policy rate / sovereign yield",
+          "sample_size": "",
+          "confidence": "0.88"
+        },
+        "pages": []
+      },
+      {
+        "id": "insight-003",
+        "text": "India’s economy is ~60% domestic demand, and its equities have materially outperformed global peers.",
+        "evidence_id": "finding-? (India and China entry)",
+        "evidence": "India: domestic‑demand‑driven (~60% of GDP) with strong equity outperformance.",
+        "metric": {
+          "value": "60",
+          "unit": "% of GDP",
+          "trend": "structural domestic demand",
+          "timeframe": "up to 2025",
+          "geography": "India",
+          "segment": "Macroeconomic composition / equities",
+          "sample_size": "",
+          "confidence": "0.8"
+        },
+        "pages": []
+      },
+      {
+        "id": "insight-005",
+        "text": "US private‑sector balance sheets are markedly stronger post‑GFC—household net wealth has more than doubled—while federal interest outlays now exceed defence spending, underscoring fiscal‑dominance risks.",
+        "evidence_id": "finding-7",
+        "evidence": "US households have moved from balance sheet recession to balance sheet strength, more than doubling their net wealth … Today, the US has reached a tipping point where it spends more on interest payments on its federal debt than on defence.",
+        "metric": {
+          "value": "more than 2x",
+          "unit": "times (net wealth)",
+          "trend": "up (household net wealth since GFC)",
+          "timeframe": "post-GFC to 2025",
+          "geography": "United States",
+          "segment": "Households vs public sector",
+          "sample_size": "",
+          "confidence": "0.78"
+        },
+        "pages": []
+      },
+      {
+        "id": "insight-006",
+        "text": "An AI‑led super‑cycle is driving record data‑centre capex, with power/grid capacity the binding constraint—“energy is the new currency” for scaling AI.",
+        "evidence_id": "finding-4",
+        "evidence": "US equity markets, led by AI hyperscalers, have surged … spending on data centres is now close to overtaking investment in new office buildings in the US. If 2025 made anything clear, it is this: in the race to scale AI, energy is the new currency.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "strong up (data-centre capex)",
+          "timeframe": "2025",
+          "geography": "United States / global AI hyperscalers",
+          "segment": "Capex: data centres / energy",
+          "sample_size": "",
+          "confidence": "0.82"
+        },
+        "pages": []
+      }
+    ],
+    "quotes_final": [
+      {
+        "text": "Gold’s most valuable characteristic – when held in physical form – is that it does not represent a claim against anyone else.",
+        "speaker": "Julius Baer Secular Outlook (2026)",
+        "citation": "Section: Gold and digital assets (out-of-system assets)",
+        "page": 27,
+        "evidence_id": "qc-001"
+      },
+      {
+        "text": "We maintain a strategic allocation to gold in portfolios to capture this trend.",
+        "speaker": "Julius Baer Secular Outlook (2026)",
+        "citation": "Section: CHF: Swiss assets as a store of value / Key capital market trends",
+        "page": 29,
+        "evidence_id": "qc-002"
+      },
+      {
+        "text": "Store-of-value assets ... particularly the CHF and Swiss assets more broadly, offering investors an additional source of risk premium and enhanced portfolio diversification.",
+        "speaker": "Julius Baer Secular Outlook (2026)",
+        "citation": "Section: CHF: Swiss assets as a store of value",
+        "page": 28,
+        "evidence_id": "qc-003"
+      }
+    ],
+    "expert_comment": "Rates, geopolitics, and innovation are reordering the investable landscape in ways that reward balance‑sheet strength and scarce stores of value. A normalized policy rate backdrop in the United States and a 10‑year UST near 4 percent coincide with a shift toward multipolarity, raising the premium on assets that diversify systemic risk. The divergence between robust private‑sector balance sheets and a fiscally pressured public sector is shaping preferences for out‑of‑system and store‑of‑value instruments. For capital allocators and treasurers, this argues for disciplined duration risk, liquidity buffers, and intentional exposure to assets that sit outside traditional financial intermediation.\n- Fed funds at 3.75–4.0 percent by November 2025; 10‑year UST near 4 percent\n- US household net wealth more than doubled since the GFC; federal interest outlays exceed defense spending\n- Gold breached USD 4,000/oz in October 2025 amid structural demand for out‑of‑system assets\n- CHF‑denominated Swiss assets provide store‑of‑value diversification\n\nAn AI‑led super‑cycle has become the market’s center of gravity, but power availability is the binding constraint on scale. Hyperscaler‑driven data‑center capex is surging, and the bottleneck is increasingly grid and energy capacity rather than capital access. Operating models should prioritize long‑term power procurement, proximity to grid capacity, and capital allocation that ranks compute efficiency alongside financial ROI. Strategic reshoring over broad deglobalization reinforces the importance of energy and infrastructure readiness in location and vendor decisions.\n\nAsia exposure requires precision, not blanket bets. China remains in a balance‑sheet recession with weak consumer confidence, while policy seeks a managed, sustainable domestic equity bull market to repair household balance sheets; positioning should focus on onshore, policy‑aligned exposures. India’s equity outperformance aligns with its roughly 60 percent domestic‑demand share, supporting allocations to domestic growth beneficiaries. In parallel, maintaining strategic hedges in gold and CHF assets strengthens portfolio resilience to multipolar and fiscal‑dominance risks.",
+    "linkedin_post": "The bottleneck for digital transformation is shifting from code to kilowatts. 2025 made it clear that in the race to scale AI, energy is the new currency.\n\nHere is the backdrop leaders should plan against:\n\n- Rates have normalized: by November 2025 the Fed cut to 3.75–4.0% and the 10‑year UST traded near 4%, resetting the cost of capital.\n- AI is driving a record data‑centre buildout, with spend close to overtaking new office investment in the US. Power and grid capacity are the binding constraints.\n- Gold breached USD 4,000/oz in October 2025 on structural demand for out‑of‑system assets.\n- US private‑sector balance sheets are strong, with household net wealth more than doubling since the GFC, while federal interest outlays now exceed defence spending.\n- India’s economy is roughly 60% domestic demand, and its equities have materially outperformed.\n- China remains in a balance‑sheet recession with weak consumer confidence, while policy aims to engineer a managed, sustainable domestic equity bull market.\n- In a multipolar world, CHF‑denominated Swiss assets offer store‑of‑value diversification.\n\nWhat this means for ecommerce and digital operators:\n\n1) AI roadmaps must be power‑aware. Capacity and siting decisions hinge on energy and grid access, not just model performance. Prioritize partnerships and locations that secure reliable power to avoid scaling delays.\n\n2) Plan investments for a normalized rate regime. Budget discipline and hurdle rates should reflect a world where policy rates and long yields sit around 4%, not the pre‑2020 era.\n\n3) Strengthen store‑of‑value diversification. Structural demand for out‑of‑system assets and the role of CHF‑denominated Swiss assets point to broader diversification benefits when systemic risks are elevated.\n\n4) Calibrate geographic bets. India’s domestic‑demand profile aligns with equity outperformance, while China’s policy‑led market repair occurs alongside weak consumer confidence. Expect strategic reshoring rather than broad deglobalisation.\n\n5) Stress‑test for interlinked risks. Climate, cyber, shadow banking and private credit, geopolitics, and infrastructure vulnerabilities are increasingly connected. Resilience planning should treat them as a system, not silos.\n\nMultipolarity and an AI‑led super‑cycle are redefining the operating baseline. Leaders that price capital correctly, secure power, diversify stores of value, and align regional strategies to the reality on the ground will keep momentum as market leadership rotates.\n\n#DigitalStrategy #Ecommerce #AIInfrastructure",
+    "source_status": {
+      "schema_version": "1.0",
+      "text_density": 1078.6,
+      "density_threshold": 0.0,
+      "pages_sampled": 5,
+      "char_count": 5393,
+      "not_available": false,
+      "reason": "",
+      "evidence_present": true
+    }
+  },
+  "validation_report": {
+    "schema_version": "1.1",
+    "status": "fail",
+    "severity": "error",
+    "source_path": "out\\julius-baer-secular-outlook-2026-acig-pdf\\report_analysis\\validation.json",
+    "issues": [
+      {
+        "schema_version": "1.0",
+        "message": "Metric unit 'USD/oz' not verbatim but semantically supported (confidence=0.98) for insight-001",
+        "severity": "info",
+        "affected_section": "insights:insight-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'Oct-2025' not verbatim but semantically supported (confidence=0.98) for insight-001",
+        "severity": "info",
+        "affected_section": "insights:insight-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric value '3.75-4.0' not verbatim but semantically supported (confidence=1.00) for insight-002",
+        "severity": "info",
+        "affected_section": "insights:insight-002"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'as of Nov-2025' not verbatim but semantically supported (confidence=1.00) for insight-002",
+        "severity": "info",
+        "affected_section": "insights:insight-002"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'up to 2025' not verbatim but semantically supported (confidence=1.00) for insight-003",
+        "severity": "info",
+        "affected_section": "insights:insight-003"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric value 'more than 2x' not verbatim but semantically supported (confidence=1.00) for insight-005",
+        "severity": "info",
+        "affected_section": "insights:insight-005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric unit 'times (net wealth)' not verbatim but semantically supported (confidence=1.00) for insight-005",
+        "severity": "info",
+        "affected_section": "insights:insight-005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe 'post-GFC to 2025' not verbatim but semantically supported (confidence=1.00) for insight-005",
+        "severity": "info",
+        "affected_section": "insights:insight-005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Number 1.0 not present in report or evidence",
+        "severity": "warning",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Number 3.0 not present in report or evidence",
+        "severity": "warning",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "While the evidence covers climate, cyber, geopolitical and infrastructure risks, no snippet supports the inclusion of shadow banking or private-credit risks.: Capital-market implications include strong private-sector versus weaker public-sector balance sheets, structurally supported demand for out-of-system assets such as gold, and CHF-denominated Swiss ass",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The provided evidence references climate, cyber, geopolitical and infrastructure threats but does not mention shadow banking or private-credit vulnerabilities.: Stress-test for interlinked risks. Climate, cyber, shadow banking and private credit, geopolitics, and infrastructure vulnerabilities are increasingly connected.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      }
+    ]
+  },
+  "categories_display": [
+    "Macroeconomics & Regional Outlooks",
+    "Technology & Innovation",
+    "AI & Automation"
+  ],
+  "analysis_mode": "vector_store"
+}

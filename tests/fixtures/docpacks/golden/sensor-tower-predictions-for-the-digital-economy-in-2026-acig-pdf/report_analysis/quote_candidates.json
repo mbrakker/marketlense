@@ -1,0 +1,32 @@
+{
+  "quote_candidates": [
+    {
+      "id": "qc-1",
+      "quote_text": "Generative AI will rival paid advertising for driving website traffic",
+      "author": "Sensor Tower (report)",
+      "source": {
+        "document_id": "file-DBpVF8PkRbcYjGtUsHAs8z",
+        "title": "SENSOR TOWER - Predictions_for_the_digital_economy_in_2026_ACIG.pdf",
+        "filecite": "",
+        "page": 12
+      },
+      "context_snippet": "While still a relatively small source, Generative AI's share of website traffic is rapidly growing as consumers spend more time engaging with these services.",
+      "start_offset": 0,
+      "end_offset": 84,
+      "confidence": 0.9,
+      "tags": [
+        "prediction",
+        "generative_ai",
+        "web_traffic"
+      ],
+      "selectors": {
+        "type": "TextQuoteSelector",
+        "exact": "Generative AI will rival paid advertising for driving website traffic"
+      }
+    }
+  ],
+  "metadata": {
+    "produced_by": "assistant",
+    "note": "I did not find a provided EvidencePack schema in the uploaded files; please upload the schema if you need strict validation or a different field layout. Search results included the Sensor Tower report used here: ."
+  }
+}

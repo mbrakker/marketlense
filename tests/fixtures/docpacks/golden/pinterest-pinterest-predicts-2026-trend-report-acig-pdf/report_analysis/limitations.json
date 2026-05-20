@@ -1,0 +1,22 @@
+{
+  "limitations": [
+    {
+      "text": "Findings rely solely on Pinterest internal English-language search data gathered between September 2023 and August 2025, so results may not generalise to non-English users, other platforms or more recent behaviour.",
+      "evidence": [
+        "turn5file3"
+      ]
+    },
+    {
+      "text": "Growth figures are expressed as normalised percentage changes rather than absolute search volumes, which can exaggerate trends that begin from a small baseline.",
+      "evidence": [
+        "turn5file3"
+      ]
+    },
+    {
+      "text": "The document is a marketing publication whose forward-looking 2026 trend predictions have not undergone independent peer review, making their accuracy uncertain.",
+      "evidence": [
+        "turn0file0"
+      ]
+    }
+  ]
+}

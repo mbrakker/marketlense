@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for IC-001 not supported (Evidence says adaptive personalization becomes the default, but it does not mention B2C/B2B explicitly nor the 'hasta 2026' timeframe.)",
+      "severity": "error",
+      "affected_section": "insights:IC-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for IC-003 not supported (Evidence describes omnichannel ecosystems and interconnected platforms shaping the consumer journey, but not that they 'define competition' or any 'hasta 2026' timeframe.)",
+      "severity": "error",
+      "affected_section": "insights:IC-003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for IC-004 not supported (Evidence shows AI/data expanding across sectors and changing brand–market interactions, but does not state they are the 'tecido conectivo' enabling personalization/analytics/operations or cite a timeframe.)",
+      "severity": "error",
+      "affected_section": "insights:IC-004"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for IC-005 not supported (Evidence supports sustainability–profitability interdependence, but not the shift 'from CSR to operational pillar' nor the 'hasta 2026' timeframe.)",
+      "severity": "error",
+      "affected_section": "insights:IC-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for IC-006 not supported (Evidence states transparency is a competitive differentiator and trust stems from demonstrable actions, but it does not include the 'hasta 2026' timeframe or specify supply chain/data/sustainability domains.)",
+      "severity": "error",
+      "affected_section": "insights:IC-006"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-001",
+      "severity": "warning",
+      "affected_section": "insights:IC-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-003",
+      "severity": "warning",
+      "affected_section": "insights:IC-003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-004",
+      "severity": "warning",
+      "affected_section": "insights:IC-004"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-005",
+      "severity": "warning",
+      "affected_section": "insights:IC-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'hasta 2026' not present in evidence for IC-006",
+      "severity": "warning",
+      "affected_section": "insights:IC-006"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Number 0.95 not present in report or evidence",
+      "severity": "warning",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Number 0.93 not present in report or evidence",
+      "severity": "warning",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Number 0.93 not present in report or evidence",
+      "severity": "warning",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Number 0.94 not present in report or evidence",
+      "severity": "warning",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Number 0.95 not present in report or evidence",
+      "severity": "warning",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Los fragmentos suministrados sólo confirman que la personalización adaptativa es el valor predeterminado; no existe evidencia que extienda esa expectativa al ámbito B2B.: La personalización adaptativa es la expectativa por defecto en B2C y B2B.",
+      "severity": "error",
+      "affected_section": "insights_final IC-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Las evidencias mencionan la expansión de IA y datos y su impacto en la interacción marca-mercado, pero no señalan explícitamente que habiliten simultáneamente personalización, analítica y operaciones.: La IA y los datos son el tejido conectivo entre sectores, marcas y personas, habilitando personalización, analítica y operaciones.",
+      "severity": "error",
+      "affected_section": "insights_final IC-004"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Hay evidencia de interdependencia entre sostenibilidad y rentabilidad, pero no de que la sostenibilidad haya 'pasado de RSC a pilar operativo' ni de su ‘valor económico y reputacional’. : Sostenibilidad y rentabilidad convergen: pasa de RSC a pilar operativo con valor económico y reputacional.",
+      "severity": "error",
+      "affected_section": "insights_final IC-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Las evidencias avalan que la transparencia es un diferenciador competitivo y fuente de confianza, pero no mencionan explícitamente la cadena de suministro ni los datos como ámbitos incluidos.: La transparencia demostrable (supply chain, datos, sostenibilidad) es diferenciador competitivo y base de la confianza.",
+      "severity": "error",
+      "affected_section": "insights_final IC-006"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No se aporta evidencia que extienda el ‘estándar de experiencia’ a B2B.: La personalización adaptativa, habilitada por IA y datos, se convierte en el estándar de experiencia también en B2B, reflejando expectativas de relevancia en tiempo real.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Se documenta la creciente importancia de autenticidad y sostenibilidad, pero no que la desalineación ética sea específicamente penalizada.: Las decisiones de compra y la lealtad se inclinan hacia la autenticidad, la sostenibilidad y la contribución social, penalizando la desalineación ética.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "La evidencia no corrobora que IA y datos conecten «analítica, operaciones y contenido».: En paralelo, la IA y los datos conectan analítica, operaciones y contenido, mientras la convergencia entre sostenibilidad y rentabilidad se afianza y los ecosistemas omnicanal redefinen la competencia",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "La parte relativa a IA y datos conectando analítica, operaciones y contenido carece de respaldo explícito.: En 2026, la ventaja se concentra en experiencias adaptativas por defecto, compras guiadas por valores y transparencia que sostiene la confianza, con IA y datos conectando analítica, operaciones y cont",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No hay evidencia de una penalización concreta por desalineación ética ni de la prioridad explícita de relevancia en tiempo real.: Este cambio penaliza la desalineación ética y prioriza relevancia en tiempo real basada en adaptación conductual continua.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No se presenta evidencia que exija dichas acciones ni que incluya la referencia a B2B o al gobierno de la transparencia en toda la cadena de suministro.: Para la toma de decisiones, esto exige integrar capacidades de IA y datos que habiliten respuestas contextuales en B2C y B2B, y gobernar la transparencia de extremo a extremo en cadena de suministro, ",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Las fuentes sólo señalan que la sostenibilidad es un requisito o que converge con la rentabilidad; no que sea ya un ‘pilar operativo’ con impacto económico y reputacional.: La sostenibilidad deja de ser un esfuerzo periférico y se convierte en pilar operativo con impacto económico y reputacional.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No hay evidencia presentada que demuestre la relación directa entre esa interdependencia y la confianza o lealtad.: La priorización de inversiones debe anclar en la interdependencia entre personalización, transparencia y sostenibilidad, porque refuerzan confianza y lealtad.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Se respalda la importancia de autenticidad y transparencia, pero no que los consumidores penalicen explícitamente la desalineación ética ni que demanden relevancia en tiempo real.: La gente espera relevancia en tiempo real, premia la autenticidad y penaliza cualquier desalineación ética, mientras la transparencia deja de ser opcional para convertirse en diferenciador claro.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No existe evidencia que indique que IA y datos unan simultáneamente analítica, experiencia y operaciones.: IA y datos se convierten en el tejido que une analítica, experiencia y operaciones.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No se aporta respaldo para la capacidad de IA/datos de proporcionar previsión ni para la exigencia de prácticas responsables.: Permiten previsión, personalización en tiempo real y eficiencia operativa, pero exigen prácticas responsables y claras sobre su uso.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "La evidencia no muestra la afirmación sobre sostenibilidad ‘como motor económico y reputacional’ ni la referencia a RSC.: A nivel estratégico, el mercado se organiza en ecosistemas omnicanal y plataformas, y la sostenibilidad se consolida como motor económico y reputacional, no como un apéndice de RSC.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No hay evidencia que extienda la expectativa de personalización adaptativa al ámbito B2B.: La expectativa también aplica a B2B.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No se aporta evidencia que incluya los sectores citados ni la referencia a plataformas B2B.: Decisiones por valores: autenticidad, sostenibilidad y contribución social influyen en compras en FMCG, durables, servicios y plataformas B2B.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Las evidencias no mencionan condiciones laborales ni especifican supply chain y uso de datos dentro de transparencia demostrable.: Transparencia demostrable: supply chain, uso de datos, condiciones laborales y desempeño sostenible.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No se proporcionan pruebas sobre la erosión de la confianza por mal uso ni sobre la habilitación específica de análisis, operaciones y soporte.: IA y datos como tejido conectivo: habilitan análisis, personalización, operaciones y soporte. Su mal uso erosiona la confianza; la transparencia es crítica.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Las evidencias sostienen la interdependencia entre sostenibilidad y rentabilidad pero no que ello impulse eficiencia, resiliencia o preferencia de marca.: Sostenibilidad y rentabilidad convergen: interdependencia creciente que impulsa eficiencia, resiliencia y preferencia de marca.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No existe evidencia que cite el modelo de Alibaba ni que describa la competencia específicamente ‘dentro de sistemas impulsados por plataformas’.: Ecosistemas omnicanal redefinen la competencia: se compite dentro de sistemas impulsados por plataformas; el modelo de Alibaba lo ejemplifica.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

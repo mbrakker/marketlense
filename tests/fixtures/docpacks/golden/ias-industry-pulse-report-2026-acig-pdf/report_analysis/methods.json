@@ -1,0 +1,18 @@
+{
+  "methods": [
+    {
+      "name": "UK Digital Media Expert Survey (IAS × YouGov)",
+      "type": "Online survey",
+      "description": "Integral Ad Science partnered with YouGov to survey U.K. digital-media experts from both the buy- and sell-sides to understand the challenges and opportunities they foresee for 2026. Fieldwork was conducted in October 2025 and captured responses from 220 professionals who actively use programmatic advertising (Advertisers = 84, Agencies = 81, Publishers/Platforms = 55).",
+      "field_date": "2025-10",
+      "geography": "United Kingdom",
+      "sample_size": 220,
+      "participant_breakdown": {
+        "advertisers": 84,
+        "agencies": 81,
+        "publishers_platforms": 55
+      },
+      "citation": "IAS 2026 Industry Pulse Report – Study Design & Objectives"
+    }
+  ]
+}

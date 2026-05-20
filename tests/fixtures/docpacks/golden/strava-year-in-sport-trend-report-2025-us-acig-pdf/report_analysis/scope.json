@@ -1,0 +1,101 @@
+{
+  "scope": {
+    "id": "evidencepack-scope-001",
+    "title": "EvidencePack Collection Scope",
+    "description": "Defines the scope for the EvidencePack: what evidence will be collected, why, by whom, where, and under which constraints.",
+    "objectives": [
+      "Collect and preserve all relevant digital evidence related to Incident ABC for forensic analysis.",
+      "Ensure chain-of-custody and access controls are maintained for all collected items.",
+      "Provide a curated evidence set sufficient for internal investigation and potential legal proceedings."
+    ],
+    "stakeholders": [
+      {
+        "role": "Requestor",
+        "name": "<requestor name or team>",
+        "contact": "<email or phone>"
+      },
+      {
+        "role": "Evidence Custodian",
+        "name": "<custodian name>",
+        "contact": "<email or phone>"
+      },
+      {
+        "role": "Legal",
+        "name": "<legal contact>",
+        "contact": "<email or phone>"
+      }
+    ],
+    "timeframe": {
+      "startDate": "<YYYY-MM-DD>",
+      "endDate": "<YYYY-MM-DD or null if ongoing>"
+    },
+    "geographicScope": [
+      "<country/region 1>",
+      "<country/region 2>"
+    ],
+    "jurisdictions": [
+      "<applicable laws/regulations (e.g., GDPR, HIPAA)>"
+    ],
+    "evidenceTypes": [
+      "disk images (forensic)",
+      "memory dumps",
+      "log files (system, application, network)",
+      "email archives",
+      "cloud service artifacts (storage, compute, auth logs)",
+      "mobile device backups",
+      "configuration files",
+      "database exports"
+    ],
+    "dataSensitivity": "High",
+    "accessControls": {
+      "authorizationModel": "role-based",
+      "approvedUsers": [
+        "<user1@example.com>",
+        "<user2@example.com>"
+      ],
+      "multiFactorRequired": true,
+      "encryptionAtRest": true,
+      "encryptionInTransit": true
+    },
+    "retentionPolicy": {
+      "retentionPeriod": "7 years",
+      "justification": "Preserve for legal and regulatory review",
+      "secureDeletionProcedure": "Overwrite and cryptographic erase according to org policy"
+    },
+    "constraints": [
+      "No evidence may be altered or modified during acquisition.",
+      "Collection must minimize disruption to business operations.",
+      "Cross-jurisdictional data transfers require Legal sign-off."
+    ],
+    "assumptions": [
+      "Requested systems are accessible to investigators.",
+      "Necessary credentials and approvals will be provided prior to collection."
+    ],
+    "deliverables": [
+      {
+        "name": "EvidencePack Archive",
+        "format": "compressed container with manifest",
+        "contents": [
+          "forensic images",
+          "hash manifest (SHA-256)",
+          "chain-of-custody logs",
+          "collection metadata"
+        ]
+      },
+      {
+        "name": "Acquisition Report",
+        "format": "PDF",
+        "contents": [
+          "methods used",
+          "timestamps",
+          "investigator notes"
+        ]
+      }
+    ],
+    "acceptanceCriteria": [
+      "All required evidence types listed above are present in the EvidencePack.",
+      "All items include cryptographic hashes and chain-of-custody records.",
+      "Legal has reviewed and approved any cross-border data movements."
+    ]
+  }
+}

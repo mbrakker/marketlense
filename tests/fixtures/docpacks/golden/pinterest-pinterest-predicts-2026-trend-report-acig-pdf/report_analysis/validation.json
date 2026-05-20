@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: quote quote_3 not supported (Only “Pen Pals” title is provided; no evidence about letter‑writing details, generations, or 2026.)",
+      "severity": "warning",
+      "affected_section": "quotes:quote_3"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'September 2024–August 2025 vs September 2023–August 2024' not verbatim but semantically supported (confidence=0.98) for insight_scentstacking_nicheperfume_500",
+      "severity": "info",
+      "affected_section": "insights:insight_scentstacking_nicheperfume_500"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'September 2024–August 2025 vs September 2023–August 2024' not verbatim but semantically supported (confidence=0.98) for insight_mysticoutlands_scotland_465",
+      "severity": "info",
+      "affected_section": "insights:insight_mysticoutlands_scotland_465"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'September 2024–August 2025 vs September 2023–August 2024' not verbatim but semantically supported (confidence=0.98) for insight_glitchy_avantgarde_270",
+      "severity": "info",
+      "affected_section": "insights:insight_glitchy_avantgarde_270"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'September 2024–August 2025 vs September 2023–August 2024' not verbatim but semantically supported (confidence=0.98) for insight_afrohemian_afrobohemian_220",
+      "severity": "info",
+      "affected_section": "insights:insight_afrohemian_afrobohemian_220"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'September 2024–August 2025 vs September 2023–August 2024' not verbatim but semantically supported (confidence=0.98) for insight_lacedup_lace_nails_215",
+      "severity": "info",
+      "affected_section": "insights:insight_lacedup_lace_nails_215"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote paraphrased but semantically supported (confidence=0.95): Meet the shade that refuses to warm up to anyone. Gen Z and Millennials are bringing a subzero sophistication to absolut",
+      "severity": "info",
+      "affected_section": "quotes:quote_1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote paraphrased but semantically supported (confidence=0.75): Shake up your signature scent. Gen Z and Millennials are ditching one-and-done scents for bespoke notes, blending oils a",
+      "severity": "info",
+      "affected_section": "quotes:quote_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote not verbatim in evidence (Only “Pen Pals” title is provided; no evidence about letter‑writing details, generations, or 2026.): Your inbox is about to get jealous of your letter box. Expect a letter-writing renaissance in 2026, as Gen Z and Millenn",
+      "severity": "warning",
+      "affected_section": "quotes:quote_3"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence in the provided report explicitly states that the report covers 21 trends.: Pinterest Predicts 2026 outlines 21 data-backed trends across categories, with Gen Z and Millennials driving many aesthetics while Boomers and Gen X shape select food and travel shifts.",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While the 465% increase is supported, the claim that it is the \"largest single-term travel increase reported\" is not substantiated by the evidence.: \"scotland highlands aesthetic\" searches surged 465%, the largest single-term travel increase reported, highlighting demand for mystical, atmospheric destinations.",
+      "severity": "error",
+      "affected_section": "insight_mysticoutlands_scotland_465"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The sourcing of the data is supported, but no evidence confirms that exactly 21 trends are included.: Pinterest Predicts 2026 synthesizes internal, global English-language search signals to surface 21 emerging trends, benchmarked by normalized year-over-year search growth.",
+      "severity": "error",
+      "affected_section": "summary.executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This forward-looking interpretation is not directly supported by explicit evidence snippets.: Collectively, the trends suggest a 2026 consumer landscape that prizes expressive styling, tactile novelty and experience-first travel, grounded in measurable search momentum.",
+      "severity": "error",
+      "affected_section": "summary.executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The timeframe and data source are supported, but the statement that the report identifies 21 trends lacks explicit evidence.: The 2026 report identifies 21 trends using Pinterest internal, global English-language search data, comparing Sep 2024–Aug 2025 to Sep 2023–Aug 2024 and highlighting early adopters by generation.",
+      "severity": "error",
+      "affected_section": "claim_evidence_map[0]"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metrics are supported, but the assertion that Scotland Highlands aesthetic is \"the largest single-term travel increase reported\" is not demonstrated in the evidence.: Gen Z and Millennials are leaning into adrenaline tourism (adventure tourism +75%; auto racing events +85%), while Millennials and Boomers surge toward atmospheric destinations (Scotland Highlands aes",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    }
+  ]
+}

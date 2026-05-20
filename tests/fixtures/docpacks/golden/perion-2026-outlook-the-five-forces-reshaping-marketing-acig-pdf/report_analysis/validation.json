@@ -1,0 +1,146 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: quote quote_2 not supported (Evidence indicates a 'Default EvidencePack Scope' but does not state to adjust timeframe/jurisdictions/patterns to match the schema.)",
+      "severity": "warning",
+      "affected_section": "quotes:quote_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2025-11-05 to 2026-02-03' not verbatim but semantically supported (confidence=1.00) for insight_1_timeframe",
+      "severity": "info",
+      "affected_section": "insights:insight_1_timeframe"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2025-11-05 to 2026-02-03' not verbatim but semantically supported (confidence=1.00) for insight_8_sensitivity_and_ownership",
+      "severity": "info",
+      "affected_section": "insights:insight_8_sensitivity_and_ownership"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2025-11-05 to 2026-02-03' not verbatim but semantically supported (confidence=1.00) for insight_2_retention",
+      "severity": "info",
+      "affected_section": "insights:insight_2_retention"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2025-11-05 to 2026-02-03' not verbatim but semantically supported (confidence=0.97) for insight_4_collection_priority",
+      "severity": "info",
+      "affected_section": "insights:insight_4_collection_priority"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2025-11-05 to 2026-02-03' not verbatim but semantically supported (confidence=0.97) for insight_7_include_exclude_patterns",
+      "severity": "info",
+      "affected_section": "insights:insight_7_include_exclude_patterns"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote paraphrased but semantically supported (confidence=0.88): Scope for evidence collection covering relevant artifacts, time range, jurisdictions, and collection constraints for a s",
+      "severity": "info",
+      "affected_section": "quotes:quote_1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote not verbatim in evidence (Evidence indicates a 'Default EvidencePack Scope' but does not state to adjust timeframe/jurisdictions/patterns to match the schema.): This scope is a default template. Adjust timeframe, jurisdictions, and include/exclude patterns to match the EvidencePac",
+      "severity": "warning",
+      "affected_section": "quotes:quote_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence confirms the absence of methods, findings and DocMap, but no evidence is provided about the presence or absence of \"limitations.\": Only a default investigation scope is available; no methods, findings, limitations, or DocMap content have been produced.",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "\"limitations\" are not mentioned in the supplied evidence.: No investigative methods, findings, or limitations are recorded at this time.",
+      "severity": "error",
+      "affected_section": "summary.executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence shows DocMap not produced, but nothing on quote candidates or the absence of analytical results.: The DocMap and quote candidates were not produced (model_returned_no_json), so there are no analytical results to summarize beyond the defined scope.",
+      "severity": "error",
+      "affected_section": "summary.executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Interpretive statement; no direct supporting evidence.: The pack establishes governance and boundaries but stops short of analysis, which signals an initiation phase rather than an investigative phase.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Claims about accountability and operationalization are not supported by evidence.: That structure provides accountability and data stewardship while the absence of investigative methods, findings, and a DocMap indicates that evidence acquisition and analytic pathways have not yet be",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence for the need for \"targeted activation.\": What is defined points to a clear acquisition path that aligns with the threat themes, but it requires targeted activation.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Effects attributed to the priorities and patterns are not evidenced.: Priorities concentrate on telemetry and communications that typically surface unauthorized access and exfiltration, and the include/exclude patterns reduce noise by emphasizing durable artifacts while",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Recommendation without supporting evidence.: Immediate decisions should formalize the activation plan around what the template already prescribes and where it explicitly calls for tailoring.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Interpretation about \"sequencing\" is not supported by evidence.: The note that \"This scope is a default template. Adjust timeframe, jurisdictions, and include/exclude patterns to match the EvidencePack schema and the specific investigation requirements\" sets the se",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Prescriptive recommendation not backed by evidence.: With retention at 365 days and a confidential designation, access controls and handoffs need to be explicit across the collection window and any subsequent review to preserve integrity and chain of cu",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Recommendation not supported by evidence.: The absence of findings underscores that leadership focus should be on enabling disciplined collection first, then analysis once the defined datasets are in hand.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Lack of methods and findings is evidenced, but \"no analytical results\" is not.: There are no investigative methods or findings, and there are no analytical results to summarize beyond the defined scope.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Guidance statement; not supported by evidence.: What this means for decision-makers: treat the document as a clear definition of boundaries, priorities, and governance for a US-based security/forensic investigation scheduled between 2025-11-05 to 2",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Prescriptive statement without supporting evidence.: If you are aligning stakeholders or preparing systems for collection, this scope provides the explicit parameters and priorities.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Predictive claim; no evidence supplied.: Findings will require recorded methods and completed analysis that are not present at this time.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

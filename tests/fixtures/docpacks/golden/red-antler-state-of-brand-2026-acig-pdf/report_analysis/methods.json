@@ -1,0 +1,12 @@
+{
+  "methods": [
+    {
+      "name": "file_search.msearch",
+      "description": "Queried the user-supplied files with multiple semantically-rich search strings (e.g., “EvidencePack schema methods array”) to locate any explicit definition of the EvidencePack schema so the response could conform to it."
+    },
+    {
+      "name": "content inspection & inference",
+      "description": "Manually inspected the returned PDF excerpts to confirm they did not contain the schema; then inferred the minimal compliant structure (top-level “methods” array with objects that have at least “name” and “description” fields) and populated it with the analytical steps used."
+    }
+  ]
+}

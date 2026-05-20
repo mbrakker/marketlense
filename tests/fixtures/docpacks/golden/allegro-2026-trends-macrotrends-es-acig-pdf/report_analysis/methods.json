@@ -1,0 +1,24 @@
+{
+  "methods": [
+    {
+      "name": "extract_macrotrends",
+      "description": "Parse the uploaded PDF (\"251118_2026 trends macrotrends es\") and return a structured list of all numbered macrotrend headings together with the paragraph that immediately follows each heading.",
+      "steps": [
+        "Locate every line that matches the pattern “<number> | ” to detect a macro-trend heading.",
+        "Capture the heading text itself (e.g. “1 | El auge de la personalización adaptativa y la relevancia contextual” ).",
+        "Collect all subsequent lines until the next heading is encountered; join them as that trend’s summary (e.g. paragraph beginning “En los mercados globales…” ).",
+        "Emit a JSON array where each item has keys: id (numeric order), title (heading minus the numeric prefix), and summary (captured paragraph)."
+      ],
+      "evidence": [
+        {
+          "text": "1 | El auge de la personalización adaptativa y la relevancia contextual",
+          "citation": ""
+        },
+        {
+          "text": "2 | Consumo impulsado por el valor y alineación ética",
+          "citation": ""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "findings": [
+    {
+      "id": "f1",
+      "title": "Generative AI apps are projected to generate more than $10 billion in consumer spending in 2026",
+      "description": "Sensor Tower forecasts that downloads of Generative AI apps will reach 7.2 billion in 2026 (+82 % YoY) and in-app purchase revenue will surpass $10 billion.",
+      "evidence": [
+        {
+          "citationMarker": "turn3file2",
+          "quote": "Consumers Will Spend More than $10 Billion in Generative AI Apps in 2026 … 7.2 Billion Downloads in 2026 (+82% YoY)"
+        }
+      ]
+    },
+    {
+      "id": "f2",
+      "title": "Vertical video—led by the Short Drama sub-genre—will overtake traditional OTT streaming app downloads",
+      "description": "The report predicts that the short-form ‘Short Drama’ format, popularised by TikTok-style vertical video, will drive app growth and is expected to surpass OTT streaming globally on downloads in 2026.",
+      "evidence": [
+        {
+          "citationMarker": "turn3file1",
+          "quote": "Vertical Video will Spur App Growth — Led by Short Drama… Short Drama is projected to surpass OTT Streaming globally."
+        }
+      ]
+    },
+    {
+      "id": "f3",
+      "title": "Generative AI will rival paid advertising as a driver of website traffic by the end of 2026",
+      "description": "More than half of the top U.S. websites are expected to receive more traffic from Generative AI than from paid sources, up from 37 % in October 2025.",
+      "evidence": [
+        {
+          "citationMarker": "turn3file11",
+          "quote": "By the end of 2026, more than half of top websites will see more traffic from Gen AI than from paid sources."
+        }
+      ]
+    },
+    {
+      "id": "f4",
+      "title": "Digital advertisers will shift budget back to image creatives, out-growing video spend in 2026",
+      "description": "After years of video growth, U.S. digital ad spend on image creatives grew 35 % YoY versus 15 % for video in 2025; the trend is forecast to accelerate as platforms like Meta Reels favour images.",
+      "evidence": [
+        {
+          "citationMarker": "turn3file10",
+          "quote": "US digital ad spend on images climbed 35% YoY compared to 15% growth for video creatives… Our 2026 prediction: Ad spend for images will again rise faster than spend on videos."
+        }
+      ]
+    },
+    {
+      "id": "f5",
+      "title": "Successful mobile games will combine ad-friendly hooks with deep monetisation to offset rising UA costs",
+      "description": "With downloads falling toward pre-pandemic levels and user-acquisition costs rising, games that natively advertise well and employ multi-layered monetisation systems are expected to outperform in 2026.",
+      "evidence": [
+        {
+          "citationMarker": "turn3file5",
+          "quote": "If the current download trends continue… it [is] more important than ever for mobile games to combine ad-friendly hooks with strong monetization."
+        }
+      ]
+    },
+    {
+      "id": "f6",
+      "title": "AI-powered development tools will speed up production cycles and increase the volume of PC game releases",
+      "description": "2025 already set a record for new Steam releases; Sensor Tower expects AI tools and accessible engines to continue driving shorter, smarter development cycles and fewer multi-year AAA projects in 2026.",
+      "evidence": [
+        {
+          "citationMarker": "turn3file6",
+          "quote": "2025 has broken the record for most new Steam releases… Our 2026 Prediction: You can expect to see fewer sprawling AAA experiences, reduced publisher risk, and a steady flow of tighter, smaller-scope games."
+        }
+      ]
+    },
+    {
+      "id": "f7",
+      "title": "ChatGPT could become the top-grossing mobile app (IAP revenue) worldwide by Q4 2026",
+      "description": "Forecasts show ChatGPT already at #2 for in-app purchase revenue by Q3 2025, with momentum that could see it overtake TikTok to claim the #1 spot by the end of 2026.",
+      "evidence": [
+        {
+          "citationMarker": "turn3file16",
+          "quote": "Bonus Prediction: ChatGPT Will Become the Top App by IAP Revenue by the End of 2026… ChatGPT was already the #2 app globally by IAP revenue."
+        }
+      ]
+    }
+  ]
+}

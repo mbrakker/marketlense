@@ -1,0 +1,44 @@
+{
+  "methods": [
+    {
+      "tool": "file_search.msearch",
+      "arguments": {
+        "queries": [
+          "EvidencePack schema methods array",
+          "methods array EvidencePack",
+          "schema \"methods\" EvidencePack",
+          "EvidencePack.json schema"
+        ]
+      }
+    },
+    {
+      "tool": "file_search.msearch",
+      "arguments": {
+        "queries": [
+          "\"EvidencePack\" \"methods\"",
+          "EvidencePack schema fields",
+          "EvidencePack \"methods\" array",
+          "EvidencePack JSON \"methods\""
+        ]
+      }
+    },
+    {
+      "tool": "file_search.msearch",
+      "arguments": {
+        "queries": [
+          "EvidencePack schema pattern",
+          "EvidencePack pattern"
+        ]
+      }
+    },
+    {
+      "tool": "file_search.msearch",
+      "arguments": {
+        "queries": [
+          "\"signal_type\" \"methods\"",
+          "\"raw_ptr\" EvidencePack"
+        ]
+      }
+    }
+  ]
+}

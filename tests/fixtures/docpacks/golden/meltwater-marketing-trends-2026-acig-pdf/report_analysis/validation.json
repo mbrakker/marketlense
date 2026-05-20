@@ -1,0 +1,176 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_003 not supported (Evidence supports the trend and emerging discipline but does not mention the 2026 timeframe.)",
+      "severity": "error",
+      "affected_section": "insights:insight_003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_008 not supported (Evidence mentions a ~2% lift in incremental sales but provides no 2026 timeframe.)",
+      "severity": "error",
+      "affected_section": "insights:insight_008"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026' not present in evidence for insight_003",
+      "severity": "warning",
+      "affected_section": "insights:insight_003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit '%' not verbatim but semantically supported (confidence=0.99) for insight_005",
+      "severity": "info",
+      "affected_section": "insights:insight_005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '2' not found in evidence for insight_008 (Evidence mentions a ~2% lift in incremental sales but provides no 2026 timeframe.)",
+      "severity": "error",
+      "affected_section": "insights:insight_008"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit '%' not present in evidence for insight_008",
+      "severity": "warning",
+      "affected_section": "insights:insight_008"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026' not present in evidence for insight_008",
+      "severity": "warning",
+      "affected_section": "insights:insight_008"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet states that these topics collectively “move to the center of marketing strategy.”: In 2026, AI-shaped discovery, LLM reputation, misinformation resilience, social customer care, and personalization at scale move to the center of marketing strategy.",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The prescriptive claim that leaders “should prepare” for a year “defined” by these shifts is not supported by the evidence snippets.: Marketing leaders should prepare for a year defined by AI-driven discovery and engagement: Answer Engine Optimization (also known as Generative Engine Optimization) moves alongside traditional SEO, wh",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet mentions 15 trends or the specific metrics listed.: The guide outlines 15 trends to watch and suggests tracking metrics such as LLM Visibility & Accuracy, Narrative Health, Creator Contribution, Community Share of Voice, Video Effectiveness, and Person",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet explicitly supports a general shift of discovery and brand research to AI-mediated environments.: Discovery and brand research are shifting to AI-mediated environments.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This prescriptive recommendation is not supported by any evidence snippet.: Leaders should align content, PR, and search around AEO and LLM reputation to influence how brands appear in AI outputs.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The claim lacks direct supporting evidence.: Trust and responsiveness move to the foreground.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet recommends pairing these workflows.: Decision-making should pair misinformation monitoring with social customer care workflows to address issues within the social channels consumers use for research.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet substantiates this broad statement.: Commercial value follows execution at scale.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The evidence snippets do not mention tracking these metrics.: To operationalize these priorities, track metrics such as LLM Visibility & Accuracy, Narrative Health, Creator Contribution, Community Share of Voice, Video Effectiveness, and Personalization Lift to ",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While AI-powered search is forecast to displace conventional search by 2028, no evidence states it is currently “overtaking” classic search.: AI-powered discovery is overtaking classic search.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This prescriptive statement is not backed by evidence snippets.: In 2026, Answer Engine Optimization belongs next to SEO on every roadmap.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet gives this recommendation or references the metric.: Stand up Answer Engine Optimization (also called Generative Engine Optimization) alongside SEO, and track LLM Visibility & Accuracy to understand how your brand shows up in AI answers.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The evidence notes the discipline is “emerging,” but does not instruct readers to treat it as such.: Treat LLM reputation management as a defined discipline.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports the first clause but not the causal statement about shaping brand perception inside AI outputs.: Journalists and influencers are using LLMs as research aids, which means brand perception is being shaped inside AI outputs.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This directive is not explicitly supported by evidence.: Elevate social customer care to protect brand reputation.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports the statistic but not the claim that slow responses erode trust.: More than 70% of worldwide internet users aged 16+ use social platforms to find information about brands, and slow responses erode trust.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This recommendation is not backed by evidence snippets.: Personalize at scale with AI where it is feasible.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet advises tracking this metric.: Track Personalization Lift to validate impact.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "There is no evidence snippet referencing the use of these metrics.: Use these metrics to operationalize the shift:",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet supports this broad claim.: 2026 belongs to leaders who adapt discovery, reputation, resilience, social care, and personalization into one operating system for growth.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This statement is unsupported by the provided evidence.: If your marketing stack and governance do not reflect these realities, you are planning against a market that no longer exists.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

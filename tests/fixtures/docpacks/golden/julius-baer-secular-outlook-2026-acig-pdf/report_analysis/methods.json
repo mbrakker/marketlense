@@ -1,0 +1,20 @@
+{
+  "methods": [
+    {
+      "name": "Historical secular-trend analysis",
+      "description": "The report compares many decades of economic ‘what happened / what profited’ data (see Chart 2) to extract long-run structural forces that guide current positioning ."
+    },
+    {
+      "name": "Macroeconomic trend assessment",
+      "description": "Authors identify and investigate today’s dominant macro forces—multipolarity, active fiscal policy, interest-rate normalisation, the innovation super-cycle and China’s balance-sheet recession—framing the investment outlook around them ."
+    },
+    {
+      "name": "Public-vs-private balance-sheet analysis",
+      "description": "Using debt-to-GDP series that contrast household/corporate leverage with public-sector indebtedness, the study gauges financial resilience and policy constraints (Chart 7: divergent leverage trends) ."
+    },
+    {
+      "name": "Capital-market theme mapping",
+      "description": "From the macro work, the authors distil investible themes (Nasdaq+, European value, India & China, Gold & digital assets, CHF store-of-value, etc.) that shape portfolio strategy in the current decade ."
+    }
+  ]
+}

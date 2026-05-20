@@ -1,0 +1,20 @@
+{
+  "limitations": [
+    {
+      "code": "sample_bias",
+      "message": "Findings draw on a survey of 6,500 Artlist users drawn from 140 countries. Because respondents all belong to a single platform’s user-base, the results may not represent the creative industry as a whole or regions where Artlist has low penetration. "
+    },
+    {
+      "code": "self_report_bias",
+      "message": "Key metrics—such as the headline figure that 87 % of creators already use AI—rely on answers that participants reported about their own behaviour. Such self-reported data can be inflated or under-stated and are not independently verified. "
+    },
+    {
+      "code": "projection_uncertainty",
+      "message": "The projection that the generative-animation market will rise from $2.1 billion (2024) to $15.9 billion (2030) is cited without disclosing underlying modelling assumptions, making the forecast’s reliability hard to judge. "
+    },
+    {
+      "code": "context_dependence",
+      "message": "Narratives about a ‘great leveling’—claiming that anyone can now compete at the highest production quality—assume equal access to hardware, connectivity and legal frameworks. These factors vary widely and may limit the generalisability of the conclusion. "
+    }
+  ]
+}

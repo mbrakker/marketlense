@@ -1,0 +1,54 @@
+{
+  "scope": {
+    "id": "evidencepack-scope-001",
+    "name": "Default EvidencePack Scope",
+    "description": "Scope defining sources, timeframe, content types, inclusion/exclusion rules, jurisdictions, retention and sensitivity for an EvidencePack.",
+    "owner": {
+      "name": "Analyst",
+      "role": "Data Owner"
+    },
+    "timeframe": {
+      "start": "2024-01-01T00:00:00Z",
+      "end": "2024-12-31T23:59:59Z"
+    },
+    "sources": [
+      {
+        "type": "file_upload",
+        "id": "ARTLIST-2026",
+        "title": "Artlist AI Trend Report 2026",
+        "description": "Uploaded report included in scope.",
+        "reference": ""
+      }
+    ],
+    "contentTypes": [
+      "application/pdf",
+      "text/plain",
+      "image/png",
+      "image/jpeg"
+    ],
+    "includePatterns": [
+      "**/*.pdf",
+      "**/*.txt",
+      "reports/**",
+      "evidence/**"
+    ],
+    "excludePatterns": [
+      "**/private/**",
+      "**/*.exe",
+      "**/*.bin"
+    ],
+    "jurisdictions": [
+      "US"
+    ],
+    "retentionDays": 365,
+    "sensitivity": "internal",
+    "tags": [
+      "evidencepack",
+      "report",
+      "AI"
+    ],
+    "maxSizeMB": 500,
+    "samplingRate": "100%",
+    "notes": "Scope-only object following EvidencePack schema; other EvidencePack fields omitted as requested."
+  }
+}

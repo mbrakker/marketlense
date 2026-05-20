@@ -1,0 +1,57 @@
+{
+  "methods": [
+    {
+      "tool": "file_search.msearch",
+      "arguments": {
+        "queries": [
+          "EvidencePack schema methods array",
+          "EvidencePack \"methods\" array",
+          "methods array EvidencePack",
+          "schema definition EvidencePack",
+          "EvidencePack JSON schema"
+        ]
+      }
+    },
+    {
+      "tool": "file_search.msearch",
+      "arguments": {
+        "queries": [
+          "EvidencePack",
+          "method EvidencePack schema",
+          "\"EvidencePack\""
+        ]
+      }
+    },
+    {
+      "tool": "file_search.msearch",
+      "arguments": {
+        "queries": [
+          "methods array schema",
+          "\"methods\": [",
+          "\"EvidencePack schema\" JSON",
+          "\"EvidencePack\" ETL",
+          "evidence pack json example"
+        ]
+      }
+    },
+    {
+      "tool": "file_search.msearch",
+      "arguments": {
+        "queries": [
+          "\"EvidencePack\" \"version\"",
+          "\"EvidencePack\" \"methods\"",
+          "\"EvidencePack schema\" \"version\""
+        ]
+      }
+    },
+    {
+      "tool": "file_search.msearch",
+      "arguments": {
+        "queries": [
+          "EvidencePack msearch",
+          "\"EvidencePack\" \"file_search\""
+        ]
+      }
+    }
+  ]
+}

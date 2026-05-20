@@ -1,0 +1,59 @@
+{
+  "findings": [
+    {
+      "id": "finding-1",
+      "summary": "Generation Q (people born 2003-2012) formed their identities primarily online during the pandemic, becoming the first cohort whose core development occurred in digital rather than physical space.",
+      "evidence": [
+        {
+          "file": "THE AKIN - The Quarantine Cohort-Exec Summary.pdf",
+          "page": 2,
+          "quote": "Generation Q comprises individuals born 2003-2012 who experienced critical identity formation during mandatory digital mediation within a global health pandemic. They are humanity's first generation to undergo identity formation primarily in digital rather than physical spaces."
+        }
+      ]
+    },
+    {
+      "id": "finding-2",
+      "summary": "Gen Q displays permanent, co-existing contradictions such as ‘dual ageing’, a progressive-conservative split, connected isolation, and a sexual deficit, which together define their sense of self.",
+      "evidence": [
+        {
+          "file": "THE AKIN - The Quarantine Cohort-Exec Summary.pdf",
+          "page": 10,
+          "quote": "Gen Q has developed stable contradictory patterns that don't resolve into traditional coherence … Dual Ageing … Progressive-Conservative Split … Connected Isolation … The Sexual Deficit."
+        }
+      ]
+    },
+    {
+      "id": "finding-3",
+      "summary": "Algorithm-driven platforms (Instagram, video games, pornography) systematically eroded self-worth, trust and real-world competence among Gen Q, while parents were ill-equipped to counteract these forces.",
+      "evidence": [
+        {
+          "file": "THE AKIN - The Quarantine Cohort-Exec Summary.pdf",
+          "page": 7,
+          "quote": "Instagram: Engineering Inadequacy … Trust Crisis … Video Games: The Isolation Engine … Pornography: The Intimacy Annihilator … Parents: The Unprepared Guardians."
+        }
+      ]
+    },
+    {
+      "id": "finding-4",
+      "summary": "Traditional milestones of adolescence now feel unattainable for Gen Q; algorithmic environments that reward safety and consumption have caused a widespread ‘failure to launch’.",
+      "evidence": [
+        {
+          "file": "THE AKIN - The Quarantine Cohort-Exec Summary.pdf",
+          "page": 3,
+          "quote": "They are failing to launch not because they lack ambition, but because the launch pad itself has disintegrated … algorithmic environments that reward safety, predictability, and endless consumption of pre-digested content."
+        }
+      ]
+    },
+    {
+      "id": "finding-5",
+      "summary": "Gen Q is witnessing the ‘death of culture creation’; instead of inventing new subcultures, they remix nostalgic content and generate short-lived AI output, hampered by high levels of shame and fragmented identities.",
+      "evidence": [
+        {
+          "file": "THE AKIN - The Quarantine Cohort-Exec Summary.pdf",
+          "page": 11,
+          "quote": "Death of Culture Creation … Gen Q creates remixes of remixes, nostalgic recreations of eras they never lived through, and AI-generated content cycles that die within weeks … Increased Shame … Identity Fragmentation."
+        }
+      ]
+    }
+  ]
+}

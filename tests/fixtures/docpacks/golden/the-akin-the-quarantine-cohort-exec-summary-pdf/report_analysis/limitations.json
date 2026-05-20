@@ -1,0 +1,28 @@
+{
+  "limitations": [
+    {
+      "category": "Geographic & Cultural Scope",
+      "text": "Findings are based on respondents from only 11 markets, so conclusions may not generalize to youth in unstudied regions.",
+      "severity": "medium",
+      "citation": ""
+    },
+    {
+      "category": "Methodological Transparency",
+      "text": "The executive summary does not describe sample size, data-collection tools or analytic methods, limiting the ability to judge the reliability of headline statistics such as the 83% and 72% figures that are presented.",
+      "severity": "high",
+      "citation": ""
+    },
+    {
+      "category": "Potential Conflict of Interest",
+      "text": "The report is produced by a consultancy that advertises paid workshops and a full report, introducing possible promotional bias in how results are framed.",
+      "severity": "low",
+      "citation": ""
+    },
+    {
+      "category": "Evidence Support",
+      "text": "Sweeping claims about permanent identity contradictions are asserted without accompanying quantitative evidence or referenced studies.",
+      "severity": "high",
+      "citation": ""
+    }
+  ]
+}

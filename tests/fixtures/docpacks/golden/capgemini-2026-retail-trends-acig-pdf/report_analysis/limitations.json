@@ -1,0 +1,32 @@
+{
+  "limitations": [
+    {
+      "id": "L1",
+      "description": "Many statistics in the report are explicitly marked as 'early findings' from the forthcoming 2026 consumer-trends study, which means the underlying survey data and analyses are preliminary and could change in the final publication .",
+      "type": "Preliminary data",
+      "severity": "medium",
+      "mitigation": "Treat figures as directional only and update analyses once the finalized dataset is released."
+    },
+    {
+      "id": "L2",
+      "description": "Numerous insights are derived from self-reported consumer surveys; such data are subject to response and social-desirability bias and may not accurately reflect real-world purchase behaviour.",
+      "type": "Self-reported data bias",
+      "severity": "medium",
+      "mitigation": "Supplement survey results with observed transactional or behavioural datasets wherever possible."
+    },
+    {
+      "id": "L3",
+      "description": "The report projects future retail and technology adoption trends out to 2026 and beyond, introducing forecasting uncertainty that can be affected by macro-economic, technological, or regulatory shifts .",
+      "type": "Forecast uncertainty",
+      "severity": "high",
+      "mitigation": "Stress-test key conclusions under alternative economic and adoption scenarios."
+    },
+    {
+      "id": "L4",
+      "description": "Details on geographic coverage, sampling frame, and weighting methodology are not disclosed, limiting the ability to assess the representativeness of the findings.",
+      "type": "Sampling limitations",
+      "severity": "medium",
+      "mitigation": "Request full methodological appendix (country splits, sample sizes, weighting scheme) before generalising insights to broader populations."
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_1 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+      "severity": "error",
+      "affected_section": "insights:insight_1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_2 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+      "severity": "error",
+      "affected_section": "insights:insight_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_3 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+      "severity": "error",
+      "affected_section": "insights:insight_3"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_4 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+      "severity": "error",
+      "affected_section": "insights:insight_4"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Semantic check: metric for insight_5 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+      "severity": "error",
+      "affected_section": "insights:insight_5"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Missing evidence snippet for metric on insight_1",
+      "severity": "error",
+      "affected_section": "insights:insight_1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Missing evidence snippet for metric on insight_2",
+      "severity": "error",
+      "affected_section": "insights:insight_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Missing evidence snippet for metric on insight_3",
+      "severity": "error",
+      "affected_section": "insights:insight_3"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Missing evidence snippet for metric on insight_4",
+      "severity": "error",
+      "affected_section": "insights:insight_4"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Missing evidence snippet for metric on insight_5",
+      "severity": "error",
+      "affected_section": "insights:insight_5"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote paraphrased but semantically supported (confidence=1.00): Collect and preserve all relevant digital evidence related to Incident ABC for forensic analysis.",
+      "severity": "info",
+      "affected_section": "quotes:quote_1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote paraphrased but semantically supported (confidence=0.92): Ensure chain-of-custody and access controls are maintained for all collected items.",
+      "severity": "info",
+      "affected_section": "quotes:quote_2"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Quote paraphrased but semantically supported (confidence=1.00): No evidence may be altered or modified during acquisition.",
+      "severity": "info",
+      "affected_section": "quotes:quote_4"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The evidence snippets provide no support for a Strava Year-In-Sport Trend Report; all evidence relates to the EvidencePack Collection Scope.: STRAVA - Year-In-Sport-Trend-Report-2025-US_ACIG",
+      "severity": "error",
+      "affected_section": "title"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports objectives, constraints and deliverables, but does not mention roles or acceptance criteria.: The EvidencePack Collection Scope defines objectives, roles, controls, constraints, deliverables, and acceptance criteria for collecting and preserving high-sensitivity digital evidence for Incident A",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence confirms role-based access, MFA and encryption, but contains no mention of the named stakeholders.: It designates stakeholders (Requestor, Evidence Custodian, Legal) and enforces role-based access with multi-factor authentication and encryption in transit and at rest.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence mentions Legal sign-off for cross-border transfers but does not state acceptance criteria about evidence types, hashes, or custody records.: Acceptance requires that all listed evidence types are present, cryptographic hashes and custody records accompany each item, and Legal approves any cross-border transfers.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Stakeholder designations are not supported by the evidence snippets.: It designates stakeholders (Requestor, Evidence Custodian, Legal) and enforces a High-sensitivity regime with role-based access, approved users, multi-factor authentication, and encryption in transit ",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence lacks any statement about acceptance criteria requiring evidence types, hashes or custody records.: Acceptance criteria raise the bar on auditability by requiring that all listed evidence types are present, cryptographic hashes accompany each item, and chain-of-custody records are maintained, with L",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence references \"named gates\" or confirms the existence of acceptance criteria elements.: For decision-makers, align governance, access control, and operational plans to the named gates: objectives, constraints, evidence types, acceptance criteria, and deliverables.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence does not mention that stakeholders are named or that acceptance criteria are defined.: It names stakeholders and enforces role-based access with multi-factor authentication and encryption in transit and at rest, while defining explicit evidence types, constraints, retention, deliverable",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Stakeholder roles are not referenced in the evidence snippets.: Stakeholders: Requestor, Evidence Custodian, Legal",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence does not state acceptance requirements for evidence types, hashes or custody records.: Acceptance requires all listed evidence types, cryptographic hashes and custody records for each item, and Legal approval for any cross-border transfers",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

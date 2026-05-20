@@ -1,0 +1,44 @@
+{
+  "findings": [
+    {
+      "id": "finding_1",
+      "statement": "Answer-Engine Optimisation (AEO) is becoming as important as traditional SEO, with AI-powered search expected to overtake conventional search by 2028.",
+      "evidence": [
+        "“Answer Engine Optimization (AEO) is now just as important as SEO” and Gartner forecasts that “by 2028 AI-powered search will displace conventional web search as the primary discovery channel for consumers”"
+      ],
+      "confidence": 0.27
+    },
+    {
+      "id": "finding_2",
+      "statement": "LLM reputation management is emerging as a distinct discipline because journalists and influencers already rely on tools like ChatGPT, meaning brand perception is shaped inside AI outputs.",
+      "evidence": [
+        "“Journalists and influencers are increasingly using LLMs as research aids… LLM reputation management is emerging as a new discipline”"
+      ],
+      "confidence": 0.26
+    },
+    {
+      "id": "finding_3",
+      "statement": "Building resilience to mis- and dis-information is now considered as fundamental for organisations as cybersecurity or data privacy, due to the speed and impact of false narratives.",
+      "evidence": [
+        "“Brands that can spot and neutralize false narratives quickly will avoid costly clean-ups… In 2026, building misinformation resilience is as fundamental as cybersecurity or data privacy”"
+      ],
+      "confidence": 0.25
+    },
+    {
+      "id": "finding_4",
+      "statement": "Social customer care has become critical for brand reputation because over 70 % of internet users use social platforms to research brands, and slow responses erode trust.",
+      "evidence": [
+        "“More than 70 percent of worldwide internet users aged 16 and up use social platforms to find information about brands… Social customer care is critical for brand reputation”"
+      ],
+      "confidence": 0.24
+    },
+    {
+      "id": "finding_5",
+      "statement": "Advances in AI now make psychographic segmentation and personalisation at scale practical, delivering measurable sales lifts for brands that adopt it.",
+      "evidence": [
+        "“Advances in AI now make that kind of psychographic segmentation and micro-targeting feasible at scale… brands can see a two percent lift in incremental sales”"
+      ],
+      "confidence": 0.24
+    }
+  ]
+}

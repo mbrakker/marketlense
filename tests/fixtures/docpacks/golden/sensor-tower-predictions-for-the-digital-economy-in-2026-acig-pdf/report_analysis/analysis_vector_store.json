@@ -1,0 +1,375 @@
+{
+  "tldr": "Sensor Tower forecasts 2026 will be reshaped by Generative AI and vertical video: GenAI apps surpass $10B, image ads outpace video, GenAI rivals paid traffic, and ChatGPT could become the top-grossing app.",
+  "title": "SENSOR TOWER - Predictions_for_the_digital_economy_in_2026_ACIG",
+  "insights": [
+    "Generative AI apps will exceed $10B in consumer spend in 2026, with 7.2B downloads (+82% YoY).",
+    "Short Drama–led vertical video is projected to surpass OTT streaming globally on downloads in 2026.",
+    "By end‑2026, more than half of top websites will receive more traffic from Generative AI than from paid ads.",
+    "In the US, image ad spend rose 35% YoY vs 15% for video in 2025 and is forecast to outpace video again in 2026.",
+    "AI tools are accelerating game development: 2025 set a record for new Steam releases, with 2026 expected to favor smaller‑scope titles over sprawling AAA."
+  ],
+  "quote": {
+    "text": "Generative AI will rival paid advertising for driving website traffic",
+    "author": "Sensor Tower (report)",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "Feature Breakdown: Top Games by In-App Purchase Growth",
+    "evidence": "Feature Breakdown: Top Games by In-App Purchase Growth",
+    "schema_version": "1.0"
+  },
+  "commentary": "Sensor Tower projects that Generative AI apps will top $10 billion in consumer spending on 7.2 billion downloads in 2026. Vertical video—led by the Short Drama sub‑genre—is expected to propel app growth and surpass OTT streaming in global downloads. Discovery dynamics are shifting as more than half of top U.S. websites are forecast to receive more traffic from Generative AI than from paid ads by end‑2026, while advertisers reallocate toward image creatives, which outpaced video growth in 2025 and are expected to do so again in 2026. A bonus prediction sees ChatGPT becoming the #1 app by IAP revenue by the end of 2026; note these are forecasts built on iOS and Google Play data, U.S. ad‑spend samples, and traffic for the top 1,000 U.S. sites.",
+  "source": "",
+  "publisher": "Skia/PDF m122",
+  "taxonomy": [
+    "digital_economy",
+    "Generative AI and AI agents",
+    "short_form_video",
+    "social_media",
+    "digital_advertising",
+    "digital_ad_spend",
+    "mobile_gaming",
+    "internet_and_media",
+    "forecasts",
+    "consumer_trends"
+  ],
+  "categories": [
+    "Advertising",
+    "consumer_behavior",
+    "social_video_creator"
+  ],
+  "region": "Global",
+  "time_period": "2026 (forecast)",
+  "contents_page_number": 0,
+  "contents_heading": "",
+  "_figure_image": "sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf/assets/sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf.png",
+  "_figure_gallery": [
+    "sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf/slices/sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf.png",
+    "sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf/slices/sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf1.png",
+    "sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf/slices/sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf2.png"
+  ],
+  "_figure_top": "sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf/slices/sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf.png",
+  "_contents_image": "",
+  "_vector_store_id": "vs_698044ef7aac8191a19aef148929334d",
+  "_evidence_packs": {
+    "doc_map": "out\\sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf\\report_analysis\\doc_map.json",
+    "scope": "out\\sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf\\report_analysis\\scope.json",
+    "methods": "out\\sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf\\report_analysis\\methods.json",
+    "findings": "out\\sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf\\report_analysis\\findings.json",
+    "limitations": "out\\sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf\\report_analysis\\limitations.json",
+    "quote_candidates": "out\\sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf\\report_analysis\\quote_candidates.json",
+    "artifacts": "out\\sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf\\report_analysis\\artifacts.json",
+    "validation": "out\\sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf\\report_analysis\\validation.json"
+  },
+  "_text_density": 0.0,
+  "_text_pages_sampled": 0,
+  "_text_char_count": 0,
+  "_text_not_available": false,
+  "schema_version": "1.1",
+  "artifacts": {
+    "schema_version": "1.0",
+    "toc_topics": [
+      "Executive Summary and Predictions",
+      "Generative AI App Revenue",
+      "Vertical Video, Short Drama",
+      "Gen AI Website Traffic",
+      "Image Creatives Outpace Video",
+      "Ad-Friendly Hooks, Deep Monetization",
+      "AI Tools Speed Development",
+      "ChatGPT Tops IAP Revenue"
+    ],
+    "summary": {
+      "tldr": "Sensor Tower forecasts 2026 will be reshaped by Generative AI and vertical video: GenAI apps surpass $10B, image ads outpace video, GenAI rivals paid traffic, and ChatGPT could become the top-grossing app.",
+      "executive_summary": "Sensor Tower projects that Generative AI apps will top $10 billion in consumer spending on 7.2 billion downloads in 2026. Vertical video—led by the Short Drama sub‑genre—is expected to propel app growth and surpass OTT streaming in global downloads. Discovery dynamics are shifting as more than half of top U.S. websites are forecast to receive more traffic from Generative AI than from paid ads by end‑2026, while advertisers reallocate toward image creatives, which outpaced video growth in 2025 and are expected to do so again in 2026. A bonus prediction sees ChatGPT becoming the #1 app by IAP revenue by the end of 2026; note these are forecasts built on iOS and Google Play data, U.S. ad‑spend samples, and traffic for the top 1,000 U.S. sites.",
+      "claim_evidence_map": [
+        {
+          "claim": "Generative AI apps will generate more than $10B in consumer spending and reach 7.2B downloads in 2026.",
+          "evidence_id": "f1",
+          "evidence": "“Consumers Will Spend More than $10 Billion in Generative AI Apps in 2026 … 7.2 Billion Downloads in 2026 (+82% YoY)”",
+          "pages": []
+        },
+        {
+          "claim": "Vertical video—led by Short Drama—will surpass OTT streaming in global downloads in 2026.",
+          "evidence_id": "f2",
+          "evidence": "“Vertical Video will Spur App Growth — Led by Short Drama… Short Drama is projected to surpass OTT Streaming globally.”",
+          "pages": []
+        },
+        {
+          "claim": "By end‑2026, more than half of top U.S. websites will receive more traffic from Generative AI than from paid sources.",
+          "evidence_id": "f3",
+          "evidence": "“By the end of 2026, more than half of top websites will see more traffic from Gen AI than from paid sources.”",
+          "pages": []
+        },
+        {
+          "claim": "U.S. digital ad spend is shifting toward image creatives, which outgrew video in 2025 and are expected to do so again in 2026.",
+          "evidence_id": "f4",
+          "evidence": "“US digital ad spend on images climbed 35% YoY compared to 15% growth for video creatives… Our 2026 prediction: Ad spend for images will again rise faster than spend on videos.”",
+          "pages": []
+        },
+        {
+          "claim": "ChatGPT could become the top app globally by IAP revenue by the end of 2026.",
+          "evidence_id": "f7",
+          "evidence": "“Bonus Prediction: ChatGPT Will Become the Top App by IAP Revenue by the End of 2026… ChatGPT was already the #2 app globally by IAP revenue.”",
+          "pages": []
+        }
+      ]
+    },
+    "insights_candidates": [],
+    "insights_final": [
+      {
+        "id": "f1",
+        "text": "Generative AI apps will exceed $10B in consumer spend in 2026, with 7.2B downloads (+82% YoY).",
+        "evidence_id": "turn3file2",
+        "evidence": "Consumers Will Spend More than $10 Billion in Generative AI Apps in 2026 … 7.2 Billion Downloads in 2026 (+82% YoY)",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "f2",
+        "text": "Short Drama–led vertical video is projected to surpass OTT streaming globally on downloads in 2026.",
+        "evidence_id": "turn3file1",
+        "evidence": "Vertical Video will Spur App Growth — Led by Short Drama… Short Drama is projected to surpass OTT Streaming globally.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "f3",
+        "text": "By end‑2026, more than half of top websites will receive more traffic from Generative AI than from paid ads.",
+        "evidence_id": "turn3file11",
+        "evidence": "By the end of 2026, more than half of top websites will see more traffic from Gen AI than from paid sources.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "f4",
+        "text": "In the US, image ad spend rose 35% YoY vs 15% for video in 2025 and is forecast to outpace video again in 2026.",
+        "evidence_id": "turn3file10",
+        "evidence": "US digital ad spend on images climbed 35% YoY compared to 15% growth for video creatives… Our 2026 prediction: Ad spend for images will again rise faster than spend on videos.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "f6",
+        "text": "AI tools are accelerating game development: 2025 set a record for new Steam releases, with 2026 expected to favor smaller‑scope titles over sprawling AAA.",
+        "evidence_id": "turn3file6",
+        "evidence": "2025 has broken the record for most new Steam releases… Our 2026 Prediction: You can expect to see fewer sprawling AAA experiences, reduced publisher risk, and a steady flow of tighter, smaller-scope games.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      }
+    ],
+    "quotes_final": [
+      {
+        "text": "Generative AI will rival paid advertising for driving website traffic",
+        "speaker": "Sensor Tower (report)",
+        "citation": "Prediction #3: Gen AI will rival paid advertising for driving website traffic — Predictions for the Digital Economy in 2026 (Sensor Tower) ",
+        "page": 12,
+        "evidence_id": "quote_1"
+      },
+      {
+        "text": "By the end of 2026, more than half of top websites will see more traffic from Gen AI than from paid sources.",
+        "speaker": "Sensor Tower (report)",
+        "citation": "Prediction #3: Gen AI will rival paid advertising for driving website traffic — Predictions for the Digital Economy in 2026 (Sensor Tower) ",
+        "page": 12,
+        "evidence_id": "quote_2"
+      },
+      {
+        "text": "Consumers Will Spend More than $10 Billion in Generative AI Apps in 2026 … 7.2 Billion Downloads in 2026 (+82% YoY)",
+        "speaker": "Sensor Tower (report)",
+        "citation": "Prediction #1: Generative AI apps will earn more than $10 Billion in 2026 — Predictions for the Digital Economy in 2026 (Sensor Tower) ",
+        "page": 6,
+        "evidence_id": "quote_3"
+      }
+    ],
+    "expert_comment": "Generative AI is moving from hype to operating reality, with consumer spend and app rankings signaling a durable shift in mobile value capture. The category’s scale forces product and finance teams to treat AI utilities as core competitors and to pressure‑test IAP monetization and retention mechanics against them. The possibility of a single AI app leading global IAP revenue reframes benchmarks for growth planning and portfolio risk.\n- GenAI apps are projected to surpass $10B in consumer spend on 7.2B downloads in 2026 (+82% YoY) .\n- ChatGPT was already #2 by IAP revenue by Q3 2025 and could become #1 by end‑2026 .\n\nConsumption and advertising are diverging: user time leans into vertical video while ad budgets reweight toward images. This creates a creative‑ops imperative to scale image variant production and channel‑specific testing, even as teams invest in short‑form video for engagement. Marketers that align creative mix to channel mechanics rather than format orthodoxy will be better positioned to harvest near‑term performance.\n- Short Drama is projected to surpass OTT streaming on global downloads in 2026 .\n- In the U.S., image ad spend grew 35% YoY vs 15% for video in 2025 and is expected to outpace video again in 2026 .\n- Image creatives on Instagram Reels rose 142% YoY across Q1–Q3 2025, with similar gains on Facebook Reels .\n\nDiscovery dynamics are shifting as generative AI becomes a material traffic source, requiring rebalanced channel mixes and content architectures designed to be AI‑referencable. The crossover point is approaching quickly: more than a third of top U.S. sites were already receiving more GenAI than paid traffic by October 2025, and more than half are expected to do so by end‑2026 . In gaming, AI is also changing the supply side: release cadence is accelerating and production is narrowing in scope, while UA pressure favors titles with native ad hooks and deeper economies.\n- 2025 set a record for new Steam releases; 2026 is expected to bring fewer sprawling AAA projects and a steady flow of smaller‑scope games .\n- UA costs continue to pressure margins; 2026 forecasts point to pre‑pandemic download levels and the need to pair ad‑friendly hooks with deep monetization .",
+    "linkedin_post": "By the end of 2026, Generative AI is forecast to drive more traffic than paid ads for more than half of top websites. Treat this as a structural shift in acquisition and measurement.  \n\nKey data points to anchor plans:\n- Generative AI apps are projected to exceed $10B in consumer spend in 2026 on 7.2B downloads.  \n- Vertical video, led by Short Drama, is expected to surpass OTT streaming in global downloads in 2026.  \n- In the US, image ad spend grew 35% year over year in 2025 compared to 15% for video creatives, with images expected to outpace video again in 2026.  \n- 2025 set a record for new Steam releases, and 2026 is expected to favor smaller scope games over sprawling AAA.  \n\nWhat this means for digital leaders:\n- Rethink channel mix and analytics. Build plans that recognize AI-sourced traffic as a distinct and growing path to your properties.\n- Rebalance creative production. Increase throughput and testing velocity for image formats to match where spend growth is heading in the US.\n- Prioritize vertical video workflows. Resource the teams, templates, and lifecycle management needed to deliver short form video at scale.\n- Adjust content partnerships and pipelines. Expect a steadier flow of smaller scope launches in gaming ecosystems and plan collaborations accordingly.\n\nThe throughline is clear. Discovery, format economics, and content cadence are shifting at once. Leaders that operationalize against these signals now will be positioned to capture demand as it moves.\n\n#ecommerce #digitalmarketing #appgrowth",
+    "source_status": {
+      "schema_version": "1.0",
+      "text_density": 377.0,
+      "density_threshold": 0.0,
+      "pages_sampled": 5,
+      "char_count": 1885,
+      "not_available": false,
+      "reason": "",
+      "evidence_present": true
+    }
+  },
+  "validation_report": {
+    "schema_version": "1.1",
+    "status": "fail",
+    "severity": "error",
+    "source_path": "out\\sensor-tower-predictions-for-the-digital-economy-in-2026-acig-pdf\\report_analysis\\validation.json",
+    "issues": [
+      {
+        "schema_version": "1.0",
+        "message": "Quote paraphrased but semantically supported (confidence=1.00): Generative AI will rival paid advertising for driving website traffic",
+        "severity": "info",
+        "affected_section": "quotes:quote_1"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Number 142.0 not present in report or evidence",
+        "severity": "warning",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Subjective claim about \"hype\" versus \"operating reality\" and a \"durable shift\" is not evidenced in the provided snippets.: Generative AI is moving from hype to operating reality, with consumer spend and app rankings signaling a durable shift in mobile value capture.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence is provided that product and finance teams are taking these specific actions.: The category’s scale forces product and finance teams to treat AI utilities as core competitors and to pressure-test IAP monetization and retention mechanics against them.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence is supplied about changes to benchmarks or portfolio risk.: The possibility of a single AI app leading global IAP revenue reframes benchmarks for growth planning and portfolio risk.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No data or citation supports the asserted \"imperative.\": This creates a creative-ops imperative to scale image variant production and channel-specific testing, even as teams invest in short-form video for engagement.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Statement is advisory and lacks supporting evidence.: Marketers that align creative mix to channel mechanics rather than format orthodoxy will be better positioned to harvest near-term performance.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence is provided for the need to redesign channel mixes or content architectures.: Discovery dynamics are shifting as generative AI becomes a material traffic source, requiring rebalanced channel mixes and content architectures designed to be AI-referencable.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence is given to support the characterization as a \"structural shift.\": Treat this as a structural shift in acquisition and measurement.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Advisory statement without supporting evidence.: Rethink channel mix and analytics.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence provided for planning recommendations.: Build plans that recognize AI-sourced traffic as a distinct and growing path to your properties.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Instructional claim with no supporting evidence.: Rebalance creative production.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence links spend growth to required production changes.: Increase throughput and testing velocity for image formats to match where spend growth is heading in the US.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Recommendation not directly supported by data.: Prioritize vertical video workflows.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence supports this operational advice.: Resource the teams, templates, and lifecycle management needed to deliver short form video at scale.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Advisory statement lacks cited evidence.: Adjust content partnerships and pipelines.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No data is provided on collaboration planning.: Expect a steadier flow of smaller scope launches in gaming ecosystems and plan collaborations accordingly.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Subjective statement, not evidence-based.: The throughline is clear.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Broad claim without direct supporting data.: Discovery, format economics, and content cadence are shifting at once.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Predictive assertion with no evidence supplied.: Leaders that operationalize against these signals now will be positioned to capture demand as it moves.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      }
+    ]
+  },
+  "categories_display": [
+    "Advertising Strategy & Media",
+    "Consumer Behavior & Insights",
+    "Social, Short Video & Creator"
+  ],
+  "analysis_mode": "vector_store"
+}

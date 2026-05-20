@@ -1,0 +1,317 @@
+{
+  "schema_version": "1.0",
+  "toc_topics": [
+    "Investigation Scope Overview",
+    "Timeframe and Jurisdiction",
+    "Incident Topics Covered",
+    "Data Types Collected",
+    "Include and Exclude Patterns",
+    "Collection Priority and Methods",
+    "Data Retention and Sensitivity",
+    "Responsible Team and Contact"
+  ],
+  "summary": {
+    "tldr": "Only a default investigation scope is available; no methods, findings, limitations, or DocMap content have been produced.",
+    "executive_summary": "The current EvidencePack contains a default scope template for a US-based security/forensic investigation spanning 2025-11-05 to 2026-02-03, focused on security incident, data exfiltration, and unauthorized access. The scope enumerates targeted data types, include/exclude patterns, collection priorities, and collection methods, and sets governance parameters such as 365-day retention, confidential sensitivity, and the Digital Forensics team as responsible with a designated primary contact. No investigative methods, findings, or limitations are recorded at this time. The DocMap and quote candidates were not produced (model_returned_no_json), so there are no analytical results to summarize beyond the defined scope.",
+    "claim_evidence_map": [
+      {
+        "claim": "A default scope defines a US-based investigation from 2025-11-05 to 2026-02-03 focused on security incident, data exfiltration, and unauthorized access.",
+        "evidence_id": "scope.scope",
+        "evidence": "Scope for evidence collection with timeframe start 2025-11-05, end 2026-02-03; jurisdictions: US; topics: security incident, data exfiltration, unauthorized access.",
+        "pages": []
+      },
+      {
+        "claim": "Collection priorities are set to system_logs, network_traffic, email_archives, user_documents, and databases.",
+        "evidence_id": "scope.scope.collection_priority",
+        "evidence": "[\"system_logs\", \"network_traffic\", \"email_archives\", \"user_documents\", \"databases\"]",
+        "pages": []
+      },
+      {
+        "claim": "Collection methods are specified as forensic_image, file_export, api_export, sql_dump, and pcap_capture.",
+        "evidence_id": "scope.scope.collection_methods",
+        "evidence": "[\"forensic_image\", \"file_export\", \"api_export\", \"sql_dump\", \"pcap_capture\"]",
+        "pages": []
+      },
+      {
+        "claim": "No investigative methods have been recorded.",
+        "evidence_id": "methods.methods",
+        "evidence": "[]",
+        "pages": []
+      },
+      {
+        "claim": "No findings have been recorded, and the DocMap content was not produced.",
+        "evidence_id": "findings.findings | doc_map.not_found_reason",
+        "evidence": "findings: []; doc_map.not_found_reason: \"model_returned_no_json\"",
+        "pages": []
+      }
+    ]
+  },
+  "insights_candidates": [
+    {
+      "id": "insight_1_timeframe",
+      "text": "Evidence collection scope covers 2025-11-05 to 2026-02-03.",
+      "evidence_id": "scope.timeframe",
+      "evidence": "\"timeframe\": { \"start\": \"2025-11-05\", \"end\": \"2026-02-03\" }",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "0.9"
+      },
+      "pages": [],
+      "score": 0.9
+    },
+    {
+      "id": "insight_2_retention",
+      "text": "Collected evidence is retained for 365 days.",
+      "evidence_id": "scope.retention_days",
+      "evidence": "\"retention_days\": 365",
+      "metric": {
+        "value": "365",
+        "unit": "days",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "0.95"
+      },
+      "pages": [],
+      "score": 0.85
+    },
+    {
+      "id": "insight_3_jurisdiction",
+      "text": "Scope limits collection to the US jurisdiction.",
+      "evidence_id": "scope.jurisdictions",
+      "evidence": "\"jurisdictions\": [\"US\"]",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "US",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "0.9"
+      },
+      "pages": [],
+      "score": 0.75
+    },
+    {
+      "id": "insight_4_collection_priority",
+      "text": "Collection priority ranks system_logs first, followed by network_traffic and email_archives.",
+      "evidence_id": "scope.collection_priority",
+      "evidence": "\"collection_priority\": [\"system_logs\", \"network_traffic\", \"email_archives\", \"user_documents\", \"databases\"]",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "system_logs (top priority)",
+        "sample_size": "",
+        "confidence": "0.9"
+      },
+      "pages": [],
+      "score": 0.8
+    },
+    {
+      "id": "insight_5_data_types",
+      "text": "Scope includes these data types: email, system_logs, application_logs, documents, images, databases, and network_traffic.",
+      "evidence_id": "scope.data_types",
+      "evidence": "\"data_types\": [\"email\", \"system_logs\", \"application_logs\", \"documents\", \"images\", \"databases\", \"network_traffic\"]",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "email; system_logs; application_logs; documents; images; databases; network_traffic",
+        "sample_size": "",
+        "confidence": "0.9"
+      },
+      "pages": [],
+      "score": 0.75
+    },
+    {
+      "id": "insight_6_collection_methods",
+      "text": "Authorized collection methods include forensic_image, file_export, api_export, sql_dump, and pcap_capture.",
+      "evidence_id": "scope.collection_methods",
+      "evidence": "\"collection_methods\": [\"forensic_image\", \"file_export\", \"api_export\", \"sql_dump\", \"pcap_capture\"]",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "forensic_image; file_export; api_export; sql_dump; pcap_capture",
+        "sample_size": "",
+        "confidence": "0.88"
+      },
+      "pages": [],
+      "score": 0.78
+    },
+    {
+      "id": "insight_7_include_exclude_patterns",
+      "text": "Include patterns prioritise /var/log/**, /home/**/Documents/**, and *.log while exclude patterns filter out /tmp/**, /var/tmp/** and *.tmp.",
+      "evidence_id": "scope.include_patterns_and_exclude_patterns",
+      "evidence": "\"include_patterns\": [\"/var/log/**\", \"/home/**/Documents/**\", \"/home/**/Downloads/**\", \"*.pst\", \"*.mbox\", \"*.log\", \"*.sql\", \"*.csv\", \"*.docx\", \"*.xlsx\", \"*.pdf\"], \"exclude_patterns\": [\"/tmp/**\", \"/var/tmp/**\", \"*.tmp\", \"*.cache\", \"*.swp\"]",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "filesystem include/exclude patterns",
+        "sample_size": "",
+        "confidence": "0.85"
+      },
+      "pages": [],
+      "score": 0.8
+    },
+    {
+      "id": "insight_8_sensitivity_and_ownership",
+      "text": "Scope sensitivity is marked 'confidential' and the responsible team is Digital Forensics (primary contact: Lead Analyst, lead.analyst@example.com).",
+      "evidence_id": "scope.sensitivity_and_responsible_team",
+      "evidence": "\"sensitivity\": \"confidential\", \"responsible_team\": \"Digital Forensics\", \"primary_contact\": { \"name\": \"Lead Analyst\", \"email\": \"lead.analyst@example.com\" }",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "sensitivity/ownership",
+        "sample_size": "",
+        "confidence": "0.92"
+      },
+      "pages": [],
+      "score": 0.86
+    }
+  ],
+  "insights_final": [
+    {
+      "id": "insight_1_timeframe",
+      "text": "Evidence collection timeframe: 2025-11-05 to 2026-02-03.",
+      "evidence_id": "scope.timeframe",
+      "evidence": "\"timeframe\": { \"start\": \"2025-11-05\", \"end\": \"2026-02-03\" }",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "0.9"
+      },
+      "pages": []
+    },
+    {
+      "id": "insight_8_sensitivity_and_ownership",
+      "text": "Sensitivity: confidential; owner: Digital Forensics (primary contact: Lead Analyst, lead.analyst@example.com).",
+      "evidence_id": "scope.sensitivity_and_responsible_team",
+      "evidence": "\"sensitivity\": \"confidential\", \"responsible_team\": \"Digital Forensics\", \"primary_contact\": { \"name\": \"Lead Analyst\", \"email\": \"lead.analyst@example.com\" }",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "sensitivity/ownership",
+        "sample_size": "",
+        "confidence": "0.92"
+      },
+      "pages": []
+    },
+    {
+      "id": "insight_2_retention",
+      "text": "Collected evidence is retained for 365 days.",
+      "evidence_id": "scope.retention_days",
+      "evidence": "\"retention_days\": 365",
+      "metric": {
+        "value": "365",
+        "unit": "days",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "0.95"
+      },
+      "pages": []
+    },
+    {
+      "id": "insight_4_collection_priority",
+      "text": "Collection priority: system_logs first, then network_traffic and email_archives.",
+      "evidence_id": "scope.collection_priority",
+      "evidence": "\"collection_priority\": [\"system_logs\", \"network_traffic\", \"email_archives\", \"user_documents\", \"databases\"]",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "system_logs (top priority)",
+        "sample_size": "",
+        "confidence": "0.9"
+      },
+      "pages": []
+    },
+    {
+      "id": "insight_7_include_exclude_patterns",
+      "text": "Include patterns prioritize /var/log/**, /home/**/Documents/**, and *.log; exclude patterns filter /tmp/**, /var/tmp/**, and *.tmp.",
+      "evidence_id": "scope.include_patterns_and_exclude_patterns",
+      "evidence": "\"include_patterns\": [\"/var/log/**\", \"/home/**/Documents/**\", \"/home/**/Downloads/**\", \"*.pst\", \"*.mbox\", \"*.log\", \"*.sql\", \"*.csv\", \"*.docx\", \"*.xlsx\", \"*.pdf\"], \"exclude_patterns\": [\"/tmp/**\", \"/var/tmp/**\", \"*.tmp\", \"*.cache\", \"*.swp\"]",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2025-11-05 to 2026-02-03",
+        "geography": "",
+        "segment": "filesystem include/exclude patterns",
+        "sample_size": "",
+        "confidence": "0.85"
+      },
+      "pages": []
+    }
+  ],
+  "quotes_final": [
+    {
+      "text": "Scope for evidence collection covering relevant artifacts, time range, jurisdictions, and collection constraints for a security/forensic investigation.",
+      "speaker": "Unknown",
+      "citation": "Default EvidencePack Scope - description",
+      "page": 0,
+      "evidence_id": "quote_1"
+    },
+    {
+      "text": "This scope is a default template. Adjust timeframe, jurisdictions, and include/exclude patterns to match the EvidencePack schema and the specific investigation requirements.",
+      "speaker": "Unknown",
+      "citation": "Default EvidencePack Scope - notes",
+      "page": 0,
+      "evidence_id": "quote_2"
+    },
+    {
+      "text": "[\"forensic_image\", \"file_export\", \"api_export\", \"sql_dump\", \"pcap_capture\"]",
+      "speaker": "Unknown",
+      "citation": "Default EvidencePack Scope - collection_methods",
+      "page": 0,
+      "evidence_id": "quote_3"
+    }
+  ],
+  "expert_comment": "The pack establishes governance and boundaries but stops short of analysis, which signals an initiation phase rather than an investigative phase. It fixes a US jurisdiction and a defined window from 2025-11-05 to 2026-02-03, centered on security incident, data exfiltration, and unauthorized access, with evidence retained for 365 days under confidential handling by Digital Forensics with a named primary contact. That structure provides accountability and data stewardship while the absence of investigative methods, findings, and a DocMap indicates that evidence acquisition and analytic pathways have not yet been operationalized.\n\nWhat is defined points to a clear acquisition path that aligns with the threat themes, but it requires targeted activation. Priorities concentrate on telemetry and communications that typically surface unauthorized access and exfiltration, and the include/exclude patterns reduce noise by emphasizing durable artifacts while filtering temporary data. Key parameters to action:\n- Collection priority: system_logs, network_traffic, email_archives, user_documents, databases\n- Methods available: forensic_image, file_export, api_export, sql_dump, pcap_capture\n- Include emphasis: /var/log/** and *.log; Exclude emphasis: /tmp/** and *.tmp\n\nImmediate decisions should formalize the activation plan around what the template already prescribes and where it explicitly calls for tailoring. The note that \"This scope is a default template. Adjust timeframe, jurisdictions, and include/exclude patterns to match the EvidencePack schema and the specific investigation requirements\" sets the sequencing: confirm scope, then execute against the stated priorities using the enumerated methods with Digital Forensics accountable. With retention at 365 days and a confidential designation, access controls and handoffs need to be explicit across the collection window and any subsequent review to preserve integrity and chain of custody. The absence of findings underscores that leadership focus should be on enabling disciplined collection first, then analysis once the defined datasets are in hand.",
+  "linkedin_post": "The current EvidencePack is scope-only. There are no investigative methods or findings, and there are no analytical results to summarize beyond the defined scope.\n\nWhat this means for decision-makers: treat the document as a clear definition of boundaries, priorities, and governance for a US-based security/forensic investigation scheduled between 2025-11-05 and 2026-02-03, not as an analysis or conclusion set.\n\nKey details you can act on now:\n- Timeframe: 2025-11-05 to 2026-02-03\n- Jurisdiction and focus: US; topics include security incident, data exfiltration, unauthorized access\n- Collection priorities: system_logs, network_traffic, email_archives, user_documents, databases\n- Collection methods: forensic_image, file_export, api_export, sql_dump, pcap_capture\n- Include patterns: /var/log/**, /home/**/Documents/**, /home/**/Downloads/**, *.pst, *.mbox, *.log, *.sql, *.csv, *.docx, *.xlsx, *.pdf\n- Exclude patterns: /tmp/**, /var/tmp/**, *.tmp, *.cache, *.swp\n- Governance: retention is 365 days; sensitivity is confidential; responsible team is Digital Forensics with primary contact Lead Analyst (lead.analyst@example.com)\n\nAdditional status: DocMap content was not produced.\n\nIf you are aligning stakeholders or preparing systems for collection, this scope provides the explicit parameters and priorities. Findings will require recorded methods and completed analysis that are not present at this time.\n\n#DigitalForensics #IncidentResponse #SecurityOperations",
+  "source_status": {
+    "schema_version": "1.0",
+    "text_density": 1.6,
+    "density_threshold": 0.0,
+    "pages_sampled": 5,
+    "char_count": 8,
+    "not_available": false,
+    "reason": "",
+    "evidence_present": true
+  }
+}

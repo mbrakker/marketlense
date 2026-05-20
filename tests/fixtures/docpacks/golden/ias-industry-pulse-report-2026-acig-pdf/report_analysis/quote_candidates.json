@@ -1,0 +1,49 @@
+{
+  "quote_candidates": [
+    {
+      "id": "qc-001",
+      "text": "GEN AI CONTENT THAT CONTAINS INACCURATE INFORMATION OR PROVIDES A CLUTTERED USER EXPERIENCE RANKS HIGHEST AMONG CONTENT THAT MEDIA EXPERTS WOULD AVOID",
+      "source": "IAS - Industry_Pulse_Report_2026_ACIG.pdf",
+      "file_citation": "",
+      "page": 13,
+      "start_offset": 0,
+      "end_offset": 124,
+      "confidence": 0.95,
+      "tags": [
+        "generative AI",
+        "brand_safety",
+        "media_quality"
+      ]
+    },
+    {
+      "id": "qc-002",
+      "text": "MEDIA EXPERTS GENERALLY FEEL POSITIVELY ABOUT ADVERTISING NEAR GENERATIVE AI CONTENT",
+      "source": "IAS - Industry_Pulse_Report_2026_ACIG.pdf",
+      "file_citation": "",
+      "page": 11,
+      "start_offset": 0,
+      "end_offset": 75,
+      "confidence": 0.9,
+      "tags": [
+        "generative AI",
+        "advertising_adjancency",
+        "industry_attitudes"
+      ]
+    },
+    {
+      "id": "qc-003",
+      "text": "BRAND SAFETY AND SUITABILITY OF DIGITAL VIDEO CONTENT WILL BE IMPERATIVE — ESPECIALLY AMONG INFLUENCERS",
+      "source": "IAS - Industry_Pulse_Report_2026_ACIG.pdf",
+      "file_citation": "",
+      "page": 21,
+      "start_offset": 0,
+      "end_offset": 97,
+      "confidence": 0.92,
+      "tags": [
+        "digital_video",
+        "brand_safety",
+        "influencer_marketing"
+      ]
+    }
+  ]
+}

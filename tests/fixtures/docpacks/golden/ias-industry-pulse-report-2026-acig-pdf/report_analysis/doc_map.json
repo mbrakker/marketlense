@@ -1,0 +1,60 @@
+{
+  "title": "THE 2026 INDUSTRY PULSE REPORT — U.K. Edition ",
+  "publisher": "Integral Ad Science (IAS) ",
+  "publication_date": "December 2025 ",
+  "study_design": {
+    "objective": "Survey U.K. buy- and sell-side digital media experts on 2026 challenges and opportunities ",
+    "field_date": "October 2025 ",
+    "participants": "N=220 U.K. digital media experts who use programmatic advertising (Advertisers n=84; Agencies n=81; Publishers & platforms n=55) "
+  },
+  "table_of_contents": [
+    "Top Media Challenges and Opportunities ",
+    "The Rise of Generative AI ",
+    "Social Media ",
+    "Digital Video ",
+    "Connected TV ",
+    "Retail Media Networks ",
+    "Looking Ahead to 2026 ",
+    "About IAS "
+  ],
+  "key_insights": [
+    "Media experts are prioritising digital video (87%) and digital display (81%) as top digital formats, while digital audio lags (55%) ",
+    "Social media remains the top priority digital environment among media experts ",
+    "The industry must balance innovation with control as generative AI, MFA sites, and adjacency risks threaten media quality ",
+    "Media experts generally feel positively about advertising near generative AI content, with success hinging on quality controls aligned to brand values ",
+    "Gen AI content with inaccuracies, cluttered UX, bot traffic, plagiarism/regurgitation, or unverifiable domains is widely deemed unsuitable for adjacency ",
+    "Social media faces the most serious challenges (41%), followed by digital video (31%), digital display (29%), and influencer marketing (27%) ",
+    "In CTV, attention (84%), brand safety (82%), and ad fraud (76%) are growing concerns as inventory volume and sellers increase ",
+    "In retail media networks, attention (84%), viewability (82%), and brand suitability (82%) are important to performance; influencer suitability (78%) and AI content levels (77%) are key adjacency considerations  "
+  ],
+  "sections": [
+    {
+      "title": "Top Media Challenges and Opportunities",
+      "summary": "As digital media evolves, opportunities on social media and digital video come with complexity. The rise of generative AI, MFA sites, and adjacency risks threaten media quality; the challenge is balancing innovation with control to drive trust and performance "
+    },
+    {
+      "title": "The Rise of Generative AI",
+      "summary": "Generative AI has shifted from experimentation to an essential tool, bringing speed, personalisation, and scale alongside new risks. Media experts are generally positive about advertising near AI-generated content when paired with quality controls. Not all AI content is equal; marketers should avoid inaccurate, cluttered, bot-attracting, plagiarised, or unverifiable domains   "
+    },
+    {
+      "title": "Social Media",
+      "summary": "Social media fuels cultural conversations and shapes decisions; advertisers seek brand-safe spaces that foster trust and relevancy "
+    },
+    {
+      "title": "Digital Video",
+      "summary": "Digital video continues explosive growth across mobile and social feeds. Viewability and brand safety of placements remain critical to transparency and impact "
+    },
+    {
+      "title": "Connected TV",
+      "summary": "CTV blends linear impact with digital precision; as ad-supported models proliferate, marketers demand clearer insights into performance, reach, and quality. Media quality concerns around attention, brand safety, and fraud will be prevalent  "
+    },
+    {
+      "title": "Retail Media Networks",
+      "summary": "Retail media has evolved into a powerhouse of digital commerce with unmatched precision, introducing challenges around measurement and quality assurance. Media quality is foundational to success; attention, viewability, and suitability matter, and influencer suitability and AI content levels are key adjacency considerations   "
+    },
+    {
+      "title": "About IAS",
+      "summary": "IAS is a leading global media measurement and optimisation platform delivering actionable data to drive results; its mission is to be the global benchmark for trust, safety, and transparency in digital media quality "
+    }
+  ]
+}

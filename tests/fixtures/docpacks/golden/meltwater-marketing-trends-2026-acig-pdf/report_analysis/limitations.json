@@ -1,0 +1,20 @@
+{
+  "limitations": [
+    {
+      "description": "Marketing content is produced by Meltwater, the vendor whose products are repeatedly promoted throughout the report, introducing potential commercial bias.",
+      "evidence": "Brands that want to stay ahead … That’s where Meltwater makes the difference… Mira, Explore+, Klear, GenAI Lens"
+    },
+    {
+      "description": "Key statistics draw on Meltwater’s proprietary “2026 Global Digital Overview”, but the underlying data sources or methodology are not disclosed, limiting reproducibility and independent verification.",
+      "evidence": "The average consumer now uses nearly seven platforms per month, according to our 2026 Global Digital Overview"
+    },
+    {
+      "description": "Many claims are forward-looking projections (e.g., technology adoption in 2026-2028) that are inherently uncertain and may not materialise.",
+      "evidence": "According to Gartner, by 2028 AI-powered search will displace conventional web search as the primary discovery channel for consumers"
+    },
+    {
+      "description": "External figures (e.g., Forbes, McKinsey) are cited anecdotally without full references or links, hindering readers’ ability to validate the numbers.",
+      "evidence": "Research from Forbes shows that 24 percent of people already prefer to use social media platforms over Google for search queries"
+    }
+  ]
+}

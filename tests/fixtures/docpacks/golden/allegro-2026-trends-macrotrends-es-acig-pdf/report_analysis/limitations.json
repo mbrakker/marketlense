@@ -1,0 +1,52 @@
+{
+  "limitations": [
+    {
+      "id": "L1",
+      "name": "Urban-centric viewpoint",
+      "description": "The report consistently frames insights around “consumidores urbanos/modernos”, so behaviours and expectations outside densely populated, highly connected cities may be under-represented.",
+      "evidence": [
+        "",
+        ""
+      ],
+      "severity": "medium",
+      "mitigation": "Complement with studies that sample rural and peri-urban populations in multiple regions."
+    },
+    {
+      "id": "L2",
+      "name": "Narrow sector scope",
+      "description": "Findings target FMCG, consumer durables and consumer services; B2B industries, heavy manufacturing, public sector and informal economies receive little or no coverage.",
+      "evidence": [
+        ""
+      ],
+      "severity": "medium",
+      "mitigation": "Cross-check with sector-specific analyses for industries not covered."
+    },
+    {
+      "id": "L3",
+      "name": "Short time horizon",
+      "description": "Projections focus on the run-up to 2026; rapidly changing macro-economic or technological shocks beyond that window could invalidate trends.",
+      "evidence": [
+        ""
+      ],
+      "severity": "high",
+      "mitigation": "Update evidence annually and scenario-plan for longer horizons (5-10 years)."
+    },
+    {
+      "id": "L4",
+      "name": "Qualitative bias",
+      "description": "Narratives rely on illustrative cases and expert opinion; quantitative data or methodological details behind the ‘analysis’ are rarely disclosed, limiting reproducibility.",
+      "severity": "medium",
+      "mitigation": "Seek supporting datasets or peer-reviewed studies that quantify the magnitude of each cited trend."
+    },
+    {
+      "id": "L5",
+      "name": "Potential publisher bias",
+      "description": "The document is produced by consulting firm Allegro 234, whose commercial interests may influence topic selection or tone.",
+      "evidence": [
+        ""
+      ],
+      "severity": "low",
+      "mitigation": "Compare with independent academic or governmental sources to validate key claims."
+    }
+  ]
+}

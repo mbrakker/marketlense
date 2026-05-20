@@ -1,0 +1,39 @@
+{
+  "limitations": [
+    {
+      "id": "lim-1",
+      "title": "Brand-safety risk from unsuitable AI-generated content",
+      "explanation": "56 % of media experts name ad adjacency to AI-generated content as a top challenge, and 40 % say rising volumes of unsuitable Gen-AI content are a serious threat to media quality . On social platforms alone, 73 % expect the surge in AI content to require close monitoring .",
+      "severity": "high",
+      "mitigation": "Deploy AI-driven classification and context-control tools, pair campaigns with third-party measurement, and create clear brand-suitability frameworks before activating against Gen-AI inventory."
+    },
+    {
+      "id": "lim-2",
+      "title": "Exposure to made-for-advertising (MFA) sites and ad fraud",
+      "explanation": "Digital display and programmatic inventory remain vulnerable to fraud and MFA domains, which 29 – 35 % of experts flag as serious threats . IAS highlights the need to block MFA and cluttered sites at scale .",
+      "severity": "high",
+      "mitigation": "Use pre-bid fraud/MFA filters, continuously audit supply paths, and rely on vendors whose detection models are trained on authoritative MFA lists."
+    },
+    {
+      "id": "lim-3",
+      "title": "Quality and transparency gaps in Connected TV (CTV)",
+      "explanation": "82 % of experts expect brand-safety concerns in CTV to increase, and 76 % foresee higher fraud as ad-supported CTV grows . IAS warns of invalid traffic, geo-mis-targeting and app spoofing that can waste budgets .",
+      "severity": "moderate",
+      "mitigation": "Adopt CTV-specific third-party measurement, apply pre- & post-bid fraud filters, and integrate cross-platform frequency controls."
+    },
+    {
+      "id": "lim-4",
+      "title": "Influencer / creator content suitability challenges",
+      "explanation": "89 % of respondents say the safety of influencer content will be critical for digital-video buys , and 78 % see the same issue on retail-media networks .",
+      "severity": "moderate",
+      "mitigation": "Screen creators for past content, apply customised suitability lists, and use frame-level video analysis before and during campaigns."
+    },
+    {
+      "id": "lim-5",
+      "title": "Measurement & outcome-assessment difficulties across new channels",
+      "explanation": "35 % of publishers/platforms and 29 % of brands cite the ‘ability to assess measurement and outcomes’ as a major challenge in the year ahead .",
+      "severity": "medium",
+      "mitigation": "Standardise KPIs, insist on independent, cross-channel verification, and integrate attention, viewability and carbon metrics into regular reporting."
+    }
+  ]
+}

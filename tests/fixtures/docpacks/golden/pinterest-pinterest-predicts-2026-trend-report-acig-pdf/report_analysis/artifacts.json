@@ -1,0 +1,298 @@
+{
+  "schema_version": "1.0",
+  "toc_topics": [
+    "Cross-category trend themes",
+    "Beauty trend themes",
+    "Fashion trend themes",
+    "Home trend themes",
+    "Travel trend themes",
+    "Food and drink trends",
+    "Celebrations trend themes"
+  ],
+  "summary": {
+    "tldr": "Pinterest Predicts 2026 outlines 21 data-backed trends across categories, with Gen Z and Millennials driving many aesthetics while Boomers and Gen X shape select food and travel shifts.",
+    "executive_summary": "Pinterest Predicts 2026 synthesizes internal, global English-language search signals to surface 21 emerging trends, benchmarked by normalized year-over-year search growth. The report highlights a wave of Gen Z and Millennial-led aesthetics spanning beauty, fashion, travel and home—from icy, blue-toned looks to bespoke fragrance layering and maximalist glamour. Counterbalancing these are cohort-specific moves such as Boomers and Gen X embracing a cabbage-forward food moment and Millennials and Boomers seeking mystical travel destinations. Collectively, the trends suggest a 2026 consumer landscape that prizes expressive styling, tactile novelty and experience-first travel, grounded in measurable search momentum.",
+    "claim_evidence_map": [
+      {
+        "claim": "The 2026 report identifies 21 trends using Pinterest internal, global English-language search data, comparing Sep 2024–Aug 2025 to Sep 2023–Aug 2024 and highlighting early adopters by generation.",
+        "evidence_id": "doc_map.sourcing_note",
+        "evidence": "Sourcing: Pinterest internal data… English language search data, global… changes are calculated using normalised searches during September 2024 to August 2025 compared to September 2023 to August 2024; early adopters highlight top generations contributing to search growth.",
+        "pages": []
+      },
+      {
+        "claim": "Cool Blue is a cross-category trend led by Gen Z and Millennials, with related searches rising (e.g., “frosted make-up” +150%, “blue drinks aesthetic” +55%).",
+        "evidence_id": "doc_map.sections.Cool Blue",
+        "evidence": "Gen Z and Millennials are bringing a subzero sophistication… Searches include “frosted make-up” (+150%), “blue drinks aesthetic” (+55%), “icy blue” (+50%).",
+        "pages": []
+      },
+      {
+        "claim": "Boomers and Gen X are pivoting to a cabbage-forward ‘Cabbage Crush,’ with recipe-related searches up (e.g., “cabbage dumplings” +110%, “golumpki soup” +95%).",
+        "evidence_id": "doc_map.sections.Cabbage Crush",
+        "evidence": "Boomers and Gen X will… crown cabbage the new kitchen champ… Searches include “cabbage dumplings” (+110%) and “golumpki soup” (+95%).",
+        "pages": []
+      },
+      {
+        "claim": "‘Darecations’ sees Gen Z and Millennials seeking adrenaline tourism, reflected in rising searches like “adventure tourism” (+75%) and “auto racing events” (+85%).",
+        "evidence_id": "doc_map.sections.Darecations",
+        "evidence": "Gen Z and Millennials will seek out full-throttle, adrenaline-inspired tourism… Searches include “adventure tourism” (+75%) and “auto racing events” (+85%).",
+        "pages": []
+      },
+      {
+        "claim": "‘Mystic Outlands’ has Millennials and Boomers pursuing whimsical destinations, with spikes such as “Scotland Highlands aesthetic” (+465%) and “Faroe Islands aesthetic” (+95%).",
+        "evidence_id": "doc_map.sections.Mystic Outlands",
+        "evidence": "Millennials and Boomers will seek whimsical and mystical destinations… Searches include “scotland highlands aesthetic” (+465%) and “faroe islands aesthetic” (+95%).",
+        "pages": []
+      }
+    ]
+  },
+  "insights_candidates": [
+    {
+      "id": "insight_scentstacking_nicheperfume_500",
+      "text": "Search interest in \"niche perfume collection\" rose 500% year‑over‑year, signalling a major surge in scent‑layering and bespoke fragrance searches.",
+      "evidence_id": "insight_scentstacking_nicheperfume_500",
+      "evidence": "niche perfume collection: +500%",
+      "metric": {
+        "value": "500",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "Gen Z; Millennials",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": [],
+      "score": 0.9
+    },
+    {
+      "id": "insight_mysticoutlands_scotland_465",
+      "text": "Searches for \"scotland highlands aesthetic\" surged 465%, the largest single‑term travel increase reported, highlighting strong demand for mystical, atmospheric destinations.",
+      "evidence_id": "insight_mysticoutlands_scotland_465",
+      "evidence": "scotland highlands aesthetic: +465%",
+      "metric": {
+        "value": "465",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "Millennials; Baby Boomers",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": [],
+      "score": 0.95
+    },
+    {
+      "id": "insight_lacedup_lace_nails_215",
+      "text": "\"Lace nails\" searches jumped 215%, indicating rapid adoption of lace textures across beauty and fashion.",
+      "evidence_id": "insight_lacedup_lace_nails_215",
+      "evidence": "lace nails: +215%",
+      "metric": {
+        "value": "215",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": [],
+      "score": 0.8
+    },
+    {
+      "id": "insight_afrohemian_afrobohemian_220",
+      "text": "\"afrobohemian home decor\" searches rose 220%, showing notable momentum for African+bohemian interior styling.",
+      "evidence_id": "insight_afrohemian_afrobohemian_220",
+      "evidence": "afrobohemian home decor: +220%",
+      "metric": {
+        "value": "220",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": [],
+      "score": 0.85
+    },
+    {
+      "id": "insight_glitchy_avantgarde_270",
+      "text": "\"avant garde make‑up editorial\" searches increased 270%, underscoring a strong shift toward experimental, asymmetrical beauty looks.",
+      "evidence_id": "insight_glitchy_avantgarde_270",
+      "evidence": "avant garde make‑up editorial: +270%",
+      "metric": {
+        "value": "270",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "Gen Z; Millennials",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": [],
+      "score": 0.9
+    },
+    {
+      "id": "insight_vampromantic_gothic_nails_180",
+      "text": "\"gothic coffin nails\" searches rose 180%, supporting growth in dark‑romantic and gothic beauty trends.",
+      "evidence_id": "insight_vampromantic_gothic_nails_180",
+      "evidence": "gothic coffin nails: +180%",
+      "metric": {
+        "value": "180",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "Millennials; Gen Z",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": [],
+      "score": 0.85
+    },
+    {
+      "id": "insight_gimmegummy_jelly_blush_130",
+      "text": "\"jelly blush\" searches rose 130%, indicating rising interest in tactile, jelly/gummy textures in beauty.",
+      "evidence_id": "insight_gimmegummy_jelly_blush_130",
+      "evidence": "jelly blush: +130%",
+      "metric": {
+        "value": "130",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "Gen Z; Millennials",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": [],
+      "score": 0.8
+    }
+  ],
+  "insights_final": [
+    {
+      "id": "insight_scentstacking_nicheperfume_500",
+      "text": "\"niche perfume collection\" searches rose 500% YoY, signaling a major surge in scent-layering and bespoke fragrance interest.",
+      "evidence_id": "insight_scentstacking_nicheperfume_500",
+      "evidence": "niche perfume collection: +500%",
+      "metric": {
+        "value": "500",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "Gen Z; Millennials",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "insight_mysticoutlands_scotland_465",
+      "text": "\"scotland highlands aesthetic\" searches surged 465%, the largest single‑term travel increase reported, highlighting demand for mystical, atmospheric destinations.",
+      "evidence_id": "insight_mysticoutlands_scotland_465",
+      "evidence": "scotland highlands aesthetic: +465%",
+      "metric": {
+        "value": "465",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "Millennials; Baby Boomers",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "insight_glitchy_avantgarde_270",
+      "text": "\"avant garde make‑up editorial\" searches increased 270%, underscoring a shift toward experimental, asymmetrical beauty looks.",
+      "evidence_id": "insight_glitchy_avantgarde_270",
+      "evidence": "avant garde make‑up editorial: +270%",
+      "metric": {
+        "value": "270",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "Gen Z; Millennials",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "insight_afrohemian_afrobohemian_220",
+      "text": "\"afrobohemian home decor\" searches rose 220%, showing momentum for African+bohemian interior styling.",
+      "evidence_id": "insight_afrohemian_afrobohemian_220",
+      "evidence": "afrobohemian home decor: +220%",
+      "metric": {
+        "value": "220",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "insight_lacedup_lace_nails_215",
+      "text": "\"lace nails\" searches jumped 215%, signaling fast adoption of lace textures across beauty and fashion.",
+      "evidence_id": "insight_lacedup_lace_nails_215",
+      "evidence": "lace nails: +215%",
+      "metric": {
+        "value": "215",
+        "unit": "%",
+        "trend": "increase",
+        "timeframe": "September 2024–August 2025 vs September 2023–August 2024",
+        "geography": "Global (English‑language searches)",
+        "segment": "",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    }
+  ],
+  "quotes_final": [
+    {
+      "text": "Meet the shade that refuses to warm up to anyone. Gen Z and Millennials are bringing a subzero sophistication to absolutely everything in 2026—think cool-toned coats, glacier-inspired accessories and the frostiest of cocktails. It’s the temp drop we’ve all been waiting for.",
+      "speaker": "Unknown",
+      "citation": "Cool Blue",
+      "page": 0,
+      "evidence_id": "quote_1"
+    },
+    {
+      "text": "Shake up your signature scent. Gen Z and Millennials are ditching one-and-done scents for bespoke notes, blending oils and perfumes to craft their very own fragrance formulas. Expect luxury to linger in layers next year.",
+      "speaker": "Unknown",
+      "citation": "Scent Stacking",
+      "page": 0,
+      "evidence_id": "quote_2"
+    },
+    {
+      "text": "Your inbox is about to get jealous of your letter box. Expect a letter-writing renaissance in 2026, as Gen Z and Millennials turn snail mail into authored art. Think elaborate envelopes, special stationary, and so. many. stamps. DMs, you’re dust.",
+      "speaker": "Unknown",
+      "citation": "Pen Pals",
+      "page": 0,
+      "evidence_id": "quote_3"
+    }
+  ],
+  "expert_comment": "Pinterest’s 2026 signals resolve into an expressive, tactile consumer palette with verified momentum pulled from normalized year-over-year search growth (Sep 2024–Aug 2025 vs Sep 2023–Aug 2024). The Cool Blue thread shows multi-category adoption, spanning beauty and beverages (frosted make-up +150%; blue drinks aesthetic +55%). Experimental and cultural layering manifest in both beauty and home (avant garde make-up editorial +270%; afrobohemian home decor +220%). This points to demand for distinct visual narratives that can be merchandised coherently across categories.\n\nIn beauty and fragrance, growth concentrates in bespoke construction and editorial surfaces. “Niche perfume collection” rose sharply (+500%) among Gen Z and Millennials, while texture and tone cues accelerate (lace nails +215%; icy blue +50%). These patterns favor assortments designed for layering and play, supported by discovery-led formats and cool-toned color stories synchronized across product, content, and retail moments.\n\nTravel and food split along actionable cohort lines that support differentiated positioning. Gen Z and Millennials are leaning into adrenaline tourism (adventure tourism +75%; auto racing events +85%), while Millennials and Boomers surge toward atmospheric destinations (Scotland Highlands aesthetic +465, the largest single-term travel increase reported; Faroe Islands aesthetic +95), reinforcing the report’s experience-first travel read. In food, Boomers and Gen X are driving a cabbage-forward pivot (cabbage dumplings +110%; golumpki soup +95%), enabling targeted menu, content, and partnership strategies without cross-cohort dilution.",
+  "linkedin_post": "Consumer attention in 2026 is spiking in two places: bespoke scent building (“niche perfume collection” +500%) and mystical travel (“Scotland Highlands aesthetic” +465%). Both are grounded in Pinterest’s global, English‑language search signals and highlight where cohorts are leaning next.  \n\nWhat this means for digital leaders: search momentum is concentrating around expressive styling, tactile detail, and experience‑led travel across beauty, fashion, home, and tourism, with clear generational early adopters called out in the data. Pinterest’s methodology compares normalised searches from Sep 2024–Aug 2025 vs Sep 2023–Aug 2024, and identifies top generations contributing to growth. \n\nData signals to watch:\n- Blue‑toned, “Cool Blue” aesthetics led by Gen Z and Millennials: “frosted make‑up” +150%, “blue drinks aesthetic” +55%, “icy blue” +50%. \n- Scent stacking among Gen Z and Millennials: “niche perfume collection” +500%. \n- Lace textures moving quickly across categories: “lace nails” +215%. \n- Experimental beauty looks: “avant garde make‑up editorial” +270%. \n- Afro‑bohemian interiors: “afrobohemian home decor” +220%. \n- Mystic, atmospheric travel interest among Millennials and Boomers: “Scotland Highlands aesthetic” +465%, “Faroe Islands aesthetic” +95%. \n- Adrenaline‑led trips for Gen Z and Millennials: “adventure tourism” +75%, “auto racing events” +85%. \n- A cabbage‑forward food shift among Boomers and Gen X: “cabbage dumplings” +110%, “golumpki soup” +95%. \n\nHow to read it: Pinterest Predicts 2026 surfaces cross‑category trends and highlights which generations are driving search growth, enabling teams to anchor planning and creative in concrete behavioral signals rather than guesswork. Sourcing: Pinterest internal, global English‑language search data; changes reflect normalised searches in Sep 2024–Aug 2025 vs Sep 2023–Aug 2024, with early adopters shown by generation. \n\n#Ecommerce #DigitalMarketing #ConsumerTrends",
+  "source_status": {
+    "schema_version": "1.0",
+    "text_density": 590.0,
+    "density_threshold": 0.0,
+    "pages_sampled": 5,
+    "char_count": 2950,
+    "not_available": false,
+    "reason": "",
+    "evidence_present": true
+  }
+}

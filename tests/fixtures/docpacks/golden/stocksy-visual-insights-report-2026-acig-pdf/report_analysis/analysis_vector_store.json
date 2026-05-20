@@ -1,0 +1,493 @@
+{
+  "tldr": "Insufficient evidence was provided to generate a grounded executive summary.",
+  "title": "STOCKSY - Visual Insights Report 2026_ACIG",
+  "insights": [
+    "Evidence pack doc_map is missing (not_found_reason = 'model_returned_no_json'), blocking mapping between findings and the source document.",
+    "Evidence pack scope is missing (scope.not_found_reason = 'model_returned_no_json').",
+    "Evidence pack findings are empty (findings: []).",
+    "Methods are empty in the package (methods: []).",
+    "Quote candidates are missing (quote_candidates.not_found_reason = 'model_returned_no_json')."
+  ],
+  "quote": {
+    "text": "Quote candidates JSON (may be empty): []",
+    "author": "Unknown",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "",
+    "evidence": "",
+    "schema_version": "1.0"
+  },
+  "commentary": "The supplied DocMap and evidence packs are empty or unavailable (not_found_reason: model_returned_no_json). Without populated sections, methods, findings, or limitations, no substantiated claims can be made. Please provide a complete DocMap and evidence packs so a concise, evidence-backed executive summary can be produced.",
+  "source": "",
+  "publisher": "PDFlib+PDI 10.0.0p1-i (macOS (arm64))",
+  "taxonomy": [],
+  "categories": [],
+  "region": "",
+  "time_period": "",
+  "contents_page_number": 0,
+  "contents_heading": "",
+  "_figure_image": "",
+  "_figure_gallery": [],
+  "_figure_top": "",
+  "_contents_image": "",
+  "_vector_store_id": "vs_697f991c75608191b0ab7bf0d10b0297",
+  "_evidence_packs": {
+    "doc_map": "out\\stocksy-visual-insights-report-2026-acig-pdf\\report_analysis\\doc_map.json",
+    "scope": "out\\stocksy-visual-insights-report-2026-acig-pdf\\report_analysis\\scope.json",
+    "methods": "out\\stocksy-visual-insights-report-2026-acig-pdf\\report_analysis\\methods.json",
+    "findings": "out\\stocksy-visual-insights-report-2026-acig-pdf\\report_analysis\\findings.json",
+    "limitations": "out\\stocksy-visual-insights-report-2026-acig-pdf\\report_analysis\\limitations.json",
+    "quote_candidates": "out\\stocksy-visual-insights-report-2026-acig-pdf\\report_analysis\\quote_candidates.json",
+    "artifacts": "out\\stocksy-visual-insights-report-2026-acig-pdf\\report_analysis\\artifacts.json",
+    "validation": "out\\stocksy-visual-insights-report-2026-acig-pdf\\report_analysis\\validation.json"
+  },
+  "_text_density": 0.0,
+  "_text_pages_sampled": 0,
+  "_text_char_count": 0,
+  "_text_not_available": false,
+  "schema_version": "1.1",
+  "artifacts": {
+    "schema_version": "1.0",
+    "toc_topics": [],
+    "summary": {
+      "tldr": "Insufficient evidence was provided to generate a grounded executive summary.",
+      "executive_summary": "The supplied DocMap and evidence packs are empty or unavailable (not_found_reason: model_returned_no_json). Without populated sections, methods, findings, or limitations, no substantiated claims can be made. Please provide a complete DocMap and evidence packs so a concise, evidence-backed executive summary can be produced.",
+      "claim_evidence_map": []
+    },
+    "insights_candidates": [
+      {
+        "id": "insight_docmap_missing",
+        "text": "DocMap JSON is missing, so document structure and sections are unavailable.",
+        "evidence_id": "doc_map.not_found_reason",
+        "evidence": "model_returned_no_json",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": [],
+        "score": 0.2
+      },
+      {
+        "id": "insight_evidencepacks_docmap_missing",
+        "text": "Evidence packs' doc_map entry is not present (not_found_reason = 'model_returned_no_json'), preventing mapping between findings and source document.",
+        "evidence_id": "evidence_packs.doc_map.not_found_reason",
+        "evidence": "model_returned_no_json",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": [],
+        "score": 0.2
+      },
+      {
+        "id": "insight_scope_missing",
+        "text": "Scope and related metadata are missing from the evidence pack (scope not_found_reason = 'model_returned_no_json').",
+        "evidence_id": "evidence_packs.scope.not_found_reason",
+        "evidence": "model_returned_no_json",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": [],
+        "score": 0.15
+      },
+      {
+        "id": "insight_findings_empty",
+        "text": "There are no findings present in the evidence pack (findings array is empty).",
+        "evidence_id": "evidence_packs.findings",
+        "evidence": "findings: []",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": [],
+        "score": 0.1
+      },
+      {
+        "id": "insight_methods_empty",
+        "text": "Methods metadata is empty in the provided package (methods: []).",
+        "evidence_id": "evidence_packs.methods",
+        "evidence": "methods: []",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": [],
+        "score": 0.1
+      },
+      {
+        "id": "insight_quote_candidates_missing",
+        "text": "Quote candidates and related fields are not available (quote_candidates.not_found_reason = 'model_returned_no_json').",
+        "evidence_id": "evidence_packs.quote_candidates.not_found_reason",
+        "evidence": "model_returned_no_json",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": [],
+        "score": 0.15
+      }
+    ],
+    "insights_final": [
+      {
+        "id": "insight_evidencepacks_docmap_missing",
+        "text": "Evidence pack doc_map is missing (not_found_reason = 'model_returned_no_json'), blocking mapping between findings and the source document.",
+        "evidence_id": "evidence_packs.doc_map.not_found_reason",
+        "evidence": "model_returned_no_json",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_scope_missing",
+        "text": "Evidence pack scope is missing (scope.not_found_reason = 'model_returned_no_json').",
+        "evidence_id": "evidence_packs.scope.not_found_reason",
+        "evidence": "model_returned_no_json",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_findings_empty",
+        "text": "Evidence pack findings are empty (findings: []).",
+        "evidence_id": "evidence_packs.findings",
+        "evidence": "findings: []",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_methods_empty",
+        "text": "Methods are empty in the package (methods: []).",
+        "evidence_id": "evidence_packs.methods",
+        "evidence": "methods: []",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_quote_candidates_missing",
+        "text": "Quote candidates are missing (quote_candidates.not_found_reason = 'model_returned_no_json').",
+        "evidence_id": "evidence_packs.quote_candidates.not_found_reason",
+        "evidence": "model_returned_no_json",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      }
+    ],
+    "quotes_final": [
+      {
+        "text": "Quote candidates JSON (may be empty): []",
+        "speaker": "Unknown",
+        "citation": "Context",
+        "page": 0,
+        "evidence_id": "quote_1"
+      },
+      {
+        "text": "DocMap JSON: {\"doc_id\": \"\", \"title\": \"\", \"sections\": [], \"not_found_reason\": \"model_returned_no_json\"}",
+        "speaker": "Unknown",
+        "citation": "DocMap JSON",
+        "page": 0,
+        "evidence_id": "quote_2"
+      },
+      {
+        "text": "Evidence packs JSON: {\"doc_map\": {\"doc_id\": \"\", \"title\": \"\", \"sections\": [], \"not_found_reason\": \"model_returned_no_json\"}, \"scope\": {\"scope\": \"\", \"methods\": [], \"findings\": [], \"limitations\": [], \"quote_candidates\": [], \"not_found_reason\": \"model_returned_no_json\"}, \"methods\": {\"methods\": []}, \"findings\": {\"findings\": []}, \"limitations\": {\"limitations\": []}, \"quote_candidates\": {\"scope\": \"\", \"methods\": [], \"findings\": [], \"limitations\": [], \"quote_candidates\": [], \"not_found_reason\": \"model_returned_no_json\"}}",
+        "speaker": "Unknown",
+        "citation": "Evidence packs JSON",
+        "page": 0,
+        "evidence_id": "quote_3"
+      }
+    ],
+    "expert_comment": "The evidence base is nonfunctional, which removes any ability to substantiate conclusions or decisions. The executive summary flags insufficient evidence and unavailable packs, so no substantiated claims can be made. The absence of a DocMap and scope, coupled with empty methods and findings, breaks traceability and blocks mapping between findings and sources. This is an integrity issue, not a minor gap.\n- DocMap not_found_reason: model_returned_no_json\n- Scope not_found_reason: model_returned_no_json\n- Methods: []\n- Findings: []\n- Quote candidates not_found_reason: model_returned_no_json\n- DocMap JSON fields (doc_id, title, sections) are empty with the same not_found_reason\n- Executive summary: insufficient evidence and unavailable packs\n\nFor decision-making, treat all downstream analyses as non-actionable until evidentiary prerequisites are restored. The current state precludes auditability and increases the risk of misinterpretation, since there is no chain from scope to method to finding. This calls for a gating criterion that halts publication and decision workflows when any of these fields return an empty or error state. Reinstate the DocMap first, then populate methods and findings, and only then surface synthesized insights.\n\nOperating models should embed automated checks for not_found_reason states and empty arrays, with stop conditions tied to evidence completeness. Require provenance at the unit level so that findings cannot exist without mapped methods and source references. Treat quote candidates as a required artifact to cross-verify claims before leadership review. These controls convert a failure point into a predictable quality gate that preserves trust in analytical outputs.",
+    "linkedin_post": "No substantiated claims can be made from this package. The evidence base required for an executive summary is missing.\n\nWhat this means for decision-makers: there is no defensible basis to draw conclusions from the current file set.\n\nGround truth from the artifacts:\n- TLDR: “Insufficient evidence was provided to generate a grounded executive summary.”\n- Executive summary: “The supplied DocMap and evidence packs are empty or unavailable (not_found_reason: model_returned_no_json). Without populated sections, methods, findings, or limitations, no substantiated claims can be made.”\n- Evidence pack doc_map is missing (not_found_reason = \"model_returned_no_json\").\n- Evidence pack scope is missing (scope.not_found_reason = \"model_returned_no_json\").\n- Evidence pack findings are empty (findings: []).\n- Methods are empty in the package (methods: []).\n- Quote candidates are missing (quote_candidates.not_found_reason = \"model_returned_no_json\").\n\nImplication: a complete DocMap and evidence packs are required before any evidence-backed summary or recommendation can be produced.\n\n#ResearchOps #DecisionQuality #DigitalStrategy",
+    "source_status": {
+      "schema_version": "1.0",
+      "text_density": 1.6,
+      "density_threshold": 0.0,
+      "pages_sampled": 5,
+      "char_count": 8,
+      "not_available": false,
+      "reason": "",
+      "evidence_present": false
+    }
+  },
+  "validation_report": {
+    "schema_version": "1.1",
+    "status": "fail",
+    "severity": "error",
+    "source_path": "out\\stocksy-visual-insights-report-2026-acig-pdf\\report_analysis\\validation.json",
+    "issues": [
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_evidencepacks_docmap_missing not supported (Only 'model_returned_no_json' appears; no evidence ties it to doc_map.)",
+        "severity": "warning",
+        "affected_section": "insights:insight_evidencepacks_docmap_missing"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_scope_missing not supported (No snippet links 'model_returned_no_json' specifically to scope.)",
+        "severity": "warning",
+        "affected_section": "insights:insight_scope_missing"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_quote_candidates_missing not supported (No snippet mentions quote_candidates or its not_found_reason.)",
+        "severity": "warning",
+        "affected_section": "insights:insight_quote_candidates_missing"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: quote quote_1 not supported (No evidence snippet references quote_candidates being [].)",
+        "severity": "warning",
+        "affected_section": "quotes:quote_1"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: quote quote_2 not supported (We see 'DocMap JSON' and 'model_returned_no_json' separately, but not linked.)",
+        "severity": "warning",
+        "affected_section": "quotes:quote_2"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: quote quote_3 not supported (Snippets support parts ('methods: []', 'findings: []', 'model_returned_no_json') but not the full structured claim.)",
+        "severity": "warning",
+        "affected_section": "quotes:quote_3"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Quote not verbatim in evidence (No evidence snippet references quote_candidates being [].): Quote candidates JSON (may be empty): []",
+        "severity": "warning",
+        "affected_section": "quotes:quote_1"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Quote not verbatim in evidence (We see 'DocMap JSON' and 'model_returned_no_json' separately, but not linked.): DocMap JSON: {\"doc_id\": \"\", \"title\": \"\", \"sections\": [], \"not_found_reason\": \"model_returned_no_json\"}",
+        "severity": "warning",
+        "affected_section": "quotes:quote_2"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Quote not verbatim in evidence (Snippets support parts ('methods: []', 'findings: []', 'model_returned_no_json') but not the full structured claim.): Evidence packs JSON: {\"doc_map\": {\"doc_id\": \"\", \"title\": \"\", \"sections\": [], \"not_found_reason\": \"model_returned_no_json",
+        "severity": "warning",
+        "affected_section": "quotes:quote_3"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The evidence snippets do not mention \"insufficient evidence\" or support this evaluative conclusion.: Insufficient evidence was provided to generate a grounded executive summary.",
+        "severity": "error",
+        "affected_section": "tldr"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "While the snippet \"model_returned_no_json\" exists, there is no explicit statement that the doc_map is missing or that mapping is blocked.: Evidence pack doc_map is missing (not_found_reason = 'model_returned_no_json'), blocking mapping between findings and the source document.",
+        "severity": "error",
+        "affected_section": "insights_final"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet explicitly confirms that scope is missing.: Evidence pack scope is missing (scope.not_found_reason = 'model_returned_no_json').",
+        "severity": "error",
+        "affected_section": "insights_final"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet confirms quote candidates are missing.: Quote candidates are missing (quote_candidates.not_found_reason = 'model_returned_no_json').",
+        "severity": "error",
+        "affected_section": "insights_final"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The snippets do not contain this sentence or evidence that quote candidates JSON is empty.: Quote candidates JSON (may be empty): []",
+        "severity": "error",
+        "affected_section": "quotes_final"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Snippets mention \"model_returned_no_json\" but do not state that the DocMap and packs are empty or unavailable.: The supplied DocMap and evidence packs are empty or unavailable (not_found_reason: model_returned_no_json).",
+        "severity": "error",
+        "affected_section": "summary.executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports this evaluative statement.: Without populated sections, methods, findings, or limitations, no substantiated claims can be made.",
+        "severity": "error",
+        "affected_section": "summary.executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports this recommendation.: Please provide a complete DocMap and evidence packs so a concise, evidence-backed executive summary can be produced.",
+        "severity": "error",
+        "affected_section": "summary.executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports the claim that the evidence base is nonfunctional.: The evidence base is nonfunctional, which removes any ability to substantiate conclusions or decisions.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Snippets do not show the executive summary making such statements.: The executive summary flags insufficient evidence and unavailable packs, so no substantiated claims can be made.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet explicitly states this relationship or impact.: The absence of a DocMap and scope, coupled with empty methods and findings, breaks traceability and blocks mapping between findings and sources.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet characterizes the issue as an integrity issue.: This is an integrity issue, not a minor gap.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports this assertion.: The current state precludes auditability and increases the risk of misinterpretation, since there is no chain from scope to method to finding.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet provides evidence for this recommendation.: This calls for a gating criterion that halts publication and decision workflows when any of these fields return an empty or error state.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Recommendation not supported by snippets.: Reinstate the DocMap first, then populate methods and findings, and only then surface synthesized insights.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports this prescription.: Operating models should embed automated checks for not_found_reason states and empty arrays, with stop conditions tied to evidence completeness.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports this recommendation.: Require provenance at the unit level so that findings cannot exist without mapped methods and source references.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports this recommendation.: Treat quote candidates as a required artifact to cross-verify claims before leadership review.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports this claim.: These controls convert a failure point into a predictable quality gate that preserves trust in analytical outputs.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports this evaluative statement.: No substantiated claims can be made from this package.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet states that the evidence base is missing.: The evidence base required for an executive summary is missing.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet supports this conclusion.: What this means for decision-makers: there is no defensible basis to draw conclusions from the current file set.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No snippet provides evidence for this implication.: Implication: a complete DocMap and evidence packs are required before any evidence-backed summary or recommendation can be produced.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      }
+    ]
+  },
+  "categories_display": [],
+  "analysis_mode": "vector_store"
+}

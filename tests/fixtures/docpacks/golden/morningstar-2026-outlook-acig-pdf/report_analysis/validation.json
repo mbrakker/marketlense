@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.1",
+  "status": "pass",
+  "severity": "pass",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '-10' not verbatim but semantically supported (confidence=1.00) for insight-001",
+      "severity": "info",
+      "affected_section": "insights:insight-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'percent (DXY, through Sept. 2025)' not verbatim but semantically supported (confidence=1.00) for insight-001",
+      "severity": "info",
+      "affected_section": "insights:insight-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'through September 2025' not verbatim but semantically supported (confidence=1.00) for insight-001",
+      "severity": "info",
+      "affected_section": "insights:insight-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '5' not verbatim but semantically supported (confidence=1.00) for insight-003",
+      "severity": "info",
+      "affected_section": "insights:insight-003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'to 10 years (maturity range)' not verbatim but semantically supported (confidence=1.00) for insight-003",
+      "severity": "info",
+      "affected_section": "insights:insight-003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'As of Sept./Oct. 2025' not verbatim but semantically supported (confidence=1.00) for insight-003",
+      "severity": "info",
+      "affected_section": "insights:insight-003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'percent (range by market)' not verbatim but semantically supported (confidence=1.00) for insight-004",
+      "severity": "info",
+      "affected_section": "insights:insight-004"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'Data as of Sept./Oct. 2025' not verbatim but semantically supported (confidence=1.00) for insight-004",
+      "severity": "info",
+      "affected_section": "insights:insight-004"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '15000000000000' not verbatim but semantically supported (confidence=1.00) for insight-005",
+      "severity": "info",
+      "affected_section": "insights:insight-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'USD (AUM)' not verbatim but semantically supported (confidence=1.00) for insight-005",
+      "severity": "info",
+      "affected_section": "insights:insight-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'as of 2025' not verbatim but semantically supported (confidence=1.00) for insight-005",
+      "severity": "info",
+      "affected_section": "insights:insight-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '35' not verbatim but semantically supported (confidence=0.96) for insight-008",
+      "severity": "info",
+      "affected_section": "insights:insight-008"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'percent (approx. top‑10 market share)' not verbatim but semantically supported (confidence=0.96) for insight-008",
+      "severity": "info",
+      "affected_section": "insights:insight-008"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'as of 2025' not verbatim but semantically supported (confidence=0.96) for insight-008",
+      "severity": "info",
+      "affected_section": "insights:insight-008"
+    }
+  ]
+}

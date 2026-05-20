@@ -1,0 +1,121 @@
+{
+  "title": "Retail trends 2026",
+  "subtitle": "5 forces reshaping the retail landscape",
+  "publisher": "Capgemini",
+  "source_file": "CAPGEMINI - 2026-Retail-Trends_ACIG.pdf",
+  "overview": {
+    "summary": "Five powerful trends are reshaping the future of retail, redefining how customers discover, decide, and buy. What’s inside: Moments over merchandise; The year of the private label; Searchless retail; Invisible AI; Trust as a profit driver. ",
+    "cover_note": "2026 Retail trends — 5 forces reshaping the retail landscape. "
+  },
+  "sections": [
+    {
+      "heading": "1. Moments over merchandise",
+      "summary": "Post‑pandemic experience spending has become a lasting shift. Global travel is projected to grow 5.8% annually through 2032, while U.S. unit sales remain flat, indicating inflation rather than intention drives growth. Retailers must find new margin in an experience‑led market. ",
+      "actions": [
+        "Offer an experience (e.g., on‑site cooking classes; in‑store bars). ",
+        "Capitalize on orbital purchases (e.g., complementary products for experience contexts). ",
+        "Contextualize what is already personalized with real‑time offers. "
+      ],
+      "insights": [
+        "Travel and hospitality experiences lead luxury spending, outpacing fashion, cars, and beauty among high and ultra‑high net worth individuals. ",
+        "To create meaningful brand moments, align brand identity with customer insight; favor participatory, community‑oriented experiences. "
+      ],
+      "quotes": [
+        {
+          "text": "Retailers shouldn’t think of the experience economy as an opportunity. It’s a necessity.",
+          "attribution": "Jessica Leitch, Head of frog - North America",
+          "citation": ""
+        }
+      ]
+    },
+    {
+      "heading": "2. The year of the private label",
+      "summary": "Private labels are no longer just budget buys—70% of shoppers earning over $100,000 now choose their grocery store based on them; growth is strong but may be slowing, pushing retailers to innovate, expand assortments, and premiumize. ",
+      "stats": [
+        "44% of shoppers are buying private‑label or low‑cost brands over name brands. ",
+        "When switching to a cheaper alternative, top factors: 66% positive user reviews; 60% money‑back guarantees/return policies; 58% clear quality certifications. ",
+        "7 in 10 consumers say small indulgences help them cope with financial stress (71%). "
+      ],
+      "actions": [
+        "Analyze shopper needs and trends using first‑party data. ",
+        "Pilot and iterate based on feedback to upgrade quality. ",
+        "Prioritize quality and differentiation around distinct value niches. "
+      ]
+    },
+    {
+      "heading": "3. The future of retail is searchless",
+      "summary": "Retail is moving from SEO to GEO (generative engine optimization). One in five of Walmart’s referral clicks in August came from ChatGPT, up 15% from July; 46% of shoppers make purchases based on AI recommendations and 46% are willing to order via AI tools.  ",
+      "actions": [
+        "Shift from search to suggestion via AI/GenAI using behavioral, contextual, transactional signals. ",
+        "Optimize for algorithmic visibility with stronger product/content tagging. ",
+        "Engineer moments of serendipity with shoppable content, live commerce, and timely notifications. "
+      ],
+      "callouts": [
+        "Walmart announced a partnership with OpenAI to enable shopping through ChatGPT (Instant Checkout); early adoption may stall if recommendations fail to meet expectations. "
+      ],
+      "quotes": [
+        {
+          "text": "Early adoption of AI-powered search is surging, but it may stall—or even retreat—if AI recommendations fail to meet expectations.",
+          "attribution": "Dreen Yang, Global Lead, Consumer Products and Retail, Capgemini",
+          "citation": ""
+        }
+      ]
+    },
+    {
+      "heading": "4. Invisible AI is expected",
+      "summary": "Consumers want seamless, frictionless, personalized experiences; 71% want Gen AI‑integrated shopping interactions (vs. 56% last year). Transparency builds confidence even when the tech stays in the background. ",
+      "stats": [
+        "71% are concerned about lack of clarity in how AI collects/uses personal data. ",
+        "52% will switch retailers for better data protection policies. "
+      ],
+      "actions": [
+        "Shift from personalization to contextualization. ",
+        "Establish visible guardrails for privacy, security, and ethical use. ",
+        "Keep humans in the loop with clear escalation and support. "
+      ],
+      "example": "Visual AI can monitor self‑checkout to detect friction and recommend process improvements, operating silently to make experiences seamless. ",
+      "quotes": [
+        {
+          "text": "Transparency builds confidence, even when the tech stays in the background.",
+          "attribution": "Mark Ruston, Global Retail Lead, Capgemini",
+          "citation": ""
+        }
+      ]
+    },
+    {
+      "heading": "5. Trust is the new profit driver",
+      "summary": "Margins are increasingly earned through trust as media, commerce, and operations converge. Build trust through the 3 Cs—consistency, care, contextualization—and add clarity to encourage data sharing. ",
+      "stats": [
+        "36% trust products and suggestions shared by Gen AI tools. ",
+        "66% trust a digital assistant more when it provides clear explanations. "
+      ],
+      "actions": [
+        "Consistency across every channel. ",
+        "Contextualization to each shopper’s moment. ",
+        "Care through actions that reflect customer values. ",
+        "Clarity on how personal data is used to enrich experiences. "
+      ],
+      "execution_notes": [
+        "Participate in digital conversations: join Reddit threads, work with influencers, and create high‑quality content to build transparent experiences. "
+      ]
+    }
+  ],
+  "contributors": [
+    {
+      "name": "Mark Ruston",
+      "role": "Global Retail Lead, Capgemini",
+      "citation": ""
+    },
+    {
+      "name": "Jessica Leitch",
+      "role": "Head of frog - North America",
+      "citation": ""
+    },
+    {
+      "name": "Dreen Yang",
+      "role": "Global Lead, Consumer Products and Retail, Capgemini",
+      "citation": ""
+    }
+  ],
+  "next_steps": "Leverage these trends to inform transformation. Download the “What matters to today’s consumer, 2025” report and watch for upcoming launches: What matters to today’s consumer (Jan 2026); Gen AI and consumers (Nov 2025). "
+}

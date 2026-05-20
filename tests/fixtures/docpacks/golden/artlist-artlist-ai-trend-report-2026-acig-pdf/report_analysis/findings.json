@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "statement": "Generative-AI tools have gone mainstream among creators: 87 % already use them, and 66 % use them every week.",
+      "evidence": [
+        {
+          "text": "…creators of 87% with … tools AI use now professionals … weekly them using 66%…",
+          "cite": ""
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "statement": "AI is acting as a great leveler—high-end ‘polish’ is now commodity, so differentiation shifts from budget to vision.",
+      "evidence": [
+        {
+          "text": "…leveling great… visuals Stunning … become table regular … polish … commodity now…",
+          "cite": ""
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "statement": "With technical barriers falling, competitive advantage moves to the ‘Auteur AI’ who provides distinctive vision, taste and empathy, not just software skills.",
+      "evidence": [
+        {
+          "text": "…ultimate leveler the is AI… revealing who has true vision… software at good just was…",
+          "cite": ""
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "statement": "Radical transparency about how AI shapes the work is becoming critical for brand trust in the new ‘authenticity economy’.",
+      "evidence": [
+        {
+          "text": "…polish outranks credibility… Transparency and authenticity… hide no longer… Show your work…",
+          "cite": ""
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "statement": "Physical, shared experiences are resurging as a powerful antidote to algorithm-fueled digital sameness and consumer fatigue.",
+      "evidence": [
+        {
+          "text": "…experience physical, shared a … antidote powerful to overwhelm digital… gatherings real room…",
+          "cite": ""
+        }
+      ]
+    }
+  ]
+}

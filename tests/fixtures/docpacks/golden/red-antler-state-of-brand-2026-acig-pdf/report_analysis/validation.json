@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '2' not verbatim but semantically supported (confidence=0.78) for ins-001",
+      "severity": "info",
+      "affected_section": "insights:ins-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=0.78) for ins-001",
+      "severity": "info",
+      "affected_section": "insights:ins-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=1.00) for ins-003",
+      "severity": "info",
+      "affected_section": "insights:ins-003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=0.98) for ins-004",
+      "severity": "info",
+      "affected_section": "insights:ins-004"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=0.98) for ins-006",
+      "severity": "info",
+      "affected_section": "insights:ins-006"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=1.00) for ins-007",
+      "severity": "info",
+      "affected_section": "insights:ins-007"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Number 4.0 not present in report or evidence",
+      "severity": "warning",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Neither the term “Dichotomy Economy” nor an explicit finding that such an economy exists is present in the supplied evidence.: In today’s Dichotomy Economy, brands that pick a side—turning data into action, proving their claims, and being explicit about AI—win, while hedging in the murky middle loses.",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet discusses a ‘utility over volume’ pattern or the replacement of many metrics with one next step.: The pattern is utility over volume, with one clear next step replacing many metrics.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The evidence supports the value of transparency but does not reference reframing it as a product experience or the need for real-time systems.: That reframes transparency as a product experience, not a campaign, and requires systems that expose verifiable facts at the decision moment.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While evidence notes backlash against hedging, it does not say decisive positioning is the baseline requirement for loyalty.: In a market that rewards decisive choices and penalizes hedging, this becomes the baseline for loyalty.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This is prescriptive advice not grounded in an explicit evidence excerpt.: Decision-wise, choose and publish a stance, disclose usage consistently, and align creative workflows so every asset reflects that stance.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence mentions backlash to J.Crew but does not generalize costs and upside in these terms.: The cost of hedging is immediate backlash risk; the upside of clarity is credibility.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence says the ‘middle ground is gone’ but does not label it the ‘riskiest strategic position.’: The middle is now the riskiest strategic position.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence uses the term “Dichotomy Economy” or directly supports this assertion.: In today’s Dichotomy Economy, the brands that win make decisive choices and live at the edges, not in the murky middle.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The rising impact of deepfakes and hallucinations is not addressed in the provided evidence.: - As deepfakes and hallucinations rise, validation matters more; authority is earned through credible evidence, not louder claims.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippet mentions Daydream or its AI-centric approach.: - On the other side, Daydream entered from day one with AI at the core, making ongoing AI asset generation a natural fit.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports reduction of overwhelm but does not mention ‘increasing usefulness on app open.’: Proof point: Oura’s “One Big Thing” surfaces a single, attainable goal from biometrics, reducing overwhelm and increasing usefulness on app open.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence notes being ‘drenched in data’ but does not state that ‘people want meaning and action.’: We’re drenched in metrics, but people want meaning and action, not more dashboards.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

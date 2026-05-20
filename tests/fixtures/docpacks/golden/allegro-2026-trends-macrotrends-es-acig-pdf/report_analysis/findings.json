@@ -1,0 +1,40 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Adaptive personalisation is now the default expectation",
+      "snippet": "La personalización ha avanzado mucho más allá de la simple segmentación; está evolucionando hacia una adaptación conductual continua.",
+      "citation": "turn2file18"
+    },
+    {
+      "id": "F2",
+      "title": "Purchasing decisions are increasingly driven by ethical/value alignment",
+      "snippet": "Las personas priorizan la autenticidad, la sostenibilidad y la contribución social, independientemente de si compran una botella de champú, un electrodoméstico, un servicio de entrega de comidas o utilizan una plataforma B2B.",
+      "citation": "turn2file12"
+    },
+    {
+      "id": "F3",
+      "title": "Omnichannel ecosystems will dominate competitive dynamics",
+      "snippet": "El análisis a nivel sectorial apunta a un futuro en el que los ecosistemas omnicanal dominen la competencia.",
+      "citation": "turn2file3"
+    },
+    {
+      "id": "F4",
+      "title": "AI and data are the connective tissue across sectors, brands and consumers",
+      "snippet": "La expansión de la IA y las herramientas basadas en datos en diversos sectores está cambiando fundamentalmente la forma en que las marcas interactúan con sus mercados.",
+      "citation": "turn2file7"
+    },
+    {
+      "id": "F5",
+      "title": "Sustainability and profitability are increasingly inter-dependent",
+      "snippet": "La investigación sectorial … muestra que la sostenibilidad y la rentabilidad son cada vez más interdependientes.",
+      "citation": "turn2file10"
+    },
+    {
+      "id": "F6",
+      "title": "Radical transparency has become a competitive differentiator",
+      "snippet": "La transparencia no es opcional; es un diferenciador competitivo.",
+      "citation": "turn2file0"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "scope": {
+    "id": "evidencepack-scope-001",
+    "title": "Evidence pack: impact of a weaker US dollar on global asset allocation and income opportunities",
+    "description": "Collect and synthesise evidence on how depreciation of the US dollar affects returns, hedged vs unhedged bond outcomes, equity market performance across regions (developed and emerging), and markets/assets that provide income resilience or inflation hedging.",
+    "objectives": [
+      "Assess the effect of USD weakness on regional equity returns (US, Europe, UK, Asia-Pacific, Emerging Markets).",
+      "Compare currency‑hedged vs unhedged bond returns for major investor domiciles.",
+      "Identify asset classes and specific markets that offer resilient income or inflation protection during USD declines.",
+      "Summarise implications for portfolio allocation and hedging strategies."
+    ],
+    "research_questions": [
+      "How have major currencies and regional equity indices performed during periods of USD depreciation (most recent 24–36 months)?",
+      "What is the historical performance difference between currency‑hedged and unhedged global bond allocations for US and non‑US investors?",
+      "Which countries or sectors have consistently provided income resilience when the USD weakens?",
+      "What policy, macro, or market factors modify these relationships (e.g., interest rate differentials, capital flows)?"
+    ],
+    "timeframe": {
+      "start_date": "2024-01-01",
+      "end_date": "2026-12-31"
+    },
+    "geography": [
+      "Global",
+      "United States",
+      "Euro area / Europe",
+      "United Kingdom",
+      "Emerging Markets (with emphasis on Brazil, South Africa, China, India, Mexico, South Korea)"
+    ],
+    "data_types": [
+      "Research reports and white papers",
+      "Index and market return time series",
+      "Currency exchange-rate series",
+      "Fund flow data",
+      "Academic articles and working papers",
+      "Regulatory and central‑bank statements"
+    ],
+    "inclusion_criteria": [
+      "Published between 2024 and 2026 (inclusive)",
+      "English language (or provided translated extract)",
+      "Provides quantitative evidence or authoritative qualitative analysis relevant to USD movements and asset returns",
+      "Sources from recognised providers (institutional research, major index providers, academic journals, central banks)"
+    ],
+    "exclusion_criteria": [
+      "Anecdotal commentary without data or clear methodology",
+      "Promotional materials / marketing collateral lacking independent analysis",
+      "Sources older than 2024 unless seminal and explicitly relevant"
+    ],
+    "deliverables": [
+      "Annotated bibliography of included sources",
+      "Concise executive summary (2–4 pages) of key findings",
+      "Data extraction table (source, metrics, period, main result)",
+      "Methodology appendix describing selection and synthesis approach"
+    ],
+    "stakeholders": [
+      "Investment research team",
+      "Portfolio managers",
+      "Wealth/advisory teams"
+    ],
+    "confidence": "medium",
+    "notes": "No EvidencePack schema file was found among the uploaded documents, so the scope above is a best‑practice template. Example uploaded file located in your uploads: MORNINGSTAR - 2026_Global_Outlook_Report ."
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "id": "escape_velocity",
+      "title": "Escape Velocity – comfort-seeking through cuteification, toys and fandoms",
+      "description": "Faced with economic pressure and anxiety, adults (especially Gen Z & Millennials) are escaping into ‘dystopian cuteness’, collectibles and immersive fandoms. 63 % say cute packaging brings joy and 36 % define themselves by their fandoms.",
+      "evidence": "“Adults are turning to toys for comfort in record numbers… Consumers are embracing soft toys, charms, and collectibles”"
+    },
+    {
+      "id": "electric_dreams",
+      "title": "Electric Dreams – deepening emotional ties to AI & backlash against ‘slop’ content",
+      "description": "AI is becoming an emotional companion: 32 % of Gen Z/Millennials feel their AI chatbot understands them better than friends/family, while only 46 % feel confident spotting AI content. Simultaneously, hyper-realistic AI influencers raise copyright and authenticity dilemmas.",
+      "evidence": "“I sometimes feel my AI chatbot understands me better than my friends and family” – 32 % agree overall (rising to 46 % Millennials, 42 % Gen Z)"
+    },
+    {
+      "id": "trad_lives",
+      "title": "Trad Lives – grounding in nature, locality & spirituality",
+      "description": "Consumers seek certainty and connection to the land: 75 % globally are drawn to spending more time in nature and 64 % to traditional values. Spiritual engagement is surging; UK church attendance among 16-24-year-olds has quadrupled since 2018.",
+      "evidence": "“Consumers the world over exhibit a yearning to touch grass and root their hands in the soil”"
+    },
+    {
+      "id": "alone_together",
+      "title": "Alone Together – reinventing ‘third spaces’ & natural highs",
+      "description": "Rising loneliness drives demand for new social formats (morning raves, chess clubs) and low/no-alcohol ‘natural highs’. Only 54 % of US adults now identify as drinkers, fuelling a boom in NoLo spirits and inclusive venues like Asahi’s SUMADORI bars.",
+      "evidence": "“Loneliness and isolation are on the rise … consumers are seeking new ‘third spaces’ as the no/low-alcohol trend means pubs are no longer the default hangout”"
+    },
+    {
+      "id": "analog_futures",
+      "title": "Analog Futures – neo-Luddite pushback against the algorithm",
+      "description": "Younger consumers are experimenting with pre-digital living and tactile rituals; 47 % of UK 16-21-year-olds wish they’d grown up in a pre-internet era. Start-ups like Brick and KARRI remove smartphone distractions, while retro devices (Walkman-style MP3s) resurface.",
+      "evidence": "“In response to an online world that feels less safe and inclusive, many younger consumers are exploring more analog approaches”"
+    }
+  ]
+}

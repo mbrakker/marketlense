@@ -1,0 +1,66 @@
+{
+  "quote_candidates": [
+    {
+      "id": "qc-001",
+      "text": "Gold’s most valuable characteristic – when held in physical form – is that it does not represent a claim against anyone else.",
+      "author": "Julius Baer Secular Outlook (2026)",
+      "location": "Section: Gold and digital assets (out-of-system assets)",
+      "page": 27,
+      "confidence": 0.95,
+      "tags": [
+        "gold",
+        "store-of-value",
+        "counterparty-risk"
+      ],
+      "evidence": [
+        {
+          "file": "JULIUS BAER - Secular-outlook-2026_ACIG.pdf",
+          "file_citation": "",
+          "excerpt": "Remember that gold’s most valuable characteristic – when held in physical form – is that it does not represent a claim against anyone else."
+        }
+      ]
+    },
+    {
+      "id": "qc-002",
+      "text": "We maintain a strategic allocation to gold in portfolios to capture this trend.",
+      "author": "Julius Baer Secular Outlook (2026)",
+      "location": "Section: CHF: Swiss assets as a store of value / Key capital market trends",
+      "page": 29,
+      "confidence": 0.92,
+      "tags": [
+        "portfolio",
+        "allocation",
+        "gold",
+        "investment-policy"
+      ],
+      "evidence": [
+        {
+          "file": "JULIUS BAER - Secular-outlook-2026_ACIG.pdf",
+          "file_citation": "",
+          "excerpt": "We maintain a strategic allocation to gold in portfolios to capture this trend."
+        }
+      ]
+    },
+    {
+      "id": "qc-003",
+      "text": "Store-of-value assets ... particularly the CHF and Swiss assets more broadly, offering investors an additional source of risk premium and enhanced portfolio diversification.",
+      "author": "Julius Baer Secular Outlook (2026)",
+      "location": "Section: CHF: Swiss assets as a store of value",
+      "page": 28,
+      "confidence": 0.93,
+      "tags": [
+        "CHF",
+        "Swiss assets",
+        "diversification",
+        "store-of-value"
+      ],
+      "evidence": [
+        {
+          "file": "JULIUS BAER - Secular-outlook-2026_ACIG.pdf",
+          "file_citation": "",
+          "excerpt": "Store-of-value assets have been featured in the Secular Outlook asset class table since 2022... another type of asset is poised to benefit from the above-described secular tailwinds: store-of-value assets, and particularly the CHF and Swiss assets more broadly, offering investors an additional source of risk premium and enhanced portfolio diversification."
+        }
+      ]
+    }
+  ]
+}

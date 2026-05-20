@@ -1,0 +1,48 @@
+{
+  "quote_candidates": [
+    {
+      "id": "qc-001",
+      "text": "Sample quote text attributed to Speaker Name.",
+      "speaker": "Speaker Name",
+      "confidence": 0.92,
+      "source": {
+        "type": "article",
+        "title": "Source Title",
+        "url": "https://example.com/article",
+        "page": 12
+      },
+      "location": {
+        "start_char": 1024,
+        "end_char": 1100
+      },
+      "tags": [
+        "policy",
+        "finance"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "qc-002",
+      "text": "Another sample quote candidate.",
+      "speaker": "Another Speaker",
+      "confidence": 0.85,
+      "source": {
+        "type": "transcript",
+        "title": "Interview with Another Speaker",
+        "url": "https://example.com/transcript",
+        "timestamp": "2025-11-12T10:15:00Z"
+      },
+      "location": {
+        "start_time_seconds": 135.5,
+        "end_time_seconds": 140.0
+      },
+      "tags": [
+        "product",
+        "marketing"
+      ],
+      "language": "en"
+    }
+  ],
+  "schema_used": "EvidencePack (placeholder)",
+  "search_note": "I could not find an EvidencePack schema among the uploaded files; please supply or point me to the official EvidencePack schema so I can produce JSON that exactly matches it. (Searched uploaded files including MELTWATER - Marketing Trends 2026_ACIG.pdf) "
+}

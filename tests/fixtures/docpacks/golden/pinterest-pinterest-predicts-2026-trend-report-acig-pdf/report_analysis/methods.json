@@ -1,0 +1,20 @@
+{
+  "methods": [
+    {
+      "name": "Year-over-year normalised search-growth calculation",
+      "goal": "Quantify momentum behind prospective 2026 trends on Pinterest.",
+      "description": "Pinterest compared the volume of normalised, English-language searches made worldwide between September 2024 – August 2025 with the same window a year earlier (September 2023 – August 2024). The resulting % change was used to flag fast-rising topics.",
+      "evidence": [
+        ""
+      ]
+    },
+    {
+      "name": "Early-adopter generational indexing",
+      "goal": "Reveal which age cohorts are disproportionately fueling each trend.",
+      "description": "For every trend, Pinterest identified the generations whose search activity grew more than their average platform activity over the same period, labelling them as “Early adopters”.",
+      "evidence": [
+        ""
+      ]
+    }
+  ]
+}

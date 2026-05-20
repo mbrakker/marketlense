@@ -1,0 +1,24 @@
+{
+  "methods": [
+    {
+      "name": "Morningstar Expected Return Framework",
+      "description": "Top-down asset-class model that blends current valuations, macro assumptions and mean-reversion to produce long-term real return forecasts. Morningstar uses it to rank relative opportunities such as South African diversified miners versus precious-metal producers.",
+      "evidence": "“Through the lens of Morningstar’s expected return framework, South African Resources currently ranks quite low …” "
+    },
+    {
+      "name": "Wealth Forecasting Engine & Private-Market Simulation",
+      "description": "A stochastic simulation toolkit that injects PitchBook private-market indices into target-date glide paths. Scenarios with a 5–10 % private-asset sleeve are run to measure changes in median lifetime returns, volatility and liquidity.",
+      "evidence": "“Preliminary simulations from Morningstar’s Wealth Forecasting Engine … suggest that adding 5%–10% diversified private exposure to target-date glide paths can raise median lifetime returns by 20–40 basis points annually.” "
+    },
+    {
+      "name": "Valuation-Implied Return Model for Risk Profiles",
+      "description": "Forward-looking real-return estimates are derived from asset-class valuations and mapped to multi-asset risk profiles (All-Growth, Balanced, Conservative, etc.) to stress-test sequencing risk in retirement plans.",
+      "evidence": "Chart: “Forecast 10-Year Annual Real Return by Risk Profile as of Sept. 30, 2025.” "
+    },
+    {
+      "name": "Behaviour-Aware Rebalancing Playbook",
+      "description": "Rule-based process that combines automatic rebalancing, counter-cyclical trades and client education to curb behavioural mistakes during volatility and keep portfolios aligned with long-term targets.",
+      "evidence": "“Morningstar’s investment team follows this approach: … Rebalance portfolios back to target allocations … Seek opportunities where markets have over-corrected relative to fundamentals …” "
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "scope": {
+    "title": "Evidence Pack — Scope",
+    "summary": "Assemble, preserve, and deliver a defensible collection of evidence (documents, records, and artifacts) relevant to the specified matter to enable investigation, litigation, or compliance review. The scope defines what will be collected, the time period, data sources, stakeholders, exclusions, constraints, and expected deliverables.",
+    "objectives": [
+      "Identify and collect all relevant documents, files, and records tied to the matter",
+      "Preserve chain-of-custody and metadata for collected items to maintain evidentiary integrity",
+      "Process and produce a usable, searchable evidence set for analysis and review",
+      "Provide a clear evidence index and documentation of collection, processing, and retention steps"
+    ],
+    "in_scope": [
+      "Email and mailbox content for custodians identified as relevant",
+      "Documents and files from identified on-premise and cloud file stores (e.g., shared drives, collaboration platforms)",
+      "System logs and access records relevant to the timeframe and custodians",
+      "Relevant attachments, calendars, and messaging platform content for identified custodians",
+      "Metadata for all collected items (timestamps, authorship, file paths, hash values)"
+    ],
+    "out_of_scope": [
+      "Personal data unrelated to the matter (unless specifically requested)",
+      "Systems, custodians, or date ranges not listed by the requesting party",
+      "Live forensic imaging of devices unless separately authorized",
+      "Destruction or alteration of original sources beyond preserved copies"
+    ],
+    "timeframe": {
+      "start_date": null,
+      "end_date": null,
+      "note": "Exact date range to be filled after scoping interview or per user-supplied parameters"
+    },
+    "jurisdiction": null,
+    "stakeholders": [
+      {
+        "role": "Requesting party",
+        "responsibilities": "Define matter, custodians, date range, privilege rules, and approval for scope changes"
+      },
+      {
+        "role": "Collection team",
+        "responsibilities": "Execute collections, document chain-of-custody, and deliver collected evidence"
+      },
+      {
+        "role": "Processing/Review team",
+        "responsibilities": "Process data, apply de-duplication, indexing, and prepare productions or review sets"
+      }
+    ],
+    "evidence_types": [
+      "Email messages and attachments",
+      "Office documents and PDFs",
+      "Chat and messaging archives",
+      "File system documents (shared drives, cloud storage)",
+      "System/access logs and audit trails",
+      "Database extracts and structured data exports"
+    ],
+    "data_sources": [
+      "Custodian mailboxes (Exchange/Office365/Gmail)",
+      "Corporate file shares and collaboration platforms (SharePoint, OneDrive, Google Drive, Box)",
+      "Endpoint file systems and managed backups (if authorized)",
+      "Messaging platforms (Slack, Teams, etc.)",
+      "Server and application logs"
+    ],
+    "constraints": [
+      "Collections limited to custodians, systems, and date ranges authorized by the requesting party",
+      "Legal, regulatory, or privacy restrictions must be honored (hold notices, privileged material)",
+      "Access to some systems may be delayed pending credentials or administrator approvals"
+    ],
+    "success_criteria": [
+      "Complete evidence set delivered for the authorized scope and timeframe",
+      "All collected items documented with hashes and chain-of-custody records",
+      "Searchable index and exports provided in agreed formats",
+      "Privilege and confidentiality protections applied and documented"
+    ],
+    "deliverables": [
+      "Forensically exported copies of collected items with metadata and hash manifest",
+      "Evidence index/catalog describing items, custodians, date ranges, and collection methods",
+      "Documentation of chain-of-custody and collection procedures",
+      "Processed, de-duplicated review set in agreed format (PST/ZIP/EDRM/CSV as requested)",
+      "Privilege log or redaction report if applicable"
+    ],
+    "retention_and_security": {
+      "retention_period": null,
+      "storage_requirements": "Secure encrypted storage with access controls; retention and destruction policies per requesting party and applicable law",
+      "access_controls": "Role-based access, logging of access, and limited distribution of originals"
+    },
+    "notes": "This scope is a template. Specific custodians, date ranges, privileged treatment rules, jurisdictional requirements, and any additional inclusions/exclusions should be provided to finalize the scope prior to collection."
+  }
+}

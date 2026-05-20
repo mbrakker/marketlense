@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'USD/oz' not verbatim but semantically supported (confidence=0.98) for insight-001",
+      "severity": "info",
+      "affected_section": "insights:insight-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'Oct-2025' not verbatim but semantically supported (confidence=0.98) for insight-001",
+      "severity": "info",
+      "affected_section": "insights:insight-001"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value '3.75-4.0' not verbatim but semantically supported (confidence=1.00) for insight-002",
+      "severity": "info",
+      "affected_section": "insights:insight-002"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'as of Nov-2025' not verbatim but semantically supported (confidence=1.00) for insight-002",
+      "severity": "info",
+      "affected_section": "insights:insight-002"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'up to 2025' not verbatim but semantically supported (confidence=1.00) for insight-003",
+      "severity": "info",
+      "affected_section": "insights:insight-003"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric value 'more than 2x' not verbatim but semantically supported (confidence=1.00) for insight-005",
+      "severity": "info",
+      "affected_section": "insights:insight-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric unit 'times (net wealth)' not verbatim but semantically supported (confidence=1.00) for insight-005",
+      "severity": "info",
+      "affected_section": "insights:insight-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'post-GFC to 2025' not verbatim but semantically supported (confidence=1.00) for insight-005",
+      "severity": "info",
+      "affected_section": "insights:insight-005"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Number 1.0 not present in report or evidence",
+      "severity": "warning",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Number 3.0 not present in report or evidence",
+      "severity": "warning",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "While the evidence covers climate, cyber, geopolitical and infrastructure risks, no snippet supports the inclusion of shadow banking or private-credit risks.: Capital-market implications include strong private-sector versus weaker public-sector balance sheets, structurally supported demand for out-of-system assets such as gold, and CHF-denominated Swiss ass",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The provided evidence references climate, cyber, geopolitical and infrastructure threats but does not mention shadow banking or private-credit vulnerabilities.: Stress-test for interlinked risks. Climate, cyber, shadow banking and private credit, geopolitics, and infrastructure vulnerabilities are increasingly connected.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

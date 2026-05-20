@@ -1,0 +1,79 @@
+{
+  "quote_candidates": [
+    {
+      "id": "qc-1",
+      "text": "With ultra-realistic AI influencers and creators on the increase, fascinating ethical dilemmas around copyright, ownership and disclosure emerge.",
+      "attribution": {
+        "title": "DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG.pdf",
+        "file_citation": "",
+        "page_hint": "Electric Dreams / AI influencers section"
+      },
+      "tags": [
+        "AI influencers",
+        "ethics",
+        "copyright"
+      ],
+      "confidence": 0.92
+    },
+    {
+      "id": "qc-2",
+      "text": "The rise of “slop” - low-quality, mass-produced content - is accelerating so quickly that platforms from YouTube to Spotify have been forced to take action to protect the integrity of the user experience.",
+      "attribution": {
+        "title": "DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG.pdf",
+        "file_citation": "",
+        "page_hint": "Electric Dreams / Slowing the Slop subsection"
+      },
+      "tags": [
+        "AI content",
+        "platform policy",
+        "content quality"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "id": "qc-3",
+      "text": "I sometimes feel my AI chatbot understands me better than my friends and family.",
+      "attribution": {
+        "title": "DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG.pdf",
+        "file_citation": "",
+        "page_hint": "Survey results (AI relationships / Emotional support)"
+      },
+      "tags": [
+        "AI relationships",
+        "survey",
+        "emotional support"
+      ],
+      "confidence": 0.88
+    },
+    {
+      "id": "qc-4",
+      "text": "Brands are leaning into community-gathering spaces authentically by supporting and amplifying existing initiatives.",
+      "attribution": {
+        "title": "DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG.pdf",
+        "file_citation": "",
+        "page_hint": "Alone Together / Community-gathering"
+      },
+      "tags": [
+        "brands",
+        "community",
+        "social trends"
+      ],
+      "confidence": 0.87
+    },
+    {
+      "id": "qc-5",
+      "text": "As AI accelerates, we see new patterns in how consumers are engaging with AI-generated content, advice and influencers.",
+      "attribution": {
+        "title": "DENTSU CREATIVE - Trends_2026_Generative_Realities_ACIG.pdf",
+        "file_citation": "",
+        "page_hint": "Introduction / Key trends"
+      },
+      "tags": [
+        "AI",
+        "consumer behavior",
+        "influencers"
+      ],
+      "confidence": 0.89
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "methods": [
+    {
+      "name": "Global Creator Survey 2026",
+      "description": "Artlist fielded an online questionnaire in September 2025, capturing responses from 6,500+ creators across 140 countries. The quantitative data from this survey supplies the numerical insights and charts that appear throughout the report.",
+      "citations": [
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "Qualitative Expert Interviews",
+      "description": "To add industry context, the authors conducted structured conversations with leaders at companies such as WPP, Google, Meta, Mondelēz and Wix. Their firsthand perspectives were woven into the narrative sections to illustrate and validate the emerging trends.",
+      "citations": [
+        "",
+        ""
+      ]
+    }
+  ]
+}

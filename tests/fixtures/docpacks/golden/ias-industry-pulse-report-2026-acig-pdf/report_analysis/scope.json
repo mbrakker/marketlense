@@ -1,0 +1,58 @@
+{
+  "scope": {
+    "id": "scope-001",
+    "title": "EvidencePack - Scope Only",
+    "summary": "Provide the 'scope' object for an EvidencePack JSON per the EvidencePack schema; other top-level fields omitted or left to the requester.",
+    "objectives": [
+      "Produce a scope object that clearly defines what is included and excluded from the EvidencePack.",
+      "Ensure the scope JSON is self-contained, valid JSON, and conforms to the EvidencePack schema's expectations for the scope field."
+    ],
+    "in_scope": [
+      "Definition of deliverables and evidence types to be collected (documents, reports, datasets).",
+      "Timeframe for evidence collection and review.",
+      "Primary stakeholders and point(s) of contact.",
+      "Acceptance criteria and success metrics for the evidence pack.",
+      "Constraints, assumptions, and dependencies relevant to evidence collection.",
+      "Any required compliance or confidentiality restrictions."
+    ],
+    "out_of_scope": [
+      "Collection, upload, or validation of individual evidence items beyond listing types.",
+      "Detailed analysis or synthesis of evidence.",
+      "Final sign-off or archival processes unless explicitly requested."
+    ],
+    "deliverables": [
+      "A single JSON object named 'scope' populated as provided.",
+      "A concise list of in-scope evidence types and exclusions.",
+      "Acceptance criteria for the completed EvidencePack."
+    ],
+    "timeline": {
+      "start": "on approval",
+      "duration": "to be defined by requester; default: 7 calendar days for full EvidencePack completion after scope approval"
+    },
+    "stakeholders": [
+      {
+        "role": "requester",
+        "description": "User who requested the EvidencePack scope"
+      },
+      {
+        "role": "analyst",
+        "description": "Person responsible for producing and validating the EvidencePack (assistant)"
+      }
+    ],
+    "assumptions": [
+      "Requester will confirm or modify the scope as needed.",
+      "EvidencePack schema's 'scope' field accepts keys used here (title, summary, objectives, in_scope, out_of_scope, deliverables, timeline, stakeholders, assumptions, constraints, acceptance_criteria).",
+      "Any uploaded source documents that are relevant will be provided separately for evidence collection."
+    ],
+    "constraints": [
+      "Response must be valid JSON and contain only the scope object at top-level per requester instruction.",
+      "Other EvidencePack fields will be omitted unless explicitly requested."
+    ],
+    "acceptance_criteria": [
+      "JSON output includes a top-level 'scope' object.",
+      "Scope object clearly lists in-scope and out-of-scope items and at least one acceptance criterion.",
+      "Requester confirms the scope or requests edits."
+    ],
+    "notes": "Scope prepared; ready for requester review and revision. Source files available for later evidence collection: "
+  }
+}

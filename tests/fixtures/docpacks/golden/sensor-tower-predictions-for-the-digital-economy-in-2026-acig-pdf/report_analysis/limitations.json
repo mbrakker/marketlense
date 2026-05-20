@@ -1,0 +1,24 @@
+{
+  "limitations": [
+    {
+      "id": "L1",
+      "description": "Sensor Tower metrics cover only Apple’s iOS App Store and Google Play. Downloads or revenue from other Android stores (e.g., Huawei AppGallery) are excluded, and China is counted on iOS only ."
+    },
+    {
+      "id": "L2",
+      "description": "Results for 2025 (partial year) and all of 2026 are projections or forecasts, not final audited figures, so actual outcomes may differ materially ."
+    },
+    {
+      "id": "L3",
+      "description": "OTT streaming revenue comparisons exclude payments made outside the app stores, which can under-state total earnings for services that rely on external billing ."
+    },
+    {
+      "id": "L4",
+      "description": "Advertising-spend analyses are limited to selected digital ad channels in the United States, meaning the findings may not generalise to other markets or channels ."
+    },
+    {
+      "id": "L5",
+      "description": "The web-traffic study contrasts paid ads with Generative-AI referrals only for the top 1,000 U.S. websites, so smaller sites and non-U.S. geographies are not represented ."
+    }
+  ]
+}

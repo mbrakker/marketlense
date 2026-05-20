@@ -1,0 +1,284 @@
+{
+  "schema_version": "1.0",
+  "toc_topics": [
+    "From access to intelligence",
+    "The In-the-Box revolution",
+    "The great leveling",
+    "Get up to AI speed",
+    "Rise of AI creative director",
+    "Authenticity 3.0 and transparency",
+    "You can't fake a real experience"
+  ],
+  "summary": {
+    "tldr": "As AI commoditizes polish, advantage shifts to clear vision and fast orchestration of tools, with authenticity and real-world experiences emerging as the decisive edges.",
+    "executive_summary": "Artlist’s 2026 report contends the third wave of democratization is shifting from access to tools and audiences toward access to intelligence, as an “In‑the‑Box” AI studio makes full‑stack creation accessible and turns polish into a commodity where distinct strategy and vision win. With 87% of creators using AI and 66% using it weekly (from Artlist’s 2026 User Survey of 6,500+ creators in Sept 2025), workflows are moving from linear to iterative, enabling instant visualization, faster concept cycles, and Z‑to‑A testing. This elevates the AI creative director: vision/strategy, taste, and empathy become the key human edge, empowering 10x creators who multiply impact through direction. As synthetic content erodes trust, Authenticity 3.0 requires radical transparency about how work is made and clear disclosure to build credibility and community. Finally, physical experiences resurge as an antidote to digital overwhelm; designing meaningful friction turns audiences into participants and powers an IRL → URL amplification flywheel.",
+    "claim_evidence_map": [
+      {
+        "claim": "AI adoption is mainstream among creators (87% use AI; 66% use it weekly).",
+        "evidence_id": "F1",
+        "evidence": "Generative-AI tools have gone mainstream among creators: 87% already use them, and 66% use them every week.",
+        "pages": []
+      },
+      {
+        "claim": "AI is a great leveler: polish is now a commodity, shifting differentiation from budget to vision.",
+        "evidence_id": "F2",
+        "evidence": "AI is acting as a great leveler—high-end ‘polish’ is now commodity, so differentiation shifts from budget to vision.",
+        "pages": []
+      },
+      {
+        "claim": "Competitive advantage concentrates in the AI creative director’s human edge: vision/strategy, taste, and empathy.",
+        "evidence_id": "F3",
+        "evidence": "Advantage moves to the ‘Auteur AI’ who provides distinctive vision, taste and empathy—not just software skills.",
+        "pages": []
+      },
+      {
+        "claim": "Radical transparency about AI’s role in content is becoming critical for trust (Authenticity 3.0).",
+        "evidence_id": "F4",
+        "evidence": "Transparency about how AI shapes the work is increasingly essential for brand trust; audiences expect disclosure.",
+        "pages": []
+      },
+      {
+        "claim": "Physical, shared experiences are resurging as an antidote to digital overwhelm and drive online amplification.",
+        "evidence_id": "F5",
+        "evidence": "Physical experiences offer a powerful counter to digital sameness and fatigue and can spark an IRL → URL flywheel.",
+        "pages": []
+      }
+    ]
+  },
+  "insights_candidates": [
+    {
+      "id": "IC-01",
+      "text": "AI adoption is now mainstream: 87% of creators use generative-AI tools and 66% use AI tools weekly.",
+      "evidence_id": "F1",
+      "evidence": "87% of creators are actively using AI; 66% use AI tools weekly. ",
+      "metric": {
+        "value": "87 / 66",
+        "unit": "percent (active / weekly)",
+        "trend": "",
+        "timeframe": "Survey fielded September 2025",
+        "geography": "Worldwide",
+        "segment": "Creators",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-02",
+      "text": "High production 'polish' has become a commodity; differentiation now depends on distinct vision and strategy rather than budget.",
+      "evidence_id": "F2",
+      "evidence": "The great leveling: polish is a commodity; strategy and distinct vision cut through perfect sameness. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-03",
+      "text": "The 'In‑the‑Box' revolution is collapsing full production pipelines into accessible, unified AI studios, democratizing professional video creation.",
+      "evidence_id": "F2",
+      "evidence": "The “In‑the‑Box” revolution brings full‑stack video creation into an accessible, unified digital studio via AI tools. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "Video creators / production teams",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-04",
+      "text": "Competitive advantage shifts to human 'AI creative directors' who combine vision/strategy, taste and empathy — skills AI cannot replace.",
+      "evidence_id": "F3",
+      "evidence": "Directors’ trinity—vision/strategy, taste, empathy—becomes the decisive human edge; concept is king with AI guidance. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "Directors / senior creative roles",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-05",
+      "text": "The '10x creator' archetype emerges: creators multiply impact through direction and taste rather than by simply increasing output.",
+      "evidence_id": "F3",
+      "evidence": "The 10x creator multiplies impact through direction and taste, not just output volume. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "High-impact creators / creative leads",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-06",
+      "text": "Radical transparency about how AI shaped creative work is becoming business‑critical: disclosure and showing process build trust.",
+      "evidence_id": "F4",
+      "evidence": "Radical transparency about how AI shapes the work is becoming critical for brand trust in the new ‘authenticity economy’. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "Brands / creators",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-07",
+      "text": "Physical, shared experiences are resurging as an antidote to algorithm-driven digital sameness; small, intimate IRL activations generate memorable online amplification.",
+      "evidence_id": "F5",
+      "evidence": "Experiential marketing becomes an antidote to digital overwhelm; small, intimate moments win and get retold. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "Brands / experiential marketers",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    }
+  ],
+  "insights_final": [
+    {
+      "id": "IC-01",
+      "text": "AI is mainstream among creators: 87% use generative AI; 66% use it weekly.",
+      "evidence_id": "F1",
+      "evidence": "87% of creators are actively using AI; 66% use AI tools weekly. ",
+      "metric": {
+        "value": "87 / 66",
+        "unit": "percent (active / weekly)",
+        "trend": "",
+        "timeframe": "Survey fielded September 2025",
+        "geography": "Worldwide",
+        "segment": "Creators",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-03",
+      "text": "The 'In‑the‑Box' revolution collapses full production pipelines into accessible, unified AI studios, democratizing pro video creation.",
+      "evidence_id": "F2",
+      "evidence": "The “In‑the‑Box” revolution brings full‑stack video creation into an accessible, unified digital studio via AI tools. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "Video creators / production teams",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-04",
+      "text": "Advantage shifts to human 'AI creative directors' who blend vision/strategy, taste, and empathy—skills AI can’t replace.",
+      "evidence_id": "F3",
+      "evidence": "Directors’ trinity—vision/strategy, taste, empathy—becomes the decisive human edge; concept is king with AI guidance. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "Directors / senior creative roles",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-06",
+      "text": "Radical transparency about how AI shaped the work is business‑critical; disclosure and showing process build trust.",
+      "evidence_id": "F4",
+      "evidence": "Radical transparency about how AI shapes the work is becoming critical for brand trust in the new ‘authenticity economy’. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "Brands / creators",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "IC-07",
+      "text": "Physical, shared experiences are resurging as an antidote to algorithmic sameness; small, intimate IRL activations spark memorable online amplification.",
+      "evidence_id": "F5",
+      "evidence": "Experiential marketing becomes an antidote to digital overwhelm; small, intimate moments win and get retold. ",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "2026 report (survey Sept 2025)",
+        "geography": "Worldwide",
+        "segment": "Brands / experiential marketers",
+        "sample_size": "6,500+",
+        "confidence": ""
+      },
+      "pages": []
+    }
+  ],
+  "quotes_final": [
+    {
+      "text": "Example quote text extracted from the source document identifying a key claim or statement.",
+      "speaker": "Unknown",
+      "citation": "Artlist AI Trend Report 2026 — uploaded_document.pdf, page 1",
+      "page": 1,
+      "evidence_id": "qc-1"
+    },
+    {
+      "text": "Another example quote candidate highlighting a separate assertion or datum.",
+      "speaker": "Unknown",
+      "citation": "Artlist AI Trend Report 2026 — uploaded_document.pdf, page 3",
+      "page": 3,
+      "evidence_id": "qc-2"
+    }
+  ],
+  "expert_comment": "The center of gravity is shifting from access to tools and audiences to access to intelligence as full-stack “In‑the‑Box” AI studios make pro‑grade creation broadly accessible and turn polish into a commodity. That reframes differentiation around clarity of vision and the ability to orchestrate tools at speed. Adoption is already mainstream, compressing any remaining advantage from mere tooling.\n- 87% of creators use generative AI; 66% use it weekly (survey Sept 2025; 6,500+ creators)\n- The “In‑the‑Box” revolution brings full‑stack video creation into an accessible, unified AI studio\n- High‑end polish is now commodity, shifting advantage from budget to vision\n\nOperating models should assume iterative workflows by default, with instant visualization, faster concept cycles, and Z‑to‑A testing as the cadence. This elevates the AI creative director, where vision and strategy, taste, and empathy become the decisive human edge, enabling 10x creators who multiply impact through direction. Team design should shift from software skills toward direction and taste, with leaders emphasizing orchestration across an integrated AI studio.\n\nTrust becomes a product feature. As synthetic content proliferates, radical transparency about how AI shaped the work and clear disclosure are now prerequisites for credibility. In parallel, physical, shared experiences are resurging as an antidote to digital overwhelm, creating an IRL → URL amplification flywheel where small, intimate moments get retold. Leaders should codify disclosure practices and invest in meaningful friction in IRL activations to turn audiences into participants.",
+  "linkedin_post": "Polish is now a commodity. Advantage shifts to leaders with clear vision and fast orchestration of AI tools.\n\nArtlist’s 2026 report signals a third wave of democratization: from access to tools and audiences to access to intelligence. An In‑the‑Box AI studio makes full‑stack creation accessible and pushes differentiation away from budget toward strategy and taste. Workflows move from linear to iterative, enabling instant visualization, faster concept cycles, and Z‑to‑A testing.\n\nData to watch:\n- 87% of creators already use generative AI; 66% use it weekly (survey of 6,500+ creators, Sept 2025).\n\nWhat this means for senior ecommerce and digital leaders:\n- Put a creative director at the center of AI: Elevate the human edge that AI cannot replace. Vision and strategy, taste, and empathy become decisive. This “AI creative director” role directs tools, sets the concept, and multiplies impact.\n- Collapse production into an In‑the‑Box studio: Unify creation inside AI-first workflows to accelerate concepting and iteration. Treat the pipeline as a digital studio where polish is standardized and strategy leads.\n- Redesign processes from linear to iterative: Build fast loops for instant visualization, tighter concept cycles, and Z‑to‑A testing so ideas are validated earlier and improved continuously.\n- Operationalize Authenticity 3.0: Be radically transparent about how AI shapes the work. Disclose methods and show process to earn trust and build community.\n- Reinvest in physical experiences: Use intimate IRL moments as antidotes to digital sameness. Design experiences that spark an IRL to URL amplification flywheel.\n\nThe edge now belongs to the “Auteur AI” leader who pairs sharp vision with transparent practice and meaningful real‑world experiences. Tools are abundant. Taste, empathy, and strategy win.\n\n#DigitalStrategy #Ecommerce #AI",
+  "source_status": {
+    "schema_version": "1.0",
+    "text_density": 714.8,
+    "density_threshold": 0.0,
+    "pages_sampled": 5,
+    "char_count": 3574,
+    "not_available": false,
+    "reason": "",
+    "evidence_present": true
+  }
+}

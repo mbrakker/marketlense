@@ -1,0 +1,41 @@
+{
+  "limitations": [
+    {
+      "text": "Report does not disclose research design, datasets or analytic methods behind its trend claims, making it hard to judge evidentiary strength.",
+      "severity": "moderate",
+      "citations": [
+        ""
+      ]
+    },
+    {
+      "text": "Many examples highlighted are current or past Red Antler clients (e.g., PopUp Bagels, Elm Biosciences), introducing promotional / selection bias and limiting objectivity.",
+      "severity": "moderate",
+      "citations": [
+        "",
+        ""
+      ]
+    },
+    {
+      "text": "Narratives and case studies are almost exclusively U.S.–centric (e.g., Times Square, Washington Monument activations), so insights may not generalize to other cultural or regulatory contexts.",
+      "severity": "minor",
+      "citations": [
+        "",
+        ""
+      ]
+    },
+    {
+      "text": "Findings are time-bound to the 2026 outlook; rapid shifts in technology, regulation or consumer sentiment could quickly render recommendations obsolete.",
+      "severity": "minor",
+      "citations": [
+        ""
+      ]
+    },
+    {
+      "text": "Several arguments adopt binary framings (e.g., brands are either “all-in on AI or not”), which may oversimplify nuanced strategic choices and ignore middle-ground approaches.",
+      "severity": "minor",
+      "citations": [
+        ""
+      ]
+    }
+  ]
+}

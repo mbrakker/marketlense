@@ -1,0 +1,128 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Quote paraphrased but semantically supported (confidence=1.00): Generative AI will rival paid advertising for driving website traffic",
+      "severity": "info",
+      "affected_section": "quotes:quote_1"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Number 142.0 not present in report or evidence",
+      "severity": "warning",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Subjective claim about \"hype\" versus \"operating reality\" and a \"durable shift\" is not evidenced in the provided snippets.: Generative AI is moving from hype to operating reality, with consumer spend and app rankings signaling a durable shift in mobile value capture.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence is provided that product and finance teams are taking these specific actions.: The category’s scale forces product and finance teams to treat AI utilities as core competitors and to pressure-test IAP monetization and retention mechanics against them.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence is supplied about changes to benchmarks or portfolio risk.: The possibility of a single AI app leading global IAP revenue reframes benchmarks for growth planning and portfolio risk.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No data or citation supports the asserted \"imperative.\": This creates a creative-ops imperative to scale image variant production and channel-specific testing, even as teams invest in short-form video for engagement.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Statement is advisory and lacks supporting evidence.: Marketers that align creative mix to channel mechanics rather than format orthodoxy will be better positioned to harvest near-term performance.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence is provided for the need to redesign channel mixes or content architectures.: Discovery dynamics are shifting as generative AI becomes a material traffic source, requiring rebalanced channel mixes and content architectures designed to be AI-referencable.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence is given to support the characterization as a \"structural shift.\": Treat this as a structural shift in acquisition and measurement.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Advisory statement without supporting evidence.: Rethink channel mix and analytics.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence provided for planning recommendations.: Build plans that recognize AI-sourced traffic as a distinct and growing path to your properties.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Instructional claim with no supporting evidence.: Rebalance creative production.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence links spend growth to required production changes.: Increase throughput and testing velocity for image formats to match where spend growth is heading in the US.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Recommendation not directly supported by data.: Prioritize vertical video workflows.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence supports this operational advice.: Resource the teams, templates, and lifecycle management needed to deliver short form video at scale.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Advisory statement lacks cited evidence.: Adjust content partnerships and pipelines.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No data is provided on collaboration planning.: Expect a steadier flow of smaller scope launches in gaming ecosystems and plan collaborations accordingly.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Subjective statement, not evidence-based.: The throughline is clear.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Broad claim without direct supporting data.: Discovery, format economics, and content cadence are shifting at once.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Predictive assertion with no evidence supplied.: Leaders that operationalize against these signals now will be positioned to capture demand as it moves.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

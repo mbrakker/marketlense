@@ -1,0 +1,172 @@
+{
+  "schema_version": "1.0",
+  "toc_topics": [
+    "Executive Summary and Predictions",
+    "Generative AI App Revenue",
+    "Vertical Video, Short Drama",
+    "Gen AI Website Traffic",
+    "Image Creatives Outpace Video",
+    "Ad-Friendly Hooks, Deep Monetization",
+    "AI Tools Speed Development",
+    "ChatGPT Tops IAP Revenue"
+  ],
+  "summary": {
+    "tldr": "Sensor Tower forecasts 2026 will be reshaped by Generative AI and vertical video: GenAI apps surpass $10B, image ads outpace video, GenAI rivals paid traffic, and ChatGPT could become the top-grossing app.",
+    "executive_summary": "Sensor Tower projects that Generative AI apps will top $10 billion in consumer spending on 7.2 billion downloads in 2026. Vertical video—led by the Short Drama sub‑genre—is expected to propel app growth and surpass OTT streaming in global downloads. Discovery dynamics are shifting as more than half of top U.S. websites are forecast to receive more traffic from Generative AI than from paid ads by end‑2026, while advertisers reallocate toward image creatives, which outpaced video growth in 2025 and are expected to do so again in 2026. A bonus prediction sees ChatGPT becoming the #1 app by IAP revenue by the end of 2026; note these are forecasts built on iOS and Google Play data, U.S. ad‑spend samples, and traffic for the top 1,000 U.S. sites.",
+    "claim_evidence_map": [
+      {
+        "claim": "Generative AI apps will generate more than $10B in consumer spending and reach 7.2B downloads in 2026.",
+        "evidence_id": "f1",
+        "evidence": "“Consumers Will Spend More than $10 Billion in Generative AI Apps in 2026 … 7.2 Billion Downloads in 2026 (+82% YoY)”",
+        "pages": []
+      },
+      {
+        "claim": "Vertical video—led by Short Drama—will surpass OTT streaming in global downloads in 2026.",
+        "evidence_id": "f2",
+        "evidence": "“Vertical Video will Spur App Growth — Led by Short Drama… Short Drama is projected to surpass OTT Streaming globally.”",
+        "pages": []
+      },
+      {
+        "claim": "By end‑2026, more than half of top U.S. websites will receive more traffic from Generative AI than from paid sources.",
+        "evidence_id": "f3",
+        "evidence": "“By the end of 2026, more than half of top websites will see more traffic from Gen AI than from paid sources.”",
+        "pages": []
+      },
+      {
+        "claim": "U.S. digital ad spend is shifting toward image creatives, which outgrew video in 2025 and are expected to do so again in 2026.",
+        "evidence_id": "f4",
+        "evidence": "“US digital ad spend on images climbed 35% YoY compared to 15% growth for video creatives… Our 2026 prediction: Ad spend for images will again rise faster than spend on videos.”",
+        "pages": []
+      },
+      {
+        "claim": "ChatGPT could become the top app globally by IAP revenue by the end of 2026.",
+        "evidence_id": "f7",
+        "evidence": "“Bonus Prediction: ChatGPT Will Become the Top App by IAP Revenue by the End of 2026… ChatGPT was already the #2 app globally by IAP revenue.”",
+        "pages": []
+      }
+    ]
+  },
+  "insights_candidates": [],
+  "insights_final": [
+    {
+      "id": "f1",
+      "text": "Generative AI apps will exceed $10B in consumer spend in 2026, with 7.2B downloads (+82% YoY).",
+      "evidence_id": "turn3file2",
+      "evidence": "Consumers Will Spend More than $10 Billion in Generative AI Apps in 2026 … 7.2 Billion Downloads in 2026 (+82% YoY)",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "f2",
+      "text": "Short Drama–led vertical video is projected to surpass OTT streaming globally on downloads in 2026.",
+      "evidence_id": "turn3file1",
+      "evidence": "Vertical Video will Spur App Growth — Led by Short Drama… Short Drama is projected to surpass OTT Streaming globally.",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "f3",
+      "text": "By end‑2026, more than half of top websites will receive more traffic from Generative AI than from paid ads.",
+      "evidence_id": "turn3file11",
+      "evidence": "By the end of 2026, more than half of top websites will see more traffic from Gen AI than from paid sources.",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "f4",
+      "text": "In the US, image ad spend rose 35% YoY vs 15% for video in 2025 and is forecast to outpace video again in 2026.",
+      "evidence_id": "turn3file10",
+      "evidence": "US digital ad spend on images climbed 35% YoY compared to 15% growth for video creatives… Our 2026 prediction: Ad spend for images will again rise faster than spend on videos.",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    },
+    {
+      "id": "f6",
+      "text": "AI tools are accelerating game development: 2025 set a record for new Steam releases, with 2026 expected to favor smaller‑scope titles over sprawling AAA.",
+      "evidence_id": "turn3file6",
+      "evidence": "2025 has broken the record for most new Steam releases… Our 2026 Prediction: You can expect to see fewer sprawling AAA experiences, reduced publisher risk, and a steady flow of tighter, smaller-scope games.",
+      "metric": {
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": ""
+      },
+      "pages": []
+    }
+  ],
+  "quotes_final": [
+    {
+      "text": "Generative AI will rival paid advertising for driving website traffic",
+      "speaker": "Sensor Tower (report)",
+      "citation": "Prediction #3: Gen AI will rival paid advertising for driving website traffic — Predictions for the Digital Economy in 2026 (Sensor Tower) ",
+      "page": 12,
+      "evidence_id": "quote_1"
+    },
+    {
+      "text": "By the end of 2026, more than half of top websites will see more traffic from Gen AI than from paid sources.",
+      "speaker": "Sensor Tower (report)",
+      "citation": "Prediction #3: Gen AI will rival paid advertising for driving website traffic — Predictions for the Digital Economy in 2026 (Sensor Tower) ",
+      "page": 12,
+      "evidence_id": "quote_2"
+    },
+    {
+      "text": "Consumers Will Spend More than $10 Billion in Generative AI Apps in 2026 … 7.2 Billion Downloads in 2026 (+82% YoY)",
+      "speaker": "Sensor Tower (report)",
+      "citation": "Prediction #1: Generative AI apps will earn more than $10 Billion in 2026 — Predictions for the Digital Economy in 2026 (Sensor Tower) ",
+      "page": 6,
+      "evidence_id": "quote_3"
+    }
+  ],
+  "expert_comment": "Generative AI is moving from hype to operating reality, with consumer spend and app rankings signaling a durable shift in mobile value capture. The category’s scale forces product and finance teams to treat AI utilities as core competitors and to pressure‑test IAP monetization and retention mechanics against them. The possibility of a single AI app leading global IAP revenue reframes benchmarks for growth planning and portfolio risk.\n- GenAI apps are projected to surpass $10B in consumer spend on 7.2B downloads in 2026 (+82% YoY) .\n- ChatGPT was already #2 by IAP revenue by Q3 2025 and could become #1 by end‑2026 .\n\nConsumption and advertising are diverging: user time leans into vertical video while ad budgets reweight toward images. This creates a creative‑ops imperative to scale image variant production and channel‑specific testing, even as teams invest in short‑form video for engagement. Marketers that align creative mix to channel mechanics rather than format orthodoxy will be better positioned to harvest near‑term performance.\n- Short Drama is projected to surpass OTT streaming on global downloads in 2026 .\n- In the U.S., image ad spend grew 35% YoY vs 15% for video in 2025 and is expected to outpace video again in 2026 .\n- Image creatives on Instagram Reels rose 142% YoY across Q1–Q3 2025, with similar gains on Facebook Reels .\n\nDiscovery dynamics are shifting as generative AI becomes a material traffic source, requiring rebalanced channel mixes and content architectures designed to be AI‑referencable. The crossover point is approaching quickly: more than a third of top U.S. sites were already receiving more GenAI than paid traffic by October 2025, and more than half are expected to do so by end‑2026 . In gaming, AI is also changing the supply side: release cadence is accelerating and production is narrowing in scope, while UA pressure favors titles with native ad hooks and deeper economies.\n- 2025 set a record for new Steam releases; 2026 is expected to bring fewer sprawling AAA projects and a steady flow of smaller‑scope games .\n- UA costs continue to pressure margins; 2026 forecasts point to pre‑pandemic download levels and the need to pair ad‑friendly hooks with deep monetization .",
+  "linkedin_post": "By the end of 2026, Generative AI is forecast to drive more traffic than paid ads for more than half of top websites. Treat this as a structural shift in acquisition and measurement.  \n\nKey data points to anchor plans:\n- Generative AI apps are projected to exceed $10B in consumer spend in 2026 on 7.2B downloads.  \n- Vertical video, led by Short Drama, is expected to surpass OTT streaming in global downloads in 2026.  \n- In the US, image ad spend grew 35% year over year in 2025 compared to 15% for video creatives, with images expected to outpace video again in 2026.  \n- 2025 set a record for new Steam releases, and 2026 is expected to favor smaller scope games over sprawling AAA.  \n\nWhat this means for digital leaders:\n- Rethink channel mix and analytics. Build plans that recognize AI-sourced traffic as a distinct and growing path to your properties.\n- Rebalance creative production. Increase throughput and testing velocity for image formats to match where spend growth is heading in the US.\n- Prioritize vertical video workflows. Resource the teams, templates, and lifecycle management needed to deliver short form video at scale.\n- Adjust content partnerships and pipelines. Expect a steadier flow of smaller scope launches in gaming ecosystems and plan collaborations accordingly.\n\nThe throughline is clear. Discovery, format economics, and content cadence are shifting at once. Leaders that operationalize against these signals now will be positioned to capture demand as it moves.\n\n#ecommerce #digitalmarketing #appgrowth",
+  "source_status": {
+    "schema_version": "1.0",
+    "text_density": 377.0,
+    "density_threshold": 0.0,
+    "pages_sampled": 5,
+    "char_count": 1885,
+    "not_available": false,
+    "reason": "",
+    "evidence_present": true
+  }
+}

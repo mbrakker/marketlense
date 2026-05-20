@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "id": "trend-1",
+      "title": "AI & automation is the #1 digital CX priority for 2026",
+      "insight": "40.6 % of global digital leaders rank AI and automation as their top focus for 2026—nearly three times higher than any other trend.",
+      "evidence": {
+        "snippet": "AI and automation dominate the 2026 CX agenda, with 40.6% of global leaders ranking it as their top priority—nearly 3x higher than any other trend. ",
+        "source_file": "CONTENT SQUARE – What’s Next in CX: 2026 Digital Customer Experience Trends_ACIG.pdf",
+        "page_estimate": 7
+      }
+    },
+    {
+      "id": "trend-2",
+      "title": "Omnichannel experience rises to #2",
+      "insight": "Omnichannel experience climbs to second place, with 13.8 % of leaders naming it their main focus for 2026.",
+      "evidence": {
+        "snippet": "Omnichannel experience climbs to second place for 2026, with 13.8% of leaders naming it their top focus. ",
+        "source_file": "CONTENT SQUARE – What’s Next in CX: 2026 Digital Customer Experience Trends_ACIG.pdf",
+        "page_estimate": 12
+      }
+    },
+    {
+      "id": "trend-3",
+      "title": "Digital innovation enters the top-three priorities",
+      "insight": "Digital innovation breaks into the top five and takes the #3 spot for 2026, reflecting demand for AI-driven differentiation and faster productization.",
+      "evidence": {
+        "snippet": "Digital innovation enters the top 5 as a new trend, reflecting demand for AI-driven competitive differentiation. ",
+        "source_file": "CONTENT SQUARE – What’s Next in CX: 2026 Digital Customer Experience Trends_ACIG.pdf",
+        "page_estimate": 6
+      }
+    },
+    {
+      "id": "trend-4",
+      "title": "Personalization drops to #4 but remains essential",
+      "insight": "Only 10.8 % of digital leaders now cite personalization as their foremost priority, signaling that it has become a baseline capability rather than a stand-alone strategy.",
+      "evidence": {
+        "snippet": "Personalization slipped from second to fourth place in 2026, with 10.8% of digital leaders ranking it as their top priority. ",
+        "source_file": "CONTENT SQUARE – What’s Next in CX: 2026 Digital Customer Experience Trends_ACIG.pdf",
+        "page_estimate": 20
+      }
+    },
+    {
+      "id": "trend-5",
+      "title": "Data-driven insights round out the top five",
+      "insight": "Data-driven insights rank fifth for 2026; 8.8 % of leaders select it as their primary CX focus, emphasizing the need for actionable analytics and real-time data.",
+      "evidence": {
+        "snippet": "Data-driven insights rank as the fifth trend of 2026, with 8.8% of leaders naming it their top CX priority. ",
+        "source_file": "CONTENT SQUARE – What’s Next in CX: 2026 Digital Customer Experience Trends_ACIG.pdf",
+        "page_estimate": 25
+      }
+    }
+  ]
+}

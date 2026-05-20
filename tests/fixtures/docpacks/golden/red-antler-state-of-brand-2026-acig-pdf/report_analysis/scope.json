@@ -1,0 +1,74 @@
+{
+  "scope": {
+    "id": "evidencepack-scope-001",
+    "title": "Evidence Pack for [Project / Claim Name]",
+    "description": "Gather, validate, and package authoritative evidence to support the stated claim(s) for [Project / Claim Name]. The pack will enable reviewers to verify compliance with requirements and make a go/no-go decision.",
+    "objectives": [
+      "Collect primary source evidence that directly supports each claim stated in the project brief.",
+      "Validate authenticity and completeness of collected evidence.",
+      "Produce an evidence bundle organized for reviewer verification and archival."
+    ],
+    "inScope": [
+      "Identification and collection of documents, logs, screenshots, and photos that substantiate the project claims.",
+      "Basic validation of each item (source, date, signer/creator, integrity checks).",
+      "Metadata capture for every evidence item (filename, filetype, author, creation date, hash).",
+      "Organization of evidence into a single deliverable structure with an index and summary."
+    ],
+    "outOfScope": [
+      "Deep forensic analysis beyond basic authenticity checks.",
+      "Legal review or formal notarization of documents (unless explicitly requested).",
+      "Long-term archival beyond delivering the evidence pack to stakeholders."
+    ],
+    "stakeholders": {
+      "requester": {
+        "name": "[Requester Name]",
+        "email": "[requester@example.com]"
+      },
+      "owner": {
+        "name": "[Evidence Owner Name]",
+        "email": "[owner@example.com]"
+      },
+      "reviewers": [
+        {
+          "name": "[Reviewer 1]",
+          "role": "Technical Reviewer",
+          "email": "[rev1@example.com]"
+        },
+        {
+          "name": "[Reviewer 2]",
+          "role": "Compliance Reviewer",
+          "email": "[rev2@example.com]"
+        }
+      ]
+    },
+    "timeframe": {
+      "startDate": "2026-02-01",
+      "endDate": "2026-02-15"
+    },
+    "evidenceTypesRequired": [
+      "official_documents (PDFs)",
+      "system_logs (txt/csv)",
+      "screenshots (PNG/JPEG)",
+      "test_reports (PDF)",
+      "photos (JPEG/HEIC)"
+    ],
+    "acceptanceCriteria": [
+      "Each claim is mapped to one or more evidence items in the index.",
+      "Evidence items include complete metadata (source, date, author, checksum).",
+      "No missing required evidence for critical claims as defined by the requester.",
+      "Pack includes an index and a 1-page executive summary of findings."
+    ],
+    "constraints": [
+      "All evidence must be collected from existing sources; no new testing or instrumentation unless approved.",
+      "Sensitive data redaction will be performed per requester's instructions prior to delivery.",
+      "Delivery format is a single compressed archive (ZIP) plus an index file (JSON)."
+    ],
+    "deliverables": [
+      "Evidence archive (ZIP) containing all evidence items",
+      "Index file (index.json) listing items, metadata, and claim mappings",
+      "Executive summary (summary.pdf)",
+      "Validation report (validation.json) with checksums and basic authenticity notes"
+    ],
+    "relatedFiles": []
+  }
+}

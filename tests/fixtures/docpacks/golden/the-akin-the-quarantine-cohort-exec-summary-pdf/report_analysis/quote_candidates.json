@@ -1,0 +1,121 @@
+{
+  "quote_candidates": [
+    {
+      "id": "qc_001",
+      "quote_text": "We must fundamentally rethink how we categorise human development in the digital age. While most reports treat 'Gen Z' as a monolithic 12-28 year old cohort, our data reveals a fundamental split at age 22-23.",
+      "speaker": "Report author / narrator",
+      "doc_title": "THE AKIN - The Quarantine Cohort- Executive Summary",
+      "citation_marker": "",
+      "page": 6,
+      "tags": [
+        "definition",
+        "finding",
+        "framing"
+      ],
+      "confidence": 0.92,
+      "context_excerpt": "Argument establishing a new model for generational categorisation based on developmental environment (digital vs physical) during ages 12-24."
+    },
+    {
+      "id": "qc_002",
+      "quote_text": "“I missed proms, formals, and graduation. I'd never been to a house party, kissed anyone, or gone on a date. I'd just got to high school and was finding my vibe. And then we got shut away.”",
+      "speaker": "20-year-old, Male, Houston (participant quote)",
+      "doc_title": "THE AKIN - The Quarantine Cohort- Executive Summary",
+      "citation_marker": "",
+      "page": 6,
+      "tags": [
+        "participant",
+        "anecdote",
+        "illustrative"
+      ],
+      "confidence": 0.9,
+      "context_excerpt": "First-person testimony used to illustrate the lived experience of interrupted adolescent rites of passage."
+    },
+    {
+      "id": "qc_003",
+      "quote_text": "Generation Q comprises individuals born 2003-2012 who experienced critical identity formation during mandatory digital mediation within a global health pandemic. They are humanity's first generation to undergo identity formation primarily in digital rather than physical spaces.",
+      "speaker": "Report author / narrator",
+      "doc_title": "THE AKIN - The Quarantine Cohort- Executive Summary",
+      "citation_marker": "",
+      "page": 2,
+      "tags": [
+        "definition",
+        "terminology"
+      ],
+      "confidence": 0.93,
+      "context_excerpt": "Clear definition of 'Gen Q' and the core claim about digitally-mediated identity formation."
+    },
+    {
+      "id": "qc_004",
+      "quote_text": "The adults have failed and are failing them through neglect and misrecognition.",
+      "speaker": "Report author / narrator",
+      "doc_title": "THE AKIN - The Quarantine Cohort- Executive Summary",
+      "citation_marker": "",
+      "page": 3,
+      "tags": [
+        "implication",
+        "accountability"
+      ],
+      "confidence": 0.87,
+      "context_excerpt": "Assessment attributing part of Gen Q's predicament to adult institutions and caregivers."
+    },
+    {
+      "id": "qc_005",
+      "quote_text": "Digital environments feel more authentic than physical reality. They retreat from exploration, optimise themselves algorithmically, and develop sophisticated online skills whilst struggling with basic face-to-face interaction.",
+      "speaker": "Report author / narrator",
+      "doc_title": "THE AKIN - The Quarantine Cohort- Executive Summary",
+      "citation_marker": "",
+      "page": 9,
+      "tags": [
+        "finding",
+        "behavioral",
+        "cognitive"
+      ],
+      "confidence": 0.9,
+      "context_excerpt": "Describes core rewiring: digital primacy, algorithmic self-optimization, and social-skill inversion."
+    },
+    {
+      "id": "qc_006",
+      "quote_text": "They're becoming collections of algorithmic responses rather than coherent individuals.",
+      "speaker": "Report author / narrator",
+      "doc_title": "THE AKIN - The Quarantine Cohort- Executive Summary",
+      "citation_marker": "",
+      "page": 11,
+      "tags": [
+        "finding",
+        "concern",
+        "identity"
+      ],
+      "confidence": 0.88,
+      "context_excerpt": "Concise statement of the report's concern about identity fragmentation across platform-specific selves."
+    },
+    {
+      "id": "qc_007",
+      "quote_text": "Each month that passes makes physical reality feel more foreign, AI companions more appealing, and recovery more distant. The path back to culture starts with sweat, not screens.",
+      "speaker": "Report author / narrator",
+      "doc_title": "THE AKIN - The Quarantine Cohort- Executive Summary",
+      "citation_marker": "",
+      "page": 13,
+      "tags": [
+        "implication",
+        "recommendation",
+        "tone-setting"
+      ],
+      "confidence": 0.85,
+      "context_excerpt": "Calls for embodied, physical interventions to restore cultural creation and real-world competence."
+    },
+    {
+      "id": "qc_008",
+      "quote_text": "Gen Q contradictory patterns are permanent features of their identity.",
+      "speaker": "Report author / narrator",
+      "doc_title": "THE AKIN - The Quarantine Cohort- Executive Summary",
+      "citation_marker": "",
+      "page": 10,
+      "tags": [
+        "finding",
+        "thematic"
+      ],
+      "confidence": 0.86,
+      "context_excerpt": "Synthesis line describing stable, opposing identity patterns (e.g., premature psychological maturity with arrested practical development)."
+    }
+  ]
+}

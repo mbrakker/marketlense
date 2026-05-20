@@ -1,0 +1,49 @@
+{
+  "scope": {
+    "title": "EvidencePack — Analysis of 'Pinterest Predicts 2026 Trend Report'",
+    "summary": "Create an EvidencePack that extracts, summaries, and catalogs the key trends, category breakdowns, and supporting metrics from the uploaded 'Pinterest Predicts 2026 Trend Report' to support product and marketing decision-making.",
+    "objectives": [
+      "Identify and summarize each trend described in the report.",
+      "Extract quantitative metrics and growth percentages (search change figures) shown for each trend.",
+      "Map trends to categories (e.g., Fashion, Beauty, Home, Travel, Food & Drink, Celebrations).",
+      "Identify primary demographic adopters called out in the report (Gen Z, Millennials, Gen X, Boomers).",
+      "Produce a concise executive summary and a structured JSON EvidencePack payload containing the extracted evidence."
+    ],
+    "in_scope": [
+      "All content, trend descriptions, and numeric indicators present in the uploaded 'Pinterest Predicts 2026 Trend Report' file (source file).",
+      "Categorization of trends and mapping to report-provided demographics.",
+      "Extraction of explicit search-change metrics and any stated sourcing/analysis-period information.",
+      "Producing structured outputs (JSON, short summary, and list of deliverables) derived solely from the uploaded report."
+    ],
+    "out_of_scope": [
+      "Supplementing or verifying report claims with external data sources not uploaded by the user.",
+      "Primary data collection or reanalysis beyond extracting the report's stated figures.",
+      "Interpretive forecasts or recommendations that go beyond summarizing and structuring the report content (unless explicitly requested)."
+    ],
+    "deliverables": [
+      "EvidencePack JSON containing structured fields (metadata, trends array, metrics, demographics).",
+      "1-page executive summary of key findings.",
+      "CSV (or table) listing trends, categories, and reported percent-change metrics."
+    ],
+    "constraints": [
+      "Work limited to content available in the uploaded report file.",
+      "Accuracy depends on the completeness and clarity of the uploaded PDF.",
+      "No external validation will be performed unless additional files or permission are provided."
+    ],
+    "assumptions": [
+      "The uploaded file ('Pinterest Predicts 2026 Trend Report') is the authoritative source for this pack.",
+      "All numeric metrics needed are present and legible in the uploaded document."
+    ],
+    "stakeholders": [
+      "Requesting analyst / user",
+      "Product or marketing team consumers of the EvidencePack"
+    ],
+    "timeline": {
+      "requested_at": "2026-02-02",
+      "estimated_completion": "2026-02-05"
+    },
+    "sources": [
+      ""
+    ]
+  }
+}

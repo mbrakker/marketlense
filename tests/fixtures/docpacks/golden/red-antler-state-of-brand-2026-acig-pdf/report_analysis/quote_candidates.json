@@ -1,0 +1,54 @@
+{
+  "quote_candidates": [
+    {
+      "id": "qc-001",
+      "text": "Show What You Stand For",
+      "document_title": "RED ANTLER - State-of-brand-2026_ACIG.pdf",
+      "source_citation": "",
+      "start_page": 34,
+      "end_page": 34,
+      "confidence": 0.95,
+      "notes": "Chapter heading / call-to-action (CHAPTER 3)"
+    },
+    {
+      "id": "qc-002",
+      "text": "You’re either all-in on AI or you’re not. The middle ground is gone.",
+      "document_title": "RED ANTLER - State-of-brand-2026_ACIG.pdf",
+      "source_citation": "",
+      "start_page": 12,
+      "end_page": 13,
+      "confidence": 0.92,
+      "notes": "Discussion of brand choices around AI (CHAPTER 1.3)"
+    },
+    {
+      "id": "qc-003",
+      "text": "The brands building loyalty aren't crafting better stories about their values. They’re making the back-end transparent enough that the proof becomes undeniable.",
+      "document_title": "RED ANTLER - State-of-brand-2026_ACIG.pdf",
+      "source_citation": "",
+      "start_page": 34,
+      "end_page": 34,
+      "confidence": 0.94,
+      "notes": "On transparency and proof as brand strategy (CHAPTER 3.1)"
+    },
+    {
+      "id": "qc-004",
+      "text": "When J.Crew tried to recreate its '90s catalog glory days in a campaign with undisclosed AI images, the backlash was instant.",
+      "document_title": "RED ANTLER - State-of-brand-2026_ACIG.pdf",
+      "source_citation": "",
+      "start_page": 12,
+      "end_page": 12,
+      "confidence": 0.91,
+      "notes": "Case example of AI backlash and intent confusion"
+    },
+    {
+      "id": "qc-005",
+      "text": "This moment demands that brands stop hedging and start making decisive choices.",
+      "document_title": "RED ANTLER - State-of-brand-2026_ACIG.pdf",
+      "source_citation": "",
+      "start_page": 2,
+      "end_page": 3,
+      "confidence": 0.9,
+      "notes": "Introductory thesis about brand conviction and taking sides"
+    }
+  ]
+}

@@ -1,0 +1,522 @@
+{
+  "schema": "DocMap",
+  "title": "Pinterest Predicts 2026 Trend Report ",
+  "site": "pinterestpredicts.com ",
+  "note": "21 trends. Unlimited possibilities. ",
+  "sourcing_note": "Sourcing: Pinterest internal data. English language search data, global, analysis period September 2023 to August 2025. Unless otherwise noted, changes are calculated using normalised searches during September 2024 to August 2025 compared to normalised searches during September 2023 to August 2024. Early adopters highlights the top generations that are contributing to search growth relative to average generational activity during September 2024–August 2025. Demographic generations defined as Gen Z (18–27), Millennials (28–43), Gen X (44–59) and Baby Boomer (60+). ",
+  "sections": [
+    {
+      "title": "Cool Blue",
+      "category": "Cross-category trend",
+      "about": "Meet the shade that refuses to warm up to anyone. Gen Z and Millennials are bringing a subzero sophistication to absolutely everything in 2026—think cool-toned coats, glacier-inspired accessories and the frostiest of cocktails. It’s the temp drop we’ve all been waiting for. ",
+      "searches": [
+        {
+          "term": "glacier aesthetic",
+          "change": "+35%"
+        },
+        {
+          "term": "blue drinks aesthetic",
+          "change": "+55%"
+        },
+        {
+          "term": "icy blue",
+          "change": "+50%"
+        },
+        {
+          "term": "frosted make-up",
+          "change": "+150%"
+        },
+        {
+          "term": "ice blue wedding dress",
+          "change": "+55%"
+        }
+      ]
+    },
+    {
+      "title": "Laced Up",
+      "category": "Cross-category trend",
+      "about": "Lace sets the pace in 2026, bringing unexpected elegance to absolutely everything. Expect bomber jackets with lacy collars, softly stitched bandanas—even crocheted phone cases. This trend is a gentle reminder that more is more: especially when it’s this gorgeous. ",
+      "searches": [
+        {
+          "term": "lace nails",
+          "change": "+215%"
+        },
+        {
+          "term": "lace belt",
+          "change": "+55%"
+        },
+        {
+          "term": "lace bandana",
+          "change": "+150%"
+        },
+        {
+          "term": "lace doily",
+          "change": "+105%"
+        },
+        {
+          "term": "lace make-up",
+          "change": "+120%"
+        }
+      ]
+    },
+    {
+      "title": "Scent Stacking",
+      "category": "Beauty trend",
+      "about": "Shake up your signature scent. Gen Z and Millennials are ditching one-and-done scents for bespoke notes, blending oils and perfumes to craft their very own fragrance formulas. Expect luxury to linger in layers next year. ",
+      "searches": [
+        {
+          "term": "niche perfume collection",
+          "change": "+500%"
+        },
+        {
+          "term": "perfume layering combinations",
+          "change": "+125%"
+        },
+        {
+          "term": "signature scent",
+          "change": "+45%"
+        },
+        {
+          "term": "scent layering",
+          "change": "+75%"
+        },
+        {
+          "term": "perfume notes",
+          "change": "+80%"
+        }
+      ]
+    },
+    {
+      "title": "Glitchy Glam",
+      "category": "Beauty trend",
+      "about": "The perfect winged liner? She doesn’t go here. This year, beauty is missing the mark—on purpose. Gen Z and Millennials will rock mismatched manicures, dual-toned lipstick and bright eyeshadow in two-toned hues. So long, symmetry. ",
+      "searches": [
+        {
+          "term": "eccentric make-up",
+          "change": "+100%"
+        },
+        {
+          "term": "weird make-up looks",
+          "change": "+115%"
+        },
+        {
+          "term": "nails with different colours on each hand",
+          "change": "+125%"
+        },
+        {
+          "term": "asymmetrical lob",
+          "change": "+85%"
+        },
+        {
+          "term": "avant garde make-up editorial",
+          "change": "+270%"
+        }
+      ]
+    },
+    {
+      "title": "Poetcore",
+      "category": "Cross-category trend",
+      "about": "Aspiring authors, take note. In 2026, Gen Z and Millennials will channel their inner wordsmiths with oversized turtlenecks, vintage blazers and messenger bags. Oh, and don’t forget the fountain pen. ",
+      "searches": [
+        {
+          "term": "the poet aesthetic",
+          "change": "+175%"
+        },
+        {
+          "term": "poet core",
+          "change": "+75%"
+        },
+        {
+          "term": "cape outfit",
+          "change": "+65%"
+        },
+        {
+          "term": "satchel bags aesthetic",
+          "change": "+85%"
+        },
+        {
+          "term": "tie accessories",
+          "change": "+85%"
+        }
+      ]
+    },
+    {
+      "title": "Pen Pals",
+      "category": "Cross-category trend",
+      "about": "Your inbox is about to get jealous of your letter box. Expect a letter-writing renaissance in 2026, as Gen Z and Millennials turn snail mail into authored art. Think elaborate envelopes, special stationary, and so. many. stamps. DMs, you’re dust. ",
+      "searches": [
+        {
+          "term": "cute stamps",
+          "change": "+105%"
+        },
+        {
+          "term": "penpal letters",
+          "change": "+35%"
+        },
+        {
+          "term": "handwritten letters",
+          "change": "+45%"
+        },
+        {
+          "term": "penpal ideas",
+          "change": "+90%"
+        },
+        {
+          "term": "snail mail gifts",
+          "change": "+110%"
+        }
+      ]
+    },
+    {
+      "title": "Throwback Kid",
+      "category": "Cross-category trend",
+      "about": "In 2026, childhood gets a throwback twist with vintage-inspired outfits, classic toys from the ’60s and upcycled baby looks. Crocheted play mats will bring cosy vibes to any nursery, while Baby Boomers and Gen X will thrift mini ’fits. Let’s go back in (play)time. ",
+      "searches": [
+        {
+          "term": "1970s childhood toys",
+          "change": "+125%"
+        },
+        {
+          "term": "upcycled baby clothes",
+          "change": "+95%"
+        },
+        {
+          "term": "vintage kids fashion",
+          "change": "+35%"
+        },
+        {
+          "term": "nostalgia toys",
+          "change": "+225%"
+        },
+        {
+          "term": "2000s kids toys",
+          "change": "+140%"
+        }
+      ]
+    },
+    {
+      "title": "Cabbage Crush",
+      "category": "Food and drink trend",
+      "about": "The motto for 2026? Live, laugh, leaf! In the year ahead, Boomers and Gen X will say goodbye to their cauliflower obsession and crown cabbage the new kitchen champ. Think blistered-edge ‘steaks’, kimchi cocktails and even crispier taco wraps. It’s crunch time, baby. ",
+      "searches": [
+        {
+          "term": "sautéed bok choy",
+          "change": "+35%"
+        },
+        {
+          "term": "cabbage dumplings",
+          "change": "+110%"
+        },
+        {
+          "term": "golumpki soup",
+          "change": "+95%"
+        },
+        {
+          "term": "cabbage alfredo",
+          "change": "+45%"
+        },
+        {
+          "term": "fermented cabbage",
+          "change": "+35%"
+        }
+      ]
+    },
+    {
+      "title": "Neo Deco",
+      "category": "Home trend",
+      "about": "The Art Deco trend is getting a modern twist: shiny, sleek and tuned to 2026. After years of heavy minimalism, this retro aesthetic is back with crisp chevrons, fan arches and other geometric hits, all edged in chrome or brass. Bold, glam—and just a touch eccentric. ",
+      "searches": [
+        {
+          "term": "pendant lamp",
+          "change": "+40%"
+        },
+        {
+          "term": "red marble bathroom",
+          "change": "+80%"
+        },
+        {
+          "term": "antique bar cart",
+          "change": "+100%"
+        },
+        {
+          "term": "brass aesthetic",
+          "change": "+35%"
+        },
+        {
+          "term": "leather banquette",
+          "change": "+35%"
+        }
+      ]
+    },
+    {
+      "title": "Afrohemian Decor",
+      "category": "Home trend",
+      "about": "2026 will bring a fusion of African and bohemian styles. Searches for ‘african boho living room’ and ‘afro chic home decor’ are trending up on Pinterest, taking home spaces to Dakar and beyond. Expect colourful Nigerian textiles and Ethiopian wall art alongside handwoven baskets and natural fibre rugs. ",
+      "searches": [
+        {
+          "term": "afrobohemian home decor",
+          "change": "+220%"
+        },
+        {
+          "term": "adire fabric",
+          "change": "+130%"
+        },
+        {
+          "term": "motif berbere",
+          "change": "+210%"
+        },
+        {
+          "term": "ethiopian art",
+          "change": "+50%"
+        },
+        {
+          "term": "rattan accent chair",
+          "change": "+50%"
+        },
+        {
+          "term": "bamboo beaded curtains",
+          "change": "+60%"
+        }
+      ]
+    },
+    {
+      "title": "Opera Aesthetic",
+      "category": "Celebrations trend",
+      "about": "Picture this: dramatic drapery, red roses, and a string quartet playing dark cabaret. In 2026, parties will become more opulent than ever as Millennials and Gen Z bring the vintage theatre aesthetic to every one of their gatherings. Cue the curtain—every detail is ready to perform. ",
+      "searches": [
+        {
+          "term": "opera theatre",
+          "change": "+35%"
+        },
+        {
+          "term": "midnight masquerade",
+          "change": "+95%"
+        },
+        {
+          "term": "wedding ceiling draping",
+          "change": "+40%"
+        },
+        {
+          "term": "opera outfits",
+          "change": "+55%"
+        },
+        {
+          "term": "masquerade decor",
+          "change": "+40%"
+        }
+      ]
+    },
+    {
+      "title": "Darecations",
+      "category": "Travel trend",
+      "about": "Sitting on the beach? Snooze. In 2026, we’re travelling for the thrill of it. Gen Z and Millennials will seek out full-throttle, adrenaline-inspired tourism—think river rafting through class 5 rapids, rappelling waterfalls on canyoneering routes or timing trips around global sporting events. What’s a comfort zone? ",
+      "searches": [
+        {
+          "term": "auto racing events",
+          "change": "+85%"
+        },
+        {
+          "term": "river rafting",
+          "change": "+35%"
+        },
+        {
+          "term": "adrenaline rush aesthetic",
+          "change": "+50%"
+        },
+        {
+          "term": "adventure tourism",
+          "change": "+75%"
+        },
+        {
+          "term": "football tournament",
+          "change": "+50%"
+        }
+      ]
+    },
+    {
+      "title": "Khaki Coded",
+      "category": "Fashion trend",
+      "about": "Dig into fashion’s newest find. This year, Gen Z and Millennials will embrace a new aesthetic inspired by wanderers of the world. Think khaki bermuda shorts, adventure-ready streetwear and pockets upon pockets. If your look can survive actual desert conditions, you’re doing it right. ",
+      "searches": [
+        {
+          "term": "pleated trousers",
+          "change": "+30%"
+        },
+        {
+          "term": "utility shirt",
+          "change": "+45%"
+        },
+        {
+          "term": "field jacket outfit men",
+          "change": "+65%"
+        },
+        {
+          "term": "paleontologist aesthetic",
+          "change": "+35%"
+        },
+        {
+          "term": "brown linen shirt",
+          "change": "+100%"
+        }
+      ]
+    },
+    {
+      "title": "Glamoratti",
+      "category": "Fashion trend",
+      "about": "The decade of decadence is back in style—and honestly, it’s about time. Tailored suits with sculpted shoulders will grow three sizes. Funnel necks will be the base of every outfit. And jewellery? Well, that’ll get chunkier, bolder and golder. Gen Z and Millennials are driving this maximalist aesthetic. ",
+      "searches": [
+        {
+          "term": "chunky belt",
+          "change": "+65%"
+        },
+        {
+          "term": "baggy suit",
+          "change": "+90%"
+        },
+        {
+          "term": "high collar jacket",
+          "change": "+60%"
+        },
+        {
+          "term": "gold cuff",
+          "change": "+50%"
+        },
+        {
+          "term": "80s luxury",
+          "change": "+225%"
+        }
+      ]
+    },
+    {
+      "title": "Gimme Gummy",
+      "category": "Cross-category trend",
+      "about": "In 2026, we’re going full-on gummy. Gen Z and Millennials are behind this ASMR overload—picture bendy phone cases, elastic cheek tints and probiotic treats that have that spring-back bite. Expect rubberized nail art and 3D jewellery to become your new tactile obsession. ",
+      "searches": [
+        {
+          "term": "gummy bears aesthetic",
+          "change": "+50%"
+        },
+        {
+          "term": "agar agar",
+          "change": "+35%"
+        },
+        {
+          "term": "yokan",
+          "change": "+60%"
+        },
+        {
+          "term": "jelly blush",
+          "change": "+130%"
+        },
+        {
+          "term": "jelly candy aesthetic",
+          "change": "+100%"
+        }
+      ]
+    },
+    {
+      "title": "Mystic Outlands",
+      "category": "Travel trend",
+      "about": "Fairytale meets fever dream in 2026’s biggest travel trend. Millennials and Boomers will seek out whimsical and mystical destinations: distant ruins swallowed in mist, naturally-occurring spirals and moody, enchanting forests. You may find you come back with more questions than answers. ",
+      "searches": [
+        {
+          "term": "scotland highlands aesthetic",
+          "change": "+465%"
+        },
+        {
+          "term": "faroe islands aesthetic",
+          "change": "+95%"
+        },
+        {
+          "term": "bolivia salar de uyuni",
+          "change": "+70%"
+        },
+        {
+          "term": "arashiyama bamboo forest",
+          "change": "+50%"
+        },
+        {
+          "term": "ethereal places",
+          "change": "+45%"
+        }
+      ]
+    },
+    {
+      "title": "Vamp Romantic",
+      "category": "Beauty trend",
+      "about": "Beauty bites back with this 2026 trend. Millennials and Gen Z will go all in on after-dark aesthetics, embracing jet black nails, romantic goth hairstyles and a smudged smokey eye—all with a touch of glossy glamour. Who says you can’t be haunting and heartbreaking? ",
+      "searches": [
+        {
+          "term": "vampire haircut",
+          "change": "+40%"
+        },
+        {
+          "term": "dark romantic make-up",
+          "change": "+160%"
+        },
+        {
+          "term": "carmilla aesthetic",
+          "change": "+60%"
+        },
+        {
+          "term": "vampire beauty",
+          "change": "+90%"
+        },
+        {
+          "term": "gothic coffin nails",
+          "change": "+180%"
+        }
+      ]
+    },
+    {
+      "title": "FunHaus",
+      "category": "Home trend",
+      "about": "Big top, bigger personality. In 2026, circus-inspired home décor will be on the rise, think bold stripes, sculptural silhouettes and just a wink of clownish charm. The trick is balance. Pair punch-line patterns with pared-back palettes so the space feels elevated, but oh, so out there. ",
+      "searches": [
+        {
+          "term": "stripey ceiling",
+          "change": "+40%"
+        },
+        {
+          "term": "circus nursery",
+          "change": "+50%"
+        },
+        {
+          "term": "circus interior",
+          "change": "+130%"
+        },
+        {
+          "term": "circus art",
+          "change": "+35%"
+        },
+        {
+          "term": "vintage circus aesthetic",
+          "change": "+70%"
+        }
+      ]
+    }
+  ],
+  "toc": [
+    "Cool Blue",
+    "Brooched",
+    "Wilderkind",
+    "Throwback Kid",
+    "Glamoratti",
+    "Scent Stacking",
+    "Poetcore",
+    "Laced Up",
+    "Pen Pals",
+    "FunHaus",
+    "Vamp Romantic",
+    "Afrohemian Decor",
+    "Opera Aesthetic",
+    "Extra Celestial",
+    "Darecations",
+    "Mystic Outlands",
+    "Khaki Coded",
+    "Glitchy Glam",
+    "Cabbage Crush",
+    "Gimme Gummy",
+    "Neo Deco "
+  ]
+}

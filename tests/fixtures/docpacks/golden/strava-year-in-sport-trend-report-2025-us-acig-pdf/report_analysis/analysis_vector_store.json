@@ -1,0 +1,377 @@
+{
+  "tldr": "The EvidencePack Collection Scope defines objectives, roles, controls, constraints, deliverables, and acceptance criteria for collecting and preserving high-sensitivity digital evidence for Incident ABC.",
+  "title": "STRAVA - Year-In-Sport-Trend-Report-2025-US_ACIG",
+  "insights": [
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "quote": {
+    "text": "Collect and preserve all relevant digital evidence related to Incident ABC for forensic analysis.",
+    "author": "Unknown",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "",
+    "evidence": "",
+    "schema_version": "1.0"
+  },
+  "commentary": "The EvidencePack Collection Scope establishes a high-sensitivity evidence program for Incident ABC, focused on comprehensive collection, strict chain-of-custody, and readiness for internal and legal review. It designates stakeholders (Requestor, Evidence Custodian, Legal) and enforces role-based access with multi-factor authentication and encryption in transit and at rest. The scope covers a wide range of sources—such as forensic disk images, memory dumps, logs, email archives, cloud artifacts, mobile backups, configuration files, and database exports—while mandating that collection not alter evidence and minimize business disruption. Retention is set to seven years with secure deletion via overwrite and cryptographic erase, and deliverables include an EvidencePack Archive (with hash manifest and custody logs) and an Acquisition Report. Acceptance requires that all listed evidence types are present, cryptographic hashes and custody records accompany each item, and Legal approves any cross-border transfers.",
+  "source": "",
+  "publisher": "",
+  "taxonomy": [],
+  "categories": [],
+  "region": "",
+  "time_period": "",
+  "contents_page_number": 0,
+  "contents_heading": "",
+  "_figure_image": "",
+  "_figure_gallery": [],
+  "_figure_top": "",
+  "_contents_image": "",
+  "_vector_store_id": "vs_6982700a88d08191ba37f2048fd16d42",
+  "_evidence_packs": {
+    "doc_map": "out\\strava-year-in-sport-trend-report-2025-us-acig-pdf\\report_analysis\\doc_map.json",
+    "scope": "out\\strava-year-in-sport-trend-report-2025-us-acig-pdf\\report_analysis\\scope.json",
+    "methods": "out\\strava-year-in-sport-trend-report-2025-us-acig-pdf\\report_analysis\\methods.json",
+    "findings": "out\\strava-year-in-sport-trend-report-2025-us-acig-pdf\\report_analysis\\findings.json",
+    "limitations": "out\\strava-year-in-sport-trend-report-2025-us-acig-pdf\\report_analysis\\limitations.json",
+    "quote_candidates": "out\\strava-year-in-sport-trend-report-2025-us-acig-pdf\\report_analysis\\quote_candidates.json",
+    "artifacts": "out\\strava-year-in-sport-trend-report-2025-us-acig-pdf\\report_analysis\\artifacts.json",
+    "validation": "out\\strava-year-in-sport-trend-report-2025-us-acig-pdf\\report_analysis\\validation.json"
+  },
+  "_text_density": 0.0,
+  "_text_pages_sampled": 0,
+  "_text_char_count": 0,
+  "_text_not_available": false,
+  "schema_version": "1.1",
+  "artifacts": {
+    "schema_version": "1.0",
+    "toc_topics": [
+      "EvidencePack Scope Overview",
+      "Objectives and Acceptance Criteria",
+      "Stakeholders and Roles",
+      "Jurisdictions and Legal Considerations",
+      "Evidence Types Collected",
+      "Access Controls and Data Sensitivity",
+      "Retention Policy and Constraints",
+      "Deliverables and Chain of Custody"
+    ],
+    "summary": {
+      "tldr": "The EvidencePack Collection Scope defines objectives, roles, controls, constraints, deliverables, and acceptance criteria for collecting and preserving high-sensitivity digital evidence for Incident ABC.",
+      "executive_summary": "The EvidencePack Collection Scope establishes a high-sensitivity evidence program for Incident ABC, focused on comprehensive collection, strict chain-of-custody, and readiness for internal and legal review. It designates stakeholders (Requestor, Evidence Custodian, Legal) and enforces role-based access with multi-factor authentication and encryption in transit and at rest. The scope covers a wide range of sources—such as forensic disk images, memory dumps, logs, email archives, cloud artifacts, mobile backups, configuration files, and database exports—while mandating that collection not alter evidence and minimize business disruption. Retention is set to seven years with secure deletion via overwrite and cryptographic erase, and deliverables include an EvidencePack Archive (with hash manifest and custody logs) and an Acquisition Report. Acceptance requires that all listed evidence types are present, cryptographic hashes and custody records accompany each item, and Legal approves any cross-border transfers.",
+      "claim_evidence_map": [
+        {
+          "claim": "The scope’s primary objectives are to collect and preserve all relevant digital evidence for Incident ABC, maintain chain-of-custody, and provide a curated set for internal and legal needs.",
+          "evidence_id": "evidencepack-scope-001",
+          "evidence": "Objectives include: “Collect and preserve all relevant digital evidence related to Incident ABC for forensic analysis,” “Ensure chain-of-custody and access controls are maintained,” and “Provide a curated evidence set sufficient for internal investigation and potential legal proceedings.”",
+          "pages": []
+        },
+        {
+          "claim": "Access to evidence is controlled via a role-based model with approved users, MFA, and encryption in transit and at rest under a High data sensitivity classification.",
+          "evidence_id": "evidencepack-scope-001",
+          "evidence": "Data sensitivity: High; accessControls specify authorizationModel: role-based, approvedUsers, multiFactorRequired: true, encryptionAtRest: true, encryptionInTransit: true.",
+          "pages": []
+        },
+        {
+          "claim": "The scope enumerates covered evidence types including forensic disk images, memory dumps, logs, email archives, cloud artifacts, mobile backups, configuration files, and database exports.",
+          "evidence_id": "evidencepack-scope-001",
+          "evidence": "evidenceTypes list: “disk images (forensic),” “memory dumps,” “log files,” “email archives,” “cloud service artifacts,” “mobile device backups,” “configuration files,” “database exports.”",
+          "pages": []
+        },
+        {
+          "claim": "Collection constraints prohibit altering evidence, require minimizing business disruption, and mandate Legal sign-off for cross-jurisdictional transfers.",
+          "evidence_id": "evidencepack-scope-001",
+          "evidence": "Constraints: “No evidence may be altered or modified during acquisition,” “Collection must minimize disruption,” “Cross-jurisdictional data transfers require Legal sign-off.”",
+          "pages": []
+        },
+        {
+          "claim": "Retention is seven years with secure deletion by overwrite and cryptographic erase, and deliverables include an EvidencePack Archive (with hash manifest and chain-of-custody logs) and an Acquisition Report.",
+          "evidence_id": "evidencepack-scope-001",
+          "evidence": "retentionPolicy: retentionPeriod “7 years,” secureDeletionProcedure “Overwrite and cryptographic erase.” Deliverables: “EvidencePack Archive … hash manifest (SHA-256), chain-of-custody logs” and “Acquisition Report.”",
+          "pages": []
+        }
+      ]
+    },
+    "insights_candidates": [],
+    "insights_final": [
+      {
+        "id": "insight_1",
+        "text": "",
+        "evidence_id": "insight_1",
+        "evidence": "",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_2",
+        "text": "",
+        "evidence_id": "insight_2",
+        "evidence": "",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_3",
+        "text": "",
+        "evidence_id": "insight_3",
+        "evidence": "",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_4",
+        "text": "",
+        "evidence_id": "insight_4",
+        "evidence": "",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_5",
+        "text": "",
+        "evidence_id": "insight_5",
+        "evidence": "",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": ""
+        },
+        "pages": []
+      }
+    ],
+    "quotes_final": [
+      {
+        "text": "Collect and preserve all relevant digital evidence related to Incident ABC for forensic analysis.",
+        "speaker": "Unknown",
+        "citation": "EvidencePack Collection Scope — objectives",
+        "page": 0,
+        "evidence_id": "quote_1"
+      },
+      {
+        "text": "Ensure chain-of-custody and access controls are maintained for all collected items.",
+        "speaker": "Unknown",
+        "citation": "EvidencePack Collection Scope — objectives",
+        "page": 0,
+        "evidence_id": "quote_2"
+      },
+      {
+        "text": "Provide a curated evidence set sufficient for internal investigation and potential legal proceedings.",
+        "speaker": "Unknown",
+        "citation": "EvidencePack Collection Scope — objectives",
+        "page": 0,
+        "evidence_id": "quote_3"
+      },
+      {
+        "text": "No evidence may be altered or modified during acquisition.",
+        "speaker": "Unknown",
+        "citation": "EvidencePack Collection Scope — constraints",
+        "page": 0,
+        "evidence_id": "quote_4"
+      }
+    ],
+    "expert_comment": "The EvidencePack Collection Scope defines an operating model centered on comprehensive collection, strict chain-of-custody, and readiness for internal and legal review. It designates stakeholders (Requestor, Evidence Custodian, Legal) and enforces a High-sensitivity regime with role-based access, approved users, multi-factor authentication, and encryption in transit and at rest. The scope covers disk images (forensic), memory dumps, log files, email archives, cloud service artifacts, mobile device backups, configuration files, and database exports. This foundation supports collecting and preserving all relevant digital evidence for Incident ABC while tightly governing access.\n\nExecution is shaped by clear constraints: no evidence may be altered during acquisition, collection must minimize disruption, and cross-jurisdictional transfers require Legal sign-off. Acceptance criteria raise the bar on auditability by requiring that all listed evidence types are present, cryptographic hashes accompany each item, and chain-of-custody records are maintained, with Legal approval for any cross-border transfers. Retention is set to seven years, with secure deletion via overwrite and cryptographic erase, extending control through end-of-life. These elements collectively build a defensible, lifecycle-based posture.\n\nFor decision-makers, align governance, access control, and operational plans to the named gates: objectives, constraints, evidence types, acceptance criteria, and deliverables. Ensure role assignments and controls are implemented as specified, and that deliverables consistently include an EvidencePack Archive with a SHA-256 hash manifest and chain-of-custody logs, plus an Acquisition Report. Plan for encrypted storage and authorized access over the seven-year retention period, and obtain Legal sign-off where data must cross jurisdictions. Build collection workflows that demonstrate non-alteration and minimize disruption, as both are required at acquisition.",
+    "linkedin_post": "The EvidencePack Collection Scope for Incident ABC establishes a high-sensitivity evidence program centered on comprehensive collection, strict chain-of-custody, and readiness for internal and legal review. It names stakeholders and enforces role-based access with multi-factor authentication and encryption in transit and at rest, while defining explicit evidence types, constraints, retention, deliverables, and acceptance criteria.\n\nWhat this means for decision-makers:\n\n- Governance and access controls:\n  - Stakeholders: Requestor, Evidence Custodian, Legal\n  - High sensitivity classification with role-based access, approved users, multi-factor required, encryption at rest and in transit\n\n- Evidence coverage to anticipate and request:\n  - Forensic disk images, memory dumps, log files, email archives\n  - Cloud service artifacts, mobile device backups, configuration files, database exports\n\n- Collection constraints to uphold operational integrity:\n  - No evidence may be altered during acquisition\n  - Collection must minimize business disruption\n  - Cross-jurisdictional transfers require Legal sign-off\n\n- Retention and disposal expectations:\n  - Retention period: seven years\n  - Secure deletion: overwrite and cryptographic erase\n\n- Deliverables and acceptance criteria for legal and internal readiness:\n  - EvidencePack Archive with a SHA-256 hash manifest and chain-of-custody logs\n  - Acquisition Report documenting the collection\n  - Acceptance requires all listed evidence types, cryptographic hashes and custody records for each item, and Legal approval for any cross-border transfers\n\nNet result: a clear, enforceable scope that aligns people, process, and artifacts for Incident ABC, ensuring comprehensive collection, protected access, and evidentiary integrity from acquisition through retention and secure deletion.\n\n#IncidentResponse #DigitalForensics #DataGovernance",
+    "source_status": {
+      "schema_version": "1.0",
+      "text_density": 1.6,
+      "density_threshold": 0.0,
+      "pages_sampled": 5,
+      "char_count": 8,
+      "not_available": false,
+      "reason": "",
+      "evidence_present": true
+    }
+  },
+  "validation_report": {
+    "schema_version": "1.1",
+    "status": "fail",
+    "severity": "error",
+    "source_path": "out\\strava-year-in-sport-trend-report-2025-us-acig-pdf\\report_analysis\\validation.json",
+    "issues": [
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_1 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+        "severity": "error",
+        "affected_section": "insights:insight_1"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_2 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+        "severity": "error",
+        "affected_section": "insights:insight_2"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_3 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+        "severity": "error",
+        "affected_section": "insights:insight_3"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_4 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+        "severity": "error",
+        "affected_section": "insights:insight_4"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_5 not supported (No metric value/text/unit/timeframe provided to verify against evidence.)",
+        "severity": "error",
+        "affected_section": "insights:insight_5"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Missing evidence snippet for metric on insight_1",
+        "severity": "error",
+        "affected_section": "insights:insight_1"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Missing evidence snippet for metric on insight_2",
+        "severity": "error",
+        "affected_section": "insights:insight_2"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Missing evidence snippet for metric on insight_3",
+        "severity": "error",
+        "affected_section": "insights:insight_3"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Missing evidence snippet for metric on insight_4",
+        "severity": "error",
+        "affected_section": "insights:insight_4"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Missing evidence snippet for metric on insight_5",
+        "severity": "error",
+        "affected_section": "insights:insight_5"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Quote paraphrased but semantically supported (confidence=1.00): Collect and preserve all relevant digital evidence related to Incident ABC for forensic analysis.",
+        "severity": "info",
+        "affected_section": "quotes:quote_1"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Quote paraphrased but semantically supported (confidence=0.92): Ensure chain-of-custody and access controls are maintained for all collected items.",
+        "severity": "info",
+        "affected_section": "quotes:quote_2"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Quote paraphrased but semantically supported (confidence=1.00): No evidence may be altered or modified during acquisition.",
+        "severity": "info",
+        "affected_section": "quotes:quote_4"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The evidence snippets provide no support for a Strava Year-In-Sport Trend Report; all evidence relates to the EvidencePack Collection Scope.: STRAVA - Year-In-Sport-Trend-Report-2025-US_ACIG",
+        "severity": "error",
+        "affected_section": "title"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence supports objectives, constraints and deliverables, but does not mention roles or acceptance criteria.: The EvidencePack Collection Scope defines objectives, roles, controls, constraints, deliverables, and acceptance criteria for collecting and preserving high-sensitivity digital evidence for Incident A",
+        "severity": "error",
+        "affected_section": "tldr"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence confirms role-based access, MFA and encryption, but contains no mention of the named stakeholders.: It designates stakeholders (Requestor, Evidence Custodian, Legal) and enforces role-based access with multi-factor authentication and encryption in transit and at rest.",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence mentions Legal sign-off for cross-border transfers but does not state acceptance criteria about evidence types, hashes, or custody records.: Acceptance requires that all listed evidence types are present, cryptographic hashes and custody records accompany each item, and Legal approves any cross-border transfers.",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Stakeholder designations are not supported by the evidence snippets.: It designates stakeholders (Requestor, Evidence Custodian, Legal) and enforces a High-sensitivity regime with role-based access, approved users, multi-factor authentication, and encryption in transit ",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence lacks any statement about acceptance criteria requiring evidence types, hashes or custody records.: Acceptance criteria raise the bar on auditability by requiring that all listed evidence types are present, cryptographic hashes accompany each item, and chain-of-custody records are maintained, with L",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence references \"named gates\" or confirms the existence of acceptance criteria elements.: For decision-makers, align governance, access control, and operational plans to the named gates: objectives, constraints, evidence types, acceptance criteria, and deliverables.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence does not mention that stakeholders are named or that acceptance criteria are defined.: It names stakeholders and enforces role-based access with multi-factor authentication and encryption in transit and at rest, while defining explicit evidence types, constraints, retention, deliverable",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Stakeholder roles are not referenced in the evidence snippets.: Stakeholders: Requestor, Evidence Custodian, Legal",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence does not state acceptance requirements for evidence types, hashes or custody records.: Acceptance requires all listed evidence types, cryptographic hashes and custody records for each item, and Legal approval for any cross-border transfers",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      }
+    ]
+  },
+  "categories_display": [],
+  "analysis_mode": "vector_store"
+}

@@ -1,0 +1,513 @@
+{
+  "tldr": "In today’s Dichotomy Economy, brands that pick a side—turning data into action, proving their claims, and being explicit about AI—win, while hedging in the murky middle loses.",
+  "title": "RED ANTLER - State-of-brand-2026_ACIG",
+  "insights": [
+    "In the 'two-seconds-til-swipe' attention economy, convert raw metrics into single, actionable guidance—not more dashboards.",
+    "Proof via transparent back-end visibility builds loyalty better than value statements alone.",
+    "Take an explicit AI stance—'all-in' or 'not'—since neutrality and hedging invite backlash.",
+    "Unapologetic, polarizing positions win attention; neutrality and 'likeable but unremarkable' brands fall behind.",
+    "Quality attention depends on intention and context—'consumption does not equal attention'—so craft moment-relevant messaging for meaningful engagement."
+  ],
+  "quote": {
+    "text": "You’re either all-in on AI or you’re not. The middle ground is gone.",
+    "author": "Unknown",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "recognized that consumers were ready \nto embrace pleasure without shame.  \nThe pivot was a profitable one, \ncontributing to 11.2% organic sales \ngrowth in the first half of the year.",
+    "evidence": "recognized that consumers were ready \nto embrace pleasure without shame.  \nThe pivot was a profitable one, \ncontributing to 11.2% organic sales \ngrowth in the first half of the year.",
+    "schema_version": "1.0"
+  },
+  "commentary": "The report argues that neutrality and pleasant-but-unremarkable approaches no longer work; brands must live at the edges with decisive choices and visible proof of what they stand for. On data, leaders are shifting from passive tracking to actionable, bite-size guidance that helps people improve—embodied by Oura’s “One Big Thing,” which reduces overwhelm by surfacing a single attainable goal. On trust, proof beats promises: transparency that exposes the back-end (e.g., ingredient and sourcing visibility) earns loyalty. On AI, brands must declare where they stand; undisclosed or hedged use sparks backlash (e.g., J.Crew), while explicit commitments (e.g., Aerie’s pledge not to use AI-generated women in ads) clarify intent and build credibility.",
+  "source": "",
+  "publisher": "",
+  "taxonomy": [
+    "ai",
+    "ai_in_marketing",
+    "consumer_behavior",
+    "consumer_insights",
+    "data_activation",
+    "creator_economy",
+    "influencer_marketing",
+    "short_form_video",
+    "social_media",
+    "brand_strategy"
+  ],
+  "categories": [
+    "Advertising",
+    "consumer_behavior",
+    "social_video_creator"
+  ],
+  "region": "",
+  "time_period": "2026",
+  "contents_page_number": 0,
+  "contents_heading": "",
+  "_figure_image": "red-antler-state-of-brand-2026-acig-pdf/assets/red-antler-state-of-brand-2026-acig-pdf.png",
+  "_figure_gallery": [
+    "red-antler-state-of-brand-2026-acig-pdf/slices/red-antler-state-of-brand-2026-acig-pdf.png",
+    "red-antler-state-of-brand-2026-acig-pdf/slices/red-antler-state-of-brand-2026-acig-pdf1.png",
+    "red-antler-state-of-brand-2026-acig-pdf/slices/red-antler-state-of-brand-2026-acig-pdf2.png"
+  ],
+  "_figure_top": "red-antler-state-of-brand-2026-acig-pdf/slices/red-antler-state-of-brand-2026-acig-pdf.png",
+  "_contents_image": "",
+  "_vector_store_id": "vs_697f8862e20881918b8b40181b380e0e",
+  "_evidence_packs": {
+    "doc_map": "out\\red-antler-state-of-brand-2026-acig-pdf\\report_analysis\\doc_map.json",
+    "scope": "out\\red-antler-state-of-brand-2026-acig-pdf\\report_analysis\\scope.json",
+    "methods": "out\\red-antler-state-of-brand-2026-acig-pdf\\report_analysis\\methods.json",
+    "findings": "out\\red-antler-state-of-brand-2026-acig-pdf\\report_analysis\\findings.json",
+    "limitations": "out\\red-antler-state-of-brand-2026-acig-pdf\\report_analysis\\limitations.json",
+    "quote_candidates": "out\\red-antler-state-of-brand-2026-acig-pdf\\report_analysis\\quote_candidates.json",
+    "artifacts": "out\\red-antler-state-of-brand-2026-acig-pdf\\report_analysis\\artifacts.json",
+    "validation": "out\\red-antler-state-of-brand-2026-acig-pdf\\report_analysis\\validation.json"
+  },
+  "_text_density": 0.0,
+  "_text_pages_sampled": 0,
+  "_text_char_count": 0,
+  "_text_not_available": false,
+  "schema_version": "1.1",
+  "artifacts": {
+    "schema_version": "1.0",
+    "toc_topics": [
+      "To Optimize or Opt Out?",
+      "Turn Data Into Doing",
+      "Pick a Side on AI",
+      "Engineer an Escape Hatch",
+      "The Rules & The Rebels",
+      "The Truth Needs Proof",
+      "Show What You Stand For",
+      "One Size Fits None"
+    ],
+    "summary": {
+      "tldr": "In today’s Dichotomy Economy, brands that pick a side—turning data into action, proving their claims, and being explicit about AI—win, while hedging in the murky middle loses.",
+      "executive_summary": "The report argues that neutrality and pleasant-but-unremarkable approaches no longer work; brands must live at the edges with decisive choices and visible proof of what they stand for. On data, leaders are shifting from passive tracking to actionable, bite-size guidance that helps people improve—embodied by Oura’s “One Big Thing,” which reduces overwhelm by surfacing a single attainable goal. On trust, proof beats promises: transparency that exposes the back-end (e.g., ingredient and sourcing visibility) earns loyalty. On AI, brands must declare where they stand; undisclosed or hedged use sparks backlash (e.g., J.Crew), while explicit commitments (e.g., Aerie’s pledge not to use AI-generated women in ads) clarify intent and build credibility.",
+      "claim_evidence_map": [
+        {
+          "claim": "Consumers expect brands to convert metrics into simple, actionable guidance rather than more dashboards.",
+          "evidence_id": "finding-1",
+          "evidence": "The report stresses moving from “all information, no transformation” to bite-size direction; Oura’s “One Big Thing” provides a single, attainable goal drawn from biometrics.",
+          "pages": []
+        },
+        {
+          "claim": "Transparency and visible proof now drive trust and loyalty more than value narratives.",
+          "evidence_id": "qc-003",
+          "evidence": "“The brands building loyalty aren't crafting better stories about their values. They’re making the back-end transparent enough that the proof becomes undeniable.”",
+          "pages": [
+            34
+          ]
+        },
+        {
+          "claim": "Brands must take an explicit stance on AI; the middle ground is gone.",
+          "evidence_id": "qc-002",
+          "evidence": "“You’re either all-in on AI or you’re not. The middle ground is gone.”",
+          "pages": [
+            12,
+            13
+          ]
+        },
+        {
+          "claim": "Undisclosed or hedged AI use triggers immediate backlash, as illustrated by J.Crew.",
+          "evidence_id": "qc-004",
+          "evidence": "“When J.Crew… used undisclosed AI images, the backlash was instant.”",
+          "pages": [
+            12
+          ]
+        },
+        {
+          "claim": "This moment rewards decisive choices and penalizes hedging.",
+          "evidence_id": "qc-005",
+          "evidence": "“This moment demands that brands stop hedging and start making decisive choices.”",
+          "pages": [
+            2,
+            3
+          ]
+        }
+      ]
+    },
+    "insights_candidates": [
+      {
+        "id": "ins-001",
+        "text": "In a 'two-seconds-til-swipe' attention economy, brands must convert raw metrics into single, actionable guidance rather than more dashboards.",
+        "evidence_id": "finding-1",
+        "evidence": "“We are drenched in data… The question today isn't whether we can track something—it’s whether we should care.” (STATE OF BRAND, Ch.1 overview: 'two-seconds-til-swipe')",
+        "metric": {
+          "value": "2",
+          "unit": "seconds",
+          "trend": "attention shortening",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "brands/marketers",
+          "sample_size": "",
+          "confidence": "0.9"
+        },
+        "pages": [],
+        "score": 0.9
+      },
+      {
+        "id": "ins-002",
+        "text": "Single, attainable goals (e.g., Oura’s 'One Big Thing') reduce user overwhelm and make analytics actionable for long-term engagement.",
+        "evidence_id": "finding-1",
+        "evidence": "“Oura… ‘One Big Thing’… provides a singular, attainable goal. Instead of plying users with more numbers and figures, this push makes long-term Oura use feel targeted, not overwhelming.”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "adoption of simplified guidance",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "wellness tech / consumers",
+          "sample_size": "",
+          "confidence": "0.9"
+        },
+        "pages": [],
+        "score": 0.85
+      },
+      {
+        "id": "ins-003",
+        "text": "Proof (transparent back-end visibility) builds loyalty more effectively than value statements alone.",
+        "evidence_id": "finding-2",
+        "evidence": "“The brands building loyalty aren't crafting better stories about their values. They’re making the back-end transparent enough that the proof becomes undeniable.”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing demand for transparency",
+          "timeframe": "2026",
+          "geography": "US (report examples are US-centric)",
+          "segment": "consumers seeking trust/validation",
+          "sample_size": "",
+          "confidence": "0.88"
+        },
+        "pages": [],
+        "score": 0.88
+      },
+      {
+        "id": "ins-004",
+        "text": "Brands must take an explicit stance on AI—'all-in' or 'not'—because neutrality and hedging invite consumer backlash.",
+        "evidence_id": "finding-3",
+        "evidence": "“You’re either all-in on AI or you’re not. The middle ground is gone.”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "polarization around AI-use stances",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "brands using AI in marketing/assets",
+          "sample_size": "",
+          "confidence": "0.87"
+        },
+        "pages": [],
+        "score": 0.87
+      },
+      {
+        "id": "ins-005",
+        "text": "Undisclosed AI use provokes rapid backlash (J.Crew example), while explicit no-AI commitments (Aerie) can earn positive consumer response.",
+        "evidence_id": "finding-3",
+        "evidence": "“When J.Crew tried to recreate its '90s catalog glory days in a campaign with undisclosed AI images, the backlash was instant.” and Aerie publicly pledged never to use AI-generated women.",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "backlash risk for undisclosed AI",
+          "timeframe": "2026",
+          "geography": "US (examples cited)",
+          "segment": "fashion/retail brands",
+          "sample_size": "",
+          "confidence": "0.87"
+        },
+        "pages": [],
+        "score": 0.82
+      },
+      {
+        "id": "ins-006",
+        "text": "Unapologetic, polarizing brand positions win attention; being neutral and 'likeable but unremarkable' leaves brands behind.",
+        "evidence_id": "finding-2",
+        "evidence": "“Unapologetic approaches are winning; being neutral and likeable but unremarkable gets you left behind.” (Chapter 2 summary) / “This moment demands that brands stop hedging and start making decisive choices.”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing returns to decisive positioning",
+          "timeframe": "2026",
+          "geography": "primarily US examples",
+          "segment": "brand strategy / marketing",
+          "sample_size": "",
+          "confidence": "0.88"
+        },
+        "pages": [],
+        "score": 0.86
+      },
+      {
+        "id": "ins-007",
+        "text": "Quality attention depends on intention and context—'consumption does not equal attention'—so brands must craft moment-relevant messaging to secure meaningful engagement.",
+        "evidence_id": "finding-1",
+        "evidence": "“Consumption does not equal attention.” (Spotlight Q&A) and Q&A note: 'quality attention depends on intention and context, requiring moment‑relevant messaging.'",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "shift toward contextualized, moment-based messaging",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "marketers / media planners",
+          "sample_size": "",
+          "confidence": "0.9"
+        },
+        "pages": [],
+        "score": 0.84
+      }
+    ],
+    "insights_final": [
+      {
+        "id": "ins-001",
+        "text": "In the 'two-seconds-til-swipe' attention economy, convert raw metrics into single, actionable guidance—not more dashboards.",
+        "evidence_id": "finding-1",
+        "evidence": "“We are drenched in data… The question today isn't whether we can track something—it’s whether we should care.” (STATE OF BRAND, Ch.1 overview: 'two-seconds-til-swipe')",
+        "metric": {
+          "value": "2",
+          "unit": "seconds",
+          "trend": "attention shortening",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "brands/marketers",
+          "sample_size": "",
+          "confidence": "0.9"
+        },
+        "pages": []
+      },
+      {
+        "id": "ins-003",
+        "text": "Proof via transparent back-end visibility builds loyalty better than value statements alone.",
+        "evidence_id": "finding-2",
+        "evidence": "“The brands building loyalty aren't crafting better stories about their values. They’re making the back-end transparent enough that the proof becomes undeniable.”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing demand for transparency",
+          "timeframe": "2026",
+          "geography": "US (report examples are US-centric)",
+          "segment": "consumers seeking trust/validation",
+          "sample_size": "",
+          "confidence": "0.88"
+        },
+        "pages": []
+      },
+      {
+        "id": "ins-004",
+        "text": "Take an explicit AI stance—'all-in' or 'not'—since neutrality and hedging invite backlash.",
+        "evidence_id": "finding-3",
+        "evidence": "“You’re either all-in on AI or you’re not. The middle ground is gone.”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "polarization around AI-use stances",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "brands using AI in marketing/assets",
+          "sample_size": "",
+          "confidence": "0.87"
+        },
+        "pages": []
+      },
+      {
+        "id": "ins-006",
+        "text": "Unapologetic, polarizing positions win attention; neutrality and 'likeable but unremarkable' brands fall behind.",
+        "evidence_id": "finding-2",
+        "evidence": "“Unapologetic approaches are winning; being neutral and likeable but unremarkable gets you left behind.” (Chapter 2 summary) / “This moment demands that brands stop hedging and start making decisive choices.”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing returns to decisive positioning",
+          "timeframe": "2026",
+          "geography": "primarily US examples",
+          "segment": "brand strategy / marketing",
+          "sample_size": "",
+          "confidence": "0.88"
+        },
+        "pages": []
+      },
+      {
+        "id": "ins-007",
+        "text": "Quality attention depends on intention and context—'consumption does not equal attention'—so craft moment-relevant messaging for meaningful engagement.",
+        "evidence_id": "finding-1",
+        "evidence": "“Consumption does not equal attention.” (Spotlight Q&A) and Q&A note: 'quality attention depends on intention and context, requiring moment‑relevant messaging.'",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "shift toward contextualized, moment-based messaging",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "marketers / media planners",
+          "sample_size": "",
+          "confidence": "0.9"
+        },
+        "pages": []
+      }
+    ],
+    "quotes_final": [
+      {
+        "text": "You’re either all-in on AI or you’re not. The middle ground is gone.",
+        "speaker": "Unknown",
+        "citation": "Chapter 1.3 — Pick a Side on AI — RED ANTLER - State-of-brand-2026_ACIG.pdf ",
+        "page": 12,
+        "evidence_id": "qc-002"
+      },
+      {
+        "text": "The brands building loyalty aren't crafting better stories about their values. They’re making the back-end transparent enough that the proof becomes undeniable.",
+        "speaker": "Unknown",
+        "citation": "Chapter 3.1 — Show What You Stand For — RED ANTLER - State-of-brand-2026_ACIG.pdf ",
+        "page": 34,
+        "evidence_id": "qc-003"
+      },
+      {
+        "text": "Show What You Stand For",
+        "speaker": "Unknown",
+        "citation": "Chapter 3 heading — The Truth Needs Proof / Show What You Stand For — RED ANTLER - State-of-brand-2026_ACIG.pdf ",
+        "page": 34,
+        "evidence_id": "qc-001"
+      },
+      {
+        "text": "When J.Crew tried to recreate its '90s catalog glory days in a campaign with undisclosed AI images, the backlash was instant.",
+        "speaker": "Unknown",
+        "citation": "Chapter 1.3 — Pick a Side on AI (J.Crew case) — RED ANTLER - State-of-brand-2026_ACIG.pdf ",
+        "page": 12,
+        "evidence_id": "qc-004"
+      }
+    ],
+    "expert_comment": "The signal is unambiguous: in a two‑second attention window, neutrality loses and decisiveness wins. Raw tracking is noise unless it resolves into a single action, as illustrated by Oura’s move to one attainable goal drawn from biometrics. Because “consumption does not equal attention,” teams should design moment‑relevant prompts rather than more dashboards. The pattern is utility over volume, with one clear next step replacing many metrics.\n\nTrust now accrues to brands that surface proof rather than stories, with ingredient and sourcing visibility turning values into evidence. That reframes transparency as a product experience, not a campaign, and requires systems that expose verifiable facts at the decision moment. The operational mandate is to wire data governance, supply visibility, and CX so the back‑end is easy to see. In a market that rewards decisive choices and penalizes hedging, this becomes the baseline for loyalty.\n\nAI policy is now positioning: the middle ground is gone, and undisclosed use invites backlash, as J.Crew discovered. Explicit commitments clarify intent and build credibility, as with Aerie’s pledge not to use AI‑generated women in ads. Decision‑wise, choose and publish a stance, disclose usage consistently, and align creative workflows so every asset reflects that stance. The cost of hedging is immediate backlash risk; the upside of clarity is credibility.",
+    "linkedin_post": "The middle is now the riskiest strategic position. In today’s Dichotomy Economy, the brands that win make decisive choices and live at the edges, not in the murky middle  .\n\nWhat this means for digital and ecommerce leaders:\n\n1) Turn data into doing\n- We’re drenched in metrics, but people want meaning and action, not more dashboards .\n- The mandate: move from all information, no transformation to bite-size guidance that helps people improve .\n- Proof point: Oura’s “One Big Thing” surfaces a single, attainable goal from biometrics, reducing overwhelm and increasing usefulness on app open .\n\n2) Design for quality attention\n- Consumption does not equal attention. Value depends on intention and context, so craft moment-relevant messaging rather than chasing volume .\n- In a two-seconds-til-swipe attention economy, pleasant but unremarkable messaging gets left behind .\n\n3) Make truth visible\n- Proof beats promises: the brands building loyalty make the back-end transparent enough that the proof becomes undeniable .\n- As deepfakes and hallucinations rise, validation matters more; authority is earned through credible evidence, not louder claims .\n\n4) Pick a side on AI\n- You’re either all-in on AI or you’re not. The middle ground is gone .\n- Undisclosed or hedged use triggers immediate backlash: J.Crew’s nostalgic campaign used undisclosed AI images and the backlash was instant, with confusion about intent .\n- Explicit positions build credibility: Aerie publicly reaffirmed it will never use AI-generated women in ads, a clear continuation of its ethos that earned respect . On the other side, Daydream entered from day one with AI at the core, making ongoing AI asset generation a natural fit .\n\nOperator checklist:\n- Replace dashboards with one-action guidance wherever customers interact with your brand  .\n- Pressure-test messaging against intention and context, not just reach .\n- Publish visible proof of what you stand for, not just values statements .\n- Declare your AI stance and label usage clearly; avoid the hedged middle .\n\nIf neutrality is noise, conviction is your competitive edge .\n\n#BrandStrategy #Ecommerce #AIinMarketing",
+    "source_status": {
+      "schema_version": "1.0",
+      "text_density": 838.4,
+      "density_threshold": 0.0,
+      "pages_sampled": 5,
+      "char_count": 4192,
+      "not_available": false,
+      "reason": "",
+      "evidence_present": true
+    }
+  },
+  "validation_report": {
+    "schema_version": "1.1",
+    "status": "fail",
+    "severity": "error",
+    "source_path": "out\\red-antler-state-of-brand-2026-acig-pdf\\report_analysis\\validation.json",
+    "issues": [
+      {
+        "schema_version": "1.0",
+        "message": "Metric value '2' not verbatim but semantically supported (confidence=0.78) for ins-001",
+        "severity": "info",
+        "affected_section": "insights:ins-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=0.78) for ins-001",
+        "severity": "info",
+        "affected_section": "insights:ins-001"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=1.00) for ins-003",
+        "severity": "info",
+        "affected_section": "insights:ins-003"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=0.98) for ins-004",
+        "severity": "info",
+        "affected_section": "insights:ins-004"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=0.98) for ins-006",
+        "severity": "info",
+        "affected_section": "insights:ins-006"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2026' not verbatim but semantically supported (confidence=1.00) for ins-007",
+        "severity": "info",
+        "affected_section": "insights:ins-007"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Number 4.0 not present in report or evidence",
+        "severity": "warning",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Neither the term “Dichotomy Economy” nor an explicit finding that such an economy exists is present in the supplied evidence.: In today’s Dichotomy Economy, brands that pick a side—turning data into action, proving their claims, and being explicit about AI—win, while hedging in the murky middle loses.",
+        "severity": "error",
+        "affected_section": "tldr"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet discusses a ‘utility over volume’ pattern or the replacement of many metrics with one next step.: The pattern is utility over volume, with one clear next step replacing many metrics.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The evidence supports the value of transparency but does not reference reframing it as a product experience or the need for real-time systems.: That reframes transparency as a product experience, not a campaign, and requires systems that expose verifiable facts at the decision moment.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "While evidence notes backlash against hedging, it does not say decisive positioning is the baseline requirement for loyalty.: In a market that rewards decisive choices and penalizes hedging, this becomes the baseline for loyalty.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "This is prescriptive advice not grounded in an explicit evidence excerpt.: Decision-wise, choose and publish a stance, disclose usage consistently, and align creative workflows so every asset reflects that stance.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence mentions backlash to J.Crew but does not generalize costs and upside in these terms.: The cost of hedging is immediate backlash risk; the upside of clarity is credibility.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence says the ‘middle ground is gone’ but does not label it the ‘riskiest strategic position.’: The middle is now the riskiest strategic position.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence uses the term “Dichotomy Economy” or directly supports this assertion.: In today’s Dichotomy Economy, the brands that win make decisive choices and live at the edges, not in the murky middle.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The rising impact of deepfakes and hallucinations is not addressed in the provided evidence.: - As deepfakes and hallucinations rise, validation matters more; authority is earned through credible evidence, not louder claims.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet mentions Daydream or its AI-centric approach.: - On the other side, Daydream entered from day one with AI at the core, making ongoing AI asset generation a natural fit.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence supports reduction of overwhelm but does not mention ‘increasing usefulness on app open.’: Proof point: Oura’s “One Big Thing” surfaces a single, attainable goal from biometrics, reducing overwhelm and increasing usefulness on app open.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence notes being ‘drenched in data’ but does not state that ‘people want meaning and action.’: We’re drenched in metrics, but people want meaning and action, not more dashboards.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      }
+    ]
+  },
+  "categories_display": [
+    "Advertising Strategy & Media",
+    "Consumer Behavior & Insights",
+    "Social, Short Video & Creator"
+  ],
+  "analysis_mode": "vector_store"
+}

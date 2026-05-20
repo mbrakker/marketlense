@@ -1,0 +1,561 @@
+{
+  "tldr": "In 2026, AI-shaped discovery, LLM reputation, misinformation resilience, social customer care, and personalization at scale move to the center of marketing strategy.",
+  "title": "MELTWATER - Marketing Trends 2026_ACIG",
+  "insights": [
+    "By 2028, AI-powered search will displace conventional web search as the primary consumer discovery channel.",
+    "As journalists and influencers increasingly use LLMs for research, LLM reputation management is emerging as a distinct discipline.",
+    "Resilience to mis- and disinformation is now fundamental for organizations—on par with cybersecurity and data privacy.",
+    "With more than 70% of worldwide internet users (16+) using social platforms to research brands, social customer care is critical for brand reputation.",
+    "AI-driven personalization can deliver around a 2% lift in incremental sales."
+  ],
+  "quote": {
+    "text": "Sample quote text attributed to Speaker Name.",
+    "author": "Speaker Name",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "Imagine briefing an AI to monitor competitive coverage, surface emerging \nrisks, draft a campaign plan, and produce a measurement dashboard, \nall from a single prompt. The real promise of agentic workflows is",
+    "evidence": "Imagine briefing an AI to monitor competitive coverage, surface emerging \nrisks, draft a campaign plan, and produce a measurement dashboard, \nall from a single prompt. The real promise of agentic workflows is",
+    "schema_version": "1.0"
+  },
+  "commentary": "Marketing leaders should prepare for a year defined by AI-driven discovery and engagement: Answer Engine Optimization (also known as Generative Engine Optimization) moves alongside traditional SEO, while LLM reputation management becomes a discipline as AI tools influence research and brand perception. Building resilience to mis- and disinformation is now table stakes, and social customer care becomes critical as consumers increasingly research brands on social platforms. Advances in AI make personalization at scale practical, with measurable uplift for adopters. The guide outlines 15 trends to watch and suggests tracking metrics such as LLM Visibility & Accuracy, Narrative Health, Creator Contribution, Community Share of Voice, Video Effectiveness, and Personalization Lift to operationalize these priorities.",
+  "source": "",
+  "publisher": "",
+  "taxonomy": [
+    "Generative Engine Optimisation (GEO)",
+    "ai",
+    "creator_commerce",
+    "shoppable_video",
+    "live_shopping",
+    "short_form_video",
+    "social_commerce",
+    "consumer_insights",
+    "attribution",
+    "social_media"
+  ],
+  "categories": [
+    "social_commerce",
+    "consumer_behavior",
+    "ai_automation"
+  ],
+  "region": "Global",
+  "time_period": "2026",
+  "contents_page_number": 2,
+  "contents_heading": "table of contents",
+  "_figure_image": "meltwater-marketing-trends-2026-acig-pdf/assets/meltwater-marketing-trends-2026-acig-pdf.png",
+  "_figure_gallery": [
+    "meltwater-marketing-trends-2026-acig-pdf/slices/meltwater-marketing-trends-2026-acig-pdf.png",
+    "meltwater-marketing-trends-2026-acig-pdf/slices/meltwater-marketing-trends-2026-acig-pdf1.png",
+    "meltwater-marketing-trends-2026-acig-pdf/slices/meltwater-marketing-trends-2026-acig-pdf2.png"
+  ],
+  "_figure_top": "meltwater-marketing-trends-2026-acig-pdf/slices/meltwater-marketing-trends-2026-acig-pdf.png",
+  "_contents_image": "meltwater-marketing-trends-2026-acig-pdf/assets/meltwater-marketing-trends-2026-acig-pdf-contents.png",
+  "_vector_store_id": "vs_6982eed6488c8191b692575576e09a0a",
+  "_evidence_packs": {
+    "doc_map": "out\\meltwater-marketing-trends-2026-acig-pdf\\report_analysis\\doc_map.json",
+    "scope": "out\\meltwater-marketing-trends-2026-acig-pdf\\report_analysis\\scope.json",
+    "methods": "out\\meltwater-marketing-trends-2026-acig-pdf\\report_analysis\\methods.json",
+    "findings": "out\\meltwater-marketing-trends-2026-acig-pdf\\report_analysis\\findings.json",
+    "limitations": "out\\meltwater-marketing-trends-2026-acig-pdf\\report_analysis\\limitations.json",
+    "quote_candidates": "out\\meltwater-marketing-trends-2026-acig-pdf\\report_analysis\\quote_candidates.json",
+    "artifacts": "out\\meltwater-marketing-trends-2026-acig-pdf\\report_analysis\\artifacts.json",
+    "validation": "out\\meltwater-marketing-trends-2026-acig-pdf\\report_analysis\\validation.json"
+  },
+  "_text_density": 0.0,
+  "_text_pages_sampled": 0,
+  "_text_char_count": 0,
+  "_text_not_available": false,
+  "schema_version": "1.1",
+  "artifacts": {
+    "schema_version": "1.0",
+    "toc_topics": [
+      "AI Search Optimization",
+      "LLM Reputation Management",
+      "Video Everywhere Short and Live",
+      "Creator Commerce Performance",
+      "Personalization at Scale",
+      "Reddit Communities Drive Decisions",
+      "Social SEO Funnel",
+      "Social Customer Care"
+    ],
+    "summary": {
+      "tldr": "In 2026, AI-shaped discovery, LLM reputation, misinformation resilience, social customer care, and personalization at scale move to the center of marketing strategy.",
+      "executive_summary": "Marketing leaders should prepare for a year defined by AI-driven discovery and engagement: Answer Engine Optimization (also known as Generative Engine Optimization) moves alongside traditional SEO, while LLM reputation management becomes a discipline as AI tools influence research and brand perception. Building resilience to mis- and disinformation is now table stakes, and social customer care becomes critical as consumers increasingly research brands on social platforms. Advances in AI make personalization at scale practical, with measurable uplift for adopters. The guide outlines 15 trends to watch and suggests tracking metrics such as LLM Visibility & Accuracy, Narrative Health, Creator Contribution, Community Share of Voice, Video Effectiveness, and Personalization Lift to operationalize these priorities.",
+      "claim_evidence_map": [
+        {
+          "claim": "Answer Engine Optimization is becoming as important as traditional SEO, with AI-powered search expected to displace conventional web search by 2028.",
+          "evidence_id": "finding_1",
+          "evidence": "“Answer Engine Optimization (AEO) is now just as important as SEO” and Gartner forecasts that “by 2028 AI-powered search will displace conventional web search as the primary discovery channel for consumers”",
+          "pages": []
+        },
+        {
+          "claim": "LLM reputation management is emerging as a distinct discipline because journalists and influencers are using LLMs as research aids, shaping brand perception inside AI outputs.",
+          "evidence_id": "finding_2",
+          "evidence": "“Journalists and influencers are increasingly using LLMs as research aids… LLM reputation management is emerging as a new discipline”",
+          "pages": []
+        },
+        {
+          "claim": "Building resilience to mis- and dis-information is now as fundamental for organizations as cybersecurity or data privacy.",
+          "evidence_id": "finding_3",
+          "evidence": "“Brands that can spot and neutralize false narratives quickly will avoid costly clean-ups… In 2026, building misinformation resilience is as fundamental as cybersecurity or data privacy”",
+          "pages": []
+        },
+        {
+          "claim": "Social customer care is critical for brand reputation as most internet users rely on social platforms to research brands, and slow responses erode trust.",
+          "evidence_id": "finding_4",
+          "evidence": "“More than 70 percent of worldwide internet users aged 16 and up use social platforms to find information about brands… Social customer care is critical for brand reputation”",
+          "pages": []
+        },
+        {
+          "claim": "Advances in AI make psychographic segmentation and personalization at scale practical, driving measurable incremental sales lifts.",
+          "evidence_id": "finding_5",
+          "evidence": "“Advances in AI now make that kind of psychographic segmentation and micro-targeting feasible at scale… brands can see a two percent lift in incremental sales”",
+          "pages": []
+        }
+      ]
+    },
+    "insights_candidates": [
+      {
+        "id": "insight_001",
+        "text": "Answer Engine Optimization (AEO) is now considered as important as traditional SEO for marketers.",
+        "evidence_id": "finding_1",
+        "evidence": "“Answer Engine Optimization (AEO) is now just as important as SEO”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": "0.27"
+        },
+        "pages": [],
+        "score": 0.27
+      },
+      {
+        "id": "insight_002",
+        "text": "Gartner forecasts that by 2028 AI-powered search will displace conventional web search as the primary consumer discovery channel.",
+        "evidence_id": "finding_1",
+        "evidence": "Gartner forecasts that “by 2028 AI-powered search will displace conventional web search as the primary discovery channel for consumers”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing adoption",
+          "timeframe": "by 2028",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": "0.27"
+        },
+        "pages": [],
+        "score": 0.27
+      },
+      {
+        "id": "insight_003",
+        "text": "LLM reputation management is emerging as a distinct discipline because journalists and influencers increasingly use LLMs as research aids.",
+        "evidence_id": "finding_2",
+        "evidence": "“Journalists and influencers are increasingly using LLMs as research aids… LLM reputation management is emerging as a new discipline”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "journalists and influencers",
+          "sample_size": "",
+          "confidence": "0.26"
+        },
+        "pages": [],
+        "score": 0.26
+      },
+      {
+        "id": "insight_004",
+        "text": "Building resilience to mis- and disinformation is now regarded as fundamental for organisations—on par with cybersecurity and data privacy.",
+        "evidence_id": "finding_3",
+        "evidence": "“In 2026, building misinformation resilience is as fundamental as cybersecurity or data privacy”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": "0.25"
+        },
+        "pages": [],
+        "score": 0.25
+      },
+      {
+        "id": "insight_005",
+        "text": "Social customer care is critical for brand reputation because more than 70% of worldwide internet users (aged 16+) use social platforms to find information about brands.",
+        "evidence_id": "finding_4",
+        "evidence": "“More than 70 percent of worldwide internet users aged 16 and up use social platforms to find information about brands… Social customer care is critical for brand reputation”",
+        "metric": {
+          "value": "70",
+          "unit": "%",
+          "trend": "",
+          "timeframe": "",
+          "geography": "worldwide",
+          "segment": "internet users aged 16+",
+          "sample_size": "",
+          "confidence": "0.24"
+        },
+        "pages": [],
+        "score": 0.24
+      },
+      {
+        "id": "insight_006",
+        "text": "Brands that fail to provide timely social customer care risk eroding trust and harming reputation.",
+        "evidence_id": "finding_4",
+        "evidence": "“Social customer care is critical for brand reputation”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "risk of reputation erosion if slow",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": "0.24"
+        },
+        "pages": [],
+        "score": 0.24
+      },
+      {
+        "id": "insight_007",
+        "text": "Advances in AI now make psychographic segmentation and personalization at scale practical for marketers.",
+        "evidence_id": "finding_5",
+        "evidence": "“Advances in AI now make that kind of psychographic segmentation and micro-targeting feasible at scale”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "enabling personalization at scale",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": "0.24"
+        },
+        "pages": [],
+        "score": 0.24
+      },
+      {
+        "id": "insight_008",
+        "text": "Brands adopting AI-driven personalization can see a measurable uplift—around a 2% increase in incremental sales.",
+        "evidence_id": "finding_5",
+        "evidence": "“brands can see a two percent lift in incremental sales”",
+        "metric": {
+          "value": "2",
+          "unit": "%",
+          "trend": "uplift vs generic control",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": "0.24"
+        },
+        "pages": [],
+        "score": 0.24
+      }
+    ],
+    "insights_final": [
+      {
+        "id": "insight_002",
+        "text": "By 2028, AI-powered search will displace conventional web search as the primary consumer discovery channel.",
+        "evidence_id": "finding_1",
+        "evidence": "Gartner forecasts that “by 2028 AI-powered search will displace conventional web search as the primary discovery channel for consumers”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "increasing adoption",
+          "timeframe": "by 2028",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": "0.27"
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_003",
+        "text": "As journalists and influencers increasingly use LLMs for research, LLM reputation management is emerging as a distinct discipline.",
+        "evidence_id": "finding_2",
+        "evidence": "“Journalists and influencers are increasingly using LLMs as research aids… LLM reputation management is emerging as a new discipline”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "journalists and influencers",
+          "sample_size": "",
+          "confidence": "0.26"
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_004",
+        "text": "Resilience to mis- and disinformation is now fundamental for organizations—on par with cybersecurity and data privacy.",
+        "evidence_id": "finding_3",
+        "evidence": "“In 2026, building misinformation resilience is as fundamental as cybersecurity or data privacy”",
+        "metric": {
+          "value": "",
+          "unit": "",
+          "trend": "",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": "0.25"
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_005",
+        "text": "With more than 70% of worldwide internet users (16+) using social platforms to research brands, social customer care is critical for brand reputation.",
+        "evidence_id": "finding_4",
+        "evidence": "“More than 70 percent of worldwide internet users aged 16 and up use social platforms to find information about brands… Social customer care is critical for brand reputation”",
+        "metric": {
+          "value": "70",
+          "unit": "%",
+          "trend": "",
+          "timeframe": "",
+          "geography": "worldwide",
+          "segment": "internet users aged 16+",
+          "sample_size": "",
+          "confidence": "0.24"
+        },
+        "pages": []
+      },
+      {
+        "id": "insight_008",
+        "text": "AI-driven personalization can deliver around a 2% lift in incremental sales.",
+        "evidence_id": "finding_5",
+        "evidence": "“brands can see a two percent lift in incremental sales”",
+        "metric": {
+          "value": "2",
+          "unit": "%",
+          "trend": "uplift vs generic control",
+          "timeframe": "2026",
+          "geography": "",
+          "segment": "",
+          "sample_size": "",
+          "confidence": "0.24"
+        },
+        "pages": []
+      }
+    ],
+    "quotes_final": [
+      {
+        "text": "Sample quote text attributed to Speaker Name.",
+        "speaker": "Speaker Name",
+        "citation": "Source Title (article) — page 12",
+        "page": 12,
+        "evidence_id": "qc-001"
+      },
+      {
+        "text": "Another sample quote candidate.",
+        "speaker": "Another Speaker",
+        "citation": "Interview with Another Speaker (transcript) — timestamp 2025-11-12T10:15:00Z",
+        "page": 0,
+        "evidence_id": "qc-002"
+      }
+    ],
+    "expert_comment": "Discovery and brand research are shifting to AI-mediated environments. Answer Engine Optimization now sits alongside SEO, with AI-powered search expected to become the primary consumer discovery channel by 2028. As journalists and influencers increasingly use LLMs for research, LLM reputation management is emerging as a distinct discipline. Leaders should align content, PR, and search around AEO and LLM reputation to influence how brands appear in AI outputs.\n\nTrust and responsiveness move to the foreground. Building resilience to mis- and disinformation is now as fundamental as cybersecurity or data privacy, and social customer care is critical as consumers rely on social platforms to research brands. Decision-making should pair misinformation monitoring with social customer care workflows to address issues within the social channels consumers use for research.\n- By 2028, AI-powered search will displace conventional web search as the primary discovery channel.\n- More than 70% of worldwide internet users aged 16+ use social platforms to find information about brands.\n- AI-driven personalization can deliver around a 2% lift in incremental sales.\n\nCommercial value follows execution at scale. Advances in AI make psychographic segmentation and personalization practical, with around a 2% lift in incremental sales for adopters. To operationalize these priorities, track metrics such as LLM Visibility & Accuracy, Narrative Health, Creator Contribution, Community Share of Voice, Video Effectiveness, and Personalization Lift to put AEO, LLM reputation, misinformation resilience, and social care on a shared scorecard.",
+    "linkedin_post": "AI-powered discovery is overtaking classic search. By 2028, AI-powered search will displace conventional web search as the primary consumer discovery channel. In 2026, Answer Engine Optimization belongs next to SEO on every roadmap.\n\nWhat this means for digital leaders:\n- Stand up Answer Engine Optimization (also called Generative Engine Optimization) alongside SEO, and track LLM Visibility & Accuracy to understand how your brand shows up in AI answers.\n- Treat LLM reputation management as a defined discipline. Journalists and influencers are using LLMs as research aids, which means brand perception is being shaped inside AI outputs.\n- Make misinformation resilience a core capability on par with cybersecurity and data privacy. The ability to spot and neutralize false narratives quickly will avoid costly clean-ups.\n- Elevate social customer care to protect brand reputation. More than 70% of worldwide internet users aged 16+ use social platforms to find information about brands, and slow responses erode trust.\n- Personalize at scale with AI where it is feasible. Advances in AI make psychographic segmentation and micro-targeting practical, and brands can see around a 2% lift in incremental sales. Track Personalization Lift to validate impact.\n\nUse these metrics to operationalize the shift:\n- LLM Visibility & Accuracy\n- Narrative Health\n- Creator Contribution\n- Community Share of Voice\n- Video Effectiveness\n- Personalization Lift\n\nKey data points to anchor plans:\n- By 2028, AI-powered search becomes the primary discovery channel for consumers.\n- 70%+ of worldwide internet users (16+) rely on social platforms to research brands.\n- AI-driven personalization can deliver around a 2% lift in incremental sales.\n\n2026 belongs to leaders who adapt discovery, reputation, resilience, social care, and personalization into one operating system for growth. If your marketing stack and governance do not reflect these realities, you are planning against a market that no longer exists.\n\n#DigitalMarketing #Ecommerce #AI",
+    "source_status": {
+      "schema_version": "1.0",
+      "text_density": 1233.8,
+      "density_threshold": 0.0,
+      "pages_sampled": 5,
+      "char_count": 6169,
+      "not_available": false,
+      "reason": "",
+      "evidence_present": true
+    }
+  },
+  "validation_report": {
+    "schema_version": "1.1",
+    "status": "fail",
+    "severity": "error",
+    "source_path": "out\\meltwater-marketing-trends-2026-acig-pdf\\report_analysis\\validation.json",
+    "issues": [
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_003 not supported (Evidence supports the trend and emerging discipline but does not mention the 2026 timeframe.)",
+        "severity": "error",
+        "affected_section": "insights:insight_003"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Semantic check: metric for insight_008 not supported (Evidence mentions a ~2% lift in incremental sales but provides no 2026 timeframe.)",
+        "severity": "error",
+        "affected_section": "insights:insight_008"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2026' not present in evidence for insight_003",
+        "severity": "warning",
+        "affected_section": "insights:insight_003"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric unit '%' not verbatim but semantically supported (confidence=0.99) for insight_005",
+        "severity": "info",
+        "affected_section": "insights:insight_005"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric value '2' not found in evidence for insight_008 (Evidence mentions a ~2% lift in incremental sales but provides no 2026 timeframe.)",
+        "severity": "error",
+        "affected_section": "insights:insight_008"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric unit '%' not present in evidence for insight_008",
+        "severity": "warning",
+        "affected_section": "insights:insight_008"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Metric timeframe '2026' not present in evidence for insight_008",
+        "severity": "warning",
+        "affected_section": "insights:insight_008"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet states that these topics collectively “move to the center of marketing strategy.”: In 2026, AI-shaped discovery, LLM reputation, misinformation resilience, social customer care, and personalization at scale move to the center of marketing strategy.",
+        "severity": "error",
+        "affected_section": "tldr"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The prescriptive claim that leaders “should prepare” for a year “defined” by these shifts is not supported by the evidence snippets.: Marketing leaders should prepare for a year defined by AI-driven discovery and engagement: Answer Engine Optimization (also known as Generative Engine Optimization) moves alongside traditional SEO, wh",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet mentions 15 trends or the specific metrics listed.: The guide outlines 15 trends to watch and suggests tracking metrics such as LLM Visibility & Accuracy, Narrative Health, Creator Contribution, Community Share of Voice, Video Effectiveness, and Person",
+        "severity": "error",
+        "affected_section": "executive_summary"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet explicitly supports a general shift of discovery and brand research to AI-mediated environments.: Discovery and brand research are shifting to AI-mediated environments.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "This prescriptive recommendation is not supported by any evidence snippet.: Leaders should align content, PR, and search around AEO and LLM reputation to influence how brands appear in AI outputs.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The claim lacks direct supporting evidence.: Trust and responsiveness move to the foreground.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet recommends pairing these workflows.: Decision-making should pair misinformation monitoring with social customer care workflows to address issues within the social channels consumers use for research.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet substantiates this broad statement.: Commercial value follows execution at scale.",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The evidence snippets do not mention tracking these metrics.: To operationalize these priorities, track metrics such as LLM Visibility & Accuracy, Narrative Health, Creator Contribution, Community Share of Voice, Video Effectiveness, and Personalization Lift to ",
+        "severity": "error",
+        "affected_section": "expert_comment"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "While AI-powered search is forecast to displace conventional search by 2028, no evidence states it is currently “overtaking” classic search.: AI-powered discovery is overtaking classic search.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "This prescriptive statement is not backed by evidence snippets.: In 2026, Answer Engine Optimization belongs next to SEO on every roadmap.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet gives this recommendation or references the metric.: Stand up Answer Engine Optimization (also called Generative Engine Optimization) alongside SEO, and track LLM Visibility & Accuracy to understand how your brand shows up in AI answers.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "The evidence notes the discipline is “emerging,” but does not instruct readers to treat it as such.: Treat LLM reputation management as a defined discipline.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence supports the first clause but not the causal statement about shaping brand perception inside AI outputs.: Journalists and influencers are using LLMs as research aids, which means brand perception is being shaped inside AI outputs.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "This directive is not explicitly supported by evidence.: Elevate social customer care to protect brand reputation.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "Evidence supports the statistic but not the claim that slow responses erode trust.: More than 70% of worldwide internet users aged 16+ use social platforms to find information about brands, and slow responses erode trust.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "This recommendation is not backed by evidence snippets.: Personalize at scale with AI where it is feasible.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet advises tracking this metric.: Track Personalization Lift to validate impact.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "There is no evidence snippet referencing the use of these metrics.: Use these metrics to operationalize the shift:",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "No evidence snippet supports this broad claim.: 2026 belongs to leaders who adapt discovery, reputation, resilience, social care, and personalization into one operating system for growth.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      },
+      {
+        "schema_version": "1.0",
+        "message": "This statement is unsupported by the provided evidence.: If your marketing stack and governance do not reflect these realities, you are planning against a market that no longer exists.",
+        "severity": "error",
+        "affected_section": "linkedin_post"
+      }
+    ]
+  },
+  "categories_display": [
+    "Social Commerce",
+    "Consumer Behavior & Insights",
+    "AI & Automation"
+  ],
+  "analysis_mode": "vector_store"
+}

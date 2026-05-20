@@ -1,0 +1,67 @@
+{
+  "scope": {
+    "title": "Evidence collection for 'Generative Realities / Trends 2026' analysis",
+    "description": "Collect and curate evidence to support analysis of consumer and brand trends related to generative AI, AI-enabled influencers/agents, slow/analog counter-trends, and fandom-driven experiences as described in Trends 2026.",
+    "timeframe": {
+      "startDate": "2024-01-01",
+      "endDate": "2026-12-31"
+    },
+    "jurisdiction": "Global (primary focus: US, UK, China, India, Japan, Brazil, Spain)",
+    "include": [
+      "Published reports and whitepapers (PDF, DOCX) describing trends, methodologies, and survey results",
+      "Quantitative datasets and survey results (CSV, XLSX) used to support trend claims",
+      "Campaign case studies and creative assets (images, video, copy) demonstrating brand work",
+      "Press releases, industry news articles, and regulatory guidance relevant to AI-generated content and disclosures",
+      "Academic papers and expert commentaries on parasocial relationships, AI agents, and media effects",
+      "Platform policy documents and takedown / moderation reports where relevant"
+    ],
+    "exclude": [
+      "Unnecessary PII (names, personal identifiers) not required for trend-level analysis",
+      "Internal draft notes not intended for external use unless explicitly permitted",
+      "Low-value social media noise (single social posts without engagement or provenance) unless they are viral/representative examples"
+    ],
+    "dataTypes": [
+      "text (reports, articles)",
+      "tabular (survey / analytics data)",
+      "images (campaign stills, screenshots)",
+      "video (campaigns, product demos)",
+      "audio (interviews, podcasts)",
+      "metadata and provenance records (timestamps, source URLs, content hashes)"
+    ],
+    "keywords": [
+      "generative AI",
+      "AI influencer",
+      "virtual influencer",
+      "parasocial",
+      "slow content",
+      "analog futures",
+      "fandom",
+      "NoLo",
+      "content slop",
+      "transparency"
+    ],
+    "priority": {
+      "high": [
+        "Primary reports and datasets that underpin trend claims",
+        "Campaign performance data and case studies with metrics"
+      ],
+      "medium": [
+        "Industry press coverage and platform policy updates",
+        "Expert analyses and academic literature"
+      ],
+      "low": [
+        "Ephemeral social posts unless they are demonstrably impactful or viral"
+      ]
+    },
+    "deliverables": [
+      "Curated evidence repository organized by source and data type",
+      "Annotated index mapping each item to the trend assertion(s) it supports",
+      "Summary brief with cited evidence and confidence levels for each key claim"
+    ],
+    "retentionAndAccess": {
+      "retentionPeriod": "5 years from package completion",
+      "accessRestrictions": "Sensitive datasets requiring access controls; redact PII before wider sharing"
+    },
+    "notes": "Scope defined to support an EvidencePack for Trends 2026 — Generative Realities. Example source used as framing: Dentsu Creative Trends 2026 "
+  }
+}

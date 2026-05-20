@@ -1,0 +1,37 @@
+{
+  "evidence_pack_version": "1.0",
+  "quote_candidates": [
+    {
+      "id": "qc-1",
+      "text": "Example quote text extracted from the source document identifying a key claim or statement.",
+      "source": "uploaded_document.pdf",
+      "page": 1,
+      "start_offset": 120,
+      "end_offset": 198,
+      "confidence": 0.92,
+      "speaker": null,
+      "date": null,
+      "metadata": {
+        "extraction_method": "nlp_v1",
+        "tags": []
+      }
+    },
+    {
+      "id": "qc-2",
+      "text": "Another example quote candidate highlighting a separate assertion or datum.",
+      "source": "uploaded_document.pdf",
+      "page": 3,
+      "start_offset": 45,
+      "end_offset": 94,
+      "confidence": 0.86,
+      "speaker": null,
+      "date": null,
+      "metadata": {
+        "extraction_method": "nlp_v1",
+        "tags": []
+      }
+    }
+  ],
+  "note": "I did not find an EvidencePack schema file among the uploaded documents; search returned an Artlist AI Trend Report instead. If you provide the EvidencePack schema or the exact schema fields you require, I will regenerate the JSON to strictly match it.",
+  "search_result_reference": ""
+}

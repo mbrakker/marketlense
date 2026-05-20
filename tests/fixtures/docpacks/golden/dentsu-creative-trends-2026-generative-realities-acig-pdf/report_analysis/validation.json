@@ -1,0 +1,164 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2025 (Dentsu Creative Quantitative Research)' not verbatim but semantically supported (confidence=1.00) for ins-001-electric-chat-uptake",
+      "severity": "info",
+      "affected_section": "insights:ins-001-electric-chat-uptake"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2025 (Dentsu Creative Quantitative Research)' not verbatim but semantically supported (confidence=1.00) for ins-002-ai-emotional-ties",
+      "severity": "info",
+      "affected_section": "insights:ins-002-ai-emotional-ties"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2025 (Dentsu Creative Trends 2026 framing)' not verbatim but semantically supported (confidence=1.00) for ins-005-escape-velocity-cute-fandom",
+      "severity": "info",
+      "affected_section": "insights:ins-005-escape-velocity-cute-fandom"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe '2025 (Dentsu Creative Quantitative Research & cited sources)' not verbatim but semantically supported (confidence=1.00) for ins-006-analog-futures-disconnect",
+      "severity": "info",
+      "affected_section": "insights:ins-006-analog-futures-disconnect"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Metric timeframe 'reported in the period prior to the 2026 Trends report (\"last year\" as cited)' not verbatim but semantically supported (confidence=1.00) for ins-007-trad-lives-nature-reconnection",
+      "severity": "info",
+      "affected_section": "insights:ins-007-trad-lives-nature-reconnection"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports AI ties and some analog/nature pushback, but does not mention “community-grounded antidotes” or the need for brands to “win with—rather than follow—the algorithm.”: Consumers are simultaneously deepening ties with AI and seeking analog, nature-led and community-grounded antidotes to stress, pushing brands to win with—rather than follow—the algorithm.",
+      "severity": "error",
+      "affected_section": "tldr"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "The 39 % membership rise is supported, but no evidence is provided for “hyperlocal experiences.”: Reconnection with nature: the UK National Trust saw a 39% rise in 18–25-year-old members last year, signaling youth interest in the outdoors and hyperlocal experiences.",
+      "severity": "error",
+      "affected_section": "ins-007-trad-lives-nature-reconnection"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippets mention cost-of-living pressures, declining social connectedness, or nostalgia.: Generative Realities frames an algorithm-accelerated culture cycle shaped by cost-of-living pressures, declining social connectedness, and complex relationships with technology and nostalgia.",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence covers nature, NoLo and creators, but not “hyperlocal living” or “spirituality.”: In parallel, ‘Trad Lives’ and ‘Alone Together’ reveal a pivot toward nature, hyperlocal living, spirituality, and new social formats and NoLo ‘natural highs,’ with creators acting as connective tissue",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports anti-algorithm behaviors but does not mention “simpler, tactile devices” or the strategic prescriptions about ‘workslop.’: ‘Analog Futures’ shows younger cohorts embracing simpler, tactile devices and anti-algorithm strategies; to lead, the report urges avoiding ‘workslop,’ designing for difference at scale, and solving f",
+      "severity": "error",
+      "affected_section": "executive_summary"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Nature is evidenced, but no snippets refer to “locality” or “spirituality.”: Consumers are turning to nature, locality, and spirituality as grounding forces.",
+      "severity": "error",
+      "affected_section": "claim_evidence_map"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "“Community-grounded antidotes” are not supported by evidence snippets.: The signals point to a split-screen consumer: deeper emotional ties to AI alongside a pivot to analog, nature-led and community-grounded antidotes.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Prescriptive statement about what leaders need to do is not evidenced.: With modest confidence in spotting AI content and rising ethics and disclosure questions around hyper-realistic AI influencers, leaders need to win with the algorithm while actively building trust.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence is provided about cost-of-living stress driving these behaviors.: In parallel, cost-of-living stress and fragmentation are channeling demand into escapism, collectibles, and creator-led social formats.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence supports this operational claim.: The operational challenge is serving both paths without contributing to low-quality workslop.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Prescriptive guidance on governance is unsupported (the quoted sentence itself is supported, but the recommendation is not).: Implications: move quickly on content governance, with clear disclosure and ownership practices for AI-generated content and influencers; as the report observes, “The rise of ‘slop’ … is accelerating ",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence supports the recommendation for “simpler, tactile options” or “hyperlocal formats.”: Design for difference at scale by pairing algorithmic convenience with simpler, tactile options and nature or hyperlocal formats that respect screen-time rationing.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "This is a recommendation without supporting evidence.: Use creators as connective tissue across fragmented media, and develop social experiences and NoLo “natural highs” that channel escapism in healthier ways.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Strategic prescription lacks evidentiary support.: Above all, solve for the trend behind the trend to win with the algorithm, not follow it.",
+      "severity": "error",
+      "affected_section": "expert_comment"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence snippets support this growth requirement statement.: Winning growth now requires designing to win with the algorithm while delivering analog and nature-grounded relief.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Evidence supports AI ties; “tactile, local, and community-led escapes” are not evidenced.: The data shows consumers deepening emotional ties to AI even as they actively seek tactile, local, and community-led escapes.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Prescriptive recommendation without supporting evidence.: Win with the algorithm: build AI interactions that deliver real care and utility, and be transparent to address modest confidence in spotting AI content and rising disclosure questions.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Recommendation not backed by evidence snippets.: Design for escapism: lean into cuteification, collectibles, and fandom-friendly formats that give stressed consumers joyful outlets.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence supports the need for “hyperlocal” or “simpler tactile” investments.: Program for analog relief: invest in nature-aligned, hyperlocal, and simpler tactile experiences that meet the desire to switch off without abandoning your digital edge.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Strategic advice without evidence.: Orchestrate creator networks: use creators to stitch together fragmented media moments and community touchpoints.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    },
+    {
+      "schema_version": "1.0",
+      "message": "No evidence supports these recommendations.: Avoid workslop: differentiate and design for difference at scale. Solve for the trend behind the trend to lead, not follow.",
+      "severity": "error",
+      "affected_section": "linkedin_post"
+    }
+  ]
+}

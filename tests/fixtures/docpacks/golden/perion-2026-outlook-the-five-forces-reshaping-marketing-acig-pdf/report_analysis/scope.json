@@ -1,0 +1,69 @@
+{
+  "scope": {
+    "title": "Default EvidencePack Scope",
+    "description": "Scope for evidence collection covering relevant artifacts, time range, jurisdictions, and collection constraints for a security/forensic investigation.",
+    "timeframe": {
+      "start": "2025-11-05",
+      "end": "2026-02-03"
+    },
+    "jurisdictions": [
+      "US"
+    ],
+    "topics": [
+      "security incident",
+      "data exfiltration",
+      "unauthorized access"
+    ],
+    "data_types": [
+      "email",
+      "system_logs",
+      "application_logs",
+      "documents",
+      "images",
+      "databases",
+      "network_traffic"
+    ],
+    "include_patterns": [
+      "/var/log/**",
+      "/home/**/Documents/**",
+      "/home/**/Downloads/**",
+      "*.pst",
+      "*.mbox",
+      "*.log",
+      "*.sql",
+      "*.csv",
+      "*.docx",
+      "*.xlsx",
+      "*.pdf"
+    ],
+    "exclude_patterns": [
+      "/tmp/**",
+      "/var/tmp/**",
+      "*.tmp",
+      "*.cache",
+      "*.swp"
+    ],
+    "collection_priority": [
+      "system_logs",
+      "network_traffic",
+      "email_archives",
+      "user_documents",
+      "databases"
+    ],
+    "collection_methods": [
+      "forensic_image",
+      "file_export",
+      "api_export",
+      "sql_dump",
+      "pcap_capture"
+    ],
+    "retention_days": 365,
+    "sensitivity": "confidential",
+    "responsible_team": "Digital Forensics",
+    "primary_contact": {
+      "name": "Lead Analyst",
+      "email": "lead.analyst@example.com"
+    },
+    "notes": "This scope is a default template. Adjust timeframe, jurisdictions, and include/exclude patterns to match the EvidencePack schema and the specific investigation requirements."
+  }
+}
