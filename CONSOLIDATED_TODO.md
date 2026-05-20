@@ -21,6 +21,7 @@ Deep-analysis evidence used for this consolidation:
 - `src/services/vector_store_service.py` supports create/upload/attach/status/update, but delete/prune lifecycle operations are still absent.
 - Long-file concentration shifted after April refactors and the May facade work. Remaining first-party hotspots from `python scripts/count_long_files.py` are concentrated in deeper PDF/browser internals, publisher-discovery workflow internals, and large paired tests rather than the public `config_service`, `openai_service`, `artifact_generator`, `publisher_inventory_service`, and `report_download_orchestrator` boundaries.
 - Recent facade splits establish the required shape for future hotspot work: keep one public boundary file and move semantic families into a same-name internal folder. Current reference examples are `src/services/report_store_service.py` over `src/services/_report_store_service/*`, `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`, `src/services/config_service.py` over `src/services/_config_service/*`, `src/services/openai_service.py` over `src/services/_openai_service/*`, and `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
+- Complexity audit on 2026-05-20 identified remaining performance hotspots in validation retrieval, PDF visual/table candidate filtering, Streamlit dashboard read models, and crop-refinement recovery paths. WordPress shortcode/theme-loop scanner hits were reviewed as lower-priority small-collection/template loops unless profiling proves otherwise.
 
 Removed from the active backlog because the core capability already ships:
 
@@ -126,7 +127,7 @@ Suggested priority order:
     - Stage metrics show extraction work avoided without quality regression.
 
 - **Title:** Fix the table dedupe hot path in `table_candidates.py` and `table_heuristics.py` [Impact: 4/5, Effort: 3/5]
-  - Explanation: Table extraction still performs nested candidate comparison in the final dedupe path, and the deeper heuristics module remains one of the largest first-party hotspots. Replace the O(n^2)-style merge path with a keyed or spatially indexed approach while preserving conservative merge behavior.
+  - Explanation: Table extraction still performs nested candidate comparison in the final dedupe path, and the deeper heuristics module remains one of the largest first-party hotspots. The 2026-05-20 complexity audit reconfirmed `src/services/_pdf/table_heuristics.py::_dedupe_table_candidates` as a concrete O(n^2) candidate merge path. Replace it with a keyed or spatially indexed approach while preserving conservative merge behavior.
   - Pros: Faster processing on dense and wide PDFs.
   - Cons: Requires careful correctness tests to avoid false merges or missed duplicates.
   - Acceptance Criteria:
@@ -134,6 +135,26 @@ Suggested priority order:
     - Benchmarks on large fixtures show lower runtime.
     - Correctness tests cover near-duplicate, overlapping, and distinct-table cases.
     - Candidate quality does not regress on existing fixture reports.
+
+- **Title:** Precompute PDF visual candidate relationships per page [Impact: 4/5, Effort: 4/5]
+  - Explanation: Visual extraction still calls sibling, wrapper, and panel-shadow helpers that rescan `page_ctx.rect_items` for many candidates in `src/services/_pdf/visual_candidates.py` and `src/services/_pdf/_visual_heuristics/panel_detection.py`. This creates repeated O(r^2)-style page work on visually dense PDFs.
+  - Pros: Faster chart/image extraction on report pages with many raster, drawing, or panel candidates.
+  - Cons: Spatial-index behavior is easy to get subtly wrong; false accepts/rejects would affect figure quality.
+  - Acceptance Criteria:
+    - Per-page visual relationships are precomputed once using a bounded spatial index or equivalent grouped lookup.
+    - Existing helper semantics for side-by-side siblings, oversized wrappers, heading-shadowed panels, stacked panels, and caption clamping are preserved.
+    - PDF visual/table fixture tests cover dense-panel, multi-chart, decorative-image, and wrapper-image pages.
+    - Benchmarks on dense visual fixtures show lower per-page runtime without candidate-quality regression.
+
+- **Title:** Remove repeated crop-refinement recovery scans [Impact: 3/5, Effort: 1/5]
+  - Explanation: `src/generators/_report_selection_generator/crop_refine.py` recovers missing LLM decisions by sorting missing IDs and repeatedly scanning phase candidate lists to find matching indices. This is a recovery-only path, but it is a straightforward O(m*n) hotspot when a batch returns many incomplete decisions.
+  - Pros: Localized speedup, simpler recovery code, low behavioral risk.
+  - Cons: Limited impact unless model responses omit many decisions.
+  - Acceptance Criteria:
+    - Coarse and finalize recovery paths build `{candidate.id: index}` once per phase before processing missing IDs.
+    - Existing recovery ordering and logged `missing_candidate_ids` remain deterministic.
+    - `tests/test_candidate_refine_selection.py` covers multiple missing IDs in one batch.
+    - Type check and candidate-refine tests pass.
 
 ---
 
@@ -185,6 +206,16 @@ Suggested priority order:
     - Benchmarks show lower full-regeneration volume on known failure fixtures.
     - Negative-path tests prove unsupported repair targets fail explicitly.
 
+- **Title:** Precompute validation evidence vectors and use bounded retrieval [Impact: 4/5, Effort: 3/5]
+  - Explanation: `src/generators/validation/evidence.py` recomputes character n-gram vectors for every claim/window comparison and sorts every scored window for each retrieval call. Metrics, quotes, numbers, and regeneration grounding all share this path, so large evidence packs and PDF text caches pay the cost repeatedly.
+  - Pros: Faster validation and targeted regeneration, especially on long reports with many evidence windows.
+  - Cons: Retrieval ranking is correctness-sensitive; precomputed vectors must preserve deterministic ordering and tie behavior.
+  - Acceptance Criteria:
+    - `EvidenceWindow` or an adjacent validation contract stores precomputed n-gram counts/norms without ad hoc sentinel fields.
+    - `retrieve_evidence_windows` computes the claim vector once and selects top results with a bounded heap or equivalent top-k strategy instead of sorting every scored window.
+    - Golden tests assert retrieved window order for ties, duplicate text, quantity-heavy claims, empty inputs, and long PDF text.
+    - Benchmarks show lower validation runtime on a large evidence fixture with no validation issue regression.
+
 ---
 
 ## 7. Architecture Simplification, CI & Observability
@@ -198,6 +229,16 @@ Suggested priority order:
     - Allowlist entries require owner plus expiry date.
     - Missing per-service integration coverage requires either a marked test or an explicit temporary waiver.
     - README documents how to add and retire waivers.
+
+- **Title:** Bound Streamlit dashboard log and directory read-model work [Impact: 3/5, Effort: 2/5]
+  - Explanation: `src/generators/streamlit_dashboard_generator.py` currently reads full log files before slicing the last N lines and runs repeated recursive directory walks for dashboard count cards. The UI cache reduces repeated reruns, but cache misses can still scale with full log size and `checks * files`.
+  - Pros: More predictable dashboard latency and memory use as logs and output directories grow.
+  - Cons: Requires a service-boundary change so generators do not add direct filesystem optimizations.
+  - Acceptance Criteria:
+    - `file_service` exposes a bounded tail-read contract for text logs and the Streamlit generator uses it.
+    - Directory count collection performs one grouped walk per root where possible, or a service-level multi-count operation with deterministic limits.
+    - Tests cover large-log tail behavior, malformed log lines, overlapping directory patterns, and directory listing errors.
+    - Dashboard read-model logs include bounded byte/line counts and grouped-walk metrics.
 
 ---
 

@@ -150,7 +150,7 @@ browser_download:
   headed: false
   route_playbook_dir: "./src/playbooks/browser_routes"
   route_playbook_stale_policy: "fallback"
-  route_playbook_promotion_mode: "disabled"
+  route_playbook_promotion_mode: "write"
   drive_upload:
     enabled: true
     required: true
