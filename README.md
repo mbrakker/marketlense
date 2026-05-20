@@ -928,7 +928,7 @@ Install dev/test tooling:
 pip install -r requirements-dev.txt
 ```
 
-The dev requirements include third-party type stub packages used by the full-repo mypy gate and the narrow browser-use support dependencies exercised by default unit tests; run this install before local `scripts/ci/run_type_check.py` or `pytest` checks so local dependency state matches CI.
+The dev requirements include third-party type stub packages used by the full-repo mypy gate and the narrow browser-use support dependencies exercised by default unit tests, including `pydantic-settings` for vendored browser-use configuration imports; run this install before local `scripts/ci/run_type_check.py` or `pytest` checks so local dependency state matches CI.
 
 ### Local browser-use
 
