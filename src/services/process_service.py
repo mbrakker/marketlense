@@ -32,6 +32,33 @@ def _is_windows() -> bool:
     return os.name == "nt"
 
 
+def _poll_posix_process_running(pid: int) -> bool:
+    waitpid = getattr(os, "waitpid", None)
+    wnohang = getattr(os, "WNOHANG", 0)
+    if callable(waitpid):
+        try:
+            waited_pid, _status = waitpid(pid, wnohang)
+        except ChildProcessError:
+            waited_pid = 0
+        if waited_pid == pid:
+            return False
+
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+
+    stat_path = Path("/proc") / str(pid) / "stat"
+    try:
+        stat_text = stat_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return True
+    stat_suffix = stat_text.rsplit(")", 1)[-1].strip()
+    if stat_suffix.startswith("Z"):
+        return False
+    return True
+
+
 def launch_process(
     request: ProcessLaunchRequest, ctx: RunContext
 ) -> ProcessLaunchResponse:
@@ -161,8 +188,7 @@ def poll_process(request: ProcessPollRequest, ctx: RunContext) -> ProcessPollRes
             output = str(result.stdout or "").strip()
             running = bool(output) and "no tasks are running" not in output.lower()
         else:
-            os.kill(pid, 0)
-            running = True
+            running = _poll_posix_process_running(pid)
     except OSError:
         running = False
     response = ProcessPollResponse(schema_version="1.0", pid=pid, running=running)
