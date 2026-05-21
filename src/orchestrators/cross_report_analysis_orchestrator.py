@@ -7,7 +7,7 @@ import time
 from dataclasses import asdict, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -18,7 +18,9 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceReference,
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
+    CrossReportOutcomeStatus,
     CrossReportProjectedDataReadRequest,
+    CrossReportPublishPackage,
     CrossReportPublishRequestSummary,
     CrossReportPublishResultSummary,
     CrossReportRawMetricReference,
@@ -36,9 +38,11 @@ from src.contracts.idempotency import (
 from src.contracts.prompts import PromptLoadRequest
 from src.contracts.run_context import RunContext
 from src.generators.cross_report_analysis_generator import (
+    build_cross_report_publish_package,
     generate_cross_report_analysis,
     validate_cross_report_generated_analysis,
 )
+from src.orchestrators.publish_orchestrator import publish_cross_report_package
 from src.generators.cross_report_analysis_input_generator import (
     assemble_cross_report_analysis_inputs,
     group_cross_report_evidence_agreement,
@@ -107,6 +111,19 @@ def _planned_artifact_path(output_root: str, slug: str) -> str:
     return str(
         Path(output_root) / "cross_report_analysis" / safe_slug / "analysis.json"
     )
+
+
+def _planned_publish_html_path(output_root: str, slug: str) -> str:
+    safe_slug = "-".join(
+        token
+        for token in "".join(
+            char.lower() if char.isalnum() else "-" for char in str(slug or "")
+        ).split("-")
+        if token
+    )
+    if not safe_slug:
+        safe_slug = "cross-report-analysis"
+    return str(Path(output_root) / "cross_report_analysis" / safe_slug / "publish.html")
 
 
 def _selected_projection_content_hashes(
@@ -302,6 +319,50 @@ def _artifact_bytes(artifact: CrossReportAnalysisArtifact) -> bytes:
     ).encode("utf-8")
 
 
+def _publish_html_bytes(package: CrossReportPublishPackage) -> bytes:
+    return (package.html_text + "\n").encode("utf-8")
+
+
+def _skipped_publish_result(
+    request: CrossReportAnalysisOrchestratorRequest,
+) -> CrossReportPublishResultSummary:
+    return CrossReportPublishResultSummary(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        publication_mode=request.analysis_request.publication_mode,
+        status="skipped",
+        target_route=request.publish_target_route,
+        idempotency_reused=False,
+        error_code="publication_not_requested",
+        error_message="Publication was not requested for this mode.",
+    )
+
+
+def _not_requested_publish_result(
+    request: CrossReportAnalysisOrchestratorRequest,
+) -> CrossReportPublishResultSummary:
+    return CrossReportPublishResultSummary(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        publication_mode=request.analysis_request.publication_mode,
+        status="not_requested",
+        target_route=request.publish_target_route,
+        idempotency_reused=False,
+    )
+
+
+def _outcome_status(
+    publication_mode: str,
+    publish_result: CrossReportPublishResultSummary,
+) -> CrossReportOutcomeStatus:
+    if publication_mode == "publish_live":
+        if publish_result.status == "published":
+            return "published"
+        if publish_result.status == "error":
+            return "failed"
+        if publish_result.status == "skipped":
+            return "skipped"
+    return cast(CrossReportOutcomeStatus, "validated")
+
+
 def run_cross_report_analysis(
     request: CrossReportAnalysisOrchestratorRequest,
     settings: Any,
@@ -315,6 +376,10 @@ def run_cross_report_analysis(
     ] = file_service.write_bytes,
     prompt_client: Any = prompt_service,
     openai_client: Any | None = None,
+    publish_settings: Any | None = None,
+    publish_cross_report_package_fn: Callable[
+        ..., CrossReportPublishResultSummary
+    ] = publish_cross_report_package,
     sleep_fn: Callable[[float], None] = time.sleep,
 ) -> CrossReportOrchestratorOutcome:
     validate_cross_report_contract(request)
@@ -372,11 +437,7 @@ def run_cross_report_analysis(
         min_source_publishers=int(
             getattr(settings, "cross_report_analysis_min_theme_source_publishers", 2)
         ),
-        publish_requires_validation_pass=bool(
-            getattr(
-                settings, "cross_report_analysis_publish_requires_validation_pass", True
-            )
-        ),
+        publish_requires_validation_pass=False,
     )
     _log_transition(ctx, transitions, "publishability_checked")
     evidence_inputs = assemble_cross_report_analysis_inputs(
@@ -502,6 +563,49 @@ def run_cross_report_analysis(
     )
     _log_transition(ctx, transitions, "validated", {"status": validation.status})
     artifact_path = _planned_artifact_path(request.output_root, generated.slug)
+    publish_html_path = _planned_publish_html_path(request.output_root, generated.slug)
+    publish_package = build_cross_report_publish_package(
+        generated,
+        validation,
+        agreement_result,
+        ctx,
+        artifact_path=artifact_path,
+        html_path=publish_html_path,
+        publish_requires_validation_pass=bool(
+            getattr(
+                settings, "cross_report_analysis_publish_requires_validation_pass", True
+            )
+        ),
+        target_route=request.publish_target_route,
+    )
+    _log_transition(
+        ctx,
+        transitions,
+        "publish_package_built",
+        {
+            "package_id": publish_package.package_id,
+            "html_path": publish_package.html_path,
+        },
+    )
+    html_write_response = write_bytes_fn(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=publish_package.html_path,
+            content=_publish_html_bytes(publish_package),
+            make_parents=True,
+        ),
+        ctx,
+    )
+    _log_transition(
+        ctx,
+        transitions,
+        "publish_html_persisted",
+        {
+            "html_path": publish_package.html_path,
+            "bytes_written": getattr(html_write_response, "bytes_written", 0),
+            "md5": getattr(html_write_response, "md5", ""),
+        },
+    )
     publish_request = CrossReportPublishRequestSummary(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         publication_mode=request.analysis_request.publication_mode,
@@ -513,12 +617,91 @@ def run_cross_report_analysis(
         selected_report_ids=selected_report_ids,
         selected_theme_id=signal_result.selected_theme.theme_id,
     )
-    publish_result = CrossReportPublishResultSummary(
-        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        publication_mode=request.analysis_request.publication_mode,
-        status="not_requested",
-        target_route=request.publish_target_route,
-        idempotency_reused=False,
+    publication_mode = request.analysis_request.publication_mode
+    if publication_mode == "generate_only":
+        publish_result = _not_requested_publish_result(request)
+    elif publication_mode == "validate_only":
+        publish_result = _skipped_publish_result(request)
+    elif publication_mode == "publish_dry_run":
+        publish_result = _run_step(
+            step_name="publish_cross_report_package",
+            operation=lambda: publish_cross_report_package_fn(
+                publish_package,
+                publish_settings,
+                ctx,
+                dry_run=True,
+                sleep_fn=sleep_fn,
+            ),
+            request=request,
+            ctx=ctx,
+            sleep_fn=sleep_fn,
+        )
+    elif publication_mode == "publish_live":
+        if not bool(getattr(settings, "cross_report_analysis_publish_enabled", False)):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="cross_report_publish_decision",
+                    module=logger.name,
+                    fields={
+                        "publication_mode": publication_mode,
+                        "decision": "blocked",
+                        "reason": "publish_disabled",
+                        "target_route": request.publish_target_route,
+                        "validation_status": validation.status,
+                    },
+                )
+            )
+            raise AppError(
+                code="cross_report_publish_live_disabled",
+                message="Cross-report live publication is disabled by configuration",
+                retryable=False,
+                severity="error",
+                context={
+                    "publication_mode": publication_mode,
+                    "target_route": request.publish_target_route,
+                },
+            )
+        if publish_settings is None:
+            raise AppError(
+                code="cross_report_publish_settings_missing",
+                message="Cross-report live publication requires publish settings",
+                retryable=False,
+                severity="error",
+                context={"publication_mode": publication_mode},
+            )
+        publish_result = _run_step(
+            step_name="publish_cross_report_package",
+            operation=lambda: publish_cross_report_package_fn(
+                publish_package,
+                publish_settings,
+                ctx,
+                dry_run=False,
+                sleep_fn=sleep_fn,
+            ),
+            request=request,
+            ctx=ctx,
+            sleep_fn=sleep_fn,
+        )
+    else:
+        raise AppError(
+            code="cross_report_publication_mode_invalid",
+            message="Unsupported cross-report publication mode",
+            retryable=False,
+            severity="error",
+            context={"publication_mode": publication_mode},
+        )
+    _log_transition(
+        ctx,
+        transitions,
+        "publish_decision_evaluated",
+        {
+            "publication_mode": publication_mode,
+            "publish_status": publish_result.status,
+            "target_route": request.publish_target_route,
+            "validation_status": validation.status,
+        },
     )
     artifact = CrossReportAnalysisArtifact(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -536,6 +719,7 @@ def run_cross_report_analysis(
         validation_result=validation,
         publish_request=publish_request,
         publish_result=publish_result,
+        publish_package=publish_package,
     )
     validate_cross_report_contract(artifact)
     write_response = write_bytes_fn(
@@ -561,7 +745,7 @@ def run_cross_report_analysis(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         run_id=ctx.run_id,
         task_id=ctx.task_id,
-        status="validated",
+        status=_outcome_status(publication_mode, publish_result),
         artifact_path=artifact_path,
         request=request.analysis_request,
         generated_result=generated,

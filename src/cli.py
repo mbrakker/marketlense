@@ -1483,7 +1483,44 @@ def generate_cross_report_analysis_cli(
                 },
             )
         )
-        outcome = run_cross_report_analysis_orchestrator(request, settings, ctx)
+        publish_settings = None
+        if request.analysis_request.publication_mode == "publish_live":
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="cli_cross_report_load_publish_settings_start",
+                    module=logger.name,
+                    fields={
+                        "request_id": request.analysis_request.request_id,
+                        "publication_mode": request.analysis_request.publication_mode,
+                    },
+                )
+            )
+            publish_settings = load_publish_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""),
+                ctx,
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="cli_cross_report_load_publish_settings_complete",
+                    module=logger.name,
+                    fields={
+                        "request_id": request.analysis_request.request_id,
+                        "site_url": publish_settings.wp.site_url,
+                        "post_type": publish_settings.wp.post_type,
+                        "post_status": publish_settings.wp.post_status,
+                    },
+                )
+            )
+        outcome = run_cross_report_analysis_orchestrator(
+            request,
+            settings,
+            ctx,
+            publish_settings=publish_settings,
+        )
     except AppError as exc:
         console.print(f"[red]Error [{exc.code}]: {exc.message}[/red]")
         raise typer.Exit(code=1) from exc
@@ -1492,10 +1529,17 @@ def generate_cross_report_analysis_cli(
     table.add_column("Field")
     table.add_column("Value")
     table.add_row("Artifact", outcome.artifact_path)
+    table.add_row("Selected theme", outcome.generated_result.selected_theme.label)
     table.add_row(
         "Selected reports", str(len(outcome.generated_result.selected_sources))
     )
     table.add_row("Validation", outcome.validation_result.status)
+    table.add_row("Publication mode", outcome.publish_result.publication_mode)
+    table.add_row("Target route", outcome.publish_result.target_route)
+    if outcome.publish_result.post_id is not None:
+        table.add_row("Post ID", str(outcome.publish_result.post_id))
+    if outcome.publish_result.post_url:
+        table.add_row("Post URL", outcome.publish_result.post_url)
     table.add_row("Idempotency reused", "yes" if outcome.idempotency_reused else "no")
     cost_summary = outcome.generated_result.cost_summary or {}
     if cost_summary:

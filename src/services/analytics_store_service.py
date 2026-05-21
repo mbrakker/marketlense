@@ -912,6 +912,32 @@ def _row_text(row: sqlite3.Row, column: str) -> str:
     return str(row[column] or "").strip()
 
 
+def _report_publisher(report_row: sqlite3.Row) -> str:
+    publisher = _row_text(report_row, "publisher") or _row_text(
+        report_row, "publisher_id"
+    )
+    if publisher:
+        return publisher
+    report_id = _row_text(report_row, "report_id")
+    if _row_text(report_row, "projection_status") != "projected":
+        return report_id
+    return "Unknown publisher"
+
+
+def _stable_row_id(row: sqlite3.Row, primary_column: str, fallback_column: str) -> str:
+    return _row_text(row, primary_column) or _row_text(row, fallback_column)
+
+
+def _scoped_row_id(
+    row: sqlite3.Row, primary_column: str, fallback_column: str, entity_kind: str
+) -> str:
+    raw_id = _stable_row_id(row, primary_column, fallback_column)
+    report_id = _row_text(row, "report_id")
+    if not raw_id or raw_id.startswith(f"{report_id}:"):
+        return raw_id
+    return f"{report_id}:{entity_kind}:{raw_id}"
+
+
 def _report_passes_filters(
     report_row: sqlite3.Row,
     *,
@@ -973,11 +999,7 @@ def _source_candidate(
     metric_count = len(metrics)
     evidence_count = claim_count + finding_count + quote_count
     report_id = _row_text(report_row, "report_id")
-    publisher = _row_text(report_row, "publisher") or _row_text(
-        report_row, "publisher_id"
-    )
-    if not publisher and _row_text(report_row, "projection_status") != "projected":
-        publisher = report_id
+    publisher = _report_publisher(report_row)
     publisher_id = _row_text(report_row, "publisher_id") or publisher
     return CrossReportSourceReportCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -1014,9 +1036,9 @@ def _claim_evidence(
 ) -> CrossReportEvidenceReference:
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        evidence_id=_row_text(row, "evidence_id"),
+        evidence_id=_scoped_row_id(row, "evidence_id", "claim_uid", "claim"),
         report_id=_row_text(row, "report_id"),
-        publisher=_row_text(report_row, "publisher"),
+        publisher=_report_publisher(report_row),
         title=_row_text(report_row, "title"),
         source_table="report_claims",
         entity_uid=_row_text(row, "claim_uid"),
@@ -1034,9 +1056,9 @@ def _finding_evidence(
 ) -> CrossReportEvidenceReference:
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        evidence_id=_row_text(row, "finding_uid"),
+        evidence_id=_scoped_row_id(row, "finding_uid", "finding_uid", "finding"),
         report_id=_row_text(row, "report_id"),
-        publisher=_row_text(report_row, "publisher"),
+        publisher=_report_publisher(report_row),
         title=_row_text(report_row, "title"),
         source_table="report_findings",
         entity_uid=_row_text(row, "finding_uid"),
@@ -1055,9 +1077,9 @@ def _quote_evidence(
 ) -> CrossReportEvidenceReference:
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        evidence_id=_row_text(row, "evidence_id"),
+        evidence_id=_scoped_row_id(row, "evidence_id", "quote_uid", "quote"),
         report_id=_row_text(row, "report_id"),
-        publisher=_row_text(report_row, "publisher"),
+        publisher=_report_publisher(report_row),
         title=_row_text(report_row, "title"),
         source_table="report_quotes",
         entity_uid=_row_text(row, "quote_uid"),
@@ -1077,14 +1099,14 @@ def _raw_metric(
 ) -> CrossReportRawMetricReference:
     return CrossReportRawMetricReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        metric_id=_row_text(row, "metric_uid"),
+        metric_id=_scoped_row_id(row, "metric_uid", "metric_uid", "metric"),
         report_id=_row_text(row, "report_id"),
-        publisher=_row_text(report_row, "publisher"),
+        publisher=_report_publisher(report_row),
         label=_row_text(row, "metric"),
         raw_value=_row_text(row, "value"),
         unit=_row_text(row, "unit"),
         context=f"pages={_json_list(row['pages_json'])}",
-        evidence_id=_row_text(row, "evidence_id"),
+        evidence_id=_scoped_row_id(row, "evidence_id", "metric_uid", "metric"),
         source_metadata={
             "source_table": "report_metrics",
             "entity_uid": _row_text(row, "metric_uid"),

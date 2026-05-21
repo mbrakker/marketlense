@@ -62,39 +62,6 @@ Suggested priority order:
 
 ## 7. Publication Flow
 
-- **Item:** Add a validated cross-report publish package [Impact: 5/5, Effort: 3/5]
-  - Explanation: Publication should be a narrow follow-on from a validated generated artifact. The publish package should adapt the cross-report analysis result into existing publish inputs without introducing a second WordPress service or a new plugin requirement.
-  - Pros: Uses current publication reliability, keeps implementation small, preserves existing idempotency and WordPress configuration.
-  - Cons: First release may use the existing post/card surface rather than a custom cross-report UX.
-  - Completion criteria:
-    - `src/generators/cross_report_analysis_generator.py` emits a publish package with publish-ready title, slug, excerpt, HTML body, source metadata, category/tag metadata, and canonical artifact reference.
-    - Publication is allowed only when deterministic validation passes and `publish_requires_validation_pass=true`.
-    - Generated HTML includes source report map, evidence references, raw metric appendix, uncertainty/divergence notes, and machine-readable cross-report metadata.
-    - Tests assert publish package completeness, source/evidence trace presence, validation gating, and no metric-normalization language.
-    - No new WordPress service boundary is introduced.
-
-- **Item:** Route publication through the existing publish orchestrator boundary [Impact: 5/5, Effort: 3/5]
-  - Explanation: Publishing is an external side effect, so the cross-report flow should delegate to existing publish orchestration and WordPress service boundaries. The cross-report orchestrator owns when publication is requested; the publish stack owns how WordPress is called.
-  - Pros: Avoids duplicated retry/idempotency behavior, keeps external I/O consolidated, lowers implementation risk.
-  - Cons: Requires careful adaptation if current publish contracts assume single-report metadata.
-  - Completion criteria:
-    - Cross-report publication calls the existing publish pathway with typed cross-report metadata instead of creating a peer WordPress client.
-    - Publish idempotency key includes selected theme id, selected report ids, artifact hash, validation hash, prompt hashes, and target publish route.
-    - Re-running a publish with unchanged inputs updates/reuses the same canonical post rather than creating duplicates.
-    - Pipeline tests assert generate-only, validate-only, publish-dry-run, successful publish, duplicate publish reuse, and publish failure paths.
-    - Retryable publish errors propagate to the orchestrator retry policy and are logged with retry decisions.
-
-- **Item:** Add publication modes and operator safeguards [Impact: 4/5, Effort: 2/5]
-  - Explanation: Operators need a fast safe path for generation, review, and publication. Publication should be opt-in and should support dry-run before live WordPress side effects.
-  - Pros: Safer rollout, clearer operator control, fewer accidental posts.
-  - Cons: Adds a small amount of CLI/config branching.
-  - Completion criteria:
-    - Supported modes are `generate_only`, `validate_only`, `publish_dry_run`, and `publish_live`.
-    - `publish_live` requires `cross_report_analysis.publish_enabled=true` and a passed validation result.
-    - CLI output reports selected theme, publication mode, artifact path, target route, post id/url when available, and idempotency reuse status.
-    - Structured logs include publication mode, publish decision, target route, validation status, and final publish result.
-    - README documents safe rollout from dry-run to live publication.
-
 ---
 
 ## 8. Quality, Speed, Cost & Documentation

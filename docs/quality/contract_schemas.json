@@ -10672,6 +10672,9 @@
           },
           "type": "object"
         },
+        "publish_package": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportPublishPackage"
+        },
         "publish_request": {
           "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportPublishRequestSummary"
         },
@@ -10718,7 +10721,8 @@
         "generated_result",
         "validation_result",
         "publish_request",
-        "publish_result"
+        "publish_result",
+        "publish_package"
       ],
       "type": "object"
     },
@@ -11383,6 +11387,125 @@
       },
       "required": [
         "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cross_report_analysis.CrossReportPublishPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_sha256": {
+          "type": "string"
+        },
+        "body_html": {
+          "type": "string"
+        },
+        "canonical_artifact_path": {
+          "type": "string"
+        },
+        "category_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "evidence_reference_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "excerpt": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "html_path": {
+          "type": "string"
+        },
+        "html_text": {
+          "type": "string"
+        },
+        "machine_metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "package_id": {
+          "type": "string"
+        },
+        "prompt_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "raw_metric_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "selected_theme_id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "source_metadata": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "tag_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target_route": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "validation_sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "package_id",
+        "file_id",
+        "target_route",
+        "title",
+        "slug",
+        "excerpt",
+        "body_html",
+        "html_text",
+        "html_path",
+        "canonical_artifact_path",
+        "artifact_sha256",
+        "validation_sha256",
+        "selected_theme_id",
+        "selected_report_ids",
+        "source_metadata",
+        "category_labels",
+        "tag_labels",
+        "evidence_reference_ids",
+        "raw_metric_ids",
+        "prompt_hashes",
+        "machine_metadata"
       ],
       "type": "object"
     },

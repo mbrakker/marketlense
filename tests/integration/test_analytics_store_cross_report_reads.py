@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from dataclasses import is_dataclass
 
 import pytest
@@ -280,6 +281,66 @@ def test_cross_report_projected_data_read_filters_and_contracts(
         "cross_report_projected_data_read_start",
         "cross_report_projected_data_read_complete",
     }
+
+
+@pytest.mark.integration
+def test_cross_report_projected_data_read_adapts_blank_projected_publisher(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    ctx = _ctx()
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=db_path,
+            batch=_batch(
+                "report-blank-publisher",
+                title="Blank Publisher Outlook",
+                publisher="Temporary Publisher",
+                publisher_id="temporary-publisher",
+                generated_at_utc="2026-05-01T00:00:00Z",
+                tag="AI",
+                category_id="retail",
+                category_label="Retail",
+            ),
+        ),
+        ctx,
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "UPDATE reports SET publisher = '', publisher_id = '' WHERE report_id = ?",
+            ("report-blank-publisher",),
+        )
+        conn.execute(
+            "UPDATE report_quotes SET evidence_id = '' WHERE report_id = ?",
+            ("report-blank-publisher",),
+        )
+        conn.execute(
+            "UPDATE report_findings SET finding_uid = 'F1' WHERE report_id = ?",
+            ("report-blank-publisher",),
+        )
+        conn.commit()
+
+    response = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=db_path,
+            content_classes=["claim", "finding", "quote", "metric"],
+            minimum_projection_status="projected",
+        ),
+        ctx,
+    )
+
+    assert response.source_candidates[0].publisher == "Unknown publisher"
+    assert response.source_candidates[0].publisher_id == "Unknown publisher"
+    assert {item.publisher for item in response.evidence} == {"Unknown publisher"}
+    finding = next(
+        item for item in response.evidence if item.content_class == "finding"
+    )
+    assert finding.evidence_id == "report-blank-publisher:finding:F1"
+    quote = next(item for item in response.evidence if item.content_class == "quote")
+    assert quote.evidence_id == "report-blank-publisher:quote:1"
+    assert response.raw_metrics[0].publisher == "Unknown publisher"
 
 
 @pytest.mark.integration

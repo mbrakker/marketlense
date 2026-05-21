@@ -18,6 +18,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
     CrossReportProjectedDataReadRequest,
+    CrossReportPublishPackage,
     CrossReportPublishabilityResult,
     CrossReportPublishRequestSummary,
     CrossReportPublishResultSummary,
@@ -306,6 +307,30 @@ def _contracts() -> list[Any]:
         error_code=None,
         error_message=None,
     )
+    publish_package = CrossReportPublishPackage(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        package_id="cross-report:analysis-ai-commerce",
+        file_id="cross-report:analysis-ai-commerce",
+        target_route="wordpress:ml_report",
+        title="AI Commerce Trust Across Reports",
+        slug="ai-commerce-trust-across-reports",
+        excerpt="Trust is a recurring constraint.",
+        body_html="<article><h1>AI Commerce Trust Across Reports</h1></article>",
+        html_text="<html><body><article><h1>AI Commerce Trust Across Reports</h1></article></body></html>",
+        html_path="out/cross_report_analysis/ai-commerce/publish.html",
+        canonical_artifact_path="out/cross_report_analysis/ai-commerce/analysis.json",
+        artifact_sha256="artifact-sha",
+        validation_sha256="validation-sha",
+        selected_theme_id="theme-ai-commerce",
+        selected_report_ids=["report-a"],
+        source_metadata=[{"report_id": "report-a", "publisher": "Publisher A"}],
+        category_labels=["Retail"],
+        tag_labels=["ai", "commerce"],
+        evidence_reference_ids=["ev-report-a-claim-1"],
+        raw_metric_ids=["metric-a-1"],
+        prompt_hashes={"system": "abc", "user": "def"},
+        machine_metadata={"analysis_id": "analysis-ai-commerce"},
+    )
     artifact = CrossReportAnalysisArtifact(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         artifact_type="cross_report_analysis",
@@ -322,6 +347,7 @@ def _contracts() -> list[Any]:
         validation_result=validation,
         publish_request=publish_request,
         publish_result=publish_result,
+        publish_package=publish_package,
     )
     outcome = CrossReportOrchestratorOutcome(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -361,6 +387,7 @@ def _contracts() -> list[Any]:
         validation,
         publish_request,
         publish_result,
+        publish_package,
         artifact,
         outcome,
     ]

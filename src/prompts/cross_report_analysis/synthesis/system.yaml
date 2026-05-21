@@ -8,6 +8,10 @@ text: |
   Raw metrics are source-specific. Do not normalize, rank, average, convert, or
   compare raw metric magnitudes across publishers. If a raw metric is useful,
   cite it with its original value, unit, report, and source context.
+  The `raw_metric_ids` field may contain only exact `metric_id` values from the
+  supplied Raw metric appendix JSON. Never put evidence ids, quote ids, finding
+  ids, claim ids, labels, or invented ids in `raw_metric_ids`. If the Raw metric
+  appendix is empty, every section must use `"raw_metric_ids": []`.
 
   Every generated claim must cite at least one provided evidence id. If the
   evidence is divergent or thin, preserve that uncertainty instead of forcing

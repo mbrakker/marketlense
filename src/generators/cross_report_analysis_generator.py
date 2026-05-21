@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import html
 import json
 import logging
 from dataclasses import asdict
@@ -12,6 +14,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceAgreementResult,
     CrossReportEvidenceInputResult,
     CrossReportGeneratedAnalysisResult,
+    CrossReportPublishPackage,
     CrossReportSignalScoreResult,
     CrossReportValidationResult,
     validate_cross_report_contract,
@@ -34,8 +37,186 @@ _METRIC_NORMALIZATION_PHRASES = (
 )
 
 
+def _hash_contract_payload(value: Any) -> str:
+    return hashlib.sha256(_json(value).encode("utf-8")).hexdigest()
+
+
 def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=True, sort_keys=True, default=str)
+
+
+def _unique_ordered(values: list[str]) -> list[str]:
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for raw_value in values:
+        value = str(raw_value or "").strip()
+        if not value or value.casefold() in seen:
+            continue
+        seen.add(value.casefold())
+        ordered.append(value)
+    return ordered
+
+
+def _html_text(value: Any) -> str:
+    return html.escape(str(value or ""), quote=True)
+
+
+def _source_metadata(
+    generated: CrossReportGeneratedAnalysisResult,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "report_id": source.report_id,
+            "title": source.title,
+            "publisher": source.publisher,
+            "publisher_id": source.publisher_id,
+            "report_date": source.report_date,
+            "rank": source.rank,
+            "evidence_count": source.evidence_count,
+            "category_labels": list(source.category_labels),
+            "tags": list(source.tags),
+        }
+        for source in generated.selected_sources
+    ]
+
+
+def _metadata_script(metadata: dict[str, Any]) -> str:
+    metadata_json = json.dumps(
+        metadata,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return (
+        '<script type="application/json" '
+        'data-market-lense-cross-report-metadata="true">'
+        f"{html.escape(metadata_json, quote=False)}</script>"
+    )
+
+
+def _analysis_sections_html(generated: CrossReportGeneratedAnalysisResult) -> str:
+    sections: list[str] = []
+    for section in generated.sections:
+        evidence_refs = ", ".join(section.evidence_ids)
+        metric_refs = ", ".join(section.raw_metric_ids)
+        footnotes = []
+        if evidence_refs:
+            footnotes.append(
+                f"<p><strong>Evidence:</strong> {_html_text(evidence_refs)}</p>"
+            )
+        if metric_refs:
+            footnotes.append(
+                f"<p><strong>Raw metrics:</strong> {_html_text(metric_refs)}</p>"
+            )
+        sections.append(
+            '<section class="ml-cross-report-section" '
+            f'id="{_html_text(section.section_id)}">'
+            f"<h2>{_html_text(section.heading)}</h2>"
+            f"<p>{_html_text(section.body)}</p>"
+            f"{''.join(footnotes)}"
+            "</section>"
+        )
+    return "\n".join(sections)
+
+
+def _source_map_html(source_metadata: list[dict[str, Any]]) -> str:
+    items = [
+        "<li "
+        f'data-report-id="{_html_text(item["report_id"])}">'
+        f"<strong>{_html_text(item['title'])}</strong>"
+        f" — {_html_text(item['publisher'])}"
+        f" — {_html_text(item['report_date'])}"
+        f" — evidence items: {_html_text(item['evidence_count'])}"
+        "</li>"
+        for item in source_metadata
+    ]
+    return (
+        "<section><h2>Source report map</h2><ul>" + "".join(items) + "</ul></section>"
+    )
+
+
+def _evidence_html(generated: CrossReportGeneratedAnalysisResult) -> str:
+    items = [
+        "<li "
+        f'id="{_html_text(evidence.evidence_id)}">'
+        f"<strong>{_html_text(evidence.publisher)}</strong>, "
+        f"{_html_text(evidence.title)}: {_html_text(evidence.text)}"
+        f" <code>{_html_text(evidence.evidence_id)}</code>"
+        "</li>"
+        for evidence in generated.evidence
+    ]
+    return (
+        "<section><h2>Evidence references</h2><ol>" + "".join(items) + "</ol></section>"
+    )
+
+
+def _raw_metric_html(generated: CrossReportGeneratedAnalysisResult) -> str:
+    items = [
+        "<li "
+        f'id="{_html_text(metric.metric_id)}">'
+        f"<strong>{_html_text(metric.publisher)}</strong>: "
+        f"{_html_text(metric.label)} = {_html_text(metric.raw_value)} "
+        f"{_html_text(metric.unit)}"
+        f" ({_html_text(metric.context)})"
+        f" <code>{_html_text(metric.metric_id)}</code>"
+        "</li>"
+        for metric in generated.raw_metrics
+    ]
+    return (
+        "<section><h2>Raw metric appendix</h2><ul>" + "".join(items) + "</ul></section>"
+    )
+
+
+def _agreement_html(agreement_result: CrossReportEvidenceAgreementResult) -> str:
+    items = [
+        "<li>"
+        f"<strong>{_html_text(group.agreement_type)}</strong>: "
+        f"{_html_text(group.label)}"
+        f" — evidence: {_html_text(', '.join(group.evidence_ids))}"
+        f" — notes: {_html_text(', '.join(group.uncertainty_reasons))}"
+        "</li>"
+        for group in agreement_result.evidence_groups
+    ]
+    return (
+        "<section><h2>Uncertainty and divergence notes</h2><ul>"
+        + "".join(items)
+        + "</ul></section>"
+    )
+
+
+def _publish_html_document(
+    *,
+    generated: CrossReportGeneratedAnalysisResult,
+    agreement_result: CrossReportEvidenceAgreementResult,
+    source_metadata: list[dict[str, Any]],
+    machine_metadata: dict[str, Any],
+    file_id: str,
+) -> tuple[str, str]:
+    body = "\n".join(
+        [
+            '<article class="ml-cross-report-analysis">',
+            f"<h1>{_html_text(generated.title)}</h1>",
+            f'<p class="ml-cross-report-excerpt">{_html_text(generated.executive_summary)}</p>',
+            _source_map_html(source_metadata),
+            _analysis_sections_html(generated),
+            _evidence_html(generated),
+            _raw_metric_html(generated),
+            _agreement_html(agreement_result),
+            _metadata_script(machine_metadata),
+            f"<p hidden>Drive fileId: {_html_text(file_id)}</p>",
+            "</article>",
+        ]
+    )
+    document = (
+        "<!doctype html><html><head>"
+        '<meta charset="utf-8">'
+        f"<title>{_html_text(generated.title)}</title>"
+        "</head><body>"
+        f"{body}"
+        "</body></html>"
+    )
+    return body, document
 
 
 def _known_evidence_ids(evidence_inputs: CrossReportEvidenceInputResult) -> set[str]:
@@ -369,6 +550,124 @@ def validate_cross_report_generated_analysis(
         )
     validate_cross_report_contract(result)
     return result
+
+
+def build_cross_report_publish_package(
+    generated: CrossReportGeneratedAnalysisResult,
+    validation_result: CrossReportValidationResult,
+    agreement_result: CrossReportEvidenceAgreementResult,
+    ctx: RunContext,
+    *,
+    artifact_path: str,
+    html_path: str,
+    publish_requires_validation_pass: bool = True,
+    target_route: str = "wordpress:ml_report",
+) -> CrossReportPublishPackage:
+    validate_cross_report_contract(generated)
+    validate_cross_report_contract(validation_result)
+    validate_cross_report_contract(agreement_result)
+    if publish_requires_validation_pass and not validation_result.passed:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cross_report_publish_package_validation_blocked",
+                module=logger.name,
+                fields={
+                    "analysis_id": generated.analysis_id,
+                    "validation_status": validation_result.status,
+                    "issues": validation_result.issues,
+                },
+            )
+        )
+        raise AppError(
+            code="cross_report_publish_validation_failed",
+            message="Cross-report publish package requires a passed validation result",
+            retryable=False,
+            severity="error",
+            context={
+                "analysis_id": generated.analysis_id,
+                "validation_status": validation_result.status,
+                "issues": validation_result.issues,
+            },
+        )
+
+    source_metadata = _source_metadata(generated)
+    category_labels = _unique_ordered(
+        [
+            category
+            for source in generated.selected_sources
+            for category in source.category_labels
+        ]
+    )
+    tag_labels = _unique_ordered(
+        [tag for source in generated.selected_sources for tag in source.tags]
+    )
+    selected_report_ids = [source.report_id for source in generated.selected_sources]
+    evidence_reference_ids = [item.evidence_id for item in generated.evidence]
+    raw_metric_ids = [item.metric_id for item in generated.raw_metrics]
+    package_id = f"cross-report:{generated.analysis_id}"
+    machine_metadata = {
+        "schema_version": CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        "analysis_id": generated.analysis_id,
+        "selected_theme_id": generated.selected_theme.theme_id,
+        "selected_report_ids": selected_report_ids,
+        "evidence_reference_ids": evidence_reference_ids,
+        "raw_metric_ids": raw_metric_ids,
+        "canonical_artifact_path": artifact_path,
+        "prompt_hashes": dict(generated.prompt_hashes),
+        "validation_status": validation_result.status,
+    }
+    body_html, html_text = _publish_html_document(
+        generated=generated,
+        agreement_result=agreement_result,
+        source_metadata=source_metadata,
+        machine_metadata=machine_metadata,
+        file_id=package_id,
+    )
+    package = CrossReportPublishPackage(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        package_id=package_id,
+        file_id=package_id,
+        target_route=target_route,
+        title=generated.title,
+        slug=generated.slug,
+        excerpt=generated.executive_summary,
+        body_html=body_html,
+        html_text=html_text,
+        html_path=html_path,
+        canonical_artifact_path=artifact_path,
+        artifact_sha256=_hash_contract_payload(asdict(generated)),
+        validation_sha256=_hash_contract_payload(asdict(validation_result)),
+        selected_theme_id=generated.selected_theme.theme_id,
+        selected_report_ids=selected_report_ids,
+        source_metadata=source_metadata,
+        category_labels=category_labels,
+        tag_labels=tag_labels,
+        evidence_reference_ids=evidence_reference_ids,
+        raw_metric_ids=raw_metric_ids,
+        prompt_hashes=dict(generated.prompt_hashes),
+        machine_metadata=machine_metadata,
+    )
+    validate_cross_report_contract(package)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_publish_package_built",
+            module=logger.name,
+            fields={
+                "analysis_id": generated.analysis_id,
+                "package_id": package.package_id,
+                "html_path": package.html_path,
+                "target_route": package.target_route,
+                "selected_report_ids": package.selected_report_ids,
+                "evidence_count": len(package.evidence_reference_ids),
+                "raw_metric_count": len(package.raw_metric_ids),
+            },
+        )
+    )
+    return package
 
 
 def generate_cross_report_analysis(

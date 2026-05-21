@@ -3,10 +3,12 @@ import sys
 import tempfile
 import types
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
 import click
+from rich.console import Console
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -336,6 +338,102 @@ class TestCli(unittest.TestCase):
         run_mock.assert_not_called()
         printed = " ".join(str(call.args[0]) for call in print_mock.call_args_list)
         self.assertIn("cross_report_cli_filter_invalid", printed)
+
+    def test_generate_cross_report_analysis_live_mode_loads_publish_settings(
+        self,
+    ) -> None:
+        import src.cli as cli
+
+        settings = AppSettings(
+            schema_version="1.0",
+            google_sa_path="sa.json",
+            gdrive_folder_id="folder",
+            openai_api_key="key",
+            openai_model="gpt-5",
+            batch_limit=5,
+            output_dir="./out",
+            cache_dir="./cache",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            publisher_profiles_path="./Wordpress/config/publisher-profiles.json",
+            category_mapping_path="./src/config/category-mappings.yaml",
+            cover_style_path="./src/config/cover-styles.yaml",
+            ingest_lock_path="./state/ingest.lock",
+            ingest_lock_ttl_seconds=7200.0,
+            temperature=1.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+            cross_report_analysis_publish_enabled=True,
+        )
+        publish_settings = PublishSettings(
+            schema_version="1.0",
+            output_dir="./out",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            category_mapping_path="./src/config/category-mappings.yaml",
+            wp=WordPressAuthSettings(
+                schema_version="1.0",
+                site_url="https://example.com",
+                username="user",
+                app_password="pass",
+                bearer_token=None,
+                post_status="draft",
+                post_type="posts",
+            ),
+        )
+
+        with patch.object(cli, "load_settings", return_value=settings):
+            with patch.object(
+                cli, "load_publish_settings", return_value=publish_settings
+            ) as load_publish_mock:
+                base_outcome = _cross_report_cli_outcome()
+                publish_result = replace(
+                    base_outcome.publish_result,
+                    publication_mode="publish_live",
+                    status="published",
+                    post_id=123,
+                    post_url="https://example.com/cross-report",
+                )
+                outcome = replace(
+                    base_outcome,
+                    publish_result=publish_result,
+                    status="published",
+                )
+                recording_console = Console(record=True, width=180)
+                with patch.object(
+                    cli,
+                    "run_cross_report_analysis_orchestrator",
+                    return_value=outcome,
+                ) as orchestrator_mock:
+                    with patch.object(cli, "console", recording_console):
+                        cli.generate_cross_report_analysis_cli(
+                            topic="AI commerce",
+                            auto_theme=True,
+                            category="Retail",
+                            tag="AI",
+                            publisher="Publisher A",
+                            date_start="2026-05-01",
+                            date_end="2026-05-31",
+                            max_report_count=2,
+                            publish_mode="publish_live",
+                            output_root="./custom-out",
+                            idempotency_db="./custom-state.sqlite",
+                            request_id="operator-request",
+                        )
+
+        load_publish_mock.assert_called_once()
+        self.assertIs(
+            orchestrator_mock.call_args.kwargs["publish_settings"], publish_settings
+        )
+        output = recording_console.export_text()
+        self.assertIn("Publication mode", output)
+        self.assertIn("publish_live", output)
+        self.assertIn("Target route", output)
+        self.assertIn("wordpress:ml_report", output)
+        self.assertIn("Post ID", output)
+        self.assertIn("123", output)
+        self.assertIn("https://example.com/cross-report", output)
 
     def test_ingest_wires_settings_and_orchestrator(self) -> None:
         # Avoid importing heavy dependencies during test import.
