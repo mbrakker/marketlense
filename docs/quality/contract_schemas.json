@@ -10638,6 +10638,142 @@
       ],
       "type": "object"
     },
+    "src.contracts.cross_report_analysis.CrossReportAnalysisArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_type": {
+          "type": "string"
+        },
+        "config_fingerprint": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "generated_result": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportGeneratedAnalysisResult"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "projection_content_hashes": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "prompt_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "publish_request": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportPublishRequestSummary"
+        },
+        "publish_result": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportPublishResultSummary"
+        },
+        "request": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportAnalysisRequest"
+        },
+        "request_fingerprint": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "validation_result": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportValidationResult"
+        },
+        "validation_status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifact_type",
+        "generated_at_utc",
+        "request_fingerprint",
+        "idempotency_key",
+        "selected_report_ids",
+        "projection_content_hashes",
+        "prompt_hashes",
+        "config_fingerprint",
+        "validation_status",
+        "request",
+        "generated_result",
+        "validation_result",
+        "publish_request",
+        "publish_result"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cross_report_analysis.CrossReportAnalysisOrchestratorRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_request": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportAnalysisRequest"
+        },
+        "idempotency_db_path": {
+          "type": "string"
+        },
+        "max_evidence_items": {
+          "type": "integer"
+        },
+        "max_prompt_chars": {
+          "type": "integer"
+        },
+        "max_signals": {
+          "type": "integer"
+        },
+        "output_root": {
+          "type": "string"
+        },
+        "projected_data_request": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportProjectedDataReadRequest"
+        },
+        "publish_target_route": {
+          "type": "string"
+        },
+        "retry_backoff_step_seconds": {
+          "type": "number"
+        },
+        "retry_base_delay_seconds": {
+          "type": "number"
+        },
+        "retry_jitter_seconds": {
+          "type": "number"
+        },
+        "retry_retries": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "analysis_request",
+        "projected_data_request",
+        "idempotency_db_path",
+        "output_root"
+      ],
+      "type": "object"
+    },
     "src.contracts.cross_report_analysis.CrossReportAnalysisRequest": {
       "additionalProperties": false,
       "properties": {

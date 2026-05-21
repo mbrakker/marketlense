@@ -12,11 +12,14 @@ from src.contracts.files import ListDirectoryRequest, ReadTextRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
+    CrossReportEvidenceAgreementType,
     CrossReportEvidenceAgreementGroup,
     CrossReportEvidenceAgreementResult,
     CrossReportEvidenceInputResult,
+    CrossReportEvidenceReference,
     CrossReportProjectedDataReadResponse,
     CrossReportPublishabilityResult,
+    CrossReportRawMetricReference,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
     CrossReportSignalScore,
@@ -326,7 +329,7 @@ def _select_diverse_sources(
 def _count_rejection_reasons(
     candidates: list[CrossReportSourceReportCandidate],
 ) -> dict[str, int]:
-    counts = Counter()
+    counts: Counter[str] = Counter()
     for candidate in candidates:
         for reason in candidate.rejection_reasons:
             counts[reason] += 1
@@ -1259,7 +1262,7 @@ def score_cross_report_signals(
         )
     )
 
-    dropped = Counter()
+    dropped: Counter[str] = Counter()
     signal_scores: list[CrossReportSignalScore] = []
     taxonomy_focus = {
         value.strip().casefold()
@@ -1404,11 +1407,11 @@ def _directional_markers(evidence) -> tuple[set[str], set[str]]:
 
 
 def _agreement_type_and_reasons(
-    evidence,
+    evidence: list[CrossReportEvidenceReference],
     *,
     publisher_count: int,
     report_count: int,
-) -> tuple[str, list[str]]:
+) -> tuple[CrossReportEvidenceAgreementType, list[str]]:
     if publisher_count < 2 or report_count < 2:
         return "thin_coverage", ["single_report_coverage"]
     positive_evidence, negative_evidence = _directional_markers(evidence)
@@ -1491,7 +1494,7 @@ def group_cross_report_evidence_agreement(
             }
         )
 
-    agreement_counts = dict(
+    agreement_counts: dict[str, int] = dict(
         sorted(Counter(group.agreement_type for group in groups).items())
     )
     result = CrossReportEvidenceAgreementResult(
@@ -1566,9 +1569,9 @@ def assemble_cross_report_analysis_inputs(
             },
         )
     )
-    dropped = Counter()
+    dropped: Counter[str] = Counter()
     seen_evidence_ids: set[str] = set()
-    candidate_evidence = []
+    candidate_evidence: list[CrossReportEvidenceReference] = []
     for item in sorted(
         projected_data.evidence,
         key=lambda evidence: _evidence_sort_key(evidence, selected_order),
@@ -1582,22 +1585,22 @@ def assemble_cross_report_analysis_inputs(
         seen_evidence_ids.add(item.evidence_id)
         candidate_evidence.append(item)
 
-    bounded_evidence = []
+    bounded_evidence: list[CrossReportEvidenceReference] = []
     for item in candidate_evidence:
         if len(bounded_evidence) >= max_evidence_items:
             dropped["max_evidence_items_reached"] += 1
             continue
         bounded_evidence.append(item)
 
-    raw_metrics = []
-    for item in sorted(
+    raw_metrics: list[CrossReportRawMetricReference] = []
+    for metric in sorted(
         projected_data.raw_metrics,
         key=lambda metric: _raw_metric_sort_key(metric, selected_order),
     ):
-        if item.report_id not in selected_set:
+        if metric.report_id not in selected_set:
             dropped["unselected_raw_metric_report"] += 1
             continue
-        raw_metrics.append(item)
+        raw_metrics.append(metric)
 
     evidence_by_report: dict[str, list[str]] = {
         report_id: [] for report_id in selected_report_ids

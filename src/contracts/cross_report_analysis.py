@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import MISSING, dataclass, field, fields, is_dataclass
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, cast
 
 from src.utils.errors import AppError
 
@@ -571,6 +571,57 @@ class CrossReportPublishResultSummary:
 
 
 @dataclass(frozen=True)
+class CrossReportAnalysisArtifact:
+    schema_version: str = field(
+        metadata={"doc": "Persisted analysis artifact contract schema version."}
+    )
+    artifact_type: str = field(
+        metadata={"doc": "Stable artifact type identifier for replay and review."}
+    )
+    generated_at_utc: str = field(
+        metadata={"doc": "UTC timestamp when the artifact was generated."}
+    )
+    request_fingerprint: str = field(
+        metadata={
+            "doc": "Deterministic fingerprint of request, source, prompt, and config inputs."
+        }
+    )
+    idempotency_key: str = field(
+        metadata={"doc": "Orchestrator idempotency key associated with this artifact."}
+    )
+    selected_report_ids: List[str] = field(
+        metadata={"doc": "Selected projected report IDs represented in the artifact."}
+    )
+    projection_content_hashes: Dict[str, Dict[str, str]] = field(
+        metadata={"doc": "Projection content hashes keyed by report ID and entity UID."}
+    )
+    prompt_hashes: Dict[str, str] = field(
+        metadata={"doc": "Prompt hashes used to generate the analysis."}
+    )
+    config_fingerprint: Dict[str, Any] = field(
+        metadata={"doc": "Generation-relevant configuration values used for replay."}
+    )
+    validation_status: CrossReportValidationStatus = field(
+        metadata={"doc": "Deterministic validation status at persistence time."}
+    )
+    request: CrossReportAnalysisRequest = field(
+        metadata={"doc": "Validated business request used for synthesis."}
+    )
+    generated_result: CrossReportGeneratedAnalysisResult = field(
+        metadata={"doc": "Generated analysis payload."}
+    )
+    validation_result: CrossReportValidationResult = field(
+        metadata={"doc": "Validation result for the generated analysis."}
+    )
+    publish_request: CrossReportPublishRequestSummary = field(
+        metadata={"doc": "Publish request summary derived for downstream routing."}
+    )
+    publish_result: CrossReportPublishResultSummary = field(
+        metadata={"doc": "Publish result summary known at persistence time."}
+    )
+
+
+@dataclass(frozen=True)
 class CrossReportOrchestratorOutcome:
     schema_version: str = field(
         metadata={"doc": "Orchestrator outcome contract schema version."}
@@ -606,6 +657,57 @@ class CrossReportOrchestratorOutcome:
     )
     state_transitions: List[str] = field(
         metadata={"doc": "Ordered workflow state transitions recorded by orchestrator."}
+    )
+
+
+@dataclass(frozen=True)
+class CrossReportAnalysisOrchestratorRequest:
+    schema_version: str = field(
+        metadata={"doc": "Cross-report orchestrator request schema version."}
+    )
+    analysis_request: CrossReportAnalysisRequest = field(
+        metadata={"doc": "Business request for cross-report analysis generation."}
+    )
+    projected_data_request: "CrossReportProjectedDataReadRequest" = field(
+        metadata={"doc": "Analytics-store projected data read request."}
+    )
+    idempotency_db_path: str = field(
+        metadata={"doc": "SQLite idempotency database path for orchestrator reuse."}
+    )
+    output_root: str = field(
+        metadata={"doc": "Output root used to derive the planned artifact path."}
+    )
+    max_evidence_items: int = field(
+        default=48,
+        metadata={"doc": "Maximum evidence items assembled before synthesis."},
+    )
+    max_signals: int = field(
+        default=8,
+        metadata={"doc": "Maximum signal scores retained before synthesis."},
+    )
+    max_prompt_chars: int = field(
+        default=60000,
+        metadata={"doc": "Maximum prompt/input character budget for validation."},
+    )
+    retry_retries: int = field(
+        default=2,
+        metadata={"doc": "Maximum retries for retryable service/generator failures."},
+    )
+    retry_base_delay_seconds: float = field(
+        default=1.0,
+        metadata={"doc": "Base retry delay controlled by the orchestrator."},
+    )
+    retry_backoff_step_seconds: float = field(
+        default=1.0,
+        metadata={"doc": "Linear retry backoff step controlled by the orchestrator."},
+    )
+    retry_jitter_seconds: float = field(
+        default=0.25,
+        metadata={"doc": "Retry jitter controlled by the orchestrator."},
+    )
+    publish_target_route: str = field(
+        default="wordpress:ml_report",
+        metadata={"doc": "Publication target route reserved for later publish stages."},
     )
 
 
@@ -846,7 +948,7 @@ def _validate_contract_value(value: object, *, path: str) -> None:
 
 
 def _validate_dataclass_instance(instance: object, *, path: str) -> None:
-    for field_def in fields(instance):
+    for field_def in fields(cast(Any, instance)):
         field_value = getattr(instance, field_def.name)
         field_path = f"{path}.{field_def.name}"
         if field_def.name == "schema_version":

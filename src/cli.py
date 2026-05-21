@@ -4,6 +4,7 @@ import logging
 import os
 import json
 from dataclasses import asdict
+from typing import Any, cast
 
 import click
 import typer
@@ -19,6 +20,13 @@ from src.contracts.browser_download import BrowserDeveloperDiagnosticsRequest
 from src.contracts.browser_download import BrowserDownloadSessionReusePolicy
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.cross_report_analysis import (
+    CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportAnalysisOrchestratorRequest,
+    CrossReportAnalysisRequest,
+    CrossReportProjectedDataReadRequest,
+    PublicationMode,
+)
 from src.contracts.cover_images import CoverImageOrchestratorRequest
 from src.contracts.drive import DriveOAuthAuthorizeRequest
 from src.contracts.files import ReadTextRequest
@@ -43,6 +51,9 @@ from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
+from src.orchestrators.cross_report_analysis_orchestrator import (
+    run_cross_report_analysis as run_cross_report_analysis_orchestrator,
+)
 from src.orchestrators.publisher_inventory_orchestrator import (
     run_publisher_inventory_discovery,
 )
@@ -77,7 +88,10 @@ from src.services.run_registry_service import (
     write_ui_run_record,
 )
 from src.services.ui_run_replay_service import write_ui_run_replay_manifest
-from src.utils.gui_utils import extract_log_date_from_filename, parse_structured_log_line
+from src.utils.gui_utils import (
+    extract_log_date_from_filename,
+    parse_structured_log_line,
+)
 from src.utils.logging import child_context, log_event, new_run_context
 
 
@@ -88,6 +102,12 @@ cli_app = typer.Typer(
 )
 console = Console()
 logger = logging.getLogger("market_lense.cli")
+_CROSS_REPORT_PUBLICATION_MODES = {
+    "generate_only",
+    "validate_only",
+    "publish_dry_run",
+    "publish_live",
+}
 
 
 def _utc_now() -> str:
@@ -100,6 +120,154 @@ def _default_log_path() -> str:
     from datetime import datetime
 
     return os.path.join("logs", f"market_lense_{datetime.now().date().isoformat()}.log")
+
+
+def _split_cli_filter_values(raw_value: str, *, option_name: str) -> list[str]:
+    value = str(raw_value or "").strip()
+    if not value:
+        return []
+    pieces = [piece.strip() for piece in value.split(",")]
+    if any(not piece for piece in pieces):
+        raise AppError(
+            code="cross_report_cli_filter_invalid",
+            message=f"{option_name} contains an empty comma-separated value.",
+            retryable=False,
+            severity="error",
+            context={"option": option_name, "value": value},
+        )
+    return pieces
+
+
+def _cross_report_publish_mode(raw_value: str) -> PublicationMode:
+    mode = str(raw_value or "").strip().lower()
+    if mode not in _CROSS_REPORT_PUBLICATION_MODES:
+        raise AppError(
+            code="cross_report_cli_publish_mode_invalid",
+            message="Cross-report publish mode is invalid.",
+            retryable=False,
+            severity="error",
+            context={
+                "publication_mode": mode,
+                "allowed": sorted(_CROSS_REPORT_PUBLICATION_MODES),
+            },
+        )
+    return cast(PublicationMode, mode)
+
+
+def _cross_report_cli_request_id(payload: dict[str, object]) -> str:
+    import hashlib
+
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    ).encode("utf-8")
+    return f"cli-cross-report:{hashlib.sha256(encoded).hexdigest()[:16]}"
+
+
+def _build_cross_report_cli_request(
+    *,
+    settings,
+    topic: str,
+    auto_theme: bool,
+    category: str,
+    tag: str,
+    publisher: str,
+    date_start: str,
+    date_end: str,
+    max_report_count: int | None,
+    publish_mode: str,
+    output_root: str,
+    idempotency_db: str,
+    request_id: str,
+) -> CrossReportAnalysisOrchestratorRequest:
+    categories = _split_cli_filter_values(category, option_name="category")
+    tags = _split_cli_filter_values(tag, option_name="tag")
+    publishers = _split_cli_filter_values(publisher, option_name="publisher")
+    normalized_topic = str(topic or "").strip()
+    normalized_auto_theme = bool(auto_theme)
+    if not normalized_topic and not normalized_auto_theme:
+        raise AppError(
+            code="cross_report_cli_topic_required",
+            message="Provide --topic or enable --auto-theme for cross-report analysis.",
+            retryable=False,
+            severity="error",
+        )
+    report_count = (
+        int(max_report_count)
+        if max_report_count is not None
+        else int(getattr(settings, "cross_report_analysis_max_source_reports", 6))
+    )
+    if report_count <= 0:
+        raise AppError(
+            code="cross_report_cli_max_report_count_invalid",
+            message="--max-report-count must be greater than zero.",
+            retryable=False,
+            severity="error",
+            context={"max_report_count": report_count},
+        )
+    publication_mode = _cross_report_publish_mode(publish_mode)
+    normalized_date_start = str(date_start or "").strip() or None
+    normalized_date_end = str(date_end or "").strip() or None
+    request_payload: dict[str, Any] = {
+        "topic": normalized_topic,
+        "auto_theme": normalized_auto_theme,
+        "category_filters": categories,
+        "tag_filters": tags,
+        "publisher_filters": publishers,
+        "date_range_start": normalized_date_start,
+        "date_range_end": normalized_date_end,
+        "max_source_reports": report_count,
+        "publication_mode": publication_mode,
+    }
+    resolved_request_id = str(request_id or "").strip() or _cross_report_cli_request_id(
+        request_payload
+    )
+    return CrossReportAnalysisOrchestratorRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        analysis_request=CrossReportAnalysisRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            request_id=resolved_request_id,
+            topic=normalized_topic,
+            auto_theme=normalized_auto_theme,
+            category_filters=categories,
+            tag_filters=tags,
+            publisher_filters=publishers,
+            date_range_start=normalized_date_start,
+            date_range_end=normalized_date_end,
+            max_source_reports=report_count,
+            diagnostic=False,
+            override_publishability=False,
+            publication_mode=publication_mode,
+        ),
+        projected_data_request=CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=settings.reports_db,
+            publisher_filters=publishers,
+            date_range_start=normalized_date_start,
+            date_range_end=normalized_date_end,
+            category_filters=categories,
+            tag_filters=tags,
+            content_classes=["claim", "finding", "quote", "metric"],
+            minimum_projection_status="projected",
+        ),
+        idempotency_db_path=str(idempotency_db or "").strip() or settings.state_db,
+        output_root=str(output_root or "").strip() or settings.output_dir,
+        max_evidence_items=int(
+            getattr(settings, "cross_report_analysis_max_evidence_items", 48)
+        ),
+        max_signals=8,
+        max_prompt_chars=int(
+            getattr(settings, "cross_report_analysis_max_prompt_chars", 60000)
+        ),
+        retry_retries=2,
+        retry_base_delay_seconds=1.0,
+        retry_backoff_step_seconds=1.0,
+        retry_jitter_seconds=0.25,
+        publish_target_route="wordpress:ml_report",
+    )
 
 
 def _load_structured_log_events(log_path: str, ctx) -> list[dict]:
@@ -1213,6 +1381,127 @@ def replay_run(
     console.print(table)
     if not result.report.matched:
         raise typer.Exit(code=1)
+
+
+@cli_app.command("generate-cross-report-analysis")
+def generate_cross_report_analysis_cli(
+    topic: str = typer.Option(
+        "",
+        "--topic",
+        help="Topic text for the cross-report analysis.",
+    ),
+    auto_theme: bool = typer.Option(
+        False,
+        "--auto-theme/--no-auto-theme",
+        help="Allow deterministic automatic theme selection.",
+    ),
+    category: str = typer.Option(
+        "",
+        "--category",
+        "--categories",
+        help="Comma-separated category filters.",
+    ),
+    tag: str = typer.Option(
+        "",
+        "--tag",
+        "--tags",
+        help="Comma-separated tag filters.",
+    ),
+    publisher: str = typer.Option(
+        "",
+        "--publisher",
+        "--publishers",
+        help="Comma-separated publisher filters.",
+    ),
+    date_start: str = typer.Option(
+        "",
+        "--date-start",
+        help="Inclusive report date lower bound in YYYY-MM-DD format.",
+    ),
+    date_end: str = typer.Option(
+        "",
+        "--date-end",
+        help="Inclusive report date upper bound in YYYY-MM-DD format.",
+    ),
+    max_report_count: int | None = typer.Option(
+        None,
+        "--max-report-count",
+        help="Maximum source reports to select.",
+    ),
+    publish_mode: str = typer.Option(
+        "generate_only",
+        "--publish-mode",
+        help="One of generate_only, validate_only, publish_dry_run, publish_live.",
+    ),
+    output_root: str = typer.Option(
+        "",
+        "--output-root",
+        help="Override output root for generated artifacts.",
+    ),
+    idempotency_db: str = typer.Option(
+        "",
+        "--idempotency-db",
+        help="Override SQLite idempotency database path.",
+    ),
+    request_id: str = typer.Option(
+        "",
+        "--request-id",
+        help="Optional stable request id; defaults to a hash of normalized inputs.",
+    ),
+):
+    ctx = new_run_context(task_id="cli_generate_cross_report_analysis")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    try:
+        settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+        request = _build_cross_report_cli_request(
+            settings=settings,
+            topic=topic,
+            auto_theme=auto_theme,
+            category=category,
+            tag=tag,
+            publisher=publisher,
+            date_start=date_start,
+            date_end=date_end,
+            max_report_count=max_report_count,
+            publish_mode=publish_mode,
+            output_root=output_root,
+            idempotency_db=idempotency_db,
+            request_id=request_id,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cli_generate_cross_report_analysis_start",
+                module=logger.name,
+                fields={
+                    "request_id": request.analysis_request.request_id,
+                    "topic": request.analysis_request.topic,
+                    "auto_theme": request.analysis_request.auto_theme,
+                    "publication_mode": request.analysis_request.publication_mode,
+                    "output_root": request.output_root,
+                },
+            )
+        )
+        outcome = run_cross_report_analysis_orchestrator(request, settings, ctx)
+    except AppError as exc:
+        console.print(f"[red]Error [{exc.code}]: {exc.message}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Cross-Report Analysis", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Artifact", outcome.artifact_path)
+    table.add_row(
+        "Selected reports", str(len(outcome.generated_result.selected_sources))
+    )
+    table.add_row("Validation", outcome.validation_result.status)
+    table.add_row("Idempotency reused", "yes" if outcome.idempotency_reused else "no")
+    cost_summary = outcome.generated_result.cost_summary or {}
+    if cost_summary:
+        table.add_row("Cost summary", json.dumps(cost_summary, ensure_ascii=False))
+    console.print(table)
+    console.print(f"[green]Done: {outcome.status}.[/green]")
 
 
 @cli_app.command("ui-run-worker", hidden=True)

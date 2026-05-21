@@ -8,7 +8,7 @@ import threading
 from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Sequence, cast
 
 from src.contracts.analytics_projection import (
     AnalyticsProjectionFailureRequest,
@@ -19,11 +19,13 @@ from src.contracts.analytics_projection import (
 )
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportReadContentClass,
     CrossReportEvidenceReference,
     CrossReportProjectedDataReadRequest,
     CrossReportProjectedDataReadResponse,
     CrossReportRawMetricReference,
     CrossReportSourceReportCandidate,
+    ProjectionReadinessStatus,
     validate_cross_report_contract,
 )
 from src.contracts.run_context import RunContext
@@ -38,7 +40,12 @@ logger = logging.getLogger("market_lense.analytics_store_service")
 DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _CONN_LOCK = threading.Lock()
 _EMBEDDING_STATUSES = {"pending", "embedded", "failed"}
-_CROSS_REPORT_READ_CONTENT_CLASSES = {"claim", "finding", "quote", "metric"}
+_CROSS_REPORT_READ_CONTENT_CLASSES: set[CrossReportReadContentClass] = {
+    "claim",
+    "finding",
+    "quote",
+    "metric",
+}
 
 DDL = """
 CREATE TABLE IF NOT EXISTS reports (
@@ -806,7 +813,9 @@ def _normalized_filter_values(values: Sequence[str]) -> set[str]:
     return {str(value).strip().casefold() for value in values if str(value).strip()}
 
 
-def _status_floor_values(status: str) -> set[str]:
+def _status_floor_values(
+    status: ProjectionReadinessStatus,
+) -> set[ProjectionReadinessStatus]:
     if status == "projected":
         return {"projected"}
     if status == "failed":
@@ -977,7 +986,9 @@ def _source_candidate(
         publisher=publisher,
         publisher_id=publisher_id,
         report_date=_report_date(report_row),
-        projection_status=_row_text(report_row, "projection_status"),
+        projection_status=cast(
+            ProjectionReadinessStatus, _row_text(report_row, "projection_status")
+        ),
         content_hash=_aggregate_content_hash(report_row, content_hashes),
         category_labels=sorted(
             {_row_text(row, "label") for row in categories if _row_text(row, "label")}
@@ -1085,12 +1096,12 @@ def _raw_metric(
 def _requested_content_classes(
     request: CrossReportProjectedDataReadRequest,
 ) -> set[str]:
-    requested = (
+    requested: set[str] = (
         set(request.content_classes)
         if request.content_classes
         else set(_CROSS_REPORT_READ_CONTENT_CLASSES)
     )
-    invalid = requested - _CROSS_REPORT_READ_CONTENT_CLASSES
+    invalid = requested - set(_CROSS_REPORT_READ_CONTENT_CLASSES)
     if invalid:
         raise AppError(
             code="cross_report_content_class_invalid",
@@ -1178,9 +1189,9 @@ def read_cross_report_projected_data(
                 )
             ]
             report_rows = {_row_text(row, "report_id"): row for row in filtered_rows}
-            source_candidates = []
-            evidence = []
-            raw_metrics = []
+            source_candidates: list[CrossReportSourceReportCandidate] = []
+            evidence: list[CrossReportEvidenceReference] = []
+            raw_metrics: list[CrossReportRawMetricReference] = []
             for report_id in sorted(report_rows):
                 report_row = report_rows[report_id]
                 source_candidates.append(

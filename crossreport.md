@@ -35,9 +35,8 @@ Suggested priority order:
 3. `3. Automatic Theme Choice, Variety & Publishability`
 4. `4. Evidence, Signals & Raw Metrics Handling`
 5. `5. Prompt Namespace & Analysis Generator`
-6. `6. Orchestration, Persistence & CLI`
-7. `7. Publication Flow`
-8. `8. Quality, Speed, Cost & Documentation`
+6. `7. Publication Flow`
+7. `8. Quality, Speed, Cost & Documentation`
 
 ---
 
@@ -58,42 +57,6 @@ Suggested priority order:
 ---
 
 ## 5. Prompt Namespace & Analysis Generator
-
----
-
-## 6. Orchestration, Persistence & CLI
-
-- **Item:** Add an idempotent cross-report analysis orchestrator [Impact: 5/5, Effort: 3/5]
-  - Explanation: The orchestrator should own sequencing, retries, state transitions, and idempotency. It should route through selection, evidence assembly, signal scoring, synthesis, validation, and persistence without embedding domain logic.
-  - Pros: Reliable reruns, clear failure states, no generator-level retry drift.
-  - Cons: Adds a new critical orchestrator that must be covered by pipeline tests.
-  - Completion criteria:
-    - `src/orchestrators/cross_report_analysis_orchestrator.py` coordinates the workflow and owns retry/backoff decisions for retryable service errors.
-    - Idempotency key includes request filters, selected report ids, projection content hashes, prompt hashes, config version, and schema version.
-    - Duplicate runs with unchanged inputs reuse the persisted outcome instead of making another model call.
-    - Pipeline tests assert stage order, retry counts, state transitions, idempotency reuse, and required structured log fields.
-    - Retryable errors from services are propagated to the orchestrator and never swallowed by generators.
-
-- **Item:** Persist generated cross-report analysis artifacts atomically [Impact: 4/5, Effort: 2/5]
-  - Explanation: The feature needs a stable local artifact before live publication. Persistence should use existing atomic file service behavior and include enough metadata for replay.
-  - Pros: Easy review, reproducibility, cheap local workflow, safe dry-run path before live publish.
-  - Cons: Operators initially consume local artifacts or CLI output rather than a rich UI.
-  - Completion criteria:
-    - Orchestrator writes `analysis.json` under `out/cross_report_analysis/<analysis_slug>/` through `file_service`.
-    - Artifact metadata includes schema version, request fingerprint, selected report ids, projection content hashes, prompt hashes, config fingerprint, generated timestamp, and validation status.
-    - Repeated identical runs produce the same artifact path and no duplicate side effects.
-    - Tests assert persisted JSON schema validity and deterministic path behavior.
-
-- **Item:** Add a focused CLI command for generation [Impact: 4/5, Effort: 2/5]
-  - Explanation: A CLI entrypoint is the fastest operator path and avoids UI complexity until the generation contract is stable.
-  - Pros: Quick delivery, simple automation, easier testability.
-  - Cons: Less convenient than Streamlit for editorial review in the first release.
-  - Completion criteria:
-    - `python -m src.cli generate-cross-report-analysis` accepts topic text, `--auto-theme`, category/tag filters, publisher filters, date range, max report count, publish mode, and output root override.
-    - CLI prints the artifact path, selected report count, validation status, and cost summary when available.
-    - CLI fails explicitly with typed error output for empty source sets, invalid filters, budget cap breach, and validation failure.
-    - CLI tests cover successful generation with mocked service boundaries and negative-path argument validation.
-    - README documents command examples and expected output layout.
 
 ---
 

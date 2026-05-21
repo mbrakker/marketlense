@@ -7,6 +7,8 @@ import pytest
 
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportAnalysisArtifact,
+    CrossReportAnalysisOrchestratorRequest,
     CrossReportAnalysisRequest,
     CrossReportAnalysisSection,
     CrossReportEvidenceAgreementGroup,
@@ -15,6 +17,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceReference,
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
+    CrossReportProjectedDataReadRequest,
     CrossReportPublishabilityResult,
     CrossReportPublishRequestSummary,
     CrossReportPublishResultSummary,
@@ -48,6 +51,32 @@ def _contracts() -> list[Any]:
         diagnostic=False,
         override_publishability=False,
         publication_mode="generate_only",
+    )
+    projected_data_request = CrossReportProjectedDataReadRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        db_path="state/reports.sqlite",
+        publisher_filters=["Publisher A", "Publisher B"],
+        date_range_start="2025-01-01",
+        date_range_end="2026-01-01",
+        category_filters=["retail"],
+        tag_filters=["ai", "commerce"],
+        content_classes=["claim", "finding", "quote", "metric"],
+        minimum_projection_status="projected",
+    )
+    orchestrator_request = CrossReportAnalysisOrchestratorRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        analysis_request=request,
+        projected_data_request=projected_data_request,
+        idempotency_db_path="state/index.sqlite",
+        output_root="out",
+        max_evidence_items=48,
+        max_signals=8,
+        max_prompt_chars=60000,
+        retry_retries=2,
+        retry_base_delay_seconds=1.0,
+        retry_backoff_step_seconds=1.0,
+        retry_jitter_seconds=0.25,
+        publish_target_route="wordpress:ml_report",
     )
     theme_candidate = CrossReportThemeCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -277,6 +306,23 @@ def _contracts() -> list[Any]:
         error_code=None,
         error_message=None,
     )
+    artifact = CrossReportAnalysisArtifact(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        artifact_type="cross_report_analysis",
+        generated_at_utc="2026-05-21T00:00:00+00:00",
+        request_fingerprint="request-fingerprint",
+        idempotency_key="idem-key",
+        selected_report_ids=["report-a"],
+        projection_content_hashes={"report-a": {"claim-a-1": "hash-a"}},
+        prompt_hashes={"system": "abc", "user": "def"},
+        config_fingerprint={"model": "gpt-5-mini"},
+        validation_status="pass",
+        request=request,
+        generated_result=generated,
+        validation_result=validation,
+        publish_request=publish_request,
+        publish_result=publish_result,
+    )
     outcome = CrossReportOrchestratorOutcome(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         run_id="run-1",
@@ -294,6 +340,8 @@ def _contracts() -> list[Any]:
     )
     return [
         request,
+        projected_data_request,
+        orchestrator_request,
         theme_candidate,
         selected_theme,
         theme_selection_result,
@@ -313,6 +361,7 @@ def _contracts() -> list[Any]:
         validation,
         publish_request,
         publish_result,
+        artifact,
         outcome,
     ]
 
