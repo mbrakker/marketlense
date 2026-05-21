@@ -225,6 +225,13 @@ cross_report_analysis:
   min_theme_source_publishers: 2
   publish_enabled: false
   publish_requires_validation_pass: true
+  signal_score_weights:
+    recurrence: 1.0
+    diversity: 1.0
+    recency: 1.0
+    taxonomy_fit: 1.0
+    support: 1.0
+    contradiction: 0.5
 
 cost:
   daily_path: "./out/cost-daily.json"

@@ -25,6 +25,7 @@ from src.contracts.files import (
 from src.generators import cross_report_analysis_input_generator as input_gen
 from src.generators.cross_report_analysis_input_generator import (
     assemble_cross_report_analysis_inputs,
+    score_cross_report_signals,
     select_cross_report_theme,
     select_cross_report_source_reports,
     validate_cross_report_publishability,
@@ -1203,3 +1204,297 @@ def test_evidence_input_assembly_enforces_cap_before_prompt_rendering(
     ]
     assert result.dropped_evidence_counts == {"max_evidence_items_reached": 1}
     assert result.prompt_input_chars < 60000
+
+
+def test_signal_scoring_ranks_text_taxonomy_without_metric_normalization(
+    run_context,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=3,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-04",
+                evidence_count=3,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence(
+                "report-a-claim-1",
+                report_id="report-a",
+                content_class="claim",
+                text="AI commerce adoption is increasing among retail leaders.",
+            ),
+            _evidence(
+                "report-a-finding-1",
+                report_id="report-a",
+                content_class="finding",
+                text="Retail AI pilots are moving into personalization workflows.",
+            ),
+            _evidence(
+                "report-b-quote-1",
+                report_id="report-b",
+                content_class="quote",
+                text="Executives say AI commerce growth is strong but uneven.",
+            ),
+        ],
+        raw_metrics=[
+            _raw_metric(
+                "metric-a",
+                report_id="report-a",
+                raw_value="42",
+                unit="percent",
+            ),
+            _raw_metric(
+                "metric-b",
+                report_id="report-b",
+                raw_value="900000",
+                unit="basis points",
+            ),
+        ],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    evidence_inputs = assemble_cross_report_analysis_inputs(
+        _request(),
+        source_selection,
+        projected_data,
+        run_context,
+    )
+    theme_selection = select_cross_report_theme(
+        _request(),
+        source_selection,
+        run_context,
+    )
+
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+    result = score_cross_report_signals(
+        _request(),
+        evidence_inputs,
+        theme_selection,
+        run_context,
+        score_weights={
+            "recurrence": 2.0,
+            "diversity": 1.0,
+            "recency": 1.0,
+            "taxonomy_fit": 1.5,
+            "support": 1.0,
+            "contradiction": 0.5,
+        },
+    )
+
+    assert is_dataclass(result)
+    assert result.raw_metric_policy == "raw_metrics_preserved_without_normalization"
+    assert result.selected_signal_ids[0] == "signal-ai"
+    signal = result.signal_scores[0]
+    assert signal.label == "AI"
+    assert signal.evidence_ids == [
+        "report-a-claim-1",
+        "report-a-finding-1",
+        "report-b-quote-1",
+    ]
+    assert signal.component_scores == {
+        "contradiction": 1.0,
+        "diversity": 1.0,
+        "recency": 1.0,
+        "recurrence": 1.0,
+        "support": 1.0,
+        "taxonomy_fit": 1.0,
+    }
+    assert "raw_metric_magnitude_ignored" in signal.reasons
+    events = _events(caplog)
+    assert_logs_have_required_fields(events)
+    complete = [
+        event
+        for event in events
+        if event["event"] == "cross_report_signal_scoring_complete"
+    ][0]
+    assert complete["fields"]["selected_signal_ids"] == ["signal-ai", "signal-retail"]
+    assert complete["fields"]["raw_metric_policy"] == result.raw_metric_policy
+
+
+def test_signal_scoring_is_unchanged_when_only_raw_metric_values_change(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=2,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-04",
+                evidence_count=2,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    base_projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence(
+                "report-a-claim-1",
+                report_id="report-a",
+                content_class="claim",
+                text="AI commerce adoption is increasing among retail leaders.",
+            ),
+            _evidence(
+                "report-b-finding-1",
+                report_id="report-b",
+                content_class="finding",
+                text="Retail AI commerce growth remains uneven.",
+            ),
+        ],
+        raw_metrics=[
+            _raw_metric("metric-a", report_id="report-a", raw_value="42", unit="%"),
+            _raw_metric("metric-b", report_id="report-b", raw_value="12", unit="%"),
+        ],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    changed_metric_projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=base_projected_data.evidence,
+        raw_metrics=[
+            _raw_metric(
+                "metric-a",
+                report_id="report-a",
+                raw_value="4.2 million",
+                unit="users",
+            ),
+            _raw_metric(
+                "metric-b",
+                report_id="report-b",
+                raw_value="0.001",
+                unit="index points",
+            ),
+        ],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    theme_selection = select_cross_report_theme(
+        _request(),
+        source_selection,
+        run_context,
+    )
+
+    base_result = score_cross_report_signals(
+        _request(),
+        assemble_cross_report_analysis_inputs(
+            _request(),
+            source_selection,
+            base_projected_data,
+            run_context,
+        ),
+        theme_selection,
+        run_context,
+    )
+    changed_metric_result = score_cross_report_signals(
+        _request(),
+        assemble_cross_report_analysis_inputs(
+            _request(),
+            source_selection,
+            changed_metric_projected_data,
+            run_context,
+        ),
+        theme_selection,
+        run_context,
+    )
+
+    assert [
+        (score.signal_id, score.component_scores, score.total_score, score.evidence_ids)
+        for score in changed_metric_result.signal_scores
+    ] == [
+        (score.signal_id, score.component_scores, score.total_score, score.evidence_ids)
+        for score in base_result.signal_scores
+    ]
+    assert changed_metric_result.selected_signal_ids == base_result.selected_signal_ids
+
+
+def test_signal_scoring_rejects_invalid_signal_limit(
+    run_context,
+    assert_app_error,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+            )
+        ]
+    )
+    evidence_inputs = assemble_cross_report_analysis_inputs(
+        _request(),
+        source_selection,
+        CrossReportProjectedDataReadResponse(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            source_candidates=[],
+            evidence=[
+                _evidence(
+                    "report-a-claim-1",
+                    report_id="report-a",
+                    text="AI commerce adoption is increasing.",
+                )
+            ],
+            raw_metrics=[],
+            content_hashes={},
+            excluded_report_counts={},
+        ),
+        run_context,
+    )
+    theme_selection = select_cross_report_theme(
+        _request(),
+        source_selection,
+        run_context,
+    )
+
+    with pytest.raises(Exception) as exc:
+        score_cross_report_signals(
+            _request(),
+            evidence_inputs,
+            theme_selection,
+            run_context,
+            max_signals=0,
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_signal_limit_invalid",
+        retryable=False,
+        severity="error",
+    )

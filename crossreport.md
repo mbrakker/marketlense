@@ -55,17 +55,6 @@ Suggested priority order:
 
 ## 4. Evidence, Signals & Raw Metrics Handling
 
-- **Item:** Add lightweight signal scoring without metric normalization [Impact: 5/5, Effort: 3/5]
-  - Explanation: Cross-report analysis needs a ranking signal, but it should not compare numeric metrics across publishers. The first scorer should use recurrence, source diversity, recency, category/tag fit, quote/finding support, and contradiction presence.
-  - Pros: Better analysis focus without expensive or risky data harmonization.
-  - Cons: Signal quality depends on projected text and taxonomy quality.
-  - Completion criteria:
-    - `src/generators/cross_report_analysis_input_generator.py` produces documented signal-score contracts with component scores and reasons.
-    - Score components are deterministic and configured by YAML weights.
-    - Numeric metric magnitude is never used as a cross-source comparable score.
-    - Tests prove that changing only a raw metric unit/value does not create normalized ranking behavior.
-    - Logs include scored signal components and selected top signals.
-
 - **Item:** Preserve disagreement and uncertainty as first-class output inputs [Impact: 4/5, Effort: 2/5]
   - Explanation: Cross-report analysis should not force consensus when projected claims conflict or when source coverage is thin. The input layer should label convergent, divergent, and under-supported evidence groups before synthesis.
   - Pros: More trustworthy analysis, fewer hallucinated conclusions, better editorial review.

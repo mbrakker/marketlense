@@ -310,6 +310,37 @@ class CrossReportSignalScore:
 
 
 @dataclass(frozen=True)
+class CrossReportSignalScoreResult:
+    schema_version: str = field(
+        metadata={"doc": "Signal scoring result contract schema version."}
+    )
+    selected_theme: CrossReportSelectedTheme = field(
+        metadata={"doc": "Selected theme used as the scoring focus."}
+    )
+    signal_scores: List[CrossReportSignalScore] = field(
+        metadata={"doc": "Ranked deterministic signals retained for synthesis focus."}
+    )
+    selected_signal_ids: List[str] = field(
+        metadata={"doc": "Ordered selected signal IDs passed to synthesis inputs."}
+    )
+    score_weights: Dict[str, float] = field(
+        metadata={"doc": "YAML/configured score weights used for deterministic totals."}
+    )
+    raw_metric_policy: str = field(
+        metadata={
+            "doc": "Policy statement confirming raw metric magnitudes are not normalized or compared."
+        }
+    )
+    dropped_signal_counts: Dict[str, int] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Signal candidate counts dropped by deterministic reason.",
+            "required": False,
+        },
+    )
+
+
+@dataclass(frozen=True)
 class CrossReportRawMetricReference:
     schema_version: str = field(
         metadata={"doc": "Raw metric reference contract schema version."}

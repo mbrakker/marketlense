@@ -260,6 +260,17 @@ class TestConfigService(unittest.TestCase):
             self.assertTrue(
                 default_settings.cross_report_analysis_publish_requires_validation_pass
             )
+            self.assertEqual(
+                {
+                    "contradiction": 0.5,
+                    "diversity": 1.0,
+                    "recency": 1.0,
+                    "recurrence": 1.0,
+                    "support": 1.0,
+                    "taxonomy_fit": 1.0,
+                },
+                default_settings.cross_report_analysis_signal_score_weights,
+            )
 
             cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
             cfg_data["cross_report_analysis"] = {
@@ -277,6 +288,14 @@ class TestConfigService(unittest.TestCase):
                 "min_theme_source_publishers": 3,
                 "publish_enabled": True,
                 "publish_requires_validation_pass": True,
+                "signal_score_weights": {
+                    "recurrence": 2.0,
+                    "diversity": 1.5,
+                    "recency": 0.5,
+                    "taxonomy_fit": 3.0,
+                    "support": 1.25,
+                    "contradiction": 0.25,
+                },
             }
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
 
@@ -300,6 +319,17 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual(45, settings.cross_report_analysis_theme_rotation_window_days)
         self.assertEqual(3, settings.cross_report_analysis_min_theme_source_publishers)
         self.assertTrue(settings.cross_report_analysis_publish_enabled)
+        self.assertEqual(
+            {
+                "contradiction": 0.25,
+                "diversity": 1.5,
+                "recency": 0.5,
+                "recurrence": 2.0,
+                "support": 1.25,
+                "taxonomy_fit": 3.0,
+            },
+            settings.cross_report_analysis_signal_score_weights,
+        )
 
     def test_cross_report_analysis_settings_reject_invalid_limits(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
