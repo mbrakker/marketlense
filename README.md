@@ -144,6 +144,22 @@ Current control-plane modules in `src/orchestrators/` include:
 - `ops_dashboard_orchestrator.py`: dashboard snapshot aggregation (reports/state/lock/storage).
 - `candidate_extraction_orchestrator.py`, `cover_image_orchestrator.py`, `recategorize_orchestrator.py`, `wp_category_update_orchestrator.py`: feature-specific workflows.
 
+### Cross-Report Analysis Scope Fence
+
+Cross-report analysis is a bounded extension of the existing modular monolith. The first implementation stays inside the current `src/` deployable and must not introduce a new top-level package, standalone worker, separately deployed service, peer analytics database boundary, peer WordPress client, or parallel publication subsystem.
+
+Planned role boundaries:
+
+- Contracts: `src/contracts/cross_report_analysis.py`.
+- Existing services reused: `src/services/analytics_store_service.py` for projected SQLite reads, `src/services/prompt_service.py` for prompt loading/rendering/versioning, `src/services/llm_service.py` for model calls, `src/services/file_service.py` for artifact writes, `src/services/idempotency_service.py` for duplicate-run protection, and the existing publish boundary for WordPress side effects.
+- Generators: `src/generators/cross_report_analysis_input_generator.py` for deterministic source/theme/evidence preparation and `src/generators/cross_report_analysis_generator.py` for synthesis and deterministic artifact validation.
+- Orchestrator: `src/orchestrators/cross_report_analysis_orchestrator.py` owns sequencing, retries, idempotency, persistence, and optional publication routing.
+- Prompt namespace: `src/prompts/cross_report_analysis/synthesis/`.
+- CLI command: `python -m src.cli generate-cross-report-analysis`.
+- Tests: contract round trips and invalid-input taxonomy in `tests/test_cross_report_analysis_contracts.py`, config loading coverage in `tests/test_config_service.py`, generator tests for selection/synthesis semantics, orchestrator pipeline tests for retry/idempotency/logging, and analytics-store SQLite integration tests for projected-data reads.
+
+First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
+
 ## WordPress Subproject
 
 The `Wordpress/` folder contains the rendering and portal layer for Market Lense:

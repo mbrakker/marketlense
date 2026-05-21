@@ -43,17 +43,6 @@ Suggested priority order:
 
 ## 1. Architecture, Contracts & Scope Fence
 
-- **Item:** Lock cross-report analysis into the existing modular monolith [Impact: 5/5, Effort: 1/5]
-  - Explanation: Cross-report analysis should be a bounded extension of the current analysis/projection/publishing system, not a separate service, worker, package, or parallel publishing subsystem. The implementation should reuse existing canonical boundaries and add only the smallest set of new role-specific modules needed to generate and publish validated artifacts.
-  - Pros: Fast delivery, low operational burden, simpler testing, no duplicated external-system boundary.
-  - Cons: First release depends on the quality and coverage of existing projected rows.
-  - Completion criteria:
-    - Implementation plan names the exact contracts, service methods, generators, orchestrator, prompt namespace, CLI command, and tests before code changes start.
-    - No new top-level `src/` package, standalone worker, deployable component, or second analytics database boundary is introduced.
-    - SQLite access for projected report data stays behind `analytics_store_service` or its same-boundary internals.
-    - Prompt loading stays behind `prompt_service`; model calls stay behind `llm_service`; artifact writes stay behind `file_service`.
-    - Non-goals are documented in `README.md`: no metric normalization, no new WordPress plugin/post-type dependency, no global vector retrieval product in this release.
-
 - **Item:** Add versioned cross-report analysis contracts [Impact: 5/5, Effort: 2/5]
   - Explanation: The feature needs explicit dataclass contracts before generators or orchestrators exist. Contracts should describe the request, theme candidates, selected theme, selected report set, evidence references, signal scores, raw metric references, generated analysis artifact, validation result, persisted artifact metadata, and publish outcome.
   - Pros: Clear boundaries, schema evolution discipline, easier test assertions, less room for ad-hoc dicts.
