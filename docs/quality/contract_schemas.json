@@ -10978,6 +10978,123 @@
       ],
       "type": "object"
     },
+    "src.contracts.cross_report_analysis.CrossReportProjectedDataReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "category_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "content_classes": {
+          "items": {
+            "enum": [
+              "claim",
+              "finding",
+              "quote",
+              "metric"
+            ]
+          },
+          "type": "array"
+        },
+        "date_range_end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "date_range_start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "minimum_projection_status": {
+          "enum": [
+            "not_projected",
+            "projected",
+            "failed"
+          ]
+        },
+        "publisher_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "tag_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cross_report_analysis.CrossReportProjectedDataReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "content_hashes": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportEvidenceReference"
+          },
+          "type": "array"
+        },
+        "excluded_report_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "raw_metrics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportRawMetricReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportSourceReportCandidate"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.cross_report_analysis.CrossReportPublishRequestSummary": {
       "additionalProperties": false,
       "properties": {

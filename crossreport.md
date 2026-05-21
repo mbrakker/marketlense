@@ -47,17 +47,6 @@ Suggested priority order:
 
 ## 2. Projection-Backed Source Selection
 
-- **Item:** Add projected-data read methods to the canonical analytics store boundary [Impact: 5/5, Effort: 3/5]
-  - Explanation: The existing analytics projection tables are the fastest low-cost foundation for cross-report analysis. The feature should query those tables directly through the existing analytics store boundary rather than building a new search service.
-  - Pros: Reuses landed storage, avoids new infrastructure, keeps retrieval deterministic and cheap.
-  - Cons: Retrieval quality is limited to projected fields until a later semantic retrieval phase exists.
-  - Completion criteria:
-    - `analytics_store_service` exposes typed read methods for report inventory, projected claims/findings/quotes/metrics/tags/categories, and content hashes.
-    - Methods return dataclass contracts, not raw SQLite rows.
-    - Read methods support filters for publisher, report date range, category, tag, content class, and minimum projection status.
-    - Integration tests use a local SQLite fixture and assert returned contracts plus required structured log fields.
-    - No caller imports private analytics-store internals.
-
 - **Item:** Build deterministic candidate report selection [Impact: 5/5, Effort: 2/5]
   - Explanation: Cross-report generation needs a small, explainable source set before any LLM call. Selection should prefer reports with projected findings/claims, relevant tags/categories, source diversity, recency, and enough evidence density.
   - Pros: Reduces prompt size, improves synthesis relevance, lowers model spend.

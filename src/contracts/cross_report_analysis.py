@@ -23,6 +23,7 @@ CrossReportContentClass = Literal[
     "section",
     "figure",
 ]
+CrossReportReadContentClass = Literal["claim", "finding", "quote", "metric"]
 CrossReportValidationStatus = Literal["pass", "fail"]
 CrossReportOutcomeStatus = Literal[
     "generated",
@@ -390,7 +391,9 @@ class CrossReportValidationResult:
     )
     prompt_budget_chars: int = field(
         default=0,
-        metadata={"doc": "Rendered prompt/input character count checked by validation."},
+        metadata={
+            "doc": "Rendered prompt/input character count checked by validation."
+        },
     )
     passed: bool = field(
         default=False,
@@ -442,19 +445,18 @@ class CrossReportPublishResultSummary:
     )
     post_id: Optional[int] = field(
         default=None,
-        metadata={"doc": "WordPress post ID when live publication produced one."}
+        metadata={"doc": "WordPress post ID when live publication produced one."},
     )
     post_url: Optional[str] = field(
         default=None,
-        metadata={"doc": "WordPress post URL when live publication produced one."}
+        metadata={"doc": "WordPress post URL when live publication produced one."},
     )
     error_code: Optional[str] = field(
-        default=None,
-        metadata={"doc": "Typed publish error code when status is error."}
+        default=None, metadata={"doc": "Typed publish error code when status is error."}
     )
     error_message: Optional[str] = field(
         default=None,
-        metadata={"doc": "Sanitized publish error message when status is error."}
+        metadata={"doc": "Sanitized publish error message when status is error."},
     )
 
 
@@ -494,6 +496,81 @@ class CrossReportOrchestratorOutcome:
     )
     state_transitions: List[str] = field(
         metadata={"doc": "Ordered workflow state transitions recorded by orchestrator."}
+    )
+
+
+@dataclass(frozen=True)
+class CrossReportProjectedDataReadRequest:
+    schema_version: str = field(
+        metadata={"doc": "Projected data read request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "SQLite reports database path containing projection tables."}
+    )
+    publisher_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Case-insensitive publisher names or IDs to include."},
+    )
+    date_range_start: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Inclusive projection/report date lower bound in YYYY-MM-DD format."
+        },
+    )
+    date_range_end: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Inclusive projection/report date upper bound in YYYY-MM-DD format."
+        },
+    )
+    category_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Case-insensitive category IDs or labels to include."},
+    )
+    tag_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Case-insensitive projected tags to include."},
+    )
+    content_classes: List[CrossReportReadContentClass] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Projected evidence classes to return; empty means claims, findings, quotes, and metrics."
+        },
+    )
+    minimum_projection_status: ProjectionReadinessStatus = field(
+        default="projected",
+        metadata={
+            "doc": "Minimum projection status to include: projected includes only ready reports."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class CrossReportProjectedDataReadResponse:
+    schema_version: str = field(
+        metadata={"doc": "Projected data read response schema version."}
+    )
+    source_candidates: List[CrossReportSourceReportCandidate] = field(
+        default_factory=list,
+        metadata={"doc": "Projected report inventory rows adapted for selection."},
+    )
+    evidence: List[CrossReportEvidenceReference] = field(
+        default_factory=list,
+        metadata={"doc": "Projected claims, findings, and quotes adapted as evidence."},
+    )
+    raw_metrics: List[CrossReportRawMetricReference] = field(
+        default_factory=list,
+        metadata={"doc": "Projected raw metrics preserved as source-bound facts."},
+    )
+    content_hashes: Dict[str, Dict[str, str]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Vector projection content hashes keyed by report ID and entity UID."
+        },
+    )
+    excluded_report_counts: Dict[str, int] = field(
+        default_factory=dict,
+        metadata={"doc": "Counts of reports excluded by status or request filters."},
     )
 
 
