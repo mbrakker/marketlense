@@ -195,9 +195,14 @@ class CrossReportSourceReportCandidate:
         metadata={"doc": "Projection content hash used for cache/idempotency keys."}
     )
     category_labels: List[str] = field(
-        metadata={"doc": "Projected category labels attached to the report."}
+        metadata={
+            "doc": "Projected category labels attached to the report.",
+            "required": False,
+        }
     )
-    tags: List[str] = field(metadata={"doc": "Projected report-level tags."})
+    tags: List[str] = field(
+        metadata={"doc": "Projected report-level tags.", "required": False}
+    )
     evidence_count: int = field(
         metadata={"doc": "Total eligible evidence rows for this report."}
     )
@@ -253,10 +258,16 @@ class CrossReportSelectedSourceReport:
         metadata={"doc": "Eligible evidence count retained for synthesis."}
     )
     category_labels: List[str] = field(
-        metadata={"doc": "Projected categories retained for prompt metadata."}
+        metadata={
+            "doc": "Projected categories retained for prompt metadata.",
+            "required": False,
+        }
     )
     tags: List[str] = field(
-        metadata={"doc": "Projected tags retained for prompt metadata."}
+        metadata={
+            "doc": "Projected tags retained for prompt metadata.",
+            "required": False,
+        }
     )
 
 

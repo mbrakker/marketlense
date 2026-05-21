@@ -4,6 +4,8 @@ import json
 import logging
 from dataclasses import is_dataclass
 
+import pytest
+
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
@@ -15,7 +17,9 @@ from src.generators.cross_report_analysis_input_generator import (
 )
 
 
-def _request(*, max_source_reports: int = 2) -> CrossReportAnalysisRequest:
+def _request(
+    *, max_source_reports: int = 2, diagnostic: bool = False
+) -> CrossReportAnalysisRequest:
     return CrossReportAnalysisRequest(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         request_id="selection-request",
@@ -27,7 +31,7 @@ def _request(*, max_source_reports: int = 2) -> CrossReportAnalysisRequest:
         date_range_start="2026-05-01",
         date_range_end="2026-05-31",
         max_source_reports=max_source_reports,
-        diagnostic=False,
+        diagnostic=diagnostic,
         override_publishability=False,
         publication_mode="generate_only",
     )
@@ -219,3 +223,110 @@ def test_source_selection_honors_max_report_cap_and_filters(run_context) -> None
         for candidate in result.rejected_candidates
     }
     assert rejected["report-b"] == ["tag_filter_mismatch"]
+
+
+def test_source_selection_excludes_non_projected_sources_before_synthesis(
+    run_context,
+) -> None:
+    projected_data = _projected_data(
+        [
+            _candidate(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=3,
+                projection_status="projected",
+            ),
+            _candidate(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-01",
+                evidence_count=6,
+                projection_status="failed",
+            ),
+            _candidate(
+                "report-c",
+                publisher="Publisher C",
+                report_date="2026-05-01",
+                evidence_count=6,
+                projection_status="not_projected",
+            ),
+        ]
+    )
+
+    result = select_cross_report_source_reports(_request(), projected_data, run_context)
+
+    assert [source.report_id for source in result.selected_sources] == ["report-a"]
+    rejected = {
+        candidate.report_id: candidate.rejection_reasons
+        for candidate in result.rejected_candidates
+    }
+    assert rejected["report-b"] == ["projection_status_failed"]
+    assert rejected["report-c"] == ["projection_status_not_projected"]
+    assert result.excluded_report_counts == {
+        "projection_status_failed": 1,
+        "projection_status_not_projected": 1,
+    }
+
+
+def test_source_selection_diagnostic_mode_can_inspect_failed_projection(
+    run_context,
+) -> None:
+    projected_data = _projected_data(
+        [
+            _candidate(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-01",
+                evidence_count=6,
+                projection_status="failed",
+            )
+        ]
+    )
+
+    result = select_cross_report_source_reports(
+        _request(max_source_reports=1, diagnostic=True), projected_data, run_context
+    )
+
+    assert [source.report_id for source in result.selected_sources] == ["report-b"]
+    assert result.rejected_candidates == []
+
+
+def test_source_selection_empty_projected_set_fails_with_typed_error(
+    run_context,
+    caplog,
+    assert_app_error,
+    assert_logs_have_required_fields,
+) -> None:
+    projected_data = _projected_data(
+        [
+            _candidate(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-01",
+                evidence_count=6,
+                projection_status="failed",
+            )
+        ]
+    )
+
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+    with pytest.raises(Exception) as exc_info:
+        select_cross_report_source_reports(_request(), projected_data, run_context)
+
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_no_projected_sources",
+        retryable=False,
+        severity="error",
+    )
+    events = _events(caplog)
+    assert_logs_have_required_fields(events)
+    failed = [
+        event
+        for event in events
+        if event["event"] == "cross_report_source_selection_failed"
+    ][0]
+    assert failed["fields"]["excluded_report_counts"] == {"projection_status_failed": 1}

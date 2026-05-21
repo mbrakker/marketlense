@@ -103,6 +103,15 @@ def _filter_rejection_reasons(
     return reasons
 
 
+def _projection_readiness_rejection_reasons(
+    candidate: CrossReportSourceReportCandidate,
+    request: CrossReportAnalysisRequest,
+) -> list[str]:
+    if request.diagnostic or candidate.projection_status == "projected":
+        return []
+    return [f"projection_status_{candidate.projection_status}"]
+
+
 def _relevance_score(
     candidate: CrossReportSourceReportCandidate,
     cleaned_filters: dict[str, Any],
@@ -325,11 +334,42 @@ def select_cross_report_source_reports(
     eligible: list[CrossReportSourceReportCandidate] = []
     rejected: list[CrossReportSourceReportCandidate] = []
     for candidate in projected_data.source_candidates:
-        reasons = _filter_rejection_reasons(candidate, cleaned_filters)
+        reasons = _projection_readiness_rejection_reasons(candidate, request)
+        if not reasons:
+            reasons = _filter_rejection_reasons(candidate, cleaned_filters)
         if reasons:
             rejected.append(replace(candidate, rejection_reasons=reasons))
         else:
             eligible.append(candidate)
+
+    if not eligible:
+        excluded_counts = _count_rejection_reasons(rejected)
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cross_report_source_selection_failed",
+                module=logger.name,
+                fields={
+                    "request_id": request.request_id,
+                    "candidate_count": len(projected_data.source_candidates),
+                    "excluded_report_counts": excluded_counts,
+                    "diagnostic": request.diagnostic,
+                },
+            )
+        )
+        raise AppError(
+            code="cross_report_no_projected_sources",
+            message="Cross-report source selection found no eligible projected sources",
+            retryable=False,
+            severity="error",
+            context={
+                "request_id": request.request_id,
+                "candidate_count": len(projected_data.source_candidates),
+                "excluded_report_counts": excluded_counts,
+                "diagnostic": request.diagnostic,
+            },
+        )
 
     ranked_candidates = _score_candidates(eligible, cleaned_filters)
     logger.info(

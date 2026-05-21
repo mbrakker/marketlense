@@ -963,12 +963,19 @@ def _source_candidate(
     quote_count = len(quotes)
     metric_count = len(metrics)
     evidence_count = claim_count + finding_count + quote_count
+    report_id = _row_text(report_row, "report_id")
+    publisher = _row_text(report_row, "publisher") or _row_text(
+        report_row, "publisher_id"
+    )
+    if not publisher and _row_text(report_row, "projection_status") != "projected":
+        publisher = report_id
+    publisher_id = _row_text(report_row, "publisher_id") or publisher
     return CrossReportSourceReportCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        report_id=_row_text(report_row, "report_id"),
+        report_id=report_id,
         title=_row_text(report_row, "title"),
-        publisher=_row_text(report_row, "publisher"),
-        publisher_id=_row_text(report_row, "publisher_id"),
+        publisher=publisher,
+        publisher_id=publisher_id,
         report_date=_report_date(report_row),
         projection_status=_row_text(report_row, "projection_status"),
         content_hash=_aggregate_content_hash(report_row, content_hashes),

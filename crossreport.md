@@ -47,16 +47,6 @@ Suggested priority order:
 
 ## 2. Projection-Backed Source Selection
 
-- **Item:** Enforce projection readiness before synthesis [Impact: 4/5, Effort: 2/5]
-  - Explanation: Synthesis should not silently operate on weak or missing projected data. Reports with failed or absent projection can be excluded, and an empty eligible set should fail explicitly.
-  - Pros: Prevents low-quality output and hidden data gaps.
-  - Cons: Some reports become unavailable for cross-report analysis until their projection issue is fixed.
-  - Completion criteria:
-    - Selection requires `projection_status='projected'` unless the request explicitly enables a documented diagnostic mode.
-    - Empty eligible source sets raise a typed non-retryable `AppError`.
-    - Tests cover all-projected, partially projected, failed-projection, and empty-result cases.
-    - Logs show excluded report counts grouped by reason.
-
 ---
 
 ## 3. Automatic Theme Choice, Variety & Publishability
