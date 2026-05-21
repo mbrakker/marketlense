@@ -11572,6 +11572,46 @@
       ],
       "type": "object"
     },
+    "src.contracts.cross_report_analysis.CrossReportSourceSelectionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "cleaned_filters": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "excluded_report_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "ranked_candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportSourceReportCandidate"
+          },
+          "type": "array"
+        },
+        "rejected_candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportSourceReportCandidate"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_sources": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportSelectedSourceReport"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.cross_report_analysis.CrossReportThemeCandidate": {
       "additionalProperties": false,
       "properties": {

@@ -56,19 +56,34 @@ class CrossReportAnalysisRequest:
         metadata={"doc": "Whether deterministic theme selection may choose the topic."}
     )
     category_filters: List[str] = field(
-        metadata={"doc": "Normalized category filters applied to projected reports."}
+        metadata={
+            "doc": "Normalized category filters applied to projected reports.",
+            "required": False,
+        }
     )
     tag_filters: List[str] = field(
-        metadata={"doc": "Normalized tag filters applied to projected reports."}
+        metadata={
+            "doc": "Normalized tag filters applied to projected reports.",
+            "required": False,
+        }
     )
     publisher_filters: List[str] = field(
-        metadata={"doc": "Normalized publisher filters applied to projected reports."}
+        metadata={
+            "doc": "Normalized publisher filters applied to projected reports.",
+            "required": False,
+        }
     )
     date_range_start: Optional[str] = field(
-        metadata={"doc": "Inclusive report date lower bound in ISO format, if set."}
+        metadata={
+            "doc": "Inclusive report date lower bound in ISO format, if set.",
+            "required": False,
+        }
     )
     date_range_end: Optional[str] = field(
-        metadata={"doc": "Inclusive report date upper bound in ISO format, if set."}
+        metadata={
+            "doc": "Inclusive report date upper bound in ISO format, if set.",
+            "required": False,
+        }
     )
     max_source_reports: int = field(
         metadata={"doc": "Maximum selected projected reports for synthesis."}
@@ -574,6 +589,33 @@ class CrossReportProjectedDataReadResponse:
     )
 
 
+@dataclass(frozen=True)
+class CrossReportSourceSelectionResult:
+    schema_version: str = field(
+        metadata={"doc": "Source selection result contract schema version."}
+    )
+    selected_sources: List[CrossReportSelectedSourceReport] = field(
+        default_factory=list,
+        metadata={"doc": "Ranked source reports retained for synthesis."},
+    )
+    ranked_candidates: List[CrossReportSourceReportCandidate] = field(
+        default_factory=list,
+        metadata={"doc": "Eligible candidates after deterministic scoring."},
+    )
+    rejected_candidates: List[CrossReportSourceReportCandidate] = field(
+        default_factory=list,
+        metadata={"doc": "Candidates rejected by filters or max-source limits."},
+    )
+    cleaned_filters: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Normalized request filters used for deterministic scoring."},
+    )
+    excluded_report_counts: Dict[str, int] = field(
+        default_factory=dict,
+        metadata={"doc": "Rejected report counts grouped by deterministic reason."},
+    )
+
+
 def validate_cross_report_contract(contract: object) -> None:
     _validate_contract_value(contract, path=type(contract).__name__)
 
@@ -589,6 +631,8 @@ def _raise_invalid(path: str, field_name: str, reason: str) -> None:
 
 
 def _field_is_required(field_def: Any) -> bool:
+    if field_def.metadata.get("required") is False:
+        return False
     return field_def.default is MISSING and field_def.default_factory is MISSING
 
 

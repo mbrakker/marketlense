@@ -47,17 +47,6 @@ Suggested priority order:
 
 ## 2. Projection-Backed Source Selection
 
-- **Item:** Build deterministic candidate report selection [Impact: 5/5, Effort: 2/5]
-  - Explanation: Cross-report generation needs a small, explainable source set before any LLM call. Selection should prefer reports with projected findings/claims, relevant tags/categories, source diversity, recency, and enough evidence density.
-  - Pros: Reduces prompt size, improves synthesis relevance, lowers model spend.
-  - Cons: Deterministic selection can miss subtle semantic matches before vector retrieval exists.
-  - Completion criteria:
-    - `src/generators/cross_report_analysis_input_generator.py` accepts typed context and projected inventory contracts.
-    - The generator returns a ranked selected-source contract with selection reasons and rejected-candidate reasons.
-    - Ranking is deterministic for fixed inputs and config.
-    - Unit tests assert source diversity, max report cap, date/category/tag filters, and stable ordering.
-    - Logs include input context, cleaned request filters, ranking decisions, and final selected report IDs.
-
 - **Item:** Enforce projection readiness before synthesis [Impact: 4/5, Effort: 2/5]
   - Explanation: Synthesis should not silently operate on weak or missing projected data. Reports with failed or absent projection can be excluded, and an empty eligible set should fail explicitly.
   - Pros: Prevents low-quality output and hidden data gaps.
