@@ -166,6 +166,8 @@ Deterministic source selection starts in `src/generators/cross_report_analysis_i
 
 Projection readiness is enforced before synthesis inputs are selected. Non-diagnostic requests reject candidates whose `projection_status` is not `projected`, record grouped exclusion reasons such as `projection_status_failed` or `projection_status_not_projected`, and raise non-retryable `AppError(code="cross_report_no_projected_sources")` when no projected source remains. Diagnostic requests may inspect failed or missing projections, but that path is explicitly represented by the request contract and logged by the generator.
 
+Automatic theme choice also lives in `src/generators/cross_report_analysis_input_generator.py` through `select_cross_report_theme`. Explicit-topic requests produce a selected theme from the operator topic and already-selected sources. Auto-theme requests, or requests with an empty topic and `auto_theme=true`, build deterministic tag/category candidates from selected projected sources, score them by evidence density, source-publisher coverage, recency, and novelty, and return `CrossReportThemeSelectionResult` with ranked candidates, the selected theme, score components, source report IDs, and structured logs. No model call is used for theme choice.
+
 First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 ## WordPress Subproject

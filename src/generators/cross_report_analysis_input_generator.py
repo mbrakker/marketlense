@@ -12,8 +12,11 @@ from src.contracts.cross_report_analysis import (
     CrossReportAnalysisRequest,
     CrossReportProjectedDataReadResponse,
     CrossReportSelectedSourceReport,
+    CrossReportSelectedTheme,
     CrossReportSourceReportCandidate,
     CrossReportSourceSelectionResult,
+    CrossReportThemeCandidate,
+    CrossReportThemeSelectionResult,
     validate_cross_report_contract,
 )
 from src.contracts.run_context import RunContext
@@ -35,6 +38,11 @@ def _topic_terms(topic: str) -> list[str]:
         if len(token) > 1
     }
     return sorted(terms)
+
+
+def _slug(value: str) -> str:
+    tokens = re.findall(r"[A-Za-z0-9]+", value.casefold())
+    return "-".join(tokens)
 
 
 def _cleaned_filters(request: CrossReportAnalysisRequest) -> dict[str, Any]:
@@ -297,6 +305,362 @@ def _count_rejection_reasons(
         for reason in candidate.rejection_reasons:
             counts[reason] += 1
     return dict(sorted(counts.items()))
+
+
+def _source_recency_scores(
+    sources: list[CrossReportSelectedSourceReport],
+) -> dict[str, float]:
+    dated = {
+        source.report_id: parsed
+        for source in sources
+        if (parsed := _selected_source_date(source)) is not None
+    }
+    if not dated:
+        return {source.report_id: 0.0 for source in sources}
+    latest = max(dated.values())
+    earliest = min(dated.values())
+    span_days = max((latest - earliest).days, 1)
+    return {
+        source.report_id: (
+            max(0.0, 1.0 - ((latest - dated[source.report_id]).days / span_days))
+            if source.report_id in dated
+            else 0.0
+        )
+        for source in sources
+    }
+
+
+def _selected_source_date(source: CrossReportSelectedSourceReport) -> date | None:
+    value = source.report_date.strip()
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
+
+
+def _display_value(values: list[str], normalized: str) -> str:
+    for value in values:
+        if value.strip().casefold() == normalized:
+            return value.strip()
+    return normalized
+
+
+def _theme_candidate_from_sources(
+    *,
+    theme_kind: str,
+    theme_value: str,
+    supporting_sources: list[CrossReportSelectedSourceReport],
+    request: CrossReportAnalysisRequest,
+    recency_scores: dict[str, float],
+) -> CrossReportThemeCandidate:
+    report_ids = sorted(source.report_id for source in supporting_sources)
+    publishers = {source.publisher.strip().casefold() for source in supporting_sources}
+    evidence_count = sum(source.evidence_count for source in supporting_sources)
+    all_tags = sorted(
+        {
+            tag.strip()
+            for source in supporting_sources
+            for tag in source.tags
+            if tag.strip()
+        },
+        key=str.casefold,
+    )
+    all_categories = sorted(
+        {
+            category.strip()
+            for source in supporting_sources
+            for category in source.category_labels
+            if category.strip()
+        },
+        key=str.casefold,
+    )
+    label = _display_value(
+        all_tags if theme_kind == "tag" else all_categories, theme_value
+    )
+    recency_score = round(
+        sum(recency_scores.get(source.report_id, 0.0) for source in supporting_sources)
+        / max(len(supporting_sources), 1),
+        6,
+    )
+    density_score = round(min(evidence_count / 10.0, 1.0), 6)
+    diversity_score = round(min(len(publishers) / 3.0, 1.0), 6)
+    novelty_score = 1.0
+    filter_boost = 0.0
+    if theme_kind == "tag" and theme_value in _clean_values(request.tag_filters):
+        filter_boost = 0.6
+    if theme_kind == "category" and theme_value in _clean_values(
+        request.category_filters
+    ):
+        filter_boost = 0.55
+    total_score = round(
+        recency_score + density_score + diversity_score + novelty_score + filter_boost,
+        6,
+    )
+    risks = []
+    if len(publishers) < 2:
+        risks.append("single_publisher")
+    if evidence_count < 3:
+        risks.append("thin_evidence")
+    return CrossReportThemeCandidate(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        theme_id=f"theme-{theme_kind}-{_slug(label)}",
+        label=label,
+        rationale=(
+            f"{theme_kind.title()} theme supported by {len(report_ids)} projected "
+            f"source reports and {len(publishers)} publishers."
+        ),
+        matched_tags=([label] if theme_kind == "tag" else all_tags),
+        matched_categories=([label] if theme_kind == "category" else all_categories),
+        source_report_ids=report_ids,
+        source_publisher_count=len(publishers),
+        evidence_count=evidence_count,
+        recency_score=recency_score,
+        density_score=density_score,
+        diversity_score=diversity_score,
+        novelty_score=novelty_score,
+        total_score=total_score,
+        rejection_risks=risks,
+    )
+
+
+def _automatic_theme_candidates(
+    request: CrossReportAnalysisRequest,
+    sources: list[CrossReportSelectedSourceReport],
+) -> list[CrossReportThemeCandidate]:
+    recency_scores = _source_recency_scores(sources)
+    grouped: dict[tuple[str, str], list[CrossReportSelectedSourceReport]] = {}
+    for source in sources:
+        for tag in source.tags:
+            if tag.strip():
+                grouped.setdefault(("tag", tag.strip().casefold()), []).append(source)
+        for category in source.category_labels:
+            if category.strip():
+                grouped.setdefault(
+                    ("category", category.strip().casefold()), []
+                ).append(source)
+    candidates = [
+        _theme_candidate_from_sources(
+            theme_kind=theme_kind,
+            theme_value=theme_value,
+            supporting_sources=sorted(
+                supporting_sources, key=lambda source: source.report_id
+            ),
+            request=request,
+            recency_scores=recency_scores,
+        )
+        for (theme_kind, theme_value), supporting_sources in grouped.items()
+    ]
+    return sorted(
+        candidates,
+        key=lambda candidate: (
+            -candidate.total_score,
+            _theme_sort_priority(candidate, request),
+            candidate.label.casefold(),
+            candidate.theme_id,
+        ),
+    )
+
+
+def _theme_sort_priority(
+    candidate: CrossReportThemeCandidate, request: CrossReportAnalysisRequest
+) -> int:
+    filter_tags = set(_clean_values(request.tag_filters))
+    filter_categories = set(_clean_values(request.category_filters))
+    candidate_tags = {tag.strip().casefold() for tag in candidate.matched_tags}
+    candidate_categories = {
+        category.strip().casefold() for category in candidate.matched_categories
+    }
+    if candidate_tags.intersection(filter_tags):
+        return 0
+    if candidate_categories.intersection(filter_categories):
+        return 1
+    if candidate.theme_id.startswith("theme-category-"):
+        return 2
+    return 3
+
+
+def _explicit_theme_candidate(
+    request: CrossReportAnalysisRequest,
+    sources: list[CrossReportSelectedSourceReport],
+) -> CrossReportThemeCandidate:
+    topic = request.topic.strip()
+    source_report_ids = sorted(source.report_id for source in sources)
+    publishers = {source.publisher.strip().casefold() for source in sources}
+    evidence_count = sum(source.evidence_count for source in sources)
+    matched_tags = sorted(
+        {
+            tag.strip()
+            for source in sources
+            for tag in source.tags
+            if tag.strip()
+            and (
+                tag.strip().casefold() in _topic_terms(topic)
+                or tag.strip().casefold() in _clean_values(request.tag_filters)
+            )
+        },
+        key=str.casefold,
+    )
+    matched_categories = sorted(
+        {
+            category.strip()
+            for source in sources
+            for category in source.category_labels
+            if category.strip()
+            and category.strip().casefold() in _clean_values(request.category_filters)
+        },
+        key=str.casefold,
+    )
+    return CrossReportThemeCandidate(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        theme_id=f"theme-explicit-{_slug(topic)}",
+        label=topic,
+        rationale="Explicit operator topic selected without automatic theme choice.",
+        matched_tags=matched_tags or _clean_values(request.tag_filters),
+        matched_categories=matched_categories
+        or _clean_values(request.category_filters),
+        source_report_ids=source_report_ids,
+        source_publisher_count=len(publishers),
+        evidence_count=evidence_count,
+        recency_score=1.0,
+        density_score=round(min(evidence_count / 10.0, 1.0), 6),
+        diversity_score=round(min(len(publishers) / 3.0, 1.0), 6),
+        novelty_score=1.0,
+        total_score=round(2.0 + min(evidence_count / 10.0, 1.0), 6),
+        rejection_risks=[] if len(publishers) > 1 else ["single_publisher"],
+    )
+
+
+def _selected_theme(candidate: CrossReportThemeCandidate) -> CrossReportSelectedTheme:
+    return CrossReportSelectedTheme(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        theme_id=candidate.theme_id,
+        label=candidate.label,
+        rationale=candidate.rationale,
+        matched_tags=candidate.matched_tags,
+        matched_categories=candidate.matched_categories,
+        source_report_ids=candidate.source_report_ids,
+        score_components={
+            "recency": candidate.recency_score,
+            "density": candidate.density_score,
+            "diversity": candidate.diversity_score,
+            "novelty": candidate.novelty_score,
+            "total": candidate.total_score,
+        },
+        selection_reasons=[
+            f"score:{candidate.total_score}",
+            f"source_reports:{len(candidate.source_report_ids)}",
+            f"source_publishers:{candidate.source_publisher_count}",
+            f"evidence:{candidate.evidence_count}",
+        ],
+        rejection_risks=candidate.rejection_risks,
+    )
+
+
+def select_cross_report_theme(
+    request: CrossReportAnalysisRequest,
+    source_selection: CrossReportSourceSelectionResult,
+    ctx: RunContext,
+) -> CrossReportThemeSelectionResult:
+    validate_cross_report_contract(request)
+    validate_cross_report_contract(source_selection)
+    if not request.auto_theme and not request.topic.strip():
+        raise AppError(
+            code="cross_report_topic_required",
+            message="Cross-report theme selection requires a topic unless auto_theme is enabled",
+            retryable=False,
+            severity="error",
+            context={"request_id": request.request_id},
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_theme_selection_start",
+            module=logger.name,
+            fields={
+                "request_id": request.request_id,
+                "auto_theme": request.auto_theme,
+                "topic": request.topic,
+                "selected_source_count": len(source_selection.selected_sources),
+            },
+        )
+    )
+
+    sources = source_selection.selected_sources
+    if not sources:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cross_report_theme_selection_failed",
+                module=logger.name,
+                fields={
+                    "request_id": request.request_id,
+                    "reason": "no_selected_sources",
+                },
+            )
+        )
+        raise AppError(
+            code="cross_report_no_theme_candidates",
+            message="Cross-report theme selection found no eligible selected sources",
+            retryable=False,
+            severity="error",
+            context={"request_id": request.request_id, "reason": "no_selected_sources"},
+        )
+
+    automatic = request.auto_theme or not request.topic.strip()
+    theme_candidates = (
+        _automatic_theme_candidates(request, sources)
+        if automatic
+        else [_explicit_theme_candidate(request, sources)]
+    )
+    if not theme_candidates:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cross_report_theme_selection_failed",
+                module=logger.name,
+                fields={
+                    "request_id": request.request_id,
+                    "reason": "no_theme_candidates",
+                },
+            )
+        )
+        raise AppError(
+            code="cross_report_no_theme_candidates",
+            message="Cross-report theme selection found no deterministic theme candidates",
+            retryable=False,
+            severity="error",
+            context={"request_id": request.request_id, "reason": "no_theme_candidates"},
+        )
+
+    selected = theme_candidates[0]
+    result = CrossReportThemeSelectionResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme=_selected_theme(selected),
+        theme_candidates=theme_candidates,
+        rejected_theme_candidates=[],
+    )
+    validate_cross_report_contract(result)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_theme_selection_complete",
+            module=logger.name,
+            fields={
+                "theme_candidate_count": len(result.theme_candidates),
+                "selected_theme_id": result.selected_theme.theme_id,
+                "selected_source_report_ids": result.selected_theme.source_report_ids,
+                "score_components": result.selected_theme.score_components,
+                "rejection_risks": result.selected_theme.rejection_risks,
+            },
+        )
+    )
+    return result
 
 
 def select_cross_report_source_reports(

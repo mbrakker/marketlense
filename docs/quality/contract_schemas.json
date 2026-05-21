@@ -11691,6 +11691,34 @@
       ],
       "type": "object"
     },
+    "src.contracts.cross_report_analysis.CrossReportThemeSelectionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "rejected_theme_candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportThemeCandidate"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_theme": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportSelectedTheme"
+        },
+        "theme_candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportThemeCandidate"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "selected_theme"
+      ],
+      "type": "object"
+    },
     "src.contracts.cross_report_analysis.CrossReportValidationResult": {
       "additionalProperties": false,
       "properties": {

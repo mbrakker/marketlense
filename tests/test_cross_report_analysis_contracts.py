@@ -21,6 +21,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportSourceReportCandidate,
     CrossReportSourceSelectionResult,
     CrossReportThemeCandidate,
+    CrossReportThemeSelectionResult,
     CrossReportValidationResult,
     validate_cross_report_contract,
 )
@@ -71,6 +72,12 @@ def _contracts() -> list[Any]:
         score_components={"recency": 0.8, "diversity": 0.9},
         selection_reasons=["two publishers", "six evidence items"],
         rejection_risks=["thin metric context"],
+    )
+    theme_selection_result = CrossReportThemeSelectionResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme=selected_theme,
+        theme_candidates=[theme_candidate],
+        rejected_theme_candidates=[],
     )
     source_candidate = CrossReportSourceReportCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -228,6 +235,7 @@ def _contracts() -> list[Any]:
         request,
         theme_candidate,
         selected_theme,
+        theme_selection_result,
         source_candidate,
         selected_source,
         source_selection_result,
