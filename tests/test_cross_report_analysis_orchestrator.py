@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -346,6 +347,82 @@ def test_cross_report_orchestrator_runs_pipeline_and_reuses_idempotency(
         for event in events
         if event["event"].startswith("cross_report_orchestrator_")
     ][0] == "cross_report_orchestrator_start"
+
+
+def test_cross_report_orchestrator_blocks_prompt_budget_before_model_call(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    openai_client = CountingOpenAIClient()
+    request = replace(_orchestrator_request(tmp_path), max_prompt_chars=200)
+
+    with pytest.raises(Exception) as exc:
+        run_cross_report_analysis(
+            request,
+            _settings(tmp_path),
+            run_context,
+            read_projected_data_fn=lambda request_arg, ctx: _projected_data(),
+            prompt_client=FakePromptClient(),
+            openai_client=openai_client,
+            sleep_fn=lambda seconds: None,
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_prompt_budget_exceeded",
+        retryable=False,
+        severity="error",
+    )
+    assert exc.value.context["prompt_input_chars"] > 200
+    assert exc.value.context["max_prompt_chars"] == 200
+    assert openai_client.calls == 0
+    assert not list((tmp_path / "out").glob("**/analysis.json"))
+
+
+def test_cross_report_orchestrator_projection_hash_change_invalidates_cache(
+    tmp_path,
+    run_context,
+) -> None:
+    openai_client = CountingOpenAIClient()
+    reads = {"count": 0}
+
+    def _read_projected(request, ctx):
+        reads["count"] += 1
+        projected = _projected_data()
+        if reads["count"] == 1:
+            return projected
+        return replace(
+            projected,
+            content_hashes={
+                **projected.content_hashes,
+                "report-a": {"report-a:claim:1": "hash-a-changed"},
+            },
+        )
+
+    first = run_cross_report_analysis(
+        _orchestrator_request(tmp_path),
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=_read_projected,
+        prompt_client=FakePromptClient(),
+        openai_client=openai_client,
+        sleep_fn=lambda seconds: None,
+    )
+    second = run_cross_report_analysis(
+        _orchestrator_request(tmp_path),
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=_read_projected,
+        prompt_client=FakePromptClient(),
+        openai_client=openai_client,
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert first.idempotency_reused is False
+    assert second.idempotency_reused is False
+    assert first.idempotency_key != second.idempotency_key
+    assert openai_client.calls == 2
 
 
 def test_cross_report_orchestrator_retries_retryable_service_errors(

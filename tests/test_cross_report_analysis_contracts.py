@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import inspect
+import json
 from dataclasses import asdict, fields, is_dataclass
 from typing import Any
 
 import pytest
 
+from src.contracts import cross_report_analysis as cross_contracts
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisArtifact,
@@ -18,6 +21,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
     CrossReportProjectedDataReadRequest,
+    CrossReportProjectedDataReadResponse,
     CrossReportPublishPackage,
     CrossReportPublishabilityResult,
     CrossReportPublishRequestSummary,
@@ -206,6 +210,14 @@ def _contracts() -> list[Any]:
         evidence_id="ev-report-a-claim-1",
         source_metadata={"page": 14},
     )
+    projected_data_response = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[source_candidate],
+        evidence=[evidence],
+        raw_metrics=[raw_metric],
+        content_hashes={"report-a": {"claim-a-1": "hash-a"}},
+        excluded_report_counts={"filtered": 1},
+    )
     evidence_input_result = CrossReportEvidenceInputResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         selected_sources=[selected_source],
@@ -367,6 +379,7 @@ def _contracts() -> list[Any]:
     return [
         request,
         projected_data_request,
+        projected_data_response,
         orchestrator_request,
         theme_candidate,
         selected_theme,
@@ -409,6 +422,29 @@ def test_cross_report_contract_validation_accepts_complete_contracts(
     assert_no_defaulted_required_fields,
 ) -> None:
     assert_no_defaulted_required_fields(contract)
+    validate_cross_report_contract(contract)
+
+
+def test_cross_report_contract_fixtures_cover_every_dataclass() -> None:
+    fixture_names = {type(contract).__name__ for contract in _contracts()}
+    contract_names = {
+        name
+        for name, value in vars(cross_contracts).items()
+        if inspect.isclass(value)
+        and is_dataclass(value)
+        and name.startswith("CrossReport")
+    }
+
+    assert fixture_names == contract_names
+
+
+@pytest.mark.parametrize("contract", _contracts())
+def test_cross_report_contract_payloads_round_trip_through_json(contract: Any) -> None:
+    payload = asdict(contract)
+    encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, default=str)
+    decoded = json.loads(encoded)
+
+    assert decoded == payload
     validate_cross_report_contract(contract)
 
 

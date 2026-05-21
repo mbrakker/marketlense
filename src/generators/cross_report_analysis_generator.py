@@ -223,6 +223,21 @@ def _known_evidence_ids(evidence_inputs: CrossReportEvidenceInputResult) -> set[
     return {item.evidence_id for item in evidence_inputs.evidence}
 
 
+def _known_evidence_aliases(
+    evidence_inputs: CrossReportEvidenceInputResult,
+) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for item in evidence_inputs.evidence:
+        evidence_id = str(item.evidence_id or "").strip()
+        if not evidence_id:
+            continue
+        aliases[evidence_id] = evidence_id
+        entity_uid = str(item.entity_uid or "").strip()
+        if entity_uid:
+            aliases[entity_uid] = evidence_id
+    return aliases
+
+
 def _known_raw_metric_ids(evidence_inputs: CrossReportEvidenceInputResult) -> set[str]:
     return {item.metric_id for item in evidence_inputs.raw_metrics}
 
@@ -306,6 +321,10 @@ def _text_list(value: Any) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
+def _canonical_ids(values: list[str], aliases: dict[str, str]) -> list[str]:
+    return [aliases.get(value, value) for value in values]
+
+
 def _validate_references(
     *,
     evidence_ids: list[str],
@@ -350,6 +369,7 @@ def _sections_from_payload(
     payload: dict[str, Any],
     *,
     known_evidence: set[str],
+    evidence_aliases: dict[str, str],
     known_raw_metrics: set[str],
 ) -> list[CrossReportAnalysisSection]:
     raw_sections = payload.get("sections")
@@ -371,7 +391,10 @@ def _sections_from_payload(
                 severity="error",
                 context={"section": raw_section},
             )
-        evidence_ids = _text_list(raw_section.get("evidence_ids"))
+        evidence_ids = _canonical_ids(
+            _text_list(raw_section.get("evidence_ids")),
+            evidence_aliases,
+        )
         raw_metric_ids = _text_list(raw_section.get("raw_metric_ids"))
         _validate_references(
             evidence_ids=evidence_ids,
@@ -410,6 +433,7 @@ def _evidence_map(
     payload: dict[str, Any],
     *,
     known_evidence: set[str],
+    evidence_aliases: dict[str, str],
 ) -> dict[str, list[str]]:
     raw_map = payload.get("evidence_map")
     if not isinstance(raw_map, dict) or not raw_map:
@@ -423,7 +447,7 @@ def _evidence_map(
     mapped: dict[str, list[str]] = {}
     for key, value in raw_map.items():
         claim_key = str(key or "").strip()
-        evidence_ids = _text_list(value)
+        evidence_ids = _canonical_ids(_text_list(value), evidence_aliases)
         if not claim_key or not evidence_ids:
             raise AppError(
                 code="cross_report_analysis_output_invalid",
@@ -797,13 +821,19 @@ def generate_cross_report_analysis(
     )
     payload = _response_payload(response)
     known_evidence = _known_evidence_ids(evidence_inputs)
+    evidence_aliases = _known_evidence_aliases(evidence_inputs)
     known_raw_metrics = _known_raw_metric_ids(evidence_inputs)
     sections = _sections_from_payload(
         payload,
         known_evidence=known_evidence,
+        evidence_aliases=evidence_aliases,
         known_raw_metrics=known_raw_metrics,
     )
-    evidence_map = _evidence_map(payload, known_evidence=known_evidence)
+    evidence_map = _evidence_map(
+        payload,
+        known_evidence=known_evidence,
+        evidence_aliases=evidence_aliases,
+    )
     result = CrossReportGeneratedAnalysisResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         analysis_id=_required_text(payload, "analysis_id"),

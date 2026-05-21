@@ -448,6 +448,54 @@ def test_generate_cross_report_analysis_rejects_unknown_evidence_id(
     )
 
 
+def test_generate_cross_report_analysis_canonicalizes_projected_entity_uid_citations(
+    tmp_path,
+    run_context,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    canonical_evidence = replace(
+        evidence_inputs.evidence[0],
+        entity_uid="projected-entity-claim-a",
+    )
+    evidence_inputs = replace(
+        evidence_inputs,
+        evidence=[
+            canonical_evidence,
+            *evidence_inputs.evidence[1:],
+        ],
+    )
+    payload = {
+        "analysis_id": "analysis-ai-commerce",
+        "title": "AI Commerce Adoption Across Retail Reports",
+        "slug": "ai-commerce-adoption-across-retail-reports",
+        "executive_summary": "AI adoption is moving unevenly.",
+        "sections": [
+            {
+                "section_id": "summary",
+                "heading": "Summary",
+                "body": "Canonicalized claim.",
+                "evidence_ids": ["projected-entity-claim-a"],
+                "raw_metric_ids": [],
+            }
+        ],
+        "evidence_map": {"summary": ["projected-entity-claim-a"]},
+    }
+
+    result = generate_cross_report_analysis(
+        _request(),
+        evidence_inputs,
+        signal_result,
+        agreement_result,
+        _settings(tmp_path),
+        run_context,
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAIClient(payload),
+    )
+
+    assert result.sections[0].evidence_ids == ["ev-report-a-claim-1"]
+    assert result.evidence_map == {"summary": ["ev-report-a-claim-1"]}
+
+
 def test_generate_cross_report_analysis_rejects_missing_json_payload(
     tmp_path,
     run_context,

@@ -89,6 +89,11 @@ def _config_fingerprint(settings: Any) -> dict[str, Any]:
         ),
         "model": getattr(settings, "cross_report_analysis_model", ""),
         "temperature": getattr(settings, "cross_report_analysis_temperature", 1.0),
+        "timeout_seconds": getattr(
+            settings, "cross_report_analysis_timeout_seconds", 600.0
+        ),
+        "seed": getattr(settings, "openai_seed", None),
+        "cache_enabled": getattr(settings, "cross_report_analysis_cache_enabled", True),
         "max_prompt_chars": getattr(
             settings, "cross_report_analysis_max_prompt_chars", 60000
         ),
@@ -167,6 +172,47 @@ def _run_step(
         retry_event="cross_report_orchestrator_step_retry",
         failure_event="cross_report_orchestrator_step_failed",
         sleep_fn=sleep_fn,
+    )
+
+
+def _enforce_prompt_budget(
+    *,
+    evidence_inputs_chars: int,
+    max_prompt_chars: int,
+    request: CrossReportAnalysisOrchestratorRequest,
+    ctx: RunContext,
+) -> None:
+    if evidence_inputs_chars <= max_prompt_chars:
+        return
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cross_report_prompt_budget_exceeded",
+            module=logger.name,
+            fields={
+                "request_id": request.analysis_request.request_id,
+                "prompt_input_chars": evidence_inputs_chars,
+                "max_prompt_chars": max_prompt_chars,
+                "selected_max_evidence_items": request.max_evidence_items,
+            },
+        )
+    )
+    raise AppError(
+        code="cross_report_prompt_budget_exceeded",
+        message="Cross-report prompt input exceeds the configured character budget",
+        retryable=False,
+        severity="error",
+        context={
+            "request_id": request.analysis_request.request_id,
+            "prompt_input_chars": evidence_inputs_chars,
+            "max_prompt_chars": max_prompt_chars,
+            "max_evidence_items": request.max_evidence_items,
+            "operator_action": (
+                "Reduce source/evidence limits or increase the cross-report prompt "
+                "budget before retrying."
+            ),
+        },
     )
 
 
@@ -446,6 +492,12 @@ def run_cross_report_analysis(
         projected_data,
         ctx,
         max_evidence_items=request.max_evidence_items,
+    )
+    _enforce_prompt_budget(
+        evidence_inputs_chars=evidence_inputs.prompt_input_chars,
+        max_prompt_chars=request.max_prompt_chars,
+        request=request,
+        ctx=ctx,
     )
     _log_transition(ctx, transitions, "evidence_assembled")
     signal_result = score_cross_report_signals(
