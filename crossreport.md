@@ -51,17 +51,6 @@ Suggested priority order:
 
 ## 3. Automatic Theme Choice, Variety & Publishability
 
-- **Item:** Enforce theme variety and anti-repetition policy [Impact: 4/5, Effort: 2/5]
-  - Explanation: Automatic choice should not repeatedly select the same publisher, category, or narrow angle just because it has dense projections. Variety here means useful editorial rotation and source diversity, not metric normalization or clickbait scoring.
-  - Pros: Better content mix, more resilient editorial calendar, less duplicated output.
-  - Cons: A strict rotation policy can skip a high-quality recurring theme when the corpus is small.
-  - Completion criteria:
-    - Theme scoring includes configurable source diversity, category diversity, recency, novelty against recent generated artifacts, and evidence density components.
-    - Recent generated artifact metadata is read through the existing file/persistence service boundary, not directly from a generator.
-    - Selection can reject or down-rank a theme when it repeats the same theme/category/publisher pattern inside `theme_rotation_window_days`.
-    - Tests prove repeated-theme down-ranking, source-diversity preference, and deterministic tie-breaking.
-    - Logs explain why the selected theme was chosen over higher-density but repetitive alternatives.
-
 - **Item:** Add publishability gate before synthesis and publication [Impact: 5/5, Effort: 2/5]
   - Explanation: The selected theme should be strong enough to generate and publish. The gate should reject thin, duplicate, unsupported, or unsafe themes before spending on synthesis or attempting publication.
   - Pros: Saves cost, improves quality, prevents weak published cross reports.

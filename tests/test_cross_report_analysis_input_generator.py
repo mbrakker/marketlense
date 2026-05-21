@@ -14,6 +14,12 @@ from src.contracts.cross_report_analysis import (
     CrossReportSourceReportCandidate,
     CrossReportSourceSelectionResult,
 )
+from src.contracts.files import (
+    DirectoryEntry,
+    ListDirectoryResponse,
+    ReadTextResponse,
+)
+from src.generators import cross_report_analysis_input_generator as input_gen
 from src.generators.cross_report_analysis_input_generator import (
     select_cross_report_theme,
     select_cross_report_source_reports,
@@ -496,3 +502,186 @@ def test_theme_selection_fails_when_no_eligible_theme(
         retryable=False,
         severity="error",
     )
+
+
+def test_theme_variety_downranks_recent_repetition_through_file_service(
+    run_context,
+    tmp_path,
+    external_boundary_mocks_only,
+) -> None:
+    base_request = _request()
+    request = CrossReportAnalysisRequest(
+        **{**base_request.__dict__, "topic": "", "auto_theme": True}
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=8,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=8,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+            _selected_source(
+                "report-c",
+                publisher="Publisher C",
+                report_date="2026-05-03",
+                evidence_count=5,
+                tags=["Payments"],
+                categories=["Payments"],
+                rank=3,
+            ),
+            _selected_source(
+                "report-d",
+                publisher="Publisher D",
+                report_date="2026-05-04",
+                evidence_count=5,
+                tags=["Payments"],
+                categories=["Payments"],
+                rank=4,
+            ),
+        ]
+    )
+    calls: list[str] = []
+
+    def _list_directory(request_arg, ctx):
+        calls.append(f"list:{request_arg.root_dir}")
+        return ListDirectoryResponse(
+            schema_version="1.0",
+            root_dir=request_arg.root_dir,
+            entries=[
+                DirectoryEntry(
+                    schema_version="1.0",
+                    path=str(tmp_path / "old" / "analysis.json"),
+                    name="analysis.json",
+                    is_dir=False,
+                    size_bytes=200,
+                    mtime_utc=1.0,
+                )
+            ],
+        )
+
+    def _read_text(request_arg, ctx):
+        calls.append(f"read:{request_arg.path}")
+        return ReadTextResponse(
+            schema_version="1.0",
+            path=request_arg.path,
+            content=json.dumps(
+                {
+                    "generated_at_utc": "2026-05-20T00:00:00Z",
+                    "selected_theme": {
+                        "theme_id": "theme-tag-ai",
+                        "matched_tags": ["AI"],
+                        "matched_categories": ["Retail"],
+                        "source_report_ids": ["old-report"],
+                    },
+                }
+            ),
+        )
+
+    external_boundary_mocks_only.setattr(
+        input_gen.file_service, "list_directory", _list_directory
+    )
+    external_boundary_mocks_only.setattr(
+        input_gen.file_service, "read_text", _read_text
+    )
+
+    result = select_cross_report_theme(
+        request,
+        source_selection,
+        run_context,
+        recent_artifacts_root=str(tmp_path),
+        theme_rotation_window_days=30,
+        theme_rotation_reference_date="2026-05-21",
+        theme_score_weights={
+            "density": 1.0,
+            "diversity": 1.0,
+            "recency": 1.0,
+            "novelty": 2.0,
+        },
+    )
+
+    assert calls == [f"list:{tmp_path}", f"read:{tmp_path / 'old' / 'analysis.json'}"]
+    assert result.selected_theme.theme_id == "theme-category-payments"
+    repeated = {candidate.theme_id: candidate for candidate in result.theme_candidates}[
+        "theme-tag-ai"
+    ]
+    assert repeated.novelty_score == 0.0
+    assert "recent_theme_repetition" in repeated.rejection_risks
+    assert "recent_category_repetition:retail" in repeated.rejection_risks
+
+
+def test_theme_variety_prefers_source_diversity_and_stable_tie_breaking(
+    run_context,
+) -> None:
+    base_request = _request()
+    request = CrossReportAnalysisRequest(
+        **{**base_request.__dict__, "topic": "", "auto_theme": True}
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=6,
+                tags=["AI"],
+                categories=["Retail"],
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-01",
+                evidence_count=3,
+                tags=["Commerce"],
+                categories=["Retail"],
+            ),
+            _selected_source(
+                "report-c",
+                publisher="Publisher C",
+                report_date="2026-05-01",
+                evidence_count=3,
+                tags=["Commerce"],
+                categories=["Retail"],
+            ),
+        ]
+    )
+
+    result = select_cross_report_theme(
+        request,
+        source_selection,
+        run_context,
+        theme_score_weights={
+            "density": 1.0,
+            "diversity": 2.0,
+            "recency": 0.0,
+            "novelty": 1.0,
+        },
+    )
+    repeat = select_cross_report_theme(
+        request,
+        source_selection,
+        run_context,
+        theme_score_weights={
+            "density": 1.0,
+            "diversity": 2.0,
+            "recency": 0.0,
+            "novelty": 1.0,
+        },
+    )
+
+    assert result.selected_theme.theme_id == "theme-category-retail"
+    assert [candidate.theme_id for candidate in result.theme_candidates] == [
+        candidate.theme_id for candidate in repeat.theme_candidates
+    ]

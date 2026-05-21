@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
+import json
 import re
 from collections import Counter
 from dataclasses import replace
 from datetime import date
 from typing import Any
 
+from src.contracts.files import ListDirectoryRequest, ReadTextRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
@@ -20,10 +22,18 @@ from src.contracts.cross_report_analysis import (
     validate_cross_report_contract,
 )
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cross_report_analysis_input_generator")
+_DEFAULT_THEME_SCORE_WEIGHTS = {
+    "density": 1.0,
+    "diversity": 1.0,
+    "recency": 1.0,
+    "novelty": 1.0,
+    "filter": 1.0,
+}
 
 
 def _clean_values(values: list[str]) -> list[str]:
@@ -330,6 +340,16 @@ def _source_recency_scores(
     }
 
 
+def _parse_iso_date(raw_value: object) -> date | None:
+    value = str(raw_value or "").strip()
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
+
+
 def _selected_source_date(source: CrossReportSelectedSourceReport) -> date | None:
     value = source.report_date.strip()
     if not value:
@@ -338,6 +358,34 @@ def _selected_source_date(source: CrossReportSelectedSourceReport) -> date | Non
         return date.fromisoformat(value[:10])
     except ValueError:
         return None
+
+
+def _theme_score_weights(raw_weights: dict[str, float] | None) -> dict[str, float]:
+    weights = dict(_DEFAULT_THEME_SCORE_WEIGHTS)
+    if raw_weights:
+        for key, value in raw_weights.items():
+            if key in weights:
+                weights[key] = float(value)
+    return weights
+
+
+def _weighted_theme_total(
+    *,
+    recency_score: float,
+    density_score: float,
+    diversity_score: float,
+    novelty_score: float,
+    filter_boost: float,
+    weights: dict[str, float],
+) -> float:
+    return round(
+        recency_score * weights["recency"]
+        + density_score * weights["density"]
+        + diversity_score * weights["diversity"]
+        + novelty_score * weights["novelty"]
+        + filter_boost * weights["filter"],
+        6,
+    )
 
 
 def _display_value(values: list[str], normalized: str) -> str:
@@ -354,6 +402,8 @@ def _theme_candidate_from_sources(
     supporting_sources: list[CrossReportSelectedSourceReport],
     request: CrossReportAnalysisRequest,
     recency_scores: dict[str, float],
+    weights: dict[str, float],
+    recent_themes: list[dict[str, Any]],
 ) -> CrossReportThemeCandidate:
     report_ids = sorted(source.report_id for source in supporting_sources)
     publishers = {source.publisher.strip().casefold() for source in supporting_sources}
@@ -394,15 +444,26 @@ def _theme_candidate_from_sources(
         request.category_filters
     ):
         filter_boost = 0.55
-    total_score = round(
-        recency_score + density_score + diversity_score + novelty_score + filter_boost,
-        6,
-    )
     risks = []
     if len(publishers) < 2:
         risks.append("single_publisher")
     if evidence_count < 3:
         risks.append("thin_evidence")
+    novelty_score, repetition_risks = _theme_novelty(
+        theme_id=f"theme-{theme_kind}-{_slug(label)}",
+        matched_tags=([label] if theme_kind == "tag" else all_tags),
+        matched_categories=([label] if theme_kind == "category" else all_categories),
+        recent_themes=recent_themes,
+    )
+    risks.extend(repetition_risks)
+    total_score = _weighted_theme_total(
+        recency_score=recency_score,
+        density_score=density_score,
+        diversity_score=diversity_score,
+        novelty_score=novelty_score,
+        filter_boost=filter_boost,
+        weights=weights,
+    )
     return CrossReportThemeCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         theme_id=f"theme-{theme_kind}-{_slug(label)}",
@@ -428,6 +489,9 @@ def _theme_candidate_from_sources(
 def _automatic_theme_candidates(
     request: CrossReportAnalysisRequest,
     sources: list[CrossReportSelectedSourceReport],
+    *,
+    recent_themes: list[dict[str, Any]],
+    weights: dict[str, float],
 ) -> list[CrossReportThemeCandidate]:
     recency_scores = _source_recency_scores(sources)
     grouped: dict[tuple[str, str], list[CrossReportSelectedSourceReport]] = {}
@@ -449,6 +513,8 @@ def _automatic_theme_candidates(
             ),
             request=request,
             recency_scores=recency_scores,
+            weights=weights,
+            recent_themes=recent_themes,
         )
         for (theme_kind, theme_value), supporting_sources in grouped.items()
     ]
@@ -479,6 +545,110 @@ def _theme_sort_priority(
     if candidate.theme_id.startswith("theme-category-"):
         return 2
     return 3
+
+
+def _theme_novelty(
+    *,
+    theme_id: str,
+    matched_tags: list[str],
+    matched_categories: list[str],
+    recent_themes: list[dict[str, Any]],
+) -> tuple[float, list[str]]:
+    risks: list[str] = []
+    novelty_score = 1.0
+    normalized_tags = {tag.strip().casefold() for tag in matched_tags if tag.strip()}
+    normalized_categories = {
+        category.strip().casefold()
+        for category in matched_categories
+        if category.strip()
+    }
+    for recent in recent_themes:
+        if str(recent.get("theme_id", "")).strip() == theme_id:
+            novelty_score = 0.0
+            risks.append("recent_theme_repetition")
+        recent_tags = {
+            str(tag).strip().casefold()
+            for tag in recent.get("matched_tags", [])
+            if str(tag).strip()
+        }
+        recent_categories = {
+            str(category).strip().casefold()
+            for category in recent.get("matched_categories", [])
+            if str(category).strip()
+        }
+        for tag in sorted(normalized_tags.intersection(recent_tags)):
+            novelty_score = min(novelty_score, 0.5)
+            risks.append(f"recent_tag_repetition:{tag}")
+        for category in sorted(normalized_categories.intersection(recent_categories)):
+            novelty_score = min(novelty_score, 0.5)
+            risks.append(f"recent_category_repetition:{category}")
+    if "recent_theme_repetition" in risks:
+        novelty_score = 0.0
+    return novelty_score, sorted(set(risks))
+
+
+def _load_recent_theme_metadata(
+    *,
+    recent_artifacts_root: str | None,
+    theme_rotation_window_days: int,
+    theme_rotation_reference_date: str | None,
+    ctx: RunContext,
+) -> list[dict[str, Any]]:
+    if not recent_artifacts_root:
+        return []
+    reference_date = _parse_iso_date(theme_rotation_reference_date) or date.today()
+    earliest_allowed = reference_date.toordinal() - int(theme_rotation_window_days)
+    response = file_service.list_directory(
+        ListDirectoryRequest(
+            schema_version="1.0",
+            root_dir=recent_artifacts_root,
+            glob_pattern="*/analysis.json",
+            recursive=True,
+            include_files=True,
+            include_dirs=False,
+            limit=500,
+        ),
+        ctx,
+    )
+    recent: list[dict[str, Any]] = []
+    for entry in response.entries:
+        text_response = file_service.read_text(
+            ReadTextRequest(schema_version="1.0", path=entry.path), ctx
+        )
+        try:
+            payload = json.loads(text_response.content)
+        except json.JSONDecodeError as exc:
+            raise AppError(
+                code="cross_report_recent_artifact_invalid",
+                message="Recent cross-report artifact metadata is not valid JSON",
+                cause=exc,
+                retryable=False,
+                severity="error",
+                context={"path": entry.path},
+            ) from exc
+        generated_at = _parse_iso_date(
+            payload.get("generated_at_utc")
+            or payload.get("metadata", {}).get("generated_at_utc")
+        )
+        if generated_at is not None and generated_at.toordinal() < earliest_allowed:
+            continue
+        selected_theme = payload.get("selected_theme") or payload.get(
+            "generated_result", {}
+        ).get("selected_theme")
+        if isinstance(selected_theme, dict):
+            recent.append(
+                {
+                    "theme_id": str(selected_theme.get("theme_id", "")).strip(),
+                    "matched_tags": list(selected_theme.get("matched_tags", []) or []),
+                    "matched_categories": list(
+                        selected_theme.get("matched_categories", []) or []
+                    ),
+                    "source_report_ids": list(
+                        selected_theme.get("source_report_ids", []) or []
+                    ),
+                }
+            )
+    return recent
 
 
 def _explicit_theme_candidate(
@@ -562,6 +732,11 @@ def select_cross_report_theme(
     request: CrossReportAnalysisRequest,
     source_selection: CrossReportSourceSelectionResult,
     ctx: RunContext,
+    *,
+    recent_artifacts_root: str | None = None,
+    theme_rotation_window_days: int = 30,
+    theme_rotation_reference_date: str | None = None,
+    theme_score_weights: dict[str, float] | None = None,
 ) -> CrossReportThemeSelectionResult:
     validate_cross_report_contract(request)
     validate_cross_report_contract(source_selection)
@@ -573,6 +748,13 @@ def select_cross_report_theme(
             severity="error",
             context={"request_id": request.request_id},
         )
+    weights = _theme_score_weights(theme_score_weights)
+    recent_themes = _load_recent_theme_metadata(
+        recent_artifacts_root=recent_artifacts_root,
+        theme_rotation_window_days=theme_rotation_window_days,
+        theme_rotation_reference_date=theme_rotation_reference_date,
+        ctx=ctx,
+    )
     logger.info(
         log_event(
             ctx,
@@ -584,6 +766,8 @@ def select_cross_report_theme(
                 "auto_theme": request.auto_theme,
                 "topic": request.topic,
                 "selected_source_count": len(source_selection.selected_sources),
+                "recent_theme_count": len(recent_themes),
+                "theme_score_weights": weights,
             },
         )
     )
@@ -612,7 +796,12 @@ def select_cross_report_theme(
 
     automatic = request.auto_theme or not request.topic.strip()
     theme_candidates = (
-        _automatic_theme_candidates(request, sources)
+        _automatic_theme_candidates(
+            request,
+            sources,
+            recent_themes=recent_themes,
+            weights=weights,
+        )
         if automatic
         else [_explicit_theme_candidate(request, sources)]
     )
