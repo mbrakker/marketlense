@@ -178,6 +178,8 @@ Lightweight signal scoring is handled by `score_cross_report_signals` in the sam
 
 Evidence agreement grouping is handled by `group_cross_report_evidence_agreement`. It uses selected signal evidence plus selected source metadata to label prompt-ready groups as `convergent`, `divergent`, or `thin_coverage` before synthesis. Divergence is detected from opposed directional language across multi-publisher evidence, thin coverage is carried forward when a signal has only one report or publisher, and each prompt uncertainty input includes the group label, evidence IDs, source report IDs, agreement type, and deterministic uncertainty reasons.
 
+Cross-report synthesis prompts live in the dedicated `src/prompts/cross_report_analysis/synthesis/` namespace and render only structured, bounded JSON inputs: request metadata, selected theme, selected sources, signal scores, evidence agreement groups, evidence references, raw metric appendix, and generation policy. The dry-run fixture in `src/prompts/_dry_run_fixtures.yaml` covers realistic divergent evidence and raw metrics, and the prompt fixture corpus baseline records the new `cross_report_analysis` family at 1,953 tokens with an estimated fixture cost of `$0.002063`; this is the documented expected cost increase for adding the namespace.
+
 First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 ## WordPress Subproject

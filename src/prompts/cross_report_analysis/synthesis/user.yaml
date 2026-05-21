@@ -1,0 +1,34 @@
+text: |
+  Cross-report synthesis input JSON:
+
+  Request:
+  {{ request_json }}
+
+  Selected theme:
+  {{ selected_theme_json }}
+
+  Selected sources:
+  {{ selected_sources_json }}
+
+  Signal scores:
+  {{ signal_scores_json }}
+
+  Evidence agreement and uncertainty groups:
+  {{ evidence_groups_json }}
+
+  Evidence references:
+  {{ evidence_json }}
+
+  Raw metric appendix:
+  {{ raw_metrics_json }}
+
+  Generation policy:
+  {{ generation_policy_json }}
+
+  Task:
+  - Generate a concise cross-report analysis artifact.
+  - Include convergences, divergences, source notes, and raw metric appendix
+    discussion only where the supplied inputs support them.
+  - Cite provided evidence ids for every claim.
+  - Do not infer missing provenance.
+  - Do not use or request full report text.

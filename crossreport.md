@@ -59,17 +59,6 @@ Suggested priority order:
 
 ## 5. Prompt Namespace & Analysis Generator
 
-- **Item:** Create a dedicated cross-report analysis prompt namespace [Impact: 5/5, Effort: 2/5]
-  - Explanation: AGENTS.md forbids inline prompt text and centralized prompts. Cross-report synthesis needs its own namespace with fixture-backed rendering before runtime use.
-  - Pros: Reproducible prompts, CI dry-run coverage, clean prompt evolution.
-  - Cons: Adds prompt fixture maintenance.
-  - Completion criteria:
-    - Prompt files live under `src/prompts/cross_report_analysis/synthesis/`.
-    - Prompt inputs are fully structured and do not include unbounded full-report text.
-    - `_dry_run_fixtures.yaml` includes a cross-report synthesis fixture with realistic evidence, raw metrics, and disagreement labels.
-    - Prompt hashes, rendered prompt text, model parameters, and request metadata are logged for every generation call.
-    - Prompt fixture regression is updated only with documented expected token/cost impact.
-
 - **Item:** Implement the cross-report analysis synthesis generator [Impact: 5/5, Effort: 4/5]
   - Explanation: The generator is the domain layer that turns selected sources, evidence groups, and signal scores into a structured cross-report analysis artifact. It should make one bounded LLM call by default and fail closed when evidence mapping is incomplete.
   - Pros: Delivers the core feature with controlled cost and traceable claims.
