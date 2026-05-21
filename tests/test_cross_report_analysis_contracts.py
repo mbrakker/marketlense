@@ -12,6 +12,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceReference,
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
+    CrossReportPublishabilityResult,
     CrossReportPublishRequestSummary,
     CrossReportPublishResultSummary,
     CrossReportRawMetricReference,
@@ -126,6 +127,18 @@ def _contracts() -> list[Any]:
         cleaned_filters={"tag_filters": ["ai"], "category_filters": ["retail"]},
         excluded_report_counts={"max_source_reports_reached": 1},
     )
+    publishability_result = CrossReportPublishabilityResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme_id="theme-ai-commerce",
+        publishable=True,
+        override_applied=False,
+        diagnostic=False,
+        source_report_count=2,
+        source_publisher_count=2,
+        evidence_count=6,
+        checked_policy_fields={"min_source_reports": 2},
+        issues=[],
+    )
     evidence = CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         evidence_id="ev-report-a-claim-1",
@@ -239,6 +252,7 @@ def _contracts() -> list[Any]:
         source_candidate,
         selected_source,
         source_selection_result,
+        publishability_result,
         evidence,
         signal,
         raw_metric,

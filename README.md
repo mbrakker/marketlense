@@ -170,6 +170,8 @@ Automatic theme choice also lives in `src/generators/cross_report_analysis_input
 
 The theme selector supports a bounded variety policy before synthesis. When a recent-artifacts root is provided, it reads prior `analysis.json` metadata through `file_service.list_directory` and `file_service.read_text`, applies the configured `theme_rotation_window_days`, and down-ranks repeated theme IDs, tags, and categories by lowering the novelty component and attaching explicit repetition risks such as `recent_theme_repetition` or `recent_category_repetition:retail`. Theme score weights for density, diversity, recency, novelty, and filter fit are function parameters so orchestrator/config wiring can tune the policy without changing prompt or model behavior.
 
+`validate_cross_report_publishability` is the deterministic gate before synthesis or publication. It checks minimum selected source reports, minimum distinct publishers, minimum evidence items, duplicate-theme risk, explicit metric-normalization dependency risks, and publish-mode validation prerequisites. Failed gates raise non-retryable `AppError(code="cross_report_publishability_failed")` unless the request is diagnostic or carries `override_publishability=true`; override results are logged and returned with `override_applied=true` plus the preserved issue list.
+
 First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 ## WordPress Subproject

@@ -11229,6 +11229,57 @@
       ],
       "type": "object"
     },
+    "src.contracts.cross_report_analysis.CrossReportPublishabilityResult": {
+      "additionalProperties": false,
+      "properties": {
+        "checked_policy_fields": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "diagnostic": {
+          "type": "boolean"
+        },
+        "evidence_count": {
+          "type": "integer"
+        },
+        "issues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "override_applied": {
+          "type": "boolean"
+        },
+        "publishable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_theme_id": {
+          "type": "string"
+        },
+        "source_publisher_count": {
+          "type": "integer"
+        },
+        "source_report_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "selected_theme_id",
+        "publishable",
+        "override_applied",
+        "diagnostic",
+        "source_report_count",
+        "source_publisher_count",
+        "evidence_count",
+        "checked_policy_fields"
+      ],
+      "type": "object"
+    },
     "src.contracts.cross_report_analysis.CrossReportRawMetricReference": {
       "additionalProperties": false,
       "properties": {

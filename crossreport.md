@@ -51,17 +51,6 @@ Suggested priority order:
 
 ## 3. Automatic Theme Choice, Variety & Publishability
 
-- **Item:** Add publishability gate before synthesis and publication [Impact: 5/5, Effort: 2/5]
-  - Explanation: The selected theme should be strong enough to generate and publish. The gate should reject thin, duplicate, unsupported, or unsafe themes before spending on synthesis or attempting publication.
-  - Pros: Saves cost, improves quality, prevents weak published cross reports.
-  - Cons: Some valid niche themes may require operator override when the corpus is intentionally narrow.
-  - Completion criteria:
-    - Publishability gate checks minimum source reports, minimum source publishers, minimum evidence items, no metric-normalization dependency, duplicate-theme risk, and validation prerequisites.
-    - Failed publishability raises typed non-retryable `AppError` before model calls unless the request is explicitly `diagnostic`.
-    - Operator override is allowed only through an explicit request flag and is logged with reason, run id, task id, and selected theme id.
-    - Tests cover pass, thin coverage, duplicate theme, single-publisher-only, and override paths.
-    - README documents theme auto-choice, variety policy, and publishability failure modes.
-
 ---
 
 ## 4. Evidence, Signals & Raw Metrics Handling
