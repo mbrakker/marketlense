@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from src.services._config_service.analysis import _resolve_analysis_settings
+from src.services._config_service.cross_report_analysis import (
+    _resolve_cross_report_analysis_settings,
+)
 from src.services._config_service.drive import (
     _resolve_drive_auth_settings,
     _resolve_drive_settings,
@@ -22,6 +25,7 @@ __all__ = [
     "_resolve_analysis_settings",
     "_resolve_artifact_settings",
     "_resolve_contents_settings",
+    "_resolve_cross_report_analysis_settings",
     "_resolve_drive_auth_settings",
     "_resolve_drive_settings",
     "_resolve_evidence_pack_settings",

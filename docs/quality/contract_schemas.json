@@ -8947,6 +8947,48 @@
         "crop_refine_timeout_seconds": {
           "type": "number"
         },
+        "cross_report_analysis_auto_theme_enabled": {
+          "type": "boolean"
+        },
+        "cross_report_analysis_cache_enabled": {
+          "type": "boolean"
+        },
+        "cross_report_analysis_enabled": {
+          "type": "boolean"
+        },
+        "cross_report_analysis_max_evidence_items": {
+          "type": "integer"
+        },
+        "cross_report_analysis_max_prompt_chars": {
+          "type": "integer"
+        },
+        "cross_report_analysis_max_source_reports": {
+          "type": "integer"
+        },
+        "cross_report_analysis_min_theme_source_publishers": {
+          "type": "integer"
+        },
+        "cross_report_analysis_model": {
+          "type": "string"
+        },
+        "cross_report_analysis_prompt_namespace": {
+          "type": "string"
+        },
+        "cross_report_analysis_publish_enabled": {
+          "type": "boolean"
+        },
+        "cross_report_analysis_publish_requires_validation_pass": {
+          "type": "boolean"
+        },
+        "cross_report_analysis_temperature": {
+          "type": "number"
+        },
+        "cross_report_analysis_theme_rotation_window_days": {
+          "type": "integer"
+        },
+        "cross_report_analysis_timeout_seconds": {
+          "type": "number"
+        },
         "drive_auth_mode": {
           "type": "string"
         },

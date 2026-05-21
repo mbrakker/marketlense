@@ -14,6 +14,7 @@ from src.services.config_service import (
     load_publish_settings,
     load_settings,
 )
+from src.utils.errors import AppError
 
 
 class TestConfigService(unittest.TestCase):
@@ -212,6 +213,127 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual(f"{tmp_dir}/ledger.jsonl", settings.cost_ledger_path)
         self.assertEqual("./out/cost-daily.json", settings.cost_daily_path)
         self.assertIsInstance(settings.model_pricing, dict)
+
+    def test_cross_report_analysis_settings_load_defaults_and_config_values(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                default_settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+            self.assertFalse(default_settings.cross_report_analysis_enabled)
+            self.assertEqual(
+                6, default_settings.cross_report_analysis_max_source_reports
+            )
+            self.assertEqual(
+                48, default_settings.cross_report_analysis_max_evidence_items
+            )
+            self.assertEqual(
+                60000, default_settings.cross_report_analysis_max_prompt_chars
+            )
+            self.assertEqual(
+                "cross_report_analysis/synthesis",
+                default_settings.cross_report_analysis_prompt_namespace,
+            )
+            self.assertEqual("gpt-5-mini", default_settings.cross_report_analysis_model)
+            self.assertEqual(1.0, default_settings.cross_report_analysis_temperature)
+            self.assertEqual(
+                600.0, default_settings.cross_report_analysis_timeout_seconds
+            )
+            self.assertTrue(default_settings.cross_report_analysis_cache_enabled)
+            self.assertTrue(default_settings.cross_report_analysis_auto_theme_enabled)
+            self.assertEqual(
+                30,
+                default_settings.cross_report_analysis_theme_rotation_window_days,
+            )
+            self.assertEqual(
+                2,
+                default_settings.cross_report_analysis_min_theme_source_publishers,
+            )
+            self.assertFalse(default_settings.cross_report_analysis_publish_enabled)
+            self.assertTrue(
+                default_settings.cross_report_analysis_publish_requires_validation_pass
+            )
+
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["cross_report_analysis"] = {
+                "enabled": True,
+                "max_source_reports": 5,
+                "max_evidence_items": 24,
+                "max_prompt_chars": 32000,
+                "prompt_namespace": "cross_report_analysis/synthesis",
+                "model": "gpt-5",
+                "temperature": 0.5,
+                "timeout_seconds": 900,
+                "cache_enabled": False,
+                "auto_theme_enabled": False,
+                "theme_rotation_window_days": 45,
+                "min_theme_source_publishers": 3,
+                "publish_enabled": True,
+                "publish_requires_validation_pass": True,
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertTrue(settings.cross_report_analysis_enabled)
+        self.assertEqual(5, settings.cross_report_analysis_max_source_reports)
+        self.assertEqual(24, settings.cross_report_analysis_max_evidence_items)
+        self.assertEqual(32000, settings.cross_report_analysis_max_prompt_chars)
+        self.assertEqual("gpt-5", settings.cross_report_analysis_model)
+        self.assertEqual(0.5, settings.cross_report_analysis_temperature)
+        self.assertEqual(900.0, settings.cross_report_analysis_timeout_seconds)
+        self.assertFalse(settings.cross_report_analysis_cache_enabled)
+        self.assertFalse(settings.cross_report_analysis_auto_theme_enabled)
+        self.assertEqual(45, settings.cross_report_analysis_theme_rotation_window_days)
+        self.assertEqual(3, settings.cross_report_analysis_min_theme_source_publishers)
+        self.assertTrue(settings.cross_report_analysis_publish_enabled)
+
+    def test_cross_report_analysis_settings_reject_invalid_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["cross_report_analysis"] = {
+                "max_source_reports": 0,
+                "max_evidence_items": 24,
+                "max_prompt_chars": 32000,
+                "prompt_namespace": "cross_report_analysis/synthesis",
+                "model": "gpt-5-mini",
+                "temperature": 1.0,
+                "timeout_seconds": 600,
+                "theme_rotation_window_days": 30,
+                "min_theme_source_publishers": 2,
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                with self.assertRaises(AppError) as ctx:
+                    load_settings(
+                        ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                        RunContext(
+                            schema_version="1.0",
+                            run_id="r",
+                            task_id="t",
+                            span_id="s",
+                        ),
+                    )
+
+        self.assertEqual("cross_report_analysis_config_invalid", ctx.exception.code)
+        self.assertFalse(ctx.exception.retryable)
+        self.assertEqual("error", ctx.exception.severity)
+        self.assertEqual("max_source_reports", ctx.exception.context["field"])
 
     def test_ingest_worker_limit_defaults_and_env_override(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
