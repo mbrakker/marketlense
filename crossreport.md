@@ -55,16 +55,6 @@ Suggested priority order:
 
 ## 4. Evidence, Signals & Raw Metrics Handling
 
-- **Item:** Preserve disagreement and uncertainty as first-class output inputs [Impact: 4/5, Effort: 2/5]
-  - Explanation: Cross-report analysis should not force consensus when projected claims conflict or when source coverage is thin. The input layer should label convergent, divergent, and under-supported evidence groups before synthesis.
-  - Pros: More trustworthy analysis, fewer hallucinated conclusions, better editorial review.
-  - Cons: Adds a small deterministic grouping step before synthesis.
-  - Completion criteria:
-    - Evidence groups carry `agreement_type` values such as `convergent`, `divergent`, and `thin_coverage`.
-    - Grouping logic is deterministic and based on source/evidence text, tags, categories, and contradiction pack rows when available.
-    - Tests include at least one convergence case, one divergence case, and one thin-coverage case.
-    - Generated prompt inputs expose uncertainty labels without asking the model to infer missing provenance.
-
 ---
 
 ## 5. Prompt Namespace & Analysis Generator

@@ -25,6 +25,7 @@ from src.contracts.files import (
 from src.generators import cross_report_analysis_input_generator as input_gen
 from src.generators.cross_report_analysis_input_generator import (
     assemble_cross_report_analysis_inputs,
+    group_cross_report_evidence_agreement,
     score_cross_report_signals,
     select_cross_report_theme,
     select_cross_report_source_reports,
@@ -1498,3 +1499,206 @@ def test_signal_scoring_rejects_invalid_signal_limit(
         retryable=False,
         severity="error",
     )
+
+
+def test_evidence_agreement_groups_convergent_signal_inputs(
+    run_context,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=2,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-04",
+                evidence_count=2,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence(
+                "report-a-claim-1",
+                report_id="report-a",
+                text="AI commerce adoption is increasing in retail.",
+            ),
+            _evidence(
+                "report-b-finding-1",
+                report_id="report-b",
+                content_class="finding",
+                text="AI commerce growth is accelerating for retailers.",
+            ),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    request = _request()
+    evidence_inputs = assemble_cross_report_analysis_inputs(
+        request, source_selection, projected_data, run_context
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+    signal_result = score_cross_report_signals(
+        request, evidence_inputs, theme_selection, run_context
+    )
+
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+    result = group_cross_report_evidence_agreement(
+        request, evidence_inputs, signal_result, run_context
+    )
+
+    assert result.agreement_counts["convergent"] >= 1
+    ai_group = next(
+        group for group in result.evidence_groups if group.group_id == "group-signal-ai"
+    )
+    assert ai_group.agreement_type == "convergent"
+    assert ai_group.evidence_ids == ["report-a-claim-1", "report-b-finding-1"]
+    assert ai_group.publisher_count == 2
+    prompt_group = next(
+        item
+        for item in result.prompt_uncertainty_inputs
+        if item["group_id"] == "group-signal-ai"
+    )
+    assert prompt_group["agreement_type"] == "convergent"
+    assert prompt_group["uncertainty_reasons"] == ["multi_publisher_alignment"]
+    events = _events(caplog)
+    assert_logs_have_required_fields(events)
+    complete = [
+        event
+        for event in events
+        if event["event"] == "cross_report_evidence_agreement_grouping_complete"
+    ][0]
+    assert complete["fields"]["agreement_counts"]["convergent"] >= 1
+
+
+def test_evidence_agreement_groups_divergent_signal_inputs(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-04",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence(
+                "report-a-claim-1",
+                report_id="report-a",
+                text="AI commerce adoption is increasing among retail leaders.",
+            ),
+            _evidence(
+                "report-b-finding-1",
+                report_id="report-b",
+                content_class="finding",
+                text="AI commerce adoption is declining in budget-constrained retail teams.",
+            ),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    request = _request()
+    evidence_inputs = assemble_cross_report_analysis_inputs(
+        request, source_selection, projected_data, run_context
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+    signal_result = score_cross_report_signals(
+        request, evidence_inputs, theme_selection, run_context
+    )
+
+    result = group_cross_report_evidence_agreement(
+        request, evidence_inputs, signal_result, run_context
+    )
+
+    ai_group = next(
+        group for group in result.evidence_groups if group.group_id == "group-signal-ai"
+    )
+    assert ai_group.agreement_type == "divergent"
+    assert "opposed_directional_language" in ai_group.uncertainty_reasons
+    assert result.agreement_counts["divergent"] >= 1
+
+
+def test_evidence_agreement_groups_thin_coverage_signal_inputs(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+            )
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence(
+                "report-a-claim-1",
+                report_id="report-a",
+                text="AI commerce adoption is increasing.",
+            )
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    request = _request(max_source_reports=1)
+    evidence_inputs = assemble_cross_report_analysis_inputs(
+        request, source_selection, projected_data, run_context
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+    signal_result = score_cross_report_signals(
+        request, evidence_inputs, theme_selection, run_context
+    )
+
+    result = group_cross_report_evidence_agreement(
+        request, evidence_inputs, signal_result, run_context
+    )
+
+    ai_group = next(
+        group for group in result.evidence_groups if group.group_id == "group-signal-ai"
+    )
+    assert ai_group.agreement_type == "thin_coverage"
+    assert ai_group.uncertainty_reasons == ["single_report_coverage"]
+    assert result.prompt_uncertainty_inputs[0]["agreement_type"] == "thin_coverage"

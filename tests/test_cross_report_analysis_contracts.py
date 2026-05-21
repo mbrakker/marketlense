@@ -9,6 +9,8 @@ from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
     CrossReportAnalysisSection,
+    CrossReportEvidenceAgreementGroup,
+    CrossReportEvidenceAgreementResult,
     CrossReportEvidenceInputResult,
     CrossReportEvidenceReference,
     CrossReportGeneratedAnalysisResult,
@@ -192,6 +194,32 @@ def _contracts() -> list[Any]:
         raw_metric_policy="raw_metrics_preserved_without_normalization",
         dropped_signal_counts={},
     )
+    evidence_group = CrossReportEvidenceAgreementGroup(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        group_id="group-signal-trust",
+        label="Trust is a recurring adoption constraint",
+        agreement_type="convergent",
+        signal_ids=["signal-trust"],
+        evidence_ids=["ev-report-a-claim-1"],
+        source_report_ids=["report-a"],
+        publisher_count=1,
+        uncertainty_reasons=["single_report_coverage"],
+        prompt_input_label="convergent: Trust is a recurring adoption constraint",
+    )
+    agreement_result = CrossReportEvidenceAgreementResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme=selected_theme,
+        evidence_groups=[evidence_group],
+        prompt_uncertainty_inputs=[
+            {
+                "group_id": "group-signal-trust",
+                "agreement_type": "convergent",
+                "evidence_ids": ["ev-report-a-claim-1"],
+                "uncertainty_reasons": ["single_report_coverage"],
+            }
+        ],
+        agreement_counts={"convergent": 1},
+    )
     section = CrossReportAnalysisSection(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         section_id="executive-summary",
@@ -277,6 +305,8 @@ def _contracts() -> list[Any]:
         evidence,
         signal,
         signal_result,
+        evidence_group,
+        agreement_result,
         raw_metric,
         section,
         generated,

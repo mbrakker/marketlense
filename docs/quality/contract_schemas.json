@@ -10763,6 +10763,108 @@
       ],
       "type": "object"
     },
+    "src.contracts.cross_report_analysis.CrossReportEvidenceAgreementGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "agreement_type": {
+          "enum": [
+            "convergent",
+            "divergent",
+            "thin_coverage"
+          ]
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "group_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "prompt_input_label": {
+          "type": "string"
+        },
+        "publisher_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "signal_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "source_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "uncertainty_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "group_id",
+        "label",
+        "agreement_type",
+        "signal_ids",
+        "evidence_ids",
+        "source_report_ids",
+        "publisher_count",
+        "uncertainty_reasons",
+        "prompt_input_label"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cross_report_analysis.CrossReportEvidenceAgreementResult": {
+      "additionalProperties": false,
+      "properties": {
+        "agreement_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "evidence_groups": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportEvidenceAgreementGroup"
+          },
+          "type": "array"
+        },
+        "prompt_uncertainty_inputs": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_theme": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportSelectedTheme"
+        }
+      },
+      "required": [
+        "schema_version",
+        "selected_theme",
+        "evidence_groups",
+        "prompt_uncertainty_inputs",
+        "agreement_counts"
+      ],
+      "type": "object"
+    },
     "src.contracts.cross_report_analysis.CrossReportEvidenceInputResult": {
       "additionalProperties": false,
       "properties": {
