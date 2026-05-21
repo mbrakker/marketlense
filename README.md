@@ -158,6 +158,8 @@ Planned role boundaries:
 - CLI command: `python -m src.cli generate-cross-report-analysis`.
 - Tests: contract round trips and invalid-input taxonomy in `tests/test_cross_report_analysis_contracts.py`, config loading coverage in `tests/test_config_service.py`, generator tests for selection/synthesis semantics, orchestrator pipeline tests for retry/idempotency/logging, and analytics-store SQLite integration tests for projected-data reads.
 
+The cross-report contract family starts in `src/contracts/cross_report_analysis.py` with schema version `1.0`. It defines the request, theme candidate, selected theme, source report candidate, selected source report, evidence reference, signal score, raw metric reference, generated section, generated analysis result, validation result, publish request summary, publish result summary, and orchestrator outcome contracts. Required semantic fields are validated by `validate_cross_report_contract`, which raises non-retryable `AppError(code="cross_report_contract_invalid")` when a contract is incomplete or uses an unsupported schema version.
+
 First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 ## WordPress Subproject
