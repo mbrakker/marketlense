@@ -182,6 +182,8 @@ Cross-report synthesis prompts live in the dedicated `src/prompts/cross_report_a
 
 `src/generators/cross_report_analysis_generator.py::generate_cross_report_analysis` performs synthesis through the existing prompt and LLM service boundaries. It validates typed cross-report inputs, renders the synthesis namespace through `prompt_service`, logs prompt paths/hashes/rendered text/model parameters, makes one bounded JSON model call through `llm_service`, logs the raw response, and adapts the payload into `CrossReportGeneratedAnalysisResult`. The generator fails closed with non-retryable typed errors when the model returns no JSON, empty sections, unknown evidence IDs, or unknown raw metric IDs; source notes are carried as a generated section so downstream persistence and publication can keep provenance visible.
 
+Deterministic artifact validation runs in the same generator module through `validate_cross_report_generated_analysis`. It checks generated sections, evidence maps, cited evidence IDs, prompt budget characters, and metric-normalization language before persistence or publication. Unknown evidence IDs, sections without evidence, empty evidence maps, prompt-budget breaches, or phrases such as normalized averages across publishers raise non-retryable `AppError(code="cross_report_analysis_validation_failed")` after logging the structured `CrossReportValidationResult`.
+
 First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 ## WordPress Subproject

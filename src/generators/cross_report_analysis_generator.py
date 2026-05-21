@@ -13,6 +13,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceInputResult,
     CrossReportGeneratedAnalysisResult,
     CrossReportSignalScoreResult,
+    CrossReportValidationResult,
     validate_cross_report_contract,
 )
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
@@ -23,6 +24,14 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cross_report_analysis_generator")
+_METRIC_NORMALIZATION_PHRASES = (
+    "normalized average",
+    "average across publishers",
+    "weighted average",
+    "converted to a common unit",
+    "normalized across sources",
+    "like-for-like metric comparison",
+)
 
 
 def _json(value: Any) -> str:
@@ -253,6 +262,115 @@ def _evidence_map(
     return mapped
 
 
+def _artifact_evidence_ids(generated: CrossReportGeneratedAnalysisResult) -> set[str]:
+    evidence_ids: set[str] = set()
+    for section in generated.sections:
+        evidence_ids.update(section.evidence_ids)
+    for mapped_ids in generated.evidence_map.values():
+        evidence_ids.update(mapped_ids)
+    return evidence_ids
+
+
+def _metric_normalization_violations(
+    generated: CrossReportGeneratedAnalysisResult,
+) -> list[str]:
+    text = " ".join(
+        [
+            generated.title,
+            generated.executive_summary,
+            *[section.heading for section in generated.sections],
+            *[section.body for section in generated.sections],
+        ]
+    ).casefold()
+    return [phrase for phrase in _METRIC_NORMALIZATION_PHRASES if phrase in text]
+
+
+def validate_cross_report_generated_analysis(
+    generated: CrossReportGeneratedAnalysisResult,
+    ctx: RunContext,
+    *,
+    prompt_budget_chars: int = 0,
+    max_prompt_chars: int = 60000,
+    raise_on_failure: bool = True,
+) -> CrossReportValidationResult:
+    known_evidence_ids = {item.evidence_id for item in generated.evidence}
+    cited_evidence_ids = _artifact_evidence_ids(generated)
+    checked_evidence_ids = sorted(cited_evidence_ids or known_evidence_ids)
+    missing_evidence_ids = sorted(cited_evidence_ids - known_evidence_ids)
+    issues: list[str] = []
+    if not generated.sections:
+        issues.append("sections_empty")
+    for section in generated.sections:
+        if not section.evidence_ids:
+            issues.append(f"section_missing_evidence:{section.section_id}")
+        if not section.heading.strip():
+            issues.append(f"section_missing_heading:{section.section_id}")
+        if not section.body.strip():
+            issues.append(f"section_missing_body:{section.section_id}")
+    if not generated.evidence_map:
+        issues.append("evidence_map_empty")
+    for key, evidence_ids in generated.evidence_map.items():
+        if not str(key).strip():
+            issues.append("evidence_map_key_empty")
+        if not evidence_ids:
+            issues.append(f"evidence_map_missing_evidence:{key}")
+    if missing_evidence_ids:
+        issues.append("unknown_evidence_ids")
+    metric_violations = _metric_normalization_violations(generated)
+    if metric_violations:
+        issues.append("metric_normalization_language")
+    if prompt_budget_chars > max_prompt_chars:
+        issues.append("prompt_budget_exceeded")
+
+    passed = not issues and not missing_evidence_ids and not metric_violations
+    result = CrossReportValidationResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        status="pass" if passed else "fail",
+        checked_evidence_ids=checked_evidence_ids,
+        missing_evidence_ids=missing_evidence_ids,
+        issues=issues,
+        metric_normalization_violations=metric_violations,
+        prompt_budget_chars=prompt_budget_chars,
+        passed=passed,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_analysis_validation_complete",
+            module=logger.name,
+            fields={
+                "analysis_id": generated.analysis_id,
+                "status": result.status,
+                "passed": result.passed,
+                "checked_evidence_ids": result.checked_evidence_ids,
+                "missing_evidence_ids": result.missing_evidence_ids,
+                "issues": result.issues,
+                "metric_normalization_violations": result.metric_normalization_violations,
+                "prompt_budget_chars": result.prompt_budget_chars,
+                "max_prompt_chars": max_prompt_chars,
+            },
+        )
+    )
+    if not passed and raise_on_failure:
+        raise AppError(
+            code="cross_report_analysis_validation_failed",
+            message="Cross-report analysis deterministic validation failed",
+            retryable=False,
+            severity="error",
+            context={
+                "analysis_id": generated.analysis_id,
+                "issues": result.issues,
+                "missing_evidence_ids": result.missing_evidence_ids,
+                "metric_normalization_violations": result.metric_normalization_violations,
+                "prompt_budget_chars": result.prompt_budget_chars,
+                "max_prompt_chars": max_prompt_chars,
+            },
+        )
+    validate_cross_report_contract(result)
+    return result
+
+
 def generate_cross_report_analysis(
     request: CrossReportAnalysisRequest,
     evidence_inputs: CrossReportEvidenceInputResult,
@@ -413,6 +531,12 @@ def generate_cross_report_analysis(
         },
     )
     validate_cross_report_contract(result)
+    validation_result = validate_cross_report_generated_analysis(
+        result,
+        ctx,
+        prompt_budget_chars=evidence_inputs.prompt_input_chars,
+        max_prompt_chars=max_prompt_chars,
+    )
     logger.info(
         log_event(
             ctx,
@@ -426,6 +550,7 @@ def generate_cross_report_analysis(
                 "section_count": len(result.sections),
                 "evidence_map_keys": sorted(result.evidence_map.keys()),
                 "provider_request_id": response.request_id or "",
+                "validation_status": validation_result.status,
                 "post_processed_output": asdict(result),
             },
         )

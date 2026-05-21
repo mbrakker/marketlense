@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import is_dataclass
+from dataclasses import is_dataclass, replace
 from types import SimpleNamespace
 
 import pytest
@@ -24,6 +24,7 @@ from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptRenderResponse, PromptSet, PromptTemplate
 from src.generators.cross_report_analysis_generator import (
     generate_cross_report_analysis,
+    validate_cross_report_generated_analysis,
 )
 
 
@@ -506,3 +507,159 @@ def test_generate_cross_report_analysis_rejects_empty_sections(
         retryable=False,
         severity="error",
     )
+
+
+def _generated_result(tmp_path, run_context):
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    return generate_cross_report_analysis(
+        _request(),
+        evidence_inputs,
+        signal_result,
+        agreement_result,
+        _settings(tmp_path),
+        run_context,
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAIClient(),
+    )
+
+
+def test_validate_cross_report_generated_analysis_accepts_grounded_artifact(
+    tmp_path,
+    run_context,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    generated = _generated_result(tmp_path, run_context)
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_generator"
+    )
+
+    result = validate_cross_report_generated_analysis(
+        generated,
+        run_context,
+        prompt_budget_chars=1200,
+        max_prompt_chars=60000,
+    )
+
+    assert result.status == "pass"
+    assert result.passed is True
+    assert result.checked_evidence_ids == [
+        "ev-report-a-claim-1",
+        "ev-report-b-finding-1",
+    ]
+    assert result.missing_evidence_ids == []
+    assert result.metric_normalization_violations == []
+    assert result.prompt_budget_chars == 1200
+    events = _events(caplog)
+    assert_logs_have_required_fields(events)
+    validation_event = [
+        event
+        for event in events
+        if event["event"] == "cross_report_analysis_validation_complete"
+    ][0]
+    assert validation_event["fields"]["status"] == "pass"
+
+
+def test_validate_cross_report_generated_analysis_rejects_missing_section_evidence(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    generated = _generated_result(tmp_path, run_context)
+    invalid = replace(
+        generated,
+        sections=[
+            replace(
+                generated.sections[0],
+                evidence_ids=[],
+            )
+        ],
+    )
+
+    with pytest.raises(Exception) as exc:
+        validate_cross_report_generated_analysis(invalid, run_context)
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_analysis_validation_failed",
+        retryable=False,
+        severity="error",
+    )
+    assert (
+        "section_missing_evidence:key-cross-report-signals"
+        in exc.value.context["issues"]
+    )
+
+
+def test_validate_cross_report_generated_analysis_rejects_unknown_evidence(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    generated = _generated_result(tmp_path, run_context)
+    invalid = replace(
+        generated,
+        evidence_map={"unsupported-claim": ["unknown-evidence"]},
+    )
+
+    with pytest.raises(Exception) as exc:
+        validate_cross_report_generated_analysis(invalid, run_context)
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_analysis_validation_failed",
+        retryable=False,
+        severity="error",
+    )
+    assert exc.value.context["missing_evidence_ids"] == ["unknown-evidence"]
+
+
+def test_validate_cross_report_generated_analysis_rejects_empty_required_sections(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    generated = _generated_result(tmp_path, run_context)
+    invalid = replace(generated, sections=[])
+
+    with pytest.raises(Exception) as exc:
+        validate_cross_report_generated_analysis(invalid, run_context)
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_analysis_validation_failed",
+        retryable=False,
+        severity="error",
+    )
+    assert "sections_empty" in exc.value.context["issues"]
+
+
+def test_validate_cross_report_generated_analysis_rejects_metric_normalization_language(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    generated = _generated_result(tmp_path, run_context)
+    invalid = replace(
+        generated,
+        sections=[
+            replace(
+                generated.sections[0],
+                body="The normalized average across publishers shows a comparable increase.",
+            )
+        ],
+    )
+
+    with pytest.raises(Exception) as exc:
+        validate_cross_report_generated_analysis(invalid, run_context)
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_analysis_validation_failed",
+        retryable=False,
+        severity="error",
+    )
+    assert exc.value.context["metric_normalization_violations"] == [
+        "normalized average",
+        "average across publishers",
+    ]
