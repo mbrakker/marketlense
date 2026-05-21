@@ -10760,6 +10760,56 @@
       ],
       "type": "object"
     },
+    "src.contracts.cross_report_analysis.CrossReportEvidenceInputResult": {
+      "additionalProperties": false,
+      "properties": {
+        "dropped_evidence_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportEvidenceReference"
+          },
+          "type": "array"
+        },
+        "evidence_by_report_id": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        },
+        "prompt_input_chars": {
+          "type": "integer"
+        },
+        "raw_metrics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportRawMetricReference"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_sources": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportSelectedSourceReport"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "selected_sources",
+        "evidence"
+      ],
+      "type": "object"
+    },
     "src.contracts.cross_report_analysis.CrossReportEvidenceReference": {
       "additionalProperties": false,
       "properties": {

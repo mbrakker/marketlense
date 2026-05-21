@@ -9,6 +9,7 @@ from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
     CrossReportAnalysisSection,
+    CrossReportEvidenceInputResult,
     CrossReportEvidenceReference,
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
@@ -172,6 +173,15 @@ def _contracts() -> list[Any]:
         evidence_id="ev-report-a-claim-1",
         source_metadata={"page": 14},
     )
+    evidence_input_result = CrossReportEvidenceInputResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_sources=[selected_source],
+        evidence=[evidence],
+        raw_metrics=[raw_metric],
+        evidence_by_report_id={"report-a": ["ev-report-a-claim-1"]},
+        dropped_evidence_counts={},
+        prompt_input_chars=512,
+    )
     section = CrossReportAnalysisSection(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         section_id="executive-summary",
@@ -253,6 +263,7 @@ def _contracts() -> list[Any]:
         selected_source,
         source_selection_result,
         publishability_result,
+        evidence_input_result,
         evidence,
         signal,
         raw_metric,

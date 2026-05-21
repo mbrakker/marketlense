@@ -1066,7 +1066,7 @@ def _raw_metric(
 ) -> CrossReportRawMetricReference:
     return CrossReportRawMetricReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        metric_id=_row_text(row, "metric_id"),
+        metric_id=_row_text(row, "metric_uid"),
         report_id=_row_text(row, "report_id"),
         publisher=_row_text(report_row, "publisher"),
         label=_row_text(row, "metric"),

@@ -12,6 +12,7 @@ from src.contracts.files import ListDirectoryRequest, ReadTextRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
+    CrossReportEvidenceInputResult,
     CrossReportProjectedDataReadResponse,
     CrossReportPublishabilityResult,
     CrossReportSelectedSourceReport,
@@ -1005,6 +1006,173 @@ def validate_cross_report_publishability(
                 "evidence_count": evidence_count,
             },
         )
+    return result
+
+
+def _ordered_selected_report_ids(
+    source_selection: CrossReportSourceSelectionResult,
+) -> list[str]:
+    return [source.report_id for source in source_selection.selected_sources]
+
+
+def _evidence_sort_key(
+    evidence,
+    selected_order: dict[str, int],
+) -> tuple[int, int, str]:
+    class_priority = {"claim": 0, "finding": 1, "quote": 2, "metric": 3}
+    return (
+        selected_order.get(evidence.report_id, 9999),
+        class_priority.get(str(evidence.content_class), 99),
+        evidence.evidence_id,
+    )
+
+
+def _raw_metric_sort_key(
+    metric,
+    selected_order: dict[str, int],
+) -> tuple[int, str]:
+    return (selected_order.get(metric.report_id, 9999), metric.metric_id)
+
+
+def _prompt_input_chars(
+    evidence,
+    raw_metrics,
+) -> int:
+    evidence_chars = sum(
+        len(item.evidence_id)
+        + len(item.report_id)
+        + len(item.publisher)
+        + len(item.title)
+        + len(item.source_table)
+        + len(item.entity_uid)
+        + len(str(item.content_class))
+        + len(item.text)
+        + len(json.dumps(item.source_metadata, sort_keys=True, default=str))
+        for item in evidence
+    )
+    metric_chars = sum(
+        len(item.metric_id)
+        + len(item.report_id)
+        + len(item.publisher)
+        + len(item.label)
+        + len(item.raw_value)
+        + len(item.unit)
+        + len(item.context)
+        + len(item.evidence_id)
+        + len(json.dumps(item.source_metadata, sort_keys=True, default=str))
+        for item in raw_metrics
+    )
+    return evidence_chars + metric_chars
+
+
+def assemble_cross_report_analysis_inputs(
+    request: CrossReportAnalysisRequest,
+    source_selection: CrossReportSourceSelectionResult,
+    projected_data: CrossReportProjectedDataReadResponse,
+    ctx: RunContext,
+    *,
+    max_evidence_items: int = 48,
+) -> CrossReportEvidenceInputResult:
+    validate_cross_report_contract(request)
+    validate_cross_report_contract(source_selection)
+    validate_cross_report_contract(projected_data)
+    if max_evidence_items < 1:
+        raise AppError(
+            code="cross_report_evidence_limit_invalid",
+            message="max_evidence_items must be at least 1",
+            retryable=False,
+            severity="error",
+            context={"max_evidence_items": max_evidence_items},
+        )
+    selected_report_ids = _ordered_selected_report_ids(source_selection)
+    selected_set = set(selected_report_ids)
+    selected_order = {
+        report_id: index for index, report_id in enumerate(selected_report_ids)
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_evidence_input_assembly_start",
+            module=logger.name,
+            fields={
+                "request_id": request.request_id,
+                "selected_report_ids": selected_report_ids,
+                "projected_evidence_count": len(projected_data.evidence),
+                "projected_raw_metric_count": len(projected_data.raw_metrics),
+                "max_evidence_items": max_evidence_items,
+            },
+        )
+    )
+    dropped = Counter()
+    seen_evidence_ids: set[str] = set()
+    candidate_evidence = []
+    for item in sorted(
+        projected_data.evidence,
+        key=lambda evidence: _evidence_sort_key(evidence, selected_order),
+    ):
+        if item.report_id not in selected_set:
+            dropped["unselected_report"] += 1
+            continue
+        if item.evidence_id in seen_evidence_ids:
+            dropped["duplicate_evidence_id"] += 1
+            continue
+        seen_evidence_ids.add(item.evidence_id)
+        candidate_evidence.append(item)
+
+    bounded_evidence = []
+    for item in candidate_evidence:
+        if len(bounded_evidence) >= max_evidence_items:
+            dropped["max_evidence_items_reached"] += 1
+            continue
+        bounded_evidence.append(item)
+
+    raw_metrics = []
+    for item in sorted(
+        projected_data.raw_metrics,
+        key=lambda metric: _raw_metric_sort_key(metric, selected_order),
+    ):
+        if item.report_id not in selected_set:
+            dropped["unselected_raw_metric_report"] += 1
+            continue
+        raw_metrics.append(item)
+
+    evidence_by_report: dict[str, list[str]] = {
+        report_id: [] for report_id in selected_report_ids
+    }
+    for item in bounded_evidence:
+        evidence_by_report.setdefault(item.report_id, []).append(item.evidence_id)
+    evidence_by_report = {
+        report_id: evidence_ids
+        for report_id, evidence_ids in evidence_by_report.items()
+        if evidence_ids
+    }
+    result = CrossReportEvidenceInputResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_sources=source_selection.selected_sources,
+        evidence=bounded_evidence,
+        raw_metrics=raw_metrics,
+        evidence_by_report_id=evidence_by_report,
+        dropped_evidence_counts=dict(sorted(dropped.items())),
+        prompt_input_chars=_prompt_input_chars(bounded_evidence, raw_metrics),
+    )
+    validate_cross_report_contract(result)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_evidence_input_assembly_complete",
+            module=logger.name,
+            fields={
+                "request_id": request.request_id,
+                "selected_report_ids": selected_report_ids,
+                "evidence_count": len(result.evidence),
+                "raw_metric_count": len(result.raw_metrics),
+                "prompt_input_chars": result.prompt_input_chars,
+                "dropped_evidence_counts": result.dropped_evidence_counts,
+            },
+        )
+    )
     return result
 
 

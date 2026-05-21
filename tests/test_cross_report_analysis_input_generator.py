@@ -9,7 +9,9 @@ import pytest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
+    CrossReportEvidenceReference,
     CrossReportProjectedDataReadResponse,
+    CrossReportRawMetricReference,
     CrossReportSelectedSourceReport,
     CrossReportSourceReportCandidate,
     CrossReportSourceSelectionResult,
@@ -22,6 +24,7 @@ from src.contracts.files import (
 )
 from src.generators import cross_report_analysis_input_generator as input_gen
 from src.generators.cross_report_analysis_input_generator import (
+    assemble_cross_report_analysis_inputs,
     select_cross_report_theme,
     select_cross_report_source_reports,
     validate_cross_report_publishability,
@@ -145,6 +148,48 @@ def _source_selection(
         rejected_candidates=[],
         cleaned_filters={"tag_filters": ["ai"], "category_filters": ["retail"]},
         excluded_report_counts={},
+    )
+
+
+def _evidence(
+    evidence_id: str,
+    *,
+    report_id: str,
+    content_class: str = "claim",
+    text: str | None = None,
+) -> CrossReportEvidenceReference:
+    return CrossReportEvidenceReference(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        evidence_id=evidence_id,
+        report_id=report_id,
+        publisher=f"{report_id} Publisher",
+        title=f"{report_id} Title",
+        source_table=f"report_{content_class}s",
+        entity_uid=f"{report_id}:{content_class}:{evidence_id}",
+        content_class=content_class,
+        text=text or f"{content_class} text for {report_id}",
+        source_metadata={"pages": [1], "quality": "fixture"},
+    )
+
+
+def _raw_metric(
+    metric_id: str,
+    *,
+    report_id: str,
+    raw_value: str,
+    unit: str,
+) -> CrossReportRawMetricReference:
+    return CrossReportRawMetricReference(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        metric_id=metric_id,
+        report_id=report_id,
+        publisher=f"{report_id} Publisher",
+        label="Adoption",
+        raw_value=raw_value,
+        unit=unit,
+        context="Source-specific survey response",
+        evidence_id=f"{report_id}-claim-1",
+        source_metadata={"pages": [2], "raw_metric_reference": True},
     )
 
 
@@ -1014,3 +1059,147 @@ def test_publishability_gate_checks_publication_validation_prerequisite(
         severity="error",
     )
     assert "validation_not_passed" in exc_info.value.context["issues"]
+
+
+def test_evidence_input_assembly_filters_selected_reports_and_preserves_metric_provenance(
+    run_context,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=3,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=3,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence("report-a-claim-1", report_id="report-a", content_class="claim"),
+            _evidence("report-a-claim-1", report_id="report-a", content_class="claim"),
+            _evidence(
+                "report-a-finding-1", report_id="report-a", content_class="finding"
+            ),
+            _evidence("report-b-quote-1", report_id="report-b", content_class="quote"),
+            _evidence("report-c-claim-1", report_id="report-c", content_class="claim"),
+        ],
+        raw_metrics=[
+            _raw_metric(
+                "metric-a",
+                report_id="report-a",
+                raw_value="42",
+                unit="percent",
+            ),
+            _raw_metric(
+                "metric-c",
+                report_id="report-c",
+                raw_value="900",
+                unit="responses",
+            ),
+        ],
+        content_hashes={"report-a": {"a": "hash-a"}, "report-b": {"b": "hash-b"}},
+        excluded_report_counts={},
+    )
+
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+    result = assemble_cross_report_analysis_inputs(
+        _request(),
+        source_selection,
+        projected_data,
+        run_context,
+        max_evidence_items=10,
+    )
+
+    assert [item.evidence_id for item in result.evidence] == [
+        "report-a-claim-1",
+        "report-a-finding-1",
+        "report-b-quote-1",
+    ]
+    assert result.evidence_by_report_id == {
+        "report-a": ["report-a-claim-1", "report-a-finding-1"],
+        "report-b": ["report-b-quote-1"],
+    }
+    assert result.dropped_evidence_counts == {
+        "duplicate_evidence_id": 1,
+        "unselected_raw_metric_report": 1,
+        "unselected_report": 1,
+    }
+    assert [metric.metric_id for metric in result.raw_metrics] == ["metric-a"]
+    assert result.raw_metrics[0].raw_value == "42"
+    assert result.raw_metrics[0].unit == "percent"
+    assert result.raw_metrics[0].source_metadata["raw_metric_reference"] is True
+    assert result.prompt_input_chars > 0
+    events = _events(caplog)
+    assert_logs_have_required_fields(events)
+    complete = [
+        event
+        for event in events
+        if event["event"] == "cross_report_evidence_input_assembly_complete"
+    ][0]
+    assert complete["fields"]["evidence_count"] == 3
+    assert complete["fields"]["raw_metric_count"] == 1
+
+
+def test_evidence_input_assembly_enforces_cap_before_prompt_rendering(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+            )
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence("report-a-claim-1", report_id="report-a", content_class="claim"),
+            _evidence(
+                "report-a-finding-1", report_id="report-a", content_class="finding"
+            ),
+            _evidence("report-a-quote-1", report_id="report-a", content_class="quote"),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+
+    result = assemble_cross_report_analysis_inputs(
+        _request(),
+        source_selection,
+        projected_data,
+        run_context,
+        max_evidence_items=2,
+    )
+
+    assert [item.evidence_id for item in result.evidence] == [
+        "report-a-claim-1",
+        "report-a-finding-1",
+    ]
+    assert result.dropped_evidence_counts == {"max_evidence_items_reached": 1}
+    assert result.prompt_input_chars < 60000
