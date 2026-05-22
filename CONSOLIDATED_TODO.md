@@ -277,3 +277,141 @@ Suggested priority order:
     - Risk-policy output surfaces current repository CI health independently from changed-file classification.
     - For docs-only changes, policy clearly reports whether hard gates are presently failing on mainline baseline.
     - Operator docs include a “docs-only but repo-red” handling path.
+
+---
+
+## 9. Appendix Feature Audit (2026-05-22)
+
+Scope: first-party runtime code under `src/`, CLI/UI entrypoints, and connected operator flows. This audit treats dynamically launched subprocess modules as live when a runtime caller invokes them by module name. It does not classify tests, CI-only gates, or vendored `tools/browser-use` code as product-flow usage.
+
+Findings summary:
+
+- Keep `src/services/_browser_report_download/browser_worker.py`: it is not statically imported, but `browser.py` launches it with `python -m src.services._browser_report_download.browser_worker`.
+- Keep prompt dry-run validation: `prompt_service.validate_prompt_dry_run` is CI/quality infrastructure used by `scripts/quality/prompt_fixture_corpus_metrics.py` and tests, not an abandoned product feature.
+- Keep optional evidence-pack variety scaffolding: the `key_metrics`, `risk_register`, `recommendations`, and `contradictions` strategies are gated but wired through `evidence_pack_generator`, validation, artifacts, and analytics projection.
+
+- **Title:** Wire or remove cross-report feature gates and theme-rotation settings [Impact: 4/5, Effort: 2/5]
+  - Evidence: `cross_report_analysis.enabled`, `auto_theme_enabled`, and `theme_rotation_window_days` are loaded into `AppSettings`, tested in config loading, and documented in README, but runtime orchestration does not enforce `enabled`, does not use `auto_theme_enabled` as a gate/default, and does not pass `theme_rotation_window_days` into `select_cross_report_theme`.
+  - Assessment: Reintroduce to the flow. These are operator policy controls, not dead implementation details.
+  - Acceptance Criteria:
+    - `cross_report_analysis.enabled=false` blocks CLI/UI/orchestrator execution unless an explicit, logged override exists.
+    - `cross_report_analysis.auto_theme_enabled=false` rejects empty-topic or auto-theme requests with a typed `AppError`.
+    - `cross_report_analysis.theme_rotation_window_days` is passed into automatic theme selection, with recent-artifact root and reference-date behavior logged.
+    - Tests cover enabled=false, auto-theme disabled, rotation-window scoring, and README wording matches actual behavior.
+
+- **Title:** Make `ingest.cover_cache_enabled` real or remove it from config/UI [Impact: 3/5, Effort: 2/5]
+  - Evidence: `cover_cache_enabled` exists in `AppSettings`, `IngestSettings`, app.yaml, README, and the Streamlit structured config form, but `report_render_generator` and `cover_image_generator` always call cover rendering and never consult the flag.
+  - Assessment: Reintroduce if repeated cover generation is a meaningful cost/latency issue; otherwise delete the setting and UI control to avoid a no-op operator switch.
+  - Acceptance Criteria:
+    - If reintroduced: cover generation checks a deterministic cache key based on report identity, title/publisher/category/time period/region, style config hash, font/image dependencies, and render contract version.
+    - Cache hit/miss decisions are logged with required structured fields.
+    - `cover_cache_enabled=false` forces regeneration.
+    - If removed: `AppSettings`, `IngestSettings`, config loader, app.yaml, README, and Streamlit structured config form no longer expose the flag.
+
+- **Title:** Retire the legacy taxonomy category scorer or wire it as an explicit fallback [Impact: 3/5, Effort: 2/5]
+  - Evidence: `src/generators/categorize_generator.py::categorize_taxonomy` is covered by tests but has no first-party runtime caller. Current categorization flows use `context_category_fit_generator.fit_report_categories_from_context` through ingest and recategorization.
+  - Assessment: Prefer delete. Keeping a second uncalled category engine creates a silent competing categorization policy. Reintroduce only if there is an explicit deterministic fallback requirement.
+  - Acceptance Criteria:
+    - Delete path: remove `categorize_generator`, obsolete tests, and README/config language that implies taxonomy-signal scoring is active.
+    - Reintroduce path: orchestrators call it only as a named fallback with clear precedence after context-first fit failure or as an operator-selected deterministic mode.
+    - Tests prove the active flow cannot silently switch category policy without logs and typed outcome fields.
+
+- **Title:** Remove or reactivate uncategorized-tag YAML updates [Impact: 2/5, Effort: 2/5]
+  - Evidence: `category_mapping_service.update_uncategorized_tags` is implemented but has no first-party runtime caller. `recategorize_orchestrator` now records `unmapped_tags=[]`, and context-first categorization does not feed this update path.
+  - Assessment: Prefer delete unless an operator mapping-maintenance workflow is restored. A service that mutates category YAML without an active orchestrator path is misleading and risky.
+  - Acceptance Criteria:
+    - Delete path: remove the service function and contracts that exist only for this unused write path.
+    - Reintroduce path: define a dedicated orchestrator/operator action that records unknown taxonomy/context terms, batches writes, logs diffs, and is idempotent.
+    - Tests cover no duplicate YAML writes and refusal to write malformed mapping files.
+
+- **Title:** Delete deprecated report-generation entrypoint stubs after confirming no external imports [Impact: 2/5, Effort: 1/5]
+  - Evidence: `src/generators/report_generator.py::generate_report`, `report_analysis_generator.ensure_vector_store`, and `report_analysis_generator.complete_report_analysis` only log `invalid_generator_entrypoint` and raise `AppError`. They have no first-party runtime callers; orchestration now goes through `report_generation_orchestrator` and `report_analysis_orchestrator`.
+  - Assessment: Delete. These are compatibility stubs, not active features, and keeping them expands the apparent API surface.
+  - Acceptance Criteria:
+    - Static search confirms no CLI/UI/orchestrator imports rely on these functions.
+    - Deprecated stub functions and any tests expecting the invalid-entrypoint behavior are removed or replaced with architecture-import checks.
+    - README points only to orchestrator entrypoints for report generation and analysis sequencing.
+
+- **Title:** Decide whether unused browser helper surface functions are real acquisition tools [Impact: 3/5, Effort: 3/5]
+  - Evidence: README describes `browser_helper_coordinate_fallback_click`, `browser_helper_wait_for_load`, `browser_helper_ensure_real_tab`, `browser_helper_http_get`, and `get_browser_helper_surface` as part of the Marketlense browser helper surface. Runtime browser download currently imports and uses page info, screenshot, JavaScript, and form autocomplete helpers, but not those additional helper functions.
+  - Assessment: Reintroduce only where the acquisition flow can call them with bounded policy and typed results; otherwise remove the unused helpers and README claims. Coordinate fallback is especially sensitive and should not exist as a dormant helper.
+  - Acceptance Criteria:
+    - Reintroduce path: preflight, terminal recovery, or route execution calls the helper through the browser-download service boundary with structured logs, bounded timeouts, and tests proving no persisted coordinate route memory.
+    - Delete path: remove unused helper functions, contracts, README claims, and tests that validate unused narratives.
+    - Browser-download prompts and route evidence labels match the helper surface that is actually callable.
+
+- **Title:** Give browser private-API playbook promotion an operator path or remove it [Impact: 2/5, Effort: 2/5]
+  - Evidence: `promote_private_api_evidence_to_browser_playbook` is tested and documented, but no CLI, UI, or orchestrator calls it. Runtime can consume playbooks, but promotion from private-API evidence is only a raw service function.
+  - Assessment: Reintroduce as an explicit operator/devtool command if private-API promotion is part of the workflow; otherwise delete the function and keep manually authored playbooks only.
+  - Acceptance Criteria:
+    - Reintroduce path: CLI/UI command accepts a typed promotion request, validates repeated success evidence, writes through the service, and logs the promoted playbook artifact.
+    - Delete path: remove the private-API promotion function/tests/docs while preserving normal playbook loading.
+    - Runtime does not gain a second implicit way to create playbooks.
+
+- **Title:** Wire the topic-brief mapping audit into artifact validation or delete it [Impact: 2/5, Effort: 1/5]
+  - Evidence: `_artifact_generator/toc.py::audit_topic_brief_mappings` is public, implemented, and not called by first-party runtime code.
+  - Assessment: Prefer reintroduce if TOC/topic grounding remains a quality problem; otherwise delete the unused diagnostic helper.
+  - Acceptance Criteria:
+    - Reintroduce path: artifact generation or validation logs audit diagnostics for topic briefs with mapped/unmapped doc-map sections and deterministic issue fields.
+    - Delete path: remove the helper and any tests/docs that imply topic-brief mapping audits are active.
+
+- **Title:** Convert publish queue snapshot into real publish jobs or rename it as an ops snapshot [Impact: 5/5, Effort: 5/5]
+  - Evidence: `publish_queue_orchestrator.py` is live in the UI, but it builds a read-only snapshot from HTML files and publish state. It does not enqueue durable publish intents or drive the publish workflow.
+  - Assessment: Reintroduce as durable jobs if the product needs a queue. If not, rename the API/UI language to "publish readiness snapshot" to avoid implying a queue exists.
+  - Acceptance Criteria:
+    - Covered by the existing Section 5 item: "Turn the publish queue into durable jobs with transactional outbox, retry, and idempotency."
+    - If not implemented as a queue, contracts, UI labels, docs, and logs stop using queue terminology for the snapshot-only feature.
+
+---
+
+## 10. Full Codebase Interconnection Audit (2026-05-22)
+
+- **Title:** Reclaim retry, rate-limit, and circuit-breaker ownership from `llm_service` into orchestrators [Impact: 5/5, Effort: 4/5]
+  - Explanation: `src/services/llm_service.py::_execute_with_policy` currently owns retry loops, sleeps, rate limiting, and circuit-breaker state for external LLM calls. That makes model latency, attempt counts, and spend side effects partly hidden inside a service boundary even though retry/backoff decisions belong to orchestrators. The same boundary is also exposed through `openai_service`, `llm_service`, and `vector_store_service`, with `vector_store_service` calling `llm_service` for OpenAI vector-store operations.
+  - Pros: More predictable failure handling, cleaner attempt-count tests, stronger spend controls, and one clearer provider boundary.
+  - Cons: Requires coordinated changes across model callers and retry tests.
+  - Acceptance Criteria:
+    - One canonical LLM/OpenAI service boundary owns raw provider calls and returns typed `AppError` values with retryability metadata, but does not sleep or retry internally.
+    - Orchestrators own retry count, backoff, rate-limit policy, circuit-breaker policy, and spend-threshold checks for LLM/vector-store work.
+    - `vector_store_service` no longer aliases `llm_service` as an OpenAI boundary; vector-store calls route through the canonical boundary or an explicitly documented provider-agnostic contract.
+    - Tests assert retry attempt counts and sleep/backoff decisions at orchestrator level, and assert services make exactly one provider attempt per invocation.
+
+- **Title:** Move artifact-generation LLM scheduling out of the generator and trim duplicated split-module imports [Impact: 4/5, Effort: 3/5]
+  - Explanation: `src/generators/_artifact_generator/generation.py` uses `ThreadPoolExecutor` to schedule multiple LLM-backed artifact calls inside the generator. This lets domain logic decide external-call concurrency and can amplify rate-limit, timeout, and spend failures outside orchestrator control. The split artifact modules (`generation.py`, `toc.py`, `storage.py`, `rendering.py`) also carry duplicated broad import blocks for services and dependencies they do not all use, increasing import-time coupling and making the split look structural rather than semantic.
+  - Pros: Clearer orchestration ownership, more deterministic logs and costs, simpler artifact internals.
+  - Cons: Parallel artifact throughput may drop until orchestrator-level bounded concurrency is implemented.
+  - Acceptance Criteria:
+    - Generators no longer create thread pools for external LLM/service calls.
+    - Artifact concurrency, if retained, is configured and executed by an orchestrator with logged budget/rate-limit decisions.
+    - Artifact internal modules import only the dependencies they use; no copy-pasted broad service import block remains.
+    - Tests cover deterministic artifact stage ordering, failure propagation, and bounded concurrency decisions.
+
+- **Title:** Break first-party import cycles in browser-download internals and Streamlit UI compatibility modules [Impact: 4/5, Effort: 2/5]
+  - Explanation: The static import graph currently has two source cycles: `src.services._browser_report_download.artifact` <-> `src.services._browser_report_download.browser`, and `src.ui.settings_page` <-> `src.ui.streamlit_pages`. The browser cycle comes from shared result/model ownership between artifact finalization and browser execution. The UI cycle is caused by the compatibility facade importing settings rendering while `settings_page` imports a legacy structured-config helper back from the facade.
+  - Pros: Fewer partial-initialization risks, simpler tests, faster imports, and clearer ownership of shared types/helpers.
+  - Cons: Requires careful compatibility exports so older imports keep working.
+  - Acceptance Criteria:
+    - Browser shared result types move to a contract or neutral internal module with one-way imports.
+    - Streamlit structured-config helpers move to `src.ui.common`, `src.ui.settings_page`, or a neutral helper module so `settings_page` never imports `streamlit_pages`.
+    - A CI/import-graph check fails on new first-party cycles outside an explicit, expiring allowlist.
+    - Existing browser-download and Streamlit tests pass without compatibility regressions.
+
+- **Title:** Reduce browser-download and publisher-discovery internal monolith risk without adding pass-through layers [Impact: 4/5, Effort: 4/5]
+  - Explanation: The largest first-party modules remain concentrated in behavior-heavy internals: `src/services/_browser_report_download/artifact.py`, `src/services/_browser_report_download/browser.py`, `src/orchestrators/_report_download_orchestrator/workflow.py`, `src/services/_publisher_inventory_service/workflow.py`, and `src/orchestrators/publisher_inventory_orchestrator.py`. These files combine many route, recovery, evidence, and terminal-state paths, making defect containment and review difficult even though public facades already exist.
+  - Pros: Easier reasoning about failure paths, lower review risk, better targeted tests.
+  - Cons: Refactor risk is meaningful because these flows are integration-heavy and stateful.
+  - Acceptance Criteria:
+    - Split only by stable capability families such as terminal evidence, route memory, browser execution, artifact finalization, recovery cache, and snapshot/state recording.
+    - Public service/orchestrator entrypoints remain singular; callers do not choose between competing routes.
+    - Each extracted module has real behavior and tests, not pass-through forwarding.
+    - Golden and failure-injection tests prove report download and publisher discovery outputs remain unchanged.
+
+- **Title:** Fix repository analysis tooling exclusions so quality signals are not polluted by temp, vendored, and replay trees [Impact: 3/5, Effort: 1/5]
+  - Explanation: `scripts/count_long_files.py` currently scans `.codex_tmp`, vendored `tools/browser-use`, temporary pytest directories, and local reproduction environments. The command reported thousands of irrelevant Python files and duplicated first-party paths from `.codex_tmp/linux-ci-repro`, which hides the actual maintainability hotspots and can produce permission-denied noise.
+  - Pros: Faster local audits, clearer long-file trends, fewer false positives in quality reviews.
+  - Cons: Exclusion rules need to avoid hiding legitimate first-party code.
+  - Acceptance Criteria:
+    - Long-file and related quality scripts share an allowlist/denylist for generated, vendored, temp, cache, and local reproduction directories.
+    - The script reports first-party `src`, `tests`, `scripts`, and WordPress integration files separately from vendored or generated code.
+    - Tests cover exclusion behavior and ensure first-party files cannot be accidentally excluded without an explicit allowlist entry.
+    - README or quality docs document how to add and expire exclusions.
