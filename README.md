@@ -106,6 +106,7 @@ Key traits:
 Related architecture notes:
 - `docs/architecture/publisher-discovery-success-playbook.md`: scenario-driven optimization plan to improve publisher inventory discovery success rates and reduce false negatives.
 - `docs/quality/deep-analysis-x10-plan-2026-04-15.md`: 50 proposal deep-analysis roadmap covering quality, stability, speed, and cost x10 opportunities by module.
+- `docs/quality/repository-analysis-exclusions.md`: shared exclusions for repository analysis tools so generated, vendored, temporary, cache, replay, and local reproduction trees do not pollute maintainability signals.
 
 
 The codebase follows a strict layered architecture under `src/`:
