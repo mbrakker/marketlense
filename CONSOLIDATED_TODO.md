@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last compiled: 2026-05-20
+Last compiled: 2026-05-22
 
 This file is the single source of truth for open backlog items. It supersedes the remaining backlog plus the archived planning work from `docs/quality/deep-analysis-x10-plan-2026-04-15.md`.
 
@@ -22,6 +22,7 @@ Deep-analysis evidence used for this consolidation:
 - Long-file concentration shifted after April refactors and the May facade work. Remaining first-party hotspots from `python scripts/count_long_files.py` are concentrated in deeper PDF/browser internals, publisher-discovery workflow internals, and large paired tests rather than the public `config_service`, `openai_service`, `artifact_generator`, `publisher_inventory_service`, and `report_download_orchestrator` boundaries.
 - Recent facade splits establish the required shape for future hotspot work: keep one public boundary file and move semantic families into a same-name internal folder. Current reference examples are `src/services/report_store_service.py` over `src/services/_report_store_service/*`, `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`, `src/services/config_service.py` over `src/services/_config_service/*`, `src/services/openai_service.py` over `src/services/_openai_service/*`, and `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
 - Complexity audit on 2026-05-20 identified remaining performance hotspots in validation retrieval, PDF visual/table candidate filtering, Streamlit dashboard read models, and crop-refinement recovery paths. WordPress shortcode/theme-loop scanner hits were reviewed as lower-priority small-collection/template loops unless profiling proves otherwise.
+- GitHub Codex Connector PR review comments from PRs #24-#37 were triaged on 2026-05-21 and resolved on 2026-05-22.
 
 Removed from the active backlog because the core capability already ships:
 

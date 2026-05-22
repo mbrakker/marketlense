@@ -1001,6 +1001,9 @@ def _source_candidate(
     report_id = _row_text(report_row, "report_id")
     publisher = _report_publisher(report_row)
     publisher_id = _row_text(report_row, "publisher_id") or publisher
+    projection_status = cast(
+        ProjectionReadinessStatus, _row_text(report_row, "projection_status")
+    )
     return CrossReportSourceReportCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         report_id=report_id,
@@ -1008,9 +1011,7 @@ def _source_candidate(
         publisher=publisher,
         publisher_id=publisher_id,
         report_date=_report_date(report_row),
-        projection_status=cast(
-            ProjectionReadinessStatus, _row_text(report_row, "projection_status")
-        ),
+        projection_status=projection_status,
         content_hash=_aggregate_content_hash(report_row, content_hashes),
         category_labels=sorted(
             {_row_text(row, "label") for row in categories if _row_text(row, "label")}
@@ -1026,7 +1027,7 @@ def _source_candidate(
         diversity_score=0.0,
         density_score=float(evidence_count),
         total_score=0.0,
-        selection_reasons=["projection_status:projected"],
+        selection_reasons=[f"projection_status:{projection_status}"],
         rejection_reasons=[],
     )
 

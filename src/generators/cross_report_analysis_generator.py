@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import html
 import json
 import logging
 from dataclasses import asdict
@@ -21,6 +20,7 @@ from src.contracts.cross_report_analysis import (
 )
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
 from src.contracts.run_context import RunContext
+from src.generators.cross_report_publish_html import build_cross_report_html_document
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import llm_service, prompt_service
 from src.utils.errors import AppError
@@ -57,10 +57,6 @@ def _unique_ordered(values: list[str]) -> list[str]:
     return ordered
 
 
-def _html_text(value: Any) -> str:
-    return html.escape(str(value or ""), quote=True)
-
-
 def _source_metadata(
     generated: CrossReportGeneratedAnalysisResult,
 ) -> list[dict[str, Any]]:
@@ -80,145 +76,6 @@ def _source_metadata(
     ]
 
 
-def _metadata_script(metadata: dict[str, Any]) -> str:
-    metadata_json = json.dumps(
-        metadata,
-        ensure_ascii=True,
-        sort_keys=True,
-        separators=(",", ":"),
-        default=str,
-    )
-    return (
-        '<script type="application/json" '
-        'data-market-lense-cross-report-metadata="true">'
-        f"{html.escape(metadata_json, quote=False)}</script>"
-    )
-
-
-def _analysis_sections_html(generated: CrossReportGeneratedAnalysisResult) -> str:
-    sections: list[str] = []
-    for section in generated.sections:
-        evidence_refs = ", ".join(section.evidence_ids)
-        metric_refs = ", ".join(section.raw_metric_ids)
-        footnotes = []
-        if evidence_refs:
-            footnotes.append(
-                f"<p><strong>Evidence:</strong> {_html_text(evidence_refs)}</p>"
-            )
-        if metric_refs:
-            footnotes.append(
-                f"<p><strong>Raw metrics:</strong> {_html_text(metric_refs)}</p>"
-            )
-        sections.append(
-            '<section class="ml-cross-report-section" '
-            f'id="{_html_text(section.section_id)}">'
-            f"<h2>{_html_text(section.heading)}</h2>"
-            f"<p>{_html_text(section.body)}</p>"
-            f"{''.join(footnotes)}"
-            "</section>"
-        )
-    return "\n".join(sections)
-
-
-def _source_map_html(source_metadata: list[dict[str, Any]]) -> str:
-    items = [
-        "<li "
-        f'data-report-id="{_html_text(item["report_id"])}">'
-        f"<strong>{_html_text(item['title'])}</strong>"
-        f" — {_html_text(item['publisher'])}"
-        f" — {_html_text(item['report_date'])}"
-        f" — evidence items: {_html_text(item['evidence_count'])}"
-        "</li>"
-        for item in source_metadata
-    ]
-    return (
-        "<section><h2>Source report map</h2><ul>" + "".join(items) + "</ul></section>"
-    )
-
-
-def _evidence_html(generated: CrossReportGeneratedAnalysisResult) -> str:
-    items = [
-        "<li "
-        f'id="{_html_text(evidence.evidence_id)}">'
-        f"<strong>{_html_text(evidence.publisher)}</strong>, "
-        f"{_html_text(evidence.title)}: {_html_text(evidence.text)}"
-        f" <code>{_html_text(evidence.evidence_id)}</code>"
-        "</li>"
-        for evidence in generated.evidence
-    ]
-    return (
-        "<section><h2>Evidence references</h2><ol>" + "".join(items) + "</ol></section>"
-    )
-
-
-def _raw_metric_html(generated: CrossReportGeneratedAnalysisResult) -> str:
-    items = [
-        "<li "
-        f'id="{_html_text(metric.metric_id)}">'
-        f"<strong>{_html_text(metric.publisher)}</strong>: "
-        f"{_html_text(metric.label)} = {_html_text(metric.raw_value)} "
-        f"{_html_text(metric.unit)}"
-        f" ({_html_text(metric.context)})"
-        f" <code>{_html_text(metric.metric_id)}</code>"
-        "</li>"
-        for metric in generated.raw_metrics
-    ]
-    return (
-        "<section><h2>Raw metric appendix</h2><ul>" + "".join(items) + "</ul></section>"
-    )
-
-
-def _agreement_html(agreement_result: CrossReportEvidenceAgreementResult) -> str:
-    items = [
-        "<li>"
-        f"<strong>{_html_text(group.agreement_type)}</strong>: "
-        f"{_html_text(group.label)}"
-        f" — evidence: {_html_text(', '.join(group.evidence_ids))}"
-        f" — notes: {_html_text(', '.join(group.uncertainty_reasons))}"
-        "</li>"
-        for group in agreement_result.evidence_groups
-    ]
-    return (
-        "<section><h2>Uncertainty and divergence notes</h2><ul>"
-        + "".join(items)
-        + "</ul></section>"
-    )
-
-
-def _publish_html_document(
-    *,
-    generated: CrossReportGeneratedAnalysisResult,
-    agreement_result: CrossReportEvidenceAgreementResult,
-    source_metadata: list[dict[str, Any]],
-    machine_metadata: dict[str, Any],
-    file_id: str,
-) -> tuple[str, str]:
-    body = "\n".join(
-        [
-            '<article class="ml-cross-report-analysis">',
-            f"<h1>{_html_text(generated.title)}</h1>",
-            f'<p class="ml-cross-report-excerpt">{_html_text(generated.executive_summary)}</p>',
-            _source_map_html(source_metadata),
-            _analysis_sections_html(generated),
-            _evidence_html(generated),
-            _raw_metric_html(generated),
-            _agreement_html(agreement_result),
-            _metadata_script(machine_metadata),
-            f"<p hidden>Drive fileId: {_html_text(file_id)}</p>",
-            "</article>",
-        ]
-    )
-    document = (
-        "<!doctype html><html><head>"
-        '<meta charset="utf-8">'
-        f"<title>{_html_text(generated.title)}</title>"
-        "</head><body>"
-        f"{body}"
-        "</body></html>"
-    )
-    return body, document
-
-
 def _known_evidence_ids(evidence_inputs: CrossReportEvidenceInputResult) -> set[str]:
     return {item.evidence_id for item in evidence_inputs.evidence}
 
@@ -227,14 +84,55 @@ def _known_evidence_aliases(
     evidence_inputs: CrossReportEvidenceInputResult,
 ) -> dict[str, str]:
     aliases: dict[str, str] = {}
+    alias_sources: dict[str, set[str]] = {}
+    projected_prefix_sources: dict[str, set[str]] = {}
+
+    def _record_alias(alias: str, evidence_id: str) -> None:
+        owners = alias_sources.setdefault(alias, set())
+        owners.add(evidence_id)
+        if len(owners) > 1:
+            raise AppError(
+                code="cross_report_analysis_evidence_alias_collision",
+                message="Cross-report evidence aliases must not collide across evidence rows",
+                retryable=False,
+                severity="error",
+                context={
+                    "alias": alias,
+                    "conflicting_evidence_ids": sorted(owners),
+                },
+            )
+        aliases[alias] = evidence_id
+
+    def _projected_prefix_alias(value: str) -> str:
+        parts = value.split(":", 2)
+        if len(parts) != 3:
+            return ""
+        report_id, content_kind, local_id = parts
+        if not report_id.strip() or not content_kind.strip():
+            return ""
+        local_prefix = local_id.split("_", 1)[0].strip()
+        if not local_prefix or local_prefix == local_id:
+            return ""
+        return f"{report_id.strip()}:{content_kind.strip()}:{local_prefix}"
+
+    def _record_projected_prefix_candidate(value: str, evidence_id: str) -> None:
+        alias = _projected_prefix_alias(value)
+        if alias:
+            projected_prefix_sources.setdefault(alias, set()).add(evidence_id)
+
     for item in evidence_inputs.evidence:
         evidence_id = str(item.evidence_id or "").strip()
         if not evidence_id:
             continue
-        aliases[evidence_id] = evidence_id
+        _record_alias(evidence_id, evidence_id)
+        _record_projected_prefix_candidate(evidence_id, evidence_id)
         entity_uid = str(item.entity_uid or "").strip()
         if entity_uid:
-            aliases[entity_uid] = evidence_id
+            _record_alias(entity_uid, evidence_id)
+            _record_projected_prefix_candidate(entity_uid, evidence_id)
+    for alias, owners in projected_prefix_sources.items():
+        if len(owners) == 1:
+            _record_alias(alias, next(iter(owners)))
     return aliases
 
 
@@ -411,19 +309,6 @@ def _sections_from_payload(
                 body=_section_text(raw_section, "body"),
                 evidence_ids=evidence_ids,
                 raw_metric_ids=raw_metric_ids,
-            )
-        )
-    source_notes = _text_list(payload.get("source_notes"))
-    if source_notes:
-        first_evidence = next(iter(sorted(known_evidence)), "")
-        sections.append(
-            CrossReportAnalysisSection(
-                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-                section_id="source-notes",
-                heading="Source notes",
-                body="\n".join(source_notes),
-                evidence_ids=[first_evidence] if first_evidence else [],
-                raw_metric_ids=[],
             )
         )
     return sections
@@ -642,7 +527,7 @@ def build_cross_report_publish_package(
         "prompt_hashes": dict(generated.prompt_hashes),
         "validation_status": validation_result.status,
     }
-    body_html, html_text = _publish_html_document(
+    body_html, html_text = build_cross_report_html_document(
         generated=generated,
         agreement_result=agreement_result,
         source_metadata=source_metadata,
@@ -704,6 +589,7 @@ def generate_cross_report_analysis(
     *,
     prompt_client: Any = prompt_service,
     openai_client: Any | None = None,
+    max_prompt_chars: int | None = None,
 ) -> CrossReportGeneratedAnalysisResult:
     validate_cross_report_contract(request)
     validate_cross_report_contract(evidence_inputs)
@@ -716,8 +602,10 @@ def generate_cross_report_analysis(
             "cross_report_analysis/synthesis",
         )
     ).strip()
-    max_prompt_chars = int(
-        getattr(settings, "cross_report_analysis_max_prompt_chars", 60000)
+    resolved_max_prompt_chars = int(
+        max_prompt_chars
+        if max_prompt_chars is not None
+        else getattr(settings, "cross_report_analysis_max_prompt_chars", 60000)
     )
     logger.info(
         log_event(
@@ -743,7 +631,7 @@ def generate_cross_report_analysis(
         evidence_inputs,
         signal_result,
         agreement_result,
-        max_prompt_chars=max_prompt_chars,
+        max_prompt_chars=resolved_max_prompt_chars,
     )
     prompt_bundle = prepare_prompt_bundle(
         namespace=namespace,
@@ -777,6 +665,39 @@ def generate_cross_report_analysis(
             },
         )
     )
+    rendered_prompt_chars = len(prompt_bundle.system_prompt) + len(
+        prompt_bundle.user_prompt
+    )
+    if rendered_prompt_chars > resolved_max_prompt_chars:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cross_report_prompt_budget_exceeded",
+                module=logger.name,
+                fields={
+                    "request_id": request.request_id,
+                    "rendered_prompt_chars": rendered_prompt_chars,
+                    "max_prompt_chars": resolved_max_prompt_chars,
+                    "namespace": namespace,
+                },
+            )
+        )
+        raise AppError(
+            code="cross_report_prompt_budget_exceeded",
+            message="Rendered cross-report prompts exceed the configured character budget",
+            retryable=False,
+            severity="error",
+            context={
+                "request_id": request.request_id,
+                "rendered_prompt_chars": rendered_prompt_chars,
+                "max_prompt_chars": resolved_max_prompt_chars,
+                "operator_action": (
+                    "Reduce source/evidence limits or increase the cross-report prompt "
+                    "budget before retrying."
+                ),
+            },
+        )
     openai_client = openai_client or llm_service.build_openai_client_for_settings(
         settings,
         scope="cross_report_analysis",
@@ -864,7 +785,7 @@ def generate_cross_report_analysis(
         result,
         ctx,
         prompt_budget_chars=evidence_inputs.prompt_input_chars,
-        max_prompt_chars=max_prompt_chars,
+        max_prompt_chars=resolved_max_prompt_chars,
     )
     logger.info(
         log_event(

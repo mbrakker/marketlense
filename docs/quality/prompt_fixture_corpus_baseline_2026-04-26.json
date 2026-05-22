@@ -14,17 +14,17 @@
       "total_tokens": 2571
     },
     "cross_report_analysis": {
-      "estimated_cost_usd": 0.00209,
+      "estimated_cost_usd": 0.002167,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 900,
       "expected_tool_calls": 0,
       "family": "cross_report_analysis",
-      "input_tokens": 1158,
+      "input_tokens": 1469,
       "namespace_count": 1,
       "runtime_ms": 2.4395,
       "schema_version": "1.0",
-      "total_tokens": 2058
+      "total_tokens": 2369
     },
     "publisher_inventory": {
       "estimated_cost_usd": 0.001189,
@@ -112,18 +112,18 @@
       "total_tokens": 2571
     },
     "cross_report_analysis/synthesis": {
-      "estimated_cost_usd": 0.00209,
+      "estimated_cost_usd": 0.002167,
       "expected_browser_attempts": 0,
       "expected_ocr_calls": 0,
       "expected_output_tokens": 900,
       "expected_tool_calls": 0,
       "family": "cross_report_analysis",
-      "input_tokens": 1158,
+      "input_tokens": 1469,
       "model": "gpt-5-mini",
       "namespace": "cross_report_analysis/synthesis",
       "runtime_ms": 2.4395,
       "schema_version": "1.0",
-      "total_tokens": 2058
+      "total_tokens": 2369
     },
     "pdf_text/ocr_fallback": {
       "estimated_cost_usd": 0.010053,
@@ -576,16 +576,16 @@
   },
   "schema_version": "1.0",
   "totals": {
-    "estimated_cost_usd": 0.059169,
+    "estimated_cost_usd": 0.059246,
     "expected_browser_attempts": 2,
     "expected_ocr_calls": 1,
     "expected_output_tokens": 27770,
     "expected_tool_calls": 0,
     "family": "totals",
-    "input_tokens": 16103,
+    "input_tokens": 16414,
     "namespace_count": 34,
     "runtime_ms": 66.6583,
     "schema_version": "1.0",
-    "total_tokens": 43873
+    "total_tokens": 44184
   }
 }

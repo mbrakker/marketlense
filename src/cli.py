@@ -4,6 +4,7 @@ import logging
 import os
 import json
 from dataclasses import asdict
+from datetime import date
 from typing import Any, cast
 
 import click
@@ -154,6 +155,31 @@ def _cross_report_publish_mode(raw_value: str) -> PublicationMode:
     return cast(PublicationMode, mode)
 
 
+def _normalize_cross_report_cli_date(raw_value: str, *, option_name: str) -> str | None:
+    value = str(raw_value or "").strip()
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value).isoformat()
+    except ValueError as exc:
+        raise AppError(
+            code="cross_report_cli_date_invalid",
+            message=f"--{option_name} must be a valid YYYY-MM-DD date.",
+            cause=exc,
+            retryable=False,
+            severity="error",
+            context={"option": option_name, "value": value},
+        ) from exc
+
+
+def _optional_int_cli_value(raw_value: object) -> int | None:
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, int):
+        return raw_value
+    return None
+
+
 def _cross_report_cli_request_id(payload: dict[str, object]) -> str:
     import hashlib
 
@@ -178,6 +204,8 @@ def _build_cross_report_cli_request(
     date_start: str,
     date_end: str,
     max_report_count: int | None,
+    max_evidence_items: int | None,
+    max_prompt_chars: int | None,
     publish_mode: str,
     output_root: str,
     idempotency_db: str,
@@ -208,9 +236,41 @@ def _build_cross_report_cli_request(
             severity="error",
             context={"max_report_count": report_count},
         )
+    evidence_item_count = (
+        int(max_evidence_items)
+        if max_evidence_items is not None
+        else int(getattr(settings, "cross_report_analysis_max_evidence_items", 48))
+    )
+    if evidence_item_count <= 0:
+        raise AppError(
+            code="cross_report_cli_max_evidence_items_invalid",
+            message="--max-evidence-items must be greater than zero.",
+            retryable=False,
+            severity="error",
+            context={"max_evidence_items": evidence_item_count},
+        )
+    prompt_char_count = (
+        int(max_prompt_chars)
+        if max_prompt_chars is not None
+        else int(getattr(settings, "cross_report_analysis_max_prompt_chars", 60000))
+    )
+    if prompt_char_count <= 0:
+        raise AppError(
+            code="cross_report_cli_max_prompt_chars_invalid",
+            message="--max-prompt-chars must be greater than zero.",
+            retryable=False,
+            severity="error",
+            context={"max_prompt_chars": prompt_char_count},
+        )
     publication_mode = _cross_report_publish_mode(publish_mode)
-    normalized_date_start = str(date_start or "").strip() or None
-    normalized_date_end = str(date_end or "").strip() or None
+    normalized_date_start = _normalize_cross_report_cli_date(
+        date_start,
+        option_name="date-start",
+    )
+    normalized_date_end = _normalize_cross_report_cli_date(
+        date_end,
+        option_name="date-end",
+    )
     request_payload: dict[str, Any] = {
         "topic": normalized_topic,
         "auto_theme": normalized_auto_theme,
@@ -220,6 +280,8 @@ def _build_cross_report_cli_request(
         "date_range_start": normalized_date_start,
         "date_range_end": normalized_date_end,
         "max_source_reports": report_count,
+        "max_evidence_items": evidence_item_count,
+        "max_prompt_chars": prompt_char_count,
         "publication_mode": publication_mode,
     }
     resolved_request_id = str(request_id or "").strip() or _cross_report_cli_request_id(
@@ -255,13 +317,9 @@ def _build_cross_report_cli_request(
         ),
         idempotency_db_path=str(idempotency_db or "").strip() or settings.state_db,
         output_root=str(output_root or "").strip() or settings.output_dir,
-        max_evidence_items=int(
-            getattr(settings, "cross_report_analysis_max_evidence_items", 48)
-        ),
+        max_evidence_items=evidence_item_count,
         max_signals=8,
-        max_prompt_chars=int(
-            getattr(settings, "cross_report_analysis_max_prompt_chars", 60000)
-        ),
+        max_prompt_chars=prompt_char_count,
         retry_retries=2,
         retry_base_delay_seconds=1.0,
         retry_backoff_step_seconds=1.0,
@@ -1428,6 +1486,16 @@ def generate_cross_report_analysis_cli(
         "--max-report-count",
         help="Maximum source reports to select.",
     ),
+    max_evidence_items: int | None = typer.Option(
+        None,
+        "--max-evidence-items",
+        help="Maximum evidence references to retain for synthesis.",
+    ),
+    max_prompt_chars: int | None = typer.Option(
+        None,
+        "--max-prompt-chars",
+        help="Maximum rendered prompt characters before model generation.",
+    ),
     publish_mode: str = typer.Option(
         "generate_only",
         "--publish-mode",
@@ -1463,6 +1531,8 @@ def generate_cross_report_analysis_cli(
             date_start=date_start,
             date_end=date_end,
             max_report_count=max_report_count,
+            max_evidence_items=_optional_int_cli_value(max_evidence_items),
+            max_prompt_chars=_optional_int_cli_value(max_prompt_chars),
             publish_mode=publish_mode,
             output_root=output_root,
             idempotency_db=idempotency_db,

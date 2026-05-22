@@ -474,3 +474,34 @@ def test_cross_report_contract_validation_rejects_missing_required_semantics(
         severity="error",
     )
     assert exc.value.context["field"] == "evidence_id"
+
+
+def test_cross_report_contract_validation_rejects_null_list_filters(
+    assert_app_error,
+) -> None:
+    invalid = CrossReportAnalysisRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        request_id="request-with-null-list",
+        topic="AI commerce",
+        auto_theme=False,
+        category_filters=None,  # type: ignore[arg-type]
+        tag_filters=[],
+        publisher_filters=[],
+        date_range_start="2025-01-01",
+        date_range_end="2026-01-01",
+        max_source_reports=2,
+        diagnostic=False,
+        override_publishability=False,
+        publication_mode="generate_only",
+    )
+
+    with pytest.raises(AppError) as exc:
+        validate_cross_report_contract(invalid)
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_contract_invalid",
+        retryable=False,
+        severity="error",
+    )
+    assert exc.value.context["field"] == "category_filters"

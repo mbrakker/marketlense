@@ -347,6 +347,57 @@ def test_cross_report_orchestrator_runs_pipeline_and_reuses_idempotency(
         for event in events
         if event["event"].startswith("cross_report_orchestrator_")
     ][0] == "cross_report_orchestrator_start"
+    idempotency_event = [
+        event
+        for event in events
+        if event["event"] == "cross_report_orchestrator_transition"
+        and event["fields"]["transition"] == "idempotency_checked"
+    ][0]
+    assert idempotency_event["fields"]["material_version"] == "2.0"
+    assert "output_root" in idempotency_event["fields"]["material_fields"]
+
+
+def test_cross_report_orchestrator_idempotency_changes_for_output_controls(
+    tmp_path,
+    run_context,
+) -> None:
+    def _read_projected(request, ctx):
+        return _projected_data()
+
+    first_client = CountingOpenAIClient()
+    second_client = CountingOpenAIClient()
+    base_request = _orchestrator_request(tmp_path)
+    changed_request = replace(
+        base_request,
+        output_root=str(tmp_path / "changed-out"),
+        max_evidence_items=5,
+        max_signals=3,
+        max_prompt_chars=55000,
+    )
+
+    first = run_cross_report_analysis(
+        base_request,
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=_read_projected,
+        prompt_client=FakePromptClient(),
+        openai_client=first_client,
+        sleep_fn=lambda seconds: None,
+    )
+    second = run_cross_report_analysis(
+        changed_request,
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=_read_projected,
+        prompt_client=FakePromptClient(),
+        openai_client=second_client,
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert first.idempotency_key != second.idempotency_key
+    assert first_client.calls == 1
+    assert second_client.calls == 1
+    assert "changed-out" in second.artifact_path
 
 
 def test_cross_report_orchestrator_blocks_prompt_budget_before_model_call(

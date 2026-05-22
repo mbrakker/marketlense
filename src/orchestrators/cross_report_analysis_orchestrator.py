@@ -63,6 +63,7 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cross_report_analysis_orchestrator")
 _IDEMPOTENCY_SCOPE = "cross_report_analysis_orchestrator.generate"
+_IDEMPOTENCY_MATERIAL_VERSION = "2.0"
 
 
 def _hash_payload(payload: dict[str, Any]) -> str:
@@ -226,8 +227,14 @@ def _idempotency_material(
 ) -> dict[str, Any]:
     return {
         "schema_version": CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        "material_version": _IDEMPOTENCY_MATERIAL_VERSION,
         "analysis_request": asdict(request.analysis_request),
         "projected_data_request": asdict(request.projected_data_request),
+        "output_root": request.output_root,
+        "max_evidence_items": request.max_evidence_items,
+        "max_signals": request.max_signals,
+        "max_prompt_chars": request.max_prompt_chars,
+        "publish_target_route": request.publish_target_route,
         "selected_report_ids": selected_report_ids,
         "projection_content_hashes": content_hashes,
         "prompt_hashes": prompt_hashes,
@@ -566,7 +573,23 @@ def run_cross_report_analysis(
         ctx,
         transitions,
         "idempotency_checked",
-        {"idempotency_key": idempotency_key, "found": lookup.found},
+        {
+            "idempotency_key": idempotency_key,
+            "found": lookup.found,
+            "material_version": _IDEMPOTENCY_MATERIAL_VERSION,
+            "material_fields": sorted(idempotency_material.keys()),
+            "miss_diagnostics": (
+                {
+                    "output_root": request.output_root,
+                    "max_evidence_items": request.max_evidence_items,
+                    "max_signals": request.max_signals,
+                    "max_prompt_chars": request.max_prompt_chars,
+                    "publish_target_route": request.publish_target_route,
+                }
+                if not lookup.found
+                else {}
+            ),
+        },
     )
     if lookup.found and lookup.record is not None:
         reused = _outcome_from_payload(
@@ -601,6 +624,7 @@ def run_cross_report_analysis(
             ctx,
             prompt_client=prompt_client,
             openai_client=openai_client,
+            max_prompt_chars=request.max_prompt_chars,
         ),
         request=request,
         ctx=ctx,

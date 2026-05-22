@@ -928,14 +928,36 @@ def publish_cross_report_package(
             ctx,
         )
         if lookup.found and lookup.post_id and lookup.link:
-            return CrossReportPublishResultSummary(
-                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-                publication_mode="publish_live",
-                status="skipped",
-                target_route=package.target_route,
-                idempotency_reused=False,
-                post_id=lookup.post_id,
-                post_url=lookup.link,
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="cross_report_publish_existing_post_checksum_mismatch",
+                    module=logger.name,
+                    fields={
+                        "package_id": package.package_id,
+                        "file_id": package.file_id,
+                        "post_id": lookup.post_id,
+                        "post_url": lookup.link,
+                        "checksum": checksum,
+                    },
+                )
+            )
+            raise AppError(
+                code="cross_report_publish_existing_post_checksum_mismatch",
+                message=(
+                    "WordPress already contains this cross-report file_id, but no "
+                    "matching publish checksum was recorded for the current package."
+                ),
+                retryable=False,
+                severity="error",
+                context={
+                    "package_id": package.package_id,
+                    "file_id": package.file_id,
+                    "post_id": lookup.post_id,
+                    "post_url": lookup.link,
+                    "checksum": checksum,
+                },
             )
         outcome = publish_html_fn(
             PublishRequest(

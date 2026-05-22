@@ -47,6 +47,9 @@ def test_cross_report_synthesis_prompt_namespace_dry_run_logs_hashes(
     assert "ev-report-a-claim-1" in result.rendered_user_prompt
     assert "raw_metric_policy" in result.rendered_user_prompt
     assert "divergent" in result.rendered_user_prompt
+    assert "industry expert" in result.rendered_system_prompt
+    assert "boardroom-ready editorial article" in result.rendered_user_prompt
+    assert "consulting-grade synthesis" in result.rendered_user_prompt
     assert "full_report_text" not in result.rendered_user_prompt
 
     events = _events(caplog)
