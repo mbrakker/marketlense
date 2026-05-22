@@ -376,16 +376,6 @@ Findings summary:
     - `vector_store_service` no longer aliases `llm_service` as an OpenAI boundary; vector-store calls route through the canonical boundary or an explicitly documented provider-agnostic contract.
     - Tests assert retry attempt counts and sleep/backoff decisions at orchestrator level, and assert services make exactly one provider attempt per invocation.
 
-- **Title:** Break first-party import cycles in browser-download internals and Streamlit UI compatibility modules [Impact: 4/5, Effort: 2/5]
-  - Explanation: The static import graph currently has two source cycles: `src.services._browser_report_download.artifact` <-> `src.services._browser_report_download.browser`, and `src.ui.settings_page` <-> `src.ui.streamlit_pages`. The browser cycle comes from shared result/model ownership between artifact finalization and browser execution. The UI cycle is caused by the compatibility facade importing settings rendering while `settings_page` imports a legacy structured-config helper back from the facade.
-  - Pros: Fewer partial-initialization risks, simpler tests, faster imports, and clearer ownership of shared types/helpers.
-  - Cons: Requires careful compatibility exports so older imports keep working.
-  - Acceptance Criteria:
-    - Browser shared result types move to a contract or neutral internal module with one-way imports.
-    - Streamlit structured-config helpers move to `src.ui.common`, `src.ui.settings_page`, or a neutral helper module so `settings_page` never imports `streamlit_pages`.
-    - A CI/import-graph check fails on new first-party cycles outside an explicit, expiring allowlist.
-    - Existing browser-download and Streamlit tests pass without compatibility regressions.
-
 - **Title:** Reduce browser-download and publisher-discovery internal monolith risk without adding pass-through layers [Impact: 4/5, Effort: 4/5]
   - Explanation: The largest first-party modules remain concentrated in behavior-heavy internals: `src/services/_browser_report_download/artifact.py`, `src/services/_browser_report_download/browser.py`, `src/orchestrators/_report_download_orchestrator/workflow.py`, `src/services/_publisher_inventory_service/workflow.py`, and `src/orchestrators/publisher_inventory_orchestrator.py`. These files combine many route, recovery, evidence, and terminal-state paths, making defect containment and review difficult even though public facades already exist.
   - Pros: Easier reasoning about failure paths, lower review risk, better targeted tests.
