@@ -1172,7 +1172,7 @@ def test_generate_artifacts_fails_when_inputs_unavailable_without_vector_store(
     assert analysis_store.stored == []
 
 
-def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
+def test_generate_artifacts_runs_llm_steps_serially_without_executor(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic 1", "Topic 2"]},
         "summary": {
@@ -1263,7 +1263,15 @@ def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
         expert_vars.get("expert_domain")
         == "Consumer Behavior & Insights, Beauty, Fashion"
     )
-    assert fake_openai.max_in_flight >= 2
+    assert fake_openai.max_in_flight == 1
+    assert [req[2] for req in fake_openai.requests if req[0] == "vector"] == [
+        "summary",
+        "insights_candidates",
+        "quotes",
+        "insights_final",
+        "expert_comment",
+        "linkedin_post",
+    ]
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 6
 
 

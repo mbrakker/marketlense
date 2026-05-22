@@ -376,16 +376,6 @@ Findings summary:
     - `vector_store_service` no longer aliases `llm_service` as an OpenAI boundary; vector-store calls route through the canonical boundary or an explicitly documented provider-agnostic contract.
     - Tests assert retry attempt counts and sleep/backoff decisions at orchestrator level, and assert services make exactly one provider attempt per invocation.
 
-- **Title:** Move artifact-generation LLM scheduling out of the generator and trim duplicated split-module imports [Impact: 4/5, Effort: 3/5]
-  - Explanation: `src/generators/_artifact_generator/generation.py` uses `ThreadPoolExecutor` to schedule multiple LLM-backed artifact calls inside the generator. This lets domain logic decide external-call concurrency and can amplify rate-limit, timeout, and spend failures outside orchestrator control. The split artifact modules (`generation.py`, `toc.py`, `storage.py`, `rendering.py`) also carry duplicated broad import blocks for services and dependencies they do not all use, increasing import-time coupling and making the split look structural rather than semantic.
-  - Pros: Clearer orchestration ownership, more deterministic logs and costs, simpler artifact internals.
-  - Cons: Parallel artifact throughput may drop until orchestrator-level bounded concurrency is implemented.
-  - Acceptance Criteria:
-    - Generators no longer create thread pools for external LLM/service calls.
-    - Artifact concurrency, if retained, is configured and executed by an orchestrator with logged budget/rate-limit decisions.
-    - Artifact internal modules import only the dependencies they use; no copy-pasted broad service import block remains.
-    - Tests cover deterministic artifact stage ordering, failure propagation, and bounded concurrency decisions.
-
 - **Title:** Break first-party import cycles in browser-download internals and Streamlit UI compatibility modules [Impact: 4/5, Effort: 2/5]
   - Explanation: The static import graph currently has two source cycles: `src.services._browser_report_download.artifact` <-> `src.services._browser_report_download.browser`, and `src.ui.settings_page` <-> `src.ui.streamlit_pages`. The browser cycle comes from shared result/model ownership between artifact finalization and browser execution. The UI cycle is caused by the compatibility facade importing settings rendering while `settings_page` imports a legacy structured-config helper back from the facade.
   - Pros: Fewer partial-initialization risks, simpler tests, faster imports, and clearer ownership of shared types/helpers.

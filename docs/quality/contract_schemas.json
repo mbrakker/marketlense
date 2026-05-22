@@ -7976,6 +7976,35 @@
       ],
       "type": "object"
     },
+    "src.contracts.artifact_generation.ArtifactRenderTask": {
+      "additionalProperties": false,
+      "properties": {
+        "ctx": {
+          "$ref": "#/$defs/src.contracts.run_context.RunContext"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "step_name": {
+          "type": "string"
+        },
+        "variables": {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "step_name",
+        "namespace",
+        "variables",
+        "ctx"
+      ],
+      "type": "object"
+    },
     "src.contracts.candidate_extraction.CandidateExtractOutcome": {
       "additionalProperties": false,
       "properties": {
