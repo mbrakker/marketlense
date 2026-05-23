@@ -9,6 +9,7 @@ from src.contracts.browser_download import (
     BrowserDeveloperDiagnosticsResult,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
+    BrowserRoutePrivateApiPromotionRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.artifact import (
@@ -31,6 +32,7 @@ from src.services._browser_report_download.prediction import (
 )
 from src.services._browser_report_download.playbooks import (
     load_browser_route_playbooks,
+    promote_private_api_evidence_to_browser_playbook as _promote_private_api_evidence_to_browser_playbook,
     promote_validated_browser_route_result_to_playbook as _promote_validated_browser_route_result_to_playbook,
 )
 from src.services._browser_report_download.private_api import (
@@ -92,6 +94,17 @@ def promote_validated_browser_route_result_to_playbook(
         ctx=ctx,
         observed_at=observed_at,
         write_file=write_file,
+    )
+
+
+def promote_private_api_evidence_to_browser_playbook(
+    *,
+    request: BrowserRoutePrivateApiPromotionRequest,
+    ctx: RunContext,
+):
+    return _promote_private_api_evidence_to_browser_playbook(
+        request=request,
+        ctx=ctx,
     )
 
 

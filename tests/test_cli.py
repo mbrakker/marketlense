@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import click
 from rich.console import Console
+import yaml
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -835,6 +836,64 @@ class TestCli(unittest.TestCase):
                 allow_cross_publisher=False,
             ),
             request.session_reuse_policy,
+        )
+
+    def test_promote_private_api_playbook_accepts_typed_request_and_writes_file(
+        self,
+    ) -> None:
+        import src.cli as cli
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            playbook_dir = root / "playbooks"
+            request_path = root / "private-api-promotion.json"
+            request_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "playbook_dir": str(playbook_dir),
+                        "source_url": "https://example.com/research/report-2026",
+                        "route_family": "browser_pdf_click",
+                        "route_kind": "pdf_download",
+                        "endpoint_pattern": "/api/reports/{last_path_segment}",
+                        "method": "GET",
+                        "request_shape_summary": (
+                            "GET with report slug path parameter; no auth headers."
+                        ),
+                        "response_pdf_url_json_pointer": "/asset/pdfUrl",
+                        "validated_success_count": 2,
+                        "fallback_route_family": "browser_pdf_click",
+                        "expected_status_codes": [200],
+                        "required_response_markers": ["pdfUrl"],
+                        "evidence_labels": ["network_document_request"],
+                        "observed_at": "2026-05-06T12:00:00+00:00",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            cli.promote_private_api_playbook(
+                request_json=str(request_path),
+                json_output=True,
+            )
+
+            path = (
+                playbook_dir
+                / "private_api"
+                / "private-api-example-com-pdf-download.yaml"
+            )
+            payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+        self.assertEqual("private-api-example-com-pdf-download", payload["playbook_id"])
+        self.assertEqual("1.0.0", payload["version"])
+        self.assertEqual(
+            "validated_private_api_evidence_promotion",
+            payload["history"][0]["source"],
+        )
+        self.assertEqual(2, payload["private_api_evidence"][0]["success_count"])
+        self.assertEqual(
+            "/asset/pdfUrl",
+            payload["private_api_evidence"][0]["response_pdf_url_json_pointer"],
         )
 
     def test_sync_publishers_wires_settings_and_orchestrator(self) -> None:

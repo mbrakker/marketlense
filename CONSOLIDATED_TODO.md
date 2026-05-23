@@ -340,14 +340,6 @@ Findings summary:
     - Delete path: remove unused helper functions, contracts, README claims, and tests that validate unused narratives.
     - Browser-download prompts and route evidence labels match the helper surface that is actually callable.
 
-- **Title:** Give browser private-API playbook promotion an operator path or remove it [Impact: 2/5, Effort: 2/5]
-  - Evidence: `promote_private_api_evidence_to_browser_playbook` is tested and documented, but no CLI, UI, or orchestrator calls it. Runtime can consume playbooks, but promotion from private-API evidence is only a raw service function.
-  - Assessment: Reintroduce as an explicit operator/devtool command if private-API promotion is part of the workflow; otherwise delete the function and keep manually authored playbooks only.
-  - Acceptance Criteria:
-    - Reintroduce path: CLI/UI command accepts a typed promotion request, validates repeated success evidence, writes through the service, and logs the promoted playbook artifact.
-    - Delete path: remove the private-API promotion function/tests/docs while preserving normal playbook loading.
-    - Runtime does not gain a second implicit way to create playbooks.
-
 - **Title:** Convert publish queue snapshot into real publish jobs or rename it as an ops snapshot [Impact: 5/5, Effort: 5/5]
   - Evidence: `publish_queue_orchestrator.py` is live in the UI, but it builds a read-only snapshot from HTML files and publish state. It does not enqueue durable publish intents or drive the publish workflow.
   - Assessment: Reintroduce as durable jobs if the product needs a queue. If not, rename the API/UI language to "publish readiness snapshot" to avoid implying a queue exists.
