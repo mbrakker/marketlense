@@ -8983,49 +8983,6 @@
       ],
       "type": "object"
     },
-    "src.contracts.categories.UncategorizedTagsFlushRequest": {
-      "additionalProperties": false,
-      "properties": {
-        "path": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "schema_version",
-        "path"
-      ],
-      "type": "object"
-    },
-    "src.contracts.categories.UncategorizedTagsUpdateRequest": {
-      "additionalProperties": false,
-      "properties": {
-        "path": {
-          "type": "string"
-        },
-        "report_title": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "tags": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "schema_version",
-        "path",
-        "report_title",
-        "tags"
-      ],
-      "type": "object"
-    },
     "src.contracts.categories.WordPressCategoryUpdateOutcome": {
       "additionalProperties": false,
       "properties": {

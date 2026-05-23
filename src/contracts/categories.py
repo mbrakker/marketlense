@@ -252,32 +252,6 @@ class CategoryMappingLoadResponse:
 
 
 @dataclass(frozen=True)
-class UncategorizedTagsUpdateRequest:
-    schema_version: str = field(
-        metadata={"doc": "Uncategorized tag update request schema version."}
-    )
-    path: str = field(
-        metadata={"doc": "Filesystem path to the category mappings YAML."}
-    )
-    report_title: str = field(
-        metadata={"doc": "Report title for the uncategorized record."}
-    )
-    tags: List[str] = field(
-        metadata={"doc": "Tags that were not mapped for this report."}
-    )
-
-
-@dataclass(frozen=True)
-class UncategorizedTagsFlushRequest:
-    schema_version: str = field(
-        metadata={"doc": "Uncategorized tag flush request schema version."}
-    )
-    path: str = field(
-        metadata={"doc": "Filesystem path to the category mappings YAML."}
-    )
-
-
-@dataclass(frozen=True)
 class CategoryScoreDetail:
     category_id: str = field(metadata={"doc": "Canonical category identifier."})
     label: str = field(metadata={"doc": "Human-readable category label."})

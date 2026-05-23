@@ -316,14 +316,6 @@ Findings summary:
     - Reintroduce path: orchestrators call it only as a named fallback with clear precedence after context-first fit failure or as an operator-selected deterministic mode.
     - Tests prove the active flow cannot silently switch category policy without logs and typed outcome fields.
 
-- **Title:** Remove or reactivate uncategorized-tag YAML updates [Impact: 2/5, Effort: 2/5]
-  - Evidence: `category_mapping_service.update_uncategorized_tags` is implemented but has no first-party runtime caller. `recategorize_orchestrator` now records `unmapped_tags=[]`, and context-first categorization does not feed this update path.
-  - Assessment: Prefer delete unless an operator mapping-maintenance workflow is restored. A service that mutates category YAML without an active orchestrator path is misleading and risky.
-  - Acceptance Criteria:
-    - Delete path: remove the service function and contracts that exist only for this unused write path.
-    - Reintroduce path: define a dedicated orchestrator/operator action that records unknown taxonomy/context terms, batches writes, logs diffs, and is idempotent.
-    - Tests cover no duplicate YAML writes and refusal to write malformed mapping files.
-
 - **Title:** Decide whether unused browser helper surface functions are real acquisition tools [Impact: 3/5, Effort: 3/5]
   - Evidence: README describes `browser_helper_coordinate_fallback_click`, `browser_helper_wait_for_load`, `browser_helper_ensure_real_tab`, `browser_helper_http_get`, and `get_browser_helper_surface` as part of the Marketlense browser helper surface. Runtime browser download currently imports and uses page info, screenshot, JavaScript, and form autocomplete helpers, but not those additional helper functions.
   - Assessment: Reintroduce only where the acquisition flow can call them with bounded policy and typed results; otherwise remove the unused helpers and README claims. Coordinate fallback is especially sensitive and should not exist as a dormant helper.

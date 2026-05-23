@@ -5,6 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+import src.contracts.categories as category_contracts
+import src.services.category_mapping_service as category_mapping_service
 from src.contracts.categories import (
     CategoryClassificationConfig,
     CategoryDefinition,
@@ -511,6 +513,13 @@ def test_category_mapping_service_rejects_non_mapping_root(
         code="category_mapping_invalid_yaml",
         retryable=False,
     )
+
+
+def test_category_mapping_service_does_not_expose_uncategorized_yaml_writes() -> None:
+    assert not hasattr(category_mapping_service, "update_uncategorized_tags")
+    assert not hasattr(category_mapping_service, "flush_uncategorized_tags")
+    assert not hasattr(category_contracts, "UncategorizedTagsUpdateRequest")
+    assert not hasattr(category_contracts, "UncategorizedTagsFlushRequest")
 
 
 def test_repo_category_mapping_config_is_normalized() -> None:

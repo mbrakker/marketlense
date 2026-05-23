@@ -4,7 +4,7 @@ import logging
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 import yaml
 
@@ -16,8 +16,6 @@ from src.contracts.categories import (
     CategoryMappings,
     TaxonomyInferenceRule,
     UncategorizedTagsEntry,
-    UncategorizedTagsFlushRequest,
-    UncategorizedTagsUpdateRequest,
 )
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
@@ -37,7 +35,6 @@ class _CategoryMappingCacheEntry:
     modified_time: float
     data: dict
     mappings: CategoryMappings
-    dirty_uncategorized: bool = False
 
 
 _CATEGORY_CACHE: Dict[Path, _CategoryMappingCacheEntry] = {}
@@ -242,215 +239,6 @@ def load_mappings(
         )
     )
     return CategoryMappingLoadResponse(schema_version="1.1", mappings=entry.mappings)
-
-
-def update_uncategorized_tags(
-    request: UncategorizedTagsUpdateRequest, ctx: RunContext
-) -> None:
-    path = Path(request.path or DEFAULT_MAPPING_PATH).resolve()
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="category_uncategorized_update_start",
-            module=logger.name,
-            fields={
-                "path": str(path),
-                "title": request.report_title,
-                "tag_count": len(request.tags),
-            },
-        )
-    )
-    with _CATEGORY_LOCK:
-        entry, source = _get_or_load_entry(
-            path,
-            reload_if_changed=True,
-            force_reload=False,
-        )
-        merged_uncategorized = _merge_uncategorized(
-            entry.data.get("uncategorized") or [],
-            entry.data.get("categories") or [],
-            request.report_title,
-            request.tags,
-        )
-        if merged_uncategorized == (entry.data.get("uncategorized") or []):
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="category_uncategorized_update_noop",
-                    module=logger.name,
-                    fields={
-                        "path": str(path),
-                        "title": request.report_title,
-                        "source": source,
-                    },
-                )
-            )
-            return
-
-        entry.data["uncategorized"] = merged_uncategorized
-        entry.mappings = CategoryMappings(
-            schema_version=entry.data.get("schema_version", "1.0"),
-            categories=entry.mappings.categories,
-            classification=entry.mappings.classification,
-            inference_rules=entry.mappings.inference_rules,
-            uncategorized=[
-                UncategorizedTagsEntry(title=item["title"], tags=item["tags"])
-                for item in merged_uncategorized
-            ],
-        )
-        entry.dirty_uncategorized = True
-        _CATEGORY_CACHE[path] = entry
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="category_uncategorized_update_complete",
-            module=logger.name,
-            fields={
-                "path": str(path),
-                "records": len(merged_uncategorized),
-                "dirty": entry.dirty_uncategorized,
-            },
-        )
-    )
-
-
-def flush_uncategorized_tags(
-    request: UncategorizedTagsFlushRequest, ctx: RunContext
-) -> None:
-    path = Path(request.path or DEFAULT_MAPPING_PATH).resolve()
-    cached_entry = _CATEGORY_CACHE.get(path)
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="category_uncategorized_flush_start",
-            module=logger.name,
-            fields={
-                "path": str(path),
-                "cached": path in _CATEGORY_CACHE,
-                "dirty": cached_entry.dirty_uncategorized if cached_entry else False,
-            },
-        )
-    )
-    with _CATEGORY_LOCK:
-        entry = _CATEGORY_CACHE.get(path)
-        if not entry or not entry.dirty_uncategorized:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="category_uncategorized_flush_skipped",
-                    module=logger.name,
-                    fields={"path": str(path), "reason": "no_pending_changes"},
-                )
-            )
-            return
-
-        serialized = {
-            "schema_version": entry.data.get("schema_version", "1.0"),
-            "classification": entry.data.get("classification") or {},
-            "categories": entry.data.get("categories") or [],
-            "inference_rules": entry.data.get("inference_rules") or [],
-            "uncategorized": entry.data.get("uncategorized") or [],
-        }
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            yaml.safe_dump(
-                serialized,
-                sort_keys=False,
-                allow_unicode=False,
-                default_flow_style=False,
-            ),
-            encoding="utf-8",
-        )
-        entry.modified_time = _get_mtime(path)
-        entry.dirty_uncategorized = False
-        _CATEGORY_CACHE[path] = entry
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="category_uncategorized_flush_complete",
-            module=logger.name,
-            fields={
-                "path": str(path),
-                "records": len(serialized.get("uncategorized") or []),
-            },
-        )
-    )
-
-
-def _merge_uncategorized(
-    existing_uncategorized: List[dict],
-    categories: List[dict],
-    report_title: str,
-    tags: List[str],
-) -> List[dict]:
-    known_tags = {
-        normalize_slug_tag(tag)
-        for item in categories
-        for tag in _category_positive_tags(item)
-        if normalize_slug_tag(tag)
-    }
-
-    cleaned_uncategorized: List[dict[str, Any]] = []
-    for entry in existing_uncategorized:
-        if not isinstance(entry, dict):
-            continue
-        title = str(entry.get("title") or "").strip()
-        tags_cleaned = []
-        seen = set()
-        for t in entry.get("tags") or []:
-            t_s = str(t).strip()
-            norm = normalize_slug_tag(t_s)
-            if not t_s or norm in known_tags or norm in seen:
-                continue
-            seen.add(norm)
-            tags_cleaned.append(t_s)
-        if tags_cleaned:
-            cleaned_uncategorized.append({"title": title, "tags": tags_cleaned})
-
-    new_tags = []
-    seen_new = set()
-    for t in tags or []:
-        t_s = str(t).strip()
-        norm = normalize_slug_tag(t_s)
-        if not t_s or norm in known_tags or norm in seen_new:
-            continue
-        seen_new.add(norm)
-        new_tags.append(t_s)
-
-    if new_tags:
-        merged = False
-        for entry in cleaned_uncategorized:
-            if entry.get("title") == report_title:
-                existing_tags = [
-                    str(tag).strip()
-                    for tag in entry.get("tags", [])
-                    if str(tag).strip()
-                ]
-                existing_norms = {
-                    normalize_slug_tag(tag)
-                    for tag in existing_tags
-                    if normalize_slug_tag(tag)
-                }
-                existing_tags.extend(
-                    [
-                        tag
-                        for tag in new_tags
-                        if normalize_slug_tag(tag) not in existing_norms
-                    ]
-                )
-                entry["tags"] = existing_tags
-                merged = True
-                break
-        if not merged:
-            cleaned_uncategorized.append({"title": report_title, "tags": new_tags})
-
-    return cleaned_uncategorized
 
 
 def _get_mtime(path: Path) -> float:
@@ -700,8 +488,6 @@ def _get_or_load_entry(
 ) -> Tuple[_CategoryMappingCacheEntry, str]:
     cache_entry = _CATEGORY_CACHE.get(path)
     if cache_entry:
-        if cache_entry.dirty_uncategorized:
-            return cache_entry, "cache_dirty"
         if not force_reload:
             if not reload_if_changed:
                 return cache_entry, "cache"
