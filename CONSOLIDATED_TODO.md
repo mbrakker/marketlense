@@ -290,15 +290,6 @@ Findings summary:
 - Keep prompt dry-run validation: `prompt_service.validate_prompt_dry_run` is CI/quality infrastructure used by `scripts/quality/prompt_fixture_corpus_metrics.py` and tests, not an abandoned product feature.
 - Keep optional evidence-pack variety scaffolding: the `key_metrics`, `risk_register`, `recommendations`, and `contradictions` strategies are gated but wired through `evidence_pack_generator`, validation, artifacts, and analytics projection.
 
-- **Title:** Wire or remove cross-report feature gates and theme-rotation settings [Impact: 4/5, Effort: 2/5]
-  - Evidence: `cross_report_analysis.enabled`, `auto_theme_enabled`, and `theme_rotation_window_days` are loaded into `AppSettings`, tested in config loading, and documented in README, but runtime orchestration does not enforce `enabled`, does not use `auto_theme_enabled` as a gate/default, and does not pass `theme_rotation_window_days` into `select_cross_report_theme`.
-  - Assessment: Reintroduce to the flow. These are operator policy controls, not dead implementation details.
-  - Acceptance Criteria:
-    - `cross_report_analysis.enabled=false` blocks CLI/UI/orchestrator execution unless an explicit, logged override exists.
-    - `cross_report_analysis.auto_theme_enabled=false` rejects empty-topic or auto-theme requests with a typed `AppError`.
-    - `cross_report_analysis.theme_rotation_window_days` is passed into automatic theme selection, with recent-artifact root and reference-date behavior logged.
-    - Tests cover enabled=false, auto-theme disabled, rotation-window scoring, and README wording matches actual behavior.
-
 - **Title:** Make `ingest.cover_cache_enabled` real or remove it from config/UI [Impact: 3/5, Effort: 2/5]
   - Evidence: `cover_cache_enabled` exists in `AppSettings`, `IngestSettings`, app.yaml, README, and the Streamlit structured config form, but `report_render_generator` and `cover_image_generator` always call cover rendering and never consult the flag.
   - Assessment: Reintroduce if repeated cover generation is a meaningful cost/latency issue; otherwise delete the setting and UI control to avoid a no-op operator switch.

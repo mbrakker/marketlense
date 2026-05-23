@@ -255,6 +255,9 @@ def _settings(tmp_path):
             "support": 1.0,
             "contradiction": 0.5,
         },
+        cross_report_analysis_enabled=True,
+        cross_report_analysis_auto_theme_enabled=True,
+        cross_report_analysis_theme_rotation_window_days=30,
         cross_report_analysis_min_theme_source_publishers=2,
         cross_report_analysis_publish_enabled=False,
         cross_report_analysis_publish_requires_validation_pass=True,
@@ -271,6 +274,144 @@ def _events(caplog) -> list[dict]:
         for record in caplog.records
         if record.name == "market_lense.cross_report_analysis_orchestrator"
     ]
+
+
+def test_cross_report_orchestrator_blocks_when_feature_disabled(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    settings = _settings(tmp_path)
+    settings.cross_report_analysis_enabled = False
+    read_calls = []
+
+    with pytest.raises(AppError) as exc_info:
+        run_cross_report_analysis(
+            _orchestrator_request(tmp_path),
+            settings,
+            run_context,
+            read_projected_data_fn=lambda request, ctx: read_calls.append(request),
+            prompt_client=FakePromptClient(),
+            openai_client=CountingOpenAIClient(),
+            sleep_fn=lambda seconds: None,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_analysis_disabled",
+        retryable=False,
+        severity="error",
+    )
+    assert read_calls == []
+
+
+def test_cross_report_orchestrator_rejects_auto_theme_when_disabled(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    settings = _settings(tmp_path)
+    settings.cross_report_analysis_auto_theme_enabled = False
+    request = replace(
+        _orchestrator_request(tmp_path),
+        analysis_request=replace(
+            _analysis_request(),
+            topic="",
+            auto_theme=True,
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_cross_report_analysis(
+            request,
+            settings,
+            run_context,
+            read_projected_data_fn=lambda request, ctx: _projected_data(),
+            prompt_client=FakePromptClient(),
+            openai_client=CountingOpenAIClient(),
+            sleep_fn=lambda seconds: None,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_auto_theme_disabled",
+        retryable=False,
+        severity="error",
+    )
+    assert exc_info.value.context["auto_theme"] is True
+
+
+def test_cross_report_orchestrator_wires_theme_rotation_settings(
+    tmp_path,
+    run_context,
+    caplog,
+) -> None:
+    settings = _settings(tmp_path)
+    settings.cross_report_analysis_theme_rotation_window_days = 30
+    recent_artifact = (
+        tmp_path / "out" / "cross_report_analysis" / "recent-ai" / "analysis.json"
+    )
+    recent_artifact.parent.mkdir(parents=True)
+    recent_artifact.write_text(
+        json.dumps(
+            {
+                "generated_at_utc": "2026-05-20T00:00:00Z",
+                "generated_result": {
+                    "selected_theme": {
+                        "theme_id": "theme-tag-ai",
+                        "matched_tags": ["AI"],
+                        "matched_categories": ["Retail"],
+                        "source_report_ids": ["report-old"],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    request = replace(
+        _orchestrator_request(tmp_path),
+        analysis_request=replace(
+            _analysis_request(),
+            topic="",
+            auto_theme=True,
+            date_range_end="2026-05-21",
+        ),
+    )
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+
+    outcome = run_cross_report_analysis(
+        request,
+        settings,
+        run_context,
+        read_projected_data_fn=lambda request, ctx: _projected_data(),
+        prompt_client=FakePromptClient(),
+        openai_client=CountingOpenAIClient(),
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert outcome.generated_result.selected_theme.rejection_risks
+    assert any(
+        risk.startswith("recent_category_repetition:")
+        for risk in outcome.generated_result.selected_theme.rejection_risks
+    )
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.cross_report_analysis_input_generator"
+    ]
+    loaded = [
+        event
+        for event in events
+        if event["event"] == "cross_report_recent_theme_metadata_loaded"
+    ][0]
+    assert loaded["fields"]["recent_artifacts_root"] == str(
+        tmp_path / "out" / "cross_report_analysis"
+    )
+    assert loaded["fields"]["theme_rotation_window_days"] == 30
+    assert loaded["fields"]["theme_rotation_reference_date"] == "2026-05-21"
+    assert loaded["fields"]["loaded_recent_themes"] == 1
 
 
 def test_cross_report_orchestrator_runs_pipeline_and_reuses_idempotency(

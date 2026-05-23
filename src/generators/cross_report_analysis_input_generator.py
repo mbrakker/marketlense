@@ -645,18 +645,41 @@ def _load_recent_theme_metadata(
         return []
     reference_date = _parse_iso_date(theme_rotation_reference_date) or date.today()
     earliest_allowed = reference_date.toordinal() - int(theme_rotation_window_days)
-    response = file_service.list_directory(
-        ListDirectoryRequest(
-            schema_version="1.0",
-            root_dir=recent_artifacts_root,
-            glob_pattern="*/analysis.json",
-            recursive=True,
-            include_files=True,
-            include_dirs=False,
-            limit=500,
-        ),
-        ctx,
-    )
+    try:
+        response = file_service.list_directory(
+            ListDirectoryRequest(
+                schema_version="1.0",
+                root_dir=recent_artifacts_root,
+                glob_pattern="*/analysis.json",
+                recursive=True,
+                include_files=True,
+                include_dirs=False,
+                limit=500,
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        if exc.code != "directory_not_found" or exc.retryable:
+            raise
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cross_report_recent_theme_metadata_loaded",
+                module=logger.name,
+                fields={
+                    "recent_artifacts_root": recent_artifacts_root,
+                    "theme_rotation_window_days": int(theme_rotation_window_days),
+                    "theme_rotation_reference_date": reference_date.isoformat(),
+                    "loaded_recent_themes": 0,
+                    "skipped_old_artifacts": 0,
+                    "skipped_undated_artifacts": 0,
+                    "skipped_invalid_date_artifacts": 0,
+                    "missing_recent_artifacts_root": True,
+                },
+            )
+        )
+        return []
     recent: list[dict[str, Any]] = []
     skipped_old = 0
     skipped_undated = 0
@@ -714,6 +737,8 @@ def _load_recent_theme_metadata(
             module=logger.name,
             fields={
                 "recent_artifacts_root": recent_artifacts_root,
+                "theme_rotation_window_days": int(theme_rotation_window_days),
+                "theme_rotation_reference_date": reference_date.isoformat(),
                 "loaded_recent_themes": len(recent),
                 "skipped_old_artifacts": skipped_old,
                 "skipped_undated_artifacts": skipped_undated,

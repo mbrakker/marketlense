@@ -291,7 +291,7 @@ def _build_cross_report_cli_request(
     *,
     settings,
     topic: str,
-    auto_theme: bool,
+    auto_theme: bool | None,
     category: str,
     tag: str,
     publisher: str,
@@ -309,7 +309,12 @@ def _build_cross_report_cli_request(
     tags = _split_cli_filter_values(tag, option_name="tag")
     publishers = _split_cli_filter_values(publisher, option_name="publisher")
     normalized_topic = str(topic or "").strip()
-    normalized_auto_theme = bool(auto_theme)
+    configured_auto_theme = bool(
+        getattr(settings, "cross_report_analysis_auto_theme_enabled", True)
+    )
+    normalized_auto_theme = (
+        configured_auto_theme if auto_theme is None else bool(auto_theme)
+    )
     if not normalized_topic and not normalized_auto_theme:
         raise AppError(
             code="cross_report_cli_topic_required",
@@ -1615,10 +1620,10 @@ def generate_cross_report_analysis_cli(
         "--topic",
         help="Topic text for the cross-report analysis.",
     ),
-    auto_theme: bool = typer.Option(
-        False,
+    auto_theme: bool | None = typer.Option(
+        None,
         "--auto-theme/--no-auto-theme",
-        help="Allow deterministic automatic theme selection.",
+        help="Allow deterministic automatic theme selection; omitted uses YAML config.",
     ),
     category: str = typer.Option(
         "",

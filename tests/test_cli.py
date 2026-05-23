@@ -342,6 +342,53 @@ class TestCli(unittest.TestCase):
         printed = " ".join(str(call.args[0]) for call in print_mock.call_args_list)
         self.assertIn("cross_report_cli_filter_invalid", printed)
 
+    def test_cross_report_cli_uses_configured_auto_theme_default(self) -> None:
+        import src.cli as cli
+
+        settings = AppSettings(
+            schema_version="1.0",
+            google_sa_path="sa.json",
+            gdrive_folder_id="folder",
+            openai_api_key="key",
+            openai_model="gpt-5",
+            batch_limit=5,
+            output_dir="./out",
+            cache_dir="./cache",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            publisher_profiles_path="./Wordpress/config/publisher-profiles.json",
+            category_mapping_path="./src/config/category-mappings.yaml",
+            cover_style_path="./src/config/cover-styles.yaml",
+            ingest_lock_path="./state/ingest.lock",
+            ingest_lock_ttl_seconds=7200.0,
+            temperature=1.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+            cross_report_analysis_auto_theme_enabled=True,
+        )
+
+        request = cli._build_cross_report_cli_request(
+            settings=settings,
+            topic="",
+            auto_theme=None,
+            category="Retail",
+            tag="AI",
+            publisher="",
+            date_start="",
+            date_end="",
+            max_report_count=None,
+            max_evidence_items=None,
+            max_prompt_chars=None,
+            publish_mode="generate_only",
+            output_root="",
+            idempotency_db="",
+            request_id="",
+        )
+
+        self.assertTrue(request.analysis_request.auto_theme)
+        self.assertEqual("", request.analysis_request.topic)
+
     def test_generate_cross_report_analysis_rejects_invalid_date_filters(self) -> None:
         import src.cli as cli
 

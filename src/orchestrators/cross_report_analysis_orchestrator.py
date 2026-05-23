@@ -83,6 +83,7 @@ def _utc_now() -> str:
 
 def _config_fingerprint(settings: Any) -> dict[str, Any]:
     return {
+        "enabled": getattr(settings, "cross_report_analysis_enabled", False),
         "prompt_namespace": getattr(
             settings,
             "cross_report_analysis_prompt_namespace",
@@ -95,6 +96,12 @@ def _config_fingerprint(settings: Any) -> dict[str, Any]:
         ),
         "seed": getattr(settings, "openai_seed", None),
         "cache_enabled": getattr(settings, "cross_report_analysis_cache_enabled", True),
+        "auto_theme_enabled": getattr(
+            settings, "cross_report_analysis_auto_theme_enabled", True
+        ),
+        "theme_rotation_window_days": getattr(
+            settings, "cross_report_analysis_theme_rotation_window_days", 30
+        ),
         "max_prompt_chars": getattr(
             settings, "cross_report_analysis_max_prompt_chars", 60000
         ),
@@ -416,6 +423,90 @@ def _outcome_status(
     return cast(CrossReportOutcomeStatus, "validated")
 
 
+def _enforce_cross_report_feature_policy(
+    request: CrossReportAnalysisOrchestratorRequest,
+    settings: Any,
+    ctx: RunContext,
+) -> None:
+    enabled = bool(getattr(settings, "cross_report_analysis_enabled", False))
+    auto_theme_enabled = bool(
+        getattr(settings, "cross_report_analysis_auto_theme_enabled", True)
+    )
+    request_uses_auto_theme = bool(
+        request.analysis_request.auto_theme
+        or not request.analysis_request.topic.strip()
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cross_report_feature_policy_evaluated",
+            module=logger.name,
+            fields={
+                "request_id": request.analysis_request.request_id,
+                "enabled": enabled,
+                "auto_theme_enabled": auto_theme_enabled,
+                "auto_theme": request.analysis_request.auto_theme,
+                "topic_present": bool(request.analysis_request.topic.strip()),
+            },
+        )
+    )
+    if not enabled:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cross_report_feature_policy_blocked",
+                module=logger.name,
+                fields={
+                    "request_id": request.analysis_request.request_id,
+                    "reason": "feature_disabled",
+                },
+            )
+        )
+        raise AppError(
+            code="cross_report_analysis_disabled",
+            message="Cross-report analysis is disabled by configuration",
+            retryable=False,
+            severity="error",
+            context={"request_id": request.analysis_request.request_id},
+        )
+    if request_uses_auto_theme and not auto_theme_enabled:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cross_report_feature_policy_blocked",
+                module=logger.name,
+                fields={
+                    "request_id": request.analysis_request.request_id,
+                    "reason": "auto_theme_disabled",
+                    "auto_theme": request.analysis_request.auto_theme,
+                    "topic_present": bool(request.analysis_request.topic.strip()),
+                },
+            )
+        )
+        raise AppError(
+            code="cross_report_auto_theme_disabled",
+            message="Automatic cross-report theme selection is disabled by configuration",
+            retryable=False,
+            severity="error",
+            context={
+                "request_id": request.analysis_request.request_id,
+                "auto_theme": request.analysis_request.auto_theme,
+                "topic": request.analysis_request.topic,
+            },
+        )
+
+
+def _recent_artifacts_root(output_root: str) -> str:
+    return str(Path(output_root) / "cross_report_analysis")
+
+
+def _theme_rotation_reference_date(request: CrossReportAnalysisRequest) -> str | None:
+    return str(request.date_range_end or "").strip() or None
+
+
 def run_cross_report_analysis(
     request: CrossReportAnalysisOrchestratorRequest,
     settings: Any,
@@ -451,6 +542,7 @@ def run_cross_report_analysis(
         )
     )
     _log_transition(ctx, transitions, "started")
+    _enforce_cross_report_feature_policy(request, settings, ctx)
 
     projected_data = _run_step(
         step_name="read_projected_data",
@@ -474,7 +566,16 @@ def run_cross_report_analysis(
         },
     )
     theme_selection = select_cross_report_theme(
-        request.analysis_request, source_selection, ctx
+        request.analysis_request,
+        source_selection,
+        ctx,
+        recent_artifacts_root=_recent_artifacts_root(request.output_root),
+        theme_rotation_window_days=int(
+            getattr(settings, "cross_report_analysis_theme_rotation_window_days", 30)
+        ),
+        theme_rotation_reference_date=_theme_rotation_reference_date(
+            request.analysis_request
+        ),
     )
     _log_transition(
         ctx,
