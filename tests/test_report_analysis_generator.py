@@ -651,7 +651,7 @@ def test_run_report_analysis_logs_artifact_scheduler_failure_propagation(
     )
 
 
-def test_complete_report_analysis_falls_back_when_validation_raises(tmp_path):
+def test_run_report_analysis_falls_back_when_validation_raises(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
     selection = _selection(runtime, source)
@@ -720,7 +720,7 @@ def test_complete_report_analysis_falls_back_when_validation_raises(tmp_path):
     assert "analysis_vector_store" in stored
 
 
-def test_complete_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_error):
+def test_run_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_error):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
     selection = _selection(runtime, source)

@@ -324,14 +324,6 @@ Findings summary:
     - Reintroduce path: define a dedicated orchestrator/operator action that records unknown taxonomy/context terms, batches writes, logs diffs, and is idempotent.
     - Tests cover no duplicate YAML writes and refusal to write malformed mapping files.
 
-- **Title:** Delete deprecated report-generation entrypoint stubs after confirming no external imports [Impact: 2/5, Effort: 1/5]
-  - Evidence: `src/generators/report_generator.py::generate_report`, `report_analysis_generator.ensure_vector_store`, and `report_analysis_generator.complete_report_analysis` only log `invalid_generator_entrypoint` and raise `AppError`. They have no first-party runtime callers; orchestration now goes through `report_generation_orchestrator` and `report_analysis_orchestrator`.
-  - Assessment: Delete. These are compatibility stubs, not active features, and keeping them expands the apparent API surface.
-  - Acceptance Criteria:
-    - Static search confirms no CLI/UI/orchestrator imports rely on these functions.
-    - Deprecated stub functions and any tests expecting the invalid-entrypoint behavior are removed or replaced with architecture-import checks.
-    - README points only to orchestrator entrypoints for report generation and analysis sequencing.
-
 - **Title:** Decide whether unused browser helper surface functions are real acquisition tools [Impact: 3/5, Effort: 3/5]
   - Evidence: README describes `browser_helper_coordinate_fallback_click`, `browser_helper_wait_for_load`, `browser_helper_ensure_real_tab`, `browser_helper_http_get`, and `get_browser_helper_surface` as part of the Marketlense browser helper surface. Runtime browser download currently imports and uses page info, screenshot, JavaScript, and form autocomplete helpers, but not those additional helper functions.
   - Assessment: Reintroduce only where the acquisition flow can call them with bounded policy and typed results; otherwise remove the unused helpers and README claims. Coordinate fallback is especially sensitive and should not exist as a dormant helper.

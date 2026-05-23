@@ -11,7 +11,10 @@ from scripts.ci.check_architecture_imports import (
 def test_architecture_import_gate_detects_reverse_dependency(tmp_path) -> None:
     path = tmp_path / "src" / "services" / "bad_service.py"
     path.parent.mkdir(parents=True)
-    path.write_text("from src.generators import report_generator\n", encoding="utf-8")
+    path.write_text(
+        "from src.generators import report_analysis_generator\n",
+        encoding="utf-8",
+    )
 
     violations = scan_file(path)
 
