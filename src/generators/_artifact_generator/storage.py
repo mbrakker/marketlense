@@ -18,6 +18,7 @@ from src.generators._artifact_generator.family_policy import (
 from src.generators._artifact_generator.toc import (
     TOC_STRUCTURE_VERSION,
     TOPIC_BRIEF_MAPPING_VERSION,
+    audit_topic_brief_mappings,
     build_legacy_topic_briefs,
 )
 from src.generators.analysis_pack_cache import (
@@ -155,6 +156,11 @@ def assemble_artifacts_payload(
     }
     if cache_meta:
         artifacts_payload["_cache"] = dict(cache_meta)
+    _log_topic_brief_mapping_audit(
+        topic_briefs=topic_briefs,
+        doc_map=doc_map,
+        ctx=ctx,
+    )
     try:
         validate_schema(
             SchemaValidateRequest(
@@ -178,6 +184,47 @@ def assemble_artifacts_payload(
         )
         raise
     return artifacts_payload
+
+
+def _log_topic_brief_mapping_audit(
+    *,
+    topic_briefs: List[Dict[str, Any]],
+    doc_map: Dict[str, Any],
+    ctx: RunContext,
+) -> None:
+    diagnostics = audit_topic_brief_mappings(
+        topic_briefs=topic_briefs,
+        doc_map=doc_map,
+    )
+    status_counts: Dict[str, int] = {}
+    for diagnostic in diagnostics:
+        status = _s(diagnostic.get("status")).strip() or "unknown"
+        status_counts[status] = status_counts.get(status, 0) + 1
+    issue_count = sum(
+        count for status, count in status_counts.items() if status != "ok"
+    )
+    unmapped_count = sum(
+        status_counts.get(status, 0)
+        for status in ("identity_mismatch", "unknown_section")
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_topic_brief_mapping_audit",
+            module=logger.name,
+            fields={
+                "mapping_version": TOPIC_BRIEF_MAPPING_VERSION,
+                "brief_count": len(topic_briefs),
+                "diagnostic_count": len(diagnostics),
+                "mapped_count": status_counts.get("ok", 0),
+                "unmapped_count": unmapped_count,
+                "issue_count": issue_count,
+                "status_counts": status_counts,
+                "diagnostics": diagnostics,
+            },
+        )
+    )
 
 
 def store_artifacts_payload(

@@ -348,13 +348,6 @@ Findings summary:
     - Delete path: remove the private-API promotion function/tests/docs while preserving normal playbook loading.
     - Runtime does not gain a second implicit way to create playbooks.
 
-- **Title:** Wire the topic-brief mapping audit into artifact validation or delete it [Impact: 2/5, Effort: 1/5]
-  - Evidence: `_artifact_generator/toc.py::audit_topic_brief_mappings` is public, implemented, and not called by first-party runtime code.
-  - Assessment: Prefer reintroduce if TOC/topic grounding remains a quality problem; otherwise delete the unused diagnostic helper.
-  - Acceptance Criteria:
-    - Reintroduce path: artifact generation or validation logs audit diagnostics for topic briefs with mapped/unmapped doc-map sections and deterministic issue fields.
-    - Delete path: remove the helper and any tests/docs that imply topic-brief mapping audits are active.
-
 - **Title:** Convert publish queue snapshot into real publish jobs or rename it as an ops snapshot [Impact: 5/5, Effort: 5/5]
   - Evidence: `publish_queue_orchestrator.py` is live in the UI, but it builds a read-only snapshot from HTML files and publish state. It does not enqueue durable publish intents or drive the publish workflow.
   - Assessment: Reintroduce as durable jobs if the product needs a queue. If not, rename the API/UI language to "publish readiness snapshot" to avoid implying a queue exists.
