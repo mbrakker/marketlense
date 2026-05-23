@@ -38,6 +38,9 @@ from src.services._browser_report_download.playbooks import (
 from src.services._browser_report_download.private_api import (
     try_private_api_playbook_download,
 )
+from src.services._browser_report_download.private_api_auto_promotion import (
+    detect_private_api_promotion_candidates,
+)
 from src.services._browser_report_download.preflight import (
     observe_browser_preflight_agent_outcome,
     try_browser_preflight_probe,

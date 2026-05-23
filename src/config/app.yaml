@@ -151,6 +151,9 @@ browser_download:
   route_playbook_dir: "./src/playbooks/browser_routes"
   route_playbook_stale_policy: "fallback"
   route_playbook_promotion_mode: "write"
+  private_api_playbook_promotion_mode: "write"
+  private_api_playbook_min_success_count: 3
+  private_api_playbook_min_distinct_source_urls: 2
   drive_upload:
     enabled: true
     required: true

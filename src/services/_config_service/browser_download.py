@@ -148,6 +148,29 @@ def load_browser_download_settings(
             "browser_download.route_playbook_promotion_mode must be one of "
             "`disabled`, `dry_run`, or `write`"
         )
+    private_api_playbook_promotion_mode = (
+        str(
+            browser_download.get("private_api_playbook_promotion_mode")
+            or _env_value("BROWSER_PRIVATE_API_PLAYBOOK_PROMOTION_MODE")
+            or "disabled"
+        ).strip()
+        or "disabled"
+    )
+    if private_api_playbook_promotion_mode not in {"disabled", "dry_run", "write"}:
+        raise RuntimeError(
+            "browser_download.private_api_playbook_promotion_mode must be one of "
+            "`disabled`, `dry_run`, or `write`"
+        )
+    private_api_playbook_min_success_count = int(
+        browser_download.get("private_api_playbook_min_success_count")
+        or _env_value("BROWSER_PRIVATE_API_PLAYBOOK_MIN_SUCCESS_COUNT")
+        or 3
+    )
+    private_api_playbook_min_distinct_source_urls = int(
+        browser_download.get("private_api_playbook_min_distinct_source_urls")
+        or _env_value("BROWSER_PRIVATE_API_PLAYBOOK_MIN_DISTINCT_SOURCE_URLS")
+        or 2
+    )
     session_reuse_policy = BrowserDownloadSessionReusePolicy(
         schema_version="1.0",
         enabled=_to_bool(
@@ -385,6 +408,11 @@ def load_browser_download_settings(
         route_playbook_dir=route_playbook_dir,
         route_playbook_stale_policy=route_playbook_stale_policy,
         route_playbook_promotion_mode=route_playbook_promotion_mode,
+        private_api_playbook_promotion_mode=private_api_playbook_promotion_mode,
+        private_api_playbook_min_success_count=private_api_playbook_min_success_count,
+        private_api_playbook_min_distinct_source_urls=(
+            private_api_playbook_min_distinct_source_urls
+        ),
         session_reuse_policy=session_reuse_policy,
     )
 
@@ -421,6 +449,15 @@ def load_browser_download_settings(
                 "route_playbook_stale_policy": settings.route_playbook_stale_policy,
                 "route_playbook_promotion_mode": (
                     settings.route_playbook_promotion_mode
+                ),
+                "private_api_playbook_promotion_mode": (
+                    settings.private_api_playbook_promotion_mode
+                ),
+                "private_api_playbook_min_success_count": (
+                    settings.private_api_playbook_min_success_count
+                ),
+                "private_api_playbook_min_distinct_source_urls": (
+                    settings.private_api_playbook_min_distinct_source_urls
                 ),
                 "session_reuse_enabled": settings.session_reuse_policy.enabled,
                 "session_reuse_mode": settings.session_reuse_policy.mode,

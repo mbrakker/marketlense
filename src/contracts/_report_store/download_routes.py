@@ -3,7 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from src.contracts.browser_download import BrowserDownloadConfirmationEvidence, BrowserDownloadRouteStep, DownloadTerminalEvidence, PublisherDownloadRoutePolicySignal
+from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
+    BrowserDownloadRouteStep,
+    DownloadTerminalEvidence,
+    PublisherDownloadRoutePolicySignal,
+)
+
 
 @dataclass(frozen=True)
 class PublisherDownloadRouteGetRequest:
@@ -23,6 +29,113 @@ class PublisherDownloadRouteGetRequest:
         metadata={
             "doc": "Optional publisher, source, or listing URL used to aggregate route policy across report URLs on the same publisher domain."
         },
+    )
+
+
+@dataclass(frozen=True)
+class PublisherPrivateApiCandidateObservationRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Private-API candidate observation request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    fingerprint: str = field(
+        metadata={"doc": "Stable private-API candidate fingerprint."}
+    )
+    publisher_host: str = field(
+        metadata={"doc": "Publisher host associated with the candidate."}
+    )
+    source_url: str = field(
+        metadata={"doc": "Source URL whose verified run produced the observation."}
+    )
+    endpoint_pattern: str = field(
+        metadata={"doc": "Endpoint pattern derived from repeated observations."}
+    )
+    method: str = field(metadata={"doc": "Validated HTTP method."})
+    request_shape_summary: str = field(
+        metadata={"doc": "Reviewable request shape summary."}
+    )
+    response_pdf_url_json_pointer: str = field(
+        metadata={"doc": "JSON pointer that extracts the PDF URL."}
+    )
+    expected_status_codes: List[int] = field(
+        metadata={"doc": "Accepted HTTP status codes."}
+    )
+    required_response_markers: List[str] = field(
+        metadata={"doc": "Required response markers."}
+    )
+    fallback_route_family: str = field(
+        metadata={"doc": "Route family used when the endpoint is stale."}
+    )
+    route_family: str = field(
+        metadata={"doc": "Browser route family replaced by the deterministic route."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Route kind produced by the deterministic route."}
+    )
+    evidence_labels: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Evidence labels backing the observation."},
+    )
+    observed_at: str = field(
+        default="",
+        metadata={"doc": "UTC ISO timestamp when the observation was validated."},
+    )
+    min_success_count: int = field(
+        default=3,
+        metadata={"doc": "Minimum observation count required for promotion."},
+    )
+    min_distinct_source_urls: int = field(
+        default=2,
+        metadata={"doc": "Minimum distinct source URL count required for promotion."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherPrivateApiCandidateObservationRecordResponse:
+    schema_version: str = field(
+        metadata={"doc": "Private-API candidate observation response schema version."}
+    )
+    fingerprint: str = field(
+        metadata={"doc": "Stable private-API candidate fingerprint."}
+    )
+    success_count: int = field(
+        metadata={"doc": "Validated success count after this observation."}
+    )
+    distinct_source_url_count: int = field(
+        metadata={"doc": "Distinct source URL count after this observation."}
+    )
+    eligible_for_promotion: bool = field(
+        metadata={
+            "doc": "Whether this candidate has crossed automatic promotion thresholds."
+        }
+    )
+    already_promoted: bool = field(
+        metadata={"doc": "Whether this candidate was already promoted to a playbook."}
+    )
+    promoted_playbook_id: str = field(
+        default="",
+        metadata={"doc": "Playbook ID recorded after promotion, if any."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherPrivateApiCandidatePromotedRequest:
+    schema_version: str = field(
+        metadata={"doc": "Private-API candidate promoted request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    fingerprint: str = field(
+        metadata={"doc": "Stable private-API candidate fingerprint."}
+    )
+    playbook_id: str = field(
+        metadata={"doc": "Playbook ID written for this promoted candidate."}
+    )
+    promoted_at: str = field(
+        metadata={"doc": "UTC ISO timestamp when promotion completed."}
     )
 
 
@@ -400,4 +513,3 @@ class PublisherDownloadRouteResponse:
             "doc": "Ranked route-family policy signals learned from same-publisher route history outside the exact URL."
         },
     )
-

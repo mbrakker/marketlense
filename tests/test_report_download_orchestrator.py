@@ -18,6 +18,9 @@ from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserDownloadSettings,
     BrowserReportDownloadResult,
+    BrowserRoutePrivateApiAutoPromotionDetectionResponse,
+    BrowserRoutePrivateApiPromotionCandidate,
+    BrowserRoutePlaybookPromotionResponse,
     DownloadTerminalEvidence,
     ReportDownloadOrchestratorRequest,
     ReportDownloadRoutePlanRequest,
@@ -30,6 +33,7 @@ from src.contracts.drive import (
 from src.contracts.files import FileHashResponse
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.contracts.report_store import (
+    PublisherPrivateApiCandidateObservationRecordResponse,
     PublisherDownloadRouteResponse,
     ReportDownloadDriveFolderLookupResponse,
     ReportSourceRecordResponse,
@@ -574,6 +578,144 @@ def test_run_report_download_uses_memory_and_records_route(
     assert_logs_have_required_fields(
         _events(caplog, "market_lense.report_download_orchestrator")
     )
+
+
+def test_run_report_download_auto_promotes_private_api_after_threshold(
+    tmp_path: Path,
+    caplog,
+    run_context,
+) -> None:
+    settings = replace(
+        _settings(tmp_path),
+        private_api_playbook_promotion_mode="write",
+        private_api_playbook_min_success_count=3,
+        private_api_playbook_min_distinct_source_urls=2,
+    )
+    downloaded_path = Path(settings.output_dir) / "report.pdf"
+    downloaded_path.parent.mkdir(parents=True, exist_ok=True)
+    downloaded_path.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    candidate = BrowserRoutePrivateApiPromotionCandidate(
+        schema_version="1.0",
+        fingerprint="private-api-fp",
+        source_url="https://example.com/research/report-2026",
+        publisher_host="example.com",
+        endpoint_pattern="/api/reports/{last_path_segment}",
+        endpoint_url="https://example.com/api/reports/report-2026",
+        method="GET",
+        request_shape_summary="GET without cookies or auth headers.",
+        response_pdf_url_json_pointer="/asset/pdfUrl",
+        selected_pdf_url="https://example.com/files/report-2026.pdf",
+        expected_status_codes=[200],
+        required_response_markers=["pdfUrl"],
+        fallback_route_family="browser_pdf_click",
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        evidence_labels=["browser_network_private_api"],
+    )
+    promoted_requests = []
+    marked_promotions = []
+
+    def _download(req, ctx):
+        return replace(
+            _result(
+                url="https://example.com/research/report-2026",
+                used_route_hint=False,
+                path=str(downloaded_path),
+            ),
+            route_family="browser_pdf_click",
+            browser_had_structured_result=True,
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        record_report_value_score=lambda req, ctx: None,
+        detect_private_api_promotion_candidates=lambda req, ctx: (
+            BrowserRoutePrivateApiAutoPromotionDetectionResponse(
+                schema_version="1.0",
+                candidate_count=1,
+                candidates=[candidate],
+                skipped_reason="",
+            )
+        ),
+        record_publisher_private_api_candidate_observation=lambda req, ctx: (
+            PublisherPrivateApiCandidateObservationRecordResponse(
+                schema_version="1.0",
+                fingerprint=req.fingerprint,
+                success_count=3,
+                distinct_source_url_count=2,
+                eligible_for_promotion=True,
+                already_promoted=False,
+                promoted_playbook_id="",
+            )
+        ),
+        promote_private_api_evidence_to_browser_playbook=lambda **kwargs: (
+            promoted_requests.append(kwargs["request"])
+            or BrowserRoutePlaybookPromotionResponse(
+                schema_version="1.0",
+                playbook_id="private-api-example-com-pdf-download",
+                version="1.0.0",
+                path=str(tmp_path / "playbooks/private_api/private-api.yaml"),
+                status="created",
+                review_diff="--- before\n+++ after\n",
+            )
+        ),
+        mark_publisher_private_api_candidate_promoted=lambda req, ctx: (
+            marked_promotions.append(req)
+        ),
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/research/report-2026",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert response.outcome == "downloaded"
+    assert len(promoted_requests) == 1
+    assert promoted_requests[0].endpoint_pattern == "/api/reports/{last_path_segment}"
+    assert promoted_requests[0].validated_success_count == 3
+    assert len(marked_promotions) == 1
+    assert marked_promotions[0].fingerprint == "private-api-fp"
+    events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_private_api_promotion_evaluated"
+    ]
+    assert events
+    assert events[-1]["fields"]["promotion_status"] == "created"
 
 
 def test_run_report_download_falls_back_after_memory_failure_and_retries(

@@ -65,8 +65,15 @@ def test_report_store_schema_authority_is_sqlite_migration_service(
             FROM publishers
             """
         ).fetchone()
+        private_api_table = conn.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='publisher_private_api_candidates'
+            """
+        ).fetchone()
 
-    assert schema_version == (11,)
+    assert schema_version == (12,)
     assert applied_migrations == [
         ("reports_db_001_create_reports_core",),
         ("reports_db_002_create_report_sources_base",),
@@ -79,7 +86,9 @@ def test_report_store_schema_authority_is_sqlite_migration_service(
         ("reports_db_009_add_reports_projection_columns",),
         ("reports_db_010_create_analytics_projection_tables",),
         ("reports_db_011_add_report_source_value_scores",),
+        ("reports_db_012_create_private_api_candidate_ledger",),
     ]
+    assert private_api_table == ("publisher_private_api_candidates",)
     assert publisher == (
         "Migration Authority Publisher",
         "https://example.com/insights",
