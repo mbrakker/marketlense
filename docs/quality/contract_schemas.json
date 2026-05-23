@@ -8548,12 +8548,6 @@
         "schema_version": {
           "type": "string"
         },
-        "score_details": {
-          "items": {
-            "$ref": "#/$defs/src.contracts.categories.CategoryScoreDetail"
-          },
-          "type": "array"
-        },
         "unmapped_tags": {
           "items": {
             "type": "string"
@@ -8567,64 +8561,6 @@
         "category_labels",
         "unmapped_tags"
       ],
-      "type": "object"
-    },
-    "src.contracts.categories.CategoryClassificationConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "core_tag_weight": {
-          "type": "number"
-        },
-        "generic_tag_weight": {
-          "type": "number"
-        },
-        "global_generic_tags": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "legacy_tag_weight": {
-          "type": "number"
-        },
-        "max_categories": {
-          "type": "integer"
-        },
-        "min_primary_score": {
-          "type": "number"
-        },
-        "min_secondary_score": {
-          "type": "number"
-        },
-        "negative_tag_weight": {
-          "type": "number"
-        },
-        "repeated_match_bonus": {
-          "type": "number"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "secondary_rescue_min_evidence_sections": {
-          "type": "integer"
-        },
-        "secondary_rescue_min_evidence_tags": {
-          "type": "integer"
-        },
-        "secondary_rescue_min_strong_matches": {
-          "type": "integer"
-        },
-        "secondary_rescue_score_ratio": {
-          "type": "number"
-        },
-        "secondary_score_ratio": {
-          "type": "number"
-        },
-        "supporting_tag_weight": {
-          "type": "number"
-        }
-      },
-      "required": [],
       "type": "object"
     },
     "src.contracts.categories.CategoryDefinition": {
@@ -8766,9 +8702,6 @@
           },
           "type": "array"
         },
-        "classification": {
-          "$ref": "#/$defs/src.contracts.categories.CategoryClassificationConfig"
-        },
         "inference_rules": {
           "items": {
             "$ref": "#/$defs/src.contracts.categories.TaxonomyInferenceRule"
@@ -8788,62 +8721,6 @@
       "required": [
         "schema_version",
         "categories"
-      ],
-      "type": "object"
-    },
-    "src.contracts.categories.CategoryScoreDetail": {
-      "additionalProperties": false,
-      "properties": {
-        "category_id": {
-          "type": "string"
-        },
-        "eligible": {
-          "type": "boolean"
-        },
-        "evidence_section_count": {
-          "type": "integer"
-        },
-        "evidence_tag_count": {
-          "type": "integer"
-        },
-        "generic_match_count": {
-          "type": "integer"
-        },
-        "label": {
-          "type": "string"
-        },
-        "matched_tags": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "must_have_match_count": {
-          "type": "integer"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "score": {
-          "type": "number"
-        },
-        "secondary_rescue_eligible": {
-          "type": "boolean"
-        },
-        "secondary_tier_match_count": {
-          "type": "integer"
-        },
-        "skip_reason": {
-          "type": "string"
-        },
-        "strong_match_count": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "category_id",
-        "label",
-        "score"
       ],
       "type": "object"
     },

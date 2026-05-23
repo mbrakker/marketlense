@@ -297,7 +297,6 @@ def _resolve_categories_from_report_context(
             categories=list(fit_response.categories),
             category_labels=list(fit_response.category_labels),
             unmapped_tags=[],
-            score_details=[],
         ),
         report_context=report_context,
         fit_response=fit_response,

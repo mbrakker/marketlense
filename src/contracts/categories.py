@@ -7,82 +7,6 @@ from src.contracts.config import AppSettings
 
 
 @dataclass(frozen=True)
-class CategoryClassificationConfig:
-    schema_version: str = field(
-        default="1.1",
-        metadata={"doc": "Category-classification config schema version."},
-    )
-    max_categories: int = field(
-        default=2,
-        metadata={"doc": "Maximum number of portal categories to assign."},
-    )
-    min_primary_score: float = field(
-        default=2.2,
-        metadata={"doc": "Minimum score required for a primary category."},
-    )
-    min_secondary_score: float = field(
-        default=1.6,
-        metadata={"doc": "Minimum score required for a secondary category."},
-    )
-    secondary_score_ratio: float = field(
-        default=0.7,
-        metadata={"doc": "Minimum ratio between secondary and primary category score."},
-    )
-    secondary_rescue_score_ratio: float = field(
-        default=0.55,
-        metadata={
-            "doc": "Lower secondary-to-primary score ratio allowed when evidence-backed rescue is satisfied."
-        },
-    )
-    secondary_rescue_min_strong_matches: int = field(
-        default=2,
-        metadata={
-            "doc": "Minimum distinct strong matches required for evidence-backed secondary rescue."
-        },
-    )
-    secondary_rescue_min_evidence_tags: int = field(
-        default=2,
-        metadata={
-            "doc": "Minimum distinct evidence-backed tags required for secondary rescue."
-        },
-    )
-    secondary_rescue_min_evidence_sections: int = field(
-        default=2,
-        metadata={
-            "doc": "Minimum distinct supporting sections required for secondary rescue."
-        },
-    )
-    core_tag_weight: float = field(
-        default=2.2,
-        metadata={"doc": "Weight applied to category core tags."},
-    )
-    supporting_tag_weight: float = field(
-        default=1.2,
-        metadata={"doc": "Weight applied to category supporting tags."},
-    )
-    legacy_tag_weight: float = field(
-        default=1.0,
-        metadata={"doc": "Weight applied to legacy category tags."},
-    )
-    generic_tag_weight: float = field(
-        default=0.3,
-        metadata={"doc": "Weight applied to generic cross-cutting tags."},
-    )
-    negative_tag_weight: float = field(
-        default=-2.0,
-        metadata={"doc": "Penalty applied to explicit negative tags."},
-    )
-    repeated_match_bonus: float = field(
-        default=0.25,
-        metadata={"doc": "Bonus applied for multiple distinct strong matches."},
-    )
-    global_generic_tags: List[str] = field(
-        default_factory=list,
-        metadata={"doc": "Cross-cutting tags that should be downweighted globally."},
-    )
-
-
-@dataclass(frozen=True)
 class CategoryDefinition:
     id: str = field(metadata={"doc": "Canonical category identifier (snake_case)."})
     label: str = field(metadata={"doc": "Human-readable category label."})
@@ -126,7 +50,7 @@ class CategoryDefinition:
     descriptor_tags: List[str] = field(
         default_factory=list,
         metadata={
-            "doc": "Broad descriptor tags that may be extracted for report metadata but must not influence portal-category scoring."
+            "doc": "Broad descriptor tags that may be extracted for report metadata but must not influence portal category assignment."
         },
     )
     generic_tags: List[str] = field(
@@ -213,10 +137,6 @@ class CategoryMappings:
     categories: List[CategoryDefinition] = field(
         metadata={"doc": "List of category definitions."}
     )
-    classification: CategoryClassificationConfig = field(
-        default_factory=CategoryClassificationConfig,
-        metadata={"doc": "Scoring and threshold rules for category assignment."},
-    )
     inference_rules: List[TaxonomyInferenceRule] = field(
         default_factory=list,
         metadata={"doc": "Config-driven taxonomy post-processing inference rules."},
@@ -252,62 +172,6 @@ class CategoryMappingLoadResponse:
 
 
 @dataclass(frozen=True)
-class CategoryScoreDetail:
-    category_id: str = field(metadata={"doc": "Canonical category identifier."})
-    label: str = field(metadata={"doc": "Human-readable category label."})
-    score: float = field(metadata={"doc": "Final weighted score for the category."})
-    matched_tags: List[str] = field(
-        default_factory=list,
-        metadata={"doc": "Matched taxonomy tags that contributed to the score."},
-    )
-    strong_match_count: int = field(
-        default=0,
-        metadata={"doc": "Count of distinct non-generic positive matches."},
-    )
-    generic_match_count: int = field(
-        default=0,
-        metadata={"doc": "Count of distinct generic matches."},
-    )
-    evidence_tag_count: int = field(
-        default=0,
-        metadata={
-            "doc": "Count of distinct strong matched tags that carry evidence support."
-        },
-    )
-    evidence_section_count: int = field(
-        default=0,
-        metadata={"doc": "Count of distinct report sections supporting matched tags."},
-    )
-    secondary_tier_match_count: int = field(
-        default=0,
-        metadata={
-            "doc": "Count of matched tags that the extractor labeled as secondary."
-        },
-    )
-    must_have_match_count: int = field(
-        default=0,
-        metadata={"doc": "Count of matched must-have rescue tags."},
-    )
-    secondary_rescue_eligible: bool = field(
-        default=False,
-        metadata={
-            "doc": "Whether this category qualifies for evidence-backed secondary rescue."
-        },
-    )
-    eligible: bool = field(
-        default=False,
-        metadata={"doc": "Whether the category cleared assignment thresholds."},
-    )
-    skip_reason: str = field(
-        default="",
-        metadata={"doc": "Reason the category was not eligible, if any."},
-    )
-    schema_version: str = field(
-        default="1.1", metadata={"doc": "Category score detail schema version."}
-    )
-
-
-@dataclass(frozen=True)
 class CategoryAssignment:
     schema_version: str = field(metadata={"doc": "Category assignment schema version."})
     categories: List[str] = field(
@@ -318,10 +182,6 @@ class CategoryAssignment:
     )
     unmapped_tags: List[str] = field(
         metadata={"doc": "Tags that did not map to any category."}
-    )
-    score_details: List[CategoryScoreDetail] = field(
-        default_factory=list,
-        metadata={"doc": "Ranked category scoring details for audit/debug flows."},
     )
 
 

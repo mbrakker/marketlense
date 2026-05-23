@@ -9,7 +9,6 @@ from typing import Dict, List, Set, Tuple
 import yaml
 
 from src.contracts.categories import (
-    CategoryClassificationConfig,
     CategoryDefinition,
     CategoryMappingLoadRequest,
     CategoryMappingLoadResponse,
@@ -67,17 +66,6 @@ def _clean_int(value: object, default: int) -> int:
         return default
 
 
-def _clean_float(value: object, default: float) -> float:
-    if isinstance(value, bool):
-        return float(value)
-    if not isinstance(value, (int, float, str, bytes, bytearray)):
-        return default
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
 def _clean_bool(value: object, default: bool) -> bool:
     if isinstance(value, bool):
         return value
@@ -102,71 +90,6 @@ def _category_positive_tags(item: dict) -> List[str]:
     ):
         positive.extend(item.get(key) or [])
     return positive
-
-
-def _sanitize_classification(raw: dict) -> dict:
-    classification_raw = raw.get("classification")
-    classification_map = (
-        classification_raw if isinstance(classification_raw, dict) else {}
-    )
-    return {
-        "schema_version": str(classification_map.get("schema_version", "1.1")),
-        "max_categories": max(
-            1, _clean_int(classification_map.get("max_categories"), 2)
-        ),
-        "min_primary_score": _clean_float(
-            classification_map.get("min_primary_score"), 2.2
-        ),
-        "min_secondary_score": _clean_float(
-            classification_map.get("min_secondary_score"), 1.6
-        ),
-        "secondary_score_ratio": _clean_float(
-            classification_map.get("secondary_score_ratio"), 0.7
-        ),
-        "secondary_rescue_score_ratio": _clean_float(
-            classification_map.get("secondary_rescue_score_ratio"), 0.55
-        ),
-        "secondary_rescue_min_strong_matches": max(
-            1,
-            _clean_int(
-                classification_map.get("secondary_rescue_min_strong_matches"),
-                2,
-            ),
-        ),
-        "secondary_rescue_min_evidence_tags": max(
-            1,
-            _clean_int(
-                classification_map.get("secondary_rescue_min_evidence_tags"),
-                2,
-            ),
-        ),
-        "secondary_rescue_min_evidence_sections": max(
-            1,
-            _clean_int(
-                classification_map.get("secondary_rescue_min_evidence_sections"),
-                2,
-            ),
-        ),
-        "core_tag_weight": _clean_float(classification_map.get("core_tag_weight"), 2.2),
-        "supporting_tag_weight": _clean_float(
-            classification_map.get("supporting_tag_weight"), 1.2
-        ),
-        "legacy_tag_weight": _clean_float(
-            classification_map.get("legacy_tag_weight"), 1.0
-        ),
-        "generic_tag_weight": _clean_float(
-            classification_map.get("generic_tag_weight"), 0.3
-        ),
-        "negative_tag_weight": _clean_float(
-            classification_map.get("negative_tag_weight"), -2.0
-        ),
-        "repeated_match_bonus": _clean_float(
-            classification_map.get("repeated_match_bonus"), 0.25
-        ),
-        "global_generic_tags": _clean_tags(
-            classification_map.get("global_generic_tags") or []
-        ),
-    }
 
 
 def _sanitize_inference_rules(raw: dict) -> List[dict]:
@@ -232,7 +155,6 @@ def load_mappings(
                 "path": str(path),
                 "categories": len(entry.mappings.categories),
                 "uncategorized": len(entry.mappings.uncategorized),
-                "max_categories": entry.mappings.classification.max_categories,
                 "cached": source != "reloaded",
                 "source": source,
             },
@@ -253,7 +175,6 @@ def _is_cache_valid(entry: _CategoryMappingCacheEntry) -> bool:
 
 
 def _sanitize_mapping_data(raw: dict) -> dict:
-    classification = _sanitize_classification(raw)
     inference_rules = _sanitize_inference_rules(raw)
     categories_raw = raw.get("categories") or []
     categories: List[dict] = []
@@ -325,7 +246,6 @@ def _sanitize_mapping_data(raw: dict) -> dict:
             uncategorized.append({"title": title, "tags": tags_cleaned})
     return {
         "schema_version": str(raw.get("schema_version", "1.2")),
-        "classification": classification,
         "categories": categories,
         "inference_rules": inference_rules,
         "uncategorized": uncategorized,
@@ -405,76 +325,6 @@ def _build_mappings(data: dict) -> CategoryMappings:
     return CategoryMappings(
         schema_version=str(data.get("schema_version", "1.2")),
         categories=categories,
-        classification=CategoryClassificationConfig(
-            schema_version=str(
-                (data.get("classification") or {}).get("schema_version", "1.1")
-            ),
-            max_categories=max(
-                1,
-                _clean_int((data.get("classification") or {}).get("max_categories"), 2),
-            ),
-            min_primary_score=_clean_float(
-                (data.get("classification") or {}).get("min_primary_score"), 2.2
-            ),
-            min_secondary_score=_clean_float(
-                (data.get("classification") or {}).get("min_secondary_score"), 1.6
-            ),
-            secondary_score_ratio=_clean_float(
-                (data.get("classification") or {}).get("secondary_score_ratio"), 0.7
-            ),
-            secondary_rescue_score_ratio=_clean_float(
-                (data.get("classification") or {}).get("secondary_rescue_score_ratio"),
-                0.55,
-            ),
-            secondary_rescue_min_strong_matches=max(
-                1,
-                _clean_int(
-                    (data.get("classification") or {}).get(
-                        "secondary_rescue_min_strong_matches"
-                    ),
-                    2,
-                ),
-            ),
-            secondary_rescue_min_evidence_tags=max(
-                1,
-                _clean_int(
-                    (data.get("classification") or {}).get(
-                        "secondary_rescue_min_evidence_tags"
-                    ),
-                    2,
-                ),
-            ),
-            secondary_rescue_min_evidence_sections=max(
-                1,
-                _clean_int(
-                    (data.get("classification") or {}).get(
-                        "secondary_rescue_min_evidence_sections"
-                    ),
-                    2,
-                ),
-            ),
-            core_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("core_tag_weight"), 2.2
-            ),
-            supporting_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("supporting_tag_weight"), 1.2
-            ),
-            legacy_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("legacy_tag_weight"), 1.0
-            ),
-            generic_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("generic_tag_weight"), 0.3
-            ),
-            negative_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("negative_tag_weight"), -2.0
-            ),
-            repeated_match_bonus=_clean_float(
-                (data.get("classification") or {}).get("repeated_match_bonus"), 0.25
-            ),
-            global_generic_tags=_clean_tags(
-                (data.get("classification") or {}).get("global_generic_tags") or []
-            ),
-        ),
         inference_rules=inference_rules,
         uncategorized=uncategorized,
     )
