@@ -9078,9 +9078,6 @@
         "cost_ledger_path": {
           "type": "string"
         },
-        "cover_cache_enabled": {
-          "type": "boolean"
-        },
         "cover_style_path": {
           "type": "string"
         },
@@ -14950,9 +14947,6 @@
         },
         "cost_ledger_path": {
           "type": "string"
-        },
-        "cover_cache_enabled": {
-          "type": "boolean"
         },
         "cover_style_path": {
           "type": "string"

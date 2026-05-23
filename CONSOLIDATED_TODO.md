@@ -290,15 +290,6 @@ Findings summary:
 - Keep prompt dry-run validation: `prompt_service.validate_prompt_dry_run` is CI/quality infrastructure used by `scripts/quality/prompt_fixture_corpus_metrics.py` and tests, not an abandoned product feature.
 - Keep optional evidence-pack variety scaffolding: the `key_metrics`, `risk_register`, `recommendations`, and `contradictions` strategies are gated but wired through `evidence_pack_generator`, validation, artifacts, and analytics projection.
 
-- **Title:** Make `ingest.cover_cache_enabled` real or remove it from config/UI [Impact: 3/5, Effort: 2/5]
-  - Evidence: `cover_cache_enabled` exists in `AppSettings`, `IngestSettings`, app.yaml, README, and the Streamlit structured config form, but `report_render_generator` and `cover_image_generator` always call cover rendering and never consult the flag.
-  - Assessment: Reintroduce if repeated cover generation is a meaningful cost/latency issue; otherwise delete the setting and UI control to avoid a no-op operator switch.
-  - Acceptance Criteria:
-    - If reintroduced: cover generation checks a deterministic cache key based on report identity, title/publisher/category/time period/region, style config hash, font/image dependencies, and render contract version.
-    - Cache hit/miss decisions are logged with required structured fields.
-    - `cover_cache_enabled=false` forces regeneration.
-    - If removed: `AppSettings`, `IngestSettings`, config loader, app.yaml, README, and Streamlit structured config form no longer expose the flag.
-
 - **Title:** Decide whether unused browser helper surface functions are real acquisition tools [Impact: 3/5, Effort: 3/5]
   - Evidence: README describes `browser_helper_coordinate_fallback_click`, `browser_helper_wait_for_load`, `browser_helper_ensure_real_tab`, `browser_helper_http_get`, and `get_browser_helper_surface` as part of the Marketlense browser helper surface. Runtime browser download currently imports and uses page info, screenshot, JavaScript, and form autocomplete helpers, but not those additional helper functions.
   - Assessment: Reintroduce only where the acquisition flow can call them with bounded policy and typed results; otherwise remove the unused helpers and README claims. Coordinate fallback is especially sensitive and should not exist as a dormant helper.

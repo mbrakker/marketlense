@@ -217,10 +217,6 @@ def render_structured_config_form(
                     if ingest.get("seed") in {None, ""}
                     else _as_str(ingest.get("seed")),
                 )
-                ingest_cover_cache_enabled = st.checkbox(
-                    "Cover Cache Enabled",
-                    value=_as_bool(ingest.get("cover_cache_enabled"), True),
-                )
 
         with st.expander("Drive", expanded=False):
             d1, d2 = st.columns(2, gap="large")
@@ -607,7 +603,6 @@ def render_structured_config_form(
     ingest["batch_limit"] = int(ingest_batch_limit)
     ingest["worker_limit"] = int(ingest_worker_limit)
     ingest["report_worker_limit"] = int(ingest_report_worker_limit)
-    ingest["cover_cache_enabled"] = bool(ingest_cover_cache_enabled)
 
     drive["supports_all_drives"] = bool(drive_supports_all_drives)
     drive["include_items_from_all_drives"] = bool(drive_include_items_from_all_drives)

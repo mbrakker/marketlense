@@ -38,7 +38,6 @@ ingest:
   batch_limit: 20
   worker_limit: 2
   report_worker_limit: 2
-  cover_cache_enabled: true
   pdf_text:
     max_pages: 5
     max_chars: 80000
