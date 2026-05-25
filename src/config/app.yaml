@@ -210,6 +210,22 @@ analysis:
   strict_schema_validation: true
   cost_ledger_path: "./out/cost-ledger.jsonl"
 
+cross_report_analysis:
+  enabled: false
+  max_source_reports: 6
+  max_evidence_items: 48
+  max_prompt_chars: 60000
+  prompt_namespace: "cross_report_analysis/synthesis"
+  model: "gpt-5-mini"
+  temperature: 1.0
+  timeout_seconds: 600
+  cache_enabled: true
+  auto_theme_enabled: true
+  theme_rotation_window_days: 30
+  min_theme_source_publishers: 2
+  publish_enabled: false
+  publish_requires_validation_pass: true
+
 cost:
   daily_path: "./out/cost-daily.json"
   pricing:

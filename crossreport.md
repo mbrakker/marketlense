@@ -43,16 +43,6 @@ Suggested priority order:
 
 ## 1. Architecture, Contracts & Scope Fence
 
-- **Item:** Add minimal YAML configuration for bounded generation [Impact: 4/5, Effort: 2/5]
-  - Explanation: Quality, speed, and cost controls should be explicit from the start. The first release needs limits for source report count, evidence count, prompt input size, model parameters, cache eligibility, theme choice, publish readiness, and validation strictness.
-  - Pros: Prevents runaway prompts, keeps costs predictable, makes tradeoffs visible.
-  - Cons: Adds config surface that must be documented and tested.
-  - Completion criteria:
-    - `src/config/app.yaml` gains a compact `cross_report_analysis` section.
-    - Settings include `enabled`, `max_source_reports`, `max_evidence_items`, `max_prompt_chars`, `prompt_namespace`, `model`, `temperature`, `timeout_seconds`, `cache_enabled`, `auto_theme_enabled`, `theme_rotation_window_days`, `min_theme_source_publishers`, `publish_enabled`, and `publish_requires_validation_pass`.
-    - Config loading validates invalid limits with typed non-retryable `AppError`.
-    - README documents defaults, CLI overrides, and cost-control behavior.
-
 ---
 
 ## 2. Projection-Backed Source Selection
