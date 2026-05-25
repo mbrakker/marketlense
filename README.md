@@ -164,6 +164,8 @@ Projected cross-report source reads use the canonical analytics-store boundary: 
 
 Deterministic source selection starts in `src/generators/cross_report_analysis_input_generator.py::select_cross_report_source_reports`. The generator accepts a typed `CrossReportAnalysisRequest` plus `CrossReportProjectedDataReadResponse`, cleans request filters, scores candidates by filter/topic relevance, evidence density, recency, and publisher diversity, applies the configured `max_source_reports` cap, and returns a `CrossReportSourceSelectionResult` with ranked selected sources, rejected candidates, normalized filters, grouped exclusion counts, and structured ranking logs. Selection uses only projected metadata and source-bound evidence counts; it does not perform semantic/vector retrieval or metric normalization.
 
+Projection readiness is enforced before synthesis inputs are selected. Non-diagnostic requests reject candidates whose `projection_status` is not `projected`, record grouped exclusion reasons such as `projection_status_failed` or `projection_status_not_projected`, and raise non-retryable `AppError(code="cross_report_no_projected_sources")` when no projected source remains. Diagnostic requests may inspect failed or missing projections, but that path is explicitly represented by the request contract and logged by the generator.
+
 First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 ## WordPress Subproject

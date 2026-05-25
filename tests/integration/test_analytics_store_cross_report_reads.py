@@ -8,6 +8,7 @@ import pytest
 
 from src.contracts.analytics_projection import (
     AnalyticsProjectionBatch,
+    AnalyticsProjectionFailureRequest,
     AnalyticsProjectionUpsertRequest,
     AnalyticsReportRow,
     PROJECTION_SCHEMA_VERSION,
@@ -28,6 +29,7 @@ from src.contracts.cross_report_analysis import (
 from src.contracts.run_context import RunContext
 from src.services.analytics_store_service import (
     read_cross_report_projected_data,
+    record_projection_failure,
     upsert_projection,
 )
 
@@ -277,3 +279,43 @@ def test_cross_report_projected_data_read_filters_and_contracts(
         "cross_report_projected_data_read_start",
         "cross_report_projected_data_read_complete",
     }
+
+
+@pytest.mark.integration
+def test_cross_report_projected_data_read_can_return_failed_projection_inventory(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    ctx = _ctx()
+    record_projection_failure(
+        AnalyticsProjectionFailureRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=db_path,
+            report_id="failed-report",
+            projection_schema_version=PROJECTION_SCHEMA_VERSION,
+            projection_version=PROJECTION_VERSION,
+            error_code="projection_failed_fixture",
+            error_message="Fixture failure row",
+            error_retryable=False,
+            generated_at_utc="2026-05-01T00:00:00Z",
+        ),
+        ctx,
+    )
+
+    response = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=db_path,
+            minimum_projection_status="failed",
+        ),
+        ctx,
+    )
+
+    assert [candidate.report_id for candidate in response.source_candidates] == [
+        "failed-report"
+    ]
+    candidate = response.source_candidates[0]
+    assert candidate.projection_status == "failed"
+    assert candidate.publisher == "failed-report"
+    assert candidate.category_labels == []
+    assert candidate.tags == []
