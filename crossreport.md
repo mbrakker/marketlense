@@ -55,30 +55,9 @@ Suggested priority order:
 
 ## 4. Evidence, Signals & Raw Metrics Handling
 
-- **Item:** Preserve disagreement and uncertainty as first-class output inputs [Impact: 4/5, Effort: 2/5]
-  - Explanation: Cross-report analysis should not force consensus when projected claims conflict or when source coverage is thin. The input layer should label convergent, divergent, and under-supported evidence groups before synthesis.
-  - Pros: More trustworthy analysis, fewer hallucinated conclusions, better editorial review.
-  - Cons: Adds a small deterministic grouping step before synthesis.
-  - Completion criteria:
-    - Evidence groups carry `agreement_type` values such as `convergent`, `divergent`, and `thin_coverage`.
-    - Grouping logic is deterministic and based on source/evidence text, tags, categories, and contradiction pack rows when available.
-    - Tests include at least one convergence case, one divergence case, and one thin-coverage case.
-    - Generated prompt inputs expose uncertainty labels without asking the model to infer missing provenance.
-
 ---
 
 ## 5. Prompt Namespace & Analysis Generator
-
-- **Item:** Create a dedicated cross-report analysis prompt namespace [Impact: 5/5, Effort: 2/5]
-  - Explanation: AGENTS.md forbids inline prompt text and centralized prompts. Cross-report synthesis needs its own namespace with fixture-backed rendering before runtime use.
-  - Pros: Reproducible prompts, CI dry-run coverage, clean prompt evolution.
-  - Cons: Adds prompt fixture maintenance.
-  - Completion criteria:
-    - Prompt files live under `src/prompts/cross_report_analysis/synthesis/`.
-    - Prompt inputs are fully structured and do not include unbounded full-report text.
-    - `_dry_run_fixtures.yaml` includes a cross-report synthesis fixture with realistic evidence, raw metrics, and disagreement labels.
-    - Prompt hashes, rendered prompt text, model parameters, and request metadata are logged for every generation call.
-    - Prompt fixture regression is updated only with documented expected token/cost impact.
 
 - **Item:** Implement the cross-report analysis synthesis generator [Impact: 5/5, Effort: 4/5]
   - Explanation: The generator is the domain layer that turns selected sources, evidence groups, and signal scores into a structured cross-report analysis artifact. It should make one bounded LLM call by default and fail closed when evidence mapping is incomplete.

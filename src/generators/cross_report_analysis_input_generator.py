@@ -12,6 +12,8 @@ from src.contracts.files import ListDirectoryRequest, ReadTextRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
+    CrossReportEvidenceAgreementGroup,
+    CrossReportEvidenceAgreementResult,
     CrossReportEvidenceInputResult,
     CrossReportProjectedDataReadResponse,
     CrossReportPublishabilityResult,
@@ -1365,6 +1367,160 @@ def score_cross_report_signals(
                 ],
                 "dropped_signal_counts": result.dropped_signal_counts,
                 "raw_metric_policy": result.raw_metric_policy,
+            },
+        )
+    )
+    return result
+
+
+def _directional_markers(evidence) -> tuple[set[str], set[str]]:
+    positive_markers = {
+        "accelerating",
+        "adoption",
+        "growth",
+        "increase",
+        "increasing",
+        "rising",
+        "strong",
+    }
+    negative_markers = {
+        "decline",
+        "declining",
+        "decrease",
+        "decreasing",
+        "falling",
+        "slower",
+        "weak",
+    }
+    positive_evidence: set[str] = set()
+    negative_evidence: set[str] = set()
+    for item in evidence:
+        tokens = {token.casefold() for token in re.findall(r"[A-Za-z0-9]+", item.text)}
+        if tokens.intersection(positive_markers):
+            positive_evidence.add(item.evidence_id)
+        if tokens.intersection(negative_markers):
+            negative_evidence.add(item.evidence_id)
+    return positive_evidence, negative_evidence
+
+
+def _agreement_type_and_reasons(
+    evidence,
+    *,
+    publisher_count: int,
+    report_count: int,
+) -> tuple[str, list[str]]:
+    if publisher_count < 2 or report_count < 2:
+        return "thin_coverage", ["single_report_coverage"]
+    positive_evidence, negative_evidence = _directional_markers(evidence)
+    if positive_evidence and negative_evidence:
+        return "divergent", ["opposed_directional_language"]
+    return "convergent", ["multi_publisher_alignment"]
+
+
+def group_cross_report_evidence_agreement(
+    request: CrossReportAnalysisRequest,
+    evidence_inputs: CrossReportEvidenceInputResult,
+    signal_result: CrossReportSignalScoreResult,
+    ctx: RunContext,
+) -> CrossReportEvidenceAgreementResult:
+    validate_cross_report_contract(request)
+    validate_cross_report_contract(evidence_inputs)
+    validate_cross_report_contract(signal_result)
+    evidence_by_id = {item.evidence_id: item for item in evidence_inputs.evidence}
+    source_by_report_id = {
+        source.report_id: source for source in evidence_inputs.selected_sources
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_evidence_agreement_grouping_start",
+            module=logger.name,
+            fields={
+                "request_id": request.request_id,
+                "selected_theme_id": signal_result.selected_theme.theme_id,
+                "signal_count": len(signal_result.signal_scores),
+                "evidence_count": len(evidence_inputs.evidence),
+            },
+        )
+    )
+
+    groups: list[CrossReportEvidenceAgreementGroup] = []
+    prompt_inputs: list[dict[str, Any]] = []
+    for signal in signal_result.signal_scores:
+        group_evidence = [
+            evidence_by_id[evidence_id]
+            for evidence_id in signal.evidence_ids
+            if evidence_id in evidence_by_id
+        ]
+        if not group_evidence:
+            continue
+        source_report_ids = sorted({item.report_id for item in group_evidence})
+        publishers = {
+            source_by_report_id[report_id].publisher.strip().casefold()
+            for report_id in source_report_ids
+            if report_id in source_by_report_id
+        }
+        agreement_type, uncertainty_reasons = _agreement_type_and_reasons(
+            group_evidence,
+            publisher_count=len(publishers),
+            report_count=len(source_report_ids),
+        )
+        group = CrossReportEvidenceAgreementGroup(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            group_id=f"group-{signal.signal_id}",
+            label=signal.label,
+            agreement_type=agreement_type,
+            signal_ids=[signal.signal_id],
+            evidence_ids=[item.evidence_id for item in group_evidence],
+            source_report_ids=source_report_ids,
+            publisher_count=len(publishers),
+            uncertainty_reasons=uncertainty_reasons,
+            prompt_input_label=f"{agreement_type}: {signal.label}",
+        )
+        groups.append(group)
+        prompt_inputs.append(
+            {
+                "group_id": group.group_id,
+                "label": group.label,
+                "agreement_type": group.agreement_type,
+                "evidence_ids": group.evidence_ids,
+                "source_report_ids": group.source_report_ids,
+                "uncertainty_reasons": group.uncertainty_reasons,
+                "prompt_input_label": group.prompt_input_label,
+            }
+        )
+
+    agreement_counts = dict(
+        sorted(Counter(group.agreement_type for group in groups).items())
+    )
+    result = CrossReportEvidenceAgreementResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme=signal_result.selected_theme,
+        evidence_groups=groups,
+        prompt_uncertainty_inputs=prompt_inputs,
+        agreement_counts=agreement_counts,
+    )
+    validate_cross_report_contract(result)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_evidence_agreement_grouping_complete",
+            module=logger.name,
+            fields={
+                "request_id": request.request_id,
+                "selected_theme_id": signal_result.selected_theme.theme_id,
+                "agreement_counts": result.agreement_counts,
+                "groups": [
+                    {
+                        "group_id": group.group_id,
+                        "agreement_type": group.agreement_type,
+                        "evidence_ids": group.evidence_ids,
+                        "uncertainty_reasons": group.uncertainty_reasons,
+                    }
+                    for group in result.evidence_groups
+                ],
             },
         )
     )

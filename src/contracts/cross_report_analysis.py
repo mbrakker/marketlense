@@ -39,6 +39,7 @@ CrossReportPublishStatus = Literal[
     "skipped",
     "error",
 ]
+CrossReportEvidenceAgreementType = Literal["convergent", "divergent", "thin_coverage"]
 
 
 @dataclass(frozen=True)
@@ -337,6 +338,57 @@ class CrossReportSignalScoreResult:
             "doc": "Signal candidate counts dropped by deterministic reason.",
             "required": False,
         },
+    )
+
+
+@dataclass(frozen=True)
+class CrossReportEvidenceAgreementGroup:
+    schema_version: str = field(
+        metadata={"doc": "Evidence agreement group schema version."}
+    )
+    group_id: str = field(metadata={"doc": "Stable evidence group identifier."})
+    label: str = field(metadata={"doc": "Human-readable group label."})
+    agreement_type: CrossReportEvidenceAgreementType = field(
+        metadata={"doc": "Deterministic agreement label for synthesis input."}
+    )
+    signal_ids: List[str] = field(
+        metadata={"doc": "Signal IDs that this evidence group supports."}
+    )
+    evidence_ids: List[str] = field(
+        metadata={"doc": "Evidence IDs included in this agreement group."}
+    )
+    source_report_ids: List[str] = field(
+        metadata={"doc": "Source report IDs represented in this group."}
+    )
+    publisher_count: int = field(
+        metadata={"doc": "Distinct publisher count represented in this group."}
+    )
+    uncertainty_reasons: List[str] = field(
+        metadata={"doc": "Deterministic reasons explaining agreement or uncertainty."}
+    )
+    prompt_input_label: str = field(
+        metadata={"doc": "Compact label exposed to synthesis prompt inputs."}
+    )
+
+
+@dataclass(frozen=True)
+class CrossReportEvidenceAgreementResult:
+    schema_version: str = field(
+        metadata={"doc": "Evidence agreement result schema version."}
+    )
+    selected_theme: CrossReportSelectedTheme = field(
+        metadata={"doc": "Selected theme used when grouping evidence agreement."}
+    )
+    evidence_groups: List[CrossReportEvidenceAgreementGroup] = field(
+        metadata={"doc": "Deterministic evidence groups passed to synthesis."}
+    )
+    prompt_uncertainty_inputs: List[Dict[str, Any]] = field(
+        metadata={
+            "doc": "Structured prompt-ready agreement and uncertainty labels with provenance."
+        }
+    )
+    agreement_counts: Dict[str, int] = field(
+        metadata={"doc": "Evidence group counts by agreement type."}
     )
 
 
