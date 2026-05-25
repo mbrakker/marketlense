@@ -1,70 +1,15 @@
 from __future__ import annotations
 
 import logging
-import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections.abc import Callable, Sequence
 from typing import Any, Dict, List, Optional
 
-from src.contracts.analysis_family import AnalysisFamilyStatus
+from src.contracts.artifact_generation import ArtifactRenderTask
 from src.contracts.config import AppSettings
-from src.contracts.ingest import IngestSettings
-from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
-from src.contracts.prompts import PromptLoadRequest
-from src.contracts.report_analysis import (
-    AnalysisPackPathRequest,
-    AnalysisStorePackRequest,
-)
 from src.contracts.run_context import RunContext
-from src.contracts.semantic_ids import ReportId
-from src.contracts.schema_validation import SchemaValidateRequest
-from src.generators.artifact_normalization import (
-    artifact_base_variables,
-    bind_artifact_evidence_spans,
-    artifact_quote_candidates,
-    artifact_retrieval_mode,
-    normalize_artifact_toc_entries,
-    artifact_vector_store_enabled,
-    normalize_artifact_evidence_ids,
-    normalize_artifact_insights,
-    normalize_artifact_quotes,
-    normalize_artifact_source_status,
-    normalize_artifact_summary,
-    normalize_expert_domain,
-    pad_artifact_insights,
-    strip_artifact_inline_reference_ids,
+from src.generators._artifact_generator.family_policy import (
+    apply_artifact_family_policy,
 )
-from src.generators.analysis_pack_cache import (
-    CachedPackAdaptResult,
-    load_cached_pack,
-)
-from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.generators.analysis_store_adapter import (
-    resolve_pack_path as resolve_analysis_pack_path,
-    store_pack as store_analysis_pack,
-)
-from src.services import (
-    file_service,
-    llm_service,
-    prompt_service,
-    report_analysis_store_service,
-)
-from src.utils.errors import AppError
-from src.utils.json_utils import safe_json_dumps
-from src.utils.model_resolver import resolve_model
-from src.utils.logging import child_context, log_event, new_run_context
-from src.utils.coercion import coerce_int
-from src.services.schema_validator_service import (
-    validate_evidence_references,
-    validate_schema,
-)
-from src.utils.analysis_family import (
-    family_is_abstained,
-    serialize_family_status,
-)
-from src.utils.cache_utils import sha256_json
-
-logger = logging.getLogger("market_lense.artifact_generator")
-from src.generators._artifact_generator.family_policy import apply_artifact_family_policy
 from src.generators._artifact_generator.rendering import render_artifact_json_model
 from src.generators._artifact_generator.storage import (
     _artifact_cache_meta,
@@ -76,12 +21,54 @@ from src.generators._artifact_generator.storage import (
     store_artifacts_payload,
 )
 from src.generators._artifact_generator.toc import build_toc_artifacts
+from src.generators.artifact_normalization import (
+    artifact_base_variables,
+    artifact_quote_candidates,
+    artifact_retrieval_mode,
+    artifact_vector_store_enabled,
+    bind_artifact_evidence_spans,
+    normalize_artifact_evidence_ids,
+    normalize_artifact_insights,
+    normalize_artifact_quotes,
+    normalize_artifact_source_status,
+    normalize_artifact_summary,
+    normalize_expert_domain,
+    pad_artifact_insights,
+    strip_artifact_inline_reference_ids,
+)
+from src.services import llm_service, prompt_service, report_analysis_store_service
+from src.utils.cache_utils import sha256_json
+from src.utils.errors import AppError
+from src.utils.logging import child_context, log_event, new_run_context
 
-def _artifact_parallel_workers(settings: AppSettings, step_count: int) -> int:
-    configured = coerce_int(
-        getattr(settings, "artifact_parallel_workers", 4), 4, min_value=1
+logger = logging.getLogger("market_lense.artifact_generator")
+
+ArtifactTaskRenderer = Callable[[ArtifactRenderTask], Dict[str, Any]]
+ArtifactStepExecutor = Callable[
+    [Sequence[ArtifactRenderTask], ArtifactTaskRenderer, RunContext, str],
+    Dict[str, Dict[str, Any]],
+]
+
+
+def _execute_artifact_tasks_serial(
+    tasks: Sequence[ArtifactRenderTask],
+    render_task: ArtifactTaskRenderer,
+    ctx: RunContext,
+    batch_name: str,
+) -> Dict[str, Dict[str, Any]]:
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_step_batch_serial",
+            module=logger.name,
+            fields={
+                "batch_name": batch_name,
+                "steps": [task.step_name for task in tasks],
+            },
+        )
     )
-    return max(1, min(configured, step_count))
+    return {task.step_name: render_task(task) for task in tasks}
 
 
 def generate_artifacts(
@@ -99,6 +86,7 @@ def generate_artifacts(
     openai_client=None,
     prompt_client=prompt_service,
     analysis_store=report_analysis_store_service,
+    artifact_step_executor: Optional[ArtifactStepExecutor] = None,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
     openai_client = openai_client or llm_service.build_openai_client_for_settings(
@@ -128,6 +116,20 @@ def generate_artifacts(
     artifact_use_vector_store = artifact_vector_store_enabled(
         settings=settings, vector_store_id=vector_store_id
     )
+    step_executor = artifact_step_executor or _execute_artifact_tasks_serial
+
+    def render_task(task: ArtifactRenderTask) -> Dict[str, Any]:
+        return render_artifact_json_model(
+            namespace=task.namespace,
+            variables=task.variables,
+            settings=settings,
+            ctx=task.ctx,
+            openai_client=openai_client,
+            prompt_client=prompt_client,
+            allow_vector_store=artifact_use_vector_store,
+            vector_store_id=vector_store_id,
+        )
+
     logger.info(
         log_event(
             ctx,
@@ -214,7 +216,10 @@ def generate_artifacts(
         )
         raise AppError(
             code="artifact_inputs_unavailable",
-            message="Artifact generation requires extractable text or evidence-backed inputs",
+            message=(
+                "Artifact generation requires extractable text or evidence-backed "
+                "inputs"
+            ),
             retryable=False,
             context={
                 "report_id": report_id,
@@ -235,80 +240,38 @@ def generate_artifacts(
     toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
     toc_topics = [entry["display_title"] for entry in toc_bundle["toc_entries"]]
 
-    stage_one_steps = [
-        ("summary", "report_vs/artifacts/summary", base_vars),
-        ("insights_candidates", "report_vs/artifacts/insights_candidates", base_vars),
-        (
-            "quotes",
-            "report_vs/artifacts/quotes",
-            {**base_vars, "quote_candidates_json": _dump_json(quote_candidates)},
+    stage_one_tasks = [
+        ArtifactRenderTask(
+            schema_version="1.0",
+            step_name="summary",
+            namespace="report_vs/artifacts/summary",
+            variables=base_vars,
+            ctx=child_context(ctx, task_id=f"{ctx.task_id}:summary"),
+        ),
+        ArtifactRenderTask(
+            schema_version="1.0",
+            step_name="insights_candidates",
+            namespace="report_vs/artifacts/insights_candidates",
+            variables=base_vars,
+            ctx=child_context(ctx, task_id=f"{ctx.task_id}:insights_candidates"),
+        ),
+        ArtifactRenderTask(
+            schema_version="1.0",
+            step_name="quotes",
+            namespace="report_vs/artifacts/quotes",
+            variables={
+                **base_vars,
+                "quote_candidates_json": _dump_json(quote_candidates),
+            },
+            ctx=child_context(ctx, task_id=f"{ctx.task_id}:quotes"),
         ),
     ]
-    parallel_workers = _artifact_parallel_workers(settings, len(stage_one_steps))
-    logger.info(
-        log_event(
-            ctx,
-            role="generator",
-            event="artifact_parallel_config",
-            module=logger.name,
-            fields={
-                "parallel_workers": parallel_workers,
-                "parallel_step_count": len(stage_one_steps),
-            },
-        )
+    stage_one_results = step_executor(
+        stage_one_tasks,
+        render_task,
+        ctx,
+        "stage_one",
     )
-    stage_one_results: Dict[str, Dict[str, Any]] = {}
-    if parallel_workers > 1 and len(stage_one_steps) > 1:
-        with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
-            futures = {}
-            for step_name, namespace, variables in stage_one_steps:
-                step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
-                future = executor.submit(
-                    render_artifact_json_model,
-                    namespace=namespace,
-                    variables=variables,
-                    settings=settings,
-                    ctx=step_ctx,
-                    openai_client=openai_client,
-                    prompt_client=prompt_client,
-                    allow_vector_store=artifact_use_vector_store,
-                    vector_store_id=vector_store_id,
-                )
-                futures[future] = step_name
-            first_error: Optional[Exception] = None
-            for future in as_completed(futures):
-                step_name = futures[future]
-                try:
-                    stage_one_results[step_name] = future.result()
-                except Exception as exc:  # pragma: no cover - defensive fallback
-                    if first_error is None:
-                        first_error = exc
-                    logger.info(
-                        log_event(
-                            ctx,
-                            role="generator",
-                            event="artifact_parallel_step_failed",
-                            module=logger.name,
-                            fields={"step": step_name, "error": str(exc)},
-                        )
-                    )
-            if first_error is not None:
-                for future in futures:
-                    future.cancel()
-                raise first_error
-    else:
-        for step_name, namespace, variables in stage_one_steps:
-            step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
-            stage_one_results[step_name] = render_artifact_json_model(
-                namespace=namespace,
-                variables=variables,
-                settings=settings,
-                ctx=step_ctx,
-                openai_client=openai_client,
-                prompt_client=prompt_client,
-                allow_vector_store=artifact_use_vector_store,
-                vector_store_id=vector_store_id,
-            )
 
     summary = normalize_artifact_summary(
         stage_one_results.get("summary", {}).get("summary")
@@ -377,9 +340,10 @@ def generate_artifacts(
         doc_map=safe_doc_map,
         evidence_packs=safe_evidence,
     )
-    if evidence_span_stats.get("bound_count", 0) > 0 or evidence_span_stats.get(
-        "unbound_count", 0
-    ) > 0:
+    if (
+        evidence_span_stats.get("bound_count", 0) > 0
+        or evidence_span_stats.get("unbound_count", 0) > 0
+    ):
         logger.info(
             log_event(
                 ctx,
@@ -403,53 +367,29 @@ def generate_artifacts(
         "summary_json": _dump_json(summary),
         "insights_final_json": _dump_json(insights_final),
     }
-    if parallel_workers > 1:
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            expert_future = executor.submit(
-                render_artifact_json_model,
+    distribution_results = step_executor(
+        [
+            ArtifactRenderTask(
+                schema_version="1.0",
+                step_name="expert_comment",
                 namespace="report_vs/artifacts/expert_comment",
                 variables=expert_vars,
-                settings=settings,
                 ctx=expert_ctx,
-                openai_client=openai_client,
-                prompt_client=prompt_client,
-                allow_vector_store=artifact_use_vector_store,
-                vector_store_id=vector_store_id,
-            )
-            linkedin_future = executor.submit(
-                render_artifact_json_model,
+            ),
+            ArtifactRenderTask(
+                schema_version="1.0",
+                step_name="linkedin_post",
                 namespace="report_vs/artifacts/linkedin_post",
                 variables=linkedin_vars,
-                settings=settings,
                 ctx=linkedin_ctx,
-                openai_client=openai_client,
-                prompt_client=prompt_client,
-                allow_vector_store=artifact_use_vector_store,
-                vector_store_id=vector_store_id,
-            )
-            expert_result = expert_future.result()
-            linkedin_result = linkedin_future.result()
-    else:
-        expert_result = render_artifact_json_model(
-            namespace="report_vs/artifacts/expert_comment",
-            variables=expert_vars,
-            settings=settings,
-            ctx=expert_ctx,
-            openai_client=openai_client,
-            prompt_client=prompt_client,
-            allow_vector_store=artifact_use_vector_store,
-            vector_store_id=vector_store_id,
-        )
-        linkedin_result = render_artifact_json_model(
-            namespace="report_vs/artifacts/linkedin_post",
-            variables=linkedin_vars,
-            settings=settings,
-            ctx=linkedin_ctx,
-            openai_client=openai_client,
-            prompt_client=prompt_client,
-            allow_vector_store=artifact_use_vector_store,
-            vector_store_id=vector_store_id,
-        )
+            ),
+        ],
+        render_task,
+        ctx,
+        "distribution",
+    )
+    expert_result = distribution_results.get("expert_comment", {})
+    linkedin_result = distribution_results.get("linkedin_post", {})
     expert_comment = _s(expert_result.get("expert_comment"))
     linkedin_post = strip_artifact_inline_reference_ids(
         _s(linkedin_result.get("linkedin_post"))
@@ -513,5 +453,3 @@ def generate_artifacts(
         )
     )
     return artifacts_payload
-
-

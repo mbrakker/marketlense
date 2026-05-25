@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -14,6 +15,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceReference,
     CrossReportProjectedDataReadRequest,
     CrossReportProjectedDataReadResponse,
+    CrossReportPublishResultSummary,
     CrossReportRawMetricReference,
     CrossReportSourceReportCandidate,
 )
@@ -95,6 +97,10 @@ class CountingOpenAIClient:
 
 
 def _analysis_request() -> CrossReportAnalysisRequest:
+    return _analysis_request_with_mode("generate_only")
+
+
+def _analysis_request_with_mode(publication_mode: str) -> CrossReportAnalysisRequest:
     return CrossReportAnalysisRequest(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         request_id="orchestrator-request",
@@ -108,14 +114,21 @@ def _analysis_request() -> CrossReportAnalysisRequest:
         max_source_reports=2,
         diagnostic=False,
         override_publishability=False,
-        publication_mode="generate_only",
+        publication_mode=publication_mode,
     )
 
 
 def _orchestrator_request(tmp_path) -> CrossReportAnalysisOrchestratorRequest:
+    return _orchestrator_request_with_mode(tmp_path, "generate_only")
+
+
+def _orchestrator_request_with_mode(
+    tmp_path,
+    publication_mode: str,
+) -> CrossReportAnalysisOrchestratorRequest:
     return CrossReportAnalysisOrchestratorRequest(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        analysis_request=_analysis_request(),
+        analysis_request=_analysis_request_with_mode(publication_mode),
         projected_data_request=CrossReportProjectedDataReadRequest(
             schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
             db_path=str(tmp_path / "reports.sqlite"),
@@ -242,7 +255,11 @@ def _settings(tmp_path):
             "support": 1.0,
             "contradiction": 0.5,
         },
+        cross_report_analysis_enabled=True,
+        cross_report_analysis_auto_theme_enabled=True,
+        cross_report_analysis_theme_rotation_window_days=30,
         cross_report_analysis_min_theme_source_publishers=2,
+        cross_report_analysis_publish_enabled=False,
         cross_report_analysis_publish_requires_validation_pass=True,
         cache_dir=str(tmp_path / "cache"),
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
@@ -257,6 +274,144 @@ def _events(caplog) -> list[dict]:
         for record in caplog.records
         if record.name == "market_lense.cross_report_analysis_orchestrator"
     ]
+
+
+def test_cross_report_orchestrator_blocks_when_feature_disabled(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    settings = _settings(tmp_path)
+    settings.cross_report_analysis_enabled = False
+    read_calls = []
+
+    with pytest.raises(AppError) as exc_info:
+        run_cross_report_analysis(
+            _orchestrator_request(tmp_path),
+            settings,
+            run_context,
+            read_projected_data_fn=lambda request, ctx: read_calls.append(request),
+            prompt_client=FakePromptClient(),
+            openai_client=CountingOpenAIClient(),
+            sleep_fn=lambda seconds: None,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_analysis_disabled",
+        retryable=False,
+        severity="error",
+    )
+    assert read_calls == []
+
+
+def test_cross_report_orchestrator_rejects_auto_theme_when_disabled(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    settings = _settings(tmp_path)
+    settings.cross_report_analysis_auto_theme_enabled = False
+    request = replace(
+        _orchestrator_request(tmp_path),
+        analysis_request=replace(
+            _analysis_request(),
+            topic="",
+            auto_theme=True,
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_cross_report_analysis(
+            request,
+            settings,
+            run_context,
+            read_projected_data_fn=lambda request, ctx: _projected_data(),
+            prompt_client=FakePromptClient(),
+            openai_client=CountingOpenAIClient(),
+            sleep_fn=lambda seconds: None,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_auto_theme_disabled",
+        retryable=False,
+        severity="error",
+    )
+    assert exc_info.value.context["auto_theme"] is True
+
+
+def test_cross_report_orchestrator_wires_theme_rotation_settings(
+    tmp_path,
+    run_context,
+    caplog,
+) -> None:
+    settings = _settings(tmp_path)
+    settings.cross_report_analysis_theme_rotation_window_days = 30
+    recent_artifact = (
+        tmp_path / "out" / "cross_report_analysis" / "recent-ai" / "analysis.json"
+    )
+    recent_artifact.parent.mkdir(parents=True)
+    recent_artifact.write_text(
+        json.dumps(
+            {
+                "generated_at_utc": "2026-05-20T00:00:00Z",
+                "generated_result": {
+                    "selected_theme": {
+                        "theme_id": "theme-tag-ai",
+                        "matched_tags": ["AI"],
+                        "matched_categories": ["Retail"],
+                        "source_report_ids": ["report-old"],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    request = replace(
+        _orchestrator_request(tmp_path),
+        analysis_request=replace(
+            _analysis_request(),
+            topic="",
+            auto_theme=True,
+            date_range_end="2026-05-21",
+        ),
+    )
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+
+    outcome = run_cross_report_analysis(
+        request,
+        settings,
+        run_context,
+        read_projected_data_fn=lambda request, ctx: _projected_data(),
+        prompt_client=FakePromptClient(),
+        openai_client=CountingOpenAIClient(),
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert outcome.generated_result.selected_theme.rejection_risks
+    assert any(
+        risk.startswith("recent_category_repetition:")
+        for risk in outcome.generated_result.selected_theme.rejection_risks
+    )
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.cross_report_analysis_input_generator"
+    ]
+    loaded = [
+        event
+        for event in events
+        if event["event"] == "cross_report_recent_theme_metadata_loaded"
+    ][0]
+    assert loaded["fields"]["recent_artifacts_root"] == str(
+        tmp_path / "out" / "cross_report_analysis"
+    )
+    assert loaded["fields"]["theme_rotation_window_days"] == 30
+    assert loaded["fields"]["theme_rotation_reference_date"] == "2026-05-21"
+    assert loaded["fields"]["loaded_recent_themes"] == 1
 
 
 def test_cross_report_orchestrator_runs_pipeline_and_reuses_idempotency(
@@ -333,6 +488,133 @@ def test_cross_report_orchestrator_runs_pipeline_and_reuses_idempotency(
         for event in events
         if event["event"].startswith("cross_report_orchestrator_")
     ][0] == "cross_report_orchestrator_start"
+    idempotency_event = [
+        event
+        for event in events
+        if event["event"] == "cross_report_orchestrator_transition"
+        and event["fields"]["transition"] == "idempotency_checked"
+    ][0]
+    assert idempotency_event["fields"]["material_version"] == "2.0"
+    assert "output_root" in idempotency_event["fields"]["material_fields"]
+
+
+def test_cross_report_orchestrator_idempotency_changes_for_output_controls(
+    tmp_path,
+    run_context,
+) -> None:
+    def _read_projected(request, ctx):
+        return _projected_data()
+
+    first_client = CountingOpenAIClient()
+    second_client = CountingOpenAIClient()
+    base_request = _orchestrator_request(tmp_path)
+    changed_request = replace(
+        base_request,
+        output_root=str(tmp_path / "changed-out"),
+        max_evidence_items=5,
+        max_signals=3,
+        max_prompt_chars=55000,
+    )
+
+    first = run_cross_report_analysis(
+        base_request,
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=_read_projected,
+        prompt_client=FakePromptClient(),
+        openai_client=first_client,
+        sleep_fn=lambda seconds: None,
+    )
+    second = run_cross_report_analysis(
+        changed_request,
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=_read_projected,
+        prompt_client=FakePromptClient(),
+        openai_client=second_client,
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert first.idempotency_key != second.idempotency_key
+    assert first_client.calls == 1
+    assert second_client.calls == 1
+    assert "changed-out" in second.artifact_path
+
+
+def test_cross_report_orchestrator_blocks_prompt_budget_before_model_call(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    openai_client = CountingOpenAIClient()
+    request = replace(_orchestrator_request(tmp_path), max_prompt_chars=200)
+
+    with pytest.raises(Exception) as exc:
+        run_cross_report_analysis(
+            request,
+            _settings(tmp_path),
+            run_context,
+            read_projected_data_fn=lambda request_arg, ctx: _projected_data(),
+            prompt_client=FakePromptClient(),
+            openai_client=openai_client,
+            sleep_fn=lambda seconds: None,
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_prompt_budget_exceeded",
+        retryable=False,
+        severity="error",
+    )
+    assert exc.value.context["prompt_input_chars"] > 200
+    assert exc.value.context["max_prompt_chars"] == 200
+    assert openai_client.calls == 0
+    assert not list((tmp_path / "out").glob("**/analysis.json"))
+
+
+def test_cross_report_orchestrator_projection_hash_change_invalidates_cache(
+    tmp_path,
+    run_context,
+) -> None:
+    openai_client = CountingOpenAIClient()
+    reads = {"count": 0}
+
+    def _read_projected(request, ctx):
+        reads["count"] += 1
+        projected = _projected_data()
+        if reads["count"] == 1:
+            return projected
+        return replace(
+            projected,
+            content_hashes={
+                **projected.content_hashes,
+                "report-a": {"report-a:claim:1": "hash-a-changed"},
+            },
+        )
+
+    first = run_cross_report_analysis(
+        _orchestrator_request(tmp_path),
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=_read_projected,
+        prompt_client=FakePromptClient(),
+        openai_client=openai_client,
+        sleep_fn=lambda seconds: None,
+    )
+    second = run_cross_report_analysis(
+        _orchestrator_request(tmp_path),
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=_read_projected,
+        prompt_client=FakePromptClient(),
+        openai_client=openai_client,
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert first.idempotency_reused is False
+    assert second.idempotency_reused is False
+    assert first.idempotency_key != second.idempotency_key
+    assert openai_client.calls == 2
 
 
 def test_cross_report_orchestrator_retries_retryable_service_errors(
@@ -365,4 +647,145 @@ def test_cross_report_orchestrator_retries_retryable_service_errors(
 
     assert outcome.status == "validated"
     assert attempts["count"] == 2
+    assert sleeps == [0.0]
+
+
+def test_cross_report_orchestrator_dry_run_builds_package_without_live_publish(
+    tmp_path,
+    run_context,
+) -> None:
+    publish_calls = []
+
+    def _publish_package(package, publish_settings, ctx, *, dry_run, sleep_fn):
+        publish_calls.append(
+            {
+                "dry_run": dry_run,
+                "package_id": package.package_id,
+                "html_path": package.html_path,
+                "has_source_map": "Source report map" in package.html_text,
+            }
+        )
+        return CrossReportPublishResultSummary(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            publication_mode="publish_dry_run",
+            status="dry_run",
+            target_route="wordpress:ml_report",
+            idempotency_reused=False,
+        )
+
+    outcome = run_cross_report_analysis(
+        _orchestrator_request_with_mode(tmp_path, "publish_dry_run"),
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=lambda request, ctx: _projected_data(),
+        prompt_client=FakePromptClient(),
+        openai_client=CountingOpenAIClient(),
+        publish_cross_report_package_fn=_publish_package,
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert outcome.status == "validated"
+    assert outcome.publish_result.status == "dry_run"
+    assert publish_calls == [
+        {
+            "dry_run": True,
+            "package_id": "cross-report:analysis-orchestrated-ai",
+            "html_path": str(
+                tmp_path
+                / "out"
+                / "cross_report_analysis"
+                / "ai-commerce-adoption-across-retail-reports"
+                / "publish.html"
+            ),
+            "has_source_map": True,
+        }
+    ]
+    assert Path(publish_calls[0]["html_path"]).exists()
+    publish_html = Path(publish_calls[0]["html_path"]).read_text(encoding="utf-8")
+    assert "data-market-lense-cross-report-metadata" in publish_html
+
+
+def test_cross_report_orchestrator_live_publish_requires_enabled_config(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    with pytest.raises(Exception) as exc:
+        run_cross_report_analysis(
+            _orchestrator_request_with_mode(tmp_path, "publish_live"),
+            _settings(tmp_path),
+            run_context,
+            read_projected_data_fn=lambda request, ctx: _projected_data(),
+            prompt_client=FakePromptClient(),
+            openai_client=CountingOpenAIClient(),
+            sleep_fn=lambda seconds: None,
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_publish_live_disabled",
+        retryable=False,
+        severity="error",
+    )
+
+
+def test_cross_report_orchestrator_live_publish_retries_and_reuses_idempotency(
+    tmp_path,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    settings.cross_report_analysis_publish_enabled = True
+    openai_client = CountingOpenAIClient()
+    publish_attempts = {"count": 0}
+    sleeps = []
+
+    def _publish_package(package, publish_settings, ctx, *, dry_run, sleep_fn):
+        publish_attempts["count"] += 1
+        if publish_attempts["count"] == 1:
+            raise AppError(
+                code="wp_post_create_failed",
+                message="Temporary WordPress failure",
+                retryable=True,
+                severity="warning",
+            )
+        return CrossReportPublishResultSummary(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            publication_mode="publish_live",
+            status="published",
+            target_route="wordpress:ml_report",
+            idempotency_reused=False,
+            post_id=123,
+            post_url="https://example.com/cross-report",
+        )
+
+    first = run_cross_report_analysis(
+        _orchestrator_request_with_mode(tmp_path, "publish_live"),
+        settings,
+        run_context,
+        read_projected_data_fn=lambda request, ctx: _projected_data(),
+        prompt_client=FakePromptClient(),
+        openai_client=openai_client,
+        publish_settings=SimpleNamespace(marker="publish-settings"),
+        publish_cross_report_package_fn=_publish_package,
+        sleep_fn=lambda seconds: sleeps.append(seconds),
+    )
+    second = run_cross_report_analysis(
+        _orchestrator_request_with_mode(tmp_path, "publish_live"),
+        settings,
+        run_context,
+        read_projected_data_fn=lambda request, ctx: _projected_data(),
+        prompt_client=FakePromptClient(),
+        openai_client=openai_client,
+        publish_settings=SimpleNamespace(marker="publish-settings"),
+        publish_cross_report_package_fn=_publish_package,
+        sleep_fn=lambda seconds: sleeps.append(seconds),
+    )
+
+    assert first.status == "published"
+    assert first.publish_result.status == "published"
+    assert first.publish_result.post_id == 123
+    assert second.idempotency_reused is True
+    assert second.publish_result.post_url == "https://example.com/cross-report"
+    assert openai_client.calls == 1
+    assert publish_attempts["count"] == 2
     assert sleeps == [0.0]

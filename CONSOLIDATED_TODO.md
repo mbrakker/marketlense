@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last compiled: 2026-05-20
+Last compiled: 2026-05-22
 
 This file is the single source of truth for open backlog items. It supersedes the remaining backlog plus the archived planning work from `docs/quality/deep-analysis-x10-plan-2026-04-15.md`.
 
@@ -22,6 +22,7 @@ Deep-analysis evidence used for this consolidation:
 - Long-file concentration shifted after April refactors and the May facade work. Remaining first-party hotspots from `python scripts/count_long_files.py` are concentrated in deeper PDF/browser internals, publisher-discovery workflow internals, and large paired tests rather than the public `config_service`, `openai_service`, `artifact_generator`, `publisher_inventory_service`, and `report_download_orchestrator` boundaries.
 - Recent facade splits establish the required shape for future hotspot work: keep one public boundary file and move semantic families into a same-name internal folder. Current reference examples are `src/services/report_store_service.py` over `src/services/_report_store_service/*`, `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`, `src/services/config_service.py` over `src/services/_config_service/*`, `src/services/openai_service.py` over `src/services/_openai_service/*`, and `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
 - Complexity audit on 2026-05-20 identified remaining performance hotspots in validation retrieval, PDF visual/table candidate filtering, Streamlit dashboard read models, and crop-refinement recovery paths. WordPress shortcode/theme-loop scanner hits were reviewed as lower-priority small-collection/template loops unless profiling proves otherwise.
+- GitHub Codex Connector PR review comments from PRs #24-#37 were triaged on 2026-05-21 and resolved on 2026-05-22.
 
 Removed from the active backlog because the core capability already ships:
 
@@ -276,3 +277,54 @@ Suggested priority order:
     - Risk-policy output surfaces current repository CI health independently from changed-file classification.
     - For docs-only changes, policy clearly reports whether hard gates are presently failing on mainline baseline.
     - Operator docs include a “docs-only but repo-red” handling path.
+
+---
+
+## 9. Appendix Feature Audit (2026-05-22)
+
+Scope: first-party runtime code under `src/`, CLI/UI entrypoints, and connected operator flows. This audit treats dynamically launched subprocess modules as live when a runtime caller invokes them by module name. It does not classify tests, CI-only gates, or vendored `tools/browser-use` code as product-flow usage.
+
+Findings summary:
+
+- Keep `src/services/_browser_report_download/browser_worker.py`: it is not statically imported, but `browser.py` launches it with `python -m src.services._browser_report_download.browser_worker`.
+- Keep prompt dry-run validation: `prompt_service.validate_prompt_dry_run` is CI/quality infrastructure used by `scripts/quality/prompt_fixture_corpus_metrics.py` and tests, not an abandoned product feature.
+- Keep optional evidence-pack variety scaffolding: the `key_metrics`, `risk_register`, `recommendations`, and `contradictions` strategies are gated but wired through `evidence_pack_generator`, validation, artifacts, and analytics projection.
+
+- **Title:** Decide whether unused browser helper surface functions are real acquisition tools [Impact: 3/5, Effort: 3/5]
+  - Evidence: README describes `browser_helper_coordinate_fallback_click`, `browser_helper_wait_for_load`, `browser_helper_ensure_real_tab`, `browser_helper_http_get`, and `get_browser_helper_surface` as part of the Marketlense browser helper surface. Runtime browser download currently imports and uses page info, screenshot, JavaScript, and form autocomplete helpers, but not those additional helper functions.
+  - Assessment: Reintroduce only where the acquisition flow can call them with bounded policy and typed results; otherwise remove the unused helpers and README claims. Coordinate fallback is especially sensitive and should not exist as a dormant helper.
+  - Acceptance Criteria:
+    - Reintroduce path: preflight, terminal recovery, or route execution calls the helper through the browser-download service boundary with structured logs, bounded timeouts, and tests proving no persisted coordinate route memory.
+    - Delete path: remove unused helper functions, contracts, README claims, and tests that validate unused narratives.
+    - Browser-download prompts and route evidence labels match the helper surface that is actually callable.
+
+- **Title:** Convert publish queue snapshot into real publish jobs or rename it as an ops snapshot [Impact: 5/5, Effort: 5/5]
+  - Evidence: `publish_queue_orchestrator.py` is live in the UI, but it builds a read-only snapshot from HTML files and publish state. It does not enqueue durable publish intents or drive the publish workflow.
+  - Assessment: Reintroduce as durable jobs if the product needs a queue. If not, rename the API/UI language to "publish readiness snapshot" to avoid implying a queue exists.
+  - Acceptance Criteria:
+    - Covered by the existing Section 5 item: "Turn the publish queue into durable jobs with transactional outbox, retry, and idempotency."
+    - If not implemented as a queue, contracts, UI labels, docs, and logs stop using queue terminology for the snapshot-only feature.
+
+---
+
+## 10. Full Codebase Interconnection Audit (2026-05-22)
+
+- **Title:** Reclaim retry, rate-limit, and circuit-breaker ownership from `llm_service` into orchestrators [Impact: 5/5, Effort: 4/5]
+  - Explanation: `src/services/llm_service.py::_execute_with_policy` currently owns retry loops, sleeps, rate limiting, and circuit-breaker state for external LLM calls. That makes model latency, attempt counts, and spend side effects partly hidden inside a service boundary even though retry/backoff decisions belong to orchestrators. The same boundary is also exposed through `openai_service`, `llm_service`, and `vector_store_service`, with `vector_store_service` calling `llm_service` for OpenAI vector-store operations.
+  - Pros: More predictable failure handling, cleaner attempt-count tests, stronger spend controls, and one clearer provider boundary.
+  - Cons: Requires coordinated changes across model callers and retry tests.
+  - Acceptance Criteria:
+    - One canonical LLM/OpenAI service boundary owns raw provider calls and returns typed `AppError` values with retryability metadata, but does not sleep or retry internally.
+    - Orchestrators own retry count, backoff, rate-limit policy, circuit-breaker policy, and spend-threshold checks for LLM/vector-store work.
+    - `vector_store_service` no longer aliases `llm_service` as an OpenAI boundary; vector-store calls route through the canonical boundary or an explicitly documented provider-agnostic contract.
+    - Tests assert retry attempt counts and sleep/backoff decisions at orchestrator level, and assert services make exactly one provider attempt per invocation.
+
+- **Title:** Reduce browser-download and publisher-discovery internal monolith risk without adding pass-through layers [Impact: 4/5, Effort: 4/5]
+  - Explanation: The largest first-party modules remain concentrated in behavior-heavy internals: `src/services/_browser_report_download/artifact.py`, `src/services/_browser_report_download/browser.py`, `src/orchestrators/_report_download_orchestrator/workflow.py`, `src/services/_publisher_inventory_service/workflow.py`, and `src/orchestrators/publisher_inventory_orchestrator.py`. These files combine many route, recovery, evidence, and terminal-state paths, making defect containment and review difficult even though public facades already exist.
+  - Pros: Easier reasoning about failure paths, lower review risk, better targeted tests.
+  - Cons: Refactor risk is meaningful because these flows are integration-heavy and stateful.
+  - Acceptance Criteria:
+    - Split only by stable capability families such as terminal evidence, route memory, browser execution, artifact finalization, recovery cache, and snapshot/state recording.
+    - Public service/orchestrator entrypoints remain singular; callers do not choose between competing routes.
+    - Each extracted module has real behavior and tests, not pass-through forwarding.
+    - Golden and failure-injection tests prove report download and publisher discovery outputs remain unchanged.

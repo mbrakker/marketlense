@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import inspect
+import json
 from dataclasses import asdict, fields, is_dataclass
 from typing import Any
 
 import pytest
 
+from src.contracts import cross_report_analysis as cross_contracts
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisArtifact,
@@ -18,6 +21,8 @@ from src.contracts.cross_report_analysis import (
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
     CrossReportProjectedDataReadRequest,
+    CrossReportProjectedDataReadResponse,
+    CrossReportPublishPackage,
     CrossReportPublishabilityResult,
     CrossReportPublishRequestSummary,
     CrossReportPublishResultSummary,
@@ -205,6 +210,14 @@ def _contracts() -> list[Any]:
         evidence_id="ev-report-a-claim-1",
         source_metadata={"page": 14},
     )
+    projected_data_response = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[source_candidate],
+        evidence=[evidence],
+        raw_metrics=[raw_metric],
+        content_hashes={"report-a": {"claim-a-1": "hash-a"}},
+        excluded_report_counts={"filtered": 1},
+    )
     evidence_input_result = CrossReportEvidenceInputResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         selected_sources=[selected_source],
@@ -306,6 +319,30 @@ def _contracts() -> list[Any]:
         error_code=None,
         error_message=None,
     )
+    publish_package = CrossReportPublishPackage(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        package_id="cross-report:analysis-ai-commerce",
+        file_id="cross-report:analysis-ai-commerce",
+        target_route="wordpress:ml_report",
+        title="AI Commerce Trust Across Reports",
+        slug="ai-commerce-trust-across-reports",
+        excerpt="Trust is a recurring constraint.",
+        body_html="<article><h1>AI Commerce Trust Across Reports</h1></article>",
+        html_text="<html><body><article><h1>AI Commerce Trust Across Reports</h1></article></body></html>",
+        html_path="out/cross_report_analysis/ai-commerce/publish.html",
+        canonical_artifact_path="out/cross_report_analysis/ai-commerce/analysis.json",
+        artifact_sha256="artifact-sha",
+        validation_sha256="validation-sha",
+        selected_theme_id="theme-ai-commerce",
+        selected_report_ids=["report-a"],
+        source_metadata=[{"report_id": "report-a", "publisher": "Publisher A"}],
+        category_labels=["Retail"],
+        tag_labels=["ai", "commerce"],
+        evidence_reference_ids=["ev-report-a-claim-1"],
+        raw_metric_ids=["metric-a-1"],
+        prompt_hashes={"system": "abc", "user": "def"},
+        machine_metadata={"analysis_id": "analysis-ai-commerce"},
+    )
     artifact = CrossReportAnalysisArtifact(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         artifact_type="cross_report_analysis",
@@ -322,6 +359,7 @@ def _contracts() -> list[Any]:
         validation_result=validation,
         publish_request=publish_request,
         publish_result=publish_result,
+        publish_package=publish_package,
     )
     outcome = CrossReportOrchestratorOutcome(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -341,6 +379,7 @@ def _contracts() -> list[Any]:
     return [
         request,
         projected_data_request,
+        projected_data_response,
         orchestrator_request,
         theme_candidate,
         selected_theme,
@@ -361,6 +400,7 @@ def _contracts() -> list[Any]:
         validation,
         publish_request,
         publish_result,
+        publish_package,
         artifact,
         outcome,
     ]
@@ -382,6 +422,29 @@ def test_cross_report_contract_validation_accepts_complete_contracts(
     assert_no_defaulted_required_fields,
 ) -> None:
     assert_no_defaulted_required_fields(contract)
+    validate_cross_report_contract(contract)
+
+
+def test_cross_report_contract_fixtures_cover_every_dataclass() -> None:
+    fixture_names = {type(contract).__name__ for contract in _contracts()}
+    contract_names = {
+        name
+        for name, value in vars(cross_contracts).items()
+        if inspect.isclass(value)
+        and is_dataclass(value)
+        and name.startswith("CrossReport")
+    }
+
+    assert fixture_names == contract_names
+
+
+@pytest.mark.parametrize("contract", _contracts())
+def test_cross_report_contract_payloads_round_trip_through_json(contract: Any) -> None:
+    payload = asdict(contract)
+    encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, default=str)
+    decoded = json.loads(encoded)
+
+    assert decoded == payload
     validate_cross_report_contract(contract)
 
 
@@ -411,3 +474,34 @@ def test_cross_report_contract_validation_rejects_missing_required_semantics(
         severity="error",
     )
     assert exc.value.context["field"] == "evidence_id"
+
+
+def test_cross_report_contract_validation_rejects_null_list_filters(
+    assert_app_error,
+) -> None:
+    invalid = CrossReportAnalysisRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        request_id="request-with-null-list",
+        topic="AI commerce",
+        auto_theme=False,
+        category_filters=None,  # type: ignore[arg-type]
+        tag_filters=[],
+        publisher_filters=[],
+        date_range_start="2025-01-01",
+        date_range_end="2026-01-01",
+        max_source_reports=2,
+        diagnostic=False,
+        override_publishability=False,
+        publication_mode="generate_only",
+    )
+
+    with pytest.raises(AppError) as exc:
+        validate_cross_report_contract(invalid)
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_contract_invalid",
+        retryable=False,
+        severity="error",
+    )
+    assert exc.value.context["field"] == "category_filters"

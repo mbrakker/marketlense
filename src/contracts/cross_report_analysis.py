@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import MISSING, dataclass, field, fields, is_dataclass
-from typing import Any, Dict, List, Literal, Optional, cast
+from typing import Any, Dict, List, Literal, Optional, cast, get_origin, get_type_hints
 
 from src.utils.errors import AppError
 
@@ -116,10 +116,16 @@ class CrossReportThemeCandidate:
         metadata={"doc": "Short deterministic rationale for candidate creation."}
     )
     matched_tags: List[str] = field(
-        metadata={"doc": "Projected tags that contributed to this theme."}
+        metadata={
+            "doc": "Projected tags that contributed to this theme when tag evidence exists.",
+            "required": False,
+        }
     )
     matched_categories: List[str] = field(
-        metadata={"doc": "Projected categories that contributed to this theme."}
+        metadata={
+            "doc": "Projected categories that contributed to this theme when category evidence exists.",
+            "required": False,
+        }
     )
     source_report_ids: List[str] = field(
         metadata={"doc": "Report IDs that support this candidate theme."}
@@ -156,10 +162,16 @@ class CrossReportSelectedTheme:
     label: str = field(metadata={"doc": "Human-readable selected theme label."})
     rationale: str = field(metadata={"doc": "Reason the theme is publishable."})
     matched_tags: List[str] = field(
-        metadata={"doc": "Tags retained for synthesis and publication metadata."}
+        metadata={
+            "doc": "Tags retained for synthesis and publication metadata when available.",
+            "required": False,
+        }
     )
     matched_categories: List[str] = field(
-        metadata={"doc": "Categories retained for synthesis and publication metadata."}
+        metadata={
+            "doc": "Categories retained for synthesis and publication metadata when available.",
+            "required": False,
+        }
     )
     source_report_ids: List[str] = field(
         metadata={"doc": "Selected report IDs supporting the theme."}
@@ -457,7 +469,10 @@ class CrossReportGeneratedAnalysisResult:
         metadata={"doc": "Deterministic signal scores used to focus synthesis."}
     )
     raw_metrics: List[CrossReportRawMetricReference] = field(
-        metadata={"doc": "Raw source-specific metrics preserved without normalization."}
+        metadata={
+            "doc": "Raw source-specific metrics preserved without normalization.",
+            "required": False,
+        }
     )
     sections: List[CrossReportAnalysisSection] = field(
         metadata={"doc": "Generated structured analysis sections."}
@@ -571,6 +586,80 @@ class CrossReportPublishResultSummary:
 
 
 @dataclass(frozen=True)
+class CrossReportPublishPackage:
+    schema_version: str = field(
+        metadata={"doc": "Cross-report publish package contract schema version."}
+    )
+    package_id: str = field(
+        metadata={"doc": "Stable package identifier used as the publish file marker."}
+    )
+    file_id: str = field(
+        metadata={
+            "doc": "Canonical pseudo file ID used by the existing publish lookup path."
+        }
+    )
+    target_route: str = field(
+        metadata={"doc": "Existing publish route or target surface identifier."}
+    )
+    title: str = field(metadata={"doc": "Publish-ready title."})
+    slug: str = field(metadata={"doc": "Publish-ready slug."})
+    excerpt: str = field(metadata={"doc": "Publish-ready excerpt or summary."})
+    body_html: str = field(
+        metadata={"doc": "Publish-ready body HTML fragment for WordPress."}
+    )
+    html_text: str = field(
+        metadata={"doc": "Complete HTML document persisted for review and publishing."}
+    )
+    html_path: str = field(
+        metadata={"doc": "Canonical local HTML publish package path."}
+    )
+    canonical_artifact_path: str = field(
+        metadata={"doc": "Canonical local analysis JSON artifact path."}
+    )
+    artifact_sha256: str = field(
+        metadata={"doc": "Deterministic hash of generated artifact-relevant payload."}
+    )
+    validation_sha256: str = field(
+        metadata={"doc": "Deterministic hash of validation result payload."}
+    )
+    selected_theme_id: str = field(
+        metadata={"doc": "Selected theme ID used in publish idempotency."}
+    )
+    selected_report_ids: List[str] = field(
+        metadata={"doc": "Selected source report IDs represented by the package."}
+    )
+    source_metadata: List[Dict[str, Any]] = field(
+        metadata={
+            "doc": "Source report metadata map rendered and published for provenance."
+        }
+    )
+    category_labels: List[str] = field(
+        metadata={
+            "doc": "Category labels carried into publish metadata.",
+            "required": False,
+        }
+    )
+    tag_labels: List[str] = field(
+        metadata={"doc": "Tag labels carried into publish metadata.", "required": False}
+    )
+    evidence_reference_ids: List[str] = field(
+        metadata={"doc": "Evidence IDs rendered into the evidence reference map."}
+    )
+    raw_metric_ids: List[str] = field(
+        metadata={
+            "doc": "Raw metric IDs rendered into the raw metric appendix when source metrics are available.",
+            "required": False,
+        }
+    )
+    prompt_hashes: Dict[str, str] = field(
+        metadata={"doc": "Prompt hashes used to generate the package."}
+    )
+    machine_metadata: Dict[str, Any] = field(
+        metadata={"doc": "Machine-readable cross-report metadata embedded in HTML."}
+    )
+
+
+@dataclass(frozen=True)
 class CrossReportAnalysisArtifact:
     schema_version: str = field(
         metadata={"doc": "Persisted analysis artifact contract schema version."}
@@ -618,6 +707,9 @@ class CrossReportAnalysisArtifact:
     )
     publish_result: CrossReportPublishResultSummary = field(
         metadata={"doc": "Publish result summary known at persistence time."}
+    )
+    publish_package: CrossReportPublishPackage = field(
+        metadata={"doc": "Publish package generated for review or publication."}
     )
 
 
@@ -924,6 +1016,10 @@ def _field_is_required(field_def: Any) -> bool:
     return field_def.default is MISSING and field_def.default_factory is MISSING
 
 
+def _field_is_list_typed(annotation: Any) -> bool:
+    return annotation in {list, List} or get_origin(annotation) in {list, List}
+
+
 def _empty_required_value(value: object) -> bool:
     if value is None:
         return True
@@ -948,12 +1044,16 @@ def _validate_contract_value(value: object, *, path: str) -> None:
 
 
 def _validate_dataclass_instance(instance: object, *, path: str) -> None:
+    type_hints = get_type_hints(type(instance))
     for field_def in fields(cast(Any, instance)):
         field_value = getattr(instance, field_def.name)
         field_path = f"{path}.{field_def.name}"
+        field_annotation = type_hints.get(field_def.name, field_def.type)
         if field_def.name == "schema_version":
             if field_value != CROSS_REPORT_ANALYSIS_SCHEMA_VERSION:
                 _raise_invalid(field_path, field_def.name, "unsupported schema version")
+        if _field_is_list_typed(field_annotation) and field_value is None:
+            _raise_invalid(field_path, field_def.name, "list field cannot be null")
         if _field_is_required(field_def) and _empty_required_value(field_value):
             _raise_invalid(field_path, field_def.name, "required value is empty")
         _validate_contract_value(field_value, path=field_path)

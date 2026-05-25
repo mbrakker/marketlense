@@ -323,6 +323,66 @@ def test_source_selection_honors_max_report_cap_and_filters(run_context) -> None
     assert rejected["report-b"] == ["tag_filter_mismatch"]
 
 
+def test_source_selection_normalizes_whitespace_dates(run_context) -> None:
+    request = CrossReportAnalysisRequest(
+        **{
+            **_request().__dict__,
+            "date_range_start": " 2026-05-01 ",
+            "date_range_end": " 2026-05-31 ",
+        }
+    )
+    result = select_cross_report_source_reports(
+        request,
+        _projected_data(
+            [
+                _candidate(
+                    "report-a",
+                    publisher="Publisher A",
+                    report_date="2026-05-02",
+                    evidence_count=3,
+                )
+            ]
+        ),
+        run_context,
+    )
+
+    assert result.cleaned_filters["date_range_start"] == "2026-05-01"
+    assert result.cleaned_filters["date_range_end"] == "2026-05-31"
+    assert [source.report_id for source in result.selected_sources] == ["report-a"]
+
+
+def test_source_selection_rejects_invalid_date_filters_with_typed_error(
+    run_context,
+    assert_app_error,
+) -> None:
+    request = CrossReportAnalysisRequest(
+        **{**_request().__dict__, "date_range_start": "2026-99-01"}
+    )
+
+    with pytest.raises(Exception) as exc:
+        select_cross_report_source_reports(
+            request,
+            _projected_data(
+                [
+                    _candidate(
+                        "report-a",
+                        publisher="Publisher A",
+                        report_date="2026-05-02",
+                        evidence_count=3,
+                    )
+                ]
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_date_filter_invalid",
+        retryable=False,
+        severity="error",
+    )
+
+
 def test_source_selection_excludes_non_projected_sources_before_synthesis(
     run_context,
 ) -> None:
@@ -456,6 +516,43 @@ def test_theme_selection_uses_explicit_topic_without_auto_theme(
     assert result.theme_candidates[0].rationale.startswith("Explicit operator topic")
 
 
+def test_theme_selection_explicit_topic_does_not_load_recent_artifacts(
+    run_context,
+    tmp_path,
+    external_boundary_mocks_only,
+) -> None:
+    calls: list[str] = []
+
+    def _list_directory(request_arg, ctx):
+        calls.append(request_arg.root_dir)
+        raise AssertionError("explicit theme selection must not read recent artifacts")
+
+    external_boundary_mocks_only.setattr(
+        input_gen.file_service, "list_directory", _list_directory
+    )
+
+    result = select_cross_report_theme(
+        _request(),
+        _source_selection(
+            [
+                _selected_source(
+                    "report-a",
+                    publisher="Publisher A",
+                    report_date="2026-05-01",
+                    evidence_count=4,
+                    tags=["AI"],
+                    categories=["Retail"],
+                )
+            ]
+        ),
+        run_context,
+        recent_artifacts_root=str(tmp_path),
+    )
+
+    assert result.selected_theme.theme_id == "theme-explicit-ai-commerce"
+    assert calls == []
+
+
 def test_theme_selection_auto_generates_ranked_candidates_and_logs(
     run_context,
     caplog,
@@ -531,6 +628,117 @@ def test_theme_selection_auto_generates_ranked_candidates_and_logs(
     assert complete["fields"]["theme_candidate_count"] == 5
     assert complete["fields"]["selected_theme_id"] == "theme-tag-ai"
     assert "score_components" in complete["fields"]
+
+
+def test_theme_selection_auto_handles_tag_only_and_category_only_taxonomy(
+    run_context,
+) -> None:
+    base_request = _request()
+    request = CrossReportAnalysisRequest(
+        **{**base_request.__dict__, "topic": "", "auto_theme": True}
+    )
+    tag_only = select_cross_report_theme(
+        request,
+        _source_selection(
+            [
+                _selected_source(
+                    "report-a",
+                    publisher="Publisher A",
+                    report_date="2026-05-01",
+                    evidence_count=4,
+                    tags=["AI"],
+                    categories=[],
+                ),
+                _selected_source(
+                    "report-b",
+                    publisher="Publisher B",
+                    report_date="2026-05-02",
+                    evidence_count=4,
+                    tags=["AI"],
+                    categories=[],
+                    rank=2,
+                ),
+            ]
+        ),
+        run_context,
+    )
+    category_only = select_cross_report_theme(
+        request,
+        _source_selection(
+            [
+                _selected_source(
+                    "report-c",
+                    publisher="Publisher C",
+                    report_date="2026-05-01",
+                    evidence_count=4,
+                    tags=[],
+                    categories=["Retail"],
+                ),
+                _selected_source(
+                    "report-d",
+                    publisher="Publisher D",
+                    report_date="2026-05-02",
+                    evidence_count=4,
+                    tags=[],
+                    categories=["Retail"],
+                    rank=2,
+                ),
+            ]
+        ),
+        run_context,
+    )
+
+    assert tag_only.selected_theme.matched_tags == ["AI"]
+    assert tag_only.selected_theme.matched_categories == []
+    assert category_only.selected_theme.matched_tags == []
+    assert category_only.selected_theme.matched_categories == ["Retail"]
+
+
+def test_theme_selection_uses_total_taxonomy_sort_for_case_ties(
+    run_context,
+) -> None:
+    request = CrossReportAnalysisRequest(
+        **{**_request().__dict__, "topic": "", "auto_theme": True, "tag_filters": []}
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=4,
+                tags=["ai", "AI"],
+                categories=["retail", "Retail"],
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=4,
+                tags=["AI", "ai"],
+                categories=["Retail", "retail"],
+                rank=2,
+            ),
+        ]
+    )
+
+    result = select_cross_report_theme(request, source_selection, run_context)
+    repeat = select_cross_report_theme(request, source_selection, run_context)
+
+    assert [candidate.theme_id for candidate in result.theme_candidates] == [
+        candidate.theme_id for candidate in repeat.theme_candidates
+    ]
+    tag_candidate = {
+        candidate.theme_id: candidate for candidate in result.theme_candidates
+    }["theme-tag-ai"]
+    category_candidate = {
+        candidate.theme_id: candidate for candidate in result.theme_candidates
+    }["theme-category-retail"]
+    assert tag_candidate.label == "AI"
+    assert tag_candidate.matched_tags == ["AI"]
+    assert category_candidate.label == "Retail"
+    assert category_candidate.matched_tags == ["AI", "ai"]
+    assert category_candidate.matched_categories == ["Retail"]
 
 
 def test_theme_selection_fails_when_no_eligible_theme(
@@ -669,6 +877,113 @@ def test_theme_variety_downranks_recent_repetition_through_file_service(
     assert repeated.novelty_score == 0.0
     assert "recent_theme_repetition" in repeated.rejection_risks
     assert "recent_category_repetition:retail" in repeated.rejection_risks
+
+
+def test_theme_variety_excludes_undated_recent_artifacts_and_logs(
+    run_context,
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+    external_boundary_mocks_only,
+) -> None:
+    request = CrossReportAnalysisRequest(
+        **{**_request().__dict__, "topic": "", "auto_theme": True}
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=8,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=8,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+
+    def _list_directory(request_arg, ctx):
+        return ListDirectoryResponse(
+            schema_version="1.0",
+            root_dir=request_arg.root_dir,
+            entries=[
+                DirectoryEntry(
+                    schema_version="1.0",
+                    path=str(tmp_path / "undated" / "analysis.json"),
+                    name="analysis.json",
+                    is_dir=False,
+                    size_bytes=200,
+                    mtime_utc=1.0,
+                ),
+                DirectoryEntry(
+                    schema_version="1.0",
+                    path=str(tmp_path / "invalid" / "analysis.json"),
+                    name="analysis.json",
+                    is_dir=False,
+                    size_bytes=200,
+                    mtime_utc=2.0,
+                ),
+            ],
+        )
+
+    def _read_text(request_arg, ctx):
+        generated_at = "" if "undated" in request_arg.path else "not-a-date"
+        return ReadTextResponse(
+            schema_version="1.0",
+            path=request_arg.path,
+            content=json.dumps(
+                {
+                    "generated_at_utc": generated_at,
+                    "selected_theme": {
+                        "theme_id": "theme-tag-ai",
+                        "matched_tags": ["AI"],
+                        "matched_categories": ["Retail"],
+                        "source_report_ids": ["old-report"],
+                    },
+                }
+            ),
+        )
+
+    external_boundary_mocks_only.setattr(
+        input_gen.file_service, "list_directory", _list_directory
+    )
+    external_boundary_mocks_only.setattr(
+        input_gen.file_service, "read_text", _read_text
+    )
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+
+    result = select_cross_report_theme(
+        request,
+        source_selection,
+        run_context,
+        recent_artifacts_root=str(tmp_path),
+        theme_rotation_window_days=30,
+        theme_rotation_reference_date="2026-05-21",
+    )
+
+    assert result.selected_theme.theme_id == "theme-tag-ai"
+    assert result.theme_candidates[0].novelty_score == 1.0
+    events = _events(caplog)
+    assert_logs_have_required_fields(events)
+    loaded = [
+        event
+        for event in events
+        if event["event"] == "cross_report_recent_theme_metadata_loaded"
+    ][0]
+    assert loaded["fields"]["skipped_undated_artifacts"] == 1
+    assert loaded["fields"]["skipped_invalid_date_artifacts"] == 1
 
 
 def test_theme_variety_prefers_source_diversity_and_stable_tie_breaking(
@@ -1141,7 +1456,7 @@ def test_evidence_input_assembly_filters_selected_reports_and_preserves_metric_p
         "report-b": ["report-b-quote-1"],
     }
     assert result.dropped_evidence_counts == {
-        "duplicate_evidence_id": 1,
+        "duplicate_evidence_id_same_report": 1,
         "unselected_raw_metric_report": 1,
         "unselected_report": 1,
     }
@@ -1205,6 +1520,55 @@ def test_evidence_input_assembly_enforces_cap_before_prompt_rendering(
     ]
     assert result.dropped_evidence_counts == {"max_evidence_items_reached": 1}
     assert result.prompt_input_chars < 60000
+
+
+def test_evidence_input_assembly_preserves_cross_report_scoped_evidence_ids(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=2,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=2,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence("source-local-1", report_id="report-a"),
+            _evidence("source-local-1", report_id="report-b"),
+            _evidence("source-local-1", report_id="report-a"),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+
+    result = assemble_cross_report_analysis_inputs(
+        _request(), source_selection, projected_data, run_context
+    )
+
+    assert [(item.report_id, item.evidence_id) for item in result.evidence] == [
+        ("report-a", "source-local-1"),
+        ("report-b", "source-local-1"),
+    ]
+    assert result.dropped_evidence_counts == {"duplicate_evidence_id_same_report": 1}
 
 
 def test_signal_scoring_ranks_text_taxonomy_without_metric_normalization(
@@ -1332,6 +1696,120 @@ def test_signal_scoring_ranks_text_taxonomy_without_metric_normalization(
     ][0]
     assert complete["fields"]["selected_signal_ids"] == ["signal-ai", "signal-retail"]
     assert complete["fields"]["raw_metric_policy"] == result.raw_metric_policy
+
+
+def test_signal_scoring_matches_short_labels_on_token_boundaries(
+    run_context,
+) -> None:
+    request = CrossReportAnalysisRequest(
+        **{**_request().__dict__, "tag_filters": ["AI"], "category_filters": []}
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=2,
+                tags=["Commerce"],
+                categories=["Retail"],
+                rank=1,
+            )
+        ]
+    )
+    evidence_inputs = assemble_cross_report_analysis_inputs(
+        request,
+        source_selection,
+        CrossReportProjectedDataReadResponse(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            source_candidates=[],
+            evidence=[
+                _evidence(
+                    "report-a-claim-1",
+                    report_id="report-a",
+                    text="Paid media budgets are rising.",
+                ),
+                _evidence(
+                    "report-a-claim-2",
+                    report_id="report-a",
+                    text="AI pilots are expanding.",
+                ),
+            ],
+            raw_metrics=[],
+            content_hashes={},
+            excluded_report_counts={},
+        ),
+        run_context,
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+
+    result = score_cross_report_signals(
+        request, evidence_inputs, theme_selection, run_context
+    )
+
+    ai_signal = next(
+        score for score in result.signal_scores if score.signal_id == "signal-ai"
+    )
+    assert ai_signal.evidence_ids == ["report-a-claim-2"]
+
+
+def test_signal_scoring_disambiguates_slug_collisions(
+    run_context,
+) -> None:
+    request = CrossReportAnalysisRequest(
+        **{**_request().__dict__, "tag_filters": [], "category_filters": []}
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=2,
+                tags=["AI/ML", "AI ML"],
+                categories=[],
+                rank=1,
+            )
+        ]
+    )
+    evidence_inputs = assemble_cross_report_analysis_inputs(
+        request,
+        source_selection,
+        CrossReportProjectedDataReadResponse(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            source_candidates=[],
+            evidence=[
+                _evidence(
+                    "report-a-claim-1",
+                    report_id="report-a",
+                    text="AI/ML investments are increasing.",
+                ),
+                _evidence(
+                    "report-a-claim-2",
+                    report_id="report-a",
+                    text="AI ML operating models are maturing.",
+                ),
+            ],
+            raw_metrics=[],
+            content_hashes={},
+            excluded_report_counts={},
+        ),
+        run_context,
+    )
+    theme_selection = select_cross_report_theme(
+        CrossReportAnalysisRequest(
+            **{**request.__dict__, "topic": "", "auto_theme": True}
+        ),
+        source_selection,
+        run_context,
+    )
+
+    result = score_cross_report_signals(
+        request, evidence_inputs, theme_selection, run_context, max_signals=4
+    )
+
+    assert len(result.selected_signal_ids) == len(set(result.selected_signal_ids))
+    assert {"signal-ai-ml", "signal-ai-ml-2"}.issubset(result.selected_signal_ids)
 
 
 def test_signal_scoring_is_unchanged_when_only_raw_metric_values_change(
@@ -1652,6 +2130,135 @@ def test_evidence_agreement_groups_divergent_signal_inputs(
     assert ai_group.agreement_type == "divergent"
     assert "opposed_directional_language" in ai_group.uncertainty_reasons
     assert result.agreement_counts["divergent"] >= 1
+
+
+def test_evidence_agreement_requires_distinct_directional_evidence_for_divergence(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-04",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence(
+                "report-a-claim-1",
+                report_id="report-a",
+                text="AI adoption is increasing but some pilots are declining.",
+            ),
+            _evidence(
+                "report-b-finding-1",
+                report_id="report-b",
+                content_class="finding",
+                text="AI adoption remains a priority.",
+            ),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    request = _request()
+    evidence_inputs = assemble_cross_report_analysis_inputs(
+        request, source_selection, projected_data, run_context
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+    signal_result = score_cross_report_signals(
+        request, evidence_inputs, theme_selection, run_context
+    )
+
+    result = group_cross_report_evidence_agreement(
+        request, evidence_inputs, signal_result, run_context
+    )
+
+    ai_group = next(
+        group for group in result.evidence_groups if group.group_id == "group-signal-ai"
+    )
+    assert ai_group.agreement_type == "convergent"
+    assert ai_group.uncertainty_reasons == ["multi_publisher_alignment"]
+
+
+def test_evidence_agreement_same_publisher_opposition_is_thin_coverage(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher A",
+                report_date="2026-05-04",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence(
+                "report-a-claim-1",
+                report_id="report-a",
+                text="AI commerce adoption is increasing.",
+            ),
+            _evidence(
+                "report-b-finding-1",
+                report_id="report-b",
+                content_class="finding",
+                text="AI commerce adoption is declining.",
+            ),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    request = _request()
+    evidence_inputs = assemble_cross_report_analysis_inputs(
+        request, source_selection, projected_data, run_context
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+    signal_result = score_cross_report_signals(
+        request, evidence_inputs, theme_selection, run_context
+    )
+
+    result = group_cross_report_evidence_agreement(
+        request, evidence_inputs, signal_result, run_context
+    )
+
+    ai_group = next(
+        group for group in result.evidence_groups if group.group_id == "group-signal-ai"
+    )
+    assert ai_group.agreement_type == "thin_coverage"
 
 
 def test_evidence_agreement_groups_thin_coverage_signal_inputs(

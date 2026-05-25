@@ -26,9 +26,17 @@ text: |
   {{ generation_policy_json }}
 
   Task:
-  - Generate a concise cross-report analysis artifact.
+  - Generate a boardroom-ready editorial article as a concise cross-report
+    analysis artifact.
+  - Make it a consulting-grade synthesis: thesis-led, analytical, specific to
+    the topic's industry context, and written for senior decision makers.
   - Include convergences, divergences, source notes, and raw metric appendix
     discussion only where the supplied inputs support them.
+  - Use executive-facing section headings. Favor sections such as the strategic
+    thesis, where sources converge, where they diverge, what the pattern implies,
+    and what the evidence cannot yet prove.
   - Cite provided evidence ids for every claim.
+  - Use raw_metric_ids only for exact metric_id values present in Raw metric
+    appendix; use an empty list when none apply.
   - Do not infer missing provenance.
   - Do not use or request full report text.

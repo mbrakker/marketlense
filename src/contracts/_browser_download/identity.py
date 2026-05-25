@@ -261,6 +261,24 @@ class BrowserDownloadSettings:
             "doc": "Promotion policy for verified browser-route memory: `disabled` logs skips, `dry_run` logs review diffs without writing files, and `write` persists reviewable playbook YAML."
         },
     )
+    private_api_playbook_promotion_mode: str = field(
+        default="disabled",
+        metadata={
+            "doc": "Promotion policy for validated private-API endpoint candidates: `disabled` skips detection, `dry_run` logs and records eligible candidates without writing YAML, and `write` persists reviewable private-API playbooks after thresholded validation."
+        },
+    )
+    private_api_playbook_min_success_count: int = field(
+        default=3,
+        metadata={
+            "doc": "Minimum validated private-API observations required before automatic promotion is eligible."
+        },
+    )
+    private_api_playbook_min_distinct_source_urls: int = field(
+        default=2,
+        metadata={
+            "doc": "Minimum distinct source URLs required before automatic private-API promotion is eligible."
+        },
+    )
     session_reuse_policy: BrowserDownloadSessionReusePolicy = field(
         default_factory=lambda: BrowserDownloadSessionReusePolicy(schema_version="1.0"),
         metadata={
