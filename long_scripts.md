@@ -1,401 +1,220 @@
-# Longest Python files (>500 lines)
+# Long-File Audit and Refactor Targets
 
-Generated: 2026-02-22
+Generated: 2026-05-25
 
-Files with more than 500 lines (sorted by length):
+## Purpose
 
-- 3698 src/services/pdf_service.py
-- 3467 src/generators/report_generator.py
-- 2958 src/ui/streamlit_pages.py
-- 2500 src/generators/validation_generator.py
-- 1778 src/generators/evidence_pack_generator.py
-- 1571 src/generators/artifact_generator.py
-- 1474 src/services/openai_service.py
-- 1243 tests/test_artifact_generator.py
-- 961 src/services/config_service.py
-- 930 tests/test_validation_generator.py
-- 915 tests/test_evidence_pack_generator.py
-- 807 tests/test_vector_pipeline_wiring.py
-- 755 src/orchestrators/ingest_orchestrator.py
-- 693 src/services/state_service.py
-- 632 src/utils/quantity.py
-- 559 src/generators/streamlit_dashboard_generator.py
-- 552 src/generators/taxonomy_generator.py
-- 543 src/services/report_store_service.py
-- 532 src/services/file_service.py
-- 514 src/services/wordpress_service.py
+This note tracks remaining first-party long-file concentration after the facade and implementation-family refactors already landed in the repository. It is an audit input, not an instruction to split files merely because they are large.
 
-Total .py files scanned: 166
+Canonical scan command:
 
-## Implementation plans
+```powershell
+python scripts/count_long_files.py --min-lines 500
+```
 
-### 1. Split pdf_service (non-breaking)
+The command uses `scripts/repository_analysis_exclusions.py` to exclude generated, vendored, cache, and local reproduction trees. The complete current `>500` inventory is reproducible from the command; the tables below highlight the files requiring first review because they exceed 1,000 physical lines.
 
-TL;DR — Create focused service modules and keep a shim so existing imports keep working. Move I/O, candidate heuristics, cropping, previewing, and figure-selection into separate modules; keep behavior identical and run tests after each step.
+## Current Scan Summary
 
-Steps
+| Section | Files >500 lines | Files >=1,000 lines |
+| --- | ---: | ---: |
+| First-party `src` | 86 | 35 |
+| First-party `tests` | 43 | 24 |
+| First-party `scripts` | 1 | 0 |
+| WordPress integration | 5 | 3 |
 
-Create modules: add new files src/services/pdf_io_service.py, src/services/pdf_candidate_service.py, src/services/pdf_crop_service.py, src/services/pdf_preview_service.py, src/services/pdf_figure_service.py. — Effort: Low
-Add shim: update __init__.py and leave pdf_service.py as a thin shim that re-exports names from the new modules. This preserves current imports/tests. — Effort: Low
-Move I/O helpers: extract check_pdf_eof, build_pdf_context, extract_pdf_info, extract_pdf_text, sample_pdf_text + related small helpers into pdf_io_service. Keep dataclass contracts in src/contracts. — Effort: Low
-Extract candidate logic (generator role): move collect_candidates and all chart/table heuristics (_extract_charts*, _extract_tables*, validation/dedupe, scoring) into pdf_candidate_service and expose a single collect_candidates API. Keep heavy heuristics and parallel-worker logic together. — Effort: High
-Move cropping/refine: move crop_regions, _crop_regions, render_page_for_crop_refine, apply_crop_refine_bbox, strict trimming helpers into pdf_crop_service. — Effort: Medium
-Move preview/thumbnail I/O: move render_preview, _page_png, _save_thumb into pdf_preview_service. — Effort: Low
-Move figure-selection: move extract_best_figure and helpers into pdf_figure_service (can be thin wrapper calling candidate/preview APIs). — Effort: Low
-Constants and utils: either move module tuning constants into a single src/services/pdf_constants.py or localize them in target modules; migrate utility geometry helpers to pdf_utils.py if shared. — Effort: Medium
-Run tests and iterate: run full test suite; fix failures by adding temporary re-exports in the shim or updating test imports progressively. Prefer shim-first so most tests pass immediately. Repeat until green. — Effort: Medium
-Deprecation cleanup: once stable, convert the shim to a deprecation wrapper or remove it and update imports/tests fully. — Effort: Low
-Verification
+- Total first-party source-like files scanned: `628`.
+- Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
+- The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 
-Run tests after each major move:
-Targeted: pytest tests/test_pdf_crop_service.py::... and tests/test_candidate_extraction_generator.py::...
-Full: pytest -q
-Spot-check integration: ingest flow that calls check_pdf_eof and collect_candidates.
-Run a sample ingest on a local PDF to ensure no behavior regressions (manual smoke).
-Decisions
+## Largest Runtime Files
 
-Non-breaking approach (shim-first) to preserve existing imports and monkeypatch targets used by tests.
-Keep domain heuristics in pdf_candidate_service (generator role) to respect AGENTS.md separation of I/O services vs generators.
-Keep contracts in src/contracts to avoid circular imports.
-Risks & Mitigations
+### `src` Files >=1,000 Lines
 
-Risk: import churn and circular imports. Mitigation: keep contracts in src/contracts and use shim re-exports while migrating call sites gradually.
-Risk: tests that monkeypatch internal helpers. Mitigation: keep exported names available on shim or update tests to mock the new module paths after migration.
-Risk: constants split across modules. Mitigation: centralize constants in pdf_constants or move them with the functions that use them.
-Risk: behavioral regressions due to subtle ordering or doc ownership of fitz.Document. Mitigation: maintain doc ownership semantics and add unit tests for PdfContext behavior.
-Files to change (minimal first-pass)
+| Lines | Path | Assessment |
+| ---: | --- | --- |
+| 4,072 | `src/services/_browser_report_download/artifact.py` | Active service-family hotspot |
+| 4,004 | `src/services/_browser_report_download/browser.py` | Active service-family hotspot |
+| 3,390 | `src/services/_pdf/table_heuristics.py` | Active PDF heuristic hotspot |
+| 2,637 | `src/services/_pdf/_visual_heuristics/panel_detection.py` | Active PDF heuristic hotspot |
+| 2,554 | `src/orchestrators/_report_download_orchestrator/workflow.py` | Active orchestrator hotspot |
+| 2,301 | `src/services/_publisher_inventory_service/workflow.py` | Active service-family hotspot |
+| 2,263 | `src/services/_pdf/visual_candidates.py` | Active PDF heuristic hotspot |
+| 2,066 | `src/services/_browser_report_download/http.py` | Active service-family hotspot |
+| 1,994 | `src/orchestrators/publisher_inventory_orchestrator.py` | Active orchestrator hotspot |
+| 1,926 | `src/cli.py` | Review after workflow work |
+| 1,892 | `src/services/_browser_report_download/helpers.py` | Active service-family hotspot |
+| 1,877 | `src/generators/cross_report_analysis_input_generator.py` | New feature surface; stabilize first |
+| 1,689 | `src/services/_pdf/crop.py` | PDF family follow-up |
+| 1,682 | `src/generators/publisher_inventory_candidate_screening_generator.py` | Discovery quality family |
+| 1,650 | `src/orchestrators/report_analysis_orchestrator.py` | Existing workflow surface |
+| 1,650 | `src/services/_pdf/figures.py` | PDF family follow-up |
+| 1,625 | `src/services/sqlite_migration_service.py` | Persistence boundary; split only by migration ownership |
+| 1,610 | `src/generators/publisher_inventory_candidate_quality_generator.py` | Discovery quality family |
+| 1,593 | `src/services/_browser_report_download/cdp.py` | Browser terminal-evidence family |
+| 1,563 | `src/services/_publisher_inventory_service/fetch_service.py` | Discovery acquisition family |
+| 1,534 | `src/services/analytics_store_service.py` | Analytics store boundary |
+| 1,506 | `src/orchestrators/publish_orchestrator.py` | Publication workflow boundary |
+| 1,431 | `src/ui/app_pages/publisher_operations.py` | UI-only page family |
+| 1,329 | `src/services/_pdf/_visual_heuristics/chart_layout.py` | PDF heuristic family |
+| 1,328 | `src/generators/report_source_generator.py` | Report-source domain family |
+| 1,301 | `src/orchestrators/_report_download_orchestrator/route_planner.py` | Route-planning family |
+| 1,300 | `src/services/drive_service.py` | External-system boundary |
+| 1,216 | `src/services/_pdf/visual_heuristics.py` | PDF heuristic family |
+| 1,207 | `src/services/wordpress_service.py` | External-system boundary |
+| 1,082 | `src/services/_report_store_service/download_routes.py` | Report-store capability family |
+| 1,076 | `src/services/_publisher_inventory_service/discovery_activity.py` | Discovery parsing/activity family |
+| 1,059 | `src/contracts/cross_report_analysis.py` | Contract surface; do not split mechanically |
+| 1,052 | `src/services/render_service.py` | Rendering boundary |
+| 1,032 | `src/generators/_report_selection_generator/crop_refine.py` | Local performance candidate |
+| 1,009 | `src/generators/analytics_projection_generator.py` | Analytics projection family |
 
-add: src/services/pdf_io_service.py, src/services/pdf_candidate_service.py, src/services/pdf_crop_service.py, src/services/pdf_preview_service.py, src/services/pdf_figure_service.py
-update: __init__.py (re-exports), keep pdf_service.py as shim initially
-optional: src/services/pdf_constants.py or move constants into target modules
-Next actions I can take for you
+### Large Test Concentration >=1,000 Lines
 
-Implement the shim-first split (create new modules and move a first group of functions, run tests). Estimated implementation time: ~3–6 hours iterative (move I/O + shim + tests), full split ~1–2 days.
-Or, if you prefer, I can start by extracting pdf_io_service and adding the shim so we can run tests and iterate.
+| Lines | Path |
+| ---: | --- |
+| 3,501 | `tests/test_browser_report_download_service/test_onsite_and_terminal.py` |
+| 3,213 | `tests/test_report_download_orchestrator.py` |
+| 2,926 | `tests/test_publisher_inventory_candidate_quality_generator.py` |
+| 2,826 | `tests/test_report_store_service.py` |
+| 2,513 | `tests/test_browser_report_download_service/test_prompt_and_probe.py` |
+| 2,503 | `tests/test_pdf_figures_service/builders.py` |
+| 2,311 | `tests/test_cross_report_analysis_input_generator.py` |
+| 2,199 | `tests/test_publisher_inventory_service/test_browser_traversal.py` |
+| 2,020 | `tests/test_publisher_inventory_orchestrator.py` |
+| 1,862 | `tests/test_artifact_generator.py` |
+| 1,607 | `tests/test_validation_generator.py` |
+| 1,599 | `tests/test_browser_report_download_service/test_worker_and_recovery.py` |
+| 1,577 | `tests/test_report_analysis_generator.py` |
+| 1,550 | `tests/test_candidate_refine_selection.py` |
+| 1,520 | `tests/test_cli.py` |
+| 1,378 | `tests/test_publisher_inventory_candidate_screening_generator.py` |
+| 1,378 | `tests/test_vector_pipeline_wiring.py` |
+| 1,341 | `tests/test_pdf_figures_service/test_panel_heuristics.py` |
+| 1,252 | `tests/test_config_service.py` |
+| 1,223 | `tests/test_report_source_generator.py` |
+| 1,206 | `tests/test_pdf_figures_service/test_table_heuristics.py` |
+| 1,166 | `tests/test_pdf_crop_service.py` |
+| 1,109 | `tests/test_cross_report_analysis_generator.py` |
+| 1,094 | `tests/test_evidence_pack_generator.py` |
 
-## 2. Split Report Generator
+### Other First-Party Sections
 
-TL;DR — Reduce report_generator.py size by extracting distinct generator responsibilities into focused generator modules and pure utils, keep a shim that preserves generate_report() API, and iterate with tests after each small move. This keeps generator responsibilities (domain assembly/validation) while delegating I/O and side-effects to services per AGENTS.md.
+| Lines | Path |
+| ---: | --- |
+| 551 | `scripts/ci/check_split_symbol_links.py` |
+| 7,026 | `Wordpress/wp-content/themes/marketlense/assets/css/theme.css` |
+| 1,762 | `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-shortcodes.php` |
+| 1,009 | `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-taxonomies.php` |
+| 837 | `Wordpress/config/publisher-profiles.json` |
+| 534 | `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-intelligence-stats.php` |
 
-Steps
+## Completed Boundary Work
 
-Create new generator modules (pure domain logic):
-src/generators/report_payload_generator.py — build/merge ReportPayload, title/metadata resolution, `_base_payload`, `_merge_artifacts_into_payload`, `_resolve_publisher`, payload validation.
-src/generators/report_candidate_selector.py — candidate prefiltering, ranking, `_candidate_*` helpers, `_rank_candidates_batch`, `_split_candidates_by_kind`, `_select_refined_candidate_items`.
-src/generators/report_indexing_generator.py — vector-store indexing orchestration (`_start_vector_store_indexing`, `_await_vector_store_indexing`, `_ensure_vector_store` and related state helpers/`_VectorStoreIndexingState`).
-src/generators/report_assets_generator.py — wrap calls that create artifacts/evidence packs/cover images: calls to `generate_artifacts`, `generate_evidence_packs`, `generate_cover_images`, and merging results into payload.
-src/generators/report_cache_generator.py — cache key helpers and read/write cache helpers (`_cache_dir`, `_read_cache_json`, `_write_cache_json`, `_template_sha256`, `_html_cache_key`).
-Extract pure helpers & utils:
-Move small pure helpers (slug/title derivation, pick-non-empty text, coercion wrappers) into src/generators/report_utils.py or utils if shared.
-Replace large internal classes with dataclass contracts where appropriate:
-Move `_VectorStoreIndexingState`, `_TaxonomyCategoryState`, `_RankBatchResult` definitions into either contracts (if shared) or into new generator modules.
-Make `generate_report()` a thin coordinator in report_generator.py:
-Keep signature unchanged (shim).
-Call the new generators in clear sequence (build pdf context → candidate selection → assets → indexing → validation → render/persist).
-Reduce direct side-effects in generators:
-Ensure file/IO/persistence remains in `src/services/*` (use existing file_service, render_service, report_store_service, rank_service, pdf_service).
-If generator currently performs any direct file writes/reads or HTTP calls, replace with calls to the appropriate `src/services/*` function.
-Add compatibility shim and incremental migration strategy:
-Keep public helper names exported from report_generator.py (re-exports) so tests and callers keep working.
-Migrate callers one-by-one if necessary; prefer shim-first to avoid breaking tests that monkeypatch.
-Tests & verification after each move:
-After step moves, run targeted tests: test_candidate_extraction_generator.py, tests/test_report_generator.py (or related tests), and crop/candidate-related tests.
-Full suite: pytest -q when the shim is in place.
-Cleanups:
-Consolidate constants used by these helpers into src/generators/report_constants.py (or keep them with the module that uses them).
-When green, remove re-export shim and update imports to the new modules.
-Verification
+Do not recreate the obsolete February split plan. These public boundaries already use the approved facade-plus-internal-family pattern:
 
-After moving helpers to report_utils and report_cache_generator, run:
-pytest tests/test_candidate_extraction_generator.py::...
-pytest tests/test_pdf_crop_service.py::... (spot-check interactions)
-Once coordinator shim exists and targeted tests pass, run full suite:
-pytest -q
-Manual smoke: run ingest for a sample PDF that exercises generate_report() and confirm outputs (HTML + artifacts) match baseline.
-Decisions
+- `src/services/pdf_service.py` over `src/services/_pdf/*`.
+- `src/services/config_service.py` over `src/services/_config_service/*`.
+- `src/services/openai_service.py` over `src/services/_openai_service/*`.
+- `src/services/report_store_service.py` over `src/services/_report_store_service/*`.
+- `src/services/state_service.py` over `src/services/_state_service/*`.
+- `src/services/publisher_inventory_service.py` over `src/services/_publisher_inventory_service/*`.
+- `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
+- `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`.
+- `src/orchestrators/report_download_orchestrator.py` over `src/orchestrators/_report_download_orchestrator/*`.
+- `src/ui/streamlit_pages.py` over `src/ui/app_pages/*` and `src/ui/_streamlit_pages/*`.
 
-Non-breaking, shim-first migration to preserve existing import paths and tests.
-Keep domain logic in generators (assembly/validation); keep I/O and API calls in `src/services/*` (follow AGENTS.md).
-Centralize shared constants where cross-module use appears.
-Risks & Mitigations
+Any additional work must reduce responsibility or algorithmic complexity inside those existing capability families. Adding peer public entrypoints would be architecture regression.
 
-Risk: import churn / circular imports. Mitigation: keep contracts in contracts and move dataclasses first; use local imports in functions to avoid cycles.
-Risk: tests that monkeypatch symbols. Mitigation: keep re-exported names on the original module until tests are updated.
-Risk: behavioral regressions in concurrency/indexing order. Mitigation: add unit tests for _VectorStoreIndexingState flows and run integration smoke on ingest after each major change.
-Files to change (minimal-first)
+## Remaining Priority Targets
 
-Add: src/generators/report_payload_generator.py, src/generators/report_candidate_selector.py, src/generators/report_indexing_generator.py, src/generators/report_assets_generator.py, src/generators/report_cache_generator.py, src/generators/report_utils.py
-Update: report_generator.py (make thin coordinator + re-exports)
-Optional: src/generators/report_constants.py (centralize constants)
+### 1. Browser Report Download Internals
 
-## 3. Split Streamlit Pages
+Primary evidence:
 
-TL;DR — Break streamlit_pages.py into focused UI modules (routing, page renderers, helpers/components, data adapters) while keeping all data access in `src/services/*` and contracts in `src/contracts/*`. Use a shimmed entry `main()` to preserve how Streamlit imports the module. Migrate incrementally with targeted UI tests and manual smoke checks.
+- `src/services/_browser_report_download/artifact.py`: `4,072` lines.
+- `src/services/_browser_report_download/browser.py`: `4,004` lines.
+- `src/services/_browser_report_download/http.py`: `2,066` lines.
+- `src/services/_browser_report_download/helpers.py`: `1,892` lines.
+- `src/orchestrators/_report_download_orchestrator/workflow.py`: `2,554` lines.
 
-Steps
+Direction:
 
-Create focused UI modules under ui:
-src/ui/pages/__init__.py — registry of pages and exported main() entrypoint (shim).
-src/ui/pages/shell.py — _page_shell, _render_stepper, _inject_theme, layout chrome and global UI pieces.
-src/ui/pages/dashboard.py — cockpit overview page and small data views (_render_cockpit_overview).
-src/ui/pages/ingest.py — ingest control page and helpers (_render_ingest_control).
-src/ui/pages/candidate_extraction.py — candidate extraction UI (_render_candidate_extraction).
-src/ui/pages/reports.py — report command center and report-related controls (_render_report_command_center).
-src/ui/pages/cover_images.py — cover image page (_render_cover_images).
-src/ui/pages/analysis.py — analysis & evidence and taxonomy views (_render_analysis_and_evidence).
-src/ui/pages/validation.py — validation center (_render_validation_center).
-src/ui/pages/publishing.py — publishing control (_render_publishing_control).
-src/ui/pages/category_manager.py — category manager (_render_category_manager).
-src/ui/pages/costs.py — cost & usage (_render_cost_and_usage).
-src/ui/pages/logs.py — logs & terminal (`_render_logs_and_terminal`, `_append_terminal`, terminal panel).
-src/ui/pages/settings.py — settings & prompts, structured config form (`_render_settings_and_prompts`, `_render_structured_config_form`).
-src/ui/pages/system.py — system & storage and developer tools (`_render_system_and_storage`, `_render_developer_tools`).
-Extract helpers/components into src/ui/components.py:
-UI utilities: `_chip_html`, `_tip`, `_to_dicts`, `_ctx`, and small conversion functions (`_as_int`, `_as_str`, `_as_bool`, `_as_utc`).
-Small HTML/CSS injection helpers and the terminal widget.
-Move data-adapter and file helpers (non-UI logic) into src/ui/adapters.py:
-Wrap calls to `src.services.*` and `src.generators.*` used only by UI (e.g., `load_report_rows`, `collect_directory_counts`, `discover_log_files`, `load_mappings`, `list_prompt_namespaces`) so pages call thin adapters returning plain dicts/contract objects. Keep adapters small and pure; they call contracts and services.
-Keep all business logic and I/O in existing `src/services/*`, `src/generators/*`, and `src/orchestrators/*`:
-Replace any direct file-reading/writing in streamlit_pages.py with calls into adapters or services.
-Add a shim entry and incremental migration:
-Make streamlit_pages.py a thin shim that imports and calls pages.__init__.main() and re-exports any public helpers tests might import.
-Migrate pages one-by-one: pick low-risk pages (theme/shell, dashboard) first.
-Test and verification after each move:
-Run targeted UI utility tests: pytest tests/test_gui_utils.py and any page-specific tests that exist.
-Manual smoke: run the Streamlit app (streamlit run src/ui/streamlit_app.py) and navigate the moved pages verifying no regressions.
-Cleanup:
-Once all pages are moved and shim is removed, delete large original streamlit_pages.py and update imports across repo.
-Optionally split very large page modules (e.g., logs or settings) further into subcomponents.
-Verification
+- Keep `src/services/browser_report_download_service.py` as the sole public browser-download service boundary.
+- Split only coherent internal capabilities, such as terminal evidence/finalization, browser session execution and teardown, deterministic HTTP acquisition/classification, and route-history persistence.
+- Keep route ordering, retry/backoff, idempotency, and state transitions in the orchestrator family.
+- Keep prompt selection/rendering in the prompt service boundary; do not place prompt text in extracted modules.
 
-After extracting components.py and adapters.py, run:
-pytest [test_gui_utils.py](http://_vscodecontentref_/69) -q
-Start Streamlit locally:
-Click through main pages: Cockpit → Ingest → Candidate Extraction → Logs.
-After each page migration, run the targeted generator/orchestrator tests that UI triggers (e.g., ingestion orchestration tests) to ensure adapters didn't change behavior.
-Decisions
+Verification required:
 
-UI-only code lives in src/ui/*; data access stays in src/services/* / src/generators/* per AGENTS.md.
-Shim-first migration to avoid breaking existing imports and tests that may monkeypatch streamlit_pages.
-Adapters normalize contract objects for UI consumption so pages remain simple.
-Risks & Mitigations
+- Existing browser-download, route-planner, and report-download orchestrator behavior tests.
+- Failure paths asserting typed `AppError` fields, attempt count, terminal result classification, idempotency, and required structured log fields.
+- No tests that preserve behavior by patching private/internal logic.
 
-Risk: tests or external code import specific helpers from src.ui.streamlit_pages. Mitigation: keep re-exports on shim module until tests updated.
-Risk: circular imports between pages and services. Mitigation: keep adapters as the single call-layer; use local imports inside functions.
-Risk: visual regressions (CSS/HTML). Mitigation: keep `_inject_theme` intact and run manual UI smoke-checks.
-Files to change (minimal-first)
+### 2. PDF Extraction Hot Paths
 
-Add: src/ui/pages/__init__.py, src/ui/pages/shell.py, src/ui/pages/dashboard.py, src/ui/components.py, src/ui/adapters.py
-Update: streamlit_pages.py (make shim), src/ui/streamlit_app.py (point to new pages if needed)
+Primary evidence:
 
-## 4. Split Validation Generator
+- `src/services/_pdf/table_heuristics.py`: `3,390` lines.
+- `src/services/_pdf/_visual_heuristics/panel_detection.py`: `2,637` lines.
+- `src/services/_pdf/visual_candidates.py`: `2,263` lines.
+- `src/services/_pdf/crop.py`: `1,689` lines.
 
-TL;DR — Break validation_generator.py into focused generator modules (validation orchestration, individual validators, caching/adapters, and utils). Preserve public API with a shim in validation_generator.py, keep I/O in `src/services/*` and contracts in `src/contracts/*`, and migrate incrementally with targeted tests (shim-first, low-risk).
+Direction:
 
-Steps
+- Retain `src/services/pdf_service.py` as the canonical PDF boundary.
+- Prioritize measured algorithm changes already recorded in `CONSOLIDATED_TODO.md`: indexed table deduplication and precomputed per-page visual candidate relationships.
+- Extract internal modules only when an algorithm or stable heuristic family gains independent testability; do not create forwarding-only layers.
 
-Create new generator modules
-src/generators/validation_orchestrator.py — top-level coordinator originally running full validation flows (keeps public entrypoints).
-src/generators/validation_rules.py — collection of independent validators (schema checks, asset presence, text quality, figure/table checks) implemented as small functions returning standardized results.
-src/generators/validation_pipeline.py — pipeline wiring: composing validators into stages, concurrency control, batch processing helpers, `_RankBatchResult`-style state if present.
-src/generators/validation_adapters.py — thin adapters that call `src/services/*` and `src/contracts/*` to fetch artifacts (report rows, files, pdf contexts); normalize outputs for validators.
-src/generators/validation_cache.py — cache key helpers, read/write cache and caching policy functions.
-Extract pure helpers & types
-Move helper functions (coercion, small transforms, result normalization) into src/generators/validation_utils.py or into utils if shared.
-Move internal state dataclasses (if reusable) into validation.py so adapters/generators share stable contracts and reduce circular imports.
-Keep I/O and side-effects in services
-Replace any direct file/DB/network I/O inside the generator with calls to `src/services/*` (`file_service`, `report_store_service`, `pdf_service`, etc.) via the adapters module.
-Make validation_generator.py a thin shim
-Keep original public functions (and names) exported from validation_generator.py by re-exporting from new modules. This preserves tests and monkeypatch targets.
-Migrate incrementally (shim-first)
-Move low-risk pieces first: helpers, cache functions, adapters.
-Move individual validators next (group by independence, e.g., schema -> assets -> content quality).
-Finally move orchestration/parallel logic into validation_orchestrator.py.
-After each move, run targeted tests and fix callsites.
-Tests & verification
-Targeted: pytest [test_validation_generator.py](http://_vscodecontentref_/18) -q and any tests asserting specific validator behavior.
-Integration: pytest tests/test_vector_pipeline_wiring.py / other suite tests that invoke validation flows.
-Full: pytest -q after shim covers all exports.
-Manual smoke: run ingest/validation on one sample report to verify same results.
-Cleanup
-Once stable and tests pass, remove the shim and update internal imports to new modules.
-Consolidate shared constants into src/generators/validation_constants.py if cross-module.
-Verification commands
+Verification required:
 
-Targeted tests:
-Full suite:
-Decisions
+- Correctness fixtures for near-duplicate/distinct tables, dense panels, multi-chart layouts, decorative images, wrappers, and crop boundaries.
+- Before/after runtime benchmark evidence on large or visually dense fixtures.
+- Candidate output and validation behavior must remain semantically equivalent unless a separately documented quality change is intended.
 
-Shim-first migration to avoid breaking tests that import or monkeypatch validation_generator.
-Keep domain validation logic in generators; keep I/O and persistence in services per AGENTS.md.
-Promote reusable state/dataclass contracts to contracts to prevent circular imports.
-Risks & Mitigations
+### 3. Publisher Discovery and Report-Download Workflows
 
-Import churn / circular imports — Mitigate by moving dataclasses to contracts first and using adapters with local imports.
-Tests that monkeypatch internal helpers — Mitigate by keeping re-exported names on the shim until tests are updated.
-Behavioral regressions in ordering/concurrency — Add unit tests for pipeline stages and run manual smoke tests after orchestration migration.
-Files to add/update (minimal-first)
+Primary evidence:
 
-Add: src/generators/validation_orchestrator.py, src/generators/validation_rules.py, src/generators/validation_pipeline.py, src/generators/validation_adapters.py, src/generators/validation_cache.py, src/generators/validation_utils.py
-Update: validation_generator.py (thin shim + re-exports)
-Optional: validation.py, src/generators/validation_constants.py
+- `src/services/_publisher_inventory_service/workflow.py`: `2,301` lines.
+- `src/orchestrators/publisher_inventory_orchestrator.py`: `1,994` lines.
+- `src/generators/publisher_inventory_candidate_screening_generator.py`: `1,682` lines.
+- `src/generators/publisher_inventory_candidate_quality_generator.py`: `1,610` lines.
 
-## 5. Split Evidence Pack Generator
+Direction:
 
-TL;DR — Break evidence_pack_generator.py into focused generator modules (I/O adapters, pack assembly, asset rendering, validation, utils), keep a shim so generate_evidence_packs() API and tests keep working, and migrate incrementally with targeted tests after each step. Respect AGENTS.md: generators stay domain logic, `src/services/*` keep I/O and external calls, contracts remain in `src/contracts/*`.
+- Preserve one publisher-inventory service boundary and one orchestration path.
+- Separate only stable behavior families such as acquisition adaptation, candidate qualification, snapshot/state recording, and recovery/route-memory decisions.
+- Keep service modules free of workflow retry choices and keep generators free of direct I/O.
 
-Steps
+Verification required:
 
-Add small modules (single-responsibility):
-src/generators/evidence_pack_assembly.py — core pack composition: entrypoint orchestration, pack metadata, ordering of evidence items.
-src/generators/evidence_pack_assets.py — create/collect evidence assets (screenshots, cropped images, snippets) by calling services; asset metadata.
-src/generators/evidence_pack_io.py — cache/key helpers, read/write pack JSON/ZIP via file_service (adapters only; no raw file logic inside main generator).
-src/generators/evidence_pack_validation.py — validators that assert pack completeness/consistency (schema, asset presence, size limits).
-src/generators/evidence_pack_utils.py — pure helpers: text normalization, hashing, slug/title helpers, small dataclass transforms.
-Create thin adapters that call services:
-Keep calls to OpenAI, PDF helpers, rendering, and storage in `src/services/*`. Add small adapter functions if the generator previously inlined service logic.
-Keep public API via shim:
-Replace evidence_pack_generator.py with a thin shim that re-exports generate_evidence_packs and any helper names tests import. This preserves monkeypatch/import targets.
-Migrate incrementally (shim-first):
-Move pure helpers and cache functions first.
-Move asset-collection functions next (they call services heavily).
-Move orchestration last (so tests see stable API).
-After each small move, run targeted tests and fix imports.
-Tests & verification:
-Targeted tests: pytest [test_evidence_pack_generator.py](http://_vscodecontentref_/12) -q and any artifact/evidence-related tests.
-Integration: run pytest tests/test_artifact_generator.py and related end-to-end checks that use evidence packs.
-Manual smoke: generate an evidence pack for one sample report and verify produced ZIP/JSON matches baseline.
-Safety rules (per AGENTS.md):
-Do not move service-level I/O into generators — call `src/services/*` only.
-Move dataclass/state types into contracts if shared to avoid circular imports.
-Use local imports inside functions when needed to prevent cycles.
-Clean-up:
-When stable and tests green, remove shim and update callers to import new modules if desired.
-Optionally centralize constants into src/generators/evidence_pack_constants.py.
-Rollout plan and effort estimate:
-Step 1 (helpers + shim): Low (30–60 mins).
-Step 2 (assets adapters): Medium (1–3 hours).
-Step 3 (orchestration move + tests): Medium–High (2–6 hours).
-Full split and cleanup: 1–2 days depending on test fixes.
-Decisions
+- Existing publisher inventory service/orchestrator and candidate screening/quality tests.
+- Pipeline tests for remembered-route reuse, snapshot preservation, retry decisions, and no duplicate side effects.
+- Structured logging assertions for each public service and orchestrator boundary affected.
 
-Shim-first migration to avoid breaking tests and monkeypatch targets.
-Keep domain composition in generators; all I/O/external API calls remain in services.
-Promote shared dataclasses to contracts before moving orchestrator state.
-Risks & Mitigations
+### 4. Track, Do Not Mechanically Split
 
-Tests monkeypatch generator internals — keep re-exports on shim until tests updated.
-Circular imports — mitigate with contracts and local imports.
-Behavioral regressions (ordering, rate-limited API calls) — add unit tests for orchestration ordering and run manual smoke with sample data.
-Files to add/update (minimal-first)
+These files need responsibility review or performance evidence before any decomposition proposal:
 
-Add: src/generators/evidence_pack_assembly.py, src/generators/evidence_pack_assets.py, src/generators/evidence_pack_io.py, src/generators/evidence_pack_validation.py, src/generators/evidence_pack_utils.py
-Update: evidence_pack_generator.py → thin shim
-Optional: src/generators/evidence_pack_constants.py, move dataclasses to contracts if necessary
+- Cross-report analysis files are new active feature surfaces. Stabilize output contracts, publication flow, and regression coverage before splitting by line count.
+- `src/cli.py` is large because it owns command registration and argument wiring; split only if command families can remain discoverable through one CLI boundary without duplicated routing.
+- Contract modules may be large without role-mixing. Split `src/contracts/cross_report_analysis.py` only along independently versioned semantic contracts, never for cosmetics.
+- External boundary modules such as Drive and WordPress services must retain one canonical namespace if internal capability extraction becomes justified.
 
-## 6. Split Artifact Generator
+## Refactor Rules
 
-TL;DR — Break artifact_generator.py into focused generator modules (asset assembly, rendering/adapters, caching/IO, validation, utils), keep a shim so the public API and test monkeypatch targets remain stable, and migrate incrementally with tests after each small move. Respect AGENTS.md: keep domain composition in generators, keep I/O/external calls in `src/services/*`, and put shared dataclasses/contracts in `src/contracts/*`.
+All future long-file remediation must satisfy these controls:
 
-Steps
+1. Preserve the modular monolith and one canonical public boundary per external system or workflow.
+2. Extract semantic capability families, not pass-through wrappers or arbitrary smaller files.
+3. Keep I/O in services, domain assembly/validation in generators, and sequencing/retries/idempotency in orchestrators.
+4. Use fully populated, versioned dataclass contracts and typed `AppError` failures.
+5. Preserve prompt namespaces and prompt-service ownership of prompt rendering.
+6. Add positive and negative behavior tests at public boundaries; do not patch private helpers or primary logic paths.
+7. Measure performance-targeted changes before and after implementation.
+8. Update `README.md` for any landed architecture or behavior change.
 
-Create focused generator modules:
-src/generators/artifact_assembly.py — core orchestration and pack composition, public entrypoints (thin orchestration).
-src/generators/artifact_renderers.py — calls that convert asset specs into images/files (wraps service calls; minimal logic).
-src/generators/artifact_adapters.py — adapters that call `src/services/*` (file_service, render_service, openai_service, pdf_service) and normalize results for assembly.
-src/generators/artifact_io.py — cache/key helpers, read/write artifact payloads and ZIP packaging via file_service (no raw file-system logic inside generators).
-src/generators/artifact_validation.py — validators for artifact completeness, size limits, schema checks.
-src/generators/artifact_utils.py — pure helpers (slug, hashing, small transforms, dataclass -> dict).
-Move types & contracts:
-Promote any shared dataclasses/state types to contracts (e.g., ArtifactItem, ArtifactPayload) before moving code to avoid circular imports.
-Shim-first migration:
-Keep artifact_generator.py as a shim that re-exports generate_artifacts and any helper names tests or other modules import.
-Migrate code in small batches (utils + adapters → renderers → assembly → io → validation).
-Minimize behavior change:
-Preserve function signatures and concurrency behavior while migrating.
-Replace any direct I/O in the generator with adapter/service calls.
-Concurrency & error handling:
-If the file contains thread/async orchestration, extract that orchestration into artifact_assembly.py with clear retry/error taxonomy and unit tests for failure modes.
-Tests & verification after each move:
-Targeted tests: pytest [test_artifact_generator.py](http://_vscodecontentref_/14) -q and pytest tests/test_artifact_* related.
-Integration: run suites that call artifact code (artifact/evidence pack/report tests).
-Full suite: pytest -q once shim covers all exports.
-Manual smoke: produce artifacts for a sample report and compare expected outputs.
-Cleanup:
-Once green, remove the shim and update callers to import new modules if desired.
-Consolidate cross-module constants into src/generators/artifact_constants.py or leave with the module that uses them.
-Verification
+## Next Review Trigger
 
-Run targeted tests after small moves:
-pytest [test_artifact_generator.py](http://_vscodecontentref_/16) -q
-Run integration/manual:
-produce artifacts for a sample report; verify ZIP/paths match baseline.
-Full:
-pytest -q
-Decisions
-
-Shim-first, non-breaking migration to avoid breaking imports/monkeypatches.
-Generators keep domain logic; services keep I/O (per AGENTS.md).
-Promote shared dataclasses to contracts before moving orchestration to avoid circular imports.
-Risks & Mitigations
-
-Import churn / circular imports — Mitigate by moving dataclasses to contracts and using local imports where needed.
-Tests that monkeypatch internals — Keep re-exports on the shim until tests are updated.
-Behavioral regressions (ordering, batching, rate-limits) — Add unit tests for orchestration ordering and run manual smoke with representative inputs.
-Files to add/update (minimal-first)
-
-Add: src/generators/artifact_assembly.py, src/generators/artifact_renderers.py, src/generators/artifact_adapters.py, src/generators/artifact_io.py, src/generators/artifact_validation.py, src/generators/artifact_utils.py
-Update: artifact_generator.py → thin shim
-Optional: src/generators/artifact_constants.py, promote types to contracts
-
-## 7. Split OpenAI Service
-
-TL;DR — Reduce openai_service.py by extracting a low-level SDK client, response/formatting helpers, caching, and batching/rate-limit logic into focused modules. Keep a shim in openai_service.py to preserve existing public API and tests, and migrate incrementally with targeted tests and careful secret redaction.
-
-Steps
-
-Add low-level client wrapper
-Create src/services/openai_client.py: single-responsibility wrapper that constructs the SDK client, performs raw calls, handles retries/backoff, and centralizes request/response logging (sanitized).
-Move direct SDK usage from openai_service.py into this file.
-Extract response parsing & JSON/schema helpers
-Create src/services/openai_formatting.py: JSON-mode parsing, strict schema validation helpers, normalization/coercion, and defensive fallbacks currently inline in openai_service.py.
-Extract caching & deduplication
-Create src/services/openai_cache.py: request hashing, memoization, TTL policy, and cache key helpers used by expensive prompt calls.
-Extract batching / concurrency / rate-limiting
-Create src/services/openai_batching.py: worker pool orchestration, batching logic, per-model rate limit handling; keep implementation small and testable.
-Keep prompt rendering / prompt text out of service
-Ensure prompt text loading/rendering remains the responsibility of the existing prompt service (prompt_service.py) — openai_* modules should accept rendered prompt strings or prompt request contracts.
-Make openai_service.py a thin compatibility shim
-Re-export top-level public functions and names from the new modules so existing imports and tests (including any monkeypatches) keep working during migration.
-Move shared dataclasses / contracts if needed
-If any request/response dataclasses are currently defined inside openai_service.py, promote them to contracts to avoid circular imports.
-Tests & verification after each step
-After extracting openai_client.py and making the shim: run targeted tests that reference OpenAI behavior.
-Targeted: pytest [test_openai_vector_store.py](http://_vscodecontentref_/3) -q and any tests that import openai_service.
-Full: pytest -q once the shim covers all exports.
-Cleanup
-When green, remove the shim and update call sites to import the smaller modules directly.
-Verification
-
-Run targeted tests after first move:
-pytest test_openai_vector_store.py -q
-pytest test_prompt_service.py -q (if prompt integration exists)
-Run full suite once migration is complete:
-pytest -q
-Manual smoke: run a known flow that calls the service (e.g., a small ingest or vector-index flow) and confirm outputs and logged request IDs.
-Decisions
-
-Shim-first non-breaking migration to preserve import/monkeypatch stability.
-Keep prompt rendering and prompt-version logging inside prompt_service.
-Centralize secret redaction and structured logging in openai_client.py.
-Risks & Mitigations
-
-Risk: secrets/keys logged. Mitigation: centralize and enforce redaction in openai_client.py.
-Risk: circular imports. Mitigation: move request/response dataclasses into contracts and use local imports inside functions when needed.
-Risk: tests that monkeypatch internals. Mitigation: keep re-exports on the shim until tests are updated.
-Risk: changed model-selection semantics. Mitigation: keep resolve_model() usage and model-mapping stable; add unit tests for model resolution behavior.
-Files to add/update (minimal-first)
-
-Add: src/services/openai_client.py, src/services/openai_formatting.py, src/services/openai_cache.py, src/services/openai_batching.py
-Update: openai_service.py → thin shim re-exporting public API
-Optional: promote dataclasses to openai.py
+Refresh this audit after a remaining priority family is materially changed, or when the canonical scan shows a new `src` file above 1,000 lines. A new top-level package, external service boundary, three-or-more peer-module split, or second path for the same external interaction requires the architecture review specified in `AGENTS.md`.
