@@ -419,12 +419,6 @@ class AppSettings:
             "doc": "Whether strict schema validation should be enforced for generated analysis packs."
         },
     )
-    cover_cache_enabled: bool = field(
-        default=True,
-        metadata={
-            "doc": "Whether to skip cover generation when cached output is up-to-date."
-        },
-    )
     cost_ledger_path: str = field(
         default="./out/cost-ledger.jsonl",
         metadata={"doc": "Filesystem path for the cost ledger JSONL output."},
@@ -525,6 +519,19 @@ class AppSettings:
         default=True,
         metadata={
             "doc": "Whether publication requires deterministic validation to pass."
+        },
+    )
+    cross_report_analysis_signal_score_weights: dict = field(
+        default_factory=lambda: {
+            "contradiction": 0.5,
+            "diversity": 1.0,
+            "recency": 1.0,
+            "recurrence": 1.0,
+            "support": 1.0,
+            "taxonomy_fit": 1.0,
+        },
+        metadata={
+            "doc": "Deterministic cross-report signal score weights loaded from YAML."
         },
     )
 

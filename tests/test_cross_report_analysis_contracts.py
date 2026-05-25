@@ -1,25 +1,40 @@
 from __future__ import annotations
 
+import inspect
+import json
 from dataclasses import asdict, fields, is_dataclass
 from typing import Any
 
 import pytest
 
+from src.contracts import cross_report_analysis as cross_contracts
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportAnalysisArtifact,
+    CrossReportAnalysisOrchestratorRequest,
     CrossReportAnalysisRequest,
     CrossReportAnalysisSection,
+    CrossReportEvidenceAgreementGroup,
+    CrossReportEvidenceAgreementResult,
+    CrossReportEvidenceInputResult,
     CrossReportEvidenceReference,
     CrossReportGeneratedAnalysisResult,
     CrossReportOrchestratorOutcome,
+    CrossReportProjectedDataReadRequest,
+    CrossReportProjectedDataReadResponse,
+    CrossReportPublishPackage,
+    CrossReportPublishabilityResult,
     CrossReportPublishRequestSummary,
     CrossReportPublishResultSummary,
     CrossReportRawMetricReference,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
     CrossReportSignalScore,
+    CrossReportSignalScoreResult,
     CrossReportSourceReportCandidate,
+    CrossReportSourceSelectionResult,
     CrossReportThemeCandidate,
+    CrossReportThemeSelectionResult,
     CrossReportValidationResult,
     validate_cross_report_contract,
 )
@@ -41,6 +56,32 @@ def _contracts() -> list[Any]:
         diagnostic=False,
         override_publishability=False,
         publication_mode="generate_only",
+    )
+    projected_data_request = CrossReportProjectedDataReadRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        db_path="state/reports.sqlite",
+        publisher_filters=["Publisher A", "Publisher B"],
+        date_range_start="2025-01-01",
+        date_range_end="2026-01-01",
+        category_filters=["retail"],
+        tag_filters=["ai", "commerce"],
+        content_classes=["claim", "finding", "quote", "metric"],
+        minimum_projection_status="projected",
+    )
+    orchestrator_request = CrossReportAnalysisOrchestratorRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        analysis_request=request,
+        projected_data_request=projected_data_request,
+        idempotency_db_path="state/index.sqlite",
+        output_root="out",
+        max_evidence_items=48,
+        max_signals=8,
+        max_prompt_chars=60000,
+        retry_retries=2,
+        retry_base_delay_seconds=1.0,
+        retry_backoff_step_seconds=1.0,
+        retry_jitter_seconds=0.25,
+        publish_target_route="wordpress:ml_report",
     )
     theme_candidate = CrossReportThemeCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -70,6 +111,12 @@ def _contracts() -> list[Any]:
         score_components={"recency": 0.8, "diversity": 0.9},
         selection_reasons=["two publishers", "six evidence items"],
         rejection_risks=["thin metric context"],
+    )
+    theme_selection_result = CrossReportThemeSelectionResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme=selected_theme,
+        theme_candidates=[theme_candidate],
+        rejected_theme_candidates=[],
     )
     source_candidate = CrossReportSourceReportCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -110,6 +157,26 @@ def _contracts() -> list[Any]:
         category_labels=["Retail"],
         tags=["ai", "commerce"],
     )
+    source_selection_result = CrossReportSourceSelectionResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_sources=[selected_source],
+        ranked_candidates=[source_candidate],
+        rejected_candidates=[],
+        cleaned_filters={"tag_filters": ["ai"], "category_filters": ["retail"]},
+        excluded_report_counts={"max_source_reports_reached": 1},
+    )
+    publishability_result = CrossReportPublishabilityResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme_id="theme-ai-commerce",
+        publishable=True,
+        override_applied=False,
+        diagnostic=False,
+        source_report_count=2,
+        source_publisher_count=2,
+        evidence_count=6,
+        checked_policy_fields={"min_source_reports": 2},
+        issues=[],
+    )
     evidence = CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         evidence_id="ev-report-a-claim-1",
@@ -142,6 +209,58 @@ def _contracts() -> list[Any]:
         context="Survey respondents reporting monthly usage.",
         evidence_id="ev-report-a-claim-1",
         source_metadata={"page": 14},
+    )
+    projected_data_response = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[source_candidate],
+        evidence=[evidence],
+        raw_metrics=[raw_metric],
+        content_hashes={"report-a": {"claim-a-1": "hash-a"}},
+        excluded_report_counts={"filtered": 1},
+    )
+    evidence_input_result = CrossReportEvidenceInputResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_sources=[selected_source],
+        evidence=[evidence],
+        raw_metrics=[raw_metric],
+        evidence_by_report_id={"report-a": ["ev-report-a-claim-1"]},
+        dropped_evidence_counts={},
+        prompt_input_chars=512,
+    )
+    signal_result = CrossReportSignalScoreResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme=selected_theme,
+        signal_scores=[signal],
+        selected_signal_ids=["signal-trust"],
+        score_weights={"recurrence": 1.0, "diversity": 1.0},
+        raw_metric_policy="raw_metrics_preserved_without_normalization",
+        dropped_signal_counts={},
+    )
+    evidence_group = CrossReportEvidenceAgreementGroup(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        group_id="group-signal-trust",
+        label="Trust is a recurring adoption constraint",
+        agreement_type="convergent",
+        signal_ids=["signal-trust"],
+        evidence_ids=["ev-report-a-claim-1"],
+        source_report_ids=["report-a"],
+        publisher_count=1,
+        uncertainty_reasons=["single_report_coverage"],
+        prompt_input_label="convergent: Trust is a recurring adoption constraint",
+    )
+    agreement_result = CrossReportEvidenceAgreementResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme=selected_theme,
+        evidence_groups=[evidence_group],
+        prompt_uncertainty_inputs=[
+            {
+                "group_id": "group-signal-trust",
+                "agreement_type": "convergent",
+                "evidence_ids": ["ev-report-a-claim-1"],
+                "uncertainty_reasons": ["single_report_coverage"],
+            }
+        ],
+        agreement_counts={"convergent": 1},
     )
     section = CrossReportAnalysisSection(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -200,6 +319,48 @@ def _contracts() -> list[Any]:
         error_code=None,
         error_message=None,
     )
+    publish_package = CrossReportPublishPackage(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        package_id="cross-report:analysis-ai-commerce",
+        file_id="cross-report:analysis-ai-commerce",
+        target_route="wordpress:ml_report",
+        title="AI Commerce Trust Across Reports",
+        slug="ai-commerce-trust-across-reports",
+        excerpt="Trust is a recurring constraint.",
+        body_html="<article><h1>AI Commerce Trust Across Reports</h1></article>",
+        html_text="<html><body><article><h1>AI Commerce Trust Across Reports</h1></article></body></html>",
+        html_path="out/cross_report_analysis/ai-commerce/publish.html",
+        canonical_artifact_path="out/cross_report_analysis/ai-commerce/analysis.json",
+        artifact_sha256="artifact-sha",
+        validation_sha256="validation-sha",
+        selected_theme_id="theme-ai-commerce",
+        selected_report_ids=["report-a"],
+        source_metadata=[{"report_id": "report-a", "publisher": "Publisher A"}],
+        category_labels=["Retail"],
+        tag_labels=["ai", "commerce"],
+        evidence_reference_ids=["ev-report-a-claim-1"],
+        raw_metric_ids=["metric-a-1"],
+        prompt_hashes={"system": "abc", "user": "def"},
+        machine_metadata={"analysis_id": "analysis-ai-commerce"},
+    )
+    artifact = CrossReportAnalysisArtifact(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        artifact_type="cross_report_analysis",
+        generated_at_utc="2026-05-21T00:00:00+00:00",
+        request_fingerprint="request-fingerprint",
+        idempotency_key="idem-key",
+        selected_report_ids=["report-a"],
+        projection_content_hashes={"report-a": {"claim-a-1": "hash-a"}},
+        prompt_hashes={"system": "abc", "user": "def"},
+        config_fingerprint={"model": "gpt-5-mini"},
+        validation_status="pass",
+        request=request,
+        generated_result=generated,
+        validation_result=validation,
+        publish_request=publish_request,
+        publish_result=publish_result,
+        publish_package=publish_package,
+    )
     outcome = CrossReportOrchestratorOutcome(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         run_id="run-1",
@@ -217,18 +378,30 @@ def _contracts() -> list[Any]:
     )
     return [
         request,
+        projected_data_request,
+        projected_data_response,
+        orchestrator_request,
         theme_candidate,
         selected_theme,
+        theme_selection_result,
         source_candidate,
         selected_source,
+        source_selection_result,
+        publishability_result,
+        evidence_input_result,
         evidence,
         signal,
+        signal_result,
+        evidence_group,
+        agreement_result,
         raw_metric,
         section,
         generated,
         validation,
         publish_request,
         publish_result,
+        publish_package,
+        artifact,
         outcome,
     ]
 
@@ -249,6 +422,29 @@ def test_cross_report_contract_validation_accepts_complete_contracts(
     assert_no_defaulted_required_fields,
 ) -> None:
     assert_no_defaulted_required_fields(contract)
+    validate_cross_report_contract(contract)
+
+
+def test_cross_report_contract_fixtures_cover_every_dataclass() -> None:
+    fixture_names = {type(contract).__name__ for contract in _contracts()}
+    contract_names = {
+        name
+        for name, value in vars(cross_contracts).items()
+        if inspect.isclass(value)
+        and is_dataclass(value)
+        and name.startswith("CrossReport")
+    }
+
+    assert fixture_names == contract_names
+
+
+@pytest.mark.parametrize("contract", _contracts())
+def test_cross_report_contract_payloads_round_trip_through_json(contract: Any) -> None:
+    payload = asdict(contract)
+    encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, default=str)
+    decoded = json.loads(encoded)
+
+    assert decoded == payload
     validate_cross_report_contract(contract)
 
 
@@ -279,3 +475,33 @@ def test_cross_report_contract_validation_rejects_missing_required_semantics(
     )
     assert exc.value.context["field"] == "evidence_id"
 
+
+def test_cross_report_contract_validation_rejects_null_list_filters(
+    assert_app_error,
+) -> None:
+    invalid = CrossReportAnalysisRequest(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        request_id="request-with-null-list",
+        topic="AI commerce",
+        auto_theme=False,
+        category_filters=None,  # type: ignore[arg-type]
+        tag_filters=[],
+        publisher_filters=[],
+        date_range_start="2025-01-01",
+        date_range_end="2026-01-01",
+        max_source_reports=2,
+        diagnostic=False,
+        override_publishability=False,
+        publication_mode="generate_only",
+    )
+
+    with pytest.raises(AppError) as exc:
+        validate_cross_report_contract(invalid)
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_contract_invalid",
+        retryable=False,
+        severity="error",
+    )
+    assert exc.value.context["field"] == "category_filters"

@@ -38,7 +38,6 @@ ingest:
   batch_limit: 20
   worker_limit: 2
   report_worker_limit: 2
-  cover_cache_enabled: true
   pdf_text:
     max_pages: 5
     max_chars: 80000
@@ -151,6 +150,9 @@ browser_download:
   route_playbook_dir: "./src/playbooks/browser_routes"
   route_playbook_stale_policy: "fallback"
   route_playbook_promotion_mode: "write"
+  private_api_playbook_promotion_mode: "write"
+  private_api_playbook_min_success_count: 3
+  private_api_playbook_min_distinct_source_urls: 2
   drive_upload:
     enabled: true
     required: true
@@ -225,6 +227,13 @@ cross_report_analysis:
   min_theme_source_publishers: 2
   publish_enabled: false
   publish_requires_validation_pass: true
+  signal_score_weights:
+    recurrence: 1.0
+    diversity: 1.0
+    recency: 1.0
+    taxonomy_fit: 1.0
+    support: 1.0
+    contradiction: 0.5
 
 cost:
   daily_path: "./out/cost-daily.json"

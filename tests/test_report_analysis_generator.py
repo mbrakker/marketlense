@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
+import time
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,6 +15,7 @@ from src.contracts.context_category_fit import (
     ContextCategoryFitResponse,
     ReportCategoryContext,
 )
+from src.contracts.artifact_generation import ArtifactRenderTask
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
@@ -424,7 +427,231 @@ def _orchestrator_events(caplog) -> list[dict]:
     return parsed
 
 
-def test_complete_report_analysis_falls_back_when_validation_raises(tmp_path):
+def test_artifact_render_task_contract_round_trip():
+    ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+    task = ArtifactRenderTask(
+        schema_version="1.0",
+        step_name="summary",
+        namespace="report_vs/artifacts/summary",
+        variables={"report_title": "Report"},
+        ctx=ctx,
+    )
+
+    restored = ArtifactRenderTask(**task.__dict__)
+
+    assert restored == task
+    assert restored.variables["report_title"] == "Report"
+    assert restored.ctx.task_id == "t"
+
+
+def test_run_report_analysis_schedules_artifact_batches_with_orchestrator_budget(
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+):
+    caplog.set_level(logging.INFO, logger="market_lense.report_analysis_orchestrator")
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(
+            _runtime(tmp_path).settings,
+            artifact_parallel_workers=4,
+            artifact_global_max_in_flight=2,
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    in_flight = 0
+    max_in_flight = 0
+    lock = threading.Lock()
+    batch_order: list[str] = []
+
+    def _task(name: str, ctx: RunContext) -> ArtifactRenderTask:
+        return ArtifactRenderTask(
+            schema_version="1.0",
+            step_name=name,
+            namespace=f"report_vs/artifacts/{name}",
+            variables={"step": name},
+            ctx=ctx,
+        )
+
+    def _generate_artifacts(**kwargs):
+        nonlocal in_flight, max_in_flight
+        executor = kwargs["artifact_step_executor"]
+
+        def _render(task: ArtifactRenderTask) -> dict:
+            nonlocal in_flight, max_in_flight
+            with lock:
+                in_flight += 1
+                max_in_flight = max(max_in_flight, in_flight)
+            try:
+                time.sleep(0.03)
+                return {"step": task.step_name}
+            finally:
+                with lock:
+                    in_flight -= 1
+
+        batch_order.append("stage_one")
+        stage_one = executor(
+            [
+                _task("summary", kwargs["ctx"]),
+                _task("insights_candidates", kwargs["ctx"]),
+                _task("quotes", kwargs["ctx"]),
+            ],
+            _render,
+            kwargs["ctx"],
+            "stage_one",
+        )
+        assert set(stage_one) == {"summary", "insights_candidates", "quotes"}
+
+        batch_order.append("distribution")
+        distribution = executor(
+            [
+                _task("expert_comment", kwargs["ctx"]),
+                _task("linkedin_post", kwargs["ctx"]),
+            ],
+            _render,
+            kwargs["ctx"],
+            "distribution",
+        )
+        assert set(distribution) == {"expert_comment", "linkedin_post"}
+        return _artifacts()
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
+        },
+        generate_artifacts=_generate_artifacts,
+        run_validation=lambda *args, **kwargs: ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        ),
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert state.artifacts_payload["summary"]["tldr"] == "summary"
+    assert batch_order == ["stage_one", "distribution"]
+    assert max_in_flight == 2
+    events = _orchestrator_events(caplog)
+    assert_logs_have_required_fields(events)
+    schedule_events = [
+        event for event in events if event.get("event") == "artifact_step_batch_start"
+    ]
+    assert [event["fields"]["batch_name"] for event in schedule_events] == [
+        "stage_one",
+        "distribution",
+    ]
+    assert schedule_events[0]["fields"]["max_workers"] == 2
+    assert schedule_events[0]["fields"]["configured_parallel_workers"] == 4
+    assert schedule_events[0]["fields"]["global_max_in_flight"] == 2
+    assert schedule_events[1]["fields"]["max_workers"] == 2
+
+
+def test_run_report_analysis_logs_artifact_scheduler_failure_propagation(
+    tmp_path,
+    caplog,
+):
+    caplog.set_level(logging.INFO, logger="market_lense.report_analysis_orchestrator")
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+
+    def _generate_artifacts(**kwargs):
+        executor = kwargs["artifact_step_executor"]
+
+        def _render(task: ArtifactRenderTask) -> dict:
+            if task.step_name == "quotes":
+                raise AppError(
+                    code="artifact_step_failed",
+                    message="quotes failed",
+                    retryable=True,
+                    severity="error",
+                    context={"step": task.step_name},
+                )
+            return {"step": task.step_name}
+
+        executor(
+            [
+                ArtifactRenderTask(
+                    schema_version="1.0",
+                    step_name="summary",
+                    namespace="report_vs/artifacts/summary",
+                    variables={},
+                    ctx=kwargs["ctx"],
+                ),
+                ArtifactRenderTask(
+                    schema_version="1.0",
+                    step_name="quotes",
+                    namespace="report_vs/artifacts/quotes",
+                    variables={},
+                    ctx=kwargs["ctx"],
+                ),
+            ],
+            _render,
+            kwargs["ctx"],
+            "stage_one",
+        )
+        raise AssertionError("artifact scheduler failure should propagate")
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
+        },
+        generate_artifacts=_generate_artifacts,
+        run_validation=lambda *args, **kwargs: ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        ),
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert state.artifacts_payload is None
+    events = _orchestrator_events(caplog)
+    assert any(
+        event.get("event") == "artifact_step_failed"
+        and event.get("fields", {}).get("step") == "quotes"
+        and event.get("fields", {}).get("batch_name") == "stage_one"
+        for event in events
+    )
+    assert any(
+        event.get("event") == "artifacts_generation_failed"
+        and "quotes failed" in event.get("fields", {}).get("error", "")
+        for event in events
+    )
+
+
+def test_run_report_analysis_falls_back_when_validation_raises(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
     selection = _selection(runtime, source)
@@ -493,7 +720,7 @@ def test_complete_report_analysis_falls_back_when_validation_raises(tmp_path):
     assert "analysis_vector_store" in stored
 
 
-def test_complete_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_error):
+def test_run_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_error):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
     selection = _selection(runtime, source)

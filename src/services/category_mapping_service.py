@@ -4,20 +4,17 @@ import logging
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 import yaml
 
 from src.contracts.categories import (
-    CategoryClassificationConfig,
     CategoryDefinition,
     CategoryMappingLoadRequest,
     CategoryMappingLoadResponse,
     CategoryMappings,
     TaxonomyInferenceRule,
     UncategorizedTagsEntry,
-    UncategorizedTagsFlushRequest,
-    UncategorizedTagsUpdateRequest,
 )
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
@@ -37,7 +34,6 @@ class _CategoryMappingCacheEntry:
     modified_time: float
     data: dict
     mappings: CategoryMappings
-    dirty_uncategorized: bool = False
 
 
 _CATEGORY_CACHE: Dict[Path, _CategoryMappingCacheEntry] = {}
@@ -70,17 +66,6 @@ def _clean_int(value: object, default: int) -> int:
         return default
 
 
-def _clean_float(value: object, default: float) -> float:
-    if isinstance(value, bool):
-        return float(value)
-    if not isinstance(value, (int, float, str, bytes, bytearray)):
-        return default
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
 def _clean_bool(value: object, default: bool) -> bool:
     if isinstance(value, bool):
         return value
@@ -105,71 +90,6 @@ def _category_positive_tags(item: dict) -> List[str]:
     ):
         positive.extend(item.get(key) or [])
     return positive
-
-
-def _sanitize_classification(raw: dict) -> dict:
-    classification_raw = raw.get("classification")
-    classification_map = (
-        classification_raw if isinstance(classification_raw, dict) else {}
-    )
-    return {
-        "schema_version": str(classification_map.get("schema_version", "1.1")),
-        "max_categories": max(
-            1, _clean_int(classification_map.get("max_categories"), 2)
-        ),
-        "min_primary_score": _clean_float(
-            classification_map.get("min_primary_score"), 2.2
-        ),
-        "min_secondary_score": _clean_float(
-            classification_map.get("min_secondary_score"), 1.6
-        ),
-        "secondary_score_ratio": _clean_float(
-            classification_map.get("secondary_score_ratio"), 0.7
-        ),
-        "secondary_rescue_score_ratio": _clean_float(
-            classification_map.get("secondary_rescue_score_ratio"), 0.55
-        ),
-        "secondary_rescue_min_strong_matches": max(
-            1,
-            _clean_int(
-                classification_map.get("secondary_rescue_min_strong_matches"),
-                2,
-            ),
-        ),
-        "secondary_rescue_min_evidence_tags": max(
-            1,
-            _clean_int(
-                classification_map.get("secondary_rescue_min_evidence_tags"),
-                2,
-            ),
-        ),
-        "secondary_rescue_min_evidence_sections": max(
-            1,
-            _clean_int(
-                classification_map.get("secondary_rescue_min_evidence_sections"),
-                2,
-            ),
-        ),
-        "core_tag_weight": _clean_float(classification_map.get("core_tag_weight"), 2.2),
-        "supporting_tag_weight": _clean_float(
-            classification_map.get("supporting_tag_weight"), 1.2
-        ),
-        "legacy_tag_weight": _clean_float(
-            classification_map.get("legacy_tag_weight"), 1.0
-        ),
-        "generic_tag_weight": _clean_float(
-            classification_map.get("generic_tag_weight"), 0.3
-        ),
-        "negative_tag_weight": _clean_float(
-            classification_map.get("negative_tag_weight"), -2.0
-        ),
-        "repeated_match_bonus": _clean_float(
-            classification_map.get("repeated_match_bonus"), 0.25
-        ),
-        "global_generic_tags": _clean_tags(
-            classification_map.get("global_generic_tags") or []
-        ),
-    }
 
 
 def _sanitize_inference_rules(raw: dict) -> List[dict]:
@@ -235,222 +155,12 @@ def load_mappings(
                 "path": str(path),
                 "categories": len(entry.mappings.categories),
                 "uncategorized": len(entry.mappings.uncategorized),
-                "max_categories": entry.mappings.classification.max_categories,
                 "cached": source != "reloaded",
                 "source": source,
             },
         )
     )
     return CategoryMappingLoadResponse(schema_version="1.1", mappings=entry.mappings)
-
-
-def update_uncategorized_tags(
-    request: UncategorizedTagsUpdateRequest, ctx: RunContext
-) -> None:
-    path = Path(request.path or DEFAULT_MAPPING_PATH).resolve()
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="category_uncategorized_update_start",
-            module=logger.name,
-            fields={
-                "path": str(path),
-                "title": request.report_title,
-                "tag_count": len(request.tags),
-            },
-        )
-    )
-    with _CATEGORY_LOCK:
-        entry, source = _get_or_load_entry(
-            path,
-            reload_if_changed=True,
-            force_reload=False,
-        )
-        merged_uncategorized = _merge_uncategorized(
-            entry.data.get("uncategorized") or [],
-            entry.data.get("categories") or [],
-            request.report_title,
-            request.tags,
-        )
-        if merged_uncategorized == (entry.data.get("uncategorized") or []):
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="category_uncategorized_update_noop",
-                    module=logger.name,
-                    fields={
-                        "path": str(path),
-                        "title": request.report_title,
-                        "source": source,
-                    },
-                )
-            )
-            return
-
-        entry.data["uncategorized"] = merged_uncategorized
-        entry.mappings = CategoryMappings(
-            schema_version=entry.data.get("schema_version", "1.0"),
-            categories=entry.mappings.categories,
-            classification=entry.mappings.classification,
-            inference_rules=entry.mappings.inference_rules,
-            uncategorized=[
-                UncategorizedTagsEntry(title=item["title"], tags=item["tags"])
-                for item in merged_uncategorized
-            ],
-        )
-        entry.dirty_uncategorized = True
-        _CATEGORY_CACHE[path] = entry
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="category_uncategorized_update_complete",
-            module=logger.name,
-            fields={
-                "path": str(path),
-                "records": len(merged_uncategorized),
-                "dirty": entry.dirty_uncategorized,
-            },
-        )
-    )
-
-
-def flush_uncategorized_tags(
-    request: UncategorizedTagsFlushRequest, ctx: RunContext
-) -> None:
-    path = Path(request.path or DEFAULT_MAPPING_PATH).resolve()
-    cached_entry = _CATEGORY_CACHE.get(path)
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="category_uncategorized_flush_start",
-            module=logger.name,
-            fields={
-                "path": str(path),
-                "cached": path in _CATEGORY_CACHE,
-                "dirty": cached_entry.dirty_uncategorized if cached_entry else False,
-            },
-        )
-    )
-    with _CATEGORY_LOCK:
-        entry = _CATEGORY_CACHE.get(path)
-        if not entry or not entry.dirty_uncategorized:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="category_uncategorized_flush_skipped",
-                    module=logger.name,
-                    fields={"path": str(path), "reason": "no_pending_changes"},
-                )
-            )
-            return
-
-        serialized = {
-            "schema_version": entry.data.get("schema_version", "1.0"),
-            "classification": entry.data.get("classification") or {},
-            "categories": entry.data.get("categories") or [],
-            "inference_rules": entry.data.get("inference_rules") or [],
-            "uncategorized": entry.data.get("uncategorized") or [],
-        }
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            yaml.safe_dump(
-                serialized,
-                sort_keys=False,
-                allow_unicode=False,
-                default_flow_style=False,
-            ),
-            encoding="utf-8",
-        )
-        entry.modified_time = _get_mtime(path)
-        entry.dirty_uncategorized = False
-        _CATEGORY_CACHE[path] = entry
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="category_uncategorized_flush_complete",
-            module=logger.name,
-            fields={
-                "path": str(path),
-                "records": len(serialized.get("uncategorized") or []),
-            },
-        )
-    )
-
-
-def _merge_uncategorized(
-    existing_uncategorized: List[dict],
-    categories: List[dict],
-    report_title: str,
-    tags: List[str],
-) -> List[dict]:
-    known_tags = {
-        normalize_slug_tag(tag)
-        for item in categories
-        for tag in _category_positive_tags(item)
-        if normalize_slug_tag(tag)
-    }
-
-    cleaned_uncategorized: List[dict[str, Any]] = []
-    for entry in existing_uncategorized:
-        if not isinstance(entry, dict):
-            continue
-        title = str(entry.get("title") or "").strip()
-        tags_cleaned = []
-        seen = set()
-        for t in entry.get("tags") or []:
-            t_s = str(t).strip()
-            norm = normalize_slug_tag(t_s)
-            if not t_s or norm in known_tags or norm in seen:
-                continue
-            seen.add(norm)
-            tags_cleaned.append(t_s)
-        if tags_cleaned:
-            cleaned_uncategorized.append({"title": title, "tags": tags_cleaned})
-
-    new_tags = []
-    seen_new = set()
-    for t in tags or []:
-        t_s = str(t).strip()
-        norm = normalize_slug_tag(t_s)
-        if not t_s or norm in known_tags or norm in seen_new:
-            continue
-        seen_new.add(norm)
-        new_tags.append(t_s)
-
-    if new_tags:
-        merged = False
-        for entry in cleaned_uncategorized:
-            if entry.get("title") == report_title:
-                existing_tags = [
-                    str(tag).strip()
-                    for tag in entry.get("tags", [])
-                    if str(tag).strip()
-                ]
-                existing_norms = {
-                    normalize_slug_tag(tag)
-                    for tag in existing_tags
-                    if normalize_slug_tag(tag)
-                }
-                existing_tags.extend(
-                    [
-                        tag
-                        for tag in new_tags
-                        if normalize_slug_tag(tag) not in existing_norms
-                    ]
-                )
-                entry["tags"] = existing_tags
-                merged = True
-                break
-        if not merged:
-            cleaned_uncategorized.append({"title": report_title, "tags": new_tags})
-
-    return cleaned_uncategorized
 
 
 def _get_mtime(path: Path) -> float:
@@ -465,7 +175,6 @@ def _is_cache_valid(entry: _CategoryMappingCacheEntry) -> bool:
 
 
 def _sanitize_mapping_data(raw: dict) -> dict:
-    classification = _sanitize_classification(raw)
     inference_rules = _sanitize_inference_rules(raw)
     categories_raw = raw.get("categories") or []
     categories: List[dict] = []
@@ -537,7 +246,6 @@ def _sanitize_mapping_data(raw: dict) -> dict:
             uncategorized.append({"title": title, "tags": tags_cleaned})
     return {
         "schema_version": str(raw.get("schema_version", "1.2")),
-        "classification": classification,
         "categories": categories,
         "inference_rules": inference_rules,
         "uncategorized": uncategorized,
@@ -617,76 +325,6 @@ def _build_mappings(data: dict) -> CategoryMappings:
     return CategoryMappings(
         schema_version=str(data.get("schema_version", "1.2")),
         categories=categories,
-        classification=CategoryClassificationConfig(
-            schema_version=str(
-                (data.get("classification") or {}).get("schema_version", "1.1")
-            ),
-            max_categories=max(
-                1,
-                _clean_int((data.get("classification") or {}).get("max_categories"), 2),
-            ),
-            min_primary_score=_clean_float(
-                (data.get("classification") or {}).get("min_primary_score"), 2.2
-            ),
-            min_secondary_score=_clean_float(
-                (data.get("classification") or {}).get("min_secondary_score"), 1.6
-            ),
-            secondary_score_ratio=_clean_float(
-                (data.get("classification") or {}).get("secondary_score_ratio"), 0.7
-            ),
-            secondary_rescue_score_ratio=_clean_float(
-                (data.get("classification") or {}).get("secondary_rescue_score_ratio"),
-                0.55,
-            ),
-            secondary_rescue_min_strong_matches=max(
-                1,
-                _clean_int(
-                    (data.get("classification") or {}).get(
-                        "secondary_rescue_min_strong_matches"
-                    ),
-                    2,
-                ),
-            ),
-            secondary_rescue_min_evidence_tags=max(
-                1,
-                _clean_int(
-                    (data.get("classification") or {}).get(
-                        "secondary_rescue_min_evidence_tags"
-                    ),
-                    2,
-                ),
-            ),
-            secondary_rescue_min_evidence_sections=max(
-                1,
-                _clean_int(
-                    (data.get("classification") or {}).get(
-                        "secondary_rescue_min_evidence_sections"
-                    ),
-                    2,
-                ),
-            ),
-            core_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("core_tag_weight"), 2.2
-            ),
-            supporting_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("supporting_tag_weight"), 1.2
-            ),
-            legacy_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("legacy_tag_weight"), 1.0
-            ),
-            generic_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("generic_tag_weight"), 0.3
-            ),
-            negative_tag_weight=_clean_float(
-                (data.get("classification") or {}).get("negative_tag_weight"), -2.0
-            ),
-            repeated_match_bonus=_clean_float(
-                (data.get("classification") or {}).get("repeated_match_bonus"), 0.25
-            ),
-            global_generic_tags=_clean_tags(
-                (data.get("classification") or {}).get("global_generic_tags") or []
-            ),
-        ),
         inference_rules=inference_rules,
         uncategorized=uncategorized,
     )
@@ -700,8 +338,6 @@ def _get_or_load_entry(
 ) -> Tuple[_CategoryMappingCacheEntry, str]:
     cache_entry = _CATEGORY_CACHE.get(path)
     if cache_entry:
-        if cache_entry.dirty_uncategorized:
-            return cache_entry, "cache_dirty"
         if not force_reload:
             if not reload_if_changed:
                 return cache_entry, "cache"

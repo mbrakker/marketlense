@@ -1,15 +1,23 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 import hashlib
 import logging
 import time
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional, cast
 
 from src.contracts.files import ListHtmlRequest, ReadTextRequest
 from src.contracts.categories import CategoryMappingLoadRequest
+from src.contracts.cross_report_analysis import (
+    CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportPublishPackage,
+    CrossReportPublishResultSummary,
+    CrossReportPublishStatus,
+    PublicationMode,
+    validate_cross_report_contract,
+)
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
@@ -69,6 +77,7 @@ from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
 _PUBLISH_IDEMPOTENCY_SCOPE = "publish_orchestrator.publish_html"
+_CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE = "publish_orchestrator.cross_report_package"
 
 
 @dataclass(frozen=True)
@@ -710,6 +719,344 @@ def _record_publish_idempotency(
         ),
         ctx,
     )
+
+
+def _cross_report_publish_checksum(
+    package: CrossReportPublishPackage,
+    settings: PublishSettings,
+) -> str:
+    payload = {
+        "schema_version": CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        "selected_theme_id": package.selected_theme_id,
+        "selected_report_ids": package.selected_report_ids,
+        "artifact_sha256": package.artifact_sha256,
+        "validation_sha256": package.validation_sha256,
+        "prompt_hashes": package.prompt_hashes,
+        "target_route": package.target_route,
+        "post_type": settings.wp.post_type,
+    }
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _cross_report_publish_idempotency_key(
+    package: CrossReportPublishPackage,
+    checksum: str,
+) -> str:
+    return f"{package.target_route}:{package.file_id}:{checksum}"
+
+
+def _cross_report_result_from_outcome(
+    *,
+    package: CrossReportPublishPackage,
+    publication_mode: str,
+    outcome: PublishOutcome,
+    idempotency_reused: bool,
+) -> CrossReportPublishResultSummary:
+    status = "published" if outcome.status == "published" else "skipped"
+    if outcome.status == "error":
+        status = "error"
+    return CrossReportPublishResultSummary(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        publication_mode=cast(PublicationMode, publication_mode),
+        status=cast(CrossReportPublishStatus, status),
+        target_route=package.target_route,
+        idempotency_reused=idempotency_reused,
+        post_id=outcome.post_id,
+        post_url=outcome.post_url,
+        error_code=outcome.error if status == "error" else None,
+        error_message=outcome.error if status == "error" else None,
+    )
+
+
+def _record_cross_report_publish_idempotency(
+    *,
+    package: CrossReportPublishPackage,
+    settings: PublishSettings,
+    result: CrossReportPublishResultSummary,
+    checksum: str,
+    ctx: RunContext,
+) -> None:
+    idempotency_service.record_outcome(
+        OrchestratorIdempotencyRecordRequest(
+            schema_version="1.0",
+            db_path=settings.state_db,
+            scope=_CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE,
+            idempotency_key=_cross_report_publish_idempotency_key(package, checksum),
+            input_checksum=checksum,
+            outcome_payload=asdict(result),
+            artifact_references={
+                "html_path": package.html_path,
+                "artifact_path": package.canonical_artifact_path,
+                "status": result.status,
+                "post_id": result.post_id,
+                "post_url": result.post_url,
+            },
+        ),
+        ctx,
+    )
+
+
+def _lookup_cross_report_publish_idempotency(
+    *,
+    package: CrossReportPublishPackage,
+    settings: PublishSettings,
+    checksum: str,
+    ctx: RunContext,
+) -> CrossReportPublishResultSummary | None:
+    lookup = idempotency_service.get_outcome(
+        OrchestratorIdempotencyGetRequest(
+            schema_version="1.0",
+            db_path=settings.state_db,
+            scope=_CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE,
+            idempotency_key=_cross_report_publish_idempotency_key(package, checksum),
+            input_checksum=checksum,
+        ),
+        ctx,
+    )
+    if not lookup.found or lookup.record is None:
+        return None
+    return replace(
+        CrossReportPublishResultSummary(**dict(lookup.record.outcome_payload or {})),
+        idempotency_reused=True,
+    )
+
+
+def publish_cross_report_package(
+    package: CrossReportPublishPackage,
+    settings: PublishSettings,
+    ctx: RunContext,
+    *,
+    dry_run: bool = False,
+    publish_html_fn: Callable[
+        [PublishRequest, PublishSettings, RunContext], PublishOutcome
+    ] = publish_html,
+    find_post_by_file_id_fn: Callable[
+        [WordPressPostLookupRequest, RunContext], WordPressPostLookupResponse
+    ] = find_post_by_file_id,
+    sleep_fn: Callable[[float], None] = time.sleep,
+) -> CrossReportPublishResultSummary:
+    validate_cross_report_contract(package)
+    publication_mode = "publish_dry_run" if dry_run else "publish_live"
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cross_report_publish_start",
+            module=logger.name,
+            fields={
+                "package_id": package.package_id,
+                "publication_mode": publication_mode,
+                "target_route": package.target_route,
+                "selected_theme_id": package.selected_theme_id,
+                "selected_report_ids": package.selected_report_ids,
+                "validation_sha256": package.validation_sha256,
+            },
+        )
+    )
+    if dry_run:
+        result = CrossReportPublishResultSummary(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            publication_mode="publish_dry_run",
+            status="dry_run",
+            target_route=package.target_route,
+            idempotency_reused=False,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cross_report_publish_complete",
+                module=logger.name,
+                fields={
+                    "package_id": package.package_id,
+                    "status": result.status,
+                    "dry_run": True,
+                },
+            )
+        )
+        return result
+
+    checksum = _cross_report_publish_checksum(package, settings)
+    reused = _lookup_cross_report_publish_idempotency(
+        package=package,
+        settings=settings,
+        checksum=checksum,
+        ctx=ctx,
+    )
+    if reused is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cross_report_publish_idempotency_reused",
+                module=logger.name,
+                fields={
+                    "package_id": package.package_id,
+                    "target_route": package.target_route,
+                    "status": reused.status,
+                    "post_id": reused.post_id or 0,
+                },
+            )
+        )
+        return reused
+
+    base_url = settings.wp.site_url.rstrip("/")
+    auth_header = build_auth_header(
+        username=settings.wp.username,
+        app_password=settings.wp.app_password,
+        bearer_token=settings.wp.bearer_token,
+    )
+
+    def _publish_attempt() -> CrossReportPublishResultSummary:
+        lookup = find_post_by_file_id_fn(
+            WordPressPostLookupRequest(
+                schema_version="1.0",
+                base_url=base_url,
+                auth_header=auth_header,
+                file_id=package.file_id,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+                post_type=settings.wp.post_type,
+            ),
+            ctx,
+        )
+        if lookup.found and lookup.post_id and lookup.link:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="cross_report_publish_existing_post_checksum_mismatch",
+                    module=logger.name,
+                    fields={
+                        "package_id": package.package_id,
+                        "file_id": package.file_id,
+                        "post_id": lookup.post_id,
+                        "post_url": lookup.link,
+                        "checksum": checksum,
+                    },
+                )
+            )
+            raise AppError(
+                code="cross_report_publish_existing_post_checksum_mismatch",
+                message=(
+                    "WordPress already contains this cross-report file_id, but no "
+                    "matching publish checksum was recorded for the current package."
+                ),
+                retryable=False,
+                severity="error",
+                context={
+                    "package_id": package.package_id,
+                    "file_id": package.file_id,
+                    "post_id": lookup.post_id,
+                    "post_url": lookup.link,
+                    "checksum": checksum,
+                },
+            )
+        outcome = publish_html_fn(
+            PublishRequest(
+                schema_version="1.0",
+                html_path=package.html_path,
+                auth_header=auth_header,
+                file_id=package.file_id,
+                html_snapshot=PublishHtmlSnapshot(
+                    schema_version="1.0",
+                    html_text=package.html_text,
+                    file_id=package.file_id,
+                    title=package.title,
+                    body_html=package.body_html,
+                    image_sources=[],
+                    preview_image_src=None,
+                ),
+                resolved_terms=PublishResolvedTerms(schema_version="1.0"),
+            ),
+            settings,
+            ctx,
+        )
+        return _cross_report_result_from_outcome(
+            package=package,
+            publication_mode="publish_live",
+            outcome=outcome,
+            idempotency_reused=False,
+        )
+
+    try:
+        result = run_with_retry(
+            step_name="publish_cross_report_package",
+            operation=_publish_attempt,
+            ctx=ctx,
+            logger=logger,
+            module_name=logger.name,
+            policy=RetryPolicy(
+                retries=2,
+                base_delay_seconds=1.0,
+                backoff_step_seconds=1.0,
+                jitter_seconds=0.25,
+            ),
+            retry_event="cross_report_publish_retry",
+            retry_fields_builder=lambda exc, attempt: {
+                "package_id": package.package_id,
+                "attempt": attempt + 1,
+                "code": exc.code if isinstance(exc, AppError) else "",
+            },
+            is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
+            sleep_fn=sleep_fn,
+        )
+    except AppError as exc:
+        result = CrossReportPublishResultSummary(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            publication_mode="publish_live",
+            status="error",
+            target_route=package.target_route,
+            idempotency_reused=False,
+            error_code=exc.code,
+            error_message=exc.message,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cross_report_publish_error",
+                module=logger.name,
+                fields={
+                    "package_id": package.package_id,
+                    "code": exc.code,
+                    "retryable": exc.retryable,
+                    "error": exc.message,
+                },
+            )
+        )
+        return result
+
+    if result.status in {"published", "skipped"}:
+        _record_cross_report_publish_idempotency(
+            package=package,
+            settings=settings,
+            result=result,
+            checksum=checksum,
+            ctx=ctx,
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cross_report_publish_complete",
+            module=logger.name,
+            fields={
+                "package_id": package.package_id,
+                "status": result.status,
+                "post_id": result.post_id or 0,
+                "post_url": result.post_url or "",
+            },
+        )
+    )
+    return result
 
 
 def run_publish(
