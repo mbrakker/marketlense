@@ -26,6 +26,7 @@ from src.ui._streamlit_pages.runtime import (
     _try_read_app_config,
     _try_write_app_config,
 )
+from src.ui._streamlit_pages.structured_config import render_structured_config_form
 from src.ui.common import (
     UI_SURFACE_EXCEPTIONS,
     _append_terminal,
@@ -421,16 +422,6 @@ def _render_asset_editor(
                 else "."
             )
             st.rerun()
-
-
-def render_structured_config_form(
-    config_payload: dict[str, Any], *, editor_key: str
-) -> None:
-    from src.ui.streamlit_pages import _render_structured_config_form_legacy
-
-    _render_structured_config_form_legacy(
-        config_payload=config_payload, editor_key=editor_key
-    )
 
 
 def render_settings_and_prompts(

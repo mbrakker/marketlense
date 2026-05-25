@@ -8,6 +8,8 @@ The public report-store API stays singular here, while semantic families live in
 
 from src.services._report_store_service.download_routes import (
     get_publisher_download_route,
+    mark_publisher_private_api_candidate_promoted,
+    record_publisher_private_api_candidate_observation,
     record_publisher_download_route,
 )
 from src.services._report_store_service.inventory import (
@@ -46,7 +48,9 @@ __all__ = [
     "list_metadata",
     "list_report_source_quality_history",
     "list_publishers",
+    "mark_publisher_private_api_candidate_promoted",
     "record_discovered_report_source",
+    "record_publisher_private_api_candidate_observation",
     "record_report_value_score",
     "record_publisher_download_route",
     "record_publisher_inventory_recovery_cache_record",

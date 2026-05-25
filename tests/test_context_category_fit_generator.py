@@ -5,7 +5,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from src.contracts.categories import (
-    CategoryClassificationConfig,
     CategoryDefinition,
     CategoryMappingLoadResponse,
     CategoryMappings,
@@ -211,7 +210,6 @@ def test_fit_report_categories_from_context_returns_selected_categories(
                 ],
             ),
         ],
-        classification=CategoryClassificationConfig(),
         inference_rules=[],
         uncategorized=[],
     )
@@ -323,7 +321,6 @@ def test_fit_report_categories_from_context_defaults_missing_optional_fields() -
                 ],
             )
         ],
-        classification=CategoryClassificationConfig(),
         inference_rules=[],
         uncategorized=[],
     )

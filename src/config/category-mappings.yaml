@@ -1,34 +1,4 @@
 schema_version: '1.2'
-classification:
-  schema_version: '1.1'
-  max_categories: 2
-  min_primary_score: 2.2
-  min_secondary_score: 1.6
-  secondary_score_ratio: 0.72
-  secondary_rescue_score_ratio: 0.55
-  secondary_rescue_min_strong_matches: 2
-  secondary_rescue_min_evidence_tags: 2
-  secondary_rescue_min_evidence_sections: 2
-  core_tag_weight: 2.2
-  supporting_tag_weight: 1.2
-  legacy_tag_weight: 1.0
-  generic_tag_weight: 0.3
-  negative_tag_weight: -2.0
-  repeated_match_bonus: 0.25
-  global_generic_tags:
-  - digital_economy
-  - innovation
-  - video
-  - social_media
-  - forecasting
-  - media_forecast
-  - market_forecast
-  - growth_forecast
-  - forecasts
-  - optimization
-  - engagement
-  - risk_assessment
-  - trust
 categories:
 - id: chinese_online_platforms
   label: Chinese Online Platforms

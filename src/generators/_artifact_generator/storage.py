@@ -1,78 +1,55 @@
 from __future__ import annotations
 
 import logging
-import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
 
-from src.contracts.analysis_family import AnalysisFamilyStatus
 from src.contracts.config import AppSettings
-from src.contracts.ingest import IngestSettings
-from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.prompts import PromptLoadRequest
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.semantic_ids import ReportId
 from src.contracts.schema_validation import SchemaValidateRequest
-from src.generators.artifact_normalization import (
-    artifact_base_variables,
-    bind_artifact_evidence_spans,
-    artifact_quote_candidates,
-    artifact_retrieval_mode,
-    normalize_artifact_toc_entries,
-    artifact_vector_store_enabled,
-    normalize_artifact_evidence_ids,
-    normalize_artifact_insights,
-    normalize_artifact_quotes,
-    normalize_artifact_source_status,
-    normalize_artifact_summary,
-    normalize_expert_domain,
-    pad_artifact_insights,
-    strip_artifact_inline_reference_ids,
-)
-from src.generators.analysis_pack_cache import (
-    CachedPackAdaptResult,
-    load_cached_pack,
-)
-from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.generators.analysis_store_adapter import (
-    resolve_pack_path as resolve_analysis_pack_path,
-    store_pack as store_analysis_pack,
-)
-from src.services import (
-    file_service,
-    llm_service,
-    prompt_service,
-    report_analysis_store_service,
-)
-from src.utils.errors import AppError
-from src.utils.json_utils import safe_json_dumps
-from src.utils.model_resolver import resolve_model
-from src.utils.logging import child_context, log_event, new_run_context
-from src.utils.coercion import coerce_int
-from src.services.schema_validator_service import (
-    validate_evidence_references,
-    validate_schema,
-)
-from src.utils.analysis_family import (
-    family_is_abstained,
-    serialize_family_status,
-)
-from src.utils.cache_utils import sha256_json
-
-logger = logging.getLogger("market_lense.artifact_generator")
+from src.contracts.semantic_ids import ReportId
 from src.generators._artifact_generator.family_policy import (
     apply_artifact_family_policy,
 )
 from src.generators._artifact_generator.toc import (
     TOC_STRUCTURE_VERSION,
     TOPIC_BRIEF_MAPPING_VERSION,
+    audit_topic_brief_mappings,
     build_legacy_topic_briefs,
-    build_topic_briefs,
 )
+from src.generators.analysis_pack_cache import (
+    CachedPackAdaptResult,
+    load_cached_pack,
+)
+from src.generators.analysis_store_adapter import (
+    resolve_pack_path as resolve_analysis_pack_path,
+)
+from src.generators.analysis_store_adapter import (
+    store_pack as store_analysis_pack,
+)
+from src.generators.artifact_normalization import (
+    bind_artifact_evidence_spans,
+    normalize_artifact_evidence_ids,
+    normalize_artifact_toc_entries,
+)
+from src.services import file_service
+from src.services.schema_validator_service import (
+    validate_evidence_references,
+    validate_schema,
+)
+from src.utils.analysis_family import family_is_abstained
+from src.utils.cache_utils import sha256_json
+from src.utils.errors import AppError
+from src.utils.json_utils import safe_json_dumps
+from src.utils.logging import log_event
+from src.utils.model_resolver import resolve_model
+
+logger = logging.getLogger("market_lense.artifact_generator")
+
 
 def assemble_artifacts_payload(
     *,
@@ -150,9 +127,10 @@ def assemble_artifacts_payload(
         doc_map=doc_map,
         evidence_packs=evidence_packs,
     )
-    if evidence_span_stats.get("bound_count", 0) > 0 or evidence_span_stats.get(
-        "unbound_count", 0
-    ) > 0:
+    if (
+        evidence_span_stats.get("bound_count", 0) > 0
+        or evidence_span_stats.get("unbound_count", 0) > 0
+    ):
         logger.info(
             log_event(
                 ctx,
@@ -178,6 +156,11 @@ def assemble_artifacts_payload(
     }
     if cache_meta:
         artifacts_payload["_cache"] = dict(cache_meta)
+    _log_topic_brief_mapping_audit(
+        topic_briefs=topic_briefs,
+        doc_map=doc_map,
+        ctx=ctx,
+    )
     try:
         validate_schema(
             SchemaValidateRequest(
@@ -201,6 +184,47 @@ def assemble_artifacts_payload(
         )
         raise
     return artifacts_payload
+
+
+def _log_topic_brief_mapping_audit(
+    *,
+    topic_briefs: List[Dict[str, Any]],
+    doc_map: Dict[str, Any],
+    ctx: RunContext,
+) -> None:
+    diagnostics = audit_topic_brief_mappings(
+        topic_briefs=topic_briefs,
+        doc_map=doc_map,
+    )
+    status_counts: Dict[str, int] = {}
+    for diagnostic in diagnostics:
+        status = _s(diagnostic.get("status")).strip() or "unknown"
+        status_counts[status] = status_counts.get(status, 0) + 1
+    issue_count = sum(
+        count for status, count in status_counts.items() if status != "ok"
+    )
+    unmapped_count = sum(
+        status_counts.get(status, 0)
+        for status in ("identity_mismatch", "unknown_section")
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_topic_brief_mapping_audit",
+            module=logger.name,
+            fields={
+                "mapping_version": TOPIC_BRIEF_MAPPING_VERSION,
+                "brief_count": len(topic_briefs),
+                "diagnostic_count": len(diagnostics),
+                "mapped_count": status_counts.get("ok", 0),
+                "unmapped_count": unmapped_count,
+                "issue_count": issue_count,
+                "status_counts": status_counts,
+                "diagnostics": diagnostics,
+            },
+        )
+    )
 
 
 def store_artifacts_payload(
@@ -236,7 +260,6 @@ def store_artifacts_payload(
         )
     )
     return output_path
-
 
 
 def _has_evidence_content(

@@ -38,7 +38,6 @@ ingest:
   batch_limit: 20
   worker_limit: 2
   report_worker_limit: 2
-  cover_cache_enabled: true
   pdf_text:
     max_pages: 5
     max_chars: 80000
@@ -151,6 +150,9 @@ browser_download:
   route_playbook_dir: "./src/playbooks/browser_routes"
   route_playbook_stale_policy: "fallback"
   route_playbook_promotion_mode: "write"
+  private_api_playbook_promotion_mode: "write"
+  private_api_playbook_min_success_count: 3
+  private_api_playbook_min_distinct_source_urls: 2
   drive_upload:
     enabled: true
     required: true
@@ -209,6 +211,29 @@ analysis:
   validation_grounding_use_vector_store: false
   strict_schema_validation: true
   cost_ledger_path: "./out/cost-ledger.jsonl"
+
+cross_report_analysis:
+  enabled: false
+  max_source_reports: 6
+  max_evidence_items: 48
+  max_prompt_chars: 60000
+  prompt_namespace: "cross_report_analysis/synthesis"
+  model: "gpt-5-mini"
+  temperature: 1.0
+  timeout_seconds: 600
+  cache_enabled: true
+  auto_theme_enabled: true
+  theme_rotation_window_days: 30
+  min_theme_source_publishers: 2
+  publish_enabled: false
+  publish_requires_validation_pass: true
+  signal_score_weights:
+    recurrence: 1.0
+    diversity: 1.0
+    recency: 1.0
+    taxonomy_fit: 1.0
+    support: 1.0
+    contradiction: 0.5
 
 cost:
   daily_path: "./out/cost-daily.json"

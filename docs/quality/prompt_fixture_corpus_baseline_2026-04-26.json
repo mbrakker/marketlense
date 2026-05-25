@@ -9,9 +9,22 @@
       "family": "browser_download",
       "input_tokens": 2121,
       "namespace_count": 1,
-      "runtime_ms": 9.6417,
+      "runtime_ms": 9.7662,
       "schema_version": "1.0",
       "total_tokens": 2571
+    },
+    "cross_report_analysis": {
+      "estimated_cost_usd": 0.002167,
+      "expected_browser_attempts": 0,
+      "expected_ocr_calls": 0,
+      "expected_output_tokens": 900,
+      "expected_tool_calls": 0,
+      "family": "cross_report_analysis",
+      "input_tokens": 1469,
+      "namespace_count": 1,
+      "runtime_ms": 2.4395,
+      "schema_version": "1.0",
+      "total_tokens": 2369
     },
     "publisher_inventory": {
       "estimated_cost_usd": 0.001189,
@@ -22,7 +35,7 @@
       "family": "publisher_inventory",
       "input_tokens": 909,
       "namespace_count": 2,
-      "runtime_ms": 4.1166,
+      "runtime_ms": 3.855,
       "schema_version": "1.0",
       "total_tokens": 1589
     },
@@ -35,7 +48,7 @@
       "family": "publishing",
       "input_tokens": 5778,
       "namespace_count": 12,
-      "runtime_ms": 25.7025,
+      "runtime_ms": 23.3249,
       "schema_version": "1.0",
       "total_tokens": 13878
     },
@@ -48,7 +61,7 @@
       "family": "ranking",
       "input_tokens": 769,
       "namespace_count": 2,
-      "runtime_ms": 3.9995,
+      "runtime_ms": 3.5715,
       "schema_version": "1.0",
       "total_tokens": 1209
     },
@@ -61,7 +74,7 @@
       "family": "report",
       "input_tokens": 4249,
       "namespace_count": 14,
-      "runtime_ms": 23.4508,
+      "runtime_ms": 20.3888,
       "schema_version": "1.0",
       "total_tokens": 20689
     },
@@ -74,14 +87,14 @@
       "family": "validation",
       "input_tokens": 1119,
       "namespace_count": 2,
-      "runtime_ms": 4.0928,
+      "runtime_ms": 3.3124,
       "schema_version": "1.0",
       "total_tokens": 1879
     }
   },
-  "fixture_count": 33,
+  "fixture_count": 34,
   "fixture_path": "C:\\Programing\\Market lense\\src\\prompts\\_dry_run_fixtures.yaml",
-  "generated_at_utc": "2026-05-19T05:33:15.919309+00:00",
+  "generated_at_utc": "2026-05-21T18:52:39.431333+00:00",
   "iterations": 3,
   "namespaces": {
     "browser_report_download/browser_route": {
@@ -94,9 +107,23 @@
       "input_tokens": 2121,
       "model": "openai/gpt-5-mini",
       "namespace": "browser_report_download/browser_route",
-      "runtime_ms": 9.6417,
+      "runtime_ms": 9.7662,
       "schema_version": "1.0",
       "total_tokens": 2571
+    },
+    "cross_report_analysis/synthesis": {
+      "estimated_cost_usd": 0.002167,
+      "expected_browser_attempts": 0,
+      "expected_ocr_calls": 0,
+      "expected_output_tokens": 900,
+      "expected_tool_calls": 0,
+      "family": "cross_report_analysis",
+      "input_tokens": 1469,
+      "model": "gpt-5-mini",
+      "namespace": "cross_report_analysis/synthesis",
+      "runtime_ms": 2.4395,
+      "schema_version": "1.0",
+      "total_tokens": 2369
     },
     "pdf_text/ocr_fallback": {
       "estimated_cost_usd": 0.010053,
@@ -108,7 +135,7 @@
       "input_tokens": 214,
       "model": "openai/gpt-5-mini",
       "namespace": "pdf_text/ocr_fallback",
-      "runtime_ms": 2.0349,
+      "runtime_ms": 1.7977,
       "schema_version": "1.0",
       "total_tokens": 5214
     },
@@ -122,7 +149,7 @@
       "input_tokens": 358,
       "model": "openai/gpt-5-mini",
       "namespace": "publisher_inventory/discovery",
-      "runtime_ms": 2.1831,
+      "runtime_ms": 2.0149,
       "schema_version": "1.0",
       "total_tokens": 858
     },
@@ -136,7 +163,7 @@
       "input_tokens": 551,
       "model": "gpt-5-nano",
       "namespace": "publisher_inventory/meaningful_candidate_screen",
-      "runtime_ms": 1.9335,
+      "runtime_ms": 1.8401,
       "schema_version": "1.0",
       "total_tokens": 731
     },
@@ -150,7 +177,7 @@
       "input_tokens": 296,
       "model": "openai/gpt-5-mini",
       "namespace": "rank_candidates",
-      "runtime_ms": 1.6778,
+      "runtime_ms": 1.5144,
       "schema_version": "1.0",
       "total_tokens": 516
     },
@@ -164,7 +191,7 @@
       "input_tokens": 473,
       "model": "openai/gpt-5-mini",
       "namespace": "rank_candidates/crop_refine",
-      "runtime_ms": 2.3217,
+      "runtime_ms": 2.0571,
       "schema_version": "1.0",
       "total_tokens": 693
     },
@@ -178,7 +205,7 @@
       "input_tokens": 653,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/expert_comment",
-      "runtime_ms": 2.3826,
+      "runtime_ms": 1.9571,
       "schema_version": "1.0",
       "total_tokens": 1353
     },
@@ -192,7 +219,7 @@
       "input_tokens": 408,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/insights_candidates",
-      "runtime_ms": 1.8015,
+      "runtime_ms": 1.6668,
       "schema_version": "1.0",
       "total_tokens": 1108
     },
@@ -206,7 +233,7 @@
       "input_tokens": 363,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/insights_final",
-      "runtime_ms": 1.7914,
+      "runtime_ms": 1.6347,
       "schema_version": "1.0",
       "total_tokens": 1063
     },
@@ -220,7 +247,7 @@
       "input_tokens": 563,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/linkedin_post",
-      "runtime_ms": 1.8279,
+      "runtime_ms": 1.7925,
       "schema_version": "1.0",
       "total_tokens": 1263
     },
@@ -234,7 +261,7 @@
       "input_tokens": 423,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/quotes",
-      "runtime_ms": 1.867,
+      "runtime_ms": 1.7334,
       "schema_version": "1.0",
       "total_tokens": 1123
     },
@@ -248,7 +275,7 @@
       "input_tokens": 467,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/regenerate/expert_comment",
-      "runtime_ms": 2.3902,
+      "runtime_ms": 2.294,
       "schema_version": "1.0",
       "total_tokens": 1117
     },
@@ -262,7 +289,7 @@
       "input_tokens": 498,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/regenerate/insights_candidates",
-      "runtime_ms": 2.45,
+      "runtime_ms": 2.1123,
       "schema_version": "1.0",
       "total_tokens": 1148
     },
@@ -276,7 +303,7 @@
       "input_tokens": 535,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/regenerate/insights_final",
-      "runtime_ms": 2.4678,
+      "runtime_ms": 2.1682,
       "schema_version": "1.0",
       "total_tokens": 1185
     },
@@ -290,7 +317,7 @@
       "input_tokens": 399,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/regenerate/linkedin_post",
-      "runtime_ms": 2.3385,
+      "runtime_ms": 2.0382,
       "schema_version": "1.0",
       "total_tokens": 1049
     },
@@ -304,7 +331,7 @@
       "input_tokens": 519,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/regenerate/quotes",
-      "runtime_ms": 2.4082,
+      "runtime_ms": 2.1764,
       "schema_version": "1.0",
       "total_tokens": 1169
     },
@@ -318,7 +345,7 @@
       "input_tokens": 549,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/regenerate/summary",
-      "runtime_ms": 2.2882,
+      "runtime_ms": 2.1447,
       "schema_version": "1.0",
       "total_tokens": 1199
     },
@@ -332,7 +359,7 @@
       "input_tokens": 401,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/artifacts/summary",
-      "runtime_ms": 1.6892,
+      "runtime_ms": 1.6066,
       "schema_version": "1.0",
       "total_tokens": 1101
     },
@@ -346,7 +373,7 @@
       "input_tokens": 676,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/context_category_fit",
-      "runtime_ms": 1.8377,
+      "runtime_ms": 1.6696,
       "schema_version": "1.0",
       "total_tokens": 856
     },
@@ -360,7 +387,7 @@
       "input_tokens": 247,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/doc_map",
-      "runtime_ms": 1.6001,
+      "runtime_ms": 1.3439,
       "schema_version": "1.0",
       "total_tokens": 1347
     },
@@ -374,7 +401,7 @@
       "input_tokens": 243,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/evidence_packs/contradictions",
-      "runtime_ms": 1.5082,
+      "runtime_ms": 1.3385,
       "schema_version": "1.0",
       "total_tokens": 1343
     },
@@ -388,7 +415,7 @@
       "input_tokens": 245,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/evidence_packs/findings",
-      "runtime_ms": 1.6722,
+      "runtime_ms": 1.3435,
       "schema_version": "1.0",
       "total_tokens": 1345
     },
@@ -402,7 +429,7 @@
       "input_tokens": 237,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/evidence_packs/key_metrics",
-      "runtime_ms": 1.5233,
+      "runtime_ms": 1.3359,
       "schema_version": "1.0",
       "total_tokens": 1337
     },
@@ -416,7 +443,7 @@
       "input_tokens": 187,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/evidence_packs/limitations",
-      "runtime_ms": 1.6492,
+      "runtime_ms": 1.3082,
       "schema_version": "1.0",
       "total_tokens": 1287
     },
@@ -430,7 +457,7 @@
       "input_tokens": 231,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/evidence_packs/methods",
-      "runtime_ms": 1.5629,
+      "runtime_ms": 1.3206,
       "schema_version": "1.0",
       "total_tokens": 1331
     },
@@ -444,7 +471,7 @@
       "input_tokens": 233,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/evidence_packs/quote_candidates",
-      "runtime_ms": 1.6703,
+      "runtime_ms": 1.3857,
       "schema_version": "1.0",
       "total_tokens": 1333
     },
@@ -458,7 +485,7 @@
       "input_tokens": 223,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/evidence_packs/recommendations",
-      "runtime_ms": 1.647,
+      "runtime_ms": 1.4058,
       "schema_version": "1.0",
       "total_tokens": 1323
     },
@@ -472,7 +499,7 @@
       "input_tokens": 236,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/evidence_packs/risk_register",
-      "runtime_ms": 1.5263,
+      "runtime_ms": 1.4331,
       "schema_version": "1.0",
       "total_tokens": 1336
     },
@@ -486,7 +513,7 @@
       "input_tokens": 249,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/evidence_packs/scope",
-      "runtime_ms": 1.4821,
+      "runtime_ms": 1.3291,
       "schema_version": "1.0",
       "total_tokens": 1349
     },
@@ -500,7 +527,7 @@
       "input_tokens": 292,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/figure_caption",
-      "runtime_ms": 1.7813,
+      "runtime_ms": 1.647,
       "schema_version": "1.0",
       "total_tokens": 452
     },
@@ -514,7 +541,7 @@
       "input_tokens": 736,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/taxonomy",
-      "runtime_ms": 1.9553,
+      "runtime_ms": 1.7302,
       "schema_version": "1.0",
       "total_tokens": 836
     },
@@ -528,7 +555,7 @@
       "input_tokens": 579,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/validate/grounding",
-      "runtime_ms": 2.0213,
+      "runtime_ms": 1.6285,
       "schema_version": "1.0",
       "total_tokens": 959
     },
@@ -542,23 +569,23 @@
       "input_tokens": 540,
       "model": "openai/gpt-5-mini",
       "namespace": "report_vs/validate/semantic",
-      "runtime_ms": 2.0715,
+      "runtime_ms": 1.6839,
       "schema_version": "1.0",
       "total_tokens": 920
     }
   },
   "schema_version": "1.0",
   "totals": {
-    "estimated_cost_usd": 0.057079,
+    "estimated_cost_usd": 0.059246,
     "expected_browser_attempts": 2,
     "expected_ocr_calls": 1,
-    "expected_output_tokens": 26870,
+    "expected_output_tokens": 27770,
     "expected_tool_calls": 0,
     "family": "totals",
-    "input_tokens": 14945,
-    "namespace_count": 33,
-    "runtime_ms": 71.0039,
+    "input_tokens": 16414,
+    "namespace_count": 34,
+    "runtime_ms": 66.6583,
     "schema_version": "1.0",
-    "total_tokens": 41815
+    "total_tokens": 44184
   }
 }

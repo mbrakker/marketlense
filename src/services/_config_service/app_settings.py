@@ -3,6 +3,7 @@ from __future__ import annotations
 from src.services._config_service.common import *
 from src.services._config_service.settings_resolvers import *
 
+
 def _to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
     payload = asdict(app_settings)
     allowed = {field.name for field in fields(IngestSettings)}
@@ -135,13 +136,27 @@ def _config_load_complete_fields(
         "artifacts_use_vector_store": settings.artifacts_use_vector_store,
         "validation_grounding_use_vector_store": settings.validation_grounding_use_vector_store,
         "strict_schema_validation": settings.strict_schema_validation,
-        "cover_cache_enabled": settings.cover_cache_enabled,
         "cost_ledger_path": settings.cost_ledger_path,
         "cost_daily_path": settings.cost_daily_path,
         "html_tag_acronyms": settings.html_tag_acronyms,
         "html_tag_acronyms_count": len(settings.html_tag_acronyms),
         "validation_data_gap_policy": settings.validation_data_gap_policy,
         "validation_regeneration_max_attempts": settings.validation_regeneration_max_attempts,
+        "cross_report_analysis_enabled": settings.cross_report_analysis_enabled,
+        "cross_report_analysis_max_source_reports": settings.cross_report_analysis_max_source_reports,
+        "cross_report_analysis_max_evidence_items": settings.cross_report_analysis_max_evidence_items,
+        "cross_report_analysis_max_prompt_chars": settings.cross_report_analysis_max_prompt_chars,
+        "cross_report_analysis_prompt_namespace": settings.cross_report_analysis_prompt_namespace,
+        "cross_report_analysis_model": settings.cross_report_analysis_model,
+        "cross_report_analysis_temperature": settings.cross_report_analysis_temperature,
+        "cross_report_analysis_timeout_seconds": settings.cross_report_analysis_timeout_seconds,
+        "cross_report_analysis_cache_enabled": settings.cross_report_analysis_cache_enabled,
+        "cross_report_analysis_auto_theme_enabled": settings.cross_report_analysis_auto_theme_enabled,
+        "cross_report_analysis_theme_rotation_window_days": settings.cross_report_analysis_theme_rotation_window_days,
+        "cross_report_analysis_min_theme_source_publishers": settings.cross_report_analysis_min_theme_source_publishers,
+        "cross_report_analysis_publish_enabled": settings.cross_report_analysis_publish_enabled,
+        "cross_report_analysis_publish_requires_validation_pass": settings.cross_report_analysis_publish_requires_validation_pass,
+        "cross_report_analysis_signal_score_weights": settings.cross_report_analysis_signal_score_weights,
     }
 
 
@@ -192,6 +207,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         sections.ingest,
     )
     validation_settings = _resolve_validation_settings(sections.validation_cfg)
+    cross_report_analysis_settings = _resolve_cross_report_analysis_settings(
+        sections.cross_report_analysis_cfg
+    )
     analysis_settings = _resolve_analysis_settings(
         sections.analysis_cfg,
         sections.cost_cfg,
@@ -339,7 +357,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "validation_grounding_use_vector_store"
         ],
         strict_schema_validation=analysis_settings["strict_schema_validation"],
-        cover_cache_enabled=ingest_runtime["cover_cache_enabled"],
         cost_ledger_path=analysis_settings["cost_ledger_path"],
         cost_daily_path=analysis_settings["cost_daily_path"],
         model_pricing=analysis_settings["model_pricing"],
@@ -347,6 +364,51 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         validation_data_gap_policy=validation_settings["validation_data_gap_policy"],
         validation_regeneration_max_attempts=validation_settings[
             "validation_regeneration_max_attempts"
+        ],
+        cross_report_analysis_enabled=cross_report_analysis_settings[
+            "cross_report_analysis_enabled"
+        ],
+        cross_report_analysis_max_source_reports=cross_report_analysis_settings[
+            "cross_report_analysis_max_source_reports"
+        ],
+        cross_report_analysis_max_evidence_items=cross_report_analysis_settings[
+            "cross_report_analysis_max_evidence_items"
+        ],
+        cross_report_analysis_max_prompt_chars=cross_report_analysis_settings[
+            "cross_report_analysis_max_prompt_chars"
+        ],
+        cross_report_analysis_prompt_namespace=cross_report_analysis_settings[
+            "cross_report_analysis_prompt_namespace"
+        ],
+        cross_report_analysis_model=cross_report_analysis_settings[
+            "cross_report_analysis_model"
+        ],
+        cross_report_analysis_temperature=cross_report_analysis_settings[
+            "cross_report_analysis_temperature"
+        ],
+        cross_report_analysis_timeout_seconds=cross_report_analysis_settings[
+            "cross_report_analysis_timeout_seconds"
+        ],
+        cross_report_analysis_cache_enabled=cross_report_analysis_settings[
+            "cross_report_analysis_cache_enabled"
+        ],
+        cross_report_analysis_auto_theme_enabled=cross_report_analysis_settings[
+            "cross_report_analysis_auto_theme_enabled"
+        ],
+        cross_report_analysis_theme_rotation_window_days=cross_report_analysis_settings[
+            "cross_report_analysis_theme_rotation_window_days"
+        ],
+        cross_report_analysis_min_theme_source_publishers=cross_report_analysis_settings[
+            "cross_report_analysis_min_theme_source_publishers"
+        ],
+        cross_report_analysis_publish_enabled=cross_report_analysis_settings[
+            "cross_report_analysis_publish_enabled"
+        ],
+        cross_report_analysis_publish_requires_validation_pass=cross_report_analysis_settings[
+            "cross_report_analysis_publish_requires_validation_pass"
+        ],
+        cross_report_analysis_signal_score_weights=cross_report_analysis_settings[
+            "cross_report_analysis_signal_score_weights"
         ],
     )
 
@@ -383,5 +445,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         )
     )
     return settings
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

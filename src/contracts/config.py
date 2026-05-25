@@ -149,9 +149,7 @@ class AppSettings:
     )
     pdf_text_ocr_policy: str = field(
         default="native_first_selective",
-        metadata={
-            "doc": "OCR fallback policy: native_first_selective or always."
-        },
+        metadata={"doc": "OCR fallback policy: native_first_selective or always."},
     )
     pdf_text_ocr_model: str = field(
         default="gpt-5-mini",
@@ -421,12 +419,6 @@ class AppSettings:
             "doc": "Whether strict schema validation should be enforced for generated analysis packs."
         },
     )
-    cover_cache_enabled: bool = field(
-        default=True,
-        metadata={
-            "doc": "Whether to skip cover generation when cached output is up-to-date."
-        },
-    )
     cost_ledger_path: str = field(
         default="./out/cost-ledger.jsonl",
         metadata={"doc": "Filesystem path for the cost ledger JSONL output."},
@@ -457,6 +449,89 @@ class AppSettings:
         default=3,
         metadata={
             "doc": "Maximum validation-driven regeneration attempts after the initial validation failure."
+        },
+    )
+    cross_report_analysis_enabled: bool = field(
+        default=False,
+        metadata={"doc": "Whether cross-report analysis generation is enabled."},
+    )
+    cross_report_analysis_max_source_reports: int = field(
+        default=6,
+        metadata={
+            "doc": "Maximum projected reports selected for cross-report synthesis."
+        },
+    )
+    cross_report_analysis_max_evidence_items: int = field(
+        default=48,
+        metadata={
+            "doc": "Maximum projected evidence items included in synthesis input."
+        },
+    )
+    cross_report_analysis_max_prompt_chars: int = field(
+        default=60000,
+        metadata={
+            "doc": "Maximum rendered prompt/input characters before model calls."
+        },
+    )
+    cross_report_analysis_prompt_namespace: str = field(
+        default="cross_report_analysis/synthesis",
+        metadata={"doc": "Prompt namespace used for cross-report synthesis."},
+    )
+    cross_report_analysis_model: str = field(
+        default="gpt-5-mini",
+        metadata={"doc": "Model identifier used for cross-report synthesis."},
+    )
+    cross_report_analysis_temperature: float = field(
+        default=1.0,
+        metadata={"doc": "Sampling temperature for cross-report synthesis."},
+    )
+    cross_report_analysis_timeout_seconds: float = field(
+        default=600.0,
+        metadata={"doc": "Timeout in seconds for cross-report synthesis model calls."},
+    )
+    cross_report_analysis_cache_enabled: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether unchanged cross-report synthesis inputs may reuse cache."
+        },
+    )
+    cross_report_analysis_auto_theme_enabled: bool = field(
+        default=True,
+        metadata={"doc": "Whether automatic deterministic theme choice is enabled."},
+    )
+    cross_report_analysis_theme_rotation_window_days: int = field(
+        default=30,
+        metadata={
+            "doc": "Days of recent artifacts considered by theme variety policy."
+        },
+    )
+    cross_report_analysis_min_theme_source_publishers: int = field(
+        default=2,
+        metadata={
+            "doc": "Minimum distinct publishers required for publishable themes."
+        },
+    )
+    cross_report_analysis_publish_enabled: bool = field(
+        default=False,
+        metadata={"doc": "Whether live cross-report publication is allowed."},
+    )
+    cross_report_analysis_publish_requires_validation_pass: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether publication requires deterministic validation to pass."
+        },
+    )
+    cross_report_analysis_signal_score_weights: dict = field(
+        default_factory=lambda: {
+            "contradiction": 0.5,
+            "diversity": 1.0,
+            "recency": 1.0,
+            "recurrence": 1.0,
+            "support": 1.0,
+            "taxonomy_fit": 1.0,
+        },
+        metadata={
+            "doc": "Deterministic cross-report signal score weights loaded from YAML."
         },
     )
 
