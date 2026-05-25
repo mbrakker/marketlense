@@ -49,7 +49,8 @@ class CrossReportAnalysisRequest:
     )
     topic: str = field(
         metadata={
-            "doc": "Explicit requested analysis topic; empty only when auto-theme selection is enabled."
+            "doc": "Explicit requested analysis topic; empty only when auto-theme selection is enabled.",
+            "required": False,
         }
     )
     auto_theme: bool = field(
@@ -624,6 +625,24 @@ class CrossReportSourceSelectionResult:
     excluded_report_counts: Dict[str, int] = field(
         default_factory=dict,
         metadata={"doc": "Rejected report counts grouped by deterministic reason."},
+    )
+
+
+@dataclass(frozen=True)
+class CrossReportThemeSelectionResult:
+    schema_version: str = field(
+        metadata={"doc": "Theme selection result contract schema version."}
+    )
+    selected_theme: CrossReportSelectedTheme = field(
+        metadata={"doc": "Selected deterministic theme for synthesis."}
+    )
+    theme_candidates: List[CrossReportThemeCandidate] = field(
+        default_factory=list,
+        metadata={"doc": "Ranked deterministic theme candidates."},
+    )
+    rejected_theme_candidates: List[CrossReportThemeCandidate] = field(
+        default_factory=list,
+        metadata={"doc": "Theme candidates rejected by deterministic gates."},
     )
 
 

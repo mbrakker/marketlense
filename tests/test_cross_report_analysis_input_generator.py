@@ -10,9 +10,12 @@ from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
     CrossReportProjectedDataReadResponse,
+    CrossReportSelectedSourceReport,
     CrossReportSourceReportCandidate,
+    CrossReportSourceSelectionResult,
 )
 from src.generators.cross_report_analysis_input_generator import (
+    select_cross_report_theme,
     select_cross_report_source_reports,
 )
 
@@ -95,6 +98,46 @@ def _events(caplog) -> list[dict]:
         for record in caplog.records
         if record.name == "market_lense.cross_report_analysis_input_generator"
     ]
+
+
+def _selected_source(
+    report_id: str,
+    *,
+    publisher: str,
+    report_date: str,
+    evidence_count: int,
+    tags: list[str],
+    categories: list[str],
+    rank: int = 1,
+) -> CrossReportSelectedSourceReport:
+    return CrossReportSelectedSourceReport(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        report_id=report_id,
+        title=f"{report_id} source report",
+        publisher=publisher,
+        publisher_id=publisher.lower().replace(" ", "-"),
+        report_date=report_date,
+        projection_status="projected",
+        content_hash=f"{report_id}-hash",
+        rank=rank,
+        selection_reasons=["test_source"],
+        evidence_count=evidence_count,
+        category_labels=categories,
+        tags=tags,
+    )
+
+
+def _source_selection(
+    sources: list[CrossReportSelectedSourceReport],
+) -> CrossReportSourceSelectionResult:
+    return CrossReportSourceSelectionResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_sources=sources,
+        ranked_candidates=[],
+        rejected_candidates=[],
+        cleaned_filters={"tag_filters": ["ai"], "category_filters": ["retail"]},
+        excluded_report_counts={},
+    )
 
 
 def test_source_selection_is_ranked_deterministic_and_diverse(
@@ -330,3 +373,126 @@ def test_source_selection_empty_projected_set_fails_with_typed_error(
         if event["event"] == "cross_report_source_selection_failed"
     ][0]
     assert failed["fields"]["excluded_report_counts"] == {"projection_status_failed": 1}
+
+
+def test_theme_selection_uses_explicit_topic_without_auto_theme(
+    run_context,
+) -> None:
+    result = select_cross_report_theme(
+        _request(),
+        _source_selection(
+            [
+                _selected_source(
+                    "report-a",
+                    publisher="Publisher A",
+                    report_date="2026-05-01",
+                    evidence_count=4,
+                    tags=["AI", "commerce"],
+                    categories=["Retail"],
+                )
+            ]
+        ),
+        run_context,
+    )
+
+    assert result.selected_theme.label == "AI commerce"
+    assert result.selected_theme.theme_id == "theme-explicit-ai-commerce"
+    assert result.selected_theme.source_report_ids == ["report-a"]
+    assert result.theme_candidates[0].rationale.startswith("Explicit operator topic")
+
+
+def test_theme_selection_auto_generates_ranked_candidates_and_logs(
+    run_context,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    base_request = _request()
+    request = CrossReportAnalysisRequest(
+        **{**base_request.__dict__, "topic": "", "auto_theme": True}
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=4,
+                tags=["AI", "commerce"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-05",
+                evidence_count=6,
+                tags=["AI", "commerce"],
+                categories=["Retail"],
+                rank=2,
+            ),
+            _selected_source(
+                "report-c",
+                publisher="Publisher C",
+                report_date="2026-05-03",
+                evidence_count=2,
+                tags=["Payments"],
+                categories=["Payments"],
+                rank=3,
+            ),
+        ]
+    )
+
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+    result = select_cross_report_theme(request, source_selection, run_context)
+    repeat = select_cross_report_theme(request, source_selection, run_context)
+
+    assert [candidate.theme_id for candidate in result.theme_candidates] == [
+        "theme-tag-ai",
+        "theme-category-retail",
+        "theme-tag-commerce",
+        "theme-category-payments",
+        "theme-tag-payments",
+    ]
+    assert result.selected_theme.theme_id == "theme-tag-ai"
+    assert result.selected_theme.matched_tags == ["AI"]
+    assert result.selected_theme.matched_categories == ["Retail"]
+    assert result.selected_theme.source_report_ids == ["report-a", "report-b"]
+    assert result.theme_candidates[0].source_publisher_count == 2
+    assert result.theme_candidates[0].evidence_count == 10
+    assert result.theme_candidates[0].recency_score > 0
+    assert [candidate.theme_id for candidate in repeat.theme_candidates] == [
+        candidate.theme_id for candidate in result.theme_candidates
+    ]
+
+    events = _events(caplog)
+    assert_logs_have_required_fields(events)
+    complete = [
+        event
+        for event in events
+        if event["event"] == "cross_report_theme_selection_complete"
+    ][0]
+    assert complete["fields"]["theme_candidate_count"] == 5
+    assert complete["fields"]["selected_theme_id"] == "theme-tag-ai"
+    assert "score_components" in complete["fields"]
+
+
+def test_theme_selection_fails_when_no_eligible_theme(
+    run_context,
+    assert_app_error,
+) -> None:
+    base_request = _request()
+    request = CrossReportAnalysisRequest(
+        **{**base_request.__dict__, "topic": "", "auto_theme": True}
+    )
+
+    with pytest.raises(Exception) as exc_info:
+        select_cross_report_theme(request, _source_selection([]), run_context)
+
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_no_theme_candidates",
+        retryable=False,
+        severity="error",
+    )

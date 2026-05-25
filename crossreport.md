@@ -51,17 +51,6 @@ Suggested priority order:
 
 ## 3. Automatic Theme Choice, Variety & Publishability
 
-- **Item:** Add deterministic automatic theme candidate generation [Impact: 5/5, Effort: 3/5]
-  - Explanation: Operators should be able to request a cross-report analysis without hand-picking the exact theme. The first release should build theme candidates from projected categories, tags, findings, claims, contradictions, recency, and source coverage without requiring an extra model call.
-  - Pros: Faster publishing cadence, lower editorial effort, lower model cost than LLM-led clustering.
-  - Cons: Theme quality depends on projection and taxonomy quality until semantic retrieval exists.
-  - Completion criteria:
-    - `src/generators/cross_report_analysis_input_generator.py` creates theme candidates when the request has `auto_theme=true` or no explicit topic.
-    - Each theme candidate includes label, short rationale, matched tags/categories, source report ids, source publisher count, evidence count, recency signals, and rejection risks.
-    - Candidate generation is deterministic for fixed projected rows and config.
-    - Tests cover explicit topic mode, auto-theme mode, no eligible theme, and stable ranking.
-    - Logs include candidate count, selected theme id, score components, and rejection reasons.
-
 - **Item:** Enforce theme variety and anti-repetition policy [Impact: 4/5, Effort: 2/5]
   - Explanation: Automatic choice should not repeatedly select the same publisher, category, or narrow angle just because it has dense projections. Variety here means useful editorial rotation and source diversity, not metric normalization or clickbait scoring.
   - Pros: Better content mix, more resilient editorial calendar, less duplicated output.
