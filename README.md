@@ -168,6 +168,8 @@ Projection readiness is enforced before synthesis inputs are selected. Non-diagn
 
 Automatic theme choice also lives in `src/generators/cross_report_analysis_input_generator.py` through `select_cross_report_theme`. Explicit-topic requests produce a selected theme from the operator topic and already-selected sources. Auto-theme requests, or requests with an empty topic and `auto_theme=true`, build deterministic tag/category candidates from selected projected sources, score them by evidence density, source-publisher coverage, recency, and novelty, and return `CrossReportThemeSelectionResult` with ranked candidates, the selected theme, score components, source report IDs, and structured logs. No model call is used for theme choice.
 
+The theme selector supports a bounded variety policy before synthesis. When a recent-artifacts root is provided, it reads prior `analysis.json` metadata through `file_service.list_directory` and `file_service.read_text`, applies the configured `theme_rotation_window_days`, and down-ranks repeated theme IDs, tags, and categories by lowering the novelty component and attaching explicit repetition risks such as `recent_theme_repetition` or `recent_category_repetition:retail`. Theme score weights for density, diversity, recency, novelty, and filter fit are function parameters so orchestrator/config wiring can tune the policy without changing prompt or model behavior.
+
 First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 ## WordPress Subproject
