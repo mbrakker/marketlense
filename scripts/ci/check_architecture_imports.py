@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = ROOT / "src"
 
@@ -37,6 +36,11 @@ class ImportViolation:
     rule: str
 
 
+@dataclass(frozen=True)
+class ImportCycle:
+    modules: tuple[str, ...]
+
+
 def _role_for_path(path: Path) -> str | None:
     try:
         relative = path.relative_to(SRC_ROOT)
@@ -61,6 +65,19 @@ def _iter_python_files() -> Iterable[Path]:
             yield from sorted(directory.rglob("*.py"))
 
 
+def _iter_first_party_python_files(src_root: Path = SRC_ROOT) -> Iterable[Path]:
+    if src_root.exists():
+        yield from sorted(src_root.rglob("*.py"))
+
+
+def _module_name_for_path(path: Path, src_root: Path = SRC_ROOT) -> str:
+    relative = path.relative_to(src_root).with_suffix("")
+    parts = relative.parts
+    if parts[-1] == "__init__":
+        parts = parts[:-1]
+    return ".".join(("src", *parts))
+
+
 def _imported_modules(node: ast.AST) -> Iterable[tuple[str, int, int]]:
     if isinstance(node, ast.Import):
         for alias in node.names:
@@ -69,6 +86,101 @@ def _imported_modules(node: ast.AST) -> Iterable[tuple[str, int, int]]:
         if not node.module:
             return
         yield node.module, node.lineno, node.col_offset + 1
+
+
+def _static_imported_module_names(tree: ast.AST) -> Iterable[str]:
+    class StaticImportVisitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self.imports: list[str] = []
+
+        def visit_Import(self, node: ast.Import) -> None:
+            for alias in node.names:
+                self.imports.append(alias.name)
+
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+            if node.module:
+                self.imports.append(node.module)
+
+    visitor = StaticImportVisitor()
+    visitor.visit(tree)
+    return visitor.imports
+
+
+def _resolve_first_party_import(
+    imported: str, known_modules: set[str], known_packages: set[str]
+) -> str | None:
+    if imported == "src":
+        return None
+    if not imported.startswith("src."):
+        return None
+    parts = imported.split(".")
+    for length in range(len(parts), 1, -1):
+        candidate = ".".join(parts[:length])
+        if candidate in known_modules:
+            return candidate
+        if candidate in known_packages:
+            return candidate
+    return None
+
+
+def _canonical_cycle(cycle: list[str]) -> tuple[str, ...]:
+    open_cycle = cycle[:-1]
+    min_index = min(range(len(open_cycle)), key=lambda index: open_cycle[index])
+    rotated = open_cycle[min_index:] + open_cycle[:min_index]
+    return tuple((*rotated, rotated[0]))
+
+
+def _find_cycles(graph: dict[str, set[str]]) -> list[ImportCycle]:
+    cycles: set[tuple[str, ...]] = set()
+    visiting: set[str] = set()
+    visited: set[str] = set()
+    stack: list[str] = []
+
+    def visit(module: str) -> None:
+        if module in visiting:
+            if module in stack:
+                cycle = stack[stack.index(module) :] + [module]
+                cycles.add(_canonical_cycle(cycle))
+            return
+        if module in visited:
+            return
+        visiting.add(module)
+        stack.append(module)
+        for dependency in sorted(graph.get(module, ())):
+            visit(dependency)
+        stack.pop()
+        visiting.remove(module)
+        visited.add(module)
+
+    for module in sorted(graph):
+        visit(module)
+    return [ImportCycle(modules=cycle) for cycle in sorted(cycles)]
+
+
+def scan_first_party_import_cycles(src_root: Path = SRC_ROOT) -> list[ImportCycle]:
+    paths = list(_iter_first_party_python_files(src_root))
+    module_by_path = {
+        path: _module_name_for_path(path, src_root)
+        for path in paths
+        if path.name != "__init__.py"
+    }
+    known_modules = set(module_by_path.values())
+    known_packages = {
+        _module_name_for_path(path, src_root)
+        for path in paths
+        if path.name == "__init__.py"
+    }
+    graph: dict[str, set[str]] = {module: set() for module in known_modules}
+    for path, module in module_by_path.items():
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for imported in _static_imported_module_names(tree):
+            dependency = _resolve_first_party_import(
+                imported, known_modules, known_packages
+            )
+            if dependency is None or dependency == module:
+                continue
+            graph[module].add(dependency)
+    return _find_cycles(graph)
 
 
 def _violates(imported: str, forbidden_prefixes: tuple[str, ...]) -> str | None:
@@ -115,7 +227,8 @@ def scan_repository() -> list[ImportViolation]:
 
 def main() -> int:
     violations = scan_repository()
-    if not violations:
+    cycles = scan_first_party_import_cycles()
+    if not violations and not cycles:
         print("Architecture import gate passed.")
         return 0
 
@@ -125,6 +238,8 @@ def main() -> int:
         print(
             f"  - {rel}:{item.line}:{item.column} imports {item.imported}; {item.rule}"
         )
+    for cycle in cycles:
+        print(f"  - first-party import cycle: {' -> '.join(cycle.modules)}")
     return 1
 
 

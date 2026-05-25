@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional
 
-from src.contracts.categories import UncategorizedTagsFlushRequest
 from src.services.pdf_service import check_pdf_eof
 from src.contracts.drive import (
     DriveFileMetadataRequest,
@@ -71,7 +70,6 @@ from src.contracts.state import (
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
 )
-from src.services.category_mapping_service import flush_uncategorized_tags
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.errors import AppError
 from src.utils.path_utils import safe_pdf_name
@@ -93,7 +91,6 @@ class IngestBatchDependencies:
         [DriveFile, int, IngestSettings, RunContext], _FileProcessResult
     ]
     thread_pool_executor_factory: Callable[[int], Any]
-    flush_uncategorized_tags: Callable[[UncategorizedTagsFlushRequest, RunContext], Any]
 
     @classmethod
     def default(cls) -> "IngestBatchDependencies":
@@ -102,7 +99,6 @@ class IngestBatchDependencies:
             batch_should_skip=_batch_should_skip,
             process_file=_process_file,
             thread_pool_executor_factory=ThreadPoolExecutor,
-            flush_uncategorized_tags=flush_uncategorized_tags,
         )
 
 
@@ -804,31 +800,10 @@ def _update_ingest_cursor(
 
 
 def _finalize_ingest_run(
-    settings: IngestSettings,
     *,
-    deps: IngestBatchDependencies,
-    root_ctx: RunContext,
     lock_ctx: RunContext,
     lock_info,
 ) -> None:
-    try:
-        deps.flush_uncategorized_tags(
-            UncategorizedTagsFlushRequest(
-                schema_version="1.0",
-                path=settings.category_mapping_path,
-            ),
-            root_ctx,
-        )
-    except AppError as exc:
-        logger.info(
-            log_event(
-                root_ctx,
-                role="orchestrator",
-                event="ingest_uncategorized_flush_failed",
-                module=logger.name,
-                fields={"path": settings.category_mapping_path, "error": str(exc)},
-            )
-        )
     if not lock_info:
         return
     try:
@@ -858,7 +833,7 @@ def _finalize_ingest_run(
                 event="ingest_lock_release_failed",
                 module=logger.name,
                 fields={
-                    "lock_path": settings.ingest_lock_path,
+                    "lock_path": lock_info.lock_path,
                     "error": str(exc),
                 },
             )
@@ -948,9 +923,6 @@ def run_ingest(
         return outcomes
     finally:
         _finalize_ingest_run(
-            settings,
-            deps=deps,
-            root_ctx=root_ctx,
             lock_ctx=lock_ctx,
             lock_info=lock_info,
         )

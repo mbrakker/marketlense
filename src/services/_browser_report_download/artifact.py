@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import replace
-from hashlib import sha256
 import re
 import shutil
+from dataclasses import replace
+from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import Iterable
 from urllib.parse import urljoin, urlsplit
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import ValidationError
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -30,6 +30,10 @@ from src.services._browser_report_download.http import (
     resolve_downloaded_mime_type,
     validate_downloaded_pdf_artifact,
 )
+from src.services._browser_report_download.models import (
+    BrowserAgentRunResult,
+    BrowserUseAgentResult,
+)
 from src.services._browser_report_download.request import (
     prepare_download_dir,
     resolve_effective_identity_fields,
@@ -45,9 +49,6 @@ from src.utils.coercion import (
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
-
-if TYPE_CHECKING:
-    from src.services._browser_report_download.browser import BrowserAgentRunResult
 
 _ROUTE_KINDS = {"pdf_download", "email_delivery", "onsite_report"}
 _BLOCKED_REASONS = {
@@ -222,116 +223,6 @@ _TERMINAL_BOOLEAN_FIELDS = (
     "form_disappeared",
 )
 logger = logging.getLogger("market_lense.browser_report_download_artifact")
-
-
-class BrowserUseRouteStep(BaseModel):
-    index: int | None = Field(default=None)
-    action: str | None = Field(default=None)
-    target_text: str | None = Field(default=None)
-    target_role: str | None = Field(default=None)
-    target_url: str | None = Field(default=None)
-    result: str | None = Field(default=None)
-    expected_evidence: list[str] = Field(default_factory=list)
-    observed_evidence: list[str] = Field(default_factory=list)
-    verification_status: str | None = Field(default=None)
-
-
-class BrowserUseAgentResult(BaseModel):
-    route_kind: str = Field(
-        description="Either `pdf_download`, `email_delivery`, or `onsite_report`."
-    )
-    route_summary: str | None = Field(
-        default=None,
-        description="Short description of the working clicks/forms for this URL.",
-    )
-    route_family: str | None = Field(
-        default=None,
-        description="Observed route family for this execution attempt when the agent can classify it.",
-    )
-    resolved_target_url: str | None = Field(
-        default=None,
-        description="Resolved target URL that produced the final artifact or email form state.",
-    )
-    final_page_url: str | None = Field(
-        default=None,
-        description="Final browser URL after the task completed.",
-    )
-    email_submission_completed: bool | None = Field(
-        default=None,
-        description="True only when an email-gated form was actually submitted.",
-    )
-    downloaded_file_path: str | None = Field(
-        default=None,
-        description="Absolute local path of the downloaded file when one was saved.",
-    )
-    downloaded_file_name: str | None = Field(
-        default=None,
-        description="Downloaded file name when available.",
-    )
-    downloaded_mime_type: str | None = Field(
-        default=None,
-        description="Downloaded file MIME type when known.",
-    )
-    encountered_form_fields: list[str] = Field(
-        default_factory=list,
-        description="Distinct form field labels or names encountered during the route.",
-    )
-    route_steps: list[BrowserUseRouteStep] = Field(
-        default_factory=list,
-        description="Ordered structured action trace for the successful route when the agent can provide it.",
-    )
-    post_submit_message: str | None = Field(
-        default=None,
-        description="Visible confirmation or status text shown after a form submission attempt.",
-    )
-    confirmation_url_changed: bool | None = Field(
-        default=None,
-        description="Whether the page URL changed after the submission or route-completing action.",
-    )
-    submit_button_state: str | None = Field(
-        default=None,
-        description="Observed submit-button state after submission, for example `disabled` or `replaced`.",
-    )
-    form_disappeared: bool | None = Field(
-        default=None,
-        description="Whether the form disappeared after submission.",
-    )
-    blocked_reason: str | None = Field(
-        default=None,
-        description="Typed blocker code when the flow is blocked instead of completed.",
-    )
-    blocked_reason_detail: str | None = Field(
-        default=None,
-        description="Human-readable blocker detail captured from the terminal state when available.",
-    )
-    final_page_title: str | None = Field(
-        default=None,
-        description="Observed final page title when available.",
-    )
-    terminal_text_excerpt: str | None = Field(
-        default=None,
-        description="Short visible text excerpt captured from the terminal page when available.",
-    )
-    traversed_page_urls: list[str] = Field(
-        default_factory=list,
-        description="Distinct page URLs traversed while reaching the terminal state.",
-    )
-    onsite_capture_path: str | None = Field(
-        default=None,
-        description="Absolute local path of the captured on-site report artifact when available.",
-    )
-    onsite_capture_format: str | None = Field(
-        default=None,
-        description="Stored on-site capture format when available.",
-    )
-    onsite_page_count: int | None = Field(
-        default=None,
-        description="Number of distinct pages or scroll segments captured for an on-site report when available.",
-    )
-    onsite_completeness_status: str | None = Field(
-        default=None,
-        description="On-site capture completeness verdict when available.",
-    )
 
 
 def finalize_browser_report_download_result(
@@ -1083,7 +974,9 @@ def _salvage_without_structured_result(
             network_events=list(browser_run.network_events or []),
             onsite_capture_path=str(browser_rendered_capture_path or ""),
             onsite_capture_format=(
-                "browser_rendered_pdf" if browser_rendered_capture_path is not None else ""
+                "browser_rendered_pdf"
+                if browser_rendered_capture_path is not None
+                else ""
             ),
         )
     blocked_reason = _resolve_salvaged_blocked_reason(
@@ -2372,9 +2265,7 @@ def _normalize_dialog_evidence(
         message = str(item.message or "").strip()
         page_url = str(item.page_url or "").strip()
         action_taken = str(item.action_taken or "none").strip() or "none"
-        validation_status = (
-            str(item.validation_status or "failed").strip() or "failed"
-        )
+        validation_status = str(item.validation_status or "failed").strip() or "failed"
         marker = (
             dialog_type.casefold(),
             message.casefold(),

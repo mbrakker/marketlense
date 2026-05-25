@@ -838,6 +838,9 @@ class TestConfigService(unittest.TestCase):
                 "output_dir": "./out/browser_downloads",
                 "headed": True,
                 "route_playbook_promotion_mode": "dry_run",
+                "private_api_playbook_promotion_mode": "write",
+                "private_api_playbook_min_success_count": 4,
+                "private_api_playbook_min_distinct_source_urls": 3,
                 "failure_forensics": {
                     "enabled": True,
                     "policy": "metadata_only",
@@ -898,6 +901,9 @@ class TestConfigService(unittest.TestCase):
         self.assertTrue(settings.failure_forensics_enabled)
         self.assertEqual("metadata_only", settings.failure_forensics_policy)
         self.assertEqual("dry_run", settings.route_playbook_promotion_mode)
+        self.assertEqual("write", settings.private_api_playbook_promotion_mode)
+        self.assertEqual(4, settings.private_api_playbook_min_success_count)
+        self.assertEqual(3, settings.private_api_playbook_min_distinct_source_urls)
         self.assertTrue(settings.session_reuse_policy.enabled)
         self.assertEqual("same_publisher_batch", settings.session_reuse_policy.mode)
         self.assertEqual("batch-key", settings.session_reuse_policy.session_key)

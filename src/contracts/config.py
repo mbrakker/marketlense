@@ -419,12 +419,6 @@ class AppSettings:
             "doc": "Whether strict schema validation should be enforced for generated analysis packs."
         },
     )
-    cover_cache_enabled: bool = field(
-        default=True,
-        metadata={
-            "doc": "Whether to skip cover generation when cached output is up-to-date."
-        },
-    )
     cost_ledger_path: str = field(
         default="./out/cost-ledger.jsonl",
         metadata={"doc": "Filesystem path for the cost ledger JSONL output."},

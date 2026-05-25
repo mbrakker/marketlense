@@ -8,7 +8,7 @@ import threading
 from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Sequence, cast
 
 from src.contracts.analytics_projection import (
     AnalyticsProjectionFailureRequest,
@@ -19,11 +19,13 @@ from src.contracts.analytics_projection import (
 )
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportReadContentClass,
     CrossReportEvidenceReference,
     CrossReportProjectedDataReadRequest,
     CrossReportProjectedDataReadResponse,
     CrossReportRawMetricReference,
     CrossReportSourceReportCandidate,
+    ProjectionReadinessStatus,
     validate_cross_report_contract,
 )
 from src.contracts.run_context import RunContext
@@ -38,7 +40,12 @@ logger = logging.getLogger("market_lense.analytics_store_service")
 DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _CONN_LOCK = threading.Lock()
 _EMBEDDING_STATUSES = {"pending", "embedded", "failed"}
-_CROSS_REPORT_READ_CONTENT_CLASSES = {"claim", "finding", "quote", "metric"}
+_CROSS_REPORT_READ_CONTENT_CLASSES: set[CrossReportReadContentClass] = {
+    "claim",
+    "finding",
+    "quote",
+    "metric",
+}
 
 DDL = """
 CREATE TABLE IF NOT EXISTS reports (
@@ -304,7 +311,7 @@ def _analytics_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="reports_db",
                     db_path=db_path,
-                    target_version=11,
+                    target_version=12,
                     ctx=ctx,
                 ),
                 conn,
@@ -806,7 +813,9 @@ def _normalized_filter_values(values: Sequence[str]) -> set[str]:
     return {str(value).strip().casefold() for value in values if str(value).strip()}
 
 
-def _status_floor_values(status: str) -> set[str]:
+def _status_floor_values(
+    status: ProjectionReadinessStatus,
+) -> set[ProjectionReadinessStatus]:
     if status == "projected":
         return {"projected"}
     if status == "failed":
@@ -903,6 +912,32 @@ def _row_text(row: sqlite3.Row, column: str) -> str:
     return str(row[column] or "").strip()
 
 
+def _report_publisher(report_row: sqlite3.Row) -> str:
+    publisher = _row_text(report_row, "publisher") or _row_text(
+        report_row, "publisher_id"
+    )
+    if publisher:
+        return publisher
+    report_id = _row_text(report_row, "report_id")
+    if _row_text(report_row, "projection_status") != "projected":
+        return report_id
+    return "Unknown publisher"
+
+
+def _stable_row_id(row: sqlite3.Row, primary_column: str, fallback_column: str) -> str:
+    return _row_text(row, primary_column) or _row_text(row, fallback_column)
+
+
+def _scoped_row_id(
+    row: sqlite3.Row, primary_column: str, fallback_column: str, entity_kind: str
+) -> str:
+    raw_id = _stable_row_id(row, primary_column, fallback_column)
+    report_id = _row_text(row, "report_id")
+    if not raw_id or raw_id.startswith(f"{report_id}:"):
+        return raw_id
+    return f"{report_id}:{entity_kind}:{raw_id}"
+
+
 def _report_passes_filters(
     report_row: sqlite3.Row,
     *,
@@ -964,12 +999,11 @@ def _source_candidate(
     metric_count = len(metrics)
     evidence_count = claim_count + finding_count + quote_count
     report_id = _row_text(report_row, "report_id")
-    publisher = _row_text(report_row, "publisher") or _row_text(
-        report_row, "publisher_id"
-    )
-    if not publisher and _row_text(report_row, "projection_status") != "projected":
-        publisher = report_id
+    publisher = _report_publisher(report_row)
     publisher_id = _row_text(report_row, "publisher_id") or publisher
+    projection_status = cast(
+        ProjectionReadinessStatus, _row_text(report_row, "projection_status")
+    )
     return CrossReportSourceReportCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         report_id=report_id,
@@ -977,7 +1011,7 @@ def _source_candidate(
         publisher=publisher,
         publisher_id=publisher_id,
         report_date=_report_date(report_row),
-        projection_status=_row_text(report_row, "projection_status"),
+        projection_status=projection_status,
         content_hash=_aggregate_content_hash(report_row, content_hashes),
         category_labels=sorted(
             {_row_text(row, "label") for row in categories if _row_text(row, "label")}
@@ -993,7 +1027,7 @@ def _source_candidate(
         diversity_score=0.0,
         density_score=float(evidence_count),
         total_score=0.0,
-        selection_reasons=["projection_status:projected"],
+        selection_reasons=[f"projection_status:{projection_status}"],
         rejection_reasons=[],
     )
 
@@ -1003,9 +1037,9 @@ def _claim_evidence(
 ) -> CrossReportEvidenceReference:
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        evidence_id=_row_text(row, "evidence_id"),
+        evidence_id=_scoped_row_id(row, "evidence_id", "claim_uid", "claim"),
         report_id=_row_text(row, "report_id"),
-        publisher=_row_text(report_row, "publisher"),
+        publisher=_report_publisher(report_row),
         title=_row_text(report_row, "title"),
         source_table="report_claims",
         entity_uid=_row_text(row, "claim_uid"),
@@ -1023,9 +1057,9 @@ def _finding_evidence(
 ) -> CrossReportEvidenceReference:
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        evidence_id=_row_text(row, "finding_uid"),
+        evidence_id=_scoped_row_id(row, "finding_uid", "finding_uid", "finding"),
         report_id=_row_text(row, "report_id"),
-        publisher=_row_text(report_row, "publisher"),
+        publisher=_report_publisher(report_row),
         title=_row_text(report_row, "title"),
         source_table="report_findings",
         entity_uid=_row_text(row, "finding_uid"),
@@ -1044,9 +1078,9 @@ def _quote_evidence(
 ) -> CrossReportEvidenceReference:
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        evidence_id=_row_text(row, "evidence_id"),
+        evidence_id=_scoped_row_id(row, "evidence_id", "quote_uid", "quote"),
         report_id=_row_text(row, "report_id"),
-        publisher=_row_text(report_row, "publisher"),
+        publisher=_report_publisher(report_row),
         title=_row_text(report_row, "title"),
         source_table="report_quotes",
         entity_uid=_row_text(row, "quote_uid"),
@@ -1066,14 +1100,14 @@ def _raw_metric(
 ) -> CrossReportRawMetricReference:
     return CrossReportRawMetricReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-        metric_id=_row_text(row, "metric_uid"),
+        metric_id=_scoped_row_id(row, "metric_uid", "metric_uid", "metric"),
         report_id=_row_text(row, "report_id"),
-        publisher=_row_text(report_row, "publisher"),
+        publisher=_report_publisher(report_row),
         label=_row_text(row, "metric"),
         raw_value=_row_text(row, "value"),
         unit=_row_text(row, "unit"),
         context=f"pages={_json_list(row['pages_json'])}",
-        evidence_id=_row_text(row, "evidence_id"),
+        evidence_id=_scoped_row_id(row, "evidence_id", "metric_uid", "metric"),
         source_metadata={
             "source_table": "report_metrics",
             "entity_uid": _row_text(row, "metric_uid"),
@@ -1085,12 +1119,12 @@ def _raw_metric(
 def _requested_content_classes(
     request: CrossReportProjectedDataReadRequest,
 ) -> set[str]:
-    requested = (
+    requested: set[str] = (
         set(request.content_classes)
         if request.content_classes
         else set(_CROSS_REPORT_READ_CONTENT_CLASSES)
     )
-    invalid = requested - _CROSS_REPORT_READ_CONTENT_CLASSES
+    invalid = requested - set(_CROSS_REPORT_READ_CONTENT_CLASSES)
     if invalid:
         raise AppError(
             code="cross_report_content_class_invalid",
@@ -1178,9 +1212,9 @@ def read_cross_report_projected_data(
                 )
             ]
             report_rows = {_row_text(row, "report_id"): row for row in filtered_rows}
-            source_candidates = []
-            evidence = []
-            raw_metrics = []
+            source_candidates: list[CrossReportSourceReportCandidate] = []
+            evidence: list[CrossReportEvidenceReference] = []
+            raw_metrics: list[CrossReportRawMetricReference] = []
             for report_id in sorted(report_rows):
                 report_row = report_rows[report_id]
                 source_candidates.append(

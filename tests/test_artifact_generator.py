@@ -1,4 +1,5 @@
 import json
+import logging
 import threading
 import time
 from pathlib import Path
@@ -14,6 +15,7 @@ from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.artifact_normalization import normalize_artifact_quotes
 from src.generators.artifact_generator import (
     _load_cached_artifacts,
+    assemble_artifacts_payload,
     build_topic_briefs,
     generate_artifacts,
 )
@@ -851,6 +853,122 @@ def test_build_topic_briefs_avoids_positional_section_swap():
     assert topic_briefs[4]["section_title"] == "Implications for marketers"
 
 
+def test_assemble_artifacts_logs_topic_brief_mapping_audit(
+    caplog, assert_logs_have_required_fields
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.artifact_generator")
+    summary = {
+        "tldr": "TLDR",
+        "executive_summary": "Executive summary",
+        "claim_evidence_map": [],
+    }
+    insights_final = [
+        {
+            "id": f"i{index}",
+            "text": f"Insight {index}",
+            "evidence_id": f"f{index}",
+            "evidence": f"Evidence {index}",
+            "metric": {},
+            "pages": [index],
+        }
+        for index in range(1, 6)
+    ]
+    quotes_final = [
+        {
+            "text": "We are expanding rapidly",
+            "speaker": "CEO",
+            "citation": "Earnings call",
+            "page": 3,
+            "evidence_id": "q1",
+        }
+    ]
+    family_status = build_artifact_family_status(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        expert_comment="Grounded comment",
+        linkedin_post="LinkedIn post",
+    )
+
+    assemble_artifacts_payload(
+        report_id="r-topic-audit",
+        report_name="topic-audit",
+        doc_map={
+            "doc_id": "r-topic-audit",
+            "title": "Report",
+            "sections": [
+                {
+                    "id": "demand-outlook",
+                    "title": "Demand outlook",
+                    "summary": "Demand growth is strongest in APAC.",
+                    "key_points": ["APAC demand grew 12%."],
+                    "pages": [2],
+                }
+            ],
+        },
+        evidence_packs=_evidence_packs(),
+        toc_bundle={
+            "toc_entries": [
+                {
+                    "section_id": "stale-section",
+                    "section_title": "Old market overview",
+                    "display_title": "Demand outlook",
+                    "summary": "Old section summary.",
+                    "key_points": ["Old point."],
+                    "pages": [9],
+                    "order": 1,
+                }
+            ],
+            "toc_topics": ["Demand outlook"],
+        },
+        summary=summary,
+        insights_candidates=[],
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        expert_comment="Grounded comment",
+        linkedin_post="LinkedIn post",
+        source_status={"not_available": False, "reason": "", "evidence_present": True},
+        family_status=family_status,
+        ctx=_ctx(),
+    )
+
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.artifact_generator"
+    ]
+    audit_events = [
+        event
+        for event in events
+        if event.get("event") == "artifact_topic_brief_mapping_audit"
+    ]
+    assert len(audit_events) == 1
+    assert_logs_have_required_fields(audit_events)
+    fields = audit_events[0]["fields"]
+    assert fields["brief_count"] == 1
+    assert fields["mapped_count"] == 0
+    assert fields["unmapped_count"] == 1
+    assert fields["issue_count"] == 1
+    assert fields["status_counts"] == {"unknown_section": 1}
+    assert fields["diagnostics"] == [
+        {
+            "topic_index": 0,
+            "topic": "Demand outlook",
+            "attached_section_id": "stale-section",
+            "attached_section_title": "Old market overview",
+            "resolved_section_id": "",
+            "resolved_section_title": "",
+            "current_score": 0,
+            "best_section_id": "demand-outlook",
+            "best_section_title": "Demand outlook",
+            "best_score": 210,
+            "status": "unknown_section",
+            "min_score": 35,
+        }
+    ]
+
+
 def test_generate_artifacts_normalizes_malformed_evidence_ids(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic 1"]},
@@ -1172,7 +1290,7 @@ def test_generate_artifacts_fails_when_inputs_unavailable_without_vector_store(
     assert analysis_store.stored == []
 
 
-def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
+def test_generate_artifacts_runs_llm_steps_serially_without_executor(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic 1", "Topic 2"]},
         "summary": {
@@ -1263,7 +1381,15 @@ def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
         expert_vars.get("expert_domain")
         == "Consumer Behavior & Insights, Beauty, Fashion"
     )
-    assert fake_openai.max_in_flight >= 2
+    assert fake_openai.max_in_flight == 1
+    assert [req[2] for req in fake_openai.requests if req[0] == "vector"] == [
+        "summary",
+        "insights_candidates",
+        "quotes",
+        "insights_final",
+        "expert_comment",
+        "linkedin_post",
+    ]
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 6
 
 

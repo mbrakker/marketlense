@@ -12,11 +12,14 @@ from src.contracts.files import ListDirectoryRequest, ReadTextRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
+    CrossReportEvidenceAgreementType,
     CrossReportEvidenceAgreementGroup,
     CrossReportEvidenceAgreementResult,
     CrossReportEvidenceInputResult,
+    CrossReportEvidenceReference,
     CrossReportProjectedDataReadResponse,
     CrossReportPublishabilityResult,
+    CrossReportRawMetricReference,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
     CrossReportSignalScore,
@@ -71,13 +74,41 @@ def _slug(value: str) -> str:
     return "-".join(tokens)
 
 
+def _taxonomy_sort_key(value: str) -> tuple[str, str]:
+    return (value.casefold(), value)
+
+
+def _normalize_iso_date_filter(raw_value: object, *, field_name: str) -> str | None:
+    value = str(raw_value or "").strip()
+    if not value:
+        return None
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError as exc:
+        raise AppError(
+            code="cross_report_date_filter_invalid",
+            message="Cross-report date filters must use YYYY-MM-DD dates",
+            cause=exc,
+            retryable=False,
+            severity="error",
+            context={"field": field_name, "value": value},
+        ) from exc
+    return parsed.isoformat()
+
+
 def _cleaned_filters(request: CrossReportAnalysisRequest) -> dict[str, Any]:
     return {
         "category_filters": _clean_values(request.category_filters),
         "tag_filters": _clean_values(request.tag_filters),
         "publisher_filters": _clean_values(request.publisher_filters),
-        "date_range_start": request.date_range_start,
-        "date_range_end": request.date_range_end,
+        "date_range_start": _normalize_iso_date_filter(
+            request.date_range_start,
+            field_name="date_range_start",
+        ),
+        "date_range_end": _normalize_iso_date_filter(
+            request.date_range_end,
+            field_name="date_range_end",
+        ),
         "topic_terms": _topic_terms(request.topic),
     }
 
@@ -98,14 +129,14 @@ def _filter_rejection_reasons(
 ) -> list[str]:
     reasons: list[str] = []
     candidate_date = _candidate_date(candidate)
-    date_range_start = cleaned_filters["date_range_start"]
-    date_range_end = cleaned_filters["date_range_end"]
-    if date_range_start and (
-        candidate_date is None or candidate_date < date.fromisoformat(date_range_start)
+    date_range_start = _parse_iso_date(cleaned_filters["date_range_start"])
+    date_range_end = _parse_iso_date(cleaned_filters["date_range_end"])
+    if date_range_start is not None and (
+        candidate_date is None or candidate_date < date_range_start
     ):
         reasons.append("date_before_start")
-    if date_range_end and (
-        candidate_date is None or candidate_date > date.fromisoformat(date_range_end)
+    if date_range_end is not None and (
+        candidate_date is None or candidate_date > date_range_end
     ):
         reasons.append("date_after_end")
 
@@ -326,7 +357,7 @@ def _select_diverse_sources(
 def _count_rejection_reasons(
     candidates: list[CrossReportSourceReportCandidate],
 ) -> dict[str, int]:
-    counts = Counter()
+    counts: Counter[str] = Counter()
     for candidate in candidates:
         for reason in candidate.rejection_reasons:
             counts[reason] += 1
@@ -431,7 +462,7 @@ def _theme_candidate_from_sources(
             for tag in source.tags
             if tag.strip()
         },
-        key=str.casefold,
+        key=_taxonomy_sort_key,
     )
     all_categories = sorted(
         {
@@ -440,7 +471,7 @@ def _theme_candidate_from_sources(
             for category in source.category_labels
             if category.strip()
         },
-        key=str.casefold,
+        key=_taxonomy_sort_key,
     )
     label = _display_value(
         all_tags if theme_kind == "tag" else all_categories, theme_value
@@ -614,19 +645,45 @@ def _load_recent_theme_metadata(
         return []
     reference_date = _parse_iso_date(theme_rotation_reference_date) or date.today()
     earliest_allowed = reference_date.toordinal() - int(theme_rotation_window_days)
-    response = file_service.list_directory(
-        ListDirectoryRequest(
-            schema_version="1.0",
-            root_dir=recent_artifacts_root,
-            glob_pattern="*/analysis.json",
-            recursive=True,
-            include_files=True,
-            include_dirs=False,
-            limit=500,
-        ),
-        ctx,
-    )
+    try:
+        response = file_service.list_directory(
+            ListDirectoryRequest(
+                schema_version="1.0",
+                root_dir=recent_artifacts_root,
+                glob_pattern="*/analysis.json",
+                recursive=True,
+                include_files=True,
+                include_dirs=False,
+                limit=500,
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        if exc.code != "directory_not_found" or exc.retryable:
+            raise
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cross_report_recent_theme_metadata_loaded",
+                module=logger.name,
+                fields={
+                    "recent_artifacts_root": recent_artifacts_root,
+                    "theme_rotation_window_days": int(theme_rotation_window_days),
+                    "theme_rotation_reference_date": reference_date.isoformat(),
+                    "loaded_recent_themes": 0,
+                    "skipped_old_artifacts": 0,
+                    "skipped_undated_artifacts": 0,
+                    "skipped_invalid_date_artifacts": 0,
+                    "missing_recent_artifacts_root": True,
+                },
+            )
+        )
+        return []
     recent: list[dict[str, Any]] = []
+    skipped_old = 0
+    skipped_undated = 0
+    skipped_invalid_date = 0
     for entry in response.entries:
         text_response = file_service.read_text(
             ReadTextRequest(schema_version="1.0", path=entry.path), ctx
@@ -642,11 +699,19 @@ def _load_recent_theme_metadata(
                 severity="error",
                 context={"path": entry.path},
             ) from exc
-        generated_at = _parse_iso_date(
-            payload.get("generated_at_utc")
-            or payload.get("metadata", {}).get("generated_at_utc")
-        )
-        if generated_at is not None and generated_at.toordinal() < earliest_allowed:
+        generated_at_raw = payload.get("generated_at_utc") or payload.get(
+            "metadata", {}
+        ).get("generated_at_utc")
+        generated_at_value = str(generated_at_raw or "").strip()
+        if not generated_at_value:
+            skipped_undated += 1
+            continue
+        generated_at = _parse_iso_date(generated_at_value)
+        if generated_at is None:
+            skipped_invalid_date += 1
+            continue
+        if generated_at.toordinal() < earliest_allowed:
+            skipped_old += 1
             continue
         selected_theme = payload.get("selected_theme") or payload.get(
             "generated_result", {}
@@ -664,6 +729,23 @@ def _load_recent_theme_metadata(
                     ),
                 }
             )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_recent_theme_metadata_loaded",
+            module=logger.name,
+            fields={
+                "recent_artifacts_root": recent_artifacts_root,
+                "theme_rotation_window_days": int(theme_rotation_window_days),
+                "theme_rotation_reference_date": reference_date.isoformat(),
+                "loaded_recent_themes": len(recent),
+                "skipped_old_artifacts": skipped_old,
+                "skipped_undated_artifacts": skipped_undated,
+                "skipped_invalid_date_artifacts": skipped_invalid_date,
+            },
+        )
+    )
     return recent
 
 
@@ -686,7 +768,7 @@ def _explicit_theme_candidate(
                 or tag.strip().casefold() in _clean_values(request.tag_filters)
             )
         },
-        key=str.casefold,
+        key=_taxonomy_sort_key,
     )
     matched_categories = sorted(
         {
@@ -696,7 +778,7 @@ def _explicit_theme_candidate(
             if category.strip()
             and category.strip().casefold() in _clean_values(request.category_filters)
         },
-        key=str.casefold,
+        key=_taxonomy_sort_key,
     )
     return CrossReportThemeCandidate(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -765,11 +847,16 @@ def select_cross_report_theme(
             context={"request_id": request.request_id},
         )
     weights = _theme_score_weights(theme_score_weights)
-    recent_themes = _load_recent_theme_metadata(
-        recent_artifacts_root=recent_artifacts_root,
-        theme_rotation_window_days=theme_rotation_window_days,
-        theme_rotation_reference_date=theme_rotation_reference_date,
-        ctx=ctx,
+    automatic = request.auto_theme or not request.topic.strip()
+    recent_themes = (
+        _load_recent_theme_metadata(
+            recent_artifacts_root=recent_artifacts_root,
+            theme_rotation_window_days=theme_rotation_window_days,
+            theme_rotation_reference_date=theme_rotation_reference_date,
+            ctx=ctx,
+        )
+        if automatic
+        else []
     )
     logger.info(
         log_event(
@@ -810,7 +897,6 @@ def select_cross_report_theme(
             context={"request_id": request.request_id, "reason": "no_selected_sources"},
         )
 
-    automatic = request.auto_theme or not request.topic.strip()
     theme_candidates = (
         _automatic_theme_candidates(
             request,
@@ -1154,9 +1240,19 @@ def _evidence_matches_signal(
     source: CrossReportSelectedSourceReport | None,
 ) -> bool:
     normalized_label = signal_label.strip().casefold()
-    text_tokens = set(_topic_terms(evidence.text))
-    if normalized_label in text_tokens or normalized_label in evidence.text.casefold():
+    text = evidence.text.casefold()
+    text_tokens = _topic_terms(evidence.text)
+    label_tokens = _topic_terms(signal_label)
+    if normalized_label in text_tokens:
         return True
+    if label_tokens:
+        pattern = (
+            r"(?<![A-Za-z0-9])"
+            + r"\W+".join(re.escape(token) for token in label_tokens)
+            + r"(?![A-Za-z0-9])"
+        )
+        if re.search(pattern, text, flags=re.IGNORECASE):
+            return True
     if source is None:
         return False
     return normalized_label in _source_taxonomy_tokens(source)
@@ -1259,8 +1355,9 @@ def score_cross_report_signals(
         )
     )
 
-    dropped = Counter()
+    dropped: Counter[str] = Counter()
     signal_scores: list[CrossReportSignalScore] = []
+    signal_slug_counts: Counter[str] = Counter()
     taxonomy_focus = {
         value.strip().casefold()
         for value in [
@@ -1317,10 +1414,17 @@ def score_cross_report_signals(
         ]
         if component_scores["contradiction"] > 0:
             reasons.append("contradiction_presence")
+        signal_slug = _slug(label)
+        signal_slug_counts[signal_slug] += 1
+        signal_id = (
+            f"signal-{signal_slug}"
+            if signal_slug_counts[signal_slug] == 1
+            else f"signal-{signal_slug}-{signal_slug_counts[signal_slug]}"
+        )
         signal_scores.append(
             CrossReportSignalScore(
                 schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
-                signal_id=f"signal-{_slug(label)}",
+                signal_id=signal_id,
                 label=label,
                 evidence_ids=[item.evidence_id for item in matched_evidence],
                 component_scores=dict(sorted(component_scores.items())),
@@ -1376,7 +1480,6 @@ def score_cross_report_signals(
 def _directional_markers(evidence) -> tuple[set[str], set[str]]:
     positive_markers = {
         "accelerating",
-        "adoption",
         "growth",
         "increase",
         "increasing",
@@ -1404,15 +1507,17 @@ def _directional_markers(evidence) -> tuple[set[str], set[str]]:
 
 
 def _agreement_type_and_reasons(
-    evidence,
+    evidence: list[CrossReportEvidenceReference],
     *,
     publisher_count: int,
     report_count: int,
-) -> tuple[str, list[str]]:
+) -> tuple[CrossReportEvidenceAgreementType, list[str]]:
     if publisher_count < 2 or report_count < 2:
         return "thin_coverage", ["single_report_coverage"]
     positive_evidence, negative_evidence = _directional_markers(evidence)
-    if positive_evidence and negative_evidence:
+    positive_only = positive_evidence - negative_evidence
+    negative_only = negative_evidence - positive_evidence
+    if positive_only and negative_only:
         return "divergent", ["opposed_directional_language"]
     return "convergent", ["multi_publisher_alignment"]
 
@@ -1491,7 +1596,7 @@ def group_cross_report_evidence_agreement(
             }
         )
 
-    agreement_counts = dict(
+    agreement_counts: dict[str, int] = dict(
         sorted(Counter(group.agreement_type for group in groups).items())
     )
     result = CrossReportEvidenceAgreementResult(
@@ -1566,9 +1671,9 @@ def assemble_cross_report_analysis_inputs(
             },
         )
     )
-    dropped = Counter()
-    seen_evidence_ids: set[str] = set()
-    candidate_evidence = []
+    dropped: Counter[str] = Counter()
+    seen_evidence_keys: set[tuple[str, str]] = set()
+    candidate_evidence: list[CrossReportEvidenceReference] = []
     for item in sorted(
         projected_data.evidence,
         key=lambda evidence: _evidence_sort_key(evidence, selected_order),
@@ -1576,28 +1681,29 @@ def assemble_cross_report_analysis_inputs(
         if item.report_id not in selected_set:
             dropped["unselected_report"] += 1
             continue
-        if item.evidence_id in seen_evidence_ids:
-            dropped["duplicate_evidence_id"] += 1
+        evidence_key = (item.report_id, item.evidence_id)
+        if evidence_key in seen_evidence_keys:
+            dropped["duplicate_evidence_id_same_report"] += 1
             continue
-        seen_evidence_ids.add(item.evidence_id)
+        seen_evidence_keys.add(evidence_key)
         candidate_evidence.append(item)
 
-    bounded_evidence = []
+    bounded_evidence: list[CrossReportEvidenceReference] = []
     for item in candidate_evidence:
         if len(bounded_evidence) >= max_evidence_items:
             dropped["max_evidence_items_reached"] += 1
             continue
         bounded_evidence.append(item)
 
-    raw_metrics = []
-    for item in sorted(
+    raw_metrics: list[CrossReportRawMetricReference] = []
+    for metric in sorted(
         projected_data.raw_metrics,
         key=lambda metric: _raw_metric_sort_key(metric, selected_order),
     ):
-        if item.report_id not in selected_set:
+        if metric.report_id not in selected_set:
             dropped["unselected_raw_metric_report"] += 1
             continue
-        raw_metrics.append(item)
+        raw_metrics.append(metric)
 
     evidence_by_report: dict[str, list[str]] = {
         report_id: [] for report_id in selected_report_ids

@@ -35,9 +35,7 @@ Suggested priority order:
 3. `3. Automatic Theme Choice, Variety & Publishability`
 4. `4. Evidence, Signals & Raw Metrics Handling`
 5. `5. Prompt Namespace & Analysis Generator`
-6. `6. Orchestration, Persistence & CLI`
-7. `7. Publication Flow`
-8. `8. Quality, Speed, Cost & Documentation`
+6. `7. Publication Flow`
 
 ---
 
@@ -61,111 +59,7 @@ Suggested priority order:
 
 ---
 
-## 6. Orchestration, Persistence & CLI
-
-- **Item:** Add an idempotent cross-report analysis orchestrator [Impact: 5/5, Effort: 3/5]
-  - Explanation: The orchestrator should own sequencing, retries, state transitions, and idempotency. It should route through selection, evidence assembly, signal scoring, synthesis, validation, and persistence without embedding domain logic.
-  - Pros: Reliable reruns, clear failure states, no generator-level retry drift.
-  - Cons: Adds a new critical orchestrator that must be covered by pipeline tests.
-  - Completion criteria:
-    - `src/orchestrators/cross_report_analysis_orchestrator.py` coordinates the workflow and owns retry/backoff decisions for retryable service errors.
-    - Idempotency key includes request filters, selected report ids, projection content hashes, prompt hashes, config version, and schema version.
-    - Duplicate runs with unchanged inputs reuse the persisted outcome instead of making another model call.
-    - Pipeline tests assert stage order, retry counts, state transitions, idempotency reuse, and required structured log fields.
-    - Retryable errors from services are propagated to the orchestrator and never swallowed by generators.
-
-- **Item:** Persist generated cross-report analysis artifacts atomically [Impact: 4/5, Effort: 2/5]
-  - Explanation: The feature needs a stable local artifact before live publication. Persistence should use existing atomic file service behavior and include enough metadata for replay.
-  - Pros: Easy review, reproducibility, cheap local workflow, safe dry-run path before live publish.
-  - Cons: Operators initially consume local artifacts or CLI output rather than a rich UI.
-  - Completion criteria:
-    - Orchestrator writes `analysis.json` under `out/cross_report_analysis/<analysis_slug>/` through `file_service`.
-    - Artifact metadata includes schema version, request fingerprint, selected report ids, projection content hashes, prompt hashes, config fingerprint, generated timestamp, and validation status.
-    - Repeated identical runs produce the same artifact path and no duplicate side effects.
-    - Tests assert persisted JSON schema validity and deterministic path behavior.
-
-- **Item:** Add a focused CLI command for generation [Impact: 4/5, Effort: 2/5]
-  - Explanation: A CLI entrypoint is the fastest operator path and avoids UI complexity until the generation contract is stable.
-  - Pros: Quick delivery, simple automation, easier testability.
-  - Cons: Less convenient than Streamlit for editorial review in the first release.
-  - Completion criteria:
-    - `python -m src.cli generate-cross-report-analysis` accepts topic text, `--auto-theme`, category/tag filters, publisher filters, date range, max report count, publish mode, and output root override.
-    - CLI prints the artifact path, selected report count, validation status, and cost summary when available.
-    - CLI fails explicitly with typed error output for empty source sets, invalid filters, budget cap breach, and validation failure.
-    - CLI tests cover successful generation with mocked service boundaries and negative-path argument validation.
-    - README documents command examples and expected output layout.
-
----
-
 ## 7. Publication Flow
-
-- **Item:** Add a validated cross-report publish package [Impact: 5/5, Effort: 3/5]
-  - Explanation: Publication should be a narrow follow-on from a validated generated artifact. The publish package should adapt the cross-report analysis result into existing publish inputs without introducing a second WordPress service or a new plugin requirement.
-  - Pros: Uses current publication reliability, keeps implementation small, preserves existing idempotency and WordPress configuration.
-  - Cons: First release may use the existing post/card surface rather than a custom cross-report UX.
-  - Completion criteria:
-    - `src/generators/cross_report_analysis_generator.py` emits a publish package with publish-ready title, slug, excerpt, HTML body, source metadata, category/tag metadata, and canonical artifact reference.
-    - Publication is allowed only when deterministic validation passes and `publish_requires_validation_pass=true`.
-    - Generated HTML includes source report map, evidence references, raw metric appendix, uncertainty/divergence notes, and machine-readable cross-report metadata.
-    - Tests assert publish package completeness, source/evidence trace presence, validation gating, and no metric-normalization language.
-    - No new WordPress service boundary is introduced.
-
-- **Item:** Route publication through the existing publish orchestrator boundary [Impact: 5/5, Effort: 3/5]
-  - Explanation: Publishing is an external side effect, so the cross-report flow should delegate to existing publish orchestration and WordPress service boundaries. The cross-report orchestrator owns when publication is requested; the publish stack owns how WordPress is called.
-  - Pros: Avoids duplicated retry/idempotency behavior, keeps external I/O consolidated, lowers implementation risk.
-  - Cons: Requires careful adaptation if current publish contracts assume single-report metadata.
-  - Completion criteria:
-    - Cross-report publication calls the existing publish pathway with typed cross-report metadata instead of creating a peer WordPress client.
-    - Publish idempotency key includes selected theme id, selected report ids, artifact hash, validation hash, prompt hashes, and target publish route.
-    - Re-running a publish with unchanged inputs updates/reuses the same canonical post rather than creating duplicates.
-    - Pipeline tests assert generate-only, validate-only, publish-dry-run, successful publish, duplicate publish reuse, and publish failure paths.
-    - Retryable publish errors propagate to the orchestrator retry policy and are logged with retry decisions.
-
-- **Item:** Add publication modes and operator safeguards [Impact: 4/5, Effort: 2/5]
-  - Explanation: Operators need a fast safe path for generation, review, and publication. Publication should be opt-in and should support dry-run before live WordPress side effects.
-  - Pros: Safer rollout, clearer operator control, fewer accidental posts.
-  - Cons: Adds a small amount of CLI/config branching.
-  - Completion criteria:
-    - Supported modes are `generate_only`, `validate_only`, `publish_dry_run`, and `publish_live`.
-    - `publish_live` requires `cross_report_analysis.publish_enabled=true` and a passed validation result.
-    - CLI output reports selected theme, publication mode, artifact path, target route, post id/url when available, and idempotency reuse status.
-    - Structured logs include publication mode, publish decision, target route, validation status, and final publish result.
-    - README documents safe rollout from dry-run to live publication.
-
----
-
-## 8. Quality, Speed, Cost & Documentation
-
-- **Item:** Add cross-report fixture regression and anti-cheat tests [Impact: 5/5, Effort: 3/5]
-  - Explanation: Cross-report generation is easy to fake with over-mocked tests. The test suite must prove real selection, evidence assembly, validation, idempotency, and log behavior.
-  - Pros: Higher confidence, protects against empty/default artifacts, aligns with AGENTS.md.
-  - Cons: Requires careful fixtures and mutation-aware assertions.
-  - Completion criteria:
-    - Contract round-trip tests cover all new dataclasses.
-    - Analytics-store integration tests cover projected-data reads against SQLite fixtures.
-    - Generator tests assert output semantics and fail if core selection/evidence/validation logic is replaced with empty defaults.
-    - Orchestrator pipeline tests assert retry counts, state transitions, idempotency keys, and required logs.
-    - Forbidden patching rules are respected: tests mock only service boundaries or true external boundaries.
-
-- **Item:** Add cache and budget gates for cross-report generation [Impact: 5/5, Effort: 2/5]
-  - Explanation: Speed and cost efficiency depend on avoiding repeated LLM calls when inputs have not changed and preventing oversized prompt construction before it happens.
-  - Pros: Lower spend, faster reruns, fewer timeout risks.
-  - Cons: Cache keys must include all behavior-changing inputs to avoid stale reuse.
-  - Completion criteria:
-    - Cache eligibility is based on selected report ids, projection content hashes, prompt hashes, model parameters, config fingerprint, and schema version.
-    - Prompt input construction stops before model calls when evidence or character limits are exceeded.
-    - Budget-cap breaches raise typed non-retryable `AppError` with clear operator context.
-    - Tests prove unchanged reruns skip the model call and changed projection content invalidates the cache.
-
-- **Item:** Document the feature in README and operational notes [Impact: 4/5, Effort: 1/5]
-  - Explanation: AGENTS.md requires meaningful architecture, settings, setup, and behavior changes to be documented. Operators need to know what the feature does and what it intentionally does not do.
-  - Pros: Easier handoff, fewer misuse cases, clearer metric-normalization boundary.
-  - Cons: Documentation must stay updated with implementation changes.
-  - Completion criteria:
-    - README documents cross-report analysis scope, architecture, automatic theme choice, variety policy, publication modes, CLI usage, config keys, artifact layout, logs, cost controls, and failure modes.
-    - README explicitly states that metric normalization, new WordPress plugin/post-type requirements, and global semantic retrieval are out of scope for the first release.
-    - Documentation links the feature to the existing analytics projection foundation.
-    - Troubleshooting notes include empty eligible report sets, projection failures, prompt budget caps, validation failures, and idempotency reuse.
 
 ---
 

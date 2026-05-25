@@ -23,6 +23,7 @@ from src.contracts.cross_report_analysis import (
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptRenderResponse, PromptSet, PromptTemplate
 from src.generators.cross_report_analysis_generator import (
+    build_cross_report_publish_package,
     generate_cross_report_analysis,
     validate_cross_report_generated_analysis,
 )
@@ -364,9 +365,9 @@ def test_generate_cross_report_analysis_calls_services_and_returns_contract(
         "Key cross-report signals",
         "Convergences",
         "Divergences",
-        "Source notes",
         "Raw metric appendix",
     }
+    assert "Source notes" not in {section.heading for section in result.sections}
     assert result.evidence_map["divergences"] == [
         "ev-report-a-claim-1",
         "ev-report-b-finding-1",
@@ -401,7 +402,7 @@ def test_generate_cross_report_analysis_calls_services_and_returns_contract(
         if event["event"] == "cross_report_analysis_generation_complete"
     ][0]
     assert complete["fields"]["provider_request_id"] == "provider-request-1"
-    assert complete["fields"]["section_count"] == 5
+    assert complete["fields"]["section_count"] == 4
 
 
 def test_generate_cross_report_analysis_rejects_unknown_evidence_id(
@@ -445,6 +446,361 @@ def test_generate_cross_report_analysis_rejects_unknown_evidence_id(
         retryable=False,
         severity="error",
     )
+
+
+def test_generate_cross_report_analysis_canonicalizes_projected_entity_uid_citations(
+    tmp_path,
+    run_context,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    canonical_evidence = replace(
+        evidence_inputs.evidence[0],
+        entity_uid="projected-entity-claim-a",
+    )
+    evidence_inputs = replace(
+        evidence_inputs,
+        evidence=[
+            canonical_evidence,
+            *evidence_inputs.evidence[1:],
+        ],
+    )
+    payload = {
+        "analysis_id": "analysis-ai-commerce",
+        "title": "AI Commerce Adoption Across Retail Reports",
+        "slug": "ai-commerce-adoption-across-retail-reports",
+        "executive_summary": "AI adoption is moving unevenly.",
+        "sections": [
+            {
+                "section_id": "summary",
+                "heading": "Summary",
+                "body": "Canonicalized claim.",
+                "evidence_ids": ["projected-entity-claim-a"],
+                "raw_metric_ids": [],
+            }
+        ],
+        "evidence_map": {"summary": ["projected-entity-claim-a"]},
+    }
+
+    result = generate_cross_report_analysis(
+        _request(),
+        evidence_inputs,
+        signal_result,
+        agreement_result,
+        _settings(tmp_path),
+        run_context,
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAIClient(payload),
+    )
+
+    assert result.sections[0].evidence_ids == ["ev-report-a-claim-1"]
+    assert result.evidence_map == {"summary": ["ev-report-a-claim-1"]}
+
+
+def test_generate_cross_report_analysis_canonicalizes_unique_projected_finding_prefixes(
+    tmp_path,
+    run_context,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    canonical_evidence_id = "report-a:finding:F4_multi_signal_optimization"
+    canonical_evidence = replace(
+        evidence_inputs.evidence[0],
+        evidence_id=canonical_evidence_id,
+        entity_uid=canonical_evidence_id,
+        source_table="report_findings",
+        content_class="finding",
+    )
+    evidence_inputs = replace(
+        evidence_inputs,
+        evidence=[
+            canonical_evidence,
+            *evidence_inputs.evidence[1:],
+        ],
+        evidence_by_report_id={
+            **evidence_inputs.evidence_by_report_id,
+            "report-a": [canonical_evidence_id],
+        },
+    )
+    payload = {
+        "analysis_id": "analysis-ai-commerce",
+        "title": "AI Commerce Adoption Across Retail Reports",
+        "slug": "ai-commerce-adoption-across-retail-reports",
+        "executive_summary": "AI adoption is moving unevenly.",
+        "sections": [
+            {
+                "section_id": "summary",
+                "heading": "Summary",
+                "body": "Canonicalized finding prefix.",
+                "evidence_ids": ["report-a:finding:F4"],
+                "raw_metric_ids": [],
+            }
+        ],
+        "evidence_map": {"summary": ["report-a:finding:F4"]},
+    }
+
+    result = generate_cross_report_analysis(
+        _request(),
+        evidence_inputs,
+        signal_result,
+        agreement_result,
+        _settings(tmp_path),
+        run_context,
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAIClient(payload),
+    )
+
+    assert result.sections[0].evidence_ids == [canonical_evidence_id]
+    assert result.evidence_map == {"summary": [canonical_evidence_id]}
+
+
+def test_generate_cross_report_analysis_allows_full_ids_when_projected_prefixes_collide(
+    tmp_path,
+    run_context,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    first_evidence_id = "report-a:claim:finding_01_marketplace_prevalence"
+    second_evidence_id = "report-a:claim:finding_02_revenue_distribution"
+    first_evidence = replace(
+        evidence_inputs.evidence[0],
+        evidence_id=first_evidence_id,
+        entity_uid="report-a:claim:abc123",
+    )
+    second_evidence = replace(
+        evidence_inputs.evidence[1],
+        report_id="report-a",
+        evidence_id=second_evidence_id,
+        entity_uid="report-a:claim:def456",
+    )
+    evidence_inputs = replace(
+        evidence_inputs,
+        evidence=[
+            first_evidence,
+            second_evidence,
+        ],
+        evidence_by_report_id={"report-a": [first_evidence_id, second_evidence_id]},
+    )
+    payload = {
+        "analysis_id": "analysis-ai-commerce",
+        "title": "AI Commerce Adoption Across Retail Reports",
+        "slug": "ai-commerce-adoption-across-retail-reports",
+        "executive_summary": "AI adoption is moving unevenly.",
+        "sections": [
+            {
+                "section_id": "summary",
+                "heading": "Summary",
+                "body": "Full projected finding ids remain unambiguous.",
+                "evidence_ids": [first_evidence_id, second_evidence_id],
+                "raw_metric_ids": [],
+            }
+        ],
+        "evidence_map": {"summary": [first_evidence_id, second_evidence_id]},
+    }
+
+    result = generate_cross_report_analysis(
+        _request(),
+        evidence_inputs,
+        signal_result,
+        agreement_result,
+        _settings(tmp_path),
+        run_context,
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAIClient(payload),
+    )
+
+    assert result.sections[0].evidence_ids == [first_evidence_id, second_evidence_id]
+    assert result.evidence_map == {"summary": [first_evidence_id, second_evidence_id]}
+
+
+def test_generate_cross_report_analysis_rejects_ambiguous_projected_prefix_citations(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    first_evidence_id = "report-a:claim:finding_01_marketplace_prevalence"
+    second_evidence_id = "report-a:claim:finding_02_revenue_distribution"
+    evidence_inputs = replace(
+        evidence_inputs,
+        evidence=[
+            replace(
+                evidence_inputs.evidence[0],
+                evidence_id=first_evidence_id,
+                entity_uid="report-a:claim:abc123",
+            ),
+            replace(
+                evidence_inputs.evidence[1],
+                report_id="report-a",
+                evidence_id=second_evidence_id,
+                entity_uid="report-a:claim:def456",
+            ),
+        ],
+        evidence_by_report_id={"report-a": [first_evidence_id, second_evidence_id]},
+    )
+    payload = {
+        "analysis_id": "analysis-ai-commerce",
+        "title": "AI Commerce Adoption Across Retail Reports",
+        "slug": "ai-commerce-adoption-across-retail-reports",
+        "executive_summary": "AI adoption is moving unevenly.",
+        "sections": [
+            {
+                "section_id": "summary",
+                "heading": "Summary",
+                "body": "Ambiguous projected prefix should not be accepted.",
+                "evidence_ids": ["report-a:claim:finding"],
+                "raw_metric_ids": [],
+            }
+        ],
+        "evidence_map": {"summary": ["report-a:claim:finding"]},
+    }
+
+    with pytest.raises(Exception) as exc:
+        generate_cross_report_analysis(
+            _request(),
+            evidence_inputs,
+            signal_result,
+            agreement_result,
+            _settings(tmp_path),
+            run_context,
+            prompt_client=FakePromptClient(),
+            openai_client=FakeOpenAIClient(payload),
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_analysis_evidence_invalid",
+        retryable=False,
+        severity="error",
+    )
+    assert exc.value.context["missing_evidence_ids"] == ["report-a:claim:finding"]
+
+
+def test_generate_cross_report_analysis_rejects_colliding_evidence_aliases(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    evidence_inputs = replace(
+        evidence_inputs,
+        evidence=[
+            replace(evidence_inputs.evidence[0], entity_uid="ev-report-b-finding-1"),
+            evidence_inputs.evidence[1],
+        ],
+    )
+
+    with pytest.raises(Exception) as exc:
+        generate_cross_report_analysis(
+            _request(),
+            evidence_inputs,
+            signal_result,
+            agreement_result,
+            _settings(tmp_path),
+            run_context,
+            prompt_client=FakePromptClient(),
+            openai_client=FakeOpenAIClient(),
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_analysis_evidence_alias_collision",
+        retryable=False,
+        severity="error",
+    )
+    assert exc.value.context["alias"] == "ev-report-b-finding-1"
+    assert set(exc.value.context["conflicting_evidence_ids"]) == {
+        "ev-report-a-claim-1",
+        "ev-report-b-finding-1",
+    }
+
+
+def test_generate_cross_report_analysis_checks_rendered_prompt_budget_before_model(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    openai_client = FakeOpenAIClient()
+    settings = _settings(tmp_path)
+    settings.cross_report_analysis_max_prompt_chars = 10
+
+    with pytest.raises(Exception) as exc:
+        generate_cross_report_analysis(
+            _request(),
+            evidence_inputs,
+            signal_result,
+            agreement_result,
+            settings,
+            run_context,
+            prompt_client=FakePromptClient(),
+            openai_client=openai_client,
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_prompt_budget_exceeded",
+        retryable=False,
+        severity="error",
+    )
+    assert openai_client.requests == []
+
+
+def test_generate_cross_report_analysis_uses_request_prompt_budget_override(
+    tmp_path,
+    run_context,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    settings = _settings(tmp_path)
+    settings.cross_report_analysis_max_prompt_chars = 10
+
+    result = generate_cross_report_analysis(
+        _request(),
+        evidence_inputs,
+        signal_result,
+        agreement_result,
+        settings,
+        run_context,
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAIClient(),
+        max_prompt_chars=80000,
+    )
+
+    assert result.analysis_id == "analysis-ai-commerce"
+
+
+def test_generate_cross_report_analysis_omits_unsupported_source_notes(
+    tmp_path,
+    run_context,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    payload = {
+        "analysis_id": "analysis-ai-commerce",
+        "title": "AI Commerce Adoption Across Retail Reports",
+        "slug": "ai-commerce-adoption-across-retail-reports",
+        "executive_summary": "AI adoption is moving unevenly.",
+        "sections": [
+            {
+                "section_id": "summary",
+                "heading": "Summary",
+                "body": "Grounded claim.",
+                "evidence_ids": ["ev-report-a-claim-1"],
+                "raw_metric_ids": [],
+            }
+        ],
+        "evidence_map": {"summary": ["ev-report-a-claim-1"]},
+        "source_notes": ["Unsupported note without cited evidence."],
+    }
+
+    result = generate_cross_report_analysis(
+        _request(),
+        evidence_inputs,
+        signal_result,
+        agreement_result,
+        _settings(tmp_path),
+        run_context,
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAIClient(payload),
+    )
+
+    assert [section.section_id for section in result.sections] == ["summary"]
 
 
 def test_generate_cross_report_analysis_rejects_missing_json_payload(
@@ -663,3 +1019,91 @@ def test_validate_cross_report_generated_analysis_rejects_metric_normalization_l
         "normalized average",
         "average across publishers",
     ]
+
+
+def test_build_cross_report_publish_package_contains_traceable_html_and_metadata(
+    tmp_path,
+    run_context,
+) -> None:
+    generated = _generated_result(tmp_path, run_context)
+    _, _, agreement_result = _analysis_inputs()
+    validation = validate_cross_report_generated_analysis(generated, run_context)
+
+    package = build_cross_report_publish_package(
+        generated,
+        validation,
+        agreement_result,
+        run_context,
+        artifact_path="out/cross_report_analysis/ai-commerce/analysis.json",
+        html_path="out/cross_report_analysis/ai-commerce/publish.html",
+        publish_requires_validation_pass=True,
+    )
+
+    assert package.package_id == "cross-report:analysis-ai-commerce"
+    assert package.title == generated.title
+    assert package.slug == generated.slug
+    assert package.excerpt == generated.executive_summary
+    assert package.canonical_artifact_path.endswith("analysis.json")
+    assert package.html_path.endswith("publish.html")
+    assert package.selected_report_ids == ["report-a", "report-b"]
+    assert package.selected_theme_id == "theme-tag-ai"
+    assert package.category_labels == ["Retail"]
+    assert package.tag_labels == ["AI"]
+    assert package.evidence_reference_ids == [
+        "ev-report-a-claim-1",
+        "ev-report-b-finding-1",
+    ]
+    assert package.raw_metric_ids == ["metric-a"]
+    assert package.source_metadata[0]["report_id"] == "report-a"
+    assert 'class="ml-ingest-report-content"' in package.html_text
+    assert 'class="page-shell"' in package.html_text
+    assert 'class="sticky-nav"' in package.html_text
+    assert 'href="#section-summary"' in package.html_text
+    assert 'href="#section-insights"' in package.html_text
+    assert 'href="#section-evidence"' in package.html_text
+    assert 'data-tone="summary"' in package.html_text
+    assert 'class="insight-card"' in package.html_text
+    assert "Executive synthesis" in package.html_text
+    assert "Strategic read-through" in package.html_text
+    assert "Consulting-style source appendix" in package.html_text
+    assert "Source report map" in package.html_text
+    assert "Evidence references" in package.html_text
+    assert "Raw metric appendix" in package.html_text
+    assert "Uncertainty and divergence notes" in package.html_text
+    assert "data-market-lense-cross-report-metadata" in package.html_text
+    assert "Drive fileId: cross-report:analysis-ai-commerce" in package.html_text
+    assert "normalized average" not in package.html_text.casefold()
+    assert "average across publishers" not in package.html_text.casefold()
+
+
+def test_build_cross_report_publish_package_blocks_failed_validation(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    generated = _generated_result(tmp_path, run_context)
+    _, _, agreement_result = _analysis_inputs()
+    failed_validation = replace(
+        validate_cross_report_generated_analysis(generated, run_context),
+        status="fail",
+        passed=False,
+        issues=["section_missing_evidence:summary"],
+    )
+
+    with pytest.raises(Exception) as exc:
+        build_cross_report_publish_package(
+            generated,
+            failed_validation,
+            agreement_result,
+            run_context,
+            artifact_path="out/cross_report_analysis/ai-commerce/analysis.json",
+            html_path="out/cross_report_analysis/ai-commerce/publish.html",
+            publish_requires_validation_pass=True,
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_publish_validation_failed",
+        retryable=False,
+        severity="error",
+    )

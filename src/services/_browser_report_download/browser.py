@@ -5,14 +5,13 @@ import inspect
 import json
 import logging
 import os
-import psutil
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import asdict, dataclass, field as dataclass_field
+from dataclasses import asdict, dataclass
 from hashlib import sha256
 from importlib import import_module
 from pathlib import Path
@@ -20,13 +19,14 @@ from threading import Thread
 from typing import Any
 from urllib.parse import urlsplit
 
+import psutil
+
 from src.contracts.browser_download import (
     BrowserDownloadDialogEvidence,
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
 )
 from src.contracts.run_context import RunContext
-from src.services._browser_report_download.artifact import BrowserUseAgentResult
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
@@ -39,17 +39,21 @@ from src.services._browser_report_download.helpers import (
     browser_helper_js,
     browser_helper_page_info,
 )
-from src.services._browser_report_download.request import (
-    resolve_effective_identity_fields,
-    resolve_delivery_email_value,
-)
 from src.services._browser_report_download.http import (
     download_pdf_from_url,
     is_pdf_file,
 )
+from src.services._browser_report_download.models import (
+    BrowserAgentRunResult,
+    BrowserUseAgentResult,
+)
 from src.services._browser_report_download.prompt import (
     BrowserDownloadPromptBundle,
     redact_browser_report_download_prompt_for_log,
+)
+from src.services._browser_report_download.request import (
+    resolve_delivery_email_value,
+    resolve_effective_identity_fields,
 )
 from src.services._browser_report_download.session_reuse import (
     finalize_browser_session_reuse,
@@ -166,26 +170,6 @@ _EMAIL_DOMAIN_FAILURE_MARKERS = (
     "rejected",
 )
 _PARTIAL_HISTORY_TEXT_MAX_CHARS = 12000
-
-
-@dataclass(frozen=True)
-class BrowserAgentRunResult:
-    schema_version: str
-    raw_model_response: str
-    final_page_url: str
-    final_page_title: str
-    final_page_html: str
-    downloaded_files: list[str]
-    attachment_paths: list[str]
-    network_resource_urls: list[str]
-    network_events: list[BrowserDownloadNetworkEvent]
-    html_snapshot_path: str
-    screenshot_path: str
-    print_pdf_capture_path: str = ""
-    print_pdf_capture_provenance: str = ""
-    dialog_evidence: list[BrowserDownloadDialogEvidence] = dataclass_field(
-        default_factory=list
-    )
 
 
 @dataclass(frozen=True)
@@ -1012,9 +996,7 @@ def _attempt_lookup_submission_assist(
                 fields={
                     "normalized_url": normalized_url,
                     "blocker_code": autocomplete_result.blocker_code or "",
-                    "unresolved_fields": list(
-                        autocomplete_result.unresolved_fields
-                    ),
+                    "unresolved_fields": list(autocomplete_result.unresolved_fields),
                     "attempted_count": autocomplete_result.attempted_count,
                 },
             )
