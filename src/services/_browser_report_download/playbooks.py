@@ -247,7 +247,8 @@ def promote_private_api_evidence_to_browser_playbook(
     if not root.is_absolute():
         root = root.resolve()
     private_api_root = root / "private_api"
-    private_api_root.mkdir(parents=True, exist_ok=True)
+    if request.write_file:
+        private_api_root.mkdir(parents=True, exist_ok=True)
     playbook_id = f"private-api-{_slugify(host)}-{_slugify(request.route_kind)}"
     path = private_api_root / f"{playbook_id}.yaml"
     before_text = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -262,7 +263,8 @@ def promote_private_api_evidence_to_browser_playbook(
         existing=existing,
     )
     after_text = yaml.safe_dump(payload, sort_keys=False, allow_unicode=False)
-    path.write_text(after_text, encoding="utf-8")
+    if request.write_file:
+        path.write_text(after_text, encoding="utf-8")
     review_diff = "".join(
         difflib.unified_diff(
             before_text.splitlines(keepends=True),
@@ -276,7 +278,9 @@ def promote_private_api_evidence_to_browser_playbook(
         playbook_id=playbook_id,
         version=version,
         path=str(path),
-        status="updated" if existing is not None else "created",
+        status=("updated" if existing is not None else "created")
+        if request.write_file
+        else "dry_run",
         review_diff=review_diff,
     )
     logger.info(

@@ -36,7 +36,6 @@ Suggested priority order:
 4. `4. Evidence, Signals & Raw Metrics Handling`
 5. `5. Prompt Namespace & Analysis Generator`
 6. `7. Publication Flow`
-7. `8. Quality, Speed, Cost & Documentation`
 
 ---
 
@@ -61,41 +60,6 @@ Suggested priority order:
 ---
 
 ## 7. Publication Flow
-
----
-
-## 8. Quality, Speed, Cost & Documentation
-
-- **Item:** Add cross-report fixture regression and anti-cheat tests [Impact: 5/5, Effort: 3/5]
-  - Explanation: Cross-report generation is easy to fake with over-mocked tests. The test suite must prove real selection, evidence assembly, validation, idempotency, and log behavior.
-  - Pros: Higher confidence, protects against empty/default artifacts, aligns with AGENTS.md.
-  - Cons: Requires careful fixtures and mutation-aware assertions.
-  - Completion criteria:
-    - Contract round-trip tests cover all new dataclasses.
-    - Analytics-store integration tests cover projected-data reads against SQLite fixtures.
-    - Generator tests assert output semantics and fail if core selection/evidence/validation logic is replaced with empty defaults.
-    - Orchestrator pipeline tests assert retry counts, state transitions, idempotency keys, and required logs.
-    - Forbidden patching rules are respected: tests mock only service boundaries or true external boundaries.
-
-- **Item:** Add cache and budget gates for cross-report generation [Impact: 5/5, Effort: 2/5]
-  - Explanation: Speed and cost efficiency depend on avoiding repeated LLM calls when inputs have not changed and preventing oversized prompt construction before it happens.
-  - Pros: Lower spend, faster reruns, fewer timeout risks.
-  - Cons: Cache keys must include all behavior-changing inputs to avoid stale reuse.
-  - Completion criteria:
-    - Cache eligibility is based on selected report ids, projection content hashes, prompt hashes, model parameters, config fingerprint, and schema version.
-    - Prompt input construction stops before model calls when evidence or character limits are exceeded.
-    - Budget-cap breaches raise typed non-retryable `AppError` with clear operator context.
-    - Tests prove unchanged reruns skip the model call and changed projection content invalidates the cache.
-
-- **Item:** Document the feature in README and operational notes [Impact: 4/5, Effort: 1/5]
-  - Explanation: AGENTS.md requires meaningful architecture, settings, setup, and behavior changes to be documented. Operators need to know what the feature does and what it intentionally does not do.
-  - Pros: Easier handoff, fewer misuse cases, clearer metric-normalization boundary.
-  - Cons: Documentation must stay updated with implementation changes.
-  - Completion criteria:
-    - README documents cross-report analysis scope, architecture, automatic theme choice, variety policy, publication modes, CLI usage, config keys, artifact layout, logs, cost controls, and failure modes.
-    - README explicitly states that metric normalization, new WordPress plugin/post-type requirements, and global semantic retrieval are out of scope for the first release.
-    - Documentation links the feature to the existing analytics projection foundation.
-    - Troubleshooting notes include empty eligible report sets, projection failures, prompt budget caps, validation failures, and idempotency reuse.
 
 ---
 

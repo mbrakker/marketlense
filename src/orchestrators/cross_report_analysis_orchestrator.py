@@ -63,6 +63,7 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cross_report_analysis_orchestrator")
 _IDEMPOTENCY_SCOPE = "cross_report_analysis_orchestrator.generate"
+_IDEMPOTENCY_MATERIAL_VERSION = "2.0"
 
 
 def _hash_payload(payload: dict[str, Any]) -> str:
@@ -82,6 +83,7 @@ def _utc_now() -> str:
 
 def _config_fingerprint(settings: Any) -> dict[str, Any]:
     return {
+        "enabled": getattr(settings, "cross_report_analysis_enabled", False),
         "prompt_namespace": getattr(
             settings,
             "cross_report_analysis_prompt_namespace",
@@ -89,6 +91,17 @@ def _config_fingerprint(settings: Any) -> dict[str, Any]:
         ),
         "model": getattr(settings, "cross_report_analysis_model", ""),
         "temperature": getattr(settings, "cross_report_analysis_temperature", 1.0),
+        "timeout_seconds": getattr(
+            settings, "cross_report_analysis_timeout_seconds", 600.0
+        ),
+        "seed": getattr(settings, "openai_seed", None),
+        "cache_enabled": getattr(settings, "cross_report_analysis_cache_enabled", True),
+        "auto_theme_enabled": getattr(
+            settings, "cross_report_analysis_auto_theme_enabled", True
+        ),
+        "theme_rotation_window_days": getattr(
+            settings, "cross_report_analysis_theme_rotation_window_days", 30
+        ),
         "max_prompt_chars": getattr(
             settings, "cross_report_analysis_max_prompt_chars", 60000
         ),
@@ -170,6 +183,47 @@ def _run_step(
     )
 
 
+def _enforce_prompt_budget(
+    *,
+    evidence_inputs_chars: int,
+    max_prompt_chars: int,
+    request: CrossReportAnalysisOrchestratorRequest,
+    ctx: RunContext,
+) -> None:
+    if evidence_inputs_chars <= max_prompt_chars:
+        return
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cross_report_prompt_budget_exceeded",
+            module=logger.name,
+            fields={
+                "request_id": request.analysis_request.request_id,
+                "prompt_input_chars": evidence_inputs_chars,
+                "max_prompt_chars": max_prompt_chars,
+                "selected_max_evidence_items": request.max_evidence_items,
+            },
+        )
+    )
+    raise AppError(
+        code="cross_report_prompt_budget_exceeded",
+        message="Cross-report prompt input exceeds the configured character budget",
+        retryable=False,
+        severity="error",
+        context={
+            "request_id": request.analysis_request.request_id,
+            "prompt_input_chars": evidence_inputs_chars,
+            "max_prompt_chars": max_prompt_chars,
+            "max_evidence_items": request.max_evidence_items,
+            "operator_action": (
+                "Reduce source/evidence limits or increase the cross-report prompt "
+                "budget before retrying."
+            ),
+        },
+    )
+
+
 def _idempotency_material(
     *,
     request: CrossReportAnalysisOrchestratorRequest,
@@ -180,8 +234,14 @@ def _idempotency_material(
 ) -> dict[str, Any]:
     return {
         "schema_version": CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        "material_version": _IDEMPOTENCY_MATERIAL_VERSION,
         "analysis_request": asdict(request.analysis_request),
         "projected_data_request": asdict(request.projected_data_request),
+        "output_root": request.output_root,
+        "max_evidence_items": request.max_evidence_items,
+        "max_signals": request.max_signals,
+        "max_prompt_chars": request.max_prompt_chars,
+        "publish_target_route": request.publish_target_route,
         "selected_report_ids": selected_report_ids,
         "projection_content_hashes": content_hashes,
         "prompt_hashes": prompt_hashes,
@@ -363,6 +423,90 @@ def _outcome_status(
     return cast(CrossReportOutcomeStatus, "validated")
 
 
+def _enforce_cross_report_feature_policy(
+    request: CrossReportAnalysisOrchestratorRequest,
+    settings: Any,
+    ctx: RunContext,
+) -> None:
+    enabled = bool(getattr(settings, "cross_report_analysis_enabled", False))
+    auto_theme_enabled = bool(
+        getattr(settings, "cross_report_analysis_auto_theme_enabled", True)
+    )
+    request_uses_auto_theme = bool(
+        request.analysis_request.auto_theme
+        or not request.analysis_request.topic.strip()
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cross_report_feature_policy_evaluated",
+            module=logger.name,
+            fields={
+                "request_id": request.analysis_request.request_id,
+                "enabled": enabled,
+                "auto_theme_enabled": auto_theme_enabled,
+                "auto_theme": request.analysis_request.auto_theme,
+                "topic_present": bool(request.analysis_request.topic.strip()),
+            },
+        )
+    )
+    if not enabled:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cross_report_feature_policy_blocked",
+                module=logger.name,
+                fields={
+                    "request_id": request.analysis_request.request_id,
+                    "reason": "feature_disabled",
+                },
+            )
+        )
+        raise AppError(
+            code="cross_report_analysis_disabled",
+            message="Cross-report analysis is disabled by configuration",
+            retryable=False,
+            severity="error",
+            context={"request_id": request.analysis_request.request_id},
+        )
+    if request_uses_auto_theme and not auto_theme_enabled:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cross_report_feature_policy_blocked",
+                module=logger.name,
+                fields={
+                    "request_id": request.analysis_request.request_id,
+                    "reason": "auto_theme_disabled",
+                    "auto_theme": request.analysis_request.auto_theme,
+                    "topic_present": bool(request.analysis_request.topic.strip()),
+                },
+            )
+        )
+        raise AppError(
+            code="cross_report_auto_theme_disabled",
+            message="Automatic cross-report theme selection is disabled by configuration",
+            retryable=False,
+            severity="error",
+            context={
+                "request_id": request.analysis_request.request_id,
+                "auto_theme": request.analysis_request.auto_theme,
+                "topic": request.analysis_request.topic,
+            },
+        )
+
+
+def _recent_artifacts_root(output_root: str) -> str:
+    return str(Path(output_root) / "cross_report_analysis")
+
+
+def _theme_rotation_reference_date(request: CrossReportAnalysisRequest) -> str | None:
+    return str(request.date_range_end or "").strip() or None
+
+
 def run_cross_report_analysis(
     request: CrossReportAnalysisOrchestratorRequest,
     settings: Any,
@@ -398,6 +542,7 @@ def run_cross_report_analysis(
         )
     )
     _log_transition(ctx, transitions, "started")
+    _enforce_cross_report_feature_policy(request, settings, ctx)
 
     projected_data = _run_step(
         step_name="read_projected_data",
@@ -421,7 +566,16 @@ def run_cross_report_analysis(
         },
     )
     theme_selection = select_cross_report_theme(
-        request.analysis_request, source_selection, ctx
+        request.analysis_request,
+        source_selection,
+        ctx,
+        recent_artifacts_root=_recent_artifacts_root(request.output_root),
+        theme_rotation_window_days=int(
+            getattr(settings, "cross_report_analysis_theme_rotation_window_days", 30)
+        ),
+        theme_rotation_reference_date=_theme_rotation_reference_date(
+            request.analysis_request
+        ),
     )
     _log_transition(
         ctx,
@@ -446,6 +600,12 @@ def run_cross_report_analysis(
         projected_data,
         ctx,
         max_evidence_items=request.max_evidence_items,
+    )
+    _enforce_prompt_budget(
+        evidence_inputs_chars=evidence_inputs.prompt_input_chars,
+        max_prompt_chars=request.max_prompt_chars,
+        request=request,
+        ctx=ctx,
     )
     _log_transition(ctx, transitions, "evidence_assembled")
     signal_result = score_cross_report_signals(
@@ -514,7 +674,23 @@ def run_cross_report_analysis(
         ctx,
         transitions,
         "idempotency_checked",
-        {"idempotency_key": idempotency_key, "found": lookup.found},
+        {
+            "idempotency_key": idempotency_key,
+            "found": lookup.found,
+            "material_version": _IDEMPOTENCY_MATERIAL_VERSION,
+            "material_fields": sorted(idempotency_material.keys()),
+            "miss_diagnostics": (
+                {
+                    "output_root": request.output_root,
+                    "max_evidence_items": request.max_evidence_items,
+                    "max_signals": request.max_signals,
+                    "max_prompt_chars": request.max_prompt_chars,
+                    "publish_target_route": request.publish_target_route,
+                }
+                if not lookup.found
+                else {}
+            ),
+        },
     )
     if lookup.found and lookup.record is not None:
         reused = _outcome_from_payload(
@@ -549,6 +725,7 @@ def run_cross_report_analysis(
             ctx,
             prompt_client=prompt_client,
             openai_client=openai_client,
+            max_prompt_chars=request.max_prompt_chars,
         ),
         request=request,
         ctx=ctx,

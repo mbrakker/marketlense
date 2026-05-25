@@ -136,7 +136,6 @@ def _config_load_complete_fields(
         "artifacts_use_vector_store": settings.artifacts_use_vector_store,
         "validation_grounding_use_vector_store": settings.validation_grounding_use_vector_store,
         "strict_schema_validation": settings.strict_schema_validation,
-        "cover_cache_enabled": settings.cover_cache_enabled,
         "cost_ledger_path": settings.cost_ledger_path,
         "cost_daily_path": settings.cost_daily_path,
         "html_tag_acronyms": settings.html_tag_acronyms,
@@ -358,7 +357,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "validation_grounding_use_vector_store"
         ],
         strict_schema_validation=analysis_settings["strict_schema_validation"],
-        cover_cache_enabled=ingest_runtime["cover_cache_enabled"],
         cost_ledger_path=analysis_settings["cost_ledger_path"],
         cost_daily_path=analysis_settings["cost_daily_path"],
         model_pricing=analysis_settings["model_pricing"],

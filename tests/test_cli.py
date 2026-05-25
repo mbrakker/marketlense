@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import click
 from rich.console import Console
+import yaml
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -261,6 +262,8 @@ class TestCli(unittest.TestCase):
                         date_start="2026-05-01",
                         date_end="2026-05-31",
                         max_report_count=2,
+                        max_evidence_items=18,
+                        max_prompt_chars=80000,
                         publish_mode="generate_only",
                         output_root="./custom-out",
                         idempotency_db="./custom-state.sqlite",
@@ -285,8 +288,8 @@ class TestCli(unittest.TestCase):
         )
         self.assertEqual("./custom-state.sqlite", request.idempotency_db_path)
         self.assertEqual("./custom-out", request.output_root)
-        self.assertEqual(24, request.max_evidence_items)
-        self.assertEqual(32000, request.max_prompt_chars)
+        self.assertEqual(18, request.max_evidence_items)
+        self.assertEqual(80000, request.max_prompt_chars)
 
     def test_generate_cross_report_analysis_rejects_invalid_filter_values(self) -> None:
         import src.cli as cli
@@ -338,6 +341,104 @@ class TestCli(unittest.TestCase):
         run_mock.assert_not_called()
         printed = " ".join(str(call.args[0]) for call in print_mock.call_args_list)
         self.assertIn("cross_report_cli_filter_invalid", printed)
+
+    def test_cross_report_cli_uses_configured_auto_theme_default(self) -> None:
+        import src.cli as cli
+
+        settings = AppSettings(
+            schema_version="1.0",
+            google_sa_path="sa.json",
+            gdrive_folder_id="folder",
+            openai_api_key="key",
+            openai_model="gpt-5",
+            batch_limit=5,
+            output_dir="./out",
+            cache_dir="./cache",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            publisher_profiles_path="./Wordpress/config/publisher-profiles.json",
+            category_mapping_path="./src/config/category-mappings.yaml",
+            cover_style_path="./src/config/cover-styles.yaml",
+            ingest_lock_path="./state/ingest.lock",
+            ingest_lock_ttl_seconds=7200.0,
+            temperature=1.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+            cross_report_analysis_auto_theme_enabled=True,
+        )
+
+        request = cli._build_cross_report_cli_request(
+            settings=settings,
+            topic="",
+            auto_theme=None,
+            category="Retail",
+            tag="AI",
+            publisher="",
+            date_start="",
+            date_end="",
+            max_report_count=None,
+            max_evidence_items=None,
+            max_prompt_chars=None,
+            publish_mode="generate_only",
+            output_root="",
+            idempotency_db="",
+            request_id="",
+        )
+
+        self.assertTrue(request.analysis_request.auto_theme)
+        self.assertEqual("", request.analysis_request.topic)
+
+    def test_generate_cross_report_analysis_rejects_invalid_date_filters(self) -> None:
+        import src.cli as cli
+
+        settings = AppSettings(
+            schema_version="1.0",
+            google_sa_path="sa.json",
+            gdrive_folder_id="folder",
+            openai_api_key="key",
+            openai_model="gpt-5",
+            batch_limit=5,
+            output_dir="./out",
+            cache_dir="./cache",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            publisher_profiles_path="./Wordpress/config/publisher-profiles.json",
+            category_mapping_path="./src/config/category-mappings.yaml",
+            cover_style_path="./src/config/cover-styles.yaml",
+            ingest_lock_path="./state/ingest.lock",
+            ingest_lock_ttl_seconds=7200.0,
+            temperature=1.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+        )
+
+        with patch.object(cli, "load_settings", return_value=settings):
+            with patch.object(
+                cli, "run_cross_report_analysis_orchestrator"
+            ) as run_mock:
+                with patch.object(cli.console, "print") as print_mock:
+                    with self.assertRaises(click.exceptions.Exit) as exc_info:
+                        cli.generate_cross_report_analysis_cli(
+                            topic="AI commerce",
+                            auto_theme=False,
+                            category="Retail",
+                            tag="AI",
+                            publisher="Publisher A",
+                            date_start="2026-99-01",
+                            date_end="2026-05-31",
+                            max_report_count=2,
+                            publish_mode="generate_only",
+                            output_root="./custom-out",
+                            idempotency_db="./custom-state.sqlite",
+                            request_id="operator-request",
+                        )
+
+        self.assertEqual(1, exc_info.exception.exit_code)
+        run_mock.assert_not_called()
+        printed = " ".join(str(call.args[0]) for call in print_mock.call_args_list)
+        self.assertIn("cross_report_cli_date_invalid", printed)
 
     def test_generate_cross_report_analysis_live_mode_loads_publish_settings(
         self,
@@ -782,6 +883,64 @@ class TestCli(unittest.TestCase):
                 allow_cross_publisher=False,
             ),
             request.session_reuse_policy,
+        )
+
+    def test_promote_private_api_playbook_accepts_typed_request_and_writes_file(
+        self,
+    ) -> None:
+        import src.cli as cli
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            playbook_dir = root / "playbooks"
+            request_path = root / "private-api-promotion.json"
+            request_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "playbook_dir": str(playbook_dir),
+                        "source_url": "https://example.com/research/report-2026",
+                        "route_family": "browser_pdf_click",
+                        "route_kind": "pdf_download",
+                        "endpoint_pattern": "/api/reports/{last_path_segment}",
+                        "method": "GET",
+                        "request_shape_summary": (
+                            "GET with report slug path parameter; no auth headers."
+                        ),
+                        "response_pdf_url_json_pointer": "/asset/pdfUrl",
+                        "validated_success_count": 2,
+                        "fallback_route_family": "browser_pdf_click",
+                        "expected_status_codes": [200],
+                        "required_response_markers": ["pdfUrl"],
+                        "evidence_labels": ["network_document_request"],
+                        "observed_at": "2026-05-06T12:00:00+00:00",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            cli.promote_private_api_playbook(
+                request_json=str(request_path),
+                json_output=True,
+            )
+
+            path = (
+                playbook_dir
+                / "private_api"
+                / "private-api-example-com-pdf-download.yaml"
+            )
+            payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+        self.assertEqual("private-api-example-com-pdf-download", payload["playbook_id"])
+        self.assertEqual("1.0.0", payload["version"])
+        self.assertEqual(
+            "validated_private_api_evidence_promotion",
+            payload["history"][0]["source"],
+        )
+        self.assertEqual(2, payload["private_api_evidence"][0]["success_count"])
+        self.assertEqual(
+            "/asset/pdfUrl",
+            payload["private_api_evidence"][0]["response_pdf_url_json_pointer"],
         )
 
     def test_sync_publishers_wires_settings_and_orchestrator(self) -> None:

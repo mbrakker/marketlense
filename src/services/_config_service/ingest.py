@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.services._config_service.common import *
 
+
 def _resolve_ingest_runtime_settings(
     ingest: dict[str, Any],
 ) -> dict[str, Any]:
@@ -82,17 +83,6 @@ def _resolve_ingest_runtime_settings(
                 env_key="TAXONOMY_TEMPERATURE",
                 env_first=True,
             ),
-            _SettingSpec(
-                field_name="cover_cache_enabled",
-                config_key="cover_cache_enabled",
-                default=_to_config_bool(
-                    _default_config_value(
-                        "ingest", "cover_cache_enabled", fallback=True
-                    ),
-                    True,
-                ),
-                coerce=_to_config_bool,
-            ),
         ],
     )
     resolved["taxonomy_temperature"] = _to_float(
@@ -111,5 +101,6 @@ def _resolve_ingest_runtime_settings(
     )
     resolved["openai_seed"] = _opt_int(ingest.get("seed"))
     return resolved
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

@@ -923,6 +923,15 @@
         "output_dir": {
           "type": "string"
         },
+        "private_api_playbook_min_distinct_source_urls": {
+          "type": "integer"
+        },
+        "private_api_playbook_min_success_count": {
+          "type": "integer"
+        },
+        "private_api_playbook_promotion_mode": {
+          "type": "string"
+        },
         "reports_db": {
           "type": "string"
         },
@@ -1957,6 +1966,86 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.playbooks.BrowserRoutePrivateApiPromotionCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "endpoint_pattern": {
+          "type": "string"
+        },
+        "endpoint_url": {
+          "type": "string"
+        },
+        "evidence_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expected_status_codes": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "fallback_route_family": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "publisher_host": {
+          "type": "string"
+        },
+        "request_shape_summary": {
+          "type": "string"
+        },
+        "required_response_markers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "response_pdf_url_json_pointer": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_pdf_url": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "fingerprint",
+        "source_url",
+        "publisher_host",
+        "endpoint_pattern",
+        "endpoint_url",
+        "method",
+        "request_shape_summary",
+        "response_pdf_url_json_pointer",
+        "selected_pdf_url",
+        "expected_status_codes",
+        "required_response_markers",
+        "fallback_route_family",
+        "route_family",
+        "route_kind"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.playbooks.BrowserRoutePrivateApiPromotionRequest": {
       "additionalProperties": false,
       "properties": {
@@ -2013,6 +2102,9 @@
         },
         "validated_success_count": {
           "type": "integer"
+        },
+        "write_file": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -2134,6 +2226,55 @@
         "escalation_reason",
         "avoided_agent_call",
         "false_negative_rate_sample"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.private_api_auto_promotion.BrowserRoutePrivateApiAutoPromotionDetectionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "observed_at": {
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/src.contracts._browser_download.runtime.BrowserReportDownloadResult"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadSettings"
+        }
+      },
+      "required": [
+        "schema_version",
+        "settings",
+        "result"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.private_api_auto_promotion.BrowserRoutePrivateApiAutoPromotionDetectionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_count": {
+          "type": "integer"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePrivateApiPromotionCandidate"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "skipped_reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "candidate_count",
+        "candidates"
       ],
       "type": "object"
     },
@@ -5249,6 +5390,154 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.download_routes.PublisherPrivateApiCandidateObservationRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "endpoint_pattern": {
+          "type": "string"
+        },
+        "evidence_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expected_status_codes": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "fallback_route_family": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "min_distinct_source_urls": {
+          "type": "integer"
+        },
+        "min_success_count": {
+          "type": "integer"
+        },
+        "observed_at": {
+          "type": "string"
+        },
+        "publisher_host": {
+          "type": "string"
+        },
+        "request_shape_summary": {
+          "type": "string"
+        },
+        "required_response_markers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "response_pdf_url_json_pointer": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "fingerprint",
+        "publisher_host",
+        "source_url",
+        "endpoint_pattern",
+        "method",
+        "request_shape_summary",
+        "response_pdf_url_json_pointer",
+        "expected_status_codes",
+        "required_response_markers",
+        "fallback_route_family",
+        "route_family",
+        "route_kind"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.download_routes.PublisherPrivateApiCandidateObservationRecordResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "already_promoted": {
+          "type": "boolean"
+        },
+        "distinct_source_url_count": {
+          "type": "integer"
+        },
+        "eligible_for_promotion": {
+          "type": "boolean"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "promoted_playbook_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "success_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "fingerprint",
+        "success_count",
+        "distinct_source_url_count",
+        "eligible_for_promotion",
+        "already_promoted"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.download_routes.PublisherPrivateApiCandidatePromotedRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "playbook_id": {
+          "type": "string"
+        },
+        "promoted_at": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "fingerprint",
+        "playbook_id",
+        "promoted_at"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.inventory_state.PublisherInventoryRecoveryCacheGetRequest": {
       "additionalProperties": false,
       "properties": {
@@ -7976,6 +8265,35 @@
       ],
       "type": "object"
     },
+    "src.contracts.artifact_generation.ArtifactRenderTask": {
+      "additionalProperties": false,
+      "properties": {
+        "ctx": {
+          "$ref": "#/$defs/src.contracts.run_context.RunContext"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "step_name": {
+          "type": "string"
+        },
+        "variables": {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "step_name",
+        "namespace",
+        "variables",
+        "ctx"
+      ],
+      "type": "object"
+    },
     "src.contracts.candidate_extraction.CandidateExtractOutcome": {
       "additionalProperties": false,
       "properties": {
@@ -8230,12 +8548,6 @@
         "schema_version": {
           "type": "string"
         },
-        "score_details": {
-          "items": {
-            "$ref": "#/$defs/src.contracts.categories.CategoryScoreDetail"
-          },
-          "type": "array"
-        },
         "unmapped_tags": {
           "items": {
             "type": "string"
@@ -8249,64 +8561,6 @@
         "category_labels",
         "unmapped_tags"
       ],
-      "type": "object"
-    },
-    "src.contracts.categories.CategoryClassificationConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "core_tag_weight": {
-          "type": "number"
-        },
-        "generic_tag_weight": {
-          "type": "number"
-        },
-        "global_generic_tags": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "legacy_tag_weight": {
-          "type": "number"
-        },
-        "max_categories": {
-          "type": "integer"
-        },
-        "min_primary_score": {
-          "type": "number"
-        },
-        "min_secondary_score": {
-          "type": "number"
-        },
-        "negative_tag_weight": {
-          "type": "number"
-        },
-        "repeated_match_bonus": {
-          "type": "number"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "secondary_rescue_min_evidence_sections": {
-          "type": "integer"
-        },
-        "secondary_rescue_min_evidence_tags": {
-          "type": "integer"
-        },
-        "secondary_rescue_min_strong_matches": {
-          "type": "integer"
-        },
-        "secondary_rescue_score_ratio": {
-          "type": "number"
-        },
-        "secondary_score_ratio": {
-          "type": "number"
-        },
-        "supporting_tag_weight": {
-          "type": "number"
-        }
-      },
-      "required": [],
       "type": "object"
     },
     "src.contracts.categories.CategoryDefinition": {
@@ -8448,9 +8702,6 @@
           },
           "type": "array"
         },
-        "classification": {
-          "$ref": "#/$defs/src.contracts.categories.CategoryClassificationConfig"
-        },
         "inference_rules": {
           "items": {
             "$ref": "#/$defs/src.contracts.categories.TaxonomyInferenceRule"
@@ -8470,62 +8721,6 @@
       "required": [
         "schema_version",
         "categories"
-      ],
-      "type": "object"
-    },
-    "src.contracts.categories.CategoryScoreDetail": {
-      "additionalProperties": false,
-      "properties": {
-        "category_id": {
-          "type": "string"
-        },
-        "eligible": {
-          "type": "boolean"
-        },
-        "evidence_section_count": {
-          "type": "integer"
-        },
-        "evidence_tag_count": {
-          "type": "integer"
-        },
-        "generic_match_count": {
-          "type": "integer"
-        },
-        "label": {
-          "type": "string"
-        },
-        "matched_tags": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "must_have_match_count": {
-          "type": "integer"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "score": {
-          "type": "number"
-        },
-        "secondary_rescue_eligible": {
-          "type": "boolean"
-        },
-        "secondary_tier_match_count": {
-          "type": "integer"
-        },
-        "skip_reason": {
-          "type": "string"
-        },
-        "strong_match_count": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "category_id",
-        "label",
-        "score"
       ],
       "type": "object"
     },
@@ -8661,49 +8856,6 @@
       },
       "required": [
         "title",
-        "tags"
-      ],
-      "type": "object"
-    },
-    "src.contracts.categories.UncategorizedTagsFlushRequest": {
-      "additionalProperties": false,
-      "properties": {
-        "path": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "schema_version",
-        "path"
-      ],
-      "type": "object"
-    },
-    "src.contracts.categories.UncategorizedTagsUpdateRequest": {
-      "additionalProperties": false,
-      "properties": {
-        "path": {
-          "type": "string"
-        },
-        "report_title": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "tags": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "schema_version",
-        "path",
-        "report_title",
         "tags"
       ],
       "type": "object"
@@ -8925,9 +9077,6 @@
         },
         "cost_ledger_path": {
           "type": "string"
-        },
-        "cover_cache_enabled": {
-          "type": "boolean"
         },
         "cover_style_path": {
           "type": "string"
@@ -14798,9 +14947,6 @@
         },
         "cost_ledger_path": {
           "type": "string"
-        },
-        "cover_cache_enabled": {
-          "type": "boolean"
         },
         "cover_style_path": {
           "type": "string"

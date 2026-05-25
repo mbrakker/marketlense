@@ -13,9 +13,7 @@ from src.contracts.context_category_fit import (
     ReportContextBuildRequest,
 )
 from src.contracts.report_generation import (
-    ReportAnalysisState,
     ReportRuntimeState,
-    ReportSelectionState,
     ReportSourceState,
 )
 from src.contracts.report_store import ReportMetadataGetResponse
@@ -34,7 +32,6 @@ from src.generators.report_generation_shared import (
     logger,
     record_state_progress,
 )
-from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
 
@@ -219,33 +216,6 @@ def start_vector_store_indexing(
     )
 
 
-def ensure_vector_store(
-    runtime: ReportRuntimeState,
-    dependencies: ReportAnalysisDependencies,
-) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[str]]:
-    logger.info(
-        log_event(
-            runtime.ctx,
-            role="generator",
-            event="invalid_generator_entrypoint",
-            module=logger.name,
-            fields={
-                "file_id": runtime.file.file_id,
-                "expected_entrypoint": "src.orchestrators.report_analysis_orchestrator.run_report_analysis",
-            },
-        )
-    )
-    raise AppError(
-        code="invalid_generator_entrypoint",
-        message=(
-            "Vector-store wait sequencing belongs to "
-            "src.orchestrators.report_analysis_orchestrator.run_report_analysis."
-        ),
-        retryable=False,
-        context={"file_id": runtime.file.file_id},
-    )
-
-
 def _resolve_taxonomy(
     runtime: ReportRuntimeState,
     mode_ctx,
@@ -327,41 +297,7 @@ def _resolve_categories_from_report_context(
             categories=list(fit_response.categories),
             category_labels=list(fit_response.category_labels),
             unmapped_tags=[],
-            score_details=[],
         ),
         report_context=report_context,
         fit_response=fit_response,
-    )
-
-
-def complete_report_analysis(
-    runtime: ReportRuntimeState,
-    source: ReportSourceState,
-    selection: ReportSelectionState,
-    indexing_state: VectorStoreIndexingState,
-    dependencies: ReportAnalysisDependencies,
-    *,
-    evidence_pack_openai_client=None,
-    artifact_openai_client=None,
-) -> ReportAnalysisState:
-    logger.info(
-        log_event(
-            runtime.ctx,
-            role="generator",
-            event="invalid_generator_entrypoint",
-            module=logger.name,
-            fields={
-                "file_id": runtime.file.file_id,
-                "expected_entrypoint": "src.orchestrators.report_analysis_orchestrator.run_report_analysis",
-            },
-        )
-    )
-    raise AppError(
-        code="invalid_generator_entrypoint",
-        message=(
-            "Report analysis sequencing belongs to "
-            "src.orchestrators.report_analysis_orchestrator.run_report_analysis."
-        ),
-        retryable=False,
-        context={"file_id": runtime.file.file_id},
     )

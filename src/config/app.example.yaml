@@ -22,6 +22,9 @@ publish:
 browser_download:
   model: "google/gemini-2.5-flash-lite"
   route_playbook_promotion_mode: "disabled"
+  private_api_playbook_promotion_mode: "disabled"
+  private_api_playbook_min_success_count: 3
+  private_api_playbook_min_distinct_source_urls: 2
 
 publisher_discovery:
   model: "google/gemini-2.5-flash-lite"

@@ -266,7 +266,7 @@ def test_cross_report_projected_data_read_filters_and_contracts(
     assert response.raw_metrics[0].raw_value == "42"
     assert response.raw_metrics[0].unit == "percent"
     assert response.raw_metrics[0].metric_id == "report-a:metric:1"
-    assert response.content_hashes["report-a"][f"report-a:claim:1"] == (
+    assert response.content_hashes["report-a"]["report-a:claim:1"] == (
         "report-a-claim-hash"
     )
     assert response.excluded_report_counts == {"filtered": 1}
@@ -378,6 +378,7 @@ def test_cross_report_projected_data_read_can_return_failed_projection_inventory
     ]
     candidate = response.source_candidates[0]
     assert candidate.projection_status == "failed"
+    assert candidate.selection_reasons == ["projection_status:failed"]
     assert candidate.publisher == "failed-report"
     assert candidate.category_labels == []
     assert candidate.tags == []
