@@ -24,6 +24,22 @@ shared:
     [{"id":"check-1","instruction":"Tie each claim to explicit evidence identifiers."}]
   grounding_package_json: &grounding_package_json >-
     {"findings":[{"claim":"Wallet adoption is increasing across enterprise checkout flows.","evidence_ids":["f1"]}],"quotes":[{"quote_id":"q1","speaker":"Lead Analyst"}]}
+  cross_report_request_json: &cross_report_request_json >-
+    {"request_id":"cross-report-fixture","topic":"AI commerce adoption","auto_theme":true,"category_filters":["Retail"],"tag_filters":["AI"],"publisher_filters":[],"date_range_start":"2026-05-01","date_range_end":"2026-05-31","publication_mode":"generate_only"}
+  cross_report_selected_theme_json: &cross_report_selected_theme_json >-
+    {"theme_id":"theme-tag-ai","label":"AI commerce adoption","matched_tags":["AI"],"matched_categories":["Retail"],"source_report_ids":["report-a","report-b"],"score_components":{"density":1.0,"diversity":1.0,"recency":1.0}}
+  cross_report_selected_sources_json: &cross_report_selected_sources_json >-
+    [{"report_id":"report-a","title":"AI Commerce Outlook","publisher":"Publisher A","report_date":"2026-05-01","rank":1,"tags":["AI"],"category_labels":["Retail"]},{"report_id":"report-b","title":"Retail AI Risk Monitor","publisher":"Publisher B","report_date":"2026-05-04","rank":2,"tags":["AI"],"category_labels":["Retail"]}]
+  cross_report_signal_scores_json: &cross_report_signal_scores_json >-
+    [{"signal_id":"signal-ai","label":"AI","evidence_ids":["ev-report-a-claim-1","ev-report-b-finding-1"],"component_scores":{"recurrence":1.0,"diversity":1.0,"recency":1.0,"taxonomy_fit":1.0,"support":1.0,"contradiction":1.0},"total_score":5.5,"reasons":["raw_metric_magnitude_ignored"]}]
+  cross_report_evidence_groups_json: &cross_report_evidence_groups_json >-
+    [{"group_id":"group-signal-ai","label":"AI","agreement_type":"divergent","evidence_ids":["ev-report-a-claim-1","ev-report-b-finding-1"],"source_report_ids":["report-a","report-b"],"uncertainty_reasons":["opposed_directional_language"],"prompt_input_label":"divergent: AI"}]
+  cross_report_evidence_json: &cross_report_evidence_json >-
+    [{"evidence_id":"ev-report-a-claim-1","report_id":"report-a","publisher":"Publisher A","content_class":"claim","text":"AI commerce adoption is increasing in retail teams.","source_metadata":{"page":4}},{"evidence_id":"ev-report-b-finding-1","report_id":"report-b","publisher":"Publisher B","content_class":"finding","text":"AI commerce adoption is declining in budget-constrained retail teams.","source_metadata":{"page":7}}]
+  cross_report_raw_metrics_json: &cross_report_raw_metrics_json >-
+    [{"metric_id":"report-a:metric:1","report_id":"report-a","publisher":"Publisher A","label":"AI pilot adoption","raw_value":"42","unit":"percent","context":"Source-specific survey response","evidence_id":"ev-report-a-claim-1"},{"metric_id":"report-b:metric:1","report_id":"report-b","publisher":"Publisher B","label":"Budget pressure","raw_value":"high","unit":"qualitative","context":"Source-specific executive interview coding","evidence_id":"ev-report-b-finding-1"}]
+  cross_report_generation_policy_json: &cross_report_generation_policy_json >-
+    {"raw_metric_policy":"raw_metrics_preserved_without_normalization","max_evidence_items":48,"max_prompt_chars":60000,"required_claim_evidence_ids":true}
   current_section_json: &current_section_json >-
     {"section_id":"summary","body":"Payment innovation is changing rapidly."}
   current_section_text: &current_section_text >-
@@ -59,6 +75,8 @@ shared:
     expected_output_tokens: 1100
   benchmark_report_classification: &benchmark_report_classification
     expected_output_tokens: 180
+  benchmark_cross_report_synthesis: &benchmark_cross_report_synthesis
+    expected_output_tokens: 900
   benchmark_figure_caption: &benchmark_figure_caption
     expected_output_tokens: 160
   benchmark_taxonomy: &benchmark_taxonomy
@@ -66,6 +84,21 @@ shared:
   benchmark_validation: &benchmark_validation
     expected_output_tokens: 380
 fixtures:
+  - namespace: "cross_report_analysis/synthesis"
+    family: "cross_report_analysis"
+    model: "gpt-5-mini"
+    temperature: 1.0
+    benchmark: *benchmark_cross_report_synthesis
+    system_variables: {}
+    user_variables:
+      request_json: *cross_report_request_json
+      selected_theme_json: *cross_report_selected_theme_json
+      selected_sources_json: *cross_report_selected_sources_json
+      signal_scores_json: *cross_report_signal_scores_json
+      evidence_groups_json: *cross_report_evidence_groups_json
+      evidence_json: *cross_report_evidence_json
+      raw_metrics_json: *cross_report_raw_metrics_json
+      generation_policy_json: *cross_report_generation_policy_json
   - namespace: "browser_report_download/browser_route"
     family: "browser_download"
     model: "openai/gpt-5-mini"
