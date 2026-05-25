@@ -13,6 +13,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportSelectedSourceReport,
     CrossReportSourceReportCandidate,
     CrossReportSourceSelectionResult,
+    CrossReportValidationResult,
 )
 from src.contracts.files import (
     DirectoryEntry,
@@ -23,6 +24,7 @@ from src.generators import cross_report_analysis_input_generator as input_gen
 from src.generators.cross_report_analysis_input_generator import (
     select_cross_report_theme,
     select_cross_report_source_reports,
+    validate_cross_report_publishability,
 )
 
 
@@ -685,3 +687,330 @@ def test_theme_variety_prefers_source_diversity_and_stable_tie_breaking(
     assert [candidate.theme_id for candidate in result.theme_candidates] == [
         candidate.theme_id for candidate in repeat.theme_candidates
     ]
+
+
+def test_publishability_gate_passes_supported_theme_and_logs(
+    run_context,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    request = _request(max_source_reports=2)
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+    result = validate_cross_report_publishability(
+        request,
+        theme_selection,
+        source_selection,
+        run_context,
+        min_source_reports=2,
+        min_source_publishers=2,
+        min_evidence_items=6,
+    )
+
+    assert result.publishable is True
+    assert result.issues == []
+    assert result.source_report_count == 2
+    assert result.source_publisher_count == 2
+    assert result.evidence_count == 8
+    events = _events(caplog)
+    assert_logs_have_required_fields(events)
+    assert {
+        event["event"]
+        for event in events
+        if event["event"].startswith("cross_report_publishability")
+    } >= {
+        "cross_report_publishability_check_start",
+        "cross_report_publishability_check_complete",
+    }
+
+
+@pytest.mark.parametrize(
+    ("sources", "expected_issue"),
+    [
+        (
+            [
+                _selected_source(
+                    "report-a",
+                    publisher="Publisher A",
+                    report_date="2026-05-01",
+                    evidence_count=8,
+                    tags=["AI"],
+                    categories=["Retail"],
+                )
+            ],
+            "source_report_count_below_minimum",
+        ),
+        (
+            [
+                _selected_source(
+                    "report-a",
+                    publisher="Publisher A",
+                    report_date="2026-05-01",
+                    evidence_count=4,
+                    tags=["AI"],
+                    categories=["Retail"],
+                    rank=1,
+                ),
+                _selected_source(
+                    "report-b",
+                    publisher="Publisher A",
+                    report_date="2026-05-02",
+                    evidence_count=4,
+                    tags=["AI"],
+                    categories=["Retail"],
+                    rank=2,
+                ),
+            ],
+            "source_publisher_count_below_minimum",
+        ),
+        (
+            [
+                _selected_source(
+                    "report-a",
+                    publisher="Publisher A",
+                    report_date="2026-05-01",
+                    evidence_count=2,
+                    tags=["AI"],
+                    categories=["Retail"],
+                    rank=1,
+                ),
+                _selected_source(
+                    "report-b",
+                    publisher="Publisher B",
+                    report_date="2026-05-02",
+                    evidence_count=2,
+                    tags=["AI"],
+                    categories=["Retail"],
+                    rank=2,
+                ),
+            ],
+            "evidence_count_below_minimum",
+        ),
+    ],
+)
+def test_publishability_gate_rejects_thin_coverage(
+    run_context,
+    assert_app_error,
+    sources,
+    expected_issue,
+) -> None:
+    request = _request(max_source_reports=2)
+    source_selection = _source_selection(sources)
+    theme_selection = select_cross_report_theme(
+        request,
+        source_selection,
+        run_context,
+    )
+
+    with pytest.raises(Exception) as exc_info:
+        validate_cross_report_publishability(
+            request,
+            theme_selection,
+            source_selection,
+            run_context,
+            min_source_reports=2,
+            min_source_publishers=2,
+            min_evidence_items=6,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_publishability_failed",
+        retryable=False,
+        severity="error",
+    )
+    assert expected_issue in exc_info.value.context["issues"]
+
+
+def test_publishability_gate_rejects_duplicate_and_metric_dependency(
+    run_context,
+    assert_app_error,
+) -> None:
+    request = _request(max_source_reports=2)
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+    selected_theme = theme_selection.selected_theme
+    risky_theme = type(selected_theme)(
+        **{
+            **selected_theme.__dict__,
+            "rejection_risks": [
+                "recent_theme_repetition",
+                "metric_normalization_dependency",
+            ],
+        }
+    )
+    risky_selection = type(theme_selection)(
+        **{**theme_selection.__dict__, "selected_theme": risky_theme}
+    )
+
+    with pytest.raises(Exception) as exc_info:
+        validate_cross_report_publishability(
+            request,
+            risky_selection,
+            source_selection,
+            run_context,
+            min_source_reports=2,
+            min_source_publishers=2,
+            min_evidence_items=6,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_publishability_failed",
+        retryable=False,
+        severity="error",
+    )
+    assert "duplicate_theme_risk" in exc_info.value.context["issues"]
+    assert "metric_normalization_dependency" in exc_info.value.context["issues"]
+
+
+def test_publishability_gate_allows_explicit_override_and_logs(
+    run_context,
+    caplog,
+) -> None:
+    base_request = _request(max_source_reports=1)
+    request = CrossReportAnalysisRequest(
+        **{**base_request.__dict__, "override_publishability": True}
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=2,
+                tags=["AI"],
+                categories=["Retail"],
+            )
+        ]
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+    result = validate_cross_report_publishability(
+        request,
+        theme_selection,
+        source_selection,
+        run_context,
+        min_source_reports=2,
+        min_source_publishers=2,
+        min_evidence_items=6,
+    )
+
+    assert result.publishable is True
+    assert result.override_applied is True
+    assert result.issues
+    complete = [
+        event
+        for event in _events(caplog)
+        if event["event"] == "cross_report_publishability_check_complete"
+    ][0]
+    assert complete["fields"]["override_applied"] is True
+
+
+def test_publishability_gate_checks_publication_validation_prerequisite(
+    run_context,
+    assert_app_error,
+) -> None:
+    base_request = _request(max_source_reports=2)
+    request = CrossReportAnalysisRequest(
+        **{**base_request.__dict__, "publication_mode": "publish_live"}
+    )
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-02",
+                evidence_count=4,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    theme_selection = select_cross_report_theme(request, source_selection, run_context)
+    validation_result = CrossReportValidationResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        status="fail",
+        checked_evidence_ids=["evidence-a"],
+        issues=["citation_missing"],
+        passed=False,
+    )
+
+    with pytest.raises(Exception) as exc_info:
+        validate_cross_report_publishability(
+            request,
+            theme_selection,
+            source_selection,
+            run_context,
+            min_source_reports=2,
+            min_source_publishers=2,
+            min_evidence_items=6,
+            validation_result=validation_result,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cross_report_publishability_failed",
+        retryable=False,
+        severity="error",
+    )
+    assert "validation_not_passed" in exc_info.value.context["issues"]

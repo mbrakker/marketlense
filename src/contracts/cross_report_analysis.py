@@ -646,6 +646,44 @@ class CrossReportThemeSelectionResult:
     )
 
 
+@dataclass(frozen=True)
+class CrossReportPublishabilityResult:
+    schema_version: str = field(
+        metadata={"doc": "Publishability gate result contract schema version."}
+    )
+    selected_theme_id: str = field(
+        metadata={"doc": "Selected theme evaluated by the publishability gate."}
+    )
+    publishable: bool = field(
+        metadata={"doc": "True when the selected source set may proceed."}
+    )
+    override_applied: bool = field(
+        metadata={"doc": "Whether an explicit operator override allowed continuation."}
+    )
+    diagnostic: bool = field(
+        metadata={"doc": "Whether diagnostic mode allowed non-publishable inspection."}
+    )
+    source_report_count: int = field(
+        metadata={"doc": "Selected source report count checked by the gate."}
+    )
+    source_publisher_count: int = field(
+        metadata={"doc": "Distinct selected source publisher count."}
+    )
+    evidence_count: int = field(
+        metadata={"doc": "Selected source evidence count checked by the gate."}
+    )
+    checked_policy_fields: Dict[str, Any] = field(
+        metadata={"doc": "Policy thresholds and validation prerequisites checked."}
+    )
+    issues: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Deterministic publishability issues found by the gate.",
+            "required": False,
+        },
+    )
+
+
 def validate_cross_report_contract(contract: object) -> None:
     _validate_contract_value(contract, path=type(contract).__name__)
 

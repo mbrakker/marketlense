@@ -13,12 +13,14 @@ from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
     CrossReportProjectedDataReadResponse,
+    CrossReportPublishabilityResult,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
     CrossReportSourceReportCandidate,
     CrossReportSourceSelectionResult,
     CrossReportThemeCandidate,
     CrossReportThemeSelectionResult,
+    CrossReportValidationResult,
     validate_cross_report_contract,
 )
 from src.contracts.run_context import RunContext
@@ -849,6 +851,160 @@ def select_cross_report_theme(
             },
         )
     )
+    return result
+
+
+def _publishability_issues(
+    request: CrossReportAnalysisRequest,
+    theme_selection: CrossReportThemeSelectionResult,
+    source_selection: CrossReportSourceSelectionResult,
+    *,
+    min_source_reports: int,
+    min_source_publishers: int,
+    min_evidence_items: int,
+    publish_requires_validation_pass: bool,
+    validation_result: CrossReportValidationResult | None,
+) -> tuple[list[str], int, int, int]:
+    selected_sources = source_selection.selected_sources
+    source_report_count = len(selected_sources)
+    source_publisher_count = len(
+        {source.publisher.strip().casefold() for source in selected_sources}
+    )
+    evidence_count = sum(source.evidence_count for source in selected_sources)
+    issues: list[str] = []
+    if source_report_count < min_source_reports:
+        issues.append("source_report_count_below_minimum")
+    if source_publisher_count < min_source_publishers:
+        issues.append("source_publisher_count_below_minimum")
+    if evidence_count < min_evidence_items:
+        issues.append("evidence_count_below_minimum")
+    risks = set(theme_selection.selected_theme.rejection_risks)
+    if "recent_theme_repetition" in risks:
+        issues.append("duplicate_theme_risk")
+    if "metric_normalization_dependency" in risks:
+        issues.append("metric_normalization_dependency")
+    if (
+        request.publication_mode in {"publish_dry_run", "publish_live"}
+        and publish_requires_validation_pass
+    ):
+        if validation_result is None:
+            issues.append("validation_result_required_for_publication")
+        elif not validation_result.passed:
+            issues.append("validation_not_passed")
+    return (
+        sorted(set(issues)),
+        source_report_count,
+        source_publisher_count,
+        evidence_count,
+    )
+
+
+def validate_cross_report_publishability(
+    request: CrossReportAnalysisRequest,
+    theme_selection: CrossReportThemeSelectionResult,
+    source_selection: CrossReportSourceSelectionResult,
+    ctx: RunContext,
+    *,
+    min_source_reports: int = 2,
+    min_source_publishers: int = 2,
+    min_evidence_items: int = 6,
+    publish_requires_validation_pass: bool = True,
+    validation_result: CrossReportValidationResult | None = None,
+) -> CrossReportPublishabilityResult:
+    validate_cross_report_contract(request)
+    validate_cross_report_contract(theme_selection)
+    validate_cross_report_contract(source_selection)
+    if validation_result is not None:
+        validate_cross_report_contract(validation_result)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_publishability_check_start",
+            module=logger.name,
+            fields={
+                "request_id": request.request_id,
+                "selected_theme_id": theme_selection.selected_theme.theme_id,
+                "min_source_reports": min_source_reports,
+                "min_source_publishers": min_source_publishers,
+                "min_evidence_items": min_evidence_items,
+                "publication_mode": request.publication_mode,
+                "override_publishability": request.override_publishability,
+                "diagnostic": request.diagnostic,
+            },
+        )
+    )
+    (
+        issues,
+        source_report_count,
+        source_publisher_count,
+        evidence_count,
+    ) = _publishability_issues(
+        request,
+        theme_selection,
+        source_selection,
+        min_source_reports=min_source_reports,
+        min_source_publishers=min_source_publishers,
+        min_evidence_items=min_evidence_items,
+        publish_requires_validation_pass=publish_requires_validation_pass,
+        validation_result=validation_result,
+    )
+    override_applied = bool(issues and request.override_publishability)
+    diagnostic = bool(issues and request.diagnostic)
+    publishable = not issues or override_applied
+    result = CrossReportPublishabilityResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme_id=theme_selection.selected_theme.theme_id,
+        publishable=publishable,
+        override_applied=override_applied,
+        diagnostic=diagnostic,
+        issues=issues,
+        source_report_count=source_report_count,
+        source_publisher_count=source_publisher_count,
+        evidence_count=evidence_count,
+        checked_policy_fields={
+            "min_source_reports": min_source_reports,
+            "min_source_publishers": min_source_publishers,
+            "min_evidence_items": min_evidence_items,
+            "publish_requires_validation_pass": publish_requires_validation_pass,
+            "publication_mode": request.publication_mode,
+        },
+    )
+    validate_cross_report_contract(result)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_publishability_check_complete",
+            module=logger.name,
+            fields={
+                "request_id": request.request_id,
+                "selected_theme_id": result.selected_theme_id,
+                "publishable": result.publishable,
+                "override_applied": result.override_applied,
+                "diagnostic": result.diagnostic,
+                "issues": result.issues,
+                "source_report_count": result.source_report_count,
+                "source_publisher_count": result.source_publisher_count,
+                "evidence_count": result.evidence_count,
+            },
+        )
+    )
+    if issues and not request.diagnostic and not request.override_publishability:
+        raise AppError(
+            code="cross_report_publishability_failed",
+            message="Cross-report selected theme is not publishable",
+            retryable=False,
+            severity="error",
+            context={
+                "request_id": request.request_id,
+                "selected_theme_id": result.selected_theme_id,
+                "issues": issues,
+                "source_report_count": source_report_count,
+                "source_publisher_count": source_publisher_count,
+                "evidence_count": evidence_count,
+            },
+        )
     return result
 
 
