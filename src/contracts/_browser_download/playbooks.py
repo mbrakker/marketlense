@@ -331,6 +331,67 @@ class BrowserRoutePrivateApiPromotionRequest:
         default="",
         metadata={"doc": "UTC ISO timestamp for deterministic tests."},
     )
+    write_file: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether promotion should persist the private-API playbook YAML. False returns path and diff metadata without writing."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class BrowserRoutePrivateApiPromotionCandidate:
+    schema_version: str = field(
+        metadata={"doc": "Private-API auto-promotion candidate schema version."}
+    )
+    fingerprint: str = field(
+        metadata={
+            "doc": "Stable fingerprint for the host, method, endpoint pattern, and response JSON pointer."
+        }
+    )
+    source_url: str = field(
+        metadata={
+            "doc": "Report source URL whose verified browser run produced the candidate."
+        }
+    )
+    publisher_host: str = field(
+        metadata={"doc": "Publisher host associated with the candidate endpoint."}
+    )
+    endpoint_pattern: str = field(
+        metadata={"doc": "Reviewable endpoint pattern with source URL placeholders."}
+    )
+    endpoint_url: str = field(
+        metadata={"doc": "Concrete endpoint URL validated during this observation."}
+    )
+    method: str = field(metadata={"doc": "HTTP method validated for the endpoint."})
+    request_shape_summary: str = field(
+        metadata={"doc": "Prompt-safe summary of the validated request shape."}
+    )
+    response_pdf_url_json_pointer: str = field(
+        metadata={"doc": "JSON pointer that yielded the selected PDF URL."}
+    )
+    selected_pdf_url: str = field(
+        metadata={"doc": "PDF URL extracted from the validated endpoint response."}
+    )
+    expected_status_codes: list[int] = field(
+        metadata={"doc": "Accepted status codes observed for the endpoint."}
+    )
+    required_response_markers: list[str] = field(
+        metadata={"doc": "Response markers required before accepting the endpoint."}
+    )
+    fallback_route_family: str = field(
+        metadata={"doc": "Route family used when the private endpoint is stale."}
+    )
+    route_family: str = field(
+        metadata={"doc": "Browser route family replaced by the deterministic route."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Route kind produced by the deterministic endpoint."}
+    )
+    evidence_labels: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Evidence labels backing this candidate observation."},
+    )
 
 
 @dataclass(frozen=True)

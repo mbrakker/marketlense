@@ -115,6 +115,18 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         route_playbook_stale_policy=str(
             payload.get("route_playbook_stale_policy") or "fallback"
         ),
+        route_playbook_promotion_mode=str(
+            payload.get("route_playbook_promotion_mode") or "disabled"
+        ),
+        private_api_playbook_promotion_mode=str(
+            payload.get("private_api_playbook_promotion_mode") or "disabled"
+        ),
+        private_api_playbook_min_success_count=int(
+            payload.get("private_api_playbook_min_success_count") or 3
+        ),
+        private_api_playbook_min_distinct_source_urls=int(
+            payload.get("private_api_playbook_min_distinct_source_urls") or 2
+        ),
         session_reuse_policy=session_reuse_policy,
     )
 

@@ -59,7 +59,7 @@ The implementation plan is now fully landed in code and fixated by the mandatory
   - direct-detail short-circuit path
   - planner awareness of remembered route traces and scenario summaries
 - automated regression coverage for:
-  - report-store round-trip and migration
+  - report-store round-trip and migration through `src/services/sqlite_migration_service.py` as the schema authority
   - route-trace/scenario persistence
   - recovery-cache idempotency
   - direct-detail preflight short-circuit

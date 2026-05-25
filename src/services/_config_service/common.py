@@ -325,6 +325,7 @@ class _ConfigLoadSections:
     artifacts_cfg: dict[str, Any]
     analysis_cfg: dict[str, Any]
     cost_cfg: dict[str, Any]
+    cross_report_analysis_cfg: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -355,6 +356,7 @@ def _load_config_sections(request: ConfigLoadRequest) -> _ConfigLoadSections:
         artifacts_cfg=ingest.get("artifacts", {}) or {},
         analysis_cfg=data.get("analysis", {}) or {},
         cost_cfg=data.get("cost", {}) or {},
+        cross_report_analysis_cfg=data.get("cross_report_analysis", {}) or {},
     )
 
 

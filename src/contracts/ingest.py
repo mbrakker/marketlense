@@ -138,9 +138,7 @@ class IngestSettings:
     )
     pdf_text_ocr_policy: str = field(
         default="native_first_selective",
-        metadata={
-            "doc": "OCR fallback policy: native_first_selective or always."
-        },
+        metadata={"doc": "OCR fallback policy: native_first_selective or always."},
     )
     pdf_text_ocr_model: str = field(
         default="gpt-5-mini",
@@ -408,12 +406,6 @@ class IngestSettings:
         default=True,
         metadata={
             "doc": "Whether strict schema validation should be enforced for generated analysis packs."
-        },
-    )
-    cover_cache_enabled: bool = field(
-        default=True,
-        metadata={
-            "doc": "Whether to skip cover generation when cached output is up-to-date."
         },
     )
     cost_ledger_path: str = field(

@@ -212,6 +212,31 @@ CREATE TABLE IF NOT EXISTS publisher_download_route_history (
 );
 """
 
+_PRIVATE_API_CANDIDATE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS publisher_private_api_candidates (
+  fingerprint TEXT PRIMARY KEY,
+  publisher_host TEXT NOT NULL,
+  endpoint_pattern TEXT NOT NULL,
+  method TEXT NOT NULL,
+  request_shape_summary TEXT NOT NULL,
+  response_pdf_url_json_pointer TEXT NOT NULL,
+  expected_status_codes_json TEXT NOT NULL,
+  required_response_markers_json TEXT NOT NULL,
+  fallback_route_family TEXT NOT NULL,
+  route_family TEXT NOT NULL,
+  route_kind TEXT NOT NULL,
+  evidence_labels_json TEXT NOT NULL,
+  source_urls_json TEXT NOT NULL,
+  success_count INTEGER NOT NULL DEFAULT 0,
+  promoted_playbook_id TEXT NOT NULL DEFAULT '',
+  promoted_at_utc TEXT NOT NULL DEFAULT '',
+  first_observed_at_utc TEXT NOT NULL,
+  last_observed_at_utc TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+"""
+
 _INVENTORY_RECOVERY_CACHE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS publisher_inventory_candidate_recovery_cache (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1477,6 +1502,24 @@ def _ui_run_registry_002_add_dead_letter_ledger(conn: sqlite3.Connection) -> Non
     )
 
 
+def _reports_db_012_create_private_api_candidate_ledger(
+    conn: sqlite3.Connection,
+) -> None:
+    conn.execute(_PRIVATE_API_CANDIDATE_TABLE_SQL)
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_private_api_candidates_publisher_host
+        ON publisher_private_api_candidates(publisher_host)
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_private_api_candidates_promoted_at
+        ON publisher_private_api_candidates(promoted_at_utc)
+        """
+    )
+
+
 _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="reports_db_001_create_reports_core",
@@ -1532,6 +1575,11 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_011_add_report_source_value_scores",
         version=11,
         apply_fn=_reports_db_011_add_report_source_value_scores,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_012_create_private_api_candidate_ledger",
+        version=12,
+        apply_fn=_reports_db_012_create_private_api_candidate_ledger,
     ),
 )
 

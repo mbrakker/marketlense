@@ -185,7 +185,6 @@ def test_retry_on_retryable_app_error(
             batch_should_skip=lambda *_args, **_kwargs: {},
             process_file=_process_file,
             thread_pool_executor_factory=orch.ThreadPoolExecutor,
-            flush_uncategorized_tags=lambda req, ctx: None,
         ),
     )
 
@@ -266,7 +265,6 @@ def test_retry_on_retryable_drive_list_error(
             batch_should_skip=lambda *_args, **_kwargs: {},
             process_file=_process_file,
             thread_pool_executor_factory=orch.ThreadPoolExecutor,
-            flush_uncategorized_tags=lambda req, ctx: None,
         ),
     )
 

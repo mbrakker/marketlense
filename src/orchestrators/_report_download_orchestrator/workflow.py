@@ -17,6 +17,9 @@ from src.contracts.browser_download import (
     DownloadTerminalEvidence,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
+    BrowserRoutePrivateApiAutoPromotionDetectionRequest,
+    BrowserRoutePrivateApiAutoPromotionDetectionResponse,
+    BrowserRoutePrivateApiPromotionRequest,
     BrowserRoutePlaybookPromotionResponse,
     FailedAcquisitionForensicsArtifact,
     FailedAcquisitionForensicsPack,
@@ -46,6 +49,9 @@ from src.contracts.idempotency import (
     OrchestratorIdempotencyRecordRequest,
 )
 from src.contracts.report_store import (
+    PublisherPrivateApiCandidateObservationRecordRequest,
+    PublisherPrivateApiCandidateObservationRecordResponse,
+    PublisherPrivateApiCandidatePromotedRequest,
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
     PublisherDownloadRouteResponse,
@@ -68,7 +74,9 @@ from src.orchestrators._report_download_orchestrator.route_planner import (
 )
 from src.generators.report_value_generator import score_report_value
 from src.services.browser_report_download_service import (
+    detect_private_api_promotion_candidates,
     download_report_with_browser_use,
+    promote_private_api_evidence_to_browser_playbook,
     promote_validated_browser_route_result_to_playbook,
 )
 from src.services import idempotency_service
@@ -78,6 +86,8 @@ from src.services.drive_service import list_files_in_folder, upload_local_file
 from src.services.report_store_service import (
     get_report_download_drive_folder,
     get_publisher_download_route,
+    mark_publisher_private_api_candidate_promoted,
+    record_publisher_private_api_candidate_observation,
     record_publisher_download_route,
     record_report_value_score,
     record_report_source,
@@ -238,6 +248,21 @@ class ReportDownloadDependencies:
     promote_validated_browser_route_result_to_playbook: Callable[
         ..., BrowserRoutePlaybookPromotionResponse
     ] = promote_validated_browser_route_result_to_playbook
+    detect_private_api_promotion_candidates: Callable[
+        [BrowserRoutePrivateApiAutoPromotionDetectionRequest, RunContext],
+        BrowserRoutePrivateApiAutoPromotionDetectionResponse,
+    ] = detect_private_api_promotion_candidates
+    record_publisher_private_api_candidate_observation: Callable[
+        [PublisherPrivateApiCandidateObservationRecordRequest, RunContext],
+        PublisherPrivateApiCandidateObservationRecordResponse,
+    ] = record_publisher_private_api_candidate_observation
+    promote_private_api_evidence_to_browser_playbook: Callable[
+        ..., BrowserRoutePlaybookPromotionResponse
+    ] = promote_private_api_evidence_to_browser_playbook
+    mark_publisher_private_api_candidate_promoted: Callable[
+        [PublisherPrivateApiCandidatePromotedRequest, RunContext],
+        None,
+    ] = mark_publisher_private_api_candidate_promoted
     score_report_value: Callable[
         [ReportValueScoreRequest, RunContext],
         ReportValueScoreResponse,
@@ -558,6 +583,193 @@ def _route_playbook_promotion_skip_reason(
     if not str(result.route_summary or "").strip():
         return "missing_route_summary"
     return ""
+
+
+def _evaluate_private_api_playbook_auto_promotion(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    result: BrowserReportDownloadResult,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+    route_record_reused: bool,
+) -> None:
+    mode = str(
+        getattr(request.settings, "private_api_playbook_promotion_mode", "disabled")
+        or "disabled"
+    ).strip()
+    if mode not in _ROUTE_PLAYBOOK_PROMOTION_MODES:
+        mode = "disabled"
+    fields: dict[str, object] = {
+        "promotion_mode": mode,
+        "route_playbook_dir": request.settings.route_playbook_dir,
+        "normalized_url": result.normalized_url,
+        "route_family": result.route_family,
+        "route_kind": result.route_kind,
+        "route_status": result.route_status,
+        "outcome": result.outcome,
+    }
+    if mode == "disabled":
+        _log_private_api_promotion_event(
+            ctx=ctx,
+            fields={**fields, "skip_reason": "promotion_disabled"},
+        )
+        return
+    if route_record_reused:
+        _log_private_api_promotion_event(
+            ctx=ctx,
+            fields={**fields, "skip_reason": "route_record_idempotency_reused"},
+        )
+        return
+    try:
+        detection = dependencies.detect_private_api_promotion_candidates(
+            BrowserRoutePrivateApiAutoPromotionDetectionRequest(
+                schema_version="1.0",
+                settings=request.settings,
+                result=result,
+                observed_at=_utc_now_iso(),
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        _log_private_api_promotion_event(
+            ctx=ctx,
+            fields={
+                **fields,
+                "skip_reason": "candidate_detection_app_error",
+                "error_code": exc.code,
+                "error_retryable": exc.retryable,
+            },
+        )
+        return
+    if not detection.candidates:
+        _log_private_api_promotion_event(
+            ctx=ctx,
+            fields={
+                **fields,
+                "candidate_count": detection.candidate_count,
+                "skip_reason": detection.skipped_reason or "no_candidates",
+            },
+        )
+        return
+    for candidate in detection.candidates:
+        observed_at = _utc_now_iso()
+        record = dependencies.record_publisher_private_api_candidate_observation(
+            PublisherPrivateApiCandidateObservationRecordRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                fingerprint=candidate.fingerprint,
+                publisher_host=candidate.publisher_host,
+                source_url=candidate.source_url,
+                endpoint_pattern=candidate.endpoint_pattern,
+                method=candidate.method,
+                request_shape_summary=candidate.request_shape_summary,
+                response_pdf_url_json_pointer=(candidate.response_pdf_url_json_pointer),
+                expected_status_codes=list(candidate.expected_status_codes),
+                required_response_markers=list(candidate.required_response_markers),
+                fallback_route_family=candidate.fallback_route_family,
+                route_family=candidate.route_family,
+                route_kind=candidate.route_kind,
+                evidence_labels=list(candidate.evidence_labels),
+                observed_at=observed_at,
+                min_success_count=(
+                    request.settings.private_api_playbook_min_success_count
+                ),
+                min_distinct_source_urls=(
+                    request.settings.private_api_playbook_min_distinct_source_urls
+                ),
+            ),
+            ctx,
+        )
+        if not record.eligible_for_promotion:
+            _log_private_api_promotion_event(
+                ctx=ctx,
+                fields={
+                    **fields,
+                    "fingerprint": candidate.fingerprint,
+                    "success_count": record.success_count,
+                    "distinct_source_url_count": record.distinct_source_url_count,
+                    "already_promoted": record.already_promoted,
+                    "skip_reason": "threshold_not_met_or_already_promoted",
+                },
+            )
+            continue
+        try:
+            response = dependencies.promote_private_api_evidence_to_browser_playbook(
+                request=BrowserRoutePrivateApiPromotionRequest(
+                    schema_version="1.0",
+                    playbook_dir=request.settings.route_playbook_dir,
+                    source_url=candidate.source_url,
+                    route_family=candidate.route_family,
+                    route_kind=candidate.route_kind,
+                    endpoint_pattern=candidate.endpoint_pattern,
+                    method=candidate.method,
+                    request_shape_summary=candidate.request_shape_summary,
+                    response_pdf_url_json_pointer=(
+                        candidate.response_pdf_url_json_pointer
+                    ),
+                    validated_success_count=record.success_count,
+                    fallback_route_family=candidate.fallback_route_family,
+                    expected_status_codes=list(candidate.expected_status_codes),
+                    required_response_markers=list(candidate.required_response_markers),
+                    evidence_labels=list(candidate.evidence_labels),
+                    observed_at=observed_at,
+                    write_file=mode == "write",
+                ),
+                ctx=ctx,
+            )
+        except AppError as exc:
+            _log_private_api_promotion_event(
+                ctx=ctx,
+                fields={
+                    **fields,
+                    "fingerprint": candidate.fingerprint,
+                    "success_count": record.success_count,
+                    "distinct_source_url_count": record.distinct_source_url_count,
+                    "skip_reason": "promotion_app_error",
+                    "error_code": exc.code,
+                    "error_retryable": exc.retryable,
+                },
+            )
+            continue
+        if mode == "write":
+            dependencies.mark_publisher_private_api_candidate_promoted(
+                PublisherPrivateApiCandidatePromotedRequest(
+                    schema_version="1.0",
+                    db_path=request.reports_db,
+                    fingerprint=candidate.fingerprint,
+                    playbook_id=response.playbook_id,
+                    promoted_at=observed_at,
+                ),
+                ctx,
+            )
+        _log_private_api_promotion_event(
+            ctx=ctx,
+            fields={
+                **fields,
+                "fingerprint": candidate.fingerprint,
+                "success_count": record.success_count,
+                "distinct_source_url_count": record.distinct_source_url_count,
+                "playbook_id": response.playbook_id,
+                "playbook_path": response.path,
+                "playbook_version": response.version,
+                "promotion_status": response.status,
+                "review_diff_line_count": len(response.review_diff.splitlines()),
+            },
+        )
+
+
+def _log_private_api_promotion_event(
+    *, ctx: RunContext, fields: dict[str, object]
+) -> None:
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_private_api_promotion_evaluated",
+            module=logger.name,
+            fields=fields,
+        )
+    )
 
 
 def _failure_error_class(exc: Exception) -> str:
@@ -1201,6 +1413,13 @@ def run_report_download(
             ctx=ctx,
         )
     _evaluate_route_playbook_promotion(
+        request=request,
+        result=result,
+        ctx=ctx,
+        dependencies=deps,
+        route_record_reused=existing_route_record is not None,
+    )
+    _evaluate_private_api_playbook_auto_promotion(
         request=request,
         result=result,
         ctx=ctx,
