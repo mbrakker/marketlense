@@ -59,28 +59,6 @@ Suggested priority order:
 
 ## 5. Prompt Namespace & Analysis Generator
 
-- **Item:** Implement the cross-report analysis synthesis generator [Impact: 5/5, Effort: 4/5]
-  - Explanation: The generator is the domain layer that turns selected sources, evidence groups, and signal scores into a structured cross-report analysis artifact. It should make one bounded LLM call by default and fail closed when evidence mapping is incomplete.
-  - Pros: Delivers the core feature with controlled cost and traceable claims.
-  - Cons: Requires strict validation around model output shape and citations.
-  - Completion criteria:
-    - `src/generators/cross_report_analysis_generator.py` accepts typed context and calls `prompt_service` plus `llm_service` only through service boundaries.
-    - Output includes title, executive summary, key cross-report signals, convergences, divergences, source notes, raw metric appendix, and evidence map.
-    - Every generated claim references at least one selected evidence id.
-    - Missing, unknown, or default-filled required fields raise typed non-retryable `AppError`.
-    - Unit tests mock only service boundaries and assert contract completeness, evidence mapping, prompt namespace/hash logging, and negative-path error taxonomy.
-
-- **Item:** Add deterministic artifact validation before persistence [Impact: 5/5, Effort: 2/5]
-  - Explanation: The first release should prefer deterministic validation over additional model calls to protect cost and speed. Validation should check schema shape, evidence references, raw metric handling, prompt budget metadata, and required logs.
-  - Pros: Fast, cheap, reliable guardrail before generated analysis is saved.
-  - Cons: Does not fully judge editorial quality; fixture regression covers that separately.
-  - Completion criteria:
-    - `src/generators/cross_report_analysis_generator.py` validates the generated artifact without external I/O before returning the final contract.
-    - Validation rejects claims without known evidence ids.
-    - Validation rejects metric language that implies normalized comparability unless explicitly framed as raw source-specific data.
-    - Tests cover valid output, missing evidence, unknown evidence id, empty required sections, and forbidden metric-normalization language.
-    - Validation results are logged with structured pass/fail reasons.
-
 ---
 
 ## 6. Orchestration, Persistence & CLI
