@@ -157,6 +157,7 @@ def _config_load_complete_fields(
         "cross_report_analysis_min_theme_source_publishers": settings.cross_report_analysis_min_theme_source_publishers,
         "cross_report_analysis_publish_enabled": settings.cross_report_analysis_publish_enabled,
         "cross_report_analysis_publish_requires_validation_pass": settings.cross_report_analysis_publish_requires_validation_pass,
+        "cross_report_analysis_signal_score_weights": settings.cross_report_analysis_signal_score_weights,
     }
 
 
@@ -407,6 +408,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         ],
         cross_report_analysis_publish_requires_validation_pass=cross_report_analysis_settings[
             "cross_report_analysis_publish_requires_validation_pass"
+        ],
+        cross_report_analysis_signal_score_weights=cross_report_analysis_settings[
+            "cross_report_analysis_signal_score_weights"
         ],
     )
 

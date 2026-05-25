@@ -527,6 +527,19 @@ class AppSettings:
             "doc": "Whether publication requires deterministic validation to pass."
         },
     )
+    cross_report_analysis_signal_score_weights: dict = field(
+        default_factory=lambda: {
+            "contradiction": 0.5,
+            "diversity": 1.0,
+            "recency": 1.0,
+            "recurrence": 1.0,
+            "support": 1.0,
+            "taxonomy_fit": 1.0,
+        },
+        metadata={
+            "doc": "Deterministic cross-report signal score weights loaded from YAML."
+        },
+    )
 
 
 @dataclass(frozen=True)

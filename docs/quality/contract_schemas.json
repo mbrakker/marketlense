@@ -8980,6 +8980,9 @@
         "cross_report_analysis_publish_requires_validation_pass": {
           "type": "boolean"
         },
+        "cross_report_analysis_signal_score_weights": {
+          "type": "string"
+        },
         "cross_report_analysis_temperature": {
           "type": "number"
         },
@@ -11559,6 +11562,53 @@
         "component_scores",
         "total_score",
         "reasons"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cross_report_analysis.CrossReportSignalScoreResult": {
+      "additionalProperties": false,
+      "properties": {
+        "dropped_signal_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "raw_metric_policy": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score_weights": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
+        "selected_signal_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "selected_theme": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportSelectedTheme"
+        },
+        "signal_scores": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportSignalScore"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "selected_theme",
+        "signal_scores",
+        "selected_signal_ids",
+        "score_weights",
+        "raw_metric_policy"
       ],
       "type": "object"
     },

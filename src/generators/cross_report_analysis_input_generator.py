@@ -17,6 +17,8 @@ from src.contracts.cross_report_analysis import (
     CrossReportPublishabilityResult,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
+    CrossReportSignalScore,
+    CrossReportSignalScoreResult,
     CrossReportSourceReportCandidate,
     CrossReportSourceSelectionResult,
     CrossReportThemeCandidate,
@@ -37,6 +39,15 @@ _DEFAULT_THEME_SCORE_WEIGHTS = {
     "novelty": 1.0,
     "filter": 1.0,
 }
+_DEFAULT_SIGNAL_SCORE_WEIGHTS = {
+    "contradiction": 0.5,
+    "diversity": 1.0,
+    "recency": 1.0,
+    "recurrence": 1.0,
+    "support": 1.0,
+    "taxonomy_fit": 1.0,
+}
+_RAW_METRIC_POLICY = "raw_metrics_preserved_without_normalization"
 
 
 def _clean_values(values: list[str]) -> list[str]:
@@ -1063,6 +1074,301 @@ def _prompt_input_chars(
         for item in raw_metrics
     )
     return evidence_chars + metric_chars
+
+
+def _signal_score_weights(raw_weights: dict[str, float] | None) -> dict[str, float]:
+    weights = dict(_DEFAULT_SIGNAL_SCORE_WEIGHTS)
+    if raw_weights:
+        for key, value in raw_weights.items():
+            if key not in weights:
+                raise AppError(
+                    code="cross_report_signal_weight_invalid",
+                    message=f"Unknown cross-report signal score weight: {key}",
+                    retryable=False,
+                    severity="error",
+                    context={"weight": key},
+                )
+            parsed = float(value)
+            if parsed < 0:
+                raise AppError(
+                    code="cross_report_signal_weight_invalid",
+                    message=f"Cross-report signal score weight must be non-negative: {key}",
+                    retryable=False,
+                    severity="error",
+                    context={"weight": key, "value": parsed},
+                )
+            weights[key] = parsed
+    return dict(sorted(weights.items()))
+
+
+def _signal_label(value: str) -> str:
+    cleaned = str(value).strip()
+    if cleaned.upper() == cleaned and len(cleaned) <= 5:
+        return cleaned
+    if len(cleaned) <= 3:
+        return cleaned.upper()
+    return " ".join(token.capitalize() for token in re.split(r"\s+", cleaned))
+
+
+def _signal_candidates(
+    request: CrossReportAnalysisRequest,
+    evidence_inputs: CrossReportEvidenceInputResult,
+    theme_selection: CrossReportThemeSelectionResult,
+) -> list[str]:
+    selected_theme = theme_selection.selected_theme
+    values: list[str] = [
+        *selected_theme.matched_tags,
+        *selected_theme.matched_categories,
+        *request.tag_filters,
+        *request.category_filters,
+    ]
+    for source in evidence_inputs.selected_sources:
+        values.extend(source.tags)
+        values.extend(source.category_labels)
+    seen: set[str] = set()
+    candidates: list[str] = []
+    for value in values:
+        normalized = str(value).strip().casefold()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        candidates.append(_signal_label(str(value)))
+    if candidates:
+        return candidates
+    return [_signal_label(term) for term in _topic_terms(request.topic)]
+
+
+def _source_taxonomy_tokens(source: CrossReportSelectedSourceReport) -> set[str]:
+    return {
+        value.strip().casefold()
+        for value in [*source.tags, *source.category_labels]
+        if value.strip()
+    }
+
+
+def _evidence_matches_signal(
+    evidence,
+    signal_label: str,
+    source: CrossReportSelectedSourceReport | None,
+) -> bool:
+    normalized_label = signal_label.strip().casefold()
+    text_tokens = set(_topic_terms(evidence.text))
+    if normalized_label in text_tokens or normalized_label in evidence.text.casefold():
+        return True
+    if source is None:
+        return False
+    return normalized_label in _source_taxonomy_tokens(source)
+
+
+def _contradiction_score(evidence) -> float:
+    positive_markers = {
+        "adoption",
+        "accelerate",
+        "growth",
+        "higher",
+        "increase",
+        "increasing",
+        "rise",
+        "strong",
+    }
+    uncertainty_markers = {
+        "decline",
+        "decrease",
+        "down",
+        "fall",
+        "risk",
+        "slower",
+        "uneven",
+        "weak",
+    }
+    tokens = {
+        token.casefold()
+        for item in evidence
+        for token in re.findall(r"[A-Za-z0-9]+", item.text)
+    }
+    return (
+        1.0
+        if tokens.intersection(positive_markers)
+        and tokens.intersection(uncertainty_markers)
+        else 0.0
+    )
+
+
+def _support_score(evidence) -> float:
+    classes = {str(item.content_class) for item in evidence}
+    if {"finding", "quote"}.intersection(classes):
+        return 1.0
+    if "claim" in classes:
+        return 0.5
+    return 0.0
+
+
+def _weighted_signal_total(
+    component_scores: dict[str, float],
+    weights: dict[str, float],
+) -> float:
+    return round(
+        sum(component_scores[key] * weights[key] for key in sorted(weights)),
+        6,
+    )
+
+
+def score_cross_report_signals(
+    request: CrossReportAnalysisRequest,
+    evidence_inputs: CrossReportEvidenceInputResult,
+    theme_selection: CrossReportThemeSelectionResult,
+    ctx: RunContext,
+    *,
+    score_weights: dict[str, float] | None = None,
+    max_signals: int = 8,
+) -> CrossReportSignalScoreResult:
+    validate_cross_report_contract(request)
+    validate_cross_report_contract(evidence_inputs)
+    validate_cross_report_contract(theme_selection)
+    if max_signals < 1:
+        raise AppError(
+            code="cross_report_signal_limit_invalid",
+            message="max_signals must be at least 1",
+            retryable=False,
+            severity="error",
+            context={"max_signals": max_signals},
+        )
+
+    weights = _signal_score_weights(score_weights)
+    selected_theme = theme_selection.selected_theme
+    source_by_report_id = {
+        source.report_id: source for source in evidence_inputs.selected_sources
+    }
+    recency_scores = _source_recency_scores(evidence_inputs.selected_sources)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_signal_scoring_start",
+            module=logger.name,
+            fields={
+                "request_id": request.request_id,
+                "selected_theme_id": selected_theme.theme_id,
+                "evidence_count": len(evidence_inputs.evidence),
+                "raw_metric_count": len(evidence_inputs.raw_metrics),
+                "score_weights": weights,
+                "raw_metric_policy": _RAW_METRIC_POLICY,
+            },
+        )
+    )
+
+    dropped = Counter()
+    signal_scores: list[CrossReportSignalScore] = []
+    taxonomy_focus = {
+        value.strip().casefold()
+        for value in [
+            *selected_theme.matched_tags,
+            *selected_theme.matched_categories,
+            *request.tag_filters,
+            *request.category_filters,
+        ]
+        if value.strip()
+    }
+    for label in _signal_candidates(request, evidence_inputs, theme_selection):
+        matched_evidence = [
+            item
+            for item in evidence_inputs.evidence
+            if _evidence_matches_signal(
+                item,
+                label,
+                source_by_report_id.get(item.report_id),
+            )
+        ]
+        if not matched_evidence:
+            dropped["no_matching_evidence"] += 1
+            continue
+        supporting_sources = {
+            item.report_id
+            for item in matched_evidence
+            if item.report_id in source_by_report_id
+        }
+        supporting_publishers = {
+            source_by_report_id[report_id].publisher.strip().casefold()
+            for report_id in supporting_sources
+        }
+        normalized_label = label.strip().casefold()
+        component_scores = {
+            "contradiction": _contradiction_score(matched_evidence),
+            "diversity": min(len(supporting_publishers) / 2.0, 1.0),
+            "recency": max(
+                (
+                    recency_scores.get(report_id, 0.0)
+                    for report_id in supporting_sources
+                ),
+                default=0.0,
+            ),
+            "recurrence": min(len(matched_evidence) / 3.0, 1.0),
+            "support": _support_score(matched_evidence),
+            "taxonomy_fit": 1.0 if normalized_label in taxonomy_focus else 0.0,
+        }
+        reasons = [
+            f"evidence_recurrence:{len(matched_evidence)}",
+            f"source_publishers:{len(supporting_publishers)}",
+            f"taxonomy_fit:{component_scores['taxonomy_fit']}",
+            f"support:{component_scores['support']}",
+            "raw_metric_magnitude_ignored",
+        ]
+        if component_scores["contradiction"] > 0:
+            reasons.append("contradiction_presence")
+        signal_scores.append(
+            CrossReportSignalScore(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                signal_id=f"signal-{_slug(label)}",
+                label=label,
+                evidence_ids=[item.evidence_id for item in matched_evidence],
+                component_scores=dict(sorted(component_scores.items())),
+                total_score=_weighted_signal_total(component_scores, weights),
+                reasons=reasons,
+            )
+        )
+
+    signal_scores.sort(
+        key=lambda score: (-score.total_score, score.signal_id),
+    )
+    selected_scores = signal_scores[:max_signals]
+    dropped_count = max(len(signal_scores) - len(selected_scores), 0)
+    if dropped_count:
+        dropped["max_signals_reached"] = dropped_count
+    result = CrossReportSignalScoreResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme=selected_theme,
+        signal_scores=selected_scores,
+        selected_signal_ids=[score.signal_id for score in selected_scores],
+        score_weights=weights,
+        raw_metric_policy=_RAW_METRIC_POLICY,
+        dropped_signal_counts=dict(sorted(dropped.items())),
+    )
+    validate_cross_report_contract(result)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cross_report_signal_scoring_complete",
+            module=logger.name,
+            fields={
+                "request_id": request.request_id,
+                "selected_theme_id": selected_theme.theme_id,
+                "selected_signal_ids": result.selected_signal_ids,
+                "signal_components": [
+                    {
+                        "signal_id": score.signal_id,
+                        "component_scores": score.component_scores,
+                        "total_score": score.total_score,
+                        "reasons": score.reasons,
+                    }
+                    for score in result.signal_scores
+                ],
+                "dropped_signal_counts": result.dropped_signal_counts,
+                "raw_metric_policy": result.raw_metric_policy,
+            },
+        )
+    )
+    return result
 
 
 def assemble_cross_report_analysis_inputs(

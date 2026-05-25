@@ -66,6 +66,54 @@ def _required_string(
     return value
 
 
+_DEFAULT_SIGNAL_SCORE_WEIGHTS = {
+    "contradiction": 0.5,
+    "diversity": 1.0,
+    "recency": 1.0,
+    "recurrence": 1.0,
+    "support": 1.0,
+    "taxonomy_fit": 1.0,
+}
+
+
+def _signal_score_weights(section: dict[str, Any]) -> dict[str, float]:
+    default_weights = dict(
+        _default_config_value(
+            "cross_report_analysis",
+            "signal_score_weights",
+            fallback=_DEFAULT_SIGNAL_SCORE_WEIGHTS,
+        )
+        or _DEFAULT_SIGNAL_SCORE_WEIGHTS
+    )
+    weights = {
+        key: _to_float(default_weights.get(key), default_value)
+        for key, default_value in _DEFAULT_SIGNAL_SCORE_WEIGHTS.items()
+    }
+    raw_weights = section.get("signal_score_weights") or {}
+    if not isinstance(raw_weights, dict):
+        _raise_cross_report_config_error(
+            "signal_score_weights",
+            raw_weights,
+            "must be a mapping",
+        )
+    for key, raw_value in raw_weights.items():
+        if key not in weights:
+            _raise_cross_report_config_error(
+                "signal_score_weights",
+                raw_weights,
+                f"unknown weight {key}",
+            )
+        value = _to_float(raw_value, weights[key])
+        if value < 0:
+            _raise_cross_report_config_error(
+                "signal_score_weights",
+                raw_weights,
+                f"{key} must be >= 0",
+            )
+        weights[key] = value
+    return dict(sorted(weights.items()))
+
+
 def _resolve_cross_report_analysis_settings(
     cross_report_cfg: dict[str, Any],
 ) -> dict[str, Any]:
@@ -219,6 +267,9 @@ def _resolve_cross_report_analysis_settings(
                 ),
                 True,
             ),
+        ),
+        "cross_report_analysis_signal_score_weights": _signal_score_weights(
+            cross_report_cfg
         ),
     }
 

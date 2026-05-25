@@ -20,6 +20,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
     CrossReportSignalScore,
+    CrossReportSignalScoreResult,
     CrossReportSourceReportCandidate,
     CrossReportSourceSelectionResult,
     CrossReportThemeCandidate,
@@ -182,6 +183,15 @@ def _contracts() -> list[Any]:
         dropped_evidence_counts={},
         prompt_input_chars=512,
     )
+    signal_result = CrossReportSignalScoreResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_theme=selected_theme,
+        signal_scores=[signal],
+        selected_signal_ids=["signal-trust"],
+        score_weights={"recurrence": 1.0, "diversity": 1.0},
+        raw_metric_policy="raw_metrics_preserved_without_normalization",
+        dropped_signal_counts={},
+    )
     section = CrossReportAnalysisSection(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         section_id="executive-summary",
@@ -266,6 +276,7 @@ def _contracts() -> list[Any]:
         evidence_input_result,
         evidence,
         signal,
+        signal_result,
         raw_metric,
         section,
         generated,
