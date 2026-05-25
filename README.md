@@ -151,6 +151,11 @@ Current control-plane modules in `src/orchestrators/` include:
 
 Cross-report analysis is a bounded extension of the existing modular monolith. The first implementation stays inside the current `src/` deployable and must not introduce a new top-level package, standalone worker, separately deployed service, peer analytics database boundary, peer WordPress client, or parallel publication subsystem.
 
+Planned role boundaries:
+
+- Contracts: `src/contracts/cross_report_analysis.py`.
+- Existing services reused: `src/services/analytics_store_service.py` for projected SQLite reads, `src/services/prompt_service.py` for prompt loading/rendering/versioning, `src/services/llm_service.py` for model calls, `src/services/file_service.py` for artifact writes, `src/services/idempotency_service.py` for duplicate-run protection, and the existing publish boundary for WordPress side effects.
+- Generators: `src/generators/cross_report_analysis_input_generator.py` for deterministic source/theme/evidence preparation and `src/generators/cross_report_analysis_generator.py` for synthesis and deterministic artifact validation.
 Role boundaries:
 
 - Contracts: `src/contracts/cross_report_analysis.py`.
@@ -160,6 +165,8 @@ Role boundaries:
 - Prompt namespace: `src/prompts/cross_report_analysis/synthesis/`.
 - CLI command: `python -m src.cli generate-cross-report-analysis`.
 - Tests: contract round trips and invalid-input taxonomy in `tests/test_cross_report_analysis_contracts.py`, config loading coverage in `tests/test_config_service.py`, generator tests for selection/synthesis semantics, orchestrator pipeline tests for retry/idempotency/logging, and analytics-store SQLite integration tests for projected-data reads.
+
+First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 The cross-report contract family starts in `src/contracts/cross_report_analysis.py` with schema version `1.0`. It defines the request, orchestrator request, theme candidate, selected theme, source report candidate, selected source report, projected-data read request/response, evidence reference, signal score and signal-score result, evidence agreement group/result, raw metric reference, generated section, generated analysis result, validation result, persisted analysis artifact, cross-report publish package, publish request summary, publish result summary, and orchestrator outcome contracts. Required semantic fields are validated by `validate_cross_report_contract`, which raises non-retryable `AppError(code="cross_report_contract_invalid")` when a contract is incomplete, uses an unsupported schema version, or passes `None` for list-typed fields; empty lists remain allowed where the contract marks them optional.
 
