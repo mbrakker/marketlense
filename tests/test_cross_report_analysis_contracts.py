@@ -19,6 +19,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportSelectedTheme,
     CrossReportSignalScore,
     CrossReportSourceReportCandidate,
+    CrossReportSourceSelectionResult,
     CrossReportThemeCandidate,
     CrossReportValidationResult,
     validate_cross_report_contract,
@@ -109,6 +110,14 @@ def _contracts() -> list[Any]:
         evidence_count=3,
         category_labels=["Retail"],
         tags=["ai", "commerce"],
+    )
+    source_selection_result = CrossReportSourceSelectionResult(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        selected_sources=[selected_source],
+        ranked_candidates=[source_candidate],
+        rejected_candidates=[],
+        cleaned_filters={"tag_filters": ["ai"], "category_filters": ["retail"]},
+        excluded_report_counts={"max_source_reports_reached": 1},
     )
     evidence = CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -221,6 +230,7 @@ def _contracts() -> list[Any]:
         selected_theme,
         source_candidate,
         selected_source,
+        source_selection_result,
         evidence,
         signal,
         raw_metric,
@@ -278,4 +288,3 @@ def test_cross_report_contract_validation_rejects_missing_required_semantics(
         severity="error",
     )
     assert exc.value.context["field"] == "evidence_id"
-
