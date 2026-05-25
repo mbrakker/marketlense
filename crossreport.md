@@ -41,26 +41,6 @@ Suggested priority order:
 
 ## 1. Architecture, Contracts & Scope Fence
 
-- **Item:** Add versioned cross-report analysis contracts [Impact: 5/5, Effort: 2/5]
-  - Explanation: The feature needs explicit dataclass contracts before generators or orchestrators exist. Contracts should describe the request, theme candidates, selected theme, selected report set, evidence references, signal scores, raw metric references, generated analysis artifact, validation result, persisted artifact metadata, and publish outcome.
-  - Pros: Clear boundaries, schema evolution discipline, easier test assertions, less room for ad-hoc dicts.
-  - Cons: Requires careful field documentation and round-trip coverage before business logic can land.
-  - Completion criteria:
-    - `src/contracts/cross_report_analysis.py` defines versioned dataclasses with documented fields and explicit types.
-    - Required contract family includes request, theme candidate, selected theme, source report candidate, selected source report, evidence reference, signal score, raw metric reference, analysis section, generated analysis result, validation result, publish request summary, publish result summary, and orchestrator outcome.
-    - Serialization round-trip tests cover every contract and fail on missing required fields.
-    - Negative-path tests assert `AppError.code`, `retryable`, and `severity` for invalid contract input.
-
-- **Item:** Add minimal YAML configuration for bounded generation [Impact: 4/5, Effort: 2/5]
-  - Explanation: Quality, speed, and cost controls should be explicit from the start. The first release needs limits for source report count, evidence count, prompt input size, model parameters, cache eligibility, theme choice, publish readiness, and validation strictness.
-  - Pros: Prevents runaway prompts, keeps costs predictable, makes tradeoffs visible.
-  - Cons: Adds config surface that must be documented and tested.
-  - Completion criteria:
-    - `src/config/app.yaml` gains a compact `cross_report_analysis` section.
-    - Settings include `enabled`, `max_source_reports`, `max_evidence_items`, `max_prompt_chars`, `prompt_namespace`, `model`, `temperature`, `timeout_seconds`, `cache_enabled`, `auto_theme_enabled`, `theme_rotation_window_days`, `min_theme_source_publishers`, `publish_enabled`, and `publish_requires_validation_pass`.
-    - Config loading validates invalid limits with typed non-retryable `AppError`.
-    - README documents defaults, CLI overrides, and cost-control behavior.
-
 ---
 
 ## 2. Projection-Backed Source Selection
