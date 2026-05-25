@@ -684,6 +684,41 @@ class CrossReportPublishabilityResult:
     )
 
 
+@dataclass(frozen=True)
+class CrossReportEvidenceInputResult:
+    schema_version: str = field(
+        metadata={"doc": "Evidence input assembly result contract schema version."}
+    )
+    selected_sources: List[CrossReportSelectedSourceReport] = field(
+        metadata={"doc": "Selected source reports used for evidence assembly."}
+    )
+    evidence: List[CrossReportEvidenceReference] = field(
+        metadata={"doc": "Bounded evidence references supplied to synthesis."}
+    )
+    raw_metrics: List[CrossReportRawMetricReference] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Source-bound raw metric references supplied without normalization.",
+            "required": False,
+        },
+    )
+    evidence_by_report_id: Dict[str, List[str]] = field(
+        default_factory=dict,
+        metadata={"doc": "Selected evidence IDs grouped by source report ID."},
+    )
+    dropped_evidence_counts: Dict[str, int] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Evidence or raw-metric rows dropped by reason during assembly.",
+            "required": False,
+        },
+    )
+    prompt_input_chars: int = field(
+        default=0,
+        metadata={"doc": "Approximate bounded prompt-input character count."},
+    )
+
+
 def validate_cross_report_contract(contract: object) -> None:
     _validate_contract_value(contract, path=type(contract).__name__)
 

@@ -55,17 +55,6 @@ Suggested priority order:
 
 ## 4. Evidence, Signals & Raw Metrics Handling
 
-- **Item:** Assemble evidence-bearing analysis inputs from projected rows [Impact: 5/5, Effort: 3/5]
-  - Explanation: The synthesis prompt should receive compact evidence objects, not full reports. Evidence should include claims, findings, quotes, tags/categories, selected figures when available, and raw metrics only as source-bound facts.
-  - Pros: Smaller prompts, better grounding, clearer provenance, lower cost.
-  - Cons: Requires strict referential integrity checks between generated claims and evidence ids.
-  - Completion criteria:
-    - `src/generators/cross_report_analysis_input_generator.py` builds a bounded evidence set from selected reports.
-    - Every evidence item includes report id, publisher/title when available, source table/entity uid, content class, text payload, and source metadata.
-    - Raw metrics preserve original value/unit/context and are marked `raw_metric_reference`, not comparable normalized measures.
-    - Evidence selection caps are enforced before prompt rendering.
-    - Tests assert evidence completeness, cap behavior, duplicate suppression, and raw metric provenance.
-
 - **Item:** Add lightweight signal scoring without metric normalization [Impact: 5/5, Effort: 3/5]
   - Explanation: Cross-report analysis needs a ranking signal, but it should not compare numeric metrics across publishers. The first scorer should use recurrence, source diversity, recency, category/tag fit, quote/finding support, and contradiction presence.
   - Pros: Better analysis focus without expensive or risky data harmonization.

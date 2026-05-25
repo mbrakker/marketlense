@@ -172,6 +172,8 @@ The theme selector supports a bounded variety policy before synthesis. When a re
 
 `validate_cross_report_publishability` is the deterministic gate before synthesis or publication. It checks minimum selected source reports, minimum distinct publishers, minimum evidence items, duplicate-theme risk, explicit metric-normalization dependency risks, and publish-mode validation prerequisites. Failed gates raise non-retryable `AppError(code="cross_report_publishability_failed")` unless the request is diagnostic or carries `override_publishability=true`; override results are logged and returned with `override_applied=true` plus the preserved issue list.
 
+Evidence-bearing synthesis inputs are assembled by `assemble_cross_report_analysis_inputs`. It reuses the selected-source and projected-read contracts, keeps only evidence and raw metrics from selected reports, deduplicates evidence IDs, applies `max_evidence_items` before prompt rendering, groups selected evidence IDs by report, and logs dropped rows by reason. Raw metrics remain source-bound facts with original `raw_value`, `unit`, `context`, and metadata; the analytics-store read boundary adapts metric IDs from projection `metric_uid` values so identical source labels such as `metric-1` do not collide across reports.
+
 First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 ## WordPress Subproject
