@@ -250,10 +250,9 @@ def test_download_report_with_browser_use_short_circuits_planned_extract_step_wi
     assert response.route_family == "browser_onsite_report"
     assert response.outcome == "captured"
     assert response.onsite_capture_path is not None
-    assert (
-        "Population and connectivity insight."
-        in Path(response.onsite_capture_path).read_text(encoding="utf-8")
-    )
+    assert "Population and connectivity insight." in Path(
+        response.onsite_capture_path
+    ).read_text(encoding="utf-8")
 
 
 def test_download_report_with_browser_use_directly_captures_route_confirmed_non_article_longread(
@@ -398,6 +397,7 @@ def test_download_report_with_browser_use_blocks_mixed_hub_direct_onsite_recover
         create_pdf=True,
         email_submission_completed=False,
     )
+
     class FakeHtmlResponse:
         status_code = 200
         headers = {"content-type": "text/html; charset=utf-8"}
@@ -687,6 +687,7 @@ def test_download_report_with_browser_use_fetches_relative_observed_pdf_candidat
     run_context,
     external_boundary_mocks_only,
 ) -> None:
+    external_calls: list[str] = []
     runtime = _runtime(
         tmp_path,
         route_kind="email_delivery",
@@ -722,6 +723,7 @@ def test_download_report_with_browser_use_fetches_relative_observed_pdf_candidat
             return RelativePdfObservedHistory()
 
     def _download_pdf_from_url(**kwargs) -> None:
+        external_calls.append("download_pdf")
         assert kwargs["pdf_url"] == (
             "https://example.com/files/live/sites/www/files/ebooks/report.pdf"
         )
@@ -734,7 +736,7 @@ def test_download_report_with_browser_use_fetches_relative_observed_pdf_candidat
         lambda module_name: runtime,
     )
     external_boundary_mocks_only.setattr(
-        artifact_runtime,
+        http_runtime,
         "download_pdf_from_url",
         _download_pdf_from_url,
     )
@@ -753,6 +755,7 @@ def test_download_report_with_browser_use_fetches_relative_observed_pdf_candidat
     assert response.outcome == "downloaded"
     assert response.downloaded_file_path is not None
     assert response.downloaded_file_path.endswith("report.pdf")
+    assert external_calls == ["download_pdf"]
 
 
 def test_download_report_with_browser_use_fetches_pdf_after_terminal_html_recovery(
@@ -760,6 +763,7 @@ def test_download_report_with_browser_use_fetches_pdf_after_terminal_html_recove
     run_context,
     external_boundary_mocks_only,
 ) -> None:
+    external_calls: list[str] = []
     runtime = _runtime(
         tmp_path,
         route_kind="email_delivery",
@@ -812,12 +816,14 @@ def test_download_report_with_browser_use_fetches_pdf_after_terminal_html_recove
             return EmptyHtmlPdfObservedHistory()
 
     def _fetch_html_from_url(**kwargs) -> str:
+        external_calls.append("fetch_html")
         return (
             "<html><body><a href='/files/live/sites/www/files/ebooks/report.pdf'>"
             "PDF</a></body></html>"
         )
 
     def _download_pdf_from_url(**kwargs) -> None:
+        external_calls.append("download_pdf")
         assert kwargs["pdf_url"] == (
             "https://example.com/files/live/sites/www/files/ebooks/report.pdf"
         )
@@ -830,12 +836,12 @@ def test_download_report_with_browser_use_fetches_pdf_after_terminal_html_recove
         lambda module_name: runtime,
     )
     external_boundary_mocks_only.setattr(
-        artifact_runtime,
+        http_runtime,
         "fetch_html_from_url",
         _fetch_html_from_url,
     )
     external_boundary_mocks_only.setattr(
-        artifact_runtime,
+        http_runtime,
         "download_pdf_from_url",
         _download_pdf_from_url,
     )
@@ -854,6 +860,7 @@ def test_download_report_with_browser_use_fetches_pdf_after_terminal_html_recove
     assert response.outcome == "downloaded"
     assert response.downloaded_file_path is not None
     assert observed_relative_pdf in response.terminal_evidence.observed_document_urls
+    assert external_calls == ["fetch_html", "download_pdf"]
 
 
 def test_download_report_with_browser_use_uses_network_confirmation_signal(
@@ -1662,7 +1669,10 @@ def test_download_report_with_browser_use_prints_printable_onsite_report_to_pdf(
     assert response.onsite_capture_path is not None
     assert Path(response.onsite_capture_path).read_bytes().startswith(b"%PDF")
     assert "browser_rendered_pdf_capture" in response.terminal_evidence.evidence_labels
-    assert "not a publisher-supplied PDF" in response.terminal_evidence.artifact_validation_detail
+    assert (
+        "not a publisher-supplied PDF"
+        in response.terminal_evidence.artifact_validation_detail
+    )
     assert "Page.printToPDF" in [str(call["method"]) for call in cdp_calls]
 
 
@@ -1693,9 +1703,7 @@ def test_download_report_with_browser_use_rejects_print_pdf_for_generic_printabl
         ) -> dict[str, object]:
             cdp_calls.append(method)
             if method == "Page.printToPDF":
-                return {
-                    "data": base64.b64encode(b"%PDF-1.7 generic").decode("ascii")
-                }
+                return {"data": base64.b64encode(b"%PDF-1.7 generic").decode("ascii")}
             return {
                 "targetInfos": [
                     {
@@ -2319,7 +2327,7 @@ def test_download_report_with_browser_use_fetches_onsite_html_when_browser_html_
         lambda module_name: runtime,
     )
     external_boundary_mocks_only.setattr(
-        artifact_runtime,
+        http_runtime,
         "fetch_html_from_url",
         lambda **kwargs: (
             "<html><body><article><h1>Global innovation outlook report</h1>"
@@ -2389,7 +2397,7 @@ def test_download_report_with_browser_use_fetches_terminal_html_for_email_delive
         lambda module_name: runtime,
     )
     external_boundary_mocks_only.setattr(
-        artifact_runtime,
+        http_runtime,
         "fetch_html_from_url",
         lambda **kwargs: (
             "<html><head><title>Thank you for downloading the report</title></head>"
@@ -2467,7 +2475,7 @@ def test_download_report_with_browser_use_infers_form_disappeared_from_fetched_t
         lambda module_name: runtime,
     )
     external_boundary_mocks_only.setattr(
-        artifact_runtime,
+        http_runtime,
         "fetch_html_from_url",
         lambda **kwargs: (
             "<html><body><h1>Thanks</h1>"
@@ -2945,7 +2953,7 @@ def test_download_report_with_browser_use_salvages_empty_result_via_terminal_htm
         lambda module_name: runtime,
     )
     external_boundary_mocks_only.setattr(
-        artifact_runtime,
+        http_runtime,
         "fetch_html_from_url",
         lambda **kwargs: (
             "<html><head><title>Digital 2021: Bosnia and Herzegovina</title></head>"
