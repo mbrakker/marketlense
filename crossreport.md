@@ -59,17 +59,6 @@ Suggested priority order:
 
 ## 5. Prompt Namespace & Analysis Generator
 
-- **Item:** Add deterministic artifact validation before persistence [Impact: 5/5, Effort: 2/5]
-  - Explanation: The first release should prefer deterministic validation over additional model calls to protect cost and speed. Validation should check schema shape, evidence references, raw metric handling, prompt budget metadata, and required logs.
-  - Pros: Fast, cheap, reliable guardrail before generated analysis is saved.
-  - Cons: Does not fully judge editorial quality; fixture regression covers that separately.
-  - Completion criteria:
-    - `src/generators/cross_report_analysis_generator.py` validates the generated artifact without external I/O before returning the final contract.
-    - Validation rejects claims without known evidence ids.
-    - Validation rejects metric language that implies normalized comparability unless explicitly framed as raw source-specific data.
-    - Tests cover valid output, missing evidence, unknown evidence id, empty required sections, and forbidden metric-normalization language.
-    - Validation results are logged with structured pass/fail reasons.
-
 ---
 
 ## 6. Orchestration, Persistence & CLI
