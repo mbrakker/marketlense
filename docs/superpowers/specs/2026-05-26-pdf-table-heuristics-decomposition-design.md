@@ -66,9 +66,10 @@ configuration for all internal table capabilities.
 `_RankedTableRegion`.
 
 `layout.py` owns deterministic page-content interpretation: safe scalar/text
-normalization, page text blocks/lines/bands, font and overlap geometry
-measurements, margin/noise recognition, note/title/body classification, and
-low-level text metrics shared by downstream table decisions.
+normalization, page text blocks/lines/bands, bounded text extraction and
+preview/statistics, font and overlap geometry measurements, margin/noise
+recognition, note/title/body classification, and low-level text metrics
+shared by downstream table decisions.
 
 `regions.py` owns formation of candidate regions: ranked-table panel
 detection, title/note/footer attachment, stream-rectangle shrink behavior,
@@ -82,9 +83,12 @@ deduplication.
 
 `table_heuristics.py` remains the compatibility module. It reexports existing
 policy, model, layout, region, and screening symbols and retains only the
-small extraction-runtime helpers used directly by candidate execution, such
-as worker-count resolution, chunk splitting, preview formatting, warning
-suppression, and rejection-reason tallying.
+small extraction-runtime helpers that have no inward capability consumers,
+such as worker-count resolution, chunk splitting, warning suppression, and
+rejection-reason tallying. Helpers also consumed by extracted capabilities,
+including preview and text-statistics operations, are reexported from their
+semantic owner instead of being defined in the compatibility module, avoiding
+an internal import cycle.
 
 ## Dependency Direction
 

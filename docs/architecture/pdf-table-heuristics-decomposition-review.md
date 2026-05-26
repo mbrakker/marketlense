@@ -57,6 +57,12 @@ threshold values and dataclass definitions across region and screening work.
 Neither file adds an application layer; each owns shared declarations required
 by multiple real capability modules.
 
+The compatibility surface retains only execution-only helpers with no inward
+capability dependency. Shared preview/text-statistics operations belong with
+layout interpretation and are reexported through the facade; this avoids a
+facade-to-capability-to-facade import cycle while preserving all existing
+imports.
+
 ## Cognitive Load Assessment
 
 Existing consumers retain one import surface, so normal candidate execution
