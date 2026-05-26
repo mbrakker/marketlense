@@ -18,16 +18,17 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 94 | 36 |
+| First-party `src` | 95 | 35 |
 | First-party `tests` | 43 | 24 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `642`.
+- Total first-party source-like files scanned: `650`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
 - Browser runtime execution has now been decomposed internally: `src/services/_browser_report_download/browser.py` is `671` lines, with remaining focused hotspots in `_browser_runtime/terminal_assets.py` (`1,319`) and `_browser_runtime/session_lifecycle.py` (`1,102`).
+- Report-download orchestration has now been decomposed internally: `src/orchestrators/_report_download_orchestrator/workflow.py` is `528` physical lines and focused idempotent persistence lives in `persistence.py` (`646`); `route_planner.py` (`1,301`) remains the family's only `>=1,000`-line hotspot.
 
 ## Largest Runtime Files
 
@@ -37,7 +38,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | ---: | --- | --- |
 | 3,390 | `src/services/_pdf/table_heuristics.py` | Active PDF heuristic hotspot |
 | 2,637 | `src/services/_pdf/_visual_heuristics/panel_detection.py` | Active PDF heuristic hotspot |
-| 2,554 | `src/orchestrators/_report_download_orchestrator/workflow.py` | Active orchestrator hotspot |
 | 2,301 | `src/services/_publisher_inventory_service/workflow.py` | Active service-family hotspot |
 | 2,263 | `src/services/_pdf/visual_candidates.py` | Active PDF heuristic hotspot |
 | 2,066 | `src/services/_browser_report_download/http.py` | Active service-family hotspot |
@@ -125,7 +125,7 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 - `src/services/browser_report_download_service.py` over `src/services/_browser_report_download/*`, including the internal `src/services/_browser_report_download/_artifact/*` and `src/services/_browser_report_download/_browser_runtime/*` capability families.
 - `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
 - `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`.
-- `src/orchestrators/report_download_orchestrator.py` over `src/orchestrators/_report_download_orchestrator/*`.
+- `src/orchestrators/report_download_orchestrator.py` over `src/orchestrators/_report_download_orchestrator/*`, including focused dependency, readiness, forensics, promotion, persistence, and Drive-archive capabilities behind the smaller `workflow.py` coordinator.
 - `src/ui/streamlit_pages.py` over `src/ui/app_pages/*` and `src/ui/_streamlit_pages/*`.
 
 Any additional work must reduce responsibility or algorithmic complexity inside those existing capability families. Adding peer public entrypoints would be architecture regression.
@@ -136,7 +136,7 @@ Any additional work must reduce responsibility or algorithmic complexity inside 
 
 Primary evidence:
 
-- `src/orchestrators/_report_download_orchestrator/workflow.py`: `2,554` lines.
+- `src/orchestrators/_report_download_orchestrator/route_planner.py`: `1,301` lines.
 - `src/services/_browser_report_download/http.py`: `2,066` lines.
 - `src/services/_browser_report_download/helpers.py`: `1,892` lines.
 - `src/services/_browser_report_download/cdp.py`: `1,593` lines.
@@ -149,6 +149,7 @@ Direction:
 - Keep `src/services/browser_report_download_service.py` as the sole public browser-download service boundary.
 - Retain the new `_artifact/*` internal capability family; `artifact.py` is now a smaller coordination module rather than the top hotspot.
 - Retain the new `_browser_runtime/*` internal capability family; `browser.py` is now a smaller runtime coordinator rather than the top hotspot.
+- Retain the new `_report_download_orchestrator/*` capability split; `workflow.py` is now a smaller sequencing coordinator and `route_planner.py` is the remaining orchestrator-family long-file review target.
 - Continue extracting only coherent internal capabilities where responsibility or measured complexity remains high, such as deterministic HTTP acquisition/classification and route-history persistence.
 - Keep route ordering, retry/backoff, idempotency, and state transitions in the orchestrator family.
 - Keep prompt selection/rendering in the prompt service boundary; do not place prompt text in extracted modules.

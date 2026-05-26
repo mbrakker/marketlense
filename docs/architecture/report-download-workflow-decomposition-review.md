@@ -71,3 +71,35 @@ The implementation is accepted only after:
   recorded
 - a guarded local live orchestrator run obtains a verified PDF artifact and
   records local workflow side effects without Drive upload
+
+## Execution Status - 2026-05-26
+
+Completed automated evidence:
+
+- The decomposition ownership test failed before extraction because the new
+  private capability modules did not exist, then passed after extraction.
+- The affected report-download and browser-download synthetic surface passed:
+  `226` tests.
+- The full default synthetic suite passed: `2,615` tests, with `16`
+  integration tests deselected.
+- Formatting, split-symbol, forbidden-patching, repository-hygiene, full
+  `src` type checking, coverage, configured mutation, and quality-regression
+  gates passed. The configured mutation targets do not currently include the
+  extracted private report-download package.
+- Coverage results were `82.60%` global and `84.27%` for
+  `src/orchestrators`, above the configured thresholds.
+
+Live-gate status:
+
+- The guarded local orchestrator fixture uses a browser-only click-to-PDF
+  path, real browser/OpenRouter execution, temporary SQLite/files, a real
+  temporary identity configuration, and `drive_upload_enabled=False`.
+- With the OpenRouter credential loaded from the local environment without
+  logging its value, running
+  `RUN_REPORT_DOWNLOAD_ORCHESTRATOR_INTEGRATION=1 python -m pytest -m integration tests/integration/test_report_download_orchestrator.py -q -rs`
+  passed: `1` integration test passed with a verified PDF artifact,
+  persisted route/source state, required orchestrator log fields, and zero
+  Drive uploads.
+- The successful final live run emitted existing vendored-browser deprecation
+  warnings. They remain visible as residual browser-runtime cleanup risk; this
+  workflow decomposition does not suppress or reinterpret them.

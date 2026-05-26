@@ -13,6 +13,7 @@ Key traits:
 - Contract-first data model for all external I/O boundaries.
 - Service isolation for all external systems and file I/O.
 - Browser-report runtime isolation: `src/services/_browser_report_download/browser.py` remains the private coordinator behind the canonical browser-download service, while terminal-state stabilization, terminal asset/evidence capture, bounded timeout recovery, worker transport, and browser session lifecycle mechanics live under `src/services/_browser_report_download/_browser_runtime/`.
+- Report-download workflow isolation: `src/orchestrators/report_download_orchestrator.py` remains the public facade and `_report_download_orchestrator/workflow.py` remains its sequencing coordinator, while dependency construction, candidate readiness, failed-attempt forensics, route promotion, idempotent persistence, and optional Drive archival live in focused private sibling modules.
 - Generator logic that composes services into domain outputs.
 - Orchestrator that controls sequencing, retries, and state (including publishing).
 - Structured logging with run/task/span identifiers plus end-to-end trace IDs and nested span metadata.
