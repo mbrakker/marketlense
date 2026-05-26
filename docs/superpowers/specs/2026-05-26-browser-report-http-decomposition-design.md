@@ -42,6 +42,7 @@ src/services/_browser_report_download/
   http.py
   _http/
     __init__.py
+    config.py
     pdf_transfer.py
     page_pdf_probe.py
     gate_probe.py
@@ -57,6 +58,10 @@ churn and preserving the single service-family entrypoint.
 
 `pdf_transfer.py` owns direct PDF transfer, downloaded-PDF recovery, MIME
 resolution, PDF signature validation, and `try_direct_pdf_download`.
+
+`config.py` owns shared immutable HTTP request headers and response-size
+limits used across multiple HTTP acquisition capabilities, preventing
+duplicated request configuration.
 
 `page_pdf_probe.py` owns report-page HTML probing, relevant PDF candidate
 filtering, and delegation to direct PDF transfer.

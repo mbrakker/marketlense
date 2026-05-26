@@ -13,6 +13,7 @@
 ## File Structure
 
 - Create: `src/services/_browser_report_download/_http/__init__.py` - marks the focused private implementation package.
+- Create: `src/services/_browser_report_download/_http/config.py` - owns shared HTTP headers and bounded response-size constants.
 - Create: `src/services/_browser_report_download/_http/html_evidence.py` - shared deterministic HTML/header/text and embedded-PDF extraction.
 - Create: `src/services/_browser_report_download/_http/pdf_transfer.py` - binary PDF download, recovery, MIME resolution, validation, and direct PDF route.
 - Create: `src/services/_browser_report_download/_http/page_pdf_probe.py` - report-page candidate PDF discovery and transfer selection.
@@ -41,6 +42,21 @@ from pathlib import Path
 
 PACKAGE = Path("src/services/_browser_report_download")
 HTTP = PACKAGE / "http.py"
+COMPATIBILITY_EXPORTS = {
+    "DirectOnsiteRecoveryDecision",
+    "download_pdf_from_url",
+    "ensure_downloaded_pdf",
+    "extract_embedded_pdf_urls",
+    "fetch_html_from_url",
+    "is_pdf_file",
+    "resolve_downloaded_mime_type",
+    "try_direct_onsite_capture",
+    "try_direct_pdf_download",
+    "try_http_access_challenge_probe",
+    "try_report_page_pdf_link_download",
+    "try_static_email_gate_probe",
+    "validate_downloaded_pdf_artifact",
+}
 MODULE_FUNCTIONS = {
     "_http/pdf_transfer.py": {
         "try_direct_pdf_download",
@@ -88,7 +104,7 @@ def test_browser_report_http_uses_focused_private_capability_modules() -> None:
         assert not expected_symbols & coordinator_symbols
 
     source = HTTP.read_text(encoding="utf-8")
-    for symbol in set().union(*MODULE_FUNCTIONS.values()):
+    for symbol in COMPATIBILITY_EXPORTS:
         assert symbol in source
 ```
 
@@ -110,6 +126,7 @@ The test remains uncommitted through the extraction so the commit contains a ver
 
 **Files:**
 - Create: `src/services/_browser_report_download/_http/__init__.py`
+- Create: `src/services/_browser_report_download/_http/config.py`
 - Create: `src/services/_browser_report_download/_http/html_evidence.py`
 - Create: `src/services/_browser_report_download/_http/pdf_transfer.py`
 - Modify: `src/services/_browser_report_download/http.py`
@@ -117,6 +134,14 @@ The test remains uncommitted through the extraction so the commit contains a ver
 - Test: `tests/test_browser_report_download_doc_type_predictor.py`
 
 - [ ] **Step 1: Move deterministic shared evidence functions**
+
+Move shared immutable request constants to `config.py` so request metadata
+remains single-sourced:
+
+| Source constants in `http.py` | Original lines |
+| --- | ---: |
+| `_PDF_FETCH_HEADERS`, `_HTML_FETCH_HEADERS` | 60-69 |
+| `_HTML_FETCH_MAX_BYTES`, `_PDF_FETCH_MAX_BYTES` | 209-210 |
 
 Move the original implementations from `http.py` into `html_evidence.py`,
 keeping their original names and bodies:

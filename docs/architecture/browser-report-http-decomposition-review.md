@@ -52,8 +52,10 @@ A two-module split would either combine probing with binary transfer or combine
 onsite capture with gate classification, leaving unrelated responsibilities
 together. A single extracted helper module would only relocate the monolith.
 
-The five private modules preserve low coupling:
+The focused private modules preserve low coupling:
 
+- shared immutable HTTP acquisition headers and body-size limits have one
+  owner in `_http/config.py`
 - shared parsing and embedded-PDF extraction are deterministic and usable by
   probe, transfer-recovery, and capture capabilities
 - report-page probing delegates successful transfer to the binary PDF owner
