@@ -29,7 +29,9 @@ class _DownloadFixtureHandler(BaseHTTPRequestHandler):
             body = (
                 "<html><body>"
                 "<h1>Report download</h1>"
-                '<a href="/report.pdf" download>Download report PDF</a>'
+                '<button type="button" onclick="window.location.href=\'/deliver\'">'
+                "Download report PDF"
+                "</button>"
                 "</body></html>"
             ).encode("utf-8")
             self.send_response(200)
@@ -38,7 +40,7 @@ class _DownloadFixtureHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        if self.path == "/report.pdf":
+        if self.path == "/deliver":
             payload = (self.fixture_root / "report.pdf").read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "application/pdf")
@@ -139,6 +141,7 @@ def test_browser_report_download_service_local_guarded(
                 schema_version="1.0",
                 url=url,
                 settings=settings,
+                route_family_hint="browser_pdf_click",
             ),
             _ctx(),
         )
@@ -151,4 +154,7 @@ def test_browser_report_download_service_local_guarded(
     assert response.outcome == "downloaded"
     assert response.downloaded_file_path is not None
     assert Path(str(response.downloaded_file_path)).exists()
-    assert_logs_have_required_fields(_events(caplog))
+    events = _events(caplog)
+    assert any(event["event"] == "browser_report_download_start" for event in events)
+    assert any(event["event"] == "browser_report_download_complete" for event in events)
+    assert_logs_have_required_fields(events)

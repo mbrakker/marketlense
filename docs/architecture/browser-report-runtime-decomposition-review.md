@@ -75,3 +75,34 @@ The implementation is accepted only after:
   browser-use/model configuration against its local PDF fixture and records
   the validated downloaded-artifact outcome
 
+## Execution Status - 2026-05-26
+
+Completed automated evidence:
+
+- The decomposition ownership test failed before extraction because the
+  `_browser_runtime` package did not exist, then passed after extraction.
+- The affected browser-download, terminal, lifecycle, CDP, route-planner,
+  and report-download orchestrator suite passed: `225` tests.
+- The full default synthetic suite passed: `2,614` tests, with `15`
+  integration tests deselected.
+- Formatting, split-symbol, forbidden-patching, repository-hygiene, full
+  `src` type checking, coverage, mutation, and quality-regression gates
+  passed.
+- Coverage results were `82.58%` global and `81.97%` for `src/services`,
+  above the configured thresholds.
+
+Live-gate status:
+
+- The guarded local integration fixture was tightened to require the
+  browser-agent click path and assert canonical service start/complete events,
+  rather than allowing the direct HTTP link shortcut to satisfy the check.
+- With the OpenRouter credential loaded from the local environment without
+  logging its value, running
+  `RUN_BROWSER_DOWNLOAD_INTEGRATION=1 python -m pytest -m integration tests/integration/test_browser_report_download_service.py -q -rs`
+  passed: `1` integration test passed and a verified PDF artifact was
+  downloaded through the browser route.
+- The successful live run emitted existing vendored-browser deprecation
+  warnings and post-completion CDP/event-loop teardown diagnostics. Those
+  diagnostics remain visible as residual live-runtime cleanup risk; this
+  decomposition does not suppress them or change the extracted lifecycle
+  behavior.

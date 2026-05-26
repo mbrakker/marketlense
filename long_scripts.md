@@ -1,6 +1,6 @@
 # Long-File Audit and Refactor Targets
 
-Generated: 2026-05-25
+Generated: 2026-05-26
 
 ## Purpose
 
@@ -18,14 +18,16 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 86 | 35 |
+| First-party `src` | 94 | 36 |
 | First-party `tests` | 43 | 24 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `628`.
+- Total first-party source-like files scanned: `642`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
+- Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
+- Browser runtime execution has now been decomposed internally: `src/services/_browser_report_download/browser.py` is `671` lines, with remaining focused hotspots in `_browser_runtime/terminal_assets.py` (`1,319`) and `_browser_runtime/session_lifecycle.py` (`1,102`).
 
 ## Largest Runtime Files
 
@@ -33,8 +35,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Lines | Path | Assessment |
 | ---: | --- | --- |
-| 4,072 | `src/services/_browser_report_download/artifact.py` | Active service-family hotspot |
-| 4,004 | `src/services/_browser_report_download/browser.py` | Active service-family hotspot |
 | 3,390 | `src/services/_pdf/table_heuristics.py` | Active PDF heuristic hotspot |
 | 2,637 | `src/services/_pdf/_visual_heuristics/panel_detection.py` | Active PDF heuristic hotspot |
 | 2,554 | `src/orchestrators/_report_download_orchestrator/workflow.py` | Active orchestrator hotspot |
@@ -58,10 +58,13 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | 1,431 | `src/ui/app_pages/publisher_operations.py` | UI-only page family |
 | 1,329 | `src/services/_pdf/_visual_heuristics/chart_layout.py` | PDF heuristic family |
 | 1,328 | `src/generators/report_source_generator.py` | Report-source domain family |
+| 1,319 | `src/services/_browser_report_download/_browser_runtime/terminal_assets.py` | Focused browser terminal-evidence capability |
 | 1,301 | `src/orchestrators/_report_download_orchestrator/route_planner.py` | Route-planning family |
 | 1,300 | `src/services/drive_service.py` | External-system boundary |
 | 1,216 | `src/services/_pdf/visual_heuristics.py` | PDF heuristic family |
 | 1,207 | `src/services/wordpress_service.py` | External-system boundary |
+| 1,153 | `src/services/_browser_report_download/_artifact/classification.py` | Extracted artifact-classification capability |
+| 1,102 | `src/services/_browser_report_download/_browser_runtime/session_lifecycle.py` | Focused browser lifecycle capability |
 | 1,082 | `src/services/_report_store_service/download_routes.py` | Report-store capability family |
 | 1,076 | `src/services/_publisher_inventory_service/discovery_activity.py` | Discovery parsing/activity family |
 | 1,059 | `src/contracts/cross_report_analysis.py` | Contract surface; do not split mechanically |
@@ -73,11 +76,11 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Lines | Path |
 | ---: | --- |
-| 3,501 | `tests/test_browser_report_download_service/test_onsite_and_terminal.py` |
+| 3,509 | `tests/test_browser_report_download_service/test_onsite_and_terminal.py` |
 | 3,213 | `tests/test_report_download_orchestrator.py` |
 | 2,926 | `tests/test_publisher_inventory_candidate_quality_generator.py` |
 | 2,826 | `tests/test_report_store_service.py` |
-| 2,513 | `tests/test_browser_report_download_service/test_prompt_and_probe.py` |
+| 2,523 | `tests/test_browser_report_download_service/test_prompt_and_probe.py` |
 | 2,503 | `tests/test_pdf_figures_service/builders.py` |
 | 2,311 | `tests/test_cross_report_analysis_input_generator.py` |
 | 2,199 | `tests/test_publisher_inventory_service/test_browser_traversal.py` |
@@ -119,6 +122,7 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 - `src/services/report_store_service.py` over `src/services/_report_store_service/*`.
 - `src/services/state_service.py` over `src/services/_state_service/*`.
 - `src/services/publisher_inventory_service.py` over `src/services/_publisher_inventory_service/*`.
+- `src/services/browser_report_download_service.py` over `src/services/_browser_report_download/*`, including the internal `src/services/_browser_report_download/_artifact/*` and `src/services/_browser_report_download/_browser_runtime/*` capability families.
 - `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
 - `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`.
 - `src/orchestrators/report_download_orchestrator.py` over `src/orchestrators/_report_download_orchestrator/*`.
@@ -132,16 +136,20 @@ Any additional work must reduce responsibility or algorithmic complexity inside 
 
 Primary evidence:
 
-- `src/services/_browser_report_download/artifact.py`: `4,072` lines.
-- `src/services/_browser_report_download/browser.py`: `4,004` lines.
+- `src/orchestrators/_report_download_orchestrator/workflow.py`: `2,554` lines.
 - `src/services/_browser_report_download/http.py`: `2,066` lines.
 - `src/services/_browser_report_download/helpers.py`: `1,892` lines.
-- `src/orchestrators/_report_download_orchestrator/workflow.py`: `2,554` lines.
+- `src/services/_browser_report_download/cdp.py`: `1,593` lines.
+- `src/services/_browser_report_download/_browser_runtime/terminal_assets.py`: `1,319` lines.
+- `src/services/_browser_report_download/_artifact/classification.py`: `1,153` lines.
+- `src/services/_browser_report_download/_browser_runtime/session_lifecycle.py`: `1,102` lines.
 
 Direction:
 
 - Keep `src/services/browser_report_download_service.py` as the sole public browser-download service boundary.
-- Split only coherent internal capabilities, such as terminal evidence/finalization, browser session execution and teardown, deterministic HTTP acquisition/classification, and route-history persistence.
+- Retain the new `_artifact/*` internal capability family; `artifact.py` is now a smaller coordination module rather than the top hotspot.
+- Retain the new `_browser_runtime/*` internal capability family; `browser.py` is now a smaller runtime coordinator rather than the top hotspot.
+- Continue extracting only coherent internal capabilities where responsibility or measured complexity remains high, such as deterministic HTTP acquisition/classification and route-history persistence.
 - Keep route ordering, retry/backoff, idempotency, and state transitions in the orchestrator family.
 - Keep prompt selection/rendering in the prompt service boundary; do not place prompt text in extracted modules.
 

@@ -2337,7 +2337,7 @@ def test_download_report_with_browser_use_prefetches_structured_pdf_url_before_c
         lambda module_name: runtime,
     )
     external_boundary_mocks_only.setattr(
-        browser_runtime,
+        http_runtime,
         "download_pdf_from_url",
         _download_pdf_from_url,
     )
