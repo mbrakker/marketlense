@@ -31,7 +31,7 @@
 **Files:**
 - Create: `tests/test_browser_report_download_http_decomposition.py`
 
-- [ ] **Step 1: Write the failing ownership and compatibility test**
+- [x] **Step 1: Write the failing ownership and compatibility test**
 
 ```python
 from __future__ import annotations
@@ -108,7 +108,7 @@ def test_browser_report_http_uses_focused_private_capability_modules() -> None:
         assert symbol in source
 ```
 
-- [ ] **Step 2: Run the ownership test and confirm it fails before production edits**
+- [x] **Step 2: Run the ownership test and confirm it fails before production edits**
 
 Run:
 
@@ -118,7 +118,7 @@ python -m pytest tests/test_browser_report_download_http_decomposition.py -q
 
 Expected: `FAILED` because `src/services/_browser_report_download/_http/pdf_transfer.py` does not yet exist.
 
-- [ ] **Step 3: Commit the red test with the implementation after it turns green**
+- [x] **Step 3: Commit the red test with the implementation after it turns green**
 
 The test remains uncommitted through the extraction so the commit contains a verified test and its corresponding implementation.
 
@@ -133,7 +133,7 @@ The test remains uncommitted through the extraction so the commit contains a ver
 - Test: `tests/test_browser_report_download_http_decomposition.py`
 - Test: `tests/test_browser_report_download_doc_type_predictor.py`
 
-- [ ] **Step 1: Move deterministic shared evidence functions**
+- [x] **Step 1: Move deterministic shared evidence functions**
 
 Move shared immutable request constants to `config.py` so request metadata
 remains single-sourced:
@@ -155,7 +155,7 @@ keeping their original names and bodies:
 Preserve their current bodies from `http.py`; export public compatibility
 names through `http.py`, including `extract_embedded_pdf_urls`.
 
-- [ ] **Step 2: Move binary transfer implementations**
+- [x] **Step 2: Move binary transfer implementations**
 
 Move these original definitions into `pdf_transfer.py` without changing their
 bodies:
@@ -170,7 +170,7 @@ Import deterministic dependencies from `html_evidence.py`. Retain identical
 HTTP acquisition requests, headers, timeouts, maximum-body policies, log event
 names, typed error behavior, route-family construction, and PDF validation.
 
-- [ ] **Step 3: Keep `http.py` as compatibility surface**
+- [x] **Step 3: Keep `http.py` as compatibility surface**
 
 Replace moved definitions with direct imports:
 
@@ -198,7 +198,7 @@ Keep `requests` imported in `http.py` because existing external-boundary
 tests patch `http_runtime.requests.get`, which refers to the shared imported
 `requests` package object used by extracted service modules.
 
-- [ ] **Step 4: Run focused checks**
+- [x] **Step 4: Run focused checks**
 
 Run:
 
@@ -218,7 +218,7 @@ extracted; existing predictor tests pass without changed output semantics.
 - Test: `tests/test_browser_report_download_http_decomposition.py`
 - Test: `tests/test_browser_report_download_service/test_prompt_and_probe.py`
 
-- [ ] **Step 1: Move report-page PDF probing**
+- [x] **Step 1: Move report-page PDF probing**
 
 Move the existing report-page probe and its candidate selection helpers from
 their original source lines:
@@ -234,7 +234,7 @@ Use `extract_embedded_pdf_urls` and `_response_header_value` from
 `try_direct_pdf_download` from `pdf_transfer.py`. Preserve candidate order,
 probe timeout choice, response-policy metadata, route steps, and log fields.
 
-- [ ] **Step 2: Move gate probing**
+- [x] **Step 2: Move gate probing**
 
 Move access-challenge and static email-gate definitions from their original
 source lines:
@@ -250,7 +250,7 @@ Use `_extract_html_title`, `_extract_text_excerpt`, `_html_to_text`, and
 `_response_header_value` from `html_evidence.py`. Preserve markers, status codes,
 timeouts, event names, terminal-evidence construction, and errors.
 
-- [ ] **Step 3: Reexport public probe functions from `http.py`**
+- [x] **Step 3: Reexport public probe functions from `http.py`**
 
 ```python
 from src.services._browser_report_download._http.gate_probe import (
@@ -262,7 +262,7 @@ from src.services._browser_report_download._http.page_pdf_probe import (
 )
 ```
 
-- [ ] **Step 4: Run focused probe checks**
+- [x] **Step 4: Run focused probe checks**
 
 Run:
 
@@ -281,7 +281,7 @@ existing probe and prediction assertions pass.
 - Test: `tests/test_browser_report_download_http_decomposition.py`
 - Test: `tests/test_browser_report_download_service/test_onsite_and_terminal.py`
 
-- [ ] **Step 1: Move onsite capture ownership**
+- [x] **Step 1: Move onsite capture ownership**
 
 Move the existing dataclass and onsite capture implementation from original
 source lines:
@@ -305,7 +305,7 @@ Use `_extract_html_title`, `_extract_text_excerpt`, and `_html_to_text` from
 `html_evidence.py`. Preserve capture request policy, recovery reasons, route
 family decisions, and event fields.
 
-- [ ] **Step 2: Complete `http.py` reexports**
+- [x] **Step 2: Complete `http.py` reexports**
 
 ```python
 from src.services._browser_report_download._http.onsite_capture import (
@@ -318,7 +318,7 @@ The compatibility module must retain every external name consumed by current
 browser-download modules and tests; it must contain no moved capability
 definitions.
 
-- [ ] **Step 3: Run ownership and affected synthetic tests**
+- [x] **Step 3: Run ownership and affected synthetic tests**
 
 Run:
 
@@ -336,7 +336,7 @@ capability in its designated module and not in `http.py`.
 - Modify: `long_scripts.md`
 - Modify: `docs/architecture/browser-report-http-decomposition-review.md`
 
-- [ ] **Step 1: Record the stable boundary in README**
+- [x] **Step 1: Record the stable boundary in README**
 
 Add a concise architecture note adjacent to existing browser-report
 decomposition documentation:
@@ -345,7 +345,7 @@ decomposition documentation:
 - Browser-report HTTP isolation: `src/services/_browser_report_download/http.py` remains the private compatibility surface, while PDF transfer, page-PDF probing, gate probing, onsite capture, and shared HTML evidence live in `_http/` capability modules behind the canonical browser-report service boundary.
 ```
 
-- [ ] **Step 2: Refresh the long-file audit**
+- [x] **Step 2: Refresh the long-file audit**
 
 Run:
 
@@ -357,7 +357,7 @@ Update `long_scripts.md` with the reported audited line counts and remove
 `http.py` from the active hotspot table only if the audit output confirms it
 is no longer above the threshold represented there.
 
-- [ ] **Step 3: Record implementation ownership and verification fields**
+- [x] **Step 3: Record implementation ownership and verification fields**
 
 In `docs/architecture/browser-report-http-decomposition-review.md`, add an
 execution-status section with extracted module ownership, test counts,
@@ -369,7 +369,7 @@ the final guarded live result.
 **Files:**
 - Modify: `docs/architecture/browser-report-http-decomposition-review.md` with actual evidence
 
-- [ ] **Step 1: Run affected synthetic and static verification**
+- [x] **Step 1: Run affected synthetic and static verification**
 
 Run:
 
@@ -385,7 +385,7 @@ python scripts/ci/run_type_check.py
 
 Expected: all commands exit `0`.
 
-- [ ] **Step 2: Run complete synthetic and configured quality gates**
+- [x] **Step 2: Run complete synthetic and configured quality gates**
 
 Run:
 
@@ -400,7 +400,7 @@ python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2
 Expected: all commands exit `0`, with actual totals recorded in the
 architecture review.
 
-- [ ] **Step 3: Run the bounded live gate only after synthetic checks pass**
+- [x] **Step 3: Run the bounded live gate only after synthetic checks pass**
 
 Load `OPENROUTER_API_KEY`, `BROWSER_DOWNLOAD_MODEL`, and
 `OPENROUTER_HTTP_REFERER` from `.env` into the child process without printing
@@ -415,14 +415,14 @@ Expected: the guarded fixture downloads and verifies a PDF through real
 browser/OpenRouter and HTTP acquisition with uploads disabled, and its
 structured-log assertions pass.
 
-- [ ] **Step 4: Handle any detected regression test-first**
+- [x] **Step 4: Handle any detected regression test-first**
 
 For a failed existing assertion or live behavior difference, add or refine a
 test asserting the observable contract, event, artifact, or request side
 effect; observe it fail; make the narrow production correction; rerun Steps 1
 through 3 before recording completion.
 
-- [ ] **Step 5: Commit implementation and evidence**
+- [x] **Step 5: Commit implementation and evidence**
 
 Run:
 

@@ -16,7 +16,7 @@
 - Create: `tests/test_report_download_workflow_decomposition.py`
 - Verify: `src/orchestrators/_report_download_orchestrator/workflow.py`
 
-- [ ] **Step 1: Write the failing ownership test**
+- [x] **Step 1: Write the failing ownership test**
 
 ```python
 from __future__ import annotations
@@ -53,7 +53,7 @@ def test_report_download_workflow_delegates_focused_capabilities() -> None:
         assert not expected & coordinator_functions
 ```
 
-- [ ] **Step 2: Prove the test is red before extraction**
+- [x] **Step 2: Prove the test is red before extraction**
 
 Run:
 
@@ -72,7 +72,7 @@ Expected: failure because the new capability modules do not exist.
 - Create: `src/orchestrators/_report_download_orchestrator/promotions.py`
 - Modify: `src/orchestrators/_report_download_orchestrator/workflow.py`
 
-- [ ] **Step 1: Move dependency injection ownership**
+- [x] **Step 1: Move dependency injection ownership**
 
 Move `ReportDownloadDependencies` and its `default()` construction unchanged
 to `dependencies.py`, then re-export it through `workflow.py`:
@@ -83,7 +83,7 @@ from src.orchestrators._report_download_orchestrator.dependencies import (
 )
 ```
 
-- [ ] **Step 2: Move candidate readiness**
+- [x] **Step 2: Move candidate readiness**
 
 Move the candidate marker constants and candidate screening functions to
 `candidate_readiness.py`, preserving their complete current implementations,
@@ -105,7 +105,7 @@ Replace the coordinator invocation with the explicit
 `assert_candidate_download_ready(request=request, normalized_url=normalized_url, ctx=ctx)`
 call shown above.
 
-- [ ] **Step 3: Move failure forensics**
+- [x] **Step 3: Move failure forensics**
 
 Move forensic metadata/evidence/package helpers to `failure_forensics.py`
 without changing artifact paths, event fields, error codes, or settings:
@@ -126,7 +126,7 @@ pack = persist_failed_attempt_forensics_pack(
 )
 ```
 
-- [ ] **Step 4: Move browser-route promotions**
+- [x] **Step 4: Move browser-route promotions**
 
 Move route-playbook and private-API promotion evaluation to `promotions.py`
 without changing skip rules or service invocation conditions:
@@ -148,7 +148,7 @@ evaluate_private_api_playbook_auto_promotion(
 )
 ```
 
-- [ ] **Step 5: Run the orchestrator tests during extraction**
+- [x] **Step 5: Run the orchestrator tests during extraction**
 
 Run:
 
@@ -165,7 +165,7 @@ Expected: all selected tests pass with unchanged behavior.
 - Create: `src/orchestrators/_report_download_orchestrator/drive_archive.py`
 - Modify: `src/orchestrators/_report_download_orchestrator/workflow.py`
 
-- [ ] **Step 1: Extract persistence stages**
+- [x] **Step 1: Extract persistence stages**
 
 Create high-level package-private operations that contain the existing route,
 source/value, and identity recording logic:
@@ -195,7 +195,7 @@ identity_update = record_identity_update(
 `record_route_outcome` returns whether the route record was reused so the
 coordinator supplies that same condition to promotion evaluation.
 
-- [ ] **Step 2: Extract optional Drive archival**
+- [x] **Step 2: Extract optional Drive archival**
 
 Move archive behavior and its helper operations unchanged to
 `drive_archive.py`, and retain its existing coordinator invocation:
@@ -214,7 +214,7 @@ drive_uploads = archive_successful_report_artifacts(
 The module continues to call Drive only when
 `request.settings.drive_upload_enabled` is true.
 
-- [ ] **Step 3: Reduce coordinator to sequencing**
+- [x] **Step 3: Reduce coordinator to sequencing**
 
 After route acquisition, call the extracted stages in the existing order:
 
@@ -252,7 +252,7 @@ drive_uploads = archive_successful_report_artifacts(
 )
 ```
 
-- [ ] **Step 4: Prove structure and behavior are green**
+- [x] **Step 4: Prove structure and behavior are green**
 
 Run:
 
@@ -267,7 +267,7 @@ Expected: all selected tests pass.
 **Files:**
 - Create: `tests/integration/test_report_download_orchestrator.py`
 
-- [ ] **Step 1: Add a guarded local browser acquisition test**
+- [x] **Step 1: Add a guarded local browser acquisition test**
 
 Implement an integration fixture serving HTML with a JavaScript download
 button whose target path does not contain `.pdf`, then invoke
@@ -294,7 +294,7 @@ assert "report_download_complete" in event_names
 assert_logs_have_required_fields(events)
 ```
 
-- [ ] **Step 2: Keep default CI synthetic**
+- [x] **Step 2: Keep default CI synthetic**
 
 Run without the live guard:
 
@@ -311,13 +311,13 @@ Expected: one skipped guarded live integration test.
 - Modify: `long_scripts.md`
 - Modify: `docs/architecture/report-download-workflow-decomposition-review.md`
 
-- [ ] **Step 1: Refresh architecture documentation and line audit**
+- [x] **Step 1: Refresh architecture documentation and line audit**
 
 Document the new private orchestrator capability package in `README.md`,
 refresh `long_scripts.md` from the existing counting workflow, and add
 execution evidence to the architecture review.
 
-- [ ] **Step 2: Run affected and full synthetic verification**
+- [x] **Step 2: Run affected and full synthetic verification**
 
 Run:
 
@@ -329,7 +329,7 @@ python -m pytest -q
 Expected: all synthetic tests pass; guarded integrations remain deselected or
 skipped by default configuration.
 
-- [ ] **Step 3: Run repository gates**
+- [x] **Step 3: Run repository gates**
 
 Run:
 
@@ -347,7 +347,7 @@ python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2
 
 Expected: all configured gates pass.
 
-- [ ] **Step 4: Run the approved bounded live verification**
+- [x] **Step 4: Run the approved bounded live verification**
 
 Load `OPENROUTER_API_KEY`, optional `BROWSER_DOWNLOAD_MODEL`, and optional
 `OPENROUTER_HTTP_REFERER` from the local environment without printing their

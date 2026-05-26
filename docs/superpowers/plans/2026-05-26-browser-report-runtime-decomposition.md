@@ -15,7 +15,7 @@
 **Files:**
 - Create: `tests/test_browser_report_download_runtime_decomposition.py`
 
-- [ ] **Step 1: Write the failing ownership test**
+- [x] **Step 1: Write the failing ownership test**
 
 ```python
 from __future__ import annotations
@@ -74,7 +74,7 @@ def test_browser_runtime_uses_focused_private_capability_modules() -> None:
         assert coordinator_functions.isdisjoint(owned_functions)
 ```
 
-- [ ] **Step 2: Run test to verify it fails before extraction**
+- [x] **Step 2: Run test to verify it fails before extraction**
 
 Run: `python -m pytest tests/test_browser_report_download_runtime_decomposition.py -q`
 
@@ -91,7 +91,7 @@ Expected: failure because `_browser_runtime/__init__.py` and the five capability
 - Create: `src/services/_browser_report_download/_browser_runtime/session_lifecycle.py`
 - Modify: `src/services/_browser_report_download/browser.py`
 
-- [ ] **Step 1: Create the private capability package declaration**
+- [x] **Step 1: Create the private capability package declaration**
 
 ```python
 """Internal runtime capabilities for browser-report acquisition.
@@ -102,7 +102,7 @@ recovery, worker transport, and browser lifecycle mechanics while preserving
 """
 ```
 
-- [ ] **Step 2: Move existing function families without behavioral edits**
+- [x] **Step 2: Move existing function families without behavioral edits**
 
 Move the current bodies and their local constants/classes exactly as follows:
 
@@ -177,7 +177,7 @@ Include private supporting helpers adjacent to the family that calls them.
 Do not change statements inside moved function/class bodies; only adjust
 imports needed to resolve the same collaborators.
 
-- [ ] **Step 3: Preserve coordinator and compatibility imports**
+- [x] **Step 3: Preserve coordinator and compatibility imports**
 
 Keep the coordinator function and runtime loader/error mapping in
 `browser.py`, and import current compatibility-visible names:
@@ -199,7 +199,7 @@ from src.services._browser_report_download._browser_runtime.worker_protocol impo
 `time` so current external-boundary tests retain their supported patch surface
 while the moved modules use the same shared module objects.
 
-- [ ] **Step 4: Run the ownership and browser-download tests**
+- [x] **Step 4: Run the ownership and browser-download tests**
 
 Run:
 
@@ -216,7 +216,7 @@ Expected: all selected tests pass.
 - Verify only: `tests/test_report_download_orchestrator.py`
 - Verify only: `tests/integration/test_browser_report_download_service.py`
 
-- [ ] **Step 1: Run affected workflow synthetic tests**
+- [x] **Step 1: Run affected workflow synthetic tests**
 
 Run:
 
@@ -226,7 +226,7 @@ python -m pytest tests/test_report_download_route_planner.py tests/test_report_d
 
 Expected: all tests pass with unchanged result and retry/idempotency behavior.
 
-- [ ] **Step 2: Run static and type validation**
+- [x] **Step 2: Run static and type validation**
 
 Run:
 
@@ -241,7 +241,7 @@ python scripts/ci/check_repository_hygiene.py
 Expected: each command exits with status `0`, or an environmental blocker is
 reported with its command output.
 
-- [ ] **Step 3: Run the default synthetic regression suite**
+- [x] **Step 3: Run the default synthetic regression suite**
 
 Run: `python -m pytest -q`
 
@@ -253,7 +253,7 @@ Expected: all non-integration tests pass.
 - Modify: `README.md`
 - Modify: `long_scripts.md`
 
-- [ ] **Step 1: Update the README boundary description**
+- [x] **Step 1: Update the README boundary description**
 
 Extend the existing browser-download architecture paragraph with:
 
@@ -264,14 +264,14 @@ worker transport, and browser session lifecycle mechanics now live under
 `_browser_report_download/_browser_runtime/` as private capabilities.
 ```
 
-- [ ] **Step 2: Refresh long-file evidence**
+- [x] **Step 2: Refresh long-file evidence**
 
 Run: `python scripts/count_long_files.py --min-lines 500`
 
 Update `long_scripts.md` to replace the prior `browser.py` count and identify
 any extracted runtime module that remains above the review threshold.
 
-- [ ] **Step 3: Check documentation diffs**
+- [x] **Step 3: Check documentation diffs**
 
 Run: `git diff --check -- README.md long_scripts.md`
 
@@ -282,7 +282,7 @@ Expected: exit status `0`.
 **Files:**
 - Verify only: `tests/integration/test_browser_report_download_service.py`
 
-- [ ] **Step 1: Run the approved live fixture integration**
+- [x] **Step 1: Run the approved live fixture integration**
 
 Run:
 
@@ -295,7 +295,7 @@ Expected: pass when `OPENROUTER_API_KEY` and browser-use dependencies are
 configured; otherwise record the explicit skip/blocker and do not claim live
 verification.
 
-- [ ] **Step 2: Report evidence**
+- [x] **Step 2: Report evidence**
 
 Report the synthetic command outcomes, the live test outcome or explicit
 configuration blocker, the new line counts, and any remaining risk without

@@ -106,7 +106,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Lines | Path |
 | ---: | --- |
-| 551 | `scripts/ci/check_split_symbol_links.py` |
+| 597 | `scripts/ci/check_split_symbol_links.py` |
 | 7,026 | `Wordpress/wp-content/themes/marketlense/assets/css/theme.css` |
 | 1,762 | `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-shortcodes.php` |
 | 1,009 | `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-taxonomies.php` |

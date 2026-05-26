@@ -31,7 +31,7 @@
 - Read: `cache/1Wm4HRYQ0ImIAEx4-tw2vz1T2i2ignIBD.pdf`
 - Generate outside source control: `$env:TEMP/market-lense-pdf-table-live-baseline.json`
 
-- [ ] **Step 1: Write the pre-edit baseline from the approved local PDF**
+- [x] **Step 1: Write the pre-edit baseline from the approved local PDF**
 
 Run:
 
@@ -90,7 +90,7 @@ update the design evidence before continuing.
 **Files:**
 - Create: `tests/test_pdf_table_heuristics_decomposition.py`
 
-- [ ] **Step 1: Write the failing structural compatibility test**
+- [x] **Step 1: Write the failing structural compatibility test**
 
 ```python
 from __future__ import annotations
@@ -180,7 +180,7 @@ def test_pdf_table_heuristics_use_focused_private_capability_modules() -> None:
         assert symbol in source
 ```
 
-- [ ] **Step 2: Run the new test before production edits**
+- [x] **Step 2: Run the new test before production edits**
 
 Run:
 
@@ -200,13 +200,13 @@ Expected: `FAILED` because
 - Modify: `src/services/_pdf/table_heuristics.py`
 - Test: `tests/test_pdf_table_heuristics_decomposition.py`
 
-- [ ] **Step 1: Create the implementation package marker**
+- [x] **Step 1: Create the implementation package marker**
 
 ```python
 """Internal semantic families for PDF table-candidate heuristics."""
 ```
 
-- [ ] **Step 2: Move policy declarations unchanged into `policy.py`**
+- [x] **Step 2: Move policy declarations unchanged into `policy.py`**
 
 Move `PDF_FIGURE_EXCEPTIONS`, `_PDFMINER_LOGGERS`, all current
 `TABLE_*` settings/threshold declarations, `CAPTION_HINTS`,
@@ -215,7 +215,7 @@ Move `PDF_FIGURE_EXCEPTIONS`, `_PDFMINER_LOGGERS`, all current
 `table_heuristics.py`. Keep their literal values and regular-expression flags
 unchanged. `policy.py` imports only `re` and `statistics`.
 
-- [ ] **Step 3: Move the immutable analysis records unchanged into `models.py`**
+- [x] **Step 3: Move the immutable analysis records unchanged into `models.py`**
 
 Move these dataclass definitions with their existing field order and types:
 
@@ -230,7 +230,7 @@ _RankedTableRegion
 `models.py` imports `dataclass`, `Tuple`, and `pymupdf as fitz`; it imports no
 service or capability module.
 
-- [ ] **Step 4: Start the facade with explicit reexports**
+- [x] **Step 4: Start the facade with explicit reexports**
 
 Add explicit imports in `table_heuristics.py` for policy constants and model
 classes so current consumers still resolve the same names:
@@ -263,7 +263,7 @@ star imports for the new boundary.
 - Test: `tests/test_pdf_table_heuristics_decomposition.py`
 - Test: `tests/test_pdf_figures_service/test_table_heuristics.py`
 
-- [ ] **Step 1: Move page-layout interpretation into `layout.py`**
+- [x] **Step 1: Move page-layout interpretation into `layout.py`**
 
 Move the original function bodies unchanged for:
 
@@ -315,7 +315,7 @@ Use `models.py` for block/band records and `policy.py` for thresholds/patterns.
 Do not change exception handling, numeric tolerances, string normalization, or
 geometry calculations.
 
-- [ ] **Step 2: Move evidence evaluation and deduplication into `screening.py`**
+- [x] **Step 2: Move evidence evaluation and deduplication into `screening.py`**
 
 Move the original bodies unchanged for:
 
@@ -368,7 +368,7 @@ Import shared layout functions from `layout.py`, models from `models.py`, and
 thresholds from `policy.py`. Preserve rejection strings and ordering exactly.
 `screening.py` does not import region formation.
 
-- [ ] **Step 3: Reexport moved layout/screening names from the facade**
+- [x] **Step 3: Reexport moved layout/screening names from the facade**
 
 Use explicit imports from `layout.py` and `screening.py` for every moved symbol
 currently imported from `table_heuristics.py` by `figures.py` or
@@ -376,7 +376,7 @@ currently imported from `table_heuristics.py` by `figures.py` or
 facade and call the imported layout/screening symbols as before; the imports
 in consumer files remain unchanged.
 
-- [ ] **Step 4: Run the focused table heuristic suite during extraction**
+- [x] **Step 4: Run the focused table heuristic suite during extraction**
 
 Run:
 
@@ -399,7 +399,7 @@ passing.
 - Test: `tests/test_pdf_figures_service/test_pipeline_and_cache.py`
 - Test: `tests/test_pdf_crop_service.py`
 
-- [ ] **Step 1: Move table-region construction into `regions.py`**
+- [x] **Step 1: Move table-region construction into `regions.py`**
 
 Move the original function bodies unchanged for:
 
@@ -431,7 +431,7 @@ Import page interpretation helpers from `layout.py`, data records from
 `screening.py`. Preserve bbox decisions and ranked candidate construction
 exactly; `screening.py` does not import `regions.py`.
 
-- [ ] **Step 2: Retain execution-only helpers in `table_heuristics.py`**
+- [x] **Step 2: Retain execution-only helpers in `table_heuristics.py`**
 
 Leave these existing helper bodies in the compatibility module because only
 candidate execution consumes them and no extracted capability depends on
@@ -448,7 +448,7 @@ _suppress_pdfminer_warnings
 Replace all other moved bodies with explicit facade imports from the five
 private implementation modules.
 
-- [ ] **Step 3: Extend split-boundary static checking**
+- [x] **Step 3: Extend split-boundary static checking**
 
 Add the facade and private modules to `BOUNDARY_EXPORT_REQUIREMENTS` in
 `scripts/ci/check_split_symbol_links.py` using symbols already asserted by
@@ -456,7 +456,7 @@ Add the facade and private modules to `BOUNDARY_EXPORT_REQUIREMENTS` in
 imports, so do not add the new package to `STAR_LINK_TARGETS` or create a
 second public boundary.
 
-- [ ] **Step 4: Verify the red test is now green with affected baseline tests**
+- [x] **Step 4: Verify the red test is now green with affected baseline tests**
 
 Run:
 
@@ -467,7 +467,7 @@ python scripts/ci/check_split_symbol_links.py
 
 Expected: all tests and static split-symbol checking pass.
 
-- [ ] **Step 5: Commit the verified extraction**
+- [x] **Step 5: Commit the verified extraction**
 
 ```powershell
 git add -- src/services/_pdf/table_heuristics.py src/services/_pdf/_table_heuristics tests/test_pdf_table_heuristics_decomposition.py scripts/ci/check_split_symbol_links.py
@@ -481,7 +481,7 @@ git commit -m "refactor: decompose pdf table heuristics"
 - Modify: `long_scripts.md`
 - Modify: `docs/architecture/pdf-table-heuristics-decomposition-review.md`
 
-- [ ] **Step 1: Update documentation and audit output**
+- [x] **Step 1: Update documentation and audit output**
 
 Add a README note beside the existing PDF candidate extraction split stating
 that `table_heuristics.py` is now an internal compatibility facade over
@@ -497,7 +497,7 @@ python scripts/count_long_files.py --min-lines 500
 Update `long_scripts.md` with the resulting table-heuristics facade line
 count and any remaining private PDF table hotspot above the audit threshold.
 
-- [ ] **Step 2: Run the expanded affected PDF tests**
+- [x] **Step 2: Run the expanded affected PDF tests**
 
 Run:
 
@@ -507,7 +507,7 @@ python -m pytest tests/test_pdf_table_heuristics_decomposition.py tests/test_pdf
 
 Expected: zero failures.
 
-- [ ] **Step 3: Run configured static and synthetic quality gates**
+- [x] **Step 3: Run configured static and synthetic quality gates**
 
 Run:
 
@@ -534,7 +534,7 @@ mutation/quality output in the architecture review.
 - Read: `cache/1Wm4HRYQ0ImIAEx4-tw2vz1T2i2ignIBD.pdf`
 - Modify: `docs/architecture/pdf-table-heuristics-decomposition-review.md`
 
-- [ ] **Step 1: Compare current results to the pre-edit fingerprint**
+- [x] **Step 1: Compare current results to the pre-edit fingerprint**
 
 Run after all synthetic gates pass:
 
@@ -591,7 +591,7 @@ identical. If elapsed time is materially slower than `51.119` seconds, repeat
 the measurement once to rule out local variance, then investigate before
 completion.
 
-- [ ] **Step 2: Record execution evidence and commit documentation**
+- [x] **Step 2: Record execution evidence and commit documentation**
 
 Add exact synthetic/gate totals and real-PDF comparison output to
 `docs/architecture/pdf-table-heuristics-decomposition-review.md`, update the
