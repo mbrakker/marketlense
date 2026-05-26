@@ -407,7 +407,7 @@ Load `OPENROUTER_API_KEY`, `BROWSER_DOWNLOAD_MODEL`, and
 values. Run:
 
 ```powershell
-$env:RUN_BROWSER_REPORT_DOWNLOAD_INTEGRATION='1'
+$env:RUN_BROWSER_DOWNLOAD_INTEGRATION='1'
 python -m pytest -m integration tests/integration/test_browser_report_download_service.py -q -rs
 ```
 

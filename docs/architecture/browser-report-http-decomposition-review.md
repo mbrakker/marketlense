@@ -100,3 +100,56 @@ Required completion evidence:
   browser/OpenRouter and real HTTP acquisition with external uploads disabled
 
 Execution evidence will be added to this review when verification completes.
+
+## Execution Status - 2026-05-26
+
+Implementation ownership:
+
+- `http.py` is now the `47`-line compatibility surface retained by current
+  browser-download consumers.
+- `_http/config.py` owns shared HTTP request headers and bounded body-size
+  constants.
+- `_http/html_evidence.py` owns deterministic HTML and embedded-PDF parsing.
+- `_http/pdf_transfer.py` owns verified PDF transfer and artifact validation.
+- `_http/page_pdf_probe.py` owns HTML report-page PDF-link probing.
+- `_http/gate_probe.py` owns access-challenge and static email-gate probes.
+- `_http/onsite_capture.py` owns direct onsite capture and recovery
+  classification.
+
+Detected and corrected during implementation:
+
+- The first focused post-extraction run detected that mechanical source
+  movement had omitted the `@dataclass(frozen=True)` decorator on
+  `DirectOnsiteRecoveryDecision`, preventing recovery-decision construction.
+  The original decorator/import were restored, and all subsequent synthetic
+  and live checks passed.
+
+Automated evidence:
+
+- The new ownership test failed before extraction because `_http/pdf_transfer.py`
+  did not exist, then passed after extraction.
+- The expanded affected browser-report and report-download synthetic surface
+  passed: `227` tests.
+- The full default synthetic suite passed: `2,616` tests, with `16`
+  integration tests deselected.
+- Formatting, split-symbol, forbidden-patching, repository-hygiene, full
+  `src` type checking, coverage, configured mutation, and quality-regression
+  gates passed.
+- Coverage results were `82.63%` globally and `82.02%` for `src/services`,
+  above the configured thresholds.
+- The configured mutation targets do not currently include the extracted
+  private browser-report `_http` package.
+
+Live-gate evidence:
+
+- The existing guarded local fixture executed the real browser/OpenRouter and
+  HTTP acquisition path using temporary output/state files; this browser
+  service path performs no external upload action.
+- With the OpenRouter credential loaded from `.env` without logging its value,
+  running
+  `RUN_BROWSER_DOWNLOAD_INTEGRATION=1 python -m pytest -m integration tests/integration/test_browser_report_download_service.py -q -rs`
+  passed: `1` integration test passed with a verified PDF artifact and
+  required structured service log fields.
+- The live run emitted existing vendored-browser and `backoff` deprecation
+  warnings. They remain visible as browser-runtime cleanup risk; this
+  decomposition does not suppress or reinterpret them.
