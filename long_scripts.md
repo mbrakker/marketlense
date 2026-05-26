@@ -18,18 +18,19 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 97 | 34 |
+| First-party `src` | 99 | 34 |
 | First-party `tests` | 43 | 24 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `658`.
+- Total first-party source-like files scanned: `665`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
 - Browser runtime execution has now been decomposed internally: `src/services/_browser_report_download/browser.py` is `671` lines, with remaining focused hotspots in `_browser_runtime/terminal_assets.py` (`1,319`) and `_browser_runtime/session_lifecycle.py` (`1,102`).
 - Report-download orchestration has now been decomposed internally: `src/orchestrators/_report_download_orchestrator/workflow.py` is `528` physical lines and focused idempotent persistence lives in `persistence.py` (`646`); `route_planner.py` (`1,301`) remains the family's only `>=1,000`-line hotspot.
 - Browser-report HTTP acquisition has now been decomposed internally: `src/services/_browser_report_download/http.py` is a `47`-line compatibility surface; focused remaining `>500` owners are `_http/gate_probe.py` (`607`), `_http/onsite_capture.py` (`573`), and `_http/pdf_transfer.py` (`522`).
+- PDF table interpretation has now been decomposed internally: `src/services/_pdf/table_heuristics.py` is a `402`-line compatibility surface; focused remaining `>500` owners are `_table_heuristics/regions.py` (`1,065`), `_table_heuristics/screening.py` (`996`), and `_table_heuristics/layout.py` (`733`).
 
 ## Largest Runtime Files
 
@@ -37,7 +38,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Lines | Path | Assessment |
 | ---: | --- | --- |
-| 3,390 | `src/services/_pdf/table_heuristics.py` | Active PDF heuristic hotspot |
 | 2,637 | `src/services/_pdf/_visual_heuristics/panel_detection.py` | Active PDF heuristic hotspot |
 | 2,301 | `src/services/_publisher_inventory_service/workflow.py` | Active service-family hotspot |
 | 2,263 | `src/services/_pdf/visual_candidates.py` | Active PDF heuristic hotspot |
@@ -67,6 +67,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | 1,102 | `src/services/_browser_report_download/_browser_runtime/session_lifecycle.py` | Focused browser lifecycle capability |
 | 1,082 | `src/services/_report_store_service/download_routes.py` | Report-store capability family |
 | 1,076 | `src/services/_publisher_inventory_service/discovery_activity.py` | Discovery parsing/activity family |
+| 1,065 | `src/services/_pdf/_table_heuristics/regions.py` | Focused table-region geometry capability |
 | 1,059 | `src/contracts/cross_report_analysis.py` | Contract surface; do not split mechanically |
 | 1,052 | `src/services/render_service.py` | Rendering boundary |
 | 1,032 | `src/generators/_report_selection_generator/crop_refine.py` | Local performance candidate |
@@ -164,7 +165,10 @@ Verification required:
 
 Primary evidence:
 
-- `src/services/_pdf/table_heuristics.py`: `3,390` lines.
+- `src/services/_pdf/_table_heuristics/regions.py`: `1,065` lines; focused region formation and bbox adjustment owner.
+- `src/services/_pdf/_table_heuristics/screening.py`: `996` lines; focused rejection, scoring, and deduplication owner.
+- `src/services/_pdf/_table_heuristics/layout.py`: `733` lines; focused page-layout and text interpretation owner.
+- `src/services/_pdf/table_heuristics.py`: `402` lines; stable compatibility surface.
 - `src/services/_pdf/_visual_heuristics/panel_detection.py`: `2,637` lines.
 - `src/services/_pdf/visual_candidates.py`: `2,263` lines.
 - `src/services/_pdf/crop.py`: `1,689` lines.
@@ -173,7 +177,8 @@ Direction:
 
 - Retain `src/services/pdf_service.py` as the canonical PDF boundary.
 - Prioritize measured algorithm changes already recorded in `CONSOLIDATED_TODO.md`: indexed table deduplication and precomputed per-page visual candidate relationships.
-- Extract internal modules only when an algorithm or stable heuristic family gains independent testability; do not create forwarding-only layers.
+- Retain the `_table_heuristics/*` capability split; `regions.py` is the remaining table-family long-file review target, and further extraction requires a semantic boundary rather than line-count slicing.
+- Extract additional internal modules only when an algorithm or stable heuristic family gains independent testability; do not create forwarding-only layers.
 
 Verification required:
 

@@ -63,6 +63,11 @@ layout interpretation and are reexported through the facade; this avoids a
 facade-to-capability-to-facade import cycle while preserving all existing
 imports.
 
+Numeric-fragment recognition also stays with layout interpretation:
+`_table_fragment_is_numeric()` depends on `_cell_is_numeric()`, so both are
+owned by layout and reexported for screening/callers rather than creating a
+layout-to-screening-to-layout cycle.
+
 ## Cognitive Load Assessment
 
 Existing consumers retain one import surface, so normal candidate execution
@@ -121,3 +126,66 @@ Required completion evidence:
 
 Execution evidence will be recorded in this review after implementation and
 verification.
+
+## Execution Evidence
+
+Implemented ownership:
+
+- `src/services/_pdf/table_heuristics.py`: `402` lines; compatibility facade
+  retaining execution-only helpers.
+- `src/services/_pdf/_table_heuristics/regions.py`: `1,065` lines; region
+  formation and bbox adjustment.
+- `src/services/_pdf/_table_heuristics/screening.py`: `996` lines; rejection,
+  quality scoring, overlap, and deduplication.
+- `src/services/_pdf/_table_heuristics/layout.py`: `733` lines; page-layout,
+  text interpretation, preview/statistics, and numeric fragment recognition.
+- `src/services/_pdf/_table_heuristics/policy.py` and `models.py`: shared
+  threshold/pattern policy and immutable private records.
+
+Regressions detected and fixed during implementation:
+
+- Initial mechanical extraction omitted the five `@dataclass(frozen=True)`
+  decorators in `models.py`; focused behavior tests failed on construction of
+  moved records. The decorators were restored before the implementation
+  commit.
+- The extracted capability files initially omitted original module-level
+  dependencies (`statistics`, `math`, `re`, and typing imports). Focused tests
+  and Ruff detected the missing imports; the imports were restored before the
+  implementation commit.
+
+Synthetic verification results:
+
+```text
+Focused affected suite: 70 passed
+Broader affected PDF/service suite: 154 passed, 9 deselected
+Default non-integration suite with coverage: 2617 passed, 16 deselected,
+  15 subtests passed
+Formatting/link/architecture/forbidden-patching/hygiene/type gates: passed
+Coverage: global 82.64%, services 82.04%, generators 86.55%,
+  orchestrators 84.27% (all thresholds passed)
+Mutation gate: passed
+Quality regression gate: passed, including candidate extraction metrics
+```
+
+The full synthetic run emitted existing resource/deprecation warnings outside
+the modified table-heuristics package; no affected assertion or quality gate
+failed.
+
+Approved previously processed PDF comparison:
+
+```text
+source: cache/1Wm4HRYQ0ImIAEx4-tw2vz1T2i2ignIBD.pdf
+report: year-in-review-2022.pdf
+mode: local single-worker extraction to temporary output only
+candidate_count: 21 -> 21
+table_count: 12 -> 12
+degraded_pages: [] -> []
+triage_failure_count: 0 -> 0
+extraction_failure_count: 0 -> 0
+table IDs, pages, rounded bboxes, preview text, captions, typed features:
+  exact match
+elapsed_seconds: 54.254 pre-refactor -> 51.086 post-refactor
+```
+
+This comparison performs no upload or model request and detected no behavior,
+quality, speed, or cost regression in the affected local extraction path.

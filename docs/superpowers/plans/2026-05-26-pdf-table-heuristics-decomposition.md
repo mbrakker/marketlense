@@ -279,6 +279,7 @@ _table_text_starts_with_footnote_marker
 _table_text_has_embedded_note_marker
 _table_page_text_blocks
 _table_page_body_font_size
+_cell_is_numeric
 _table_fragment_is_numeric
 _table_page_text_lines
 _table_text_bands
@@ -319,7 +320,6 @@ geometry calculations.
 Move the original bodies unchanged for:
 
 ```python
-_cell_is_numeric
 _cell_words
 _numeric_char_ratio
 _avg_words_per_cell

@@ -68,8 +68,8 @@ configuration for all internal table capabilities.
 `layout.py` owns deterministic page-content interpretation: safe scalar/text
 normalization, page text blocks/lines/bands, bounded text extraction and
 preview/statistics, font and overlap geometry measurements, margin/noise
-recognition, note/title/body classification, and low-level text metrics
-shared by downstream table decisions.
+recognition, note/title/body classification, numeric-fragment recognition,
+and low-level text metrics shared by downstream table decisions.
 
 `regions.py` owns formation of candidate regions: ranked-table panel
 detection, title/note/footer attachment, stream-rectangle shrink behavior,
