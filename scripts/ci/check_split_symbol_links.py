@@ -156,6 +156,28 @@ BOUNDARY_EXPORT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     ),
     "src/services/_pdf/_visual_heuristics/panel_detection.py": ("_panel_chart_rects",),
     "src/services/_pdf/_visual_heuristics/collectors.py": ("_collect_chart_rects",),
+    "src/services/_publisher_inventory_service/workflow.py": (
+        "discover_publisher_inventory",
+        "inspect_publisher_inventory_landing_pages",
+        "_build_scenario_summary",
+        "_classify_preflight_scenario",
+        "_run_browser_traversal_with_timeout",
+        "_extract_browser_http_supplement_candidates",
+        "_discover_with_browser",
+    ),
+    "src/services/_publisher_inventory_service/preflight.py": (
+        "_build_scenario_summary",
+        "_classify_preflight_scenario",
+        "_looks_like_preflight_filter_route",
+        "_looks_like_preflight_direct_detail_path",
+    ),
+    "src/services/_publisher_inventory_service/browser_flow.py": (
+        "_run_browser_traversal",
+        "_run_browser_traversal_with_timeout",
+        "_collect_browser_inventory_pages",
+        "_wait_for_inventory_growth_probe",
+        "_extract_browser_http_supplement_candidates",
+    ),
     "src/services/_openai_service/base.py": (
         "AppError",
         "OpenAIAnalyzeRequest",
