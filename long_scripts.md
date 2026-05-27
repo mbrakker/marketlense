@@ -18,12 +18,12 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 99 | 35 |
+| First-party `src` | 101 | 35 |
 | First-party `tests` | 43 | 24 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `666`.
+- Total first-party source-like files scanned: `669`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
@@ -31,6 +31,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - Report-download orchestration has now been decomposed internally: `src/orchestrators/_report_download_orchestrator/workflow.py` is `528` physical lines and focused idempotent persistence lives in `persistence.py` (`646`); `route_planner.py` (`1,301`) remains the family's only `>=1,000`-line hotspot.
 - Browser-report HTTP acquisition has now been decomposed internally: `src/services/_browser_report_download/http.py` is a `47`-line compatibility surface; focused remaining `>500` owners are `_http/gate_probe.py` (`607`), `_http/onsite_capture.py` (`573`), and `_http/pdf_transfer.py` (`522`).
 - PDF table interpretation has now been decomposed internally: `src/services/_pdf/table_heuristics.py` is a `407`-line compatibility surface; focused remaining `>500` owners are `_table_heuristics/regions.py` (`1,085`), `_table_heuristics/screening.py` (`1,038`), and `_table_heuristics/layout.py` (`774`).
+- PDF panel interpretation has now been decomposed internally: `src/services/_pdf/_visual_heuristics/panel_detection.py` is a `1,002`-line detector coordinator, with focused text interpretation in `panel_text.py` (`952`) and geometry construction in `panel_geometry.py` (`988`); `src/services/_pdf/visual_heuristics.py` remains the compatibility facade.
 
 ## Largest Runtime Files
 
@@ -38,13 +39,12 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Lines | Path | Assessment |
 | ---: | --- | --- |
-| 2,637 | `src/services/_pdf/_visual_heuristics/panel_detection.py` | Active PDF heuristic hotspot |
 | 2,301 | `src/services/_publisher_inventory_service/workflow.py` | Active service-family hotspot |
 | 2,263 | `src/services/_pdf/visual_candidates.py` | Active PDF heuristic hotspot |
 | 1,994 | `src/orchestrators/publisher_inventory_orchestrator.py` | Active orchestrator hotspot |
 | 1,925 | `src/cli.py` | Review after workflow work |
 | 1,892 | `src/services/_browser_report_download/helpers.py` | Active service-family hotspot |
-| 1,877 | `src/generators/cross_report_analysis_input_generator.py` | New feature surface; stabilize first |
+| 1,880 | `src/generators/cross_report_analysis_input_generator.py` | New feature surface; stabilize first |
 | 1,689 | `src/services/_pdf/crop.py` | PDF family follow-up |
 | 1,682 | `src/generators/publisher_inventory_candidate_screening_generator.py` | Discovery quality family |
 | 1,650 | `src/orchestrators/report_analysis_orchestrator.py` | Existing workflow surface |
@@ -61,30 +61,31 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | 1,319 | `src/services/_browser_report_download/_browser_runtime/terminal_assets.py` | Focused browser terminal-evidence capability |
 | 1,301 | `src/orchestrators/_report_download_orchestrator/route_planner.py` | Route-planning family |
 | 1,300 | `src/services/drive_service.py` | External-system boundary |
-| 1,216 | `src/services/_pdf/visual_heuristics.py` | PDF heuristic family |
+| 1,230 | `src/services/_pdf/visual_heuristics.py` | PDF heuristic family compatibility facade |
 | 1,207 | `src/services/wordpress_service.py` | External-system boundary |
 | 1,153 | `src/services/_browser_report_download/_artifact/classification.py` | Extracted artifact-classification capability |
 | 1,102 | `src/services/_browser_report_download/_browser_runtime/session_lifecycle.py` | Focused browser lifecycle capability |
+| 1,085 | `src/services/_pdf/_table_heuristics/regions.py` | Focused table-region geometry capability |
+| 1,085 | `src/contracts/cross_report_analysis.py` | Contract surface; do not split mechanically |
 | 1,082 | `src/services/_report_store_service/download_routes.py` | Report-store capability family |
 | 1,076 | `src/services/_publisher_inventory_service/discovery_activity.py` | Discovery parsing/activity family |
-| 1,085 | `src/services/_pdf/_table_heuristics/regions.py` | Focused table-region geometry capability |
-| 1,059 | `src/contracts/cross_report_analysis.py` | Contract surface; do not split mechanically |
 | 1,052 | `src/services/render_service.py` | Rendering boundary |
 | 1,038 | `src/services/_pdf/_table_heuristics/screening.py` | Focused table screening capability |
 | 1,032 | `src/generators/_report_selection_generator/crop_refine.py` | Local performance candidate |
 | 1,009 | `src/generators/analytics_projection_generator.py` | Analytics projection family |
+| 1,002 | `src/services/_pdf/_visual_heuristics/panel_detection.py` | Focused panel detector coordinator |
 
 ### Large Test Concentration >=1,000 Lines
 
 | Lines | Path |
 | ---: | --- |
 | 3,509 | `tests/test_browser_report_download_service/test_onsite_and_terminal.py` |
-| 3,213 | `tests/test_report_download_orchestrator.py` |
+| 3,388 | `tests/test_report_download_orchestrator.py` |
 | 2,926 | `tests/test_publisher_inventory_candidate_quality_generator.py` |
 | 2,826 | `tests/test_report_store_service.py` |
 | 2,523 | `tests/test_browser_report_download_service/test_prompt_and_probe.py` |
 | 2,503 | `tests/test_pdf_figures_service/builders.py` |
-| 2,311 | `tests/test_cross_report_analysis_input_generator.py` |
+| 2,344 | `tests/test_cross_report_analysis_input_generator.py` |
 | 2,199 | `tests/test_publisher_inventory_service/test_browser_traversal.py` |
 | 2,020 | `tests/test_publisher_inventory_orchestrator.py` |
 | 1,862 | `tests/test_artifact_generator.py` |
@@ -96,23 +97,12 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | 1,378 | `tests/test_publisher_inventory_candidate_screening_generator.py` |
 | 1,378 | `tests/test_vector_pipeline_wiring.py` |
 | 1,341 | `tests/test_pdf_figures_service/test_panel_heuristics.py` |
-| 1,252 | `tests/test_config_service.py` |
+| 1,316 | `tests/test_config_service.py` |
 | 1,223 | `tests/test_report_source_generator.py` |
 | 1,206 | `tests/test_pdf_figures_service/test_table_heuristics.py` |
 | 1,166 | `tests/test_pdf_crop_service.py` |
 | 1,109 | `tests/test_cross_report_analysis_generator.py` |
 | 1,094 | `tests/test_evidence_pack_generator.py` |
-
-### Other First-Party Sections
-
-| Lines | Path |
-| ---: | --- |
-| 597 | `scripts/ci/check_split_symbol_links.py` |
-| 7,026 | `Wordpress/wp-content/themes/marketlense/assets/css/theme.css` |
-| 1,762 | `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-shortcodes.php` |
-| 1,009 | `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-taxonomies.php` |
-| 837 | `Wordpress/config/publisher-profiles.json` |
-| 534 | `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-intelligence-stats.php` |
 
 ## Completed Boundary Work
 
@@ -170,7 +160,9 @@ Primary evidence:
 - `src/services/_pdf/_table_heuristics/screening.py`: `1,038` lines; focused rejection, scoring, and deduplication owner.
 - `src/services/_pdf/_table_heuristics/layout.py`: `774` lines; focused page-layout and text interpretation owner.
 - `src/services/_pdf/table_heuristics.py`: `407` lines; stable compatibility surface.
-- `src/services/_pdf/_visual_heuristics/panel_detection.py`: `2,637` lines.
+- `src/services/_pdf/_visual_heuristics/panel_detection.py`: `1,002` lines; detector-level decisions and candidate coordination.
+- `src/services/_pdf/_visual_heuristics/panel_geometry.py`: `988` lines; deterministic panel geometry construction and adjustment.
+- `src/services/_pdf/_visual_heuristics/panel_text.py`: `952` lines; deterministic title, caption, metric, and component-text interpretation.
 - `src/services/_pdf/visual_candidates.py`: `2,263` lines.
 - `src/services/_pdf/crop.py`: `1,689` lines.
 
@@ -179,6 +171,7 @@ Direction:
 - Retain `src/services/pdf_service.py` as the canonical PDF boundary.
 - Prioritize measured algorithm changes already recorded in `CONSOLIDATED_TODO.md`: indexed table deduplication and precomputed per-page visual candidate relationships.
 - Retain the `_table_heuristics/*` capability split; `regions.py` and `screening.py` are the remaining table-family `>=1,000`-line review targets, and further extraction requires a semantic boundary rather than line-count slicing.
+- Retain the `_visual_heuristics/{panel_text,panel_geometry,panel_detection}.py` semantic split behind `visual_heuristics.py`; optimization of precomputed visual relationships remains separate from the decomposition evidence.
 - Extract additional internal modules only when an algorithm or stable heuristic family gains independent testability; do not create forwarding-only layers.
 
 Verification required:

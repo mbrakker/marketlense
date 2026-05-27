@@ -1087,12 +1087,7 @@ _CHART_LAYOUT_EXPORTS = [
     "_next_block_top_below",
     "_clamp_bottom_to_note",
 ]
-_PANEL_DETECTION_EXPORTS = [
-    "_panel_should_clamp_to_internal_caption",
-    "_panel_candidate_shadowed_by_heading_candidate",
-    "_panel_candidate_shadowed_by_larger_panel",
-    "_panel_stacked_bottom_clip_y",
-    "_panel_neighbor_x_bounds",
+_PANEL_TEXT_EXPORTS = [
     "_panel_title_lines",
     "_panel_lowercase_title_has_metric_context",
     "_panel_local_title_line",
@@ -1103,7 +1098,6 @@ _PANEL_DETECTION_EXPORTS = [
     "_panel_chart_is_label_dense_not_prose",
     "_numeric_token_hits",
     "_panel_chart_has_metric_signal",
-    "_extend_panel_rect_with_nearby_label_blocks",
     "_panel_label_block_looks_like_footer_banner",
     "_panel_chart_has_data_signal",
     "_panel_component_text_from_blocks",
@@ -1113,16 +1107,26 @@ _PANEL_DETECTION_EXPORTS = [
     "_panel_chart_has_structured_card_signal",
     "_panel_caption_looks_metric_stub",
     "_panel_chart_has_compact_stat_card_signal",
-    "_page_looks_like_contents_layout",
+    "_panel_caption_looks_top_band",
+]
+_PANEL_GEOMETRY_EXPORTS = [
+    "_extend_panel_rect_with_nearby_label_blocks",
     "_drawing_components",
     "_shared_title_component_group",
     "_stacked_panel_group_has_intervening_text",
-    "_panel_chart_rects",
-    "_merge_panel_title_band_candidates",
-    "_panel_caption_looks_top_band",
     "_extend_panel_rect_with_adjacent_drawings",
     "_clamp_panel_rect_to_dominant_fill_rect",
     "_extend_panel_with_adjacent_text_blocks",
+]
+_PANEL_DETECTION_EXPORTS = [
+    "_panel_should_clamp_to_internal_caption",
+    "_panel_candidate_shadowed_by_heading_candidate",
+    "_panel_candidate_shadowed_by_larger_panel",
+    "_panel_stacked_bottom_clip_y",
+    "_panel_neighbor_x_bounds",
+    "_page_looks_like_contents_layout",
+    "_panel_chart_rects",
+    "_merge_panel_title_band_candidates",
 ]
 _COLLECTOR_EXPORTS = ["_collect_chart_rects"]
 
@@ -1203,6 +1207,8 @@ __all__ = [
         "TYPE_CHECKING",
         "_LOCAL_PRIVATE_EXPORTS",
         "_CHART_LAYOUT_EXPORTS",
+        "_PANEL_TEXT_EXPORTS",
+        "_PANEL_GEOMETRY_EXPORTS",
         "_PANEL_DETECTION_EXPORTS",
         "_COLLECTOR_EXPORTS",
     }
@@ -1210,7 +1216,15 @@ __all__ = [
 __all__ += _LOCAL_PRIVATE_EXPORTS
 
 from ._visual_heuristics.chart_layout import *
+from ._visual_heuristics.panel_text import *
+from ._visual_heuristics.panel_geometry import *
 from ._visual_heuristics.panel_detection import *
 from ._visual_heuristics.collectors import *
 
-__all__ += _CHART_LAYOUT_EXPORTS + _PANEL_DETECTION_EXPORTS + _COLLECTOR_EXPORTS
+__all__ += (
+    _CHART_LAYOUT_EXPORTS
+    + _PANEL_TEXT_EXPORTS
+    + _PANEL_GEOMETRY_EXPORTS
+    + _PANEL_DETECTION_EXPORTS
+    + _COLLECTOR_EXPORTS
+)
