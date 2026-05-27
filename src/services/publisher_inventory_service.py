@@ -12,6 +12,8 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryServiceResponse,
 )
 from src.contracts.run_context import RunContext
+from src.services._publisher_inventory_service import browser_flow as _browser_flow
+from src.services._publisher_inventory_service import preflight as _preflight
 from src.services._publisher_inventory_service import workflow as _workflow
 from src.services._publisher_inventory_service.workflow import *
 
@@ -20,6 +22,9 @@ def _sync_runtime_patch_points() -> None:
     _workflow.asyncio = asyncio
     _workflow.import_module = import_module
     _workflow.requests = requests
+    _preflight.requests = requests
+    _browser_flow.asyncio = asyncio
+    _browser_flow.requests = requests
 
 
 def discover_publisher_inventory(
