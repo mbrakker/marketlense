@@ -9,6 +9,7 @@ def test_browser_use_route_steps_are_enriched_with_post_action_verification(
     caplog,
     run_context,
     external_boundary_mocks_only,
+    assert_logs_have_required_fields,
 ) -> None:
     runtime = _runtime(
         tmp_path,
@@ -77,6 +78,7 @@ def test_browser_use_route_steps_are_enriched_with_post_action_verification(
         if event.get("event") == "browser_report_download_route_step_verification"
     ]
     assert verification_events
+    assert_logs_have_required_fields(verification_events)
     assert verification_events[-1]["fields"]["validation_result"] == "verified"
     assert verification_events[-1]["fields"]["verification_status"] == "verified"
     assert verification_events[-1]["fields"]["expected_evidence"] == ["artifact"]

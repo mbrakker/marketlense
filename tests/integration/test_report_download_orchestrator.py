@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sqlite3
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -13,24 +14,22 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
     BrowserDownloadSettings,
-    BrowserReportDownloadRequest,
+    ReportDownloadOrchestratorRequest,
 )
 from src.contracts.run_context import RunContext
-from src.services.browser_report_download_service import (
-    download_report_with_browser_use,
-)
+from src.orchestrators.report_download_orchestrator import run_report_download
 
 
-class _DownloadFixtureHandler(BaseHTTPRequestHandler):
+class _OrchestratorDownloadFixtureHandler(BaseHTTPRequestHandler):
     fixture_root: Path = Path(".")
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path in {"/", "/index.html"}:
             body = (
                 "<html><body>"
-                "<h1>Report download</h1>"
+                "<h1>Market research report</h1>"
                 '<button type="button" onclick="window.location.href=\'/deliver\'">'
-                "Download report PDF"
+                "Download report"
                 "</button>"
                 "</body></html>"
             ).encode("utf-8")
@@ -58,16 +57,16 @@ class _DownloadFixtureHandler(BaseHTTPRequestHandler):
 def _ctx() -> RunContext:
     return RunContext(
         schema_version="1.0",
-        run_id="integration-run",
-        task_id="integration-task",
-        span_id="integration-span",
+        run_id="orchestrator-integration-run",
+        task_id="orchestrator-integration-task",
+        span_id="orchestrator-integration-span",
     )
 
 
 def _events(caplog) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for record in caplog.records:
-        if record.name != "market_lense.browser_report_download_service":
+        if record.name != "market_lense.report_download_orchestrator":
             continue
         payload = json.loads(record.message)
         if isinstance(payload, dict):
@@ -76,14 +75,15 @@ def _events(caplog) -> list[dict[str, object]]:
 
 
 @pytest.mark.integration
-def test_browser_report_download_service_local_guarded(
+def test_report_download_orchestrator_local_browser_route_guarded(
     tmp_path: Path,
     caplog,
     assert_logs_have_required_fields,
 ) -> None:
-    if os.getenv("RUN_BROWSER_DOWNLOAD_INTEGRATION") != "1":
+    if os.getenv("RUN_REPORT_DOWNLOAD_ORCHESTRATOR_INTEGRATION") != "1":
         pytest.skip(
-            "Set RUN_BROWSER_DOWNLOAD_INTEGRATION=1 to run the local browser-use integration."
+            "Set RUN_REPORT_DOWNLOAD_ORCHESTRATOR_INTEGRATION=1 to run the "
+            "live local orchestration integration."
         )
     api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
     if not api_key:
@@ -95,15 +95,30 @@ def test_browser_report_download_service_local_guarded(
 
     fixture_root = tmp_path / "site"
     fixture_root.mkdir(parents=True, exist_ok=True)
-    (fixture_root / "report.pdf").write_bytes(b"%PDF-1.7 integration")
-    _DownloadFixtureHandler.fixture_root = fixture_root
+    (fixture_root / "report.pdf").write_bytes(b"%PDF-1.7 orchestrator integration")
+    identity_path = tmp_path / "browser_download_identity.yaml"
+    identity_path.write_text(
+        "\n".join(
+            [
+                "schema_version: '1.0'",
+                "fields:",
+                "- schema_version: '1.0'",
+                "  key: work_email",
+                "  label: Work email",
+                "  value: ops@example.com",
+                "  aliases:",
+                "  - email",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _OrchestratorDownloadFixtureHandler.fixture_root = fixture_root
 
-    server = HTTPServer(("127.0.0.1", 0), _DownloadFixtureHandler)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _OrchestratorDownloadFixtureHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    caplog.set_level(
-        logging.INFO, logger="market_lense.browser_report_download_service"
-    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
     try:
         settings = BrowserDownloadSettings(
             schema_version="1.0",
@@ -115,7 +130,7 @@ def test_browser_report_download_service_local_guarded(
             output_dir=str(tmp_path / "downloads"),
             state_db=str(tmp_path / "state.sqlite"),
             reports_db=str(tmp_path / "reports.sqlite"),
-            identity_config_path=str(tmp_path / "browser_download_identity.yaml"),
+            identity_config_path=str(identity_path),
             identity_profile=BrowserDownloadIdentity(
                 schema_version="1.0",
                 fields=[
@@ -134,16 +149,19 @@ def test_browser_report_download_service_local_guarded(
             retry_base_delay_seconds=0.0,
             retry_backoff_step_seconds=0.0,
             retry_jitter_seconds=0.0,
+            drive_upload_enabled=False,
+            drive_upload_required=False,
         )
         url = f"http://127.0.0.1:{server.server_port}/"
-        response = download_report_with_browser_use(
-            BrowserReportDownloadRequest(
+        response = run_report_download(
+            ReportDownloadOrchestratorRequest(
                 schema_version="1.0",
                 url=url,
                 settings=settings,
-                route_family_hint="browser_pdf_click",
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
             ),
-            _ctx(),
+            ctx=_ctx(),
         )
     finally:
         server.shutdown()
@@ -153,8 +171,20 @@ def test_browser_report_download_service_local_guarded(
     assert response.route_kind == "pdf_download"
     assert response.outcome == "downloaded"
     assert response.downloaded_file_path is not None
-    assert Path(str(response.downloaded_file_path)).exists()
+    assert Path(response.downloaded_file_path).exists()
+    assert response.drive_uploads == []
+
+    with sqlite3.connect(settings.reports_db) as connection:
+        route_history_count = connection.execute(
+            "SELECT COUNT(*) FROM publisher_download_route_history"
+        ).fetchone()[0]
+        source_count = connection.execute(
+            "SELECT COUNT(*) FROM report_sources"
+        ).fetchone()[0]
+    assert route_history_count >= 1
+    assert source_count >= 1
+
     events = _events(caplog)
-    assert any(event["event"] == "browser_report_download_start" for event in events)
-    assert any(event["event"] == "browser_report_download_complete" for event in events)
+    assert any(event["event"] == "report_download_start" for event in events)
+    assert any(event["event"] == "report_download_complete" for event in events)
     assert_logs_have_required_fields(events)

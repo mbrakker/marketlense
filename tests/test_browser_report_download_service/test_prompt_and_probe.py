@@ -181,9 +181,7 @@ def test_download_report_with_browser_use_redacts_identity_values_from_prompt_lo
         if event["event"] == "browser_report_download_prompt_prepared"
     )
     request_event = next(
-        event
-        for event in events
-        if event["event"] == "browser_report_download_request"
+        event for event in events if event["event"] == "browser_report_download_request"
     )
     prompt_fields_json = json.dumps(prompt_event["fields"])
     request_fields_json = json.dumps(request_event["fields"])
@@ -253,6 +251,7 @@ def test_download_report_with_browser_use_returns_downloaded_pdf(
     assert_logs_have_required_fields,
     assert_no_defaulted_required_fields,
 ) -> None:
+    unexpected_recovery_calls: list[str] = []
     runtime = _runtime(
         tmp_path,
         route_kind="pdf_download",
@@ -264,6 +263,16 @@ def test_download_report_with_browser_use_returns_downloaded_pdf(
         browser_runtime,
         "import_module",
         lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        http_runtime,
+        "download_pdf_from_url",
+        lambda **kwargs: unexpected_recovery_calls.append("download_pdf"),
+    )
+    external_boundary_mocks_only.setattr(
+        http_runtime,
+        "fetch_html_from_url",
+        lambda **kwargs: unexpected_recovery_calls.append("fetch_html") or "",
     )
     caplog.set_level(logging.INFO, logger=service.logger.name)
 
@@ -285,6 +294,7 @@ def test_download_report_with_browser_use_returns_downloaded_pdf(
     assert Path(str(response.downloaded_file_path)).exists()
     assert response.downloaded_mime_type == "application/pdf"
     assert response.encountered_form_fields == []
+    assert unexpected_recovery_calls == []
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_service_events(caplog))
 
@@ -2327,7 +2337,7 @@ def test_download_report_with_browser_use_prefetches_structured_pdf_url_before_c
         lambda module_name: runtime,
     )
     external_boundary_mocks_only.setattr(
-        browser_runtime,
+        http_runtime,
         "download_pdf_from_url",
         _download_pdf_from_url,
     )

@@ -17,7 +17,7 @@
 - Modify: `README.md`
 - Modify: `crossreport.md`
 
-- [ ] **Step 1: Document exact role boundaries**
+- [x] **Step 1: Document exact role boundaries**
 
 Add this plan and a README scope section naming the planned files:
 
@@ -31,15 +31,15 @@ CLI command: python -m src.cli generate-cross-report-analysis
 Tests: tests/test_cross_report_analysis_contracts.py, tests/test_config_service.py additions, tests/test_cross_report_analysis_input_generator.py, tests/test_cross_report_analysis_generator.py, tests/test_cross_report_analysis_orchestrator.py, tests/integration/test_analytics_store_cross_report_reads.py
 ```
 
-- [ ] **Step 2: Document non-goals**
+- [x] **Step 2: Document non-goals**
 
 Add README language stating that the first release does not include metric normalization, new WordPress plugin/post-type dependency, new deployable worker/service/package, a peer analytics database boundary, or global vector retrieval over `vector_projection_queue`.
 
-- [ ] **Step 3: Remove completed report item**
+- [x] **Step 3: Remove completed report item**
 
 Remove only `Lock cross-report analysis into the existing modular monolith` from `crossreport.md` after the README and plan are in place.
 
-- [ ] **Step 4: Verify architecture safety**
+- [x] **Step 4: Verify architecture safety**
 
 Run:
 
@@ -59,11 +59,11 @@ Expected: both commands pass. The CLI help run is the live runtime smoke for thi
 - Modify: `README.md`
 - Modify: `crossreport.md`
 
-- [ ] **Step 1: Write failing contract tests**
+- [x] **Step 1: Write failing contract tests**
 
 Add tests that instantiate every cross-report dataclass, assert required fields are populated, round-trip through `dataclasses.asdict`, and assert invalid contract input raises `AppError(code="cross_report_contract_invalid", retryable=False, severity="error")`.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -73,7 +73,7 @@ pytest tests/test_cross_report_analysis_contracts.py -q
 
 Expected: fail because `src.contracts.cross_report_analysis` is missing.
 
-- [ ] **Step 3: Add contracts**
+- [x] **Step 3: Add contracts**
 
 Create `src/contracts/cross_report_analysis.py` with versioned dataclasses for:
 
@@ -96,7 +96,7 @@ CrossReportOrchestratorOutcome
 
 Each field must be typed and documented with `field(metadata={"doc": ...})`. Add validation functions that fail closed with typed `AppError` for missing required semantic values.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run:
 
@@ -121,11 +121,11 @@ Expected: tests pass and the schema snapshot is current.
 - Modify: `README.md`
 - Modify: `crossreport.md`
 
-- [ ] **Step 1: Write failing config tests**
+- [x] **Step 1: Write failing config tests**
 
 Add tests proving `load_settings` reads `cross_report_analysis` defaults and rejects invalid limits with `AppError(code="cross_report_analysis_config_invalid", retryable=False, severity="error")`.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -135,7 +135,7 @@ pytest tests/test_config_service.py -q
 
 Expected: fail because the settings fields/resolver do not exist.
 
-- [ ] **Step 3: Add config contract fields and resolver**
+- [x] **Step 3: Add config contract fields and resolver**
 
 Add `AppSettings` fields for:
 
@@ -158,7 +158,7 @@ cross_report_analysis_publish_requires_validation_pass
 
 Load them from `src/config/app.yaml` section `cross_report_analysis`. Invalid positive limits must raise typed non-retryable `AppError` during config loading.
 
-- [ ] **Step 4: Verify GREEN and live config load**
+- [x] **Step 4: Verify GREEN and live config load**
 
 Run:
 

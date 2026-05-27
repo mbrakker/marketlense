@@ -7,7 +7,6 @@ from dataclasses import asdict
 from datetime import date
 from typing import Any, cast
 
-import click
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -1886,7 +1885,7 @@ def ui_run_worker(
             flush=True,
         )
         raise typer.Exit(code=1)
-    except click.exceptions.Exit:
+    except typer.Exit:
         raise
     except Exception as exc:
         _update_ui_run_record(
