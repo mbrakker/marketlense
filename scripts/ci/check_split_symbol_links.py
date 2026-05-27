@@ -118,11 +118,17 @@ BOUNDARY_EXPORT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "_heading_chart_rects",
         "_image_block_rects",
     ),
-    "src/services/_pdf/_visual_heuristics/panel_detection.py": (
+    "src/services/_pdf/_visual_heuristics/panel_text.py": (
         "_panel_caption_looks_metric_stub",
         "_panel_chart_has_data_signal",
-        "_panel_chart_rects",
+        "_panel_caption_looks_top_band",
     ),
+    "src/services/_pdf/_visual_heuristics/panel_geometry.py": (
+        "_extend_panel_rect_with_nearby_label_blocks",
+        "_clamp_panel_rect_to_dominant_fill_rect",
+        "_extend_panel_with_adjacent_text_blocks",
+    ),
+    "src/services/_pdf/_visual_heuristics/panel_detection.py": ("_panel_chart_rects",),
     "src/services/_pdf/_visual_heuristics/collectors.py": ("_collect_chart_rects",),
     "src/services/_openai_service/base.py": (
         "AppError",
@@ -153,6 +159,8 @@ STAR_LINK_TARGETS = (
 ORDERED_SUBMODULE_EXPORTS: dict[str, dict[str, str]] = {
     "src/services/_pdf/visual_heuristics.py": {
         "_CHART_LAYOUT_EXPORTS": "src/services/_pdf/_visual_heuristics/chart_layout.py",
+        "_PANEL_TEXT_EXPORTS": "src/services/_pdf/_visual_heuristics/panel_text.py",
+        "_PANEL_GEOMETRY_EXPORTS": "src/services/_pdf/_visual_heuristics/panel_geometry.py",
         "_PANEL_DETECTION_EXPORTS": "src/services/_pdf/_visual_heuristics/panel_detection.py",
         "_COLLECTOR_EXPORTS": "src/services/_pdf/_visual_heuristics/collectors.py",
     }
