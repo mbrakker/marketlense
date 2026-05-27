@@ -38,6 +38,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportValidationResult,
     validate_cross_report_contract,
 )
+from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 
 
@@ -505,3 +506,32 @@ def test_cross_report_contract_validation_rejects_null_list_filters(
         severity="error",
     )
     assert exc.value.context["field"] == "category_filters"
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        {},
+        [],
+        "not-a-contract",
+        RunContext(
+            schema_version="1.0",
+            run_id="foreign-run",
+            task_id="foreign-task",
+            span_id="foreign-span",
+        ),
+    ],
+)
+def test_cross_report_contract_validation_rejects_non_contract_roots(
+    invalid: object,
+    assert_app_error,
+) -> None:
+    with pytest.raises(AppError) as exc:
+        validate_cross_report_contract(invalid)
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_contract_invalid",
+        retryable=False,
+        severity="error",
+    )

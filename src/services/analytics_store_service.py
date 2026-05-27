@@ -395,6 +395,7 @@ def _upsert_report(
             file_id,
             title,
             publisher,
+            time_period,
             taxonomy_json,
             categories_json,
             md5,
@@ -419,10 +420,11 @@ def _upsert_report(
             created_at,
             updated_at
         )
-        VALUES(?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'projected', 1, NULL, NULL, NULL, ?, ?, strftime('%s','now'), strftime('%s','now'))
+        VALUES(?, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'projected', 1, NULL, NULL, NULL, ?, ?, strftime('%s','now'), strftime('%s','now'))
         ON CONFLICT(file_id) DO UPDATE SET
             title=excluded.title,
             publisher=excluded.publisher,
+            time_period=excluded.time_period,
             md5=COALESCE(excluded.md5, reports.md5),
             report_id=excluded.report_id,
             publisher_id=excluded.publisher_id,
@@ -448,6 +450,7 @@ def _upsert_report(
             report_id,
             title,
             report.publisher.strip() or None,
+            report.time_period.strip() or None,
             report.source_md5,
             report_id,
             str(report.publisher_id) if report.publisher_id else None,
@@ -901,11 +904,16 @@ def _aggregate_content_hash(report_row: sqlite3.Row, hashes: dict[str, str]) -> 
     return hashlib.sha256(fallback.encode("utf-8")).hexdigest()
 
 
-def _report_date(report_row: sqlite3.Row) -> str:
-    generated_at = str(report_row["projection_generated_at_utc"] or "").strip()
-    if generated_at:
-        return generated_at[:10]
+def _report_period(report_row: sqlite3.Row) -> str:
     return str(report_row["time_period"] or "").strip()
+
+
+def _report_date(report_row: sqlite3.Row) -> str:
+    period = _report_period(report_row)
+    if period:
+        return period
+    generated_at = str(report_row["projection_generated_at_utc"] or "").strip()
+    return generated_at[:10]
 
 
 def _row_text(row: sqlite3.Row, column: str) -> str:
@@ -954,7 +962,7 @@ def _report_passes_filters(
         if not publisher_filters.intersection(publisher_values):
             return False
 
-    report_date = _report_date(report_row)
+    report_date = _report_period(report_row)
     if request.date_range_start and (
         not report_date or report_date < request.date_range_start
     ):
@@ -1015,6 +1023,13 @@ def _source_candidate(
         content_hash=_aggregate_content_hash(report_row, content_hashes),
         category_labels=sorted(
             {_row_text(row, "label") for row in categories if _row_text(row, "label")}
+        ),
+        category_ids=sorted(
+            {
+                _row_text(row, "category_id")
+                for row in categories
+                if _row_text(row, "category_id")
+            }
         ),
         tags=sorted({_row_text(row, "tag") for row in tags if _row_text(row, "tag")}),
         evidence_count=evidence_count,

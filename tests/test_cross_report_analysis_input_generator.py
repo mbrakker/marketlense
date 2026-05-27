@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import is_dataclass
+from dataclasses import is_dataclass, replace
 
 import pytest
 
@@ -321,6 +321,39 @@ def test_source_selection_honors_max_report_cap_and_filters(run_context) -> None
         for candidate in result.rejected_candidates
     }
     assert rejected["report-b"] == ["tag_filter_mismatch"]
+
+
+def test_source_selection_honors_category_id_filters_when_label_differs(
+    run_context,
+) -> None:
+    request = CrossReportAnalysisRequest(
+        **{
+            **_request().__dict__,
+            "category_filters": ["retail-media"],
+            "tag_filters": [],
+        }
+    )
+    candidate = replace(
+        _candidate(
+            "report-category-id",
+            publisher="Publisher A",
+            report_date="2026-05-02",
+            evidence_count=3,
+            categories=["Retail Media"],
+        ),
+        category_ids=["retail-media"],
+    )
+
+    result = select_cross_report_source_reports(
+        request,
+        _projected_data([candidate]),
+        run_context,
+    )
+
+    assert [source.report_id for source in result.selected_sources] == [
+        "report-category-id"
+    ]
+    assert result.selected_sources[0].category_ids == ["retail-media"]
 
 
 def test_source_selection_normalizes_whitespace_dates(run_context) -> None:

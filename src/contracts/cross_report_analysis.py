@@ -242,6 +242,13 @@ class CrossReportSourceReportCandidate:
         default_factory=list,
         metadata={"doc": "Reasons this candidate was rejected, if applicable."},
     )
+    category_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Projected category identifiers retained for exact filtering.",
+            "required": False,
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -282,6 +289,13 @@ class CrossReportSelectedSourceReport:
             "doc": "Projected tags retained for prompt metadata.",
             "required": False,
         }
+    )
+    category_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Projected category identifiers retained for exact filtering.",
+            "required": False,
+        },
     )
 
 
@@ -997,7 +1011,19 @@ class CrossReportEvidenceInputResult:
 
 
 def validate_cross_report_contract(contract: object) -> None:
-    _validate_contract_value(contract, path=type(contract).__name__)
+    contract_type = type(contract)
+    if (
+        not is_dataclass(contract)
+        or contract_type.__module__ != __name__
+        or not contract_type.__name__.startswith("CrossReport")
+    ):
+        _raise_invalid(
+            contract_type.__name__,
+            "<root>",
+            "expected cross-report dataclass contract",
+        )
+        return
+    _validate_contract_value(contract, path=contract_type.__name__)
 
 
 def _raise_invalid(path: str, field_name: str, reason: str) -> None:
