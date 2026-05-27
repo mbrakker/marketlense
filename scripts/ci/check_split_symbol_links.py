@@ -82,6 +82,32 @@ BOUNDARY_EXPORT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "_text_stats",
         "_validate_table_candidate",
     ),
+    "src/services/_pdf/visual_candidates.py": (
+        "_RasterProbeCache",
+        "_render_visual_probe_image",
+        "_visual_probe_profile",
+        "_page_has_chart_caption_blocks",
+        "_visual_candidate_looks_table_like",
+        "_visual_text_dense_recovery_allowed",
+        "_extract_visuals_sequential",
+        "extract_visual_candidates",
+    ),
+    "src/services/_pdf/_visual_candidates/raster.py": (
+        "_RasterProbeCache",
+        "_render_visual_probe_image",
+        "_visual_probe_profile",
+        "_embedded_visual_looks_chart_like",
+    ),
+    "src/services/_pdf/_visual_candidates/screening.py": (
+        "_page_has_chart_caption_blocks",
+        "_visual_candidate_looks_table_like",
+        "_visual_candidate_looks_reference_or_prose",
+        "_visual_text_dense_recovery_allowed",
+    ),
+    "src/services/_pdf/_visual_candidates/extraction.py": (
+        "_extract_visuals_sequential",
+        "extract_visual_candidates",
+    ),
     "src/services/_pdf/_table_heuristics/policy.py": (
         "TABLE_SETTINGS_LATTICE",
         "TABLE_SETTINGS_STREAM",
