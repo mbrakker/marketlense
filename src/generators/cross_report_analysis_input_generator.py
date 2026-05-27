@@ -153,7 +153,7 @@ def _filter_rejection_reasons(
     if category_filters:
         categories = {
             value.strip().casefold()
-            for value in candidate.category_labels
+            for value in [*candidate.category_ids, *candidate.category_labels]
             if value.strip()
         }
         if not category_filters.intersection(categories):
@@ -185,7 +185,9 @@ def _relevance_score(
     reasons: list[str] = []
     tags = {value.strip().casefold() for value in candidate.tags if value.strip()}
     categories = {
-        value.strip().casefold() for value in candidate.category_labels if value.strip()
+        value.strip().casefold()
+        for value in [*candidate.category_ids, *candidate.category_labels]
+        if value.strip()
     }
     title = candidate.title.casefold()
 
@@ -338,6 +340,7 @@ def _select_diverse_sources(
                 evidence_count=winner.evidence_count,
                 category_labels=winner.category_labels,
                 tags=winner.tags,
+                category_ids=winner.category_ids,
             )
         )
         rank += 1

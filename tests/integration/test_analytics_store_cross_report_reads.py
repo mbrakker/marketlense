@@ -62,6 +62,7 @@ def _batch(
     title: str,
     publisher: str,
     publisher_id: str,
+    time_period: str = "2026",
     generated_at_utc: str,
     tag: str,
     category_id: str,
@@ -79,7 +80,7 @@ def _batch(
         ingest_run_id=f"{report_id}-ingest-run",
         analysis_run_id=f"{report_id}-analysis-run",
         region="US",
-        time_period="2026",
+        time_period=time_period,
         validation_status="pass",
         validation_severity="pass",
         text_density=1200.0,
@@ -202,6 +203,7 @@ def test_cross_report_projected_data_read_filters_and_contracts(
             title="AI Commerce Outlook",
             publisher="Publisher A",
             publisher_id="publisher-a",
+            time_period="2026-05-01",
             generated_at_utc="2026-05-01T00:00:00Z",
             tag="AI",
             category_id="retail",
@@ -212,6 +214,7 @@ def test_cross_report_projected_data_read_filters_and_contracts(
             title="Payments Trust Monitor",
             publisher="Publisher B",
             publisher_id="publisher-b",
+            time_period="2026-05-02",
             generated_at_utc="2026-05-02T00:00:00Z",
             tag="Payments",
             category_id="payments",
@@ -251,6 +254,7 @@ def test_cross_report_projected_data_read_filters_and_contracts(
     assert candidate.projection_status == "projected"
     assert candidate.publisher == "Publisher A"
     assert candidate.category_labels == ["Retail"]
+    assert candidate.category_ids == ["retail"]
     assert candidate.tags == ["AI"]
     assert candidate.claim_count == 1
     assert candidate.finding_count == 1
@@ -281,6 +285,44 @@ def test_cross_report_projected_data_read_filters_and_contracts(
         "cross_report_projected_data_read_start",
         "cross_report_projected_data_read_complete",
     }
+
+
+@pytest.mark.integration
+def test_cross_report_projected_data_date_filter_uses_report_period_not_projection_date(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    ctx = _ctx()
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=db_path,
+            batch=_batch(
+                "old-report-reprojected-now",
+                title="Historical Outlook",
+                publisher="Publisher A",
+                publisher_id="publisher-a",
+                time_period="2024-01-01",
+                generated_at_utc="2026-05-04T00:00:00Z",
+                tag="AI",
+                category_id="retail",
+                category_label="Retail",
+            ),
+        ),
+        ctx,
+    )
+
+    response = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=db_path,
+            date_range_start="2026-05-01",
+            date_range_end="2026-05-31",
+        ),
+        ctx,
+    )
+
+    assert response.source_candidates == []
 
 
 @pytest.mark.integration

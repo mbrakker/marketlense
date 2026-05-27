@@ -365,6 +365,70 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("error", ctx.exception.severity)
         self.assertEqual("max_source_reports", ctx.exception.context["field"])
 
+    def test_cross_report_analysis_settings_reject_malformed_limit_values(self) -> None:
+        for field_name, raw_value in (
+            ("max_source_reports", "many"),
+            ("max_evidence_items", "several"),
+            ("max_prompt_chars", "30k"),
+        ):
+            with self.subTest(field_name=field_name):
+                with tempfile.TemporaryDirectory() as tmp_dir:
+                    cfg_path = self._write_config(tmp_dir, include_analysis=False)
+                    cfg_data = yaml.safe_load(
+                        Path(cfg_path).read_text(encoding="utf-8")
+                    )
+                    cfg_data["cross_report_analysis"] = {field_name: raw_value}
+                    Path(cfg_path).write_text(
+                        yaml.safe_dump(cfg_data), encoding="utf-8"
+                    )
+
+                    with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                        with self.assertRaises(AppError) as ctx:
+                            load_settings(
+                                ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                                RunContext(
+                                    schema_version="1.0",
+                                    run_id="r",
+                                    task_id="t",
+                                    span_id="s",
+                                ),
+                            )
+
+                self.assertEqual(
+                    "cross_report_analysis_config_invalid", ctx.exception.code
+                )
+                self.assertEqual(field_name, ctx.exception.context["field"])
+
+    def test_cross_report_analysis_settings_reject_blank_required_strings(self) -> None:
+        for field_name, raw_value in (("prompt_namespace", ""), ("model", "   ")):
+            with self.subTest(field_name=field_name):
+                with tempfile.TemporaryDirectory() as tmp_dir:
+                    cfg_path = self._write_config(tmp_dir, include_analysis=False)
+                    cfg_data = yaml.safe_load(
+                        Path(cfg_path).read_text(encoding="utf-8")
+                    )
+                    cfg_data["cross_report_analysis"] = {field_name: raw_value}
+                    Path(cfg_path).write_text(
+                        yaml.safe_dump(cfg_data), encoding="utf-8"
+                    )
+
+                    with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                        with self.assertRaises(AppError) as ctx:
+                            load_settings(
+                                ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                                RunContext(
+                                    schema_version="1.0",
+                                    run_id="r",
+                                    task_id="t",
+                                    span_id="s",
+                                ),
+                            )
+
+                self.assertEqual(
+                    "cross_report_analysis_config_invalid", ctx.exception.code
+                )
+                self.assertEqual(field_name, ctx.exception.context["field"])
+
     def test_ingest_worker_limit_defaults_and_env_override(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)

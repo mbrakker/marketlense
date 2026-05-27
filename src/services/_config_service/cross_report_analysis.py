@@ -21,8 +21,24 @@ def _positive_int(
     default: int,
     minimum: int = 1,
 ) -> int:
-    raw_value = section.get(config_key)
-    value = _to_int(raw_value, default)
+    if config_key not in section:
+        raw_value = None
+        value = default
+    else:
+        raw_value = section[config_key]
+        try:
+            if isinstance(raw_value, bool):
+                raise ValueError
+            value = int(raw_value)
+            if isinstance(raw_value, float) and not raw_value.is_integer():
+                raise ValueError
+        except (TypeError, ValueError):
+            _raise_cross_report_config_error(
+                field_name,
+                raw_value,
+                "must be an integer",
+            )
+            return default
     if value < minimum:
         _raise_cross_report_config_error(
             field_name,
@@ -58,12 +74,15 @@ def _required_string(
     config_key: str,
     default: str,
 ) -> str:
-    value = _to_str(section.get(config_key), default)
-    if not value.strip():
+    if config_key not in section:
+        return default
+    raw_value = section[config_key]
+    if not isinstance(raw_value, str) or not raw_value.strip():
         _raise_cross_report_config_error(
-            field_name, section.get(config_key), "required"
+            field_name, raw_value, "required non-blank string"
         )
-    return value
+        return default
+    return raw_value.strip()
 
 
 _DEFAULT_SIGNAL_SCORE_WEIGHTS = {

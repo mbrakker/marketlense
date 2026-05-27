@@ -42,6 +42,9 @@ from src.orchestrators.report_download_orchestrator import (
     ReportDownloadDependencies,
     run_report_download,
 )
+from src.orchestrators._report_download_orchestrator.promotions import (
+    evaluate_private_api_playbook_auto_promotion,
+)
 from src.orchestrators._report_download_orchestrator.route_planner import (
     plan_report_download_routes,
 )
@@ -716,6 +719,178 @@ def test_run_report_download_auto_promotes_private_api_after_threshold(
     ]
     assert events
     assert events[-1]["fields"]["promotion_status"] == "created"
+
+
+def _private_api_promotion_candidate() -> BrowserRoutePrivateApiPromotionCandidate:
+    return BrowserRoutePrivateApiPromotionCandidate(
+        schema_version="1.0",
+        fingerprint="private-api-fp",
+        source_url="https://example.com/research/report-2026",
+        publisher_host="example.com",
+        endpoint_pattern="/api/reports/{last_path_segment}",
+        endpoint_url="https://example.com/api/reports/report-2026",
+        method="GET",
+        request_shape_summary="GET without cookies or auth headers.",
+        response_pdf_url_json_pointer="/asset/pdfUrl",
+        selected_pdf_url="https://example.com/files/report-2026.pdf",
+        expected_status_codes=[200],
+        required_response_markers=["pdfUrl"],
+        fallback_route_family="browser_pdf_click",
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        evidence_labels=["browser_network_private_api"],
+    )
+
+
+def _private_api_promotion_dependencies(
+    tmp_path: Path,
+    *,
+    record_candidate,
+    mark_promoted,
+) -> ReportDownloadDependencies:
+    def _unused(*args, **kwargs):
+        raise AssertionError("unused dependency called")
+
+    return ReportDownloadDependencies(
+        download_report_with_browser_use=_unused,
+        get_publisher_download_route=_unused,
+        record_publisher_download_route=_unused,
+        file_md5=_unused,
+        record_report_source=_unused,
+        upsert_browser_download_identity_fields=_unused,
+        record_report_value_score=_unused,
+        detect_private_api_promotion_candidates=lambda req, ctx: (
+            BrowserRoutePrivateApiAutoPromotionDetectionResponse(
+                schema_version="1.0",
+                candidate_count=1,
+                candidates=[_private_api_promotion_candidate()],
+                skipped_reason="",
+            )
+        ),
+        record_publisher_private_api_candidate_observation=record_candidate,
+        promote_private_api_evidence_to_browser_playbook=lambda **kwargs: (
+            BrowserRoutePlaybookPromotionResponse(
+                schema_version="1.0",
+                playbook_id="private-api-example-com-pdf-download",
+                version="1.0.0",
+                path=str(tmp_path / "playbooks/private_api/private-api.yaml"),
+                status="created",
+                review_diff="--- before\n+++ after\n",
+            )
+        ),
+        mark_publisher_private_api_candidate_promoted=mark_promoted,
+        sleep_fn=lambda seconds: None,
+    )
+
+
+def _evaluate_private_api_side_path(
+    tmp_path: Path,
+    run_context,
+    dependencies: ReportDownloadDependencies,
+) -> None:
+    settings = replace(
+        _settings(tmp_path),
+        private_api_playbook_promotion_mode="write",
+        private_api_playbook_min_success_count=3,
+        private_api_playbook_min_distinct_source_urls=2,
+    )
+    evaluate_private_api_playbook_auto_promotion(
+        request=ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/research/report-2026",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+        ),
+        result=replace(
+            _result(
+                url="https://example.com/research/report-2026",
+                used_route_hint=False,
+                path=str(tmp_path / "report.pdf"),
+            ),
+            route_family="browser_pdf_click",
+            browser_had_structured_result=True,
+        ),
+        ctx=run_context,
+        dependencies=dependencies,
+        route_record_reused=False,
+    )
+
+
+def test_private_api_observation_app_error_does_not_abort_successful_download_side_path(
+    tmp_path: Path,
+    caplog,
+    run_context,
+) -> None:
+    def _record_candidate(req, ctx):
+        raise AppError(
+            code="private_api_candidate_record_failed",
+            message="fixture ledger failure",
+            retryable=True,
+            severity="error",
+        )
+
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+    _evaluate_private_api_side_path(
+        tmp_path,
+        run_context,
+        _private_api_promotion_dependencies(
+            tmp_path,
+            record_candidate=_record_candidate,
+            mark_promoted=lambda req, ctx: None,
+        ),
+    )
+
+    events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_private_api_promotion_evaluated"
+    ]
+    assert events[-1]["fields"]["skip_reason"] == "candidate_observation_app_error"
+    assert events[-1]["fields"]["error_code"] == "private_api_candidate_record_failed"
+
+
+def test_private_api_promotion_mark_app_error_does_not_abort_successful_download_side_path(
+    tmp_path: Path,
+    caplog,
+    run_context,
+) -> None:
+    def _mark_promoted(req, ctx):
+        raise AppError(
+            code="private_api_candidate_mark_failed",
+            message="fixture promotion marker failure",
+            retryable=True,
+            severity="error",
+        )
+
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+    _evaluate_private_api_side_path(
+        tmp_path,
+        run_context,
+        _private_api_promotion_dependencies(
+            tmp_path,
+            record_candidate=lambda req, ctx: (
+                PublisherPrivateApiCandidateObservationRecordResponse(
+                    schema_version="1.0",
+                    fingerprint=req.fingerprint,
+                    success_count=3,
+                    distinct_source_url_count=2,
+                    eligible_for_promotion=True,
+                    already_promoted=False,
+                    promoted_playbook_id="",
+                )
+            ),
+            mark_promoted=_mark_promoted,
+        ),
+    )
+
+    events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_private_api_promotion_evaluated"
+    ]
+    assert events[-1]["fields"]["skip_reason"] == "promotion_mark_app_error"
+    assert events[-1]["fields"]["error_code"] == "private_api_candidate_mark_failed"
 
 
 def test_run_report_download_falls_back_after_memory_failure_and_retries(

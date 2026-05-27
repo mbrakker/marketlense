@@ -11895,6 +11895,12 @@
     "src.contracts.cross_report_analysis.CrossReportSelectedSourceReport": {
       "additionalProperties": false,
       "properties": {
+        "category_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "category_labels": {
           "items": {
             "type": "string"
@@ -12125,6 +12131,12 @@
     "src.contracts.cross_report_analysis.CrossReportSourceReportCandidate": {
       "additionalProperties": false,
       "properties": {
+        "category_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "category_labels": {
           "items": {
             "type": "string"

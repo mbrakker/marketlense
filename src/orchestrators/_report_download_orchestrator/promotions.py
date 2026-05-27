@@ -203,33 +203,48 @@ def evaluate_private_api_playbook_auto_promotion(
         return
     for candidate in detection.candidates:
         observed_at = _utc_now_iso()
-        record = dependencies.record_publisher_private_api_candidate_observation(
-            PublisherPrivateApiCandidateObservationRecordRequest(
-                schema_version="1.0",
-                db_path=request.reports_db,
-                fingerprint=candidate.fingerprint,
-                publisher_host=candidate.publisher_host,
-                source_url=candidate.source_url,
-                endpoint_pattern=candidate.endpoint_pattern,
-                method=candidate.method,
-                request_shape_summary=candidate.request_shape_summary,
-                response_pdf_url_json_pointer=(candidate.response_pdf_url_json_pointer),
-                expected_status_codes=list(candidate.expected_status_codes),
-                required_response_markers=list(candidate.required_response_markers),
-                fallback_route_family=candidate.fallback_route_family,
-                route_family=candidate.route_family,
-                route_kind=candidate.route_kind,
-                evidence_labels=list(candidate.evidence_labels),
-                observed_at=observed_at,
-                min_success_count=(
-                    request.settings.private_api_playbook_min_success_count
+        try:
+            record = dependencies.record_publisher_private_api_candidate_observation(
+                PublisherPrivateApiCandidateObservationRecordRequest(
+                    schema_version="1.0",
+                    db_path=request.reports_db,
+                    fingerprint=candidate.fingerprint,
+                    publisher_host=candidate.publisher_host,
+                    source_url=candidate.source_url,
+                    endpoint_pattern=candidate.endpoint_pattern,
+                    method=candidate.method,
+                    request_shape_summary=candidate.request_shape_summary,
+                    response_pdf_url_json_pointer=(
+                        candidate.response_pdf_url_json_pointer
+                    ),
+                    expected_status_codes=list(candidate.expected_status_codes),
+                    required_response_markers=list(candidate.required_response_markers),
+                    fallback_route_family=candidate.fallback_route_family,
+                    route_family=candidate.route_family,
+                    route_kind=candidate.route_kind,
+                    evidence_labels=list(candidate.evidence_labels),
+                    observed_at=observed_at,
+                    min_success_count=(
+                        request.settings.private_api_playbook_min_success_count
+                    ),
+                    min_distinct_source_urls=(
+                        request.settings.private_api_playbook_min_distinct_source_urls
+                    ),
                 ),
-                min_distinct_source_urls=(
-                    request.settings.private_api_playbook_min_distinct_source_urls
-                ),
-            ),
-            ctx,
-        )
+                ctx,
+            )
+        except AppError as exc:
+            _log_private_api_promotion_event(
+                ctx=ctx,
+                fields={
+                    **fields,
+                    "fingerprint": candidate.fingerprint,
+                    "skip_reason": "candidate_observation_app_error",
+                    "error_code": exc.code,
+                    "error_retryable": exc.retryable,
+                },
+            )
+            continue
         if not record.eligible_for_promotion:
             _log_private_api_promotion_event(
                 ctx=ctx,
@@ -282,16 +297,30 @@ def evaluate_private_api_playbook_auto_promotion(
             )
             continue
         if mode == "write":
-            dependencies.mark_publisher_private_api_candidate_promoted(
-                PublisherPrivateApiCandidatePromotedRequest(
-                    schema_version="1.0",
-                    db_path=request.reports_db,
-                    fingerprint=candidate.fingerprint,
-                    playbook_id=response.playbook_id,
-                    promoted_at=observed_at,
-                ),
-                ctx,
-            )
+            try:
+                dependencies.mark_publisher_private_api_candidate_promoted(
+                    PublisherPrivateApiCandidatePromotedRequest(
+                        schema_version="1.0",
+                        db_path=request.reports_db,
+                        fingerprint=candidate.fingerprint,
+                        playbook_id=response.playbook_id,
+                        promoted_at=observed_at,
+                    ),
+                    ctx,
+                )
+            except AppError as exc:
+                _log_private_api_promotion_event(
+                    ctx=ctx,
+                    fields={
+                        **fields,
+                        "fingerprint": candidate.fingerprint,
+                        "playbook_id": response.playbook_id,
+                        "skip_reason": "promotion_mark_app_error",
+                        "error_code": exc.code,
+                        "error_retryable": exc.retryable,
+                    },
+                )
+                continue
         _log_private_api_promotion_event(
             ctx=ctx,
             fields={
