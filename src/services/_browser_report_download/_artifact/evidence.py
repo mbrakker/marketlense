@@ -516,7 +516,7 @@ def _extract_visible_text_from_html(html: str, *, max_chars: int = 320) -> str:
     if not token:
         return ""
     without_scripts = re.sub(
-        r"(?is)<(script|style)[^>]*>.*?</\1>",
+        r"(?is)<(script|style)[^>]*>.*?</\1\s*>",
         " ",
         token,
     )

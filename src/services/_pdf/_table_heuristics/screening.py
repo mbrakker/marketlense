@@ -179,8 +179,10 @@ from .layout import (
     _table_text_has_figure_context,
 )
 
+
 def _cell_words(text: str) -> int:
     return len([w for w in text.split() if w.strip()])
+
 
 def _numeric_char_ratio(rows: List[List[object]]) -> Tuple[int, int]:
     numeric_chars = 0
@@ -194,6 +196,7 @@ def _numeric_char_ratio(rows: List[List[object]]) -> Tuple[int, int]:
             numeric_chars += sum(1 for ch in text if ch.isdigit())
     return numeric_chars, total_chars
 
+
 def _avg_words_per_cell(rows: List[List[object]]) -> float:
     words = 0
     cells = 0
@@ -205,6 +208,7 @@ def _avg_words_per_cell(rows: List[List[object]]) -> float:
             cells += 1
             words += _cell_words(text)
     return (words / cells) if cells else 0.0
+
 
 def _avg_first_col_words(rows: List[List[object]]) -> float:
     words = 0
@@ -219,6 +223,7 @@ def _avg_first_col_words(rows: List[List[object]]) -> float:
             break
     return (words / rows_counted) if rows_counted else 0.0
 
+
 def _row_nonempty_counts(rows: List[List[object]]) -> List[int]:
     counts = []
     for row in rows:
@@ -228,6 +233,7 @@ def _row_nonempty_counts(rows: List[List[object]]) -> List[int]:
         if count:
             counts.append(count)
     return counts
+
 
 def _row_text_lengths(rows: List[List[object]]) -> List[int]:
     lengths = []
@@ -240,6 +246,7 @@ def _row_text_lengths(rows: List[List[object]]) -> List[int]:
         lengths.append(sum(len(t) for t in texts))
     return lengths
 
+
 def _col_consistency(row_counts: List[int]) -> float:
     if not row_counts:
         return 0.0
@@ -247,6 +254,7 @@ def _col_consistency(row_counts: List[int]) -> float:
     for count in row_counts:
         counts[count] = counts.get(count, 0) + 1
     return max(counts.values()) / max(1, len(row_counts))
+
 
 def _row_len_cv(lengths: List[int]) -> float:
     if len(lengths) < 2:
@@ -257,8 +265,10 @@ def _row_len_cv(lengths: List[int]) -> float:
     var = sum((length - mean) ** 2 for length in lengths) / len(lengths)
     return math.sqrt(var) / mean
 
+
 def _cell_is_page_number(text: str) -> bool:
     return _is_page_number_text(text)
+
 
 def _index_page_ratio(rows: List[List[object]]) -> float:
     index_rows = 0
@@ -275,6 +285,7 @@ def _index_page_ratio(rows: List[List[object]]) -> float:
         ) >= TABLE_INDEX_MIN_FIRST_COL_WORDS and _cell_is_page_number(last_text):
             index_rows += 1
     return (index_rows / total_rows) if total_rows else 0.0
+
 
 def _has_caption_hint(
     page: fitz.Page, bbox: Tuple[float, float, float, float], max_dist: float = 60
@@ -294,6 +305,7 @@ def _has_caption_hint(
         text += ""
     lowered = text.lower()
     return any(hint in lowered for hint in TABLE_CAPTION_HINTS)
+
 
 def _has_figure_context_hint(
     page: fitz.Page,
@@ -331,6 +343,7 @@ def _has_figure_context_hint(
     except PDF_FIGURE_EXCEPTIONS:
         return False
     return _table_text_has_figure_context(full_width_text)
+
 
 def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
     if cand.method == "image":
@@ -425,6 +438,7 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
             return False, "text_block_like"
     return True, ""
 
+
 def _stream_text_layout_like(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
         return False
@@ -442,6 +456,7 @@ def _stream_text_layout_like(cand: _TableCandidate) -> bool:
     if cand.avg_line_len < TABLE_STREAM_TEXTY_MIN_AVG_LINE_LEN:
         return False
     return True
+
 
 def _stream_text_block_like(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
@@ -463,6 +478,7 @@ def _stream_text_block_like(cand: _TableCandidate) -> bool:
         return False
     return True
 
+
 def _stream_infobox_like(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
         return False
@@ -482,6 +498,7 @@ def _stream_infobox_like(cand: _TableCandidate) -> bool:
         return False
     return True
 
+
 def _stream_list_like(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
         return False
@@ -497,6 +514,7 @@ def _stream_list_like(cand: _TableCandidate) -> bool:
         return False
     return True
 
+
 def _stream_panel_like(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
         return False
@@ -511,6 +529,7 @@ def _stream_panel_like(cand: _TableCandidate) -> bool:
     if cand.numeric_ratio > TABLE_STREAM_PANEL_MAX_NUMERIC_RATIO:
         return False
     return True
+
 
 def _stream_slide_card_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
@@ -542,6 +561,7 @@ def _stream_slide_card_like(cand: _TableCandidate) -> bool:
         cand.row_count + TABLE_STREAM_SLIDE_CARD_LINE_PAD,
     )
 
+
 def _stream_sparse_text_like(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
         return False
@@ -556,6 +576,7 @@ def _stream_sparse_text_like(cand: _TableCandidate) -> bool:
     if cand.col_count > TABLE_STREAM_SPARSE_MAX_COLS:
         return False
     return True
+
 
 def _stream_multilist_infographic_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
@@ -583,6 +604,7 @@ def _stream_multilist_infographic_like(cand: _TableCandidate) -> bool:
             heading_hits += 1
     return heading_hits >= 3
 
+
 def _stream_low_consistency(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
         return False
@@ -597,6 +619,7 @@ def _stream_low_consistency(cand: _TableCandidate) -> bool:
         return False
     return True
 
+
 def _text_block_like(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
         return False
@@ -609,6 +632,7 @@ def _text_block_like(cand: _TableCandidate) -> bool:
     if cand.numeric_ratio > TEXT_BLOCK_MAX_NUMERIC_RATIO:
         return False
     return True
+
 
 def _text_block_like_loose(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
@@ -623,11 +647,14 @@ def _text_block_like_loose(cand: _TableCandidate) -> bool:
         return False
     return True
 
+
 def _filled_cells_per_row(cand: _TableCandidate) -> float:
     return cand.non_empty_cells / max(1, cand.row_count)
 
+
 def _nonempty_text_lines(text: str) -> List[str]:
     return [line.strip() for line in text.splitlines() if line.strip()]
+
 
 def _terminal_page_number_hits(lines: List[str]) -> int:
     hits = 0
@@ -635,6 +662,7 @@ def _terminal_page_number_hits(lines: List[str]) -> int:
         if re.search(r"\b\d{1,3}\s*$", line):
             hits += 1
     return hits
+
 
 def _contents_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
@@ -671,6 +699,7 @@ def _contents_like(cand: _TableCandidate) -> bool:
         terminal_page_hits += 1
     required_hits = max(6, math.ceil(len(lines) * 0.45))
     return terminal_page_hits >= required_hits
+
 
 def _section_list_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
@@ -712,6 +741,7 @@ def _section_list_like(cand: _TableCandidate) -> bool:
         and cand.area_frac <= TABLE_SECTION_LIST_MAX_AREA_FRAC_WITHOUT_NUMBERS
     )
 
+
 def _contents_grid_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
         return False
@@ -749,6 +779,7 @@ def _contents_grid_like(cand: _TableCandidate) -> bool:
         and line == line.upper()
     ) / max(1, len(lines))
     return uppercase_short_ratio >= TABLE_CONTENTS_GRID_MIN_UPPERCASE_SHORT_RATIO
+
 
 def _reference_block_like(cand: _TableCandidate) -> bool:
     lowered = cand.text.lower()
@@ -791,6 +822,7 @@ def _reference_block_like(cand: _TableCandidate) -> bool:
         and term_hits >= TABLE_REFERENCE_MIN_TERM_HITS
     )
 
+
 def _front_matter_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
         return False
@@ -804,6 +836,7 @@ def _front_matter_like(cand: _TableCandidate) -> bool:
     if cand.avg_words_per_cell > TABLE_FRONT_MATTER_MAX_AVG_WORDS_PER_CELL:
         return False
     return cand.area_frac >= TABLE_FRONT_MATTER_MIN_AREA_FRAC
+
 
 def _contact_block_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
@@ -819,6 +852,7 @@ def _contact_block_like(cand: _TableCandidate) -> bool:
     if cand.avg_line_len < TABLE_CONTACT_MIN_AVG_LINE_LEN:
         return False
     return EMAIL_ADDRESS_RX.search(cand.text) is not None
+
 
 def _prose_box_like(cand: _TableCandidate) -> bool:
     if cand.row_count < TABLE_PROSE_BOX_MIN_ROWS:
@@ -843,6 +877,7 @@ def _prose_box_like(cand: _TableCandidate) -> bool:
     if cand.line_count > max_line_count:
         return False
     return True
+
 
 def _visual_quote_page_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
@@ -869,6 +904,7 @@ def _visual_quote_page_like(cand: _TableCandidate) -> bool:
         return False
     return True
 
+
 def _chart_fragment_like(cand: _TableCandidate) -> bool:
     if cand.method != "lattice":
         return False
@@ -892,8 +928,10 @@ def _chart_fragment_like(cand: _TableCandidate) -> bool:
     )
     return compact_numeric_fragment or wide_sparse_fragment
 
+
 def _table_sort_key(cand: _TableCandidate) -> Tuple[float, float]:
     return (cand.bbox[1], cand.bbox[0])
+
 
 def _table_quality(cand: _TableCandidate) -> Tuple[int, int, int, int]:
     method_bonus = 100 if cand.method == "ranked" else 0
@@ -903,6 +941,7 @@ def _table_quality(cand: _TableCandidate) -> Tuple[int, int, int, int]:
         cand.non_empty_cells,
         cand.text_len,
     )
+
 
 def _table_iou(
     a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]
@@ -921,6 +960,7 @@ def _table_iou(
         return 0.0
     return inter / union
 
+
 def _table_containment_ratio(
     a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]
 ) -> float:
@@ -938,6 +978,7 @@ def _table_containment_ratio(
         return 0.0
     return inter / smaller
 
+
 def _prefer_inner_lattice_table(
     smaller: _TableCandidate, larger: _TableCandidate
 ) -> bool:
@@ -952,6 +993,7 @@ def _prefer_inner_lattice_table(
     width_ratio = smaller_width / larger_width
     height_ratio = smaller_height / larger_height
     return width_ratio >= 0.7 and height_ratio >= 0.75
+
 
 def _dedupe_table_candidates(
     candidates: List[_TableCandidate],

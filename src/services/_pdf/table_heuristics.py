@@ -352,11 +352,13 @@ from ._table_heuristics.regions import (
     _table_restore_top_slack,
 )
 
+
 def _candidate_index_from_id(candidate_id: str) -> int:
     try:
         return int(str(candidate_id).rsplit("-", 1)[-1])
     except (TypeError, ValueError):
         return 0
+
 
 def _split_even_chunks(values: List[int], chunk_count: int) -> List[List[int]]:
     if not values:
@@ -366,6 +368,7 @@ def _split_even_chunks(values: List[int], chunk_count: int) -> List[List[int]]:
     for idx, value in enumerate(values):
         chunks[idx % chunk_count].append(value)
     return [chunk for chunk in chunks if chunk]
+
 
 def _resolve_candidate_parallel_workers(requested_workers: int, unit_count: int) -> int:
     if unit_count <= 1:
@@ -386,12 +389,14 @@ def _resolve_candidate_parallel_workers(requested_workers: int, unit_count: int)
         workers = max(2, min(6, (os.cpu_count() or 2)))
     return max(1, min(workers, unit_count, 8))
 
+
 def _tally_reason(stats: Dict[str, object], reason: str) -> None:
     reasons = stats.get("reasons")
     if not isinstance(reasons, dict):
         reasons = {}
         stats["reasons"] = reasons
     reasons[reason] = int(reasons.get(reason, 0)) + 1
+
 
 def _suppress_pdfminer_warnings() -> None:
     """Force pdfminer loggers to ERROR to avoid noisy color warnings."""

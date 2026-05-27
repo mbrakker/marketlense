@@ -131,13 +131,13 @@ verification.
 
 Implemented ownership:
 
-- `src/services/_pdf/table_heuristics.py`: `402` lines; compatibility facade
+- `src/services/_pdf/table_heuristics.py`: `407` lines; compatibility facade
   retaining execution-only helpers.
-- `src/services/_pdf/_table_heuristics/regions.py`: `1,065` lines; region
+- `src/services/_pdf/_table_heuristics/regions.py`: `1,085` lines; region
   formation and bbox adjustment.
-- `src/services/_pdf/_table_heuristics/screening.py`: `996` lines; rejection,
+- `src/services/_pdf/_table_heuristics/screening.py`: `1,038` lines; rejection,
   quality scoring, overlap, and deduplication.
-- `src/services/_pdf/_table_heuristics/layout.py`: `733` lines; page-layout,
+- `src/services/_pdf/_table_heuristics/layout.py`: `774` lines; page-layout,
   text interpretation, preview/statistics, and numeric fragment recognition.
 - `src/services/_pdf/_table_heuristics/policy.py` and `models.py`: shared
   threshold/pattern policy and immutable private records.

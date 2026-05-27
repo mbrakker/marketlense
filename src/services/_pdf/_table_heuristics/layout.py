@@ -41,6 +41,7 @@ from .models import (
     _TableTextBand,
 )
 
+
 def _s(value: object) -> str:
     if value is None:
         return ""
@@ -48,6 +49,7 @@ def _s(value: object) -> str:
         return str(value)
     except PDF_FIGURE_EXCEPTIONS:
         return ""
+
 
 def _int_count(value: object) -> int:
     if isinstance(value, bool):
@@ -63,9 +65,11 @@ def _int_count(value: object) -> int:
             return 0
     return 0
 
+
 def _table_normalize_text(text: str) -> str:
     normalized = str(text or "").replace("|", " ").replace("\u00a0", " ")
     return " ".join(normalized.split())
+
 
 def _table_text_lines(text: str) -> List[str]:
     lines: List[str] = []
@@ -75,12 +79,14 @@ def _table_text_lines(text: str) -> List[str]:
             lines.append(normalized)
     return lines
 
+
 def _starts_with_lower_alpha(text: str) -> bool:
     for char in str(text or ""):
         if not char.isalpha():
             continue
         return char.islower()
     return False
+
 
 def _table_text_has_note_marker(text: str) -> bool:
     for line in _table_text_lines(text):
@@ -91,17 +97,20 @@ def _table_text_has_note_marker(text: str) -> bool:
             return True
     return False
 
+
 def _table_text_has_figure_context(text: str) -> bool:
     for line in _table_text_lines(text):
         if _FIGURE_CONTEXT_RX.match(line):
             return True
     return False
 
+
 def _table_text_starts_with_footnote_marker(text: str) -> bool:
     lines = _table_text_lines(text)
     if not lines:
         return False
     return bool(_TABLE_FOOTNOTE_RX.match(lines[0]))
+
 
 def _table_text_has_embedded_note_marker(text: str) -> bool:
     lines = _table_text_lines(text)
@@ -114,6 +123,7 @@ def _table_text_has_embedded_note_marker(text: str) -> bool:
         if lowered.startswith(NOTE_LABEL_PREFIXES):
             return True
     return False
+
 
 def _table_page_text_blocks(
     page: fitz.Page,
@@ -189,6 +199,7 @@ def _table_page_text_blocks(
         )
     return blocks
 
+
 def _table_page_body_font_size(blocks: List[_PageTextBlock]) -> float:
     sizes = [block.max_font_size for block in blocks if block.max_font_size > 0.0]
     if not sizes:
@@ -197,6 +208,7 @@ def _table_page_body_font_size(blocks: List[_PageTextBlock]) -> float:
         return float(statistics.median(sizes))
     except statistics.StatisticsError:
         return float(sizes[0])
+
 
 def _cell_is_numeric(text: str) -> bool:
     stripped = text.strip()
@@ -210,12 +222,14 @@ def _cell_is_numeric(text: str) -> bool:
         return False
     return any(ch.isdigit() for ch in stripped)
 
+
 def _table_fragment_is_numeric(text: str) -> bool:
     compact = _table_normalize_text(text).replace(" ", "")
     if not compact:
         return False
     compact = compact.replace("*", "")
     return _cell_is_numeric(compact)
+
 
 def _table_page_text_lines(
     page: fitz.Page,
@@ -272,6 +286,7 @@ def _table_page_text_lines(
                 )
             )
     return lines
+
 
 def _table_text_bands(
     page: fitz.Page,
@@ -341,6 +356,7 @@ def _table_text_bands(
         _flush(current, bands)
     return bands
 
+
 def _table_band_is_margin_noise(band: _TableTextBand, page_rect: fitz.Rect) -> bool:
     normalized = _table_normalize_text(band.text)
     if _is_page_number_text(normalized):
@@ -358,6 +374,7 @@ def _table_band_is_margin_noise(band: _TableTextBand, page_rect: fitz.Rect) -> b
         return True
     return False
 
+
 def _table_band_is_note_like(band: _TableTextBand) -> bool:
     normalized = _table_normalize_text(band.text)
     lowered = normalized.lower()
@@ -368,6 +385,7 @@ def _table_band_is_note_like(band: _TableTextBand) -> bool:
     if "statlink" in lowered or "http://" in lowered or "https://" in lowered:
         return True
     return False
+
 
 def _table_band_is_heading_like(
     band: _TableTextBand,
@@ -387,6 +405,7 @@ def _table_band_is_heading_like(
     text_heading = _heading_like_block(normalized, 1, float(len(normalized)))
     return font_large or text_heading
 
+
 def _table_band_is_body_paragraph(
     band: _TableTextBand,
     body_font_size: float,
@@ -404,6 +423,7 @@ def _table_band_is_body_paragraph(
         return True
     return False
 
+
 def _table_band_is_title_like(
     band: _TableTextBand,
     body_font_size: float,
@@ -417,6 +437,7 @@ def _table_band_is_title_like(
     if ":" in normalized and len(normalized.split()) <= 16:
         return True
     return _table_band_is_heading_like(band, body_font_size)
+
 
 def _table_band_is_row_like(
     band: _TableTextBand,
@@ -444,6 +465,7 @@ def _table_band_is_row_like(
         return True
     return False
 
+
 def _table_block_is_margin_noise(block: _PageTextBlock, page_rect: fitz.Rect) -> bool:
     text_normalized = _table_normalize_text(block.text)
     if _is_page_number_text(text_normalized):
@@ -461,6 +483,7 @@ def _table_block_is_margin_noise(block: _PageTextBlock, page_rect: fitz.Rect) ->
         if "oecd" in lowered or "economic outlook" in lowered:
             return True
     return False
+
 
 def _cluster_is_row_continuation(
     cluster: List[_TableTextBand],
@@ -487,6 +510,7 @@ def _cluster_is_row_continuation(
             return False
     return True
 
+
 def _table_block_is_note_like(block: _PageTextBlock) -> bool:
     normalized = _table_normalize_text(block.text)
     lowered = normalized.lower()
@@ -503,6 +527,7 @@ def _table_block_is_note_like(block: _PageTextBlock) -> bool:
         return True
     return False
 
+
 def _table_block_is_mixed_footer_cluster(block: _PageTextBlock) -> bool:
     if not _table_text_has_embedded_note_marker(block.text):
         return False
@@ -511,6 +536,7 @@ def _table_block_is_mixed_footer_cluster(block: _PageTextBlock) -> bool:
     if block.avg_line_len > 85:
         return False
     return True
+
 
 def _table_block_is_heading_like(
     block: _PageTextBlock,
@@ -534,6 +560,7 @@ def _table_block_is_heading_like(
     )
     return font_large or text_heading
 
+
 def _table_block_is_body_paragraph(
     block: _PageTextBlock,
     body_font_size: float,
@@ -550,6 +577,7 @@ def _table_block_is_body_paragraph(
     if len(normalized.split()) >= 18 and block.avg_line_len >= 28:
         return True
     return False
+
 
 def _table_block_is_note_continuation(
     block: _PageTextBlock,
@@ -576,6 +604,7 @@ def _table_block_is_note_continuation(
         return False
     return True
 
+
 def _table_band_is_note_continuation(
     band: _TableTextBand,
     rect: fitz.Rect,
@@ -598,6 +627,7 @@ def _table_band_is_note_continuation(
         return False
     return True
 
+
 def _table_block_is_title_like(
     block: _PageTextBlock,
     body_font_size: float,
@@ -612,6 +642,7 @@ def _table_block_is_title_like(
         return True
     return _table_block_is_heading_like(block, body_font_size)
 
+
 def _table_block_looks_dense_tabular(block: _PageTextBlock) -> bool:
     if block.lines < TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MIN_LINES:
         return False
@@ -624,12 +655,14 @@ def _table_block_looks_dense_tabular(block: _PageTextBlock) -> bool:
         return False
     return True
 
+
 def _alpha_ratio(text: str) -> float:
     if not text:
         return 0.0
     alpha = sum(1 for ch in text if ch.isalpha())
     total = len(text)
     return alpha / total if total else 0.0
+
 
 def _is_page_number_text(text: str) -> bool:
     if not text:
@@ -638,6 +671,7 @@ def _is_page_number_text(text: str) -> bool:
     if not _PAGE_NUMBER_RX.match(cleaned):
         return False
     return _alpha_ratio(cleaned) <= 0.3
+
 
 def _horizontal_overlap_ratio(a: fitz.Rect, b: fitz.Rect) -> float:
     left = max(a.x0, b.x0)
@@ -650,6 +684,7 @@ def _horizontal_overlap_ratio(a: fitz.Rect, b: fitz.Rect) -> float:
         return 0.0
     return overlap / denom
 
+
 def _vertical_overlap_ratio(a: fitz.Rect, b: fitz.Rect) -> float:
     top = max(a.y0, b.y0)
     bot = min(a.y1, b.y1)
@@ -661,6 +696,7 @@ def _vertical_overlap_ratio(a: fitz.Rect, b: fitz.Rect) -> float:
         return 0.0
     return overlap / denom
 
+
 def _table_preview(rows: List[List[object]]) -> str:
     preview_lines = []
     for row in rows[:3]:
@@ -668,6 +704,7 @@ def _table_preview(rows: List[List[object]]) -> str:
             continue
         preview_lines.append(" | ".join(_s(c) for c in row[:6]))
     return "\n".join(preview_lines)
+
 
 def _extract_text_in_bbox(
     page: pdfplumber.page.Page, bbox: Tuple[float, float, float, float]
@@ -677,16 +714,19 @@ def _extract_text_in_bbox(
     except (AttributeError, ValueError, RuntimeError, TypeError):
         return ""
 
+
 def _text_stats(text: str) -> Tuple[int, int]:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     char_count = sum(len(line) for line in lines)
     return len(lines), char_count
+
 
 def _rect_intersection_area(a: fitz.Rect, b: fitz.Rect) -> float:
     inter = a & b
     if inter.is_empty:
         return 0.0
     return max(0.0, inter.get_area())
+
 
 def _heading_like_block(text: str, lines: int, avg_line_len: float) -> bool:
     if lines == 0:
@@ -701,6 +741,7 @@ def _heading_like_block(text: str, lines: int, avg_line_len: float) -> bool:
     if sentence_marks > TABLE_EXPAND_HEADING_MAX_SENTENCES:
         return False
     return True
+
 
 def _text_block_stats(
     page: fitz.Page,

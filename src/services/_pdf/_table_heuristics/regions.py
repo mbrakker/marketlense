@@ -86,6 +86,7 @@ from .screening import (
     _validate_table_candidate,
 )
 
+
 def _table_rank_value(block: _PageTextBlock) -> Optional[int]:
     normalized = _table_normalize_text(block.text)
     if not re.fullmatch(r"\d{1,2}", normalized):
@@ -97,6 +98,7 @@ def _table_rank_value(block: _PageTextBlock) -> Optional[int]:
     if value < 1 or value > TABLE_RANKED_MAX_RANK:
         return None
     return value
+
 
 def _table_horizontal_rule_rects(page: fitz.Page) -> List[fitz.Rect]:
     rules: List[fitz.Rect] = []
@@ -119,6 +121,7 @@ def _table_horizontal_rule_rects(page: fitz.Page) -> List[fitz.Rect]:
             continue
         rules.append(rect)
     return sorted(rules, key=lambda rect: (rect.y0, rect.x0))
+
 
 def _group_rank_blocks_into_sequences(
     blocks: List[_PageTextBlock],
@@ -170,6 +173,7 @@ def _group_rank_blocks_into_sequences(
         if len(current) >= TABLE_RANKED_MIN_ROWS:
             sequences.append(current)
     return sequences
+
 
 def _ranked_table_panel_region(
     page: fitz.Page,
@@ -300,6 +304,7 @@ def _ranked_table_panel_region(
         col_count=col_count,
     )
 
+
 def _detect_ranked_table_candidates(
     plumber_page: pdfplumber.page.Page,
     page: fitz.Page,
@@ -397,6 +402,7 @@ def _detect_ranked_table_candidates(
             candidates.append(candidate)
     return candidates
 
+
 def _table_attach_title_bands(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -426,6 +432,7 @@ def _table_attach_title_bands(
         expanded |= band.rect
         current_top = band.rect.y0
     return expanded
+
 
 def _table_attach_note_bands(
     page: fitz.Page,
@@ -472,6 +479,7 @@ def _table_attach_note_bands(
         ) or _table_band_is_body_paragraph(band, body_font_size):
             break
     return expanded
+
 
 def _shrink_stream_table_rect(
     page: fitz.Page,
@@ -562,6 +570,7 @@ def _shrink_stream_table_rect(
         return rect
     return fitz.Rect(rect.x0, cluster_top, rect.x1, cluster_bottom)
 
+
 def _table_attach_title_blocks(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -591,6 +600,7 @@ def _table_attach_title_blocks(
         expanded |= block.rect
         current_top = block.rect.y0
     return expanded
+
 
 def _table_attach_note_blocks(
     page: fitz.Page,
@@ -627,6 +637,7 @@ def _table_attach_note_blocks(
         ) or _table_block_is_body_paragraph(block, body_font_size):
             break
     return expanded
+
 
 def _table_attach_explicit_title_context(
     rect: fitz.Rect,
@@ -671,6 +682,7 @@ def _table_attach_explicit_title_context(
         current_bottom = block.rect.y1
     return expanded
 
+
 def _table_attach_mixed_footer_blocks(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -707,6 +719,7 @@ def _table_attach_mixed_footer_blocks(
         ) or _table_block_is_body_paragraph(block, body_font_size):
             break
     return expanded
+
 
 def _table_expand_horizontal_to_content(
     page: fitz.Page,
@@ -752,6 +765,7 @@ def _table_expand_horizontal_to_content(
             expanded = fitz.Rect(expanded.x0, expanded.y0, block.rect.x1, expanded.y1)
     return expanded
 
+
 def _table_extend_overlapping_note_blocks(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -789,6 +803,7 @@ def _table_extend_overlapping_note_blocks(
         if note_started:
             break
     return expanded
+
 
 def _table_restore_top_slack(
     page: fitz.Page,
@@ -837,6 +852,7 @@ def _table_restore_top_slack(
         return rect
     return fitz.Rect(rect.x0, rect.y0 - slack, rect.x1, rect.y1)
 
+
 def _table_clamp_top_to_internal_title_band(
     rect: fitz.Rect,
     bands: List[_TableTextBand],
@@ -879,6 +895,7 @@ def _table_clamp_top_to_internal_title_band(
     if title_band.rect.y0 <= rect.y0 + 6.0:
         return rect
     return fitz.Rect(rect.x0, title_band.rect.y0, rect.x1, rect.y1)
+
 
 def _table_clamp_top_to_internal_title(
     rect: fitz.Rect,
@@ -941,6 +958,7 @@ def _table_clamp_top_to_internal_title(
         return rect
     return fitz.Rect(rect.x0, title_block.rect.y0, rect.x1, rect.y1)
 
+
 def _table_clamp_bottom_before_internal_heading(
     rect: fitz.Rect,
     blocks: List[_PageTextBlock],
@@ -974,6 +992,7 @@ def _table_clamp_bottom_before_internal_heading(
             continue
         return fitz.Rect(rect.x0, rect.y0, rect.x1, max(rect.y0, block.rect.y0 - 2.0))
     return rect
+
 
 def _compose_table_bbox(
     page: fitz.Page,
@@ -1045,6 +1064,7 @@ def _compose_table_bbox(
     if expanded.is_empty:
         return bbox
     return (expanded.x0, expanded.y0, expanded.x1, expanded.y1)
+
 
 def _expand_table_bbox(
     page: fitz.Page,

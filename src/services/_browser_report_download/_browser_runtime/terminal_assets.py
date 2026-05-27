@@ -646,7 +646,7 @@ def _should_capture_print_pdf_fallback(
 
 
 def _browser_visible_text_from_html(html: str) -> str:
-    token = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", str(html or ""))
+    token = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1\s*>", " ", str(html or ""))
     token = re.sub(r"(?is)<[^>]+>", " ", token)
     return " ".join(token.split())
 

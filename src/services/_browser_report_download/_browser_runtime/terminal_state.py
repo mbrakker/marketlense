@@ -468,8 +468,8 @@ def _assessment_meets_terminal_quorum(
 
 def _terminal_quorum_text(snapshot: TerminalSnapshot) -> str:
     html = str(snapshot.html or "")
-    sanitized = re.sub(r"(?is)<script[^>]*>.*?</script>", " ", html)
-    sanitized = re.sub(r"(?is)<style[^>]*>.*?</style>", " ", sanitized)
+    sanitized = re.sub(r"(?is)<script[^>]*>.*?</script\s*>", " ", html)
+    sanitized = re.sub(r"(?is)<style[^>]*>.*?</style\s*>", " ", sanitized)
     sanitized = re.sub(r"(?is)<[^>]+>", " ", sanitized)
     combined = " ".join([str(snapshot.title or "").strip(), sanitized])
     return re.sub(r"\s+", " ", combined).strip()
