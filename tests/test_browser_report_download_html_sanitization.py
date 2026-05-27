@@ -31,13 +31,13 @@ from src.services._browser_report_download._http.html_evidence import _html_to_t
         ),
     ],
 )
-def test_browser_html_text_sanitizers_exclude_script_and_style_text_with_spaced_end_tags(
+def test_browser_html_text_sanitizers_exclude_script_and_style_text_with_malformed_end_tags(
     sanitize,
 ) -> None:
     text = sanitize(
         "<body>Visible report"
-        "<script>FAKE THANK YOU DOWNLOAD REPORT</script >"
-        "<style>FAKE HIDDEN DOWNLOAD CTA</style >"
+        "<script>FAKE THANK YOU DOWNLOAD REPORT</script\t\n bar>"
+        "<style>FAKE HIDDEN DOWNLOAD CTA</style data-ignored>"
         "</body>"
     )
 

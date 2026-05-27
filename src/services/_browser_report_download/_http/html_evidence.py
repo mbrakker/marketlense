@@ -46,8 +46,8 @@ def _extract_html_title(html: str) -> str:
 
 
 def _html_to_text(html: str) -> str:
-    token = re.sub(r"(?is)<script[^>]*>.*?</script\s*>", " ", str(html or ""))
-    token = re.sub(r"(?is)<style[^>]*>.*?</style\s*>", " ", token)
+    token = re.sub(r"(?is)<script[^>]*>.*?</script\b[^>]*>", " ", str(html or ""))
+    token = re.sub(r"(?is)<style[^>]*>.*?</style\b[^>]*>", " ", token)
     token = re.sub(r"(?is)<[^>]+>", " ", token)
     token = re.sub(r"\s+", " ", token)
     return token.strip()
