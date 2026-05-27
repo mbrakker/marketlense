@@ -856,7 +856,7 @@ Redaction covers API keys, bearer tokens, and common PII patterns before log emi
 
 CLI-provided run contexts flow into the ingest orchestrator so CLI run/task IDs stay consistent across downstream orchestrator/service logs.
 
-CLI rich exception rendering keeps local variables out of terminal tracebacks; structured logs remain the supported diagnostic surface and pass through the normal redaction path.
+CLI rich exception rendering keeps local variables out of terminal tracebacks; structured logs remain the supported diagnostic surface and pass through the normal redaction path. CLI failure handling uses Typer's public exit contract so validation, replay, and UI-worker failures preserve nonzero exit behavior across supported Typer releases.
 
 Every log event includes:
 

@@ -7,7 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-import click
+import typer
 from rich.console import Console
 import yaml
 
@@ -321,7 +321,7 @@ class TestCli(unittest.TestCase):
                 cli, "run_cross_report_analysis_orchestrator"
             ) as run_mock:
                 with patch.object(cli.console, "print") as print_mock:
-                    with self.assertRaises(click.exceptions.Exit) as exc_info:
+                    with self.assertRaises(typer.Exit) as exc_info:
                         cli.generate_cross_report_analysis_cli(
                             topic="AI commerce",
                             auto_theme=False,
@@ -419,7 +419,7 @@ class TestCli(unittest.TestCase):
                 cli, "run_cross_report_analysis_orchestrator"
             ) as run_mock:
                 with patch.object(cli.console, "print") as print_mock:
-                    with self.assertRaises(click.exceptions.Exit) as exc_info:
+                    with self.assertRaises(typer.Exit) as exc_info:
                         cli.generate_cross_report_analysis_cli(
                             topic="AI commerce",
                             auto_theme=False,
@@ -1432,7 +1432,7 @@ class TestCli(unittest.TestCase):
 
         with patch.object(cli, "replay_ui_run", return_value=response):
             with patch.object(cli.console, "print"):
-                with self.assertRaises(click.exceptions.Exit) as exc_info:
+                with self.assertRaises(typer.Exit) as exc_info:
                     cli.replay_run(
                         run_id="run-1", registry_path="./state/ui_runs.sqlite"
                     )
@@ -1498,7 +1498,7 @@ class TestCli(unittest.TestCase):
                 ),
             ):
                 with patch.object(cli, "setup_logging"):
-                    with self.assertRaises(click.exceptions.Exit) as exc_info:
+                    with self.assertRaises(typer.Exit) as exc_info:
                         cli.ui_run_worker(request_json=str(request_path))
 
             self.assertEqual(1, exc_info.exception.exit_code)

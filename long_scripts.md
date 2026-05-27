@@ -42,7 +42,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | 2,301 | `src/services/_publisher_inventory_service/workflow.py` | Active service-family hotspot |
 | 2,263 | `src/services/_pdf/visual_candidates.py` | Active PDF heuristic hotspot |
 | 1,994 | `src/orchestrators/publisher_inventory_orchestrator.py` | Active orchestrator hotspot |
-| 1,926 | `src/cli.py` | Review after workflow work |
+| 1,925 | `src/cli.py` | Review after workflow work |
 | 1,892 | `src/services/_browser_report_download/helpers.py` | Active service-family hotspot |
 | 1,877 | `src/generators/cross_report_analysis_input_generator.py` | New feature surface; stabilize first |
 | 1,689 | `src/services/_pdf/crop.py` | PDF family follow-up |
