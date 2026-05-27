@@ -18,12 +18,12 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 101 | 35 |
+| First-party `src` | 103 | 35 |
 | First-party `tests` | 43 | 24 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `669`.
+- Total first-party source-like files scanned: `674`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
@@ -32,6 +32,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - Browser-report HTTP acquisition has now been decomposed internally: `src/services/_browser_report_download/http.py` is a `47`-line compatibility surface; focused remaining `>500` owners are `_http/gate_probe.py` (`607`), `_http/onsite_capture.py` (`573`), and `_http/pdf_transfer.py` (`522`).
 - PDF table interpretation has now been decomposed internally: `src/services/_pdf/table_heuristics.py` is a `407`-line compatibility surface; focused remaining `>500` owners are `_table_heuristics/regions.py` (`1,085`), `_table_heuristics/screening.py` (`1,038`), and `_table_heuristics/layout.py` (`774`).
 - PDF panel interpretation has now been decomposed internally: `src/services/_pdf/_visual_heuristics/panel_detection.py` is a `1,002`-line detector coordinator, with focused text interpretation in `panel_text.py` (`952`) and geometry construction in `panel_geometry.py` (`988`); `src/services/_pdf/visual_heuristics.py` remains the compatibility facade.
+- PDF visual-candidate extraction has now been decomposed internally: `src/services/_pdf/visual_candidates.py` is a `164`-line compatibility surface; focused owners are `_visual_candidates/extraction.py` (`1,176`), `_visual_candidates/screening.py` (`684`), and `_visual_candidates/raster.py` (`558`).
 
 ## Largest Runtime Files
 
@@ -40,7 +41,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | Lines | Path | Assessment |
 | ---: | --- | --- |
 | 2,301 | `src/services/_publisher_inventory_service/workflow.py` | Active service-family hotspot |
-| 2,263 | `src/services/_pdf/visual_candidates.py` | Active PDF heuristic hotspot |
 | 1,994 | `src/orchestrators/publisher_inventory_orchestrator.py` | Active orchestrator hotspot |
 | 1,925 | `src/cli.py` | Review after workflow work |
 | 1,892 | `src/services/_browser_report_download/helpers.py` | Active service-family hotspot |
@@ -63,6 +63,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | 1,300 | `src/services/drive_service.py` | External-system boundary |
 | 1,230 | `src/services/_pdf/visual_heuristics.py` | PDF heuristic family compatibility facade |
 | 1,207 | `src/services/wordpress_service.py` | External-system boundary |
+| 1,176 | `src/services/_pdf/_visual_candidates/extraction.py` | Focused visual extraction coordinator |
 | 1,153 | `src/services/_browser_report_download/_artifact/classification.py` | Extracted artifact-classification capability |
 | 1,102 | `src/services/_browser_report_download/_browser_runtime/session_lifecycle.py` | Focused browser lifecycle capability |
 | 1,085 | `src/services/_pdf/_table_heuristics/regions.py` | Focused table-region geometry capability |
@@ -163,7 +164,10 @@ Primary evidence:
 - `src/services/_pdf/_visual_heuristics/panel_detection.py`: `1,002` lines; detector-level decisions and candidate coordination.
 - `src/services/_pdf/_visual_heuristics/panel_geometry.py`: `988` lines; deterministic panel geometry construction and adjustment.
 - `src/services/_pdf/_visual_heuristics/panel_text.py`: `952` lines; deterministic title, caption, metric, and component-text interpretation.
-- `src/services/_pdf/visual_candidates.py`: `2,263` lines.
+- `src/services/_pdf/visual_candidates.py`: `164` lines; stable compatibility surface.
+- `src/services/_pdf/_visual_candidates/extraction.py`: `1,176` lines; candidate construction, ordering, overlap handling, and worker coordination.
+- `src/services/_pdf/_visual_candidates/screening.py`: `684` lines; deterministic textual and false-positive screening.
+- `src/services/_pdf/_visual_candidates/raster.py`: `558` lines; raster qualification and probe caching.
 - `src/services/_pdf/crop.py`: `1,689` lines.
 
 Direction:
@@ -172,6 +176,7 @@ Direction:
 - Prioritize measured algorithm changes already recorded in `CONSOLIDATED_TODO.md`: indexed table deduplication and precomputed per-page visual candidate relationships.
 - Retain the `_table_heuristics/*` capability split; `regions.py` and `screening.py` are the remaining table-family `>=1,000`-line review targets, and further extraction requires a semantic boundary rather than line-count slicing.
 - Retain the `_visual_heuristics/{panel_text,panel_geometry,panel_detection}.py` semantic split behind `visual_heuristics.py`; optimization of precomputed visual relationships remains separate from the decomposition evidence.
+- Retain the `_visual_candidates/{raster,screening,extraction}.py` semantic split behind `visual_candidates.py`; `extraction.py` is the remaining visual-candidate `>=1,000`-line coordinator and the deferred relationship-scan optimization is still a separate change.
 - Extract additional internal modules only when an algorithm or stable heuristic family gains independent testability; do not create forwarding-only layers.
 
 Verification required:
