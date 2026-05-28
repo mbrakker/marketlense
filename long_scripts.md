@@ -18,12 +18,12 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 107 | 31 |
+| First-party `src` | 107 | 30 |
 | First-party `tests` | 43 | 24 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `702`.
+- Total first-party source-like files scanned: `708`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
@@ -37,6 +37,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - PDF crop rendering has now been decomposed internally: `src/services/_pdf/crop.py` is a compatibility facade, with crop geometry in `_crop/geometry.py` (`550`), image operations, table-continuation stitching, crop-region artifact writing, crop-refine rendering, and preview rendering in focused `_crop/` owner modules.
 - Publisher-inventory workflow coordination has now been decomposed internally: `src/services/_publisher_inventory_service/workflow.py` is a `563`-line coordinator and compatibility surface, with deterministic browser traversal in `browser_flow.py` (`1,561`) and preflight scenario classification in `preflight.py`.
 - Publisher-inventory orchestration has now been decomposed internally: `src/orchestrators/publisher_inventory_orchestrator.py` is an `889`-line public coordinator and compatibility surface, while dependency wiring, idempotency, snapshot I/O, candidate-flow helpers, and runtime budget/retry helpers live in `src/orchestrators/_publisher_inventory_orchestrator/`.
+- Publisher-inventory candidate screening has now been decomposed internally: `src/generators/publisher_inventory_candidate_screening_generator.py` is a compatibility facade, with shared marker normalization in `_publisher_inventory_candidate_screening/shared.py` (`534`) and focused deterministic screening, response-policy, and LLM-batch owners in the same private family.
 - Cross-report analysis input preparation has now been decomposed internally: `src/generators/cross_report_analysis_input_generator.py` is a compatibility facade, with theme selection in `_cross_report_analysis_input/theme_selection.py` (`762`), evidence and signal preparation in `evidence_signals.py` (`703`), source selection in `source_selection.py`, and shared deterministic helpers in `shared.py`.
 
 ## Largest Runtime Files
@@ -46,7 +47,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | Lines | Path | Assessment |
 | ---: | --- | --- |
 | 1,925 | `src/cli.py` | Review after workflow work |
-| 1,682 | `src/generators/publisher_inventory_candidate_screening_generator.py` | Discovery quality family |
 | 1,650 | `src/orchestrators/report_analysis_orchestrator.py` | Existing workflow surface |
 | 1,650 | `src/services/_pdf/figures.py` | PDF family follow-up |
 | 1,625 | `src/services/sqlite_migration_service.py` | Persistence boundary; split only by migration ownership |
@@ -195,14 +195,14 @@ Primary evidence:
 - `src/services/_publisher_inventory_service/workflow.py`: `563` lines; stable coordinator and compatibility surface.
 - `src/services/_publisher_inventory_service/preflight.py`: focused preflight classification owner.
 - `src/orchestrators/publisher_inventory_orchestrator.py`: `888` lines; public coordinator and compatibility surface.
-- `src/generators/publisher_inventory_candidate_screening_generator.py`: `1,682` lines.
+- `src/generators/publisher_inventory_candidate_screening_generator.py`: compatibility facade for `_publisher_inventory_candidate_screening/*`; shared marker normalization is the largest owner at `534` lines.
 - `src/generators/publisher_inventory_candidate_quality_generator.py`: `1,610` lines.
 
 Direction:
 
 - Preserve one publisher-inventory service boundary and one orchestration path.
 - Retain the `_publisher_inventory_service/{preflight,browser_flow,workflow}.py` semantic split; `workflow.py` remains the service coordinator, route selector, runtime loader, and compatibility surface.
-- Separate only stable behavior families such as acquisition adaptation, candidate qualification, snapshot/state recording, and recovery/route-memory decisions.
+- Separate only stable behavior families such as acquisition adaptation, candidate qualification, snapshot/state recording, and recovery/route-memory decisions; retain the candidate-screening semantic split behind the generator facade.
 - Keep service modules free of workflow retry choices and keep generators free of direct I/O.
 
 Verification required:
