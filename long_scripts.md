@@ -1,6 +1,6 @@
 # Long-File Audit and Refactor Targets
 
-Generated: 2026-05-27
+Generated: 2026-05-28
 
 ## Purpose
 
@@ -23,7 +23,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `677`.
+- Total first-party source-like files scanned: `683`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
@@ -33,7 +33,8 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - PDF table interpretation has now been decomposed internally: `src/services/_pdf/table_heuristics.py` is a `407`-line compatibility surface; focused remaining `>500` owners are `_table_heuristics/regions.py` (`1,085`), `_table_heuristics/screening.py` (`1,038`), and `_table_heuristics/layout.py` (`774`).
 - PDF panel interpretation has now been decomposed internally: `src/services/_pdf/_visual_heuristics/panel_detection.py` is a `1,002`-line detector coordinator, with focused text interpretation in `panel_text.py` (`952`) and geometry construction in `panel_geometry.py` (`988`); `src/services/_pdf/visual_heuristics.py` remains the compatibility facade.
 - PDF visual-candidate extraction has now been decomposed internally: `src/services/_pdf/visual_candidates.py` is a `164`-line compatibility surface; focused owners are `_visual_candidates/extraction.py` (`1,176`), `_visual_candidates/screening.py` (`684`), and `_visual_candidates/raster.py` (`558`).
-- Publisher-inventory workflow coordination has now been decomposed internally: `src/services/_publisher_inventory_service/workflow.py` is a `552`-line coordinator and compatibility surface, with deterministic browser traversal in `browser_flow.py` (`1,539`) and preflight scenario classification in `preflight.py`.
+- Publisher-inventory workflow coordination has now been decomposed internally: `src/services/_publisher_inventory_service/workflow.py` is a `563`-line coordinator and compatibility surface, with deterministic browser traversal in `browser_flow.py` (`1,561`) and preflight scenario classification in `preflight.py`.
+- Publisher-inventory orchestration has now been decomposed internally: `src/orchestrators/publisher_inventory_orchestrator.py` is an `889`-line public coordinator and compatibility surface, while dependency wiring, idempotency, snapshot I/O, candidate-flow helpers, and runtime budget/retry helpers live in `src/orchestrators/_publisher_inventory_orchestrator/`.
 
 ## Largest Runtime Files
 
@@ -41,7 +42,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Lines | Path | Assessment |
 | ---: | --- | --- |
-| 1,994 | `src/orchestrators/publisher_inventory_orchestrator.py` | Active orchestrator hotspot |
 | 1,925 | `src/cli.py` | Review after workflow work |
 | 1,892 | `src/services/_browser_report_download/helpers.py` | Active service-family hotspot |
 | 1,880 | `src/generators/cross_report_analysis_input_generator.py` | New feature surface; stabilize first |
@@ -53,8 +53,8 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | 1,610 | `src/generators/publisher_inventory_candidate_quality_generator.py` | Discovery quality family |
 | 1,593 | `src/services/_browser_report_download/cdp.py` | Browser terminal-evidence family |
 | 1,563 | `src/services/_publisher_inventory_service/fetch_service.py` | Discovery acquisition family |
-| 1,539 | `src/services/_publisher_inventory_service/browser_flow.py` | Focused browser traversal and supplement recovery capability |
-| 1,534 | `src/services/analytics_store_service.py` | Analytics store boundary |
+| 1,561 | `src/services/_publisher_inventory_service/browser_flow.py` | Focused browser traversal and supplement recovery capability |
+| 1,549 | `src/services/analytics_store_service.py` | Analytics store boundary |
 | 1,506 | `src/orchestrators/publish_orchestrator.py` | Publication workflow boundary |
 | 1,431 | `src/ui/app_pages/publisher_operations.py` | UI-only page family |
 | 1,329 | `src/services/_pdf/_visual_heuristics/chart_layout.py` | PDF heuristic family |
@@ -117,6 +117,7 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 - `src/services/state_service.py` over `src/services/_state_service/*`.
 - `src/services/publisher_inventory_service.py` over `src/services/_publisher_inventory_service/*`.
 - `src/services/browser_report_download_service.py` over `src/services/_browser_report_download/*`, including the internal `src/services/_browser_report_download/_artifact/*`, `src/services/_browser_report_download/_browser_runtime/*`, and `src/services/_browser_report_download/_http/*` capability families.
+- `src/orchestrators/publisher_inventory_orchestrator.py` over `src/orchestrators/_publisher_inventory_orchestrator/*`.
 - `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
 - `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`.
 - `src/orchestrators/report_download_orchestrator.py` over `src/orchestrators/_report_download_orchestrator/*`, including focused dependency, readiness, forensics, promotion, persistence, and Drive-archive capabilities behind the smaller `workflow.py` coordinator.
