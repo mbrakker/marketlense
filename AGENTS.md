@@ -884,3 +884,79 @@ The review MUST explicitly answer:
 * Is the new boundary semantic, or only structural?
 * Can the same outcome be achieved with fewer modules and the same testability?
 * Does this reduce total cognitive load for the next engineer?
+
+---
+
+## 11. Refactor Execution Protocol
+
+These rules apply when an agent decomposes, splits, or moves an existing module.
+
+### 11.1 Movement-Only Decomposition
+
+When a user requests semantic decomposition of an existing module:
+
+* Treat the change as movement-only unless the user explicitly approves behavior changes.
+* Do not change thresholds, branch order, candidate ordering, retry behavior, prompts, configs, schemas, logging events, provider calls, cache keys, artifact paths, or cost behavior.
+* Preserve the original module as the compatibility facade unless the user explicitly approves a public import migration.
+* New private submodules MUST have semantic ownership, not size-only ownership.
+* Do not introduce forwarding-only wrappers except for an existing compatibility facade.
+* Run an AST movement audit against `HEAD:<original-file>` and record:
+  * moved symbol count
+  * unchanged moved symbol count
+  * changed moved symbol count
+  * facade-owned definitions after the split
+
+### 11.2 Red Test First For Decomposition
+
+Before moving production code:
+
+* Add the ownership/decomposition test first.
+* Run it and confirm it fails for the expected reason: the new owner modules do not exist yet.
+* Only then move implementation bodies.
+
+### 11.3 Baseline And Live-Gate Evidence
+
+For behavior-preserving refactors:
+
+* Capture a pre-change baseline outside the repository.
+* Capture a post-change baseline outside the repository.
+* Compare normalized outputs exactly, excluding only approved volatile fields such as temp root paths and elapsed wall time.
+* Record baseline paths and comparison results in the architecture review when one is required.
+* Any output mismatch blocks completion until it is captured by an observable regression test or attributed to approved external variance.
+
+### 11.4 Real Run Credential Resolution
+
+When a live/API/model run is requested:
+
+* Check process environment first.
+* If keys are not present, check approved local dotenv files such as `.env` without printing secret values.
+* It is acceptable to load `.env` into the canary process only.
+* Never print secrets or partial secrets.
+* If credentials still cannot be found, state that the live gate is blocked; do not claim it passed.
+
+### 11.5 Temp-Only Live Canaries
+
+Live validation runs after refactors MUST isolate side effects:
+
+* Use temp output directories.
+* Use temp cost ledgers and temp databases.
+* Avoid Drive writes, report DB writes, browser runs, or orchestrator side effects unless those are explicitly part of the affected feature.
+* Record model name, call count, request-id presence, token/cost ledger summary, runtime, and normalized outputs when a model path is exercised.
+* Do not broaden the live boundary beyond the feature under refactor.
+
+### 11.6 Documentation Inventory Updates
+
+When decomposing a file listed in `long_scripts.md`:
+
+* Refresh the long-file inventory after the split.
+* Preserve any existing unstaged user edits in `long_scripts.md`.
+
+### 11.7 Completion Claims
+
+An agent MUST NOT say decomposition work is complete unless:
+
+* focused affected tests pass
+* configured quality gates pass or skipped gates are explicitly justified
+* architecture review evidence is updated when required
+* live canary either passes or is explicitly reported as blocked
+* final response names any residual verification gap
