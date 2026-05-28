@@ -18,12 +18,12 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 106 | 33 |
+| First-party `src` | 107 | 32 |
 | First-party `tests` | 43 | 24 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `688`.
+- Total first-party source-like files scanned: `694`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
@@ -36,6 +36,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - PDF visual-candidate extraction has now been decomposed internally: `src/services/_pdf/visual_candidates.py` is a `164`-line compatibility surface; focused owners are `_visual_candidates/extraction.py` (`1,176`), `_visual_candidates/screening.py` (`684`), and `_visual_candidates/raster.py` (`558`).
 - Publisher-inventory workflow coordination has now been decomposed internally: `src/services/_publisher_inventory_service/workflow.py` is a `563`-line coordinator and compatibility surface, with deterministic browser traversal in `browser_flow.py` (`1,561`) and preflight scenario classification in `preflight.py`.
 - Publisher-inventory orchestration has now been decomposed internally: `src/orchestrators/publisher_inventory_orchestrator.py` is an `889`-line public coordinator and compatibility surface, while dependency wiring, idempotency, snapshot I/O, candidate-flow helpers, and runtime budget/retry helpers live in `src/orchestrators/_publisher_inventory_orchestrator/`.
+- Cross-report analysis input preparation has now been decomposed internally: `src/generators/cross_report_analysis_input_generator.py` is a compatibility facade, with theme selection in `_cross_report_analysis_input/theme_selection.py` (`762`), evidence and signal preparation in `evidence_signals.py` (`703`), source selection in `source_selection.py`, and shared deterministic helpers in `shared.py`.
 
 ## Largest Runtime Files
 
@@ -44,7 +45,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | Lines | Path | Assessment |
 | ---: | --- | --- |
 | 1,925 | `src/cli.py` | Review after workflow work |
-| 1,880 | `src/generators/cross_report_analysis_input_generator.py` | New feature surface; stabilize first |
 | 1,689 | `src/services/_pdf/crop.py` | PDF family follow-up |
 | 1,682 | `src/generators/publisher_inventory_candidate_screening_generator.py` | Discovery quality family |
 | 1,650 | `src/orchestrators/report_analysis_orchestrator.py` | Existing workflow surface |
@@ -119,6 +119,7 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 - `src/services/browser_report_download_service.py` over `src/services/_browser_report_download/*`, including the internal `src/services/_browser_report_download/_artifact/*`, `src/services/_browser_report_download/_browser_runtime/*`, `src/services/_browser_report_download/_helpers/*`, and `src/services/_browser_report_download/_http/*` capability families.
 - `src/orchestrators/publisher_inventory_orchestrator.py` over `src/orchestrators/_publisher_inventory_orchestrator/*`.
 - `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
+- `src/generators/cross_report_analysis_input_generator.py` over `src/generators/_cross_report_analysis_input/*`.
 - `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`.
 - `src/orchestrators/report_download_orchestrator.py` over `src/orchestrators/_report_download_orchestrator/*`, including focused dependency, readiness, forensics, promotion, persistence, and Drive-archive capabilities behind the smaller `workflow.py` coordinator.
 - `src/ui/streamlit_pages.py` over `src/ui/app_pages/*` and `src/ui/_streamlit_pages/*`.
@@ -132,7 +133,6 @@ Any additional work must reduce responsibility or algorithmic complexity inside 
 Primary evidence:
 
 - `src/orchestrators/_report_download_orchestrator/route_planner.py`: `1,301` lines.
-- `src/services/_browser_report_download/helpers.py`: `1,892` lines.
 - `src/services/_browser_report_download/cdp.py`: `1,593` lines.
 - `src/services/_browser_report_download/_browser_runtime/terminal_assets.py`: `1,319` lines.
 - `src/services/_browser_report_download/_artifact/classification.py`: `1,153` lines.
@@ -191,10 +191,10 @@ Verification required:
 
 Primary evidence:
 
-- `src/services/_publisher_inventory_service/browser_flow.py`: `1,539` lines.
-- `src/services/_publisher_inventory_service/workflow.py`: `552` lines; stable coordinator and compatibility surface.
+- `src/services/_publisher_inventory_service/browser_flow.py`: `1,561` lines.
+- `src/services/_publisher_inventory_service/workflow.py`: `563` lines; stable coordinator and compatibility surface.
 - `src/services/_publisher_inventory_service/preflight.py`: focused preflight classification owner.
-- `src/orchestrators/publisher_inventory_orchestrator.py`: `1,994` lines.
+- `src/orchestrators/publisher_inventory_orchestrator.py`: `888` lines; public coordinator and compatibility surface.
 - `src/generators/publisher_inventory_candidate_screening_generator.py`: `1,682` lines.
 - `src/generators/publisher_inventory_candidate_quality_generator.py`: `1,610` lines.
 
@@ -215,7 +215,7 @@ Verification required:
 
 These files need responsibility review or performance evidence before any decomposition proposal:
 
-- Cross-report analysis files are new active feature surfaces. Stabilize output contracts, publication flow, and regression coverage before splitting by line count.
+- Cross-report analysis synthesis, publishing, orchestrator, and contract files are active feature surfaces. The input generator now uses a private semantic split; any further work must preserve output contracts, publication flow, and regression coverage rather than splitting by line count.
 - `src/cli.py` is large because it owns command registration and argument wiring; split only if command families can remain discoverable through one CLI boundary without duplicated routing.
 - Contract modules may be large without role-mixing. Split `src/contracts/cross_report_analysis.py` only along independently versioned semantic contracts, never for cosmetics.
 - External boundary modules such as Drive and WordPress services must retain one canonical namespace if internal capability extraction becomes justified.
