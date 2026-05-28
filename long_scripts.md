@@ -18,18 +18,19 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 104 | 35 |
+| First-party `src` | 106 | 33 |
 | First-party `tests` | 43 | 24 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `683`.
+- Total first-party source-like files scanned: `688`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
 - Browser runtime execution has now been decomposed internally: `src/services/_browser_report_download/browser.py` is `671` lines, with remaining focused hotspots in `_browser_runtime/terminal_assets.py` (`1,319`) and `_browser_runtime/session_lifecycle.py` (`1,102`).
 - Report-download orchestration has now been decomposed internally: `src/orchestrators/_report_download_orchestrator/workflow.py` is `528` physical lines and focused idempotent persistence lives in `persistence.py` (`646`); `route_planner.py` (`1,301`) remains the family's only `>=1,000`-line hotspot.
 - Browser-report HTTP acquisition has now been decomposed internally: `src/services/_browser_report_download/http.py` is a `47`-line compatibility surface; focused remaining `>500` owners are `_http/gate_probe.py` (`607`), `_http/onsite_capture.py` (`573`), and `_http/pdf_transfer.py` (`522`).
+- Browser-report helper inspection has now been decomposed internally: `src/services/_browser_report_download/helpers.py` is a compatibility facade, with page state/real-tab diagnostics in `_helpers/state.py` (`555`), JavaScript and bounded HTTP inspection in `_helpers/inspection.py` (`550`), and screenshot/coordinate/autocomplete interaction in `_helpers/interaction.py` (`895`).
 - PDF table interpretation has now been decomposed internally: `src/services/_pdf/table_heuristics.py` is a `407`-line compatibility surface; focused remaining `>500` owners are `_table_heuristics/regions.py` (`1,085`), `_table_heuristics/screening.py` (`1,038`), and `_table_heuristics/layout.py` (`774`).
 - PDF panel interpretation has now been decomposed internally: `src/services/_pdf/_visual_heuristics/panel_detection.py` is a `1,002`-line detector coordinator, with focused text interpretation in `panel_text.py` (`952`) and geometry construction in `panel_geometry.py` (`988`); `src/services/_pdf/visual_heuristics.py` remains the compatibility facade.
 - PDF visual-candidate extraction has now been decomposed internally: `src/services/_pdf/visual_candidates.py` is a `164`-line compatibility surface; focused owners are `_visual_candidates/extraction.py` (`1,176`), `_visual_candidates/screening.py` (`684`), and `_visual_candidates/raster.py` (`558`).
@@ -43,7 +44,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | Lines | Path | Assessment |
 | ---: | --- | --- |
 | 1,925 | `src/cli.py` | Review after workflow work |
-| 1,892 | `src/services/_browser_report_download/helpers.py` | Active service-family hotspot |
 | 1,880 | `src/generators/cross_report_analysis_input_generator.py` | New feature surface; stabilize first |
 | 1,689 | `src/services/_pdf/crop.py` | PDF family follow-up |
 | 1,682 | `src/generators/publisher_inventory_candidate_screening_generator.py` | Discovery quality family |
@@ -116,7 +116,7 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 - `src/services/report_store_service.py` over `src/services/_report_store_service/*`.
 - `src/services/state_service.py` over `src/services/_state_service/*`.
 - `src/services/publisher_inventory_service.py` over `src/services/_publisher_inventory_service/*`.
-- `src/services/browser_report_download_service.py` over `src/services/_browser_report_download/*`, including the internal `src/services/_browser_report_download/_artifact/*`, `src/services/_browser_report_download/_browser_runtime/*`, and `src/services/_browser_report_download/_http/*` capability families.
+- `src/services/browser_report_download_service.py` over `src/services/_browser_report_download/*`, including the internal `src/services/_browser_report_download/_artifact/*`, `src/services/_browser_report_download/_browser_runtime/*`, `src/services/_browser_report_download/_helpers/*`, and `src/services/_browser_report_download/_http/*` capability families.
 - `src/orchestrators/publisher_inventory_orchestrator.py` over `src/orchestrators/_publisher_inventory_orchestrator/*`.
 - `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
 - `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`.
