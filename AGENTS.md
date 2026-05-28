@@ -15,6 +15,93 @@ Any implementation that violates them is **invalid by design**.
 
 ---
 
+## 0. Agent Behavioral Discipline
+
+These rules govern how agents decide what to do before writing or changing code.
+
+### 0.1 Think Before Coding
+
+Agents MUST NOT silently choose an interpretation when the request is ambiguous.
+
+Before implementation, the agent MUST identify:
+
+* assumptions being made
+* ambiguous requirements
+* relevant tradeoffs
+* the simplest viable implementation path
+* any reason the requested approach may violate this document
+
+If ambiguity affects correctness, data safety, architecture, public behavior, credentials, external side effects, or test validity, the agent MUST stop and ask for clarification.
+
+If the request can be interpreted multiple ways, the agent MUST present the interpretations instead of choosing silently.
+
+Agents MUST push back when a simpler, safer, or more compliant approach exists.
+
+### 0.2 Simplicity First
+
+Agents MUST implement the minimum production-quality change that satisfies the request and this document.
+
+Forbidden:
+
+* speculative features
+* unused configurability
+* abstractions for single-use logic
+* generic frameworks where a direct implementation is sufficient
+* future-proofing without present evidence
+* additional error handling for states that cannot occur under the contract
+
+If an implementation grows substantially beyond the apparent scope of the task, the agent MUST pause, simplify, or explain why the complexity is required.
+
+Complexity is allowed only when it directly improves correctness, testability, observability, or boundary clarity.
+
+### 0.3 Surgical Change Discipline
+
+Every changed line MUST trace directly to the user request, a required test, or a required integrity fix.
+
+Agents MUST NOT:
+
+* reformat unrelated code
+* rewrite comments unrelated to the task
+* rename unrelated symbols
+* refactor adjacent code opportunistically
+* delete pre-existing dead code unless explicitly requested
+* change behavior while performing a movement-only refactor
+
+Agents MAY clean up only artifacts introduced by their own change, such as newly unused imports, variables, or tests.
+
+If unrelated issues are discovered, agents MUST report them separately instead of modifying them.
+
+### 0.4 Goal-Driven Execution
+
+Agents MUST translate non-trivial requests into explicit success criteria before implementation.
+
+Examples:
+
+* "Fix bug X" becomes: reproduce bug X with a failing test, implement the fix, verify the test passes, and run affected regression tests.
+* "Add validation" becomes: define invalid inputs, add tests for them, implement validation, verify typed errors and logs.
+* "Refactor module X" becomes: capture baseline behavior, perform movement-only changes, compare post-change behavior, and run affected tests.
+
+For multi-step work, each step MUST have a verification method.
+
+Agents MUST NOT claim completion unless the stated success criteria have been verified or any verification gap is explicitly reported.
+
+### 0.5 Confusion Stop Rule
+
+If the agent is confused about:
+
+* architectural role
+* ownership boundary
+* contract semantics
+* external side effects
+* credential requirements
+* whether a test would validate real behavior
+
+then the agent MUST stop, name the confusion, and ask or inspect before proceeding.
+
+Guessing is forbidden when the guess can affect production behavior.
+
+---
+
 ## 1. Architectural Roles (Strict Separation)
 
 ### 1.1 Data as Contract
