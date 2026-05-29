@@ -345,16 +345,41 @@ Scope: gaps identified by comparing the README direction against the current `sr
     - About is either documented as a public support page outside the canonical entity nav or removed from the primary nav.
     - Navigation tests or static checks verify required nav labels and destinations.
 
-- **Title:** Add first-class WordPress destinations for Signals and Briefings [Impact: 5/5, Effort: 4/5]
-  - Explanation: README treats Signal and Briefing as canonical public entities, but the current WordPress implementation only has shortcode-driven signal-like modules and cross-report publish packages. There are no durable WordPress-facing signal or briefing archives/templates/routes equivalent to report, topic, or publisher surfaces.
-  - Pros: Closes the largest entity-model gap and prevents canonical entities from existing only as page fragments.
-  - Cons: Requires contract, publish, plugin, theme, and migration work if old posts need backfill.
+- **Title:** Add first-class WordPress destinations for Signals and cross-report Briefings [Impact: 5/5, Effort: 4/5]
+  - Explanation: README treats Signal and Briefing as canonical public entities. Briefing generation already exists as cross-report analysis/publish packages, but WordPress does not expose those packages as a canonical Briefing archive/detail surface. Signals currently exist only as shortcode-driven, signal-like modules.
+  - Pros: Closes the largest entity-model gap while reusing the existing cross-report analysis implementation for Briefings.
+  - Cons: Requires contract, publish, plugin, theme, and migration work if old cross-report outputs need backfill.
   - Acceptance Criteria:
-    - Signal and Briefing have explicit publish contracts or documented projections with schema versions.
+    - Signal has an explicit publish contract or documented projection with a schema version.
+    - Briefing WordPress surfaces map to the existing cross-report analysis/publish package contract instead of introducing a duplicate briefing generator.
     - WordPress registers canonical destinations for Signals and Briefings through CPTs, taxonomies, pages, or a documented alternative with tests.
     - Theme templates or block patterns render Signal and Briefing archive/detail surfaces.
     - Publish pipeline can populate those surfaces without empty/default term contracts.
     - README documents the final WordPress entity implementation and naming.
+
+- **Title:** Route cross-report HTML publication into the Briefings section [Impact: 5/5, Effort: 3/5]
+  - Explanation: Cross-report HTML is already generated through `src/generators/cross_report_publish_html.py` and routed through `python -m src.cli generate-cross-report-analysis` plus `publish_orchestrator.publish_cross_report_package`. The remaining gap is making that path explicitly publish the generated cross-report HTML as a WordPress post in the Briefings section, not as a Report/digest or an unclassified WordPress post.
+  - Pros: Turns the implemented cross-report analysis capability into the public Briefing workflow without creating a second publication subsystem.
+  - Cons: Requires a clear WordPress routing choice for the Briefings section and migration handling for previously published cross-report posts.
+  - Acceptance Criteria:
+    - A documented command or script path publishes cross-report HTML to WordPress, starting from `python -m src.cli generate-cross-report-analysis --publish-mode publish_live` or a thin script that calls the same orchestrator.
+    - `publish_cross_report_package` maps the package to the Briefings section deterministically, including post type, slug/permalink route, category/term assignment, and any required metadata.
+    - Cross-report publications do not land in the Reports archive or use report/digest labels unless README explicitly redefines the sectioning model.
+    - Dry-run output shows the target Briefings route and the exact WordPress payload classification without making side effects.
+    - Tests cover live payload construction, dry-run payload classification, idempotent republish, and readback/URL placement for a Briefing post.
+
+- **Title:** Build the grounded Signal-post generation and WordPress publish flow [Impact: 5/5, Effort: 5/5]
+  - Explanation: Signals are a canonical README entity, but current WordPress signal modules are render-time heuristics over WP posts/categories rather than durable, approved Signal posts. The required flow is to derive grounded Signal entities from approved Python projections and evidence references, generate publish-ready Signal HTML/metadata, and publish them through the existing WordPress service boundary.
+  - Pros: Makes Signals reproducible, evidence-backed, and independently publishable instead of homepage-only UI fragments.
+  - Cons: Requires new contracts, generator/orchestrator work, WordPress routing, and migration/removal of current heuristic signal modules.
+  - Acceptance Criteria:
+    - Signal contracts define schema version, title, slug, summary/body HTML, evidence IDs, source report IDs, topic/category IDs, confidence/uncertainty fields, and validation status.
+    - Signal generation reads only approved projections/Data Points through existing service boundaries such as `analytics_store_service`, reusing cross-report signal scoring where appropriate without making Briefing-specific contracts the public Signal contract.
+    - A Signal generator validates grounding by requiring cited projected evidence, source reports, and topic/category relationships before any publish package is created.
+    - A Signal orchestrator or documented CLI/script path creates Signal publish packages and routes them through the canonical publish/WordPress boundary without adding a peer WordPress client.
+    - WordPress publishes Signal posts into the Signals section with deterministic post type or taxonomy route, slug/permalink, category/topic assignment, metadata, and readback verification.
+    - Dry-run output shows the exact Signal WordPress payload classification and target route without side effects.
+    - Tests cover positive grounded Signal creation, insufficient-evidence failure, dry-run payload construction, live payload construction, idempotent republish, and WordPress readback/URL placement.
 
 - **Title:** Stop WordPress from synthesizing intelligence, freshness, and authority claims at render time [Impact: 5/5, Effort: 3/5]
   - Explanation: README says WordPress must not synthesize new intelligence, freshness, or quality judgments and should assemble approved projections/artifacts. Current plugin code computes weekly signals, strategic themes, freshness windows, and publisher authority from live WordPress counts and dates in `class-marketlense-core-intelligence-stats.php`.
@@ -366,12 +391,13 @@ Scope: gaps identified by comparing the README direction against the current `sr
     - Tests prove no signal, freshness, strategic-theme, or publisher-authority claim is generated solely from WordPress post counts.
     - README documents the projection source used by each WordPress intelligence module.
 
-- **Title:** Make Signals, Briefings, Figures, Regions, and Time Periods durable publish/projection entities [Impact: 5/5, Effort: 5/5]
-  - Explanation: The analytics projection layer persists reports, sections, findings, metrics, quotes, claims, tags, categories, figures, and vector queue state, but Signals and Briefings are not durable public projection entities. Figures exist in storage but lack a public WordPress destination, and Regions/Time Periods are stored mostly as metadata rather than complete public surfaces.
+- **Title:** Make Signals, cross-report Briefings, Figures, Regions, and Time Periods durable public entities [Impact: 5/5, Effort: 5/5]
+  - Explanation: The analytics projection layer persists reports, sections, findings, metrics, quotes, claims, tags, categories, figures, and vector queue state. Cross-report analysis already implements the Briefing-generation capability, but that output is not consistently exposed as a durable public Briefing entity with WordPress taxonomy/route/readback semantics. Signals are still not durable public projection entities. Figures exist in storage but lack a public WordPress destination, and Regions/Time Periods are stored mostly as metadata rather than complete public surfaces.
   - Pros: Gives the publishing layer one typed source of truth for every README entity and reduces UI-specific inference.
   - Cons: Broad schema, migration, and publish workflow changes.
   - Acceptance Criteria:
-    - Projection contracts/tables exist for public Signals and Briefings with schema versions and round-trip tests.
+    - Projection contracts/tables exist for public Signals with schema versions and round-trip tests.
+    - Existing cross-report analysis outputs are explicitly versioned and mapped to the public Briefing entity contract.
     - Figures, Regions, and Time Periods have documented public projection contracts or explicit README-scoped exclusions.
     - WordPress publish code can map each public projection entity to a stable route/template/surface.
     - Integration tests cover report-to-entity projection and WordPress publish/readback for each implemented entity.
@@ -386,14 +412,15 @@ Scope: gaps identified by comparing the README direction against the current `sr
     - Public UI copy consistently uses Report for report entities and Briefing only for briefing entities.
     - Tests verify configured post type, WP payload post type, and resulting WordPress content type.
 
-- **Title:** Project topic definitions into WordPress taxonomy terms instead of labels only [Impact: 4/5, Effort: 3/5]
-  - Explanation: README defines Topics as controlled taxonomy entries with definition, inclusion, and exclusion rules. Current publish code creates WordPress category terms from `category-mappings.yaml` labels, and `WordPressTaxonomyTerm` carries only schema version, slug, and name, so topic semantics are not published.
-  - Pros: Makes topic pages explainable and keeps taxonomy governance visible on the public site.
-  - Cons: Requires term contract expansion and careful migration for existing categories.
+- **Title:** Make WordPress categories the canonical Topic surface with full topic semantics [Impact: 4/5, Effort: 3/5]
+  - Explanation: The current implementation already uses WordPress categories as the public Topic path, populated from `category-mappings.yaml`. The remaining gap is that categories currently publish mostly as labels, while README defines Topics as controlled taxonomy entries with definition, inclusion, and exclusion rules.
+  - Pros: Reuses the existing category-based Topic implementation while making taxonomy governance visible on the public site.
+  - Cons: Requires term contract expansion and careful migration/update behavior for existing categories.
   - Acceptance Criteria:
+    - README explicitly states that WordPress categories are the canonical public implementation of Topics, or config/docs are updated to name a different canonical taxonomy.
     - Topic/category contract includes definition, inclusion rules, exclusion rules, and version metadata where required.
-    - WordPress term creation/update writes approved topic descriptions or term meta through the service boundary.
-    - Topic directory and archive templates render approved topic semantics without ad hoc copy.
+    - WordPress category creation/update writes approved topic descriptions or term meta through the service boundary.
+    - Topic directory and category archive templates render approved topic semantics without ad hoc copy.
     - Tests assert term semantics survive publish and readback.
 
 - **Title:** Add secondary public surfaces for Figures, Regions, and Time Periods or narrow the README contract [Impact: 3/5, Effort: 3/5]
