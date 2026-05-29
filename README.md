@@ -20,6 +20,7 @@ Key traits:
 - Structured logging with run/task/span identifiers plus end-to-end trace IDs and nested span metadata.
 - Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
 - Validation-driven targeted regeneration: after a failed validation pass, the analysis orchestrator can regenerate only the mapped failing artifact families, re-run validation, and keep the latest canonical `validation.json` for downstream render/publish policy.
+- Report-analysis orchestration isolation: `src/orchestrators/report_analysis_orchestrator.py` remains the public analysis coordinator, while bounded artifact scheduling, vector-store readiness polling, payload completeness checks, validation/regeneration execution, and regeneration-plan mapping live in focused private `_report_analysis_orchestrator/` owner modules without changing prompt, retry, validation, or cost behavior.
 - Confidence-scored family outputs: every evidence pack now persists a typed `family_status` record with `status`, `confidence_score`, `policy_action`, and `reason`, and generated artifact families do the same at the top level of `artifacts.json`. Low-confidence summary/insights families abstain into explicit validation regeneration targets instead of shipping weak output; quote families require a real verbatim source, and quote-only abstentions now publish as warning-level omitted-quote notices instead of forcing fake quotation text. Soft editorial families such as `expert_comment` and `linkedin_post` can also abstain with warning-level omission notices that render transparently in the HTML digest.
 - Text extractability gate: before analysis, the pipeline samples deterministic pages, computes per-page plus document-level native-text confidence, and still aborts early with `pdf_text_unextractable` when none of the sampled pages contain extractable text.
 - OCR fallback for scanned PDFs: with `ingest.pdf_text.ocr_fallback.enabled=true`, the source phase stays native-first, logs native sample confidence plus density, and falls back to OCR only when the sampled native text is blank, weak, sparse, or explicitly forced by `ingest.pdf_text.ocr_fallback.policy=always`. Visual previews, contents-page screenshots, candidate extraction, and crop/render steps still use the original cached PDF; text extraction, vector-store upload, and text-grounded analysis switch to the OCR PDF.
@@ -154,9 +155,76 @@ Current control-plane modules in `src/orchestrators/` include:
 - `ops_dashboard_orchestrator.py`: dashboard snapshot aggregation (reports/state/lock/storage).
 - `candidate_extraction_orchestrator.py`, `cover_image_orchestrator.py`, `recategorize_orchestrator.py`, `wp_category_update_orchestrator.py`: feature-specific workflows.
 
+### Intelligence Entity and Navigation Model
+
+Market Lense is organized around intelligence objects, not implementation objects. The public product model is defined by the entities users navigate, cite, compare, and trust; the pipeline, projections, WordPress metadata, and persisted artifacts are implementation layers behind those entities.
+
+Primary public navigation:
+
+```text
+Reports | Topics | Signals | Briefings | Publishers
+```
+
+Secondary public discovery surfaces:
+
+```text
+Figures | Regions | Time Periods | Methodology
+```
+
+Operator/admin surfaces:
+
+```text
+Sources | Runs | Validation | Publishing Queue | Cost
+```
+
+Figures, Regions, and Time Periods support discovery across the primary navigation. Sources, Runs, Validation, Publishing Queue, and Cost are operational surfaces and should not be treated as public navigation. Data Points are internal metric/evidence records that power user-facing Figures, including key figures in a report.
+
+Canonical entity definitions:
+
+- **Report**: the atomic source-backed content unit. A report represents one validated source digest and must retain source attribution, publisher, evidence references, validation status, time period, geography, topic assignments, and the generated HTML artifact used for publication.
+- **Topic**: a stable editorial domain. Public language should say Topics even when WordPress internally uses native categories. Raw tags are metadata; Topics are navigable editorial destinations with explicit definitions, inclusion rules, and exclusion rules.
+- **Signal**: a navigation-worthy market movement, pattern, shift, risk, opportunity, contradiction, or weak signal. Signals are first-class intelligence entities, not only homepage modules. A Signal must remain evidence-backed by Reports and Data Points, and contradictory or low-confidence support must be represented explicitly.
+- **Briefing**: the executive synthesis layer. Cross-report analysis, weekly updates, topic deep dives, trend analyses, publisher landscapes, category updates, competitive signals, and executive memos should be exposed publicly as Briefings rather than hidden inside report pages.
+- **Publisher**: a source organization. Publisher surfaces should show source profile, coverage topics, latest reports, related signals, freshness, and source links where those relationships are recoverable. Publisher self-description must remain separate from Market Lense assessment.
+- **Data Point**: an internal metric/evidence record such as a metric, statistic, quote, claim, figure caption, methodology note, or limitation. Data Points power Signals, Briefings, search, trust, and user-facing Figures. Public WordPress language should normally say Figures, Key Figures, or Key figures in report rather than Data Points.
+- **Source**: an operator-facing acquisition candidate. A discovered URL is not a Report until acquisition, extraction, validation, and artifact generation have succeeded. Operators should be able to inspect acquisition route, outcome, blocker reason, and whether the Source became a report, an onsite capture, an email-required item, a rejection, or a failure.
+- **Methodology**: the trust and process layer. Methodology explains how Market Lense ingests, extracts, validates, scores, abstains, publishes, and exposes limitations. It should distinguish deterministic checks from LLM judgments and disclose weak text, OCR-derived content, validation warnings, and abstention states.
+
+Entity relationship model:
+
+```text
+Publisher
+  -> publishes Sources
+        -> become Reports
+              -> assigned to Topics
+              -> contain Data Points
+              -> produce Signals
+              -> feed Briefings
+
+Topic
+  -> groups Reports
+  -> groups Signals
+  -> anchors Briefings
+
+Signal
+  -> supported by Data Points
+  -> derived from Reports
+  -> summarized in Briefings
+
+Briefing
+  -> synthesizes Reports
+  -> organizes Signals
+  -> cites Data Points
+  -> spans Topics and Publishers
+```
+
+Public entity pages must expose only validated generated HTML artifacts and approved metadata or projections. WordPress is the publication layer, not the intelligence-generation layer. WordPress must not generate new report interpretation, new signals, evidence maps, cross-report synthesis, metric normalization, uncertainty claims, publisher authority claims, or freshness claims. Those outputs must come from validated pipeline artifacts or approved recoverable projections.
+
+Report pages and report cards should link to related Topics, Signals, Publishers, Figures, and Briefings when those relationships are recoverable. Topic, Signal, Publisher, Figure, and Briefing pages should be assembled from approved projections and validated artifacts rather than inferred at render time.
+
 ### Cross-Report Analysis Scope Fence
 
-Cross-report analysis is a bounded extension of the existing modular monolith. The first implementation stays inside the current `src/` deployable and must not introduce a new top-level package, standalone worker, separately deployed service, peer analytics database boundary, peer WordPress client, or parallel publication subsystem.
+Cross-report analysis is a bounded extension of the existing modular monolith and produces the public-facing **Briefing** entity family. The first implementation stays inside the current `src/` deployable and must not introduce a new top-level package, standalone worker, separately deployed service, peer analytics database boundary, peer WordPress client, or parallel publication subsystem.
 
 Role boundaries:
 
@@ -192,7 +260,7 @@ Evidence agreement grouping is handled by `group_cross_report_evidence_agreement
 
 Cross-report synthesis prompts live in the dedicated `src/prompts/cross_report_analysis/synthesis/` namespace and render only structured, bounded JSON inputs: request metadata, selected theme, selected sources, signal scores, evidence agreement groups, evidence references, raw metric appendix, and generation policy. The prompt now asks for an industry-expert, boardroom-ready editorial article while preserving the same evidence-only JSON contract and citation rules. The dry-run fixture in `src/prompts/_dry_run_fixtures.yaml` covers realistic divergent evidence and raw metrics, and the prompt fixture corpus baseline records the `cross_report_analysis` family at 2,369 tokens with an estimated fixture cost of `$0.002167`.
 
-`src/generators/cross_report_analysis_generator.py::generate_cross_report_analysis` performs synthesis through the existing prompt and LLM service boundaries. It validates typed cross-report inputs, renders the synthesis namespace through `prompt_service`, logs prompt paths/hashes/rendered text/model parameters, checks the rendered system plus user prompt length before any model call, makes one bounded JSON model call through `llm_service`, logs the raw response, and adapts the payload into `CrossReportGeneratedAnalysisResult`. The adapter canonicalizes known projected `entity_uid` citations back to the selected `evidence_id` values because projections expose both identifiers to the model, rejects alias collisions before adaptation with `AppError(code="cross_report_analysis_evidence_alias_collision")`, and still rejects genuinely unknown citations. The generator fails closed with non-retryable typed errors when the model returns no JSON, empty sections, over-budget rendered prompts, unknown evidence IDs, or unknown raw metric IDs. Unsupported `source_notes` payloads are omitted from evidence-backed sections rather than being auto-attributed to arbitrary evidence.
+`src/generators/cross_report_analysis_generator.py::generate_cross_report_analysis` performs synthesis through the existing prompt and LLM service boundaries. It validates typed cross-report inputs, renders the synthesis namespace through `prompt_service`, logs prompt paths/hashes/rendered text/model parameters, checks the rendered system plus user prompt length before any model call, makes one bounded JSON model call through `llm_service`, logs the raw response, and adapts the payload into `CrossReportGeneratedAnalysisResult`, the internal generated-analysis contract behind public Briefings. The adapter canonicalizes known projected `entity_uid` citations back to the selected `evidence_id` values because projections expose both identifiers to the model, rejects alias collisions before adaptation with `AppError(code="cross_report_analysis_evidence_alias_collision")`, and still rejects genuinely unknown citations. The generator fails closed with non-retryable typed errors when the model returns no JSON, empty sections, over-budget rendered prompts, unknown evidence IDs, or unknown raw metric IDs. Unsupported `source_notes` payloads are omitted from evidence-backed sections rather than being auto-attributed to arbitrary evidence.
 
 Deterministic artifact validation runs in the same generator module through `validate_cross_report_generated_analysis`. It checks generated sections, evidence maps, cited evidence IDs, prompt budget characters, and metric-normalization language before persistence or publication. Unknown evidence IDs, sections without evidence, empty evidence maps, prompt-budget breaches, or phrases such as normalized averages across publishers raise non-retryable `AppError(code="cross_report_analysis_validation_failed")` after logging the structured `CrossReportValidationResult`.
 
@@ -202,7 +270,7 @@ Cross-report cost controls are configured under `cross_report_analysis` in `src/
 
 Validated generation persists a deterministic local artifact at `out/cross_report_analysis/<analysis_slug>/analysis.json` or the CLI-specified output root. The orchestrator builds a `CrossReportAnalysisArtifact` with schema version, generated timestamp, request fingerprint, idempotency key, selected report IDs, projection content hashes, prompt hashes, config fingerprint, validation status, generated result, validation result, publish package, and publish summaries, then writes it through `file_service.write_bytes` so the write is atomic and reviewable.
 
-After deterministic validation passes, `src/generators/cross_report_analysis_generator.py::build_cross_report_publish_package` creates a `CrossReportPublishPackage` with publish-ready title, slug, excerpt, body HTML, full review HTML, source report map, evidence reference appendix, raw metric appendix, uncertainty/divergence notes, prompt hashes, validation hash, artifact hash, category/tag labels, and machine-readable metadata. The HTML is assembled through `src/generators/cross_report_publish_html.py` using the same digest-style shell as ingested report pages: hero, sticky section navigation, executive synthesis, strategic read-through cards, source map, uncertainty notes, evidence references, and raw metric appendix. The package is still built for review in non-live modes, but it fails closed with `AppError(code="cross_report_publish_validation_failed")` when `cross_report_analysis.publish_requires_validation_pass=true` and validation did not pass.
+After deterministic validation passes, `src/generators/cross_report_analysis_generator.py::build_cross_report_publish_package` creates a `CrossReportPublishPackage` with publish-ready Briefing title, slug, excerpt, body HTML, full review HTML, source report map, evidence reference appendix, raw metric appendix, uncertainty/divergence notes, prompt hashes, validation hash, artifact hash, category/tag labels, and machine-readable metadata. The HTML is assembled through `src/generators/cross_report_publish_html.py` using the same digest-style shell as ingested report pages: hero, sticky section navigation, executive synthesis, strategic read-through cards, source map, uncertainty notes, evidence references, and raw metric appendix. The package is still built for review in non-live modes, but it fails closed with `AppError(code="cross_report_publish_validation_failed")` when `cross_report_analysis.publish_requires_validation_pass=true` and validation did not pass.
 
 Publication stays inside the existing publish control plane. The cross-report orchestrator decides the operator mode and delegates `publish_dry_run` or `publish_live` to `src/orchestrators/publish_orchestrator.py::publish_cross_report_package`; that path reuses the existing `publish_generator` and WordPress service boundary instead of introducing a peer WordPress client. Its live idempotency key includes selected theme ID, selected report IDs, artifact hash, validation hash, prompt hashes, target route, and WordPress post type, so unchanged live publishes reuse the same canonical outcome instead of creating duplicate posts. If WordPress already contains the same cross-report `file_id` but the current package checksum has no matching publish idempotency record, live publish fails with `AppError(code="cross_report_publish_existing_post_checksum_mismatch")` instead of silently skipping changed content.
 
@@ -327,6 +395,7 @@ Primary responsibilities:
   - `ml_time_period`
   - `ml_region`
 - Synchronizes metadata/taxonomy projections from published digest content and existing tags/categories on save
+- Treats the canonical public IA as Reports, Topics, Signals, Briefings, and Publishers. Current WordPress internals may still implement those surfaces through `ml_report`, native categories, publisher terms, shortcodes, and approved projections; WordPress must not synthesize new intelligence at render time.
 - Provides shortcodes:
   - `[ml_report_browser]`
   - `[ml_home_metrics]`
@@ -345,6 +414,7 @@ The block theme is organized as an editorial intelligence portal:
 
 - Full-site editing templates and template parts for header, footer, archives, trust pages, search, and ingest-first singles
 - Homepage assembled from reorderable patterns with a consultancy-style hero, proof bands, and discovery bands
+- Public product navigation is Reports, Topics, Signals, Briefings, and Publishers, with Figures, Regions, Time Periods, and Methodology as secondary discovery/trust surfaces. Signal and Briefing surfaces are product destinations even when the current theme exposes them first through homepage modules or generated publish packages.
 - Theme-driven editorial token system in `theme.json` with semantic enterprise-blue tokens mirrored into `assets/css/theme.css` for non-block components
 - Sans-first typography roles for display, page titles, section titles, card titles, body copy, metadata, navigation, and buttons are defined centrally in `theme.json` and reinforced in `assets/css/theme.css`
 - Homepage chapter anchors are standardized through `.ml-section-anchor`, `.ml-section-eyebrow`, `.ml-section-title`, and `.ml-section-rule`
@@ -638,7 +708,7 @@ Key fields and env overrides:
 - Figure captions: `ingest.figure_captions.enabled`, `ingest.figure_captions.temperature`, `ingest.figure_captions.timeout_seconds`, `ingest.figure_captions.prompt_namespace` (default `report_vs/figure_caption`), `ingest.figure_captions.max_chars` (default `500`). The bundled `src/config/app.yaml` keeps this phase disabled unless you opt in via config/env override. Model resolution follows `openai_models.report_vs/figure_caption` first, then falls back to `ingest.openai_model`. The phase is fail-open: primary figures fall back to the legacy shared caption, secondary figures fall back to detected captions or the existing placeholder label.
 - Browser downloads: `OPENROUTER_API_KEY` is required, `OPENROUTER_HTTP_REFERER` is optional, `browser_download.model` (`BROWSER_DOWNLOAD_MODEL`, default comes from `src/config/app.yaml`), `browser_download.identity_config_path` (`BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH`, default `src/config/browser_download_identity.yaml` relative to `app.yaml`), `browser_download.temperature` (`BROWSER_DOWNLOAD_TEMPERATURE`, default `0.0`), `browser_download.timeout_seconds` (`BROWSER_DOWNLOAD_TIMEOUT_SECONDS`, default `180`), `browser_download.max_steps` (`BROWSER_DOWNLOAD_MAX_STEPS`, default `30`), `browser_download.output_dir` (`BROWSER_DOWNLOAD_OUTPUT_DIR`, default `./out/browser_downloads`), `browser_download.headed` (`BROWSER_DOWNLOAD_HEADED`, default `false`), `browser_download.drive_upload.enabled` (`BROWSER_DOWNLOAD_DRIVE_UPLOAD_ENABLED`, default `true`), `browser_download.drive_upload.required` (`BROWSER_DOWNLOAD_DRIVE_UPLOAD_REQUIRED`, default `true`), `browser_download.failure_forensics.enabled` (`BROWSER_DOWNLOAD_FAILURE_FORENSICS_ENABLED`, default `true`), `browser_download.failure_forensics.policy` (`BROWSER_DOWNLOAD_FAILURE_FORENSICS_POLICY`, `copy_artifacts` or `metadata_only`), and `browser_download.retry.*` (`BROWSER_DOWNLOAD_RETRIES`, `BROWSER_DOWNLOAD_BASE_DELAY_SECONDS`, `BROWSER_DOWNLOAD_BACKOFF_STEP_SECONDS`, `BROWSER_DOWNLOAD_JITTER_SECONDS`). The browser-download flow uses the shared `paths.state_db` to persist one remembered route summary per normalized URL, appends newly seen form labels into the identity YAML for later manual completion, uploads successful local terminal artifacts to the resolved publisher `google_folder` when Drive archival is enabled, and persists failed-attempt forensic packs beside the per-URL download directory when failure forensics are enabled.
 - Browser-download session reuse: `browser_download.session_reuse.enabled` (`BROWSER_SESSION_REUSE_ENABLED`, default `false`), `mode` (`BROWSER_SESSION_REUSE_MODE`, `developer_canary` or `same_publisher_batch`), `session_key` (`BROWSER_SESSION_REUSE_KEY`), `publisher_scope` (`BROWSER_SESSION_REUSE_PUBLISHER_SCOPE`), `ttl_seconds` (`BROWSER_SESSION_REUSE_TTL_SECONDS`), `base_dir` (`BROWSER_SESSION_REUSE_BASE_DIR`), `cleanup_expired` (`BROWSER_SESSION_REUSE_CLEANUP_EXPIRED`, default `true`), and `allow_cross_publisher` (`BROWSER_SESSION_REUSE_ALLOW_CROSS_PUBLISHER`, default `false`) control bounded reusable browser profiles for developer canaries and same-publisher batches.
-- Browser downloads also write into `paths.reports_db` table `report_sources`. Discovery inserts one row per new diff item with `source_status='discovered'`, publisher/source-page provenance, and `discovered_on_page_number`; a later successful local PDF download upgrades the same normalized-URL row in place to `source_status='downloaded'`, filling `downloaded_at_utc` and the downloaded file `md5`. Successful downloads now receive a typed deterministic report-value score over five dimensions (`market_insight_depth`, `evidence_specificity`, `decision_relevance`, `recency_timeliness`, `source_authority_originality`), with `report_value_score`, `report_value_band`, `report_value_score_json`, and `report_value_scored_at_utc` persisted back to the same source row for later publisher-resource ranking.
+- Browser downloads also write into `paths.reports_db` table `report_sources`. Discovery inserts one Source row per new diff item with `source_status='discovered'`, publisher/source-page provenance, and `discovered_on_page_number`; a later successful local PDF download upgrades the same normalized-URL row in place to `source_status='downloaded'`, filling `downloaded_at_utc` and the downloaded file `md5`. Successful downloads now receive a typed deterministic report-value score over five dimensions (`market_insight_depth`, `evidence_specificity`, `decision_relevance`, `recency_timeliness`, `source_authority_originality`), with `report_value_score`, `report_value_band`, `report_value_score_json`, and `report_value_scored_at_utc` persisted back to the same Source row for later publisher-resource ranking. A Source remains an acquisition candidate until the downstream report pipeline produces a validated Report artifact.
 - Publisher resource quality ranking: `publisher_discovery.resource_quality_ranking.*` controls whether qualified discovery candidates are reordered by rolling report-value consistency before new `report_sources` rows are queued. The policy logs score window, sample size, confidence, rank score, and demotion reason per resource; defaults are enabled with a 5-report window, minimum sample size of 2, weights of `0.35` consistency / `0.50` average score / `0.15` confidence, and low-average demotion below `45.0`.
 - Publisher snapshots sourced from the Notion `REPORT SOURCES` page can be synced into `paths.reports_db` table `publishers` via `python -m src.cli sync-publishers`. The sync reads `paths.publisher_profiles` (default `Wordpress/config/publisher-profiles.json`) and replaces the current `publishers` table contents with validated snapshot rows storing `name`, `homepage`, `self_presentation`, and `insights_url`, while preserving any previously curated `google_folder` links and remembered browser-download route fields by `insights_url` and fallback publisher-name matching.
 - Publish: WordPress publish settings and TLS notes are documented together in the `WordPress Subproject` section below (`publish.wp.*`, `publish.media_upload_workers`, `WP_*`, `PUBLISH_MEDIA_UPLOAD_WORKERS`, and `publish.validation.policy`).
@@ -772,7 +842,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
        - If validation fails after artifact generation, `report_analysis_orchestrator` can build a bounded regeneration plan from `affected_section` mappings, regenerate only the failing artifact families (or one broad retry for unmappable/global failures), and re-run validation until pass or `ingest.validation.regeneration_max_attempts` is reached.
        - Results persist to `out/<report-slug>/report_analysis/validation*.json` and flow into HTML and publish policy decisions. The canonical `validation.json` is always updated to the latest attempt used by render/publish, while regeneration snapshots are also persisted as `validation_regen_attempt_<n>.json`. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings. Schema validation is performed via `schema_validator_service`.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
-    - **Categorization**: stored evidence packs are compacted into a `ReportCategoryContext`, then a single batched category-fit prompt evaluates all portal categories against that context using each category's `definition`, `include_when`, and `exclude_when` guidance from `src/config/category-mappings.yaml`. The selector returns at most two portal categories. Taxonomy tags are kept as metadata and do not determine category assignment.
+    - **Categorization**: stored evidence packs are compacted into a `ReportCategoryContext`, then a single batched category-fit prompt evaluates all portal categories against that context using each category's `definition`, `include_when`, and `exclude_when` guidance from `src/config/category-mappings.yaml`. The selector returns at most two portal categories, which are exposed publicly as Topics. Taxonomy tags are kept as metadata and do not determine category assignment.
      - **Figure selection**: `pdf_service.extract_best_figure` selects a representative visual and caption.
       - **Candidate extraction**: `pdf_service.collect_candidates` remains the single public coordination boundary for chart/table discovery, page-level extraction, and contents-page exclusion. Table extraction lives under `src/services/_pdf/table_candidates.py`; `src/services/_pdf/table_heuristics.py` preserves its compatibility surface while private capability modules in `src/services/_pdf/_table_heuristics/` own policy, models, layout analysis, region formation, and screening. `src/services/_pdf/visual_candidates.py` preserves the chart/infographic compatibility surface while `_visual_candidates/raster.py`, `screening.py`, and `extraction.py` own raster qualification, false-positive screening, and extraction coordination; shared geometric heuristics remain behind `src/services/_pdf/visual_heuristics.py`.
      - **Candidate prefilter + ranking**: deterministic prefilter removes obvious low/no-data fragments, reference-style/table-shadow leaks, low-confidence visual fragments, and other early false positives before kind-aware truncation and LLM ranking. Rank prompts receive both the full typed feature payload and a compact `quality_signals` block (`ocr_density`, `visual_entropy`, `chart_confidence`, `table_confidence`) alongside overall + quality + insight + data + keep/reject_reason scoring; model resolves from `openai_models.rank_candidates` if set, else `rank.model`, then `ingest.openai_model`. The detailed prefilter, ranking, and threshold behavior is documented in [Ranking, Crop Refinement, and Fallback](#ranking-crop-refinement-and-fallback).
@@ -937,7 +1007,7 @@ Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/s
 ## Category mappings
 
 - Source of truth: `src/config/category-mappings.yaml` (versioned by `schema_version`).
-- Category policy: production portal categories are assigned only by the context-first fit flow, which evaluates compacted report evidence against each category's `definition`, `include_when`, and `exclude_when` profile. The former weighted taxonomy tag scorer has been removed, so taxonomy tags remain metadata and prompt vocabulary rather than a competing category engine.
+- Category policy: production portal categories are the implementation layer for public Topics and are assigned only by the context-first fit flow, which evaluates compacted report evidence against each category's `definition`, `include_when`, and `exclude_when` profile. The former weighted taxonomy tag scorer has been removed, so taxonomy tags remain metadata and prompt vocabulary rather than a competing category engine.
 - Category schema: categories expose stable `id`, `label`, and `description`, and every portal-exposed category must also define `definition`, `include_when`, and `exclude_when` so the context-first classifier has explicit decision boundaries. The same mapping file still retains `core_tags`, `supporting_tags`, `secondary_supporting_tags`, `descriptor_tags`, `generic_tags`, `negative_tags`, and optional `must_have_one_of` fields for taxonomy metadata support, audits, and compatibility flows. Tag values are canonical underscore slugs end-to-end in repo config, inference rules, extracted taxonomy output, and stored taxonomy metadata. The root mapping file also supports `inference_rules` for evidence-backed tag bridges that run after extraction. Each inference rule carries a `target_category_id` for maintenance validation and an `inferred_tag` that must already exist in that category's retained subject-signal groups. Legacy `tags` remain supported only for backwards-compatible external mappings and do not assign portal categories.
 - Taxonomy inference: configured `inference_rules` can add or remove extracted tags when trigger-tag evidence matches configured context keywords. These rules refine taxonomy metadata before it is stored and before context-first categorization consumes the report context, but they do not score or select portal categories.
 - Taxonomy prompt: allowed tags from the mapping signals are provided to `src/prompts/report_vs/taxonomy/`; the prompt now asks for central subject tags, explicit secondary themes, and short per-tag evidence rather than broad template tags. Tags present only in `descriptor_tags` may still be extracted for metadata, but they no longer affect portal categorization.
@@ -977,11 +1047,11 @@ Key contracts live under `src/contracts/`:
 
 ## Analytics Projection Foundation
 
-After the rendered report outcome has been successfully assembled, `src/orchestrators/report_generation_orchestrator.py` invokes `src/orchestrators/analytics_projection_orchestrator.py`. The projection pass maps existing DocMap, FindingsPack, KeyMetricsPack, taxonomy, context-category fit, artifacts, validation, and figure payloads into normalized SQLite tables plus `vector_projection_queue`.
+After the rendered report outcome has been successfully assembled, `src/orchestrators/report_generation_orchestrator.py` invokes `src/orchestrators/analytics_projection_orchestrator.py`. The projection pass maps existing DocMap, FindingsPack, KeyMetricsPack, taxonomy, context-category fit, artifacts, validation, and figure payloads into normalized SQLite tables plus `vector_projection_queue`. These projections are the implementation layer for the intelligence entity model: source sections, findings, claims, metrics, quotes, figures, tags, and categories become recoverable Report, Topic, Signal, Briefing, Publisher, Figure, Region, and Time Period inputs without making WordPress responsible for inference.
 
 The projection is additive. Existing JSON packs, audit artifacts, vector-store-first analysis, and HTML rendering remain the source behavior. Projection failures are persisted on the `reports` row with `projection_status='failed'`, attempt count, and typed error fields, then logged as `analytics_projection_failed_nonblocking` without blocking the processed HTML outcome.
 
-Projection-owned tables include `report_sections`, `report_findings`, `report_metrics`, `report_quotes`, `report_claims`, `report_tags`, `report_categories`, `report_figures`, and `vector_projection_queue`. `report_id` is the existing Drive file ID, and `source_file_id` is not stored separately when it would duplicate `report_id`.
+Projection-owned tables include `report_sections`, `report_findings`, `report_metrics`, `report_quotes`, `report_claims`, `report_tags`, `report_categories`, `report_figures`, and `vector_projection_queue`. `report_id` is the existing Drive file ID, and `source_file_id` is not stored separately when it would duplicate `report_id`. Projected metrics, quotes, claims, methodology notes, and limitations are internal Data Points; public metric/statistic surfaces should use Figure, Key Figure, or Key figures in report language and preserve raw value, unit, source report, publisher, and evidence reference.
 
 `vector_projection_queue` stages future embedding work with deterministic `entity_uid`, canonical `text_payload`, `content_hash`, metadata JSON, `content_class`, and `embedding_status` constrained to `pending`, `embedded`, or `failed`. The queue does not implement global retrieval yet.
 
@@ -1068,7 +1138,7 @@ Workflow tests should prefer explicit dependency dataclasses and shared boundary
 Current boundary seams include `IngestBatchDependencies`, `CandidateExtractionDependencies`, and the capability-scoped report-generation contracts: `ReportSourceDependencies`, `ReportSelectionDependencies`, `ReportAnalysisDependencies`, `FigureCaptionDependencies`, and `ReportRenderDependencies`. `ReportGenerationDependencies` now exists only as the top-level orchestrator wiring container that groups those scoped contracts, while the concrete dependency families live under `src/generators/_report_generation_dependencies/` and `src/generators/report_generation_dependencies.py` remains the single public facade.
 Use `tests/conftest.py` fixtures like `external_boundary_mocks_only`, `wordpress_http`, and `fake_openai` to patch only external boundaries (service entrypoints, HTTP clients, OpenAI clients, time/random/os), while leaving orchestrator and generator logic on the real path.
 Touched orchestrator tests should also use `assert_logs_have_required_fields`, and remaining generator/orchestrator hotspots should move to explicit dependency seams or service-module patch points instead of patching internal module symbols directly.
-Prompt text is immutable outside `src/services/prompt_service.py`: generators must render prompts through the prompt service, pass the rendered text through unchanged, and log namespace, prompt paths, hashes, rendered prompts, model params, and raw responses around each model call. `tests/test_prompt_boundaries.py` enforces the no-concatenation rule over `src/`.
+Prompt text is immutable outside `src/services/prompt_service.py`: generators must render prompts through the prompt service, pass the rendered text through unchanged, and log namespace, prompt paths, hashes, rendered prompts, model params, and raw responses around each model call. Prompt rendering caches compiled Jinja templates by prompt path, hash, and text so repeated dry-run validation avoids recompilation without changing prompt output. `tests/test_prompt_boundaries.py` enforces the no-concatenation rule over `src/`.
 
 Run the live OpenAI smoke test explicitly (opt-in):
 
@@ -1475,6 +1545,8 @@ Grouped sidebar navigation:
 - `Content QA`: Report Command Center, Analysis & Evidence, Validation Center
 - `Observability`: Cost & Usage, Logs & Live Events, System & Storage, Developer & Test Tools
 - `Configuration`: Settings & Prompts
+
+The Streamlit cockpit is an operator/admin surface. It manages Sources, Runs, Validation, Publishing Queue, Cost, configuration, and operational diagnostics; it is not the canonical public navigation model used by the WordPress portal.
 
 Design and behavior highlights:
 

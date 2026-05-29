@@ -1,6 +1,6 @@
 # Long-File Audit and Refactor Targets
 
-Generated: 2026-05-28
+Generated: 2026-05-29
 
 ## Purpose
 
@@ -18,12 +18,12 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 107 | 30 |
+| First-party `src` | 107 | 29 |
 | First-party `tests` | 43 | 24 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `708`.
+- Total first-party source-like files scanned: `717`.
 - Skipped paths/files: `45` (`40` top-level runtime/temp directories, `4` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
@@ -39,6 +39,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - Publisher-inventory orchestration has now been decomposed internally: `src/orchestrators/publisher_inventory_orchestrator.py` is an `889`-line public coordinator and compatibility surface, while dependency wiring, idempotency, snapshot I/O, candidate-flow helpers, and runtime budget/retry helpers live in `src/orchestrators/_publisher_inventory_orchestrator/`.
 - Publisher-inventory candidate screening has now been decomposed internally: `src/generators/publisher_inventory_candidate_screening_generator.py` is a compatibility facade, with shared marker normalization in `_publisher_inventory_candidate_screening/shared.py` (`534`) and focused deterministic screening, response-policy, and LLM-batch owners in the same private family.
 - Cross-report analysis input preparation has now been decomposed internally: `src/generators/cross_report_analysis_input_generator.py` is a compatibility facade, with theme selection in `_cross_report_analysis_input/theme_selection.py` (`762`), evidence and signal preparation in `evidence_signals.py` (`703`), source selection in `source_selection.py`, and shared deterministic helpers in `shared.py`.
+- Report-analysis orchestration has now been decomposed internally: `src/orchestrators/report_analysis_orchestrator.py` is a `588`-line public coordinator and compatibility surface, while artifact scheduling, vector-store readiness polling, payload checks, validation/regeneration execution, and regeneration-plan mapping live in `src/orchestrators/_report_analysis_orchestrator/`.
 
 ## Largest Runtime Files
 
@@ -47,7 +48,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | Lines | Path | Assessment |
 | ---: | --- | --- |
 | 1,925 | `src/cli.py` | Review after workflow work |
-| 1,650 | `src/orchestrators/report_analysis_orchestrator.py` | Existing workflow surface |
 | 1,650 | `src/services/_pdf/figures.py` | PDF family follow-up |
 | 1,625 | `src/services/sqlite_migration_service.py` | Persistence boundary; split only by migration ownership |
 | 1,610 | `src/generators/publisher_inventory_candidate_quality_generator.py` | Discovery quality family |

@@ -8,7 +8,13 @@ from pathlib import Path
 from typing import Dict
 
 import yaml
-from jinja2 import Environment, StrictUndefined, TemplateSyntaxError, UndefinedError
+from jinja2 import (
+    Environment,
+    StrictUndefined,
+    Template,
+    TemplateSyntaxError,
+    UndefinedError,
+)
 
 from src.contracts.prompts import (
     PromptDryRunBenchmark,
@@ -59,6 +65,7 @@ class _PromptNamespaceCacheEntry:
 
 _PROMPT_CACHE: Dict[str, _PromptCacheEntry] = {}
 _PROMPT_NAMESPACE_CACHE: _PromptNamespaceCacheEntry | None = None
+_RENDER_TEMPLATE_CACHE: Dict[tuple[str, str, str], Template] = {}
 
 
 def _resolve_prompt_namespace(namespace: str) -> str:
@@ -252,7 +259,15 @@ def render_prompt(
         )
     )
     try:
-        template = JINJA_ENV.from_string(request.template.text)
+        cache_key = (
+            str(request.template.path),
+            str(request.template.sha256),
+            str(request.template.text),
+        )
+        template = _RENDER_TEMPLATE_CACHE.get(cache_key)
+        if template is None:
+            template = JINJA_ENV.from_string(request.template.text)
+            _RENDER_TEMPLATE_CACHE[cache_key] = template
         text = template.render(**request.variables)
     except UndefinedError as exc:
         raise AppError(
