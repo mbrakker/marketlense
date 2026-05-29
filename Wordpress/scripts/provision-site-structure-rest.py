@@ -22,6 +22,8 @@ REQUIRED_PAGES: List[PageSpec] = [
     PageSpec(schema_version="1.0", title="About", slug="about"),
     PageSpec(schema_version="1.0", title="Methodology", slug="methodology"),
     PageSpec(schema_version="1.0", title="Topics directory", slug="topics-directory"),
+    PageSpec(schema_version="1.0", title="Signals", slug="signals"),
+    PageSpec(schema_version="1.0", title="Briefings", slug="briefings"),
     PageSpec(
         schema_version="1.0",
         title="Publishers directory",

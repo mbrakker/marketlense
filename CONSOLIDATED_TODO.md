@@ -335,16 +335,6 @@ Findings summary:
 
 Scope: gaps identified by comparing the README direction against the current `src/` implementation and the `Wordpress/wp-content` block theme/plugin. These items cover public information architecture, WordPress design, publish entities, and naming drift.
 
-- **Title:** Align WordPress public navigation with the README entity model [Impact: 4/5, Effort: 2/5]
-  - Explanation: README defines the primary public navigation as Reports, Topics, Signals, Briefings, and Publishers, with Figures, Regions, Time Periods, and Methodology as secondary surfaces. The current WordPress nav exposes Reports, Topics, Publishers, Methodology, and About, so Signals and Briefings are missing from the primary path while Methodology/About are promoted differently than documented.
-  - Pros: Makes the public site match the documented product model and gives users stable destinations for canonical entities.
-  - Cons: Requires coordinated theme/plugin/template updates and content migration decisions for any existing pages.
-  - Acceptance Criteria:
-    - WordPress primary navigation renders Reports, Topics, Signals, Briefings, and Publishers in that order unless README is explicitly changed.
-    - Methodology is moved to the documented secondary surface or README is updated to define it as primary.
-    - About is either documented as a public support page outside the canonical entity nav or removed from the primary nav.
-    - Navigation tests or static checks verify required nav labels and destinations.
-
 - **Title:** Add first-class WordPress destinations for Signals and cross-report Briefings [Impact: 5/5, Effort: 4/5]
   - Explanation: README treats Signal and Briefing as canonical public entities. Briefing generation already exists as cross-report analysis/publish packages, but WordPress does not expose those packages as a canonical Briefing archive/detail surface. Signals currently exist only as shortcode-driven, signal-like modules.
   - Pros: Closes the largest entity-model gap while reusing the existing cross-report analysis implementation for Briefings.

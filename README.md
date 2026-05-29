@@ -460,7 +460,7 @@ bash Wordpress/scripts/sync-publisher-profiles.sh
 
 What `provision-site-structure.sh` does:
 
-- Creates/updates required pages (About, Methodology, Topics directory, Publishers directory, Submit a Report, Contact, Privacy, Terms)
+- Creates/updates required pages (About, Methodology, Topics directory, Signals, Briefings, Publishers directory, Submit a Report, Contact, Privacy, Terms)
 - Publishes pages idempotently
 - Uses static block-theme template parts for navigation; it does not create classic menu locations
 - Falls back to REST when `wp-cli` is unavailable
@@ -567,7 +567,7 @@ What it validates:
 - REST endpoints resolve for `ml_report` and `ml_publisher`
 - Front page, report archive, report filter URLs, and required site pages return HTTP `200`
 - Topics and publishers directory shortcodes render
-- Primary navigation links are present in rendered output
+- Primary navigation links for Reports, Topics, Signals, Briefings, and Publishers are present in rendered output
 - Front page editorial sections render
 - A published `ml_report` URL returns HTTP `200` (seeded if missing)
 

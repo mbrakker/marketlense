@@ -148,6 +148,8 @@ main() {
     "About|about"
     "Methodology|methodology"
     "Topics directory|topics-directory"
+    "Signals|signals"
+    "Briefings|briefings"
     "Publishers directory|publishers-directory"
     "Submit a Report|submit-a-report"
     "Contact|contact"

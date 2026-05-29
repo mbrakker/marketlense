@@ -1179,9 +1179,9 @@ final class Shortcodes
             [
                 ['label' => __('Reports', 'marketlense-core'), 'target' => 'reports'],
                 ['label' => __('Topics', 'marketlense-core'), 'target' => 'topics-directory'],
+                ['label' => __('Signals', 'marketlense-core'), 'target' => 'signals'],
+                ['label' => __('Briefings', 'marketlense-core'), 'target' => 'briefings'],
                 ['label' => __('Publishers', 'marketlense-core'), 'target' => 'publishers-directory'],
-                ['label' => __('Methodology', 'marketlense-core'), 'target' => 'methodology'],
-                ['label' => __('About', 'marketlense-core'), 'target' => 'about'],
             ],
             'ml-primary-nav',
             __('Primary navigation', 'marketlense-core')
@@ -1710,6 +1710,8 @@ final class Shortcodes
             'home' => home_url('/'),
             'reports' => (string) (get_post_type_archive_link(Post_Type::POST_TYPE) ?: home_url('/reports/')),
             'topics-directory' => home_url('/topics-directory/'),
+            'signals' => home_url('/signals/'),
+            'briefings' => home_url('/briefings/'),
             'publishers-directory' => home_url('/publishers-directory/'),
             'methodology' => home_url('/methodology/'),
             'about' => home_url('/about/'),
