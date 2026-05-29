@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last compiled: 2026-05-22
+Last compiled: 2026-05-29
 
 This file is the single source of truth for open backlog items. It supersedes the remaining backlog plus the archived planning work from `docs/quality/deep-analysis-x10-plan-2026-04-15.md`.
 
@@ -328,3 +328,100 @@ Findings summary:
     - Public service/orchestrator entrypoints remain singular; callers do not choose between competing routes.
     - Each extracted module has real behavior and tests, not pass-through forwarding.
     - Golden and failure-injection tests prove report download and publisher discovery outputs remain unchanged.
+
+---
+
+## 11. README, WordPress Design & Publish Entity Alignment Audit (2026-05-29)
+
+Scope: gaps identified by comparing the README direction against the current `src/` implementation and the `Wordpress/wp-content` block theme/plugin. These items cover public information architecture, WordPress design, publish entities, and naming drift.
+
+- **Title:** Align WordPress public navigation with the README entity model [Impact: 4/5, Effort: 2/5]
+  - Explanation: README defines the primary public navigation as Reports, Topics, Signals, Briefings, and Publishers, with Figures, Regions, Time Periods, and Methodology as secondary surfaces. The current WordPress nav exposes Reports, Topics, Publishers, Methodology, and About, so Signals and Briefings are missing from the primary path while Methodology/About are promoted differently than documented.
+  - Pros: Makes the public site match the documented product model and gives users stable destinations for canonical entities.
+  - Cons: Requires coordinated theme/plugin/template updates and content migration decisions for any existing pages.
+  - Acceptance Criteria:
+    - WordPress primary navigation renders Reports, Topics, Signals, Briefings, and Publishers in that order unless README is explicitly changed.
+    - Methodology is moved to the documented secondary surface or README is updated to define it as primary.
+    - About is either documented as a public support page outside the canonical entity nav or removed from the primary nav.
+    - Navigation tests or static checks verify required nav labels and destinations.
+
+- **Title:** Add first-class WordPress destinations for Signals and Briefings [Impact: 5/5, Effort: 4/5]
+  - Explanation: README treats Signal and Briefing as canonical public entities, but the current WordPress implementation only has shortcode-driven signal-like modules and cross-report publish packages. There are no durable WordPress-facing signal or briefing archives/templates/routes equivalent to report, topic, or publisher surfaces.
+  - Pros: Closes the largest entity-model gap and prevents canonical entities from existing only as page fragments.
+  - Cons: Requires contract, publish, plugin, theme, and migration work if old posts need backfill.
+  - Acceptance Criteria:
+    - Signal and Briefing have explicit publish contracts or documented projections with schema versions.
+    - WordPress registers canonical destinations for Signals and Briefings through CPTs, taxonomies, pages, or a documented alternative with tests.
+    - Theme templates or block patterns render Signal and Briefing archive/detail surfaces.
+    - Publish pipeline can populate those surfaces without empty/default term contracts.
+    - README documents the final WordPress entity implementation and naming.
+
+- **Title:** Stop WordPress from synthesizing intelligence, freshness, and authority claims at render time [Impact: 5/5, Effort: 3/5]
+  - Explanation: README says WordPress must not synthesize new intelligence, freshness, or quality judgments and should assemble approved projections/artifacts. Current plugin code computes weekly signals, strategic themes, freshness windows, and publisher authority from live WordPress counts and dates in `class-marketlense-core-intelligence-stats.php`.
+  - Pros: Keeps analytical claims owned by the Python pipeline and makes published site content reproducible from approved artifacts.
+  - Cons: Existing home-page modules need replacement data contracts and fallback behavior when projections are absent.
+  - Acceptance Criteria:
+    - WordPress intelligence modules read approved projection/artifact data instead of deriving claims from live WP queries.
+    - Any missing projection fails closed with neutral UI or typed/admin-visible diagnostics, not invented metrics.
+    - Tests prove no signal, freshness, strategic-theme, or publisher-authority claim is generated solely from WordPress post counts.
+    - README documents the projection source used by each WordPress intelligence module.
+
+- **Title:** Make Signals, Briefings, Figures, Regions, and Time Periods durable publish/projection entities [Impact: 5/5, Effort: 5/5]
+  - Explanation: The analytics projection layer persists reports, sections, findings, metrics, quotes, claims, tags, categories, figures, and vector queue state, but Signals and Briefings are not durable public projection entities. Figures exist in storage but lack a public WordPress destination, and Regions/Time Periods are stored mostly as metadata rather than complete public surfaces.
+  - Pros: Gives the publishing layer one typed source of truth for every README entity and reduces UI-specific inference.
+  - Cons: Broad schema, migration, and publish workflow changes.
+  - Acceptance Criteria:
+    - Projection contracts/tables exist for public Signals and Briefings with schema versions and round-trip tests.
+    - Figures, Regions, and Time Periods have documented public projection contracts or explicit README-scoped exclusions.
+    - WordPress publish code can map each public projection entity to a stable route/template/surface.
+    - Integration tests cover report-to-entity projection and WordPress publish/readback for each implemented entity.
+
+- **Title:** Resolve publish post-type and entity naming drift between README, config, and WordPress [Impact: 4/5, Effort: 2/5]
+  - Explanation: README says publishing currently targets core `posts`, while `src/config/app.yaml` sets `publish.wp.post_type` to `ml_report`. The WordPress plugin supports both core `post` and `ml_report` as report-like types, and public copy mixes Report, Digest, Brief, and Latest brief labels.
+  - Pros: Removes ambiguity from the publish path and prevents operators from publishing to the wrong content type.
+  - Cons: Requires a deliberate migration choice and updates to screenshots/copy/tests.
+  - Acceptance Criteria:
+    - README, YAML config, WordPress plugin behavior, and publish tests agree on the canonical report post type.
+    - Compatibility behavior for old core `post` digests is explicitly documented or removed.
+    - Public UI copy consistently uses Report for report entities and Briefing only for briefing entities.
+    - Tests verify configured post type, WP payload post type, and resulting WordPress content type.
+
+- **Title:** Project topic definitions into WordPress taxonomy terms instead of labels only [Impact: 4/5, Effort: 3/5]
+  - Explanation: README defines Topics as controlled taxonomy entries with definition, inclusion, and exclusion rules. Current publish code creates WordPress category terms from `category-mappings.yaml` labels, and `WordPressTaxonomyTerm` carries only schema version, slug, and name, so topic semantics are not published.
+  - Pros: Makes topic pages explainable and keeps taxonomy governance visible on the public site.
+  - Cons: Requires term contract expansion and careful migration for existing categories.
+  - Acceptance Criteria:
+    - Topic/category contract includes definition, inclusion rules, exclusion rules, and version metadata where required.
+    - WordPress term creation/update writes approved topic descriptions or term meta through the service boundary.
+    - Topic directory and archive templates render approved topic semantics without ad hoc copy.
+    - Tests assert term semantics survive publish and readback.
+
+- **Title:** Add secondary public surfaces for Figures, Regions, and Time Periods or narrow the README contract [Impact: 3/5, Effort: 3/5]
+  - Explanation: README lists Figures, Regions, and Time Periods as secondary public surfaces. Current WordPress templates include reports, topics, publishers, methodology, and support pages, but no figure, region, or time-period destination.
+  - Pros: Completes the documented browsing model and improves report discoverability by artifact, geography, and period.
+  - Cons: More templates and projection/read-model work; some surfaces may be low value until there is enough content.
+  - Acceptance Criteria:
+    - Figures, Regions, and Time Periods each have a WordPress route/template/surface, or README explicitly removes/defers them with rationale.
+    - Publish/projection code provides stable data for each implemented surface.
+    - Empty-state behavior is deterministic and does not invent content.
+    - Static or integration tests cover route existence and representative rendering.
+
+- **Title:** Replace publisher authority heuristics with approved publisher projections [Impact: 4/5, Effort: 3/5]
+  - Explanation: Publisher surfaces are partly implemented, but current WordPress code derives authority-style rankings and labels from local post/category counts. README positions Publisher as a canonical entity and forbids WordPress from creating quality judgments outside approved artifacts.
+  - Pros: Keeps publisher claims auditable and avoids misleading authority language from incomplete WordPress data.
+  - Cons: Requires a publisher projection or metric artifact and revised homepage/publisher modules.
+  - Acceptance Criteria:
+    - Publisher authority/coverage modules consume approved pipeline projections, not WP count heuristics.
+    - Public labels avoid authority/ranking language unless backed by a documented metric contract.
+    - Publisher term metadata and templates expose only approved fields.
+    - Tests prove missing publisher projections do not produce inferred authority claims.
+
+- **Title:** Bring WordPress design tokens and CSS organization back in line with README [Impact: 3/5, Effort: 2/5]
+  - Explanation: README documents the theme `wideSize` as `82rem`, while `theme.json` currently uses `84rem`. The block theme also includes inline CSS in `parts/header.html`, and the main theme CSS has grown large with repeated hooks, making the WordPress design contract harder to audit.
+  - Pros: Reduces design drift and keeps styling centralized and testable.
+  - Cons: Visual regressions are possible without screenshot review.
+  - Acceptance Criteria:
+    - README and `theme.json` agree on `wideSize` and other documented layout tokens.
+    - Inline header CSS is moved into the theme stylesheet or an approved block/style asset.
+    - Repeated CSS hooks are consolidated without changing intended rendering.
+    - WordPress static checks and at least one visual/screenshot review pass for desktop and mobile.
