@@ -1,6 +1,7 @@
 """Test clicking elements inside TRUE cross-origin iframes (external domains)."""
 
 import asyncio
+from urllib.parse import urlparse
 
 import pytest
 
@@ -67,7 +68,7 @@ class TestTrueCrossOriginIframeClick:
 		assert browser_state.dom_state is not None
 		state = browser_state.dom_state
 
-		print(f'\n📊 Found {len(state.selector_map)} total elements')
+		print(f'\nFound {len(state.selector_map)} total elements')
 
 		# Find elements from different targets
 		targets_found = set()
@@ -85,23 +86,23 @@ class TestTrueCrossOriginIframeClick:
 				element_id = element.attributes.get('id', '')
 
 				# example.com has a link to iana.org/domains/reserved
-				if 'iana.org' in href:
+				if urlparse(href).hostname == 'www.iana.org':
 					cross_origin_elements.append((idx, element))
-					print(f'   ✅ Found cross-origin element: [{idx}] {element.tag_name} href={href}')
+					print(f'   Found cross-origin element: [{idx}] {element.tag_name} href={href}')
 				elif element_id == 'main-button':
 					main_page_elements.append((idx, element))
 
 		# Verify we found elements from at least 2 different targets
-		print(f'\n🎯 Found elements from {len(targets_found)} different CDP targets')
+		print(f'\nFound elements from {len(targets_found)} different CDP targets')
 
 		# Check if cross-origin iframe loaded
 		if len(targets_found) < 2:
-			print('⚠️  Warning: Cross-origin iframe did not create separate CDP target')
+			print('Warning: Cross-origin iframe did not create separate CDP target')
 			print('   This may indicate cross_origin_iframes feature is not working as expected')
 			pytest.skip('Cross-origin iframe did not create separate CDP target - skipping test')
 
 		if len(cross_origin_elements) == 0:
-			print('⚠️  Warning: No elements found from example.com iframe')
+			print('Warning: No elements found from example.com iframe')
 			print('   Network may be restricted in CI environment')
 			pytest.skip('No elements extracted from example.com - skipping click test')
 
@@ -109,7 +110,7 @@ class TestTrueCrossOriginIframeClick:
 		assert len(cross_origin_elements) > 0, 'Expected to find at least one element from cross-origin iframe (example.com)'
 
 		# Try clicking the cross-origin element
-		print('\n🖱️  Testing Click on True Cross-Origin Iframe Element:')
+		print('\nTesting Click on True Cross-Origin Iframe Element:')
 		tools = Tools()
 
 		link_idx, link_element = cross_origin_elements[0]
@@ -127,10 +128,10 @@ class TestTrueCrossOriginIframeClick:
 			):
 				pytest.fail(f'Click on cross-origin element [{link_idx}] failed: {result.extracted_content}')
 
-			print(f'   ✅ Click succeeded on cross-origin element [{link_idx}]!')
-			print('   🎉 True cross-origin iframe element clicking works!')
+			print(f'   Click succeeded on cross-origin element [{link_idx}]!')
+			print('   True cross-origin iframe element clicking works!')
 
 		except Exception as e:
 			pytest.fail(f'Exception while clicking cross-origin element [{link_idx}]: {e}')
 
-		print('\n✅ Test passed: True cross-origin iframe elements can be clicked')
+		print('\nTest passed: True cross-origin iframe elements can be clicked')

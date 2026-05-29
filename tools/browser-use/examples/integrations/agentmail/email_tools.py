@@ -4,6 +4,7 @@ Email management to enable 2fa.
 
 import asyncio
 import logging
+from html.parser import HTMLParser
 
 # run `pip install agentmail` to install the library
 from agentmail import AsyncAgentMail, Message, MessageReceivedEvent, Subscribe  # type: ignore
@@ -17,6 +18,28 @@ if not logging.getLogger().handlers:
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(name)s - %(message)s')
 
 logger = logging.getLogger(__name__)
+
+
+class _EmailHtmlTextParser(HTMLParser):
+	def __init__(self) -> None:
+		super().__init__(convert_charrefs=True)
+		self.parts: list[str] = []
+		self._skip_depth = 0
+
+	def handle_starttag(self, tag: str, attrs) -> None:
+		if tag.lower() in {'script', 'style'}:
+			self._skip_depth += 1
+
+	def handle_endtag(self, tag: str) -> None:
+		if tag.lower() in {'script', 'style'} and self._skip_depth:
+			self._skip_depth -= 1
+
+	def handle_data(self, data: str) -> None:
+		if self._skip_depth:
+			return
+		token = str(data or '').strip()
+		if token:
+			self.parts.append(token)
 
 
 class EmailTools(Tools):
@@ -51,28 +74,10 @@ class EmailTools(Tools):
 		"""
 		Simple HTML to text conversion
 		"""
-		import re
-
-		# Remove script and style elements - handle spaces in closing tags
-		html = re.sub(r'<script\b[^>]*>.*?</script\s*>', '', html, flags=re.DOTALL | re.IGNORECASE)
-		html = re.sub(r'<style\b[^>]*>.*?</style\s*>', '', html, flags=re.DOTALL | re.IGNORECASE)
-
-		# Remove HTML tags
-		html = re.sub(r'<[^>]+>', '', html)
-
-		# Decode HTML entities
-		html = html.replace('&nbsp;', ' ')
-		html = html.replace('&amp;', '&')
-		html = html.replace('&lt;', '<')
-		html = html.replace('&gt;', '>')
-		html = html.replace('&quot;', '"')
-		html = html.replace('&#39;', "'")
-
-		# Clean up whitespace
-		html = re.sub(r'\s+', ' ', html)
-		html = html.strip()
-
-		return html
+		parser = _EmailHtmlTextParser()
+		parser.feed(str(html or ''))
+		parser.close()
+		return ' '.join(' '.join(parser.parts).split()).strip()
 
 	async def get_or_create_inbox_client(self) -> Inbox:
 		"""

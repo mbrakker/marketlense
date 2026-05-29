@@ -13,7 +13,7 @@ from typing import Any, Mapping
 from urllib.parse import parse_qs, urljoin, urlsplit
 
 from src.contracts.publisher_inventory import PublisherInventoryRawCandidate
-from src.utils.url_utils import normalize_url
+from src.utils.url_utils import host_matches_domain, normalize_url
 
 _REPORT_KEYWORDS = (
     "report",
@@ -495,8 +495,10 @@ def _should_traverse_tabs(
     normalized_url: str,
     state: Any,
 ) -> bool:
-    host = str(urlsplit(normalized_url).hostname or "").casefold()
-    return "salesforce.com" in host and len(state.tab_labels) > 1
+    return (
+        host_matches_domain(normalized_url, "salesforce.com")
+        and len(state.tab_labels) > 1
+    )
 
 
 def _select_tab_labels_for_traversal(
@@ -682,8 +684,7 @@ def _build_browser_route_summary(
         surface = str(getattr(metrics, "scroll_surface", "nested_container")).strip()
         probe_count = int(getattr(metrics, "nested_scroll_probes", 0))
         steps.append(
-            f"Probed {surface.replace('_', ' ')} scroll surfaces "
-            f"{probe_count} time(s)."
+            f"Probed {surface.replace('_', ' ')} scroll surfaces {probe_count} time(s)."
         )
     if bounded_by_pagination_limit:
         steps.append(

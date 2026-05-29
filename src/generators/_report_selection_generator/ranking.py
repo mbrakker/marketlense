@@ -14,6 +14,7 @@ from src.utils.candidate_features import candidate_features, candidate_features_
 from src.utils.coercion import coerce_float, coerce_int
 from src.utils.costing import estimate_cost_usd, estimate_text_tokens
 from src.utils.logging import log_event
+from src.utils.url_utils import text_has_url_or_domain_marker
 
 
 @dataclass(frozen=True)
@@ -156,7 +157,10 @@ def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
         ):
             return "table_box_text_block"
         if (
-            ("http" in preview_normalized or "doi.org" in preview_normalized)
+            text_has_url_or_domain_marker(
+                preview_normalized,
+                domains={"doi.org"},
+            )
             and rows >= 8
             and numeric_ratio <= 0.12
         ):

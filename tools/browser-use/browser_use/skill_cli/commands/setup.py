@@ -302,9 +302,8 @@ def _log_checks(checks: dict[str, Any]) -> None:
 	print('\n✓ Running checks...\n')
 	for name, check in checks.items():
 		status = check.get('status', 'unknown')
-		message = check.get('message', '')
 		icon = '✓' if status == 'ok' else '⚠' if status == 'missing' else '✗'
-		print(f'  {icon} {name.replace("_", " ")}: {message}')
+		print(f'  {icon} {name.replace("_", " ")}: {status}')
 	print()
 
 
@@ -317,7 +316,7 @@ def _log_actions(actions: list[dict[str, Any]]) -> None:
 	print('\n📋 Setup actions:\n')
 	for i, action in enumerate(actions, 1):
 		required = '(required)' if action.get('required') else '(optional)'
-		print(f'  {i}. {action["description"]} {required}')
+		print(f'  {i}. Setup action {i} {required}')
 	print()
 
 

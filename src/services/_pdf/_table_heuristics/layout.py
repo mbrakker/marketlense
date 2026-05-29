@@ -8,6 +8,8 @@ from typing import Any, List, Optional, Tuple
 import pdfplumber
 import pymupdf as fitz
 
+from src.utils.url_utils import text_has_url_or_domain_marker
+
 __all__ = [
     "_extract_text_in_bbox",
     "_table_page_text_blocks",
@@ -382,7 +384,9 @@ def _table_band_is_note_like(band: _TableTextBand) -> bool:
         return False
     if _table_text_has_note_marker(band.text):
         return True
-    if "statlink" in lowered or "http://" in lowered or "https://" in lowered:
+    if "statlink" in lowered:
+        return True
+    if text_has_url_or_domain_marker(lowered, domains={"doi.org"}):
         return True
     return False
 
@@ -518,12 +522,9 @@ def _table_block_is_note_like(block: _PageTextBlock) -> bool:
         return False
     if _table_text_has_note_marker(block.text):
         return True
-    if (
-        "statlink" in lowered
-        or "doi.org" in lowered
-        or "http://" in lowered
-        or "https://" in lowered
-    ):
+    if "statlink" in lowered:
+        return True
+    if text_has_url_or_domain_marker(lowered, domains={"doi.org"}):
         return True
     return False
 

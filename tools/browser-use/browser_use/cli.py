@@ -158,7 +158,7 @@ from browser_use.agent.views import AgentSettings
 from browser_use.browser import BrowserProfile, BrowserSession
 from browser_use.logging_config import addLoggingLevel
 from browser_use.telemetry import CLITelemetryEvent, ProductTelemetry
-from browser_use.utils import get_browser_use_version
+from browser_use.utils import get_browser_use_version, safe_log_exception_name, safe_log_value
 
 try:
 	import click
@@ -1632,7 +1632,7 @@ async def textual_interface(config: dict[str, Any]):
 
 		logger.info('Browser type: chromium')  # BrowserSession only supports chromium
 		if browser_config.get('executable_path'):
-			logger.info(f'Browser binary: {browser_config["executable_path"]}')
+			logger.info('Browser binary: %s', safe_log_value(browser_config.get('executable_path')))
 		if browser_config.get('headless'):
 			logger.info('Browser mode: headless')
 		else:
@@ -1681,11 +1681,11 @@ async def textual_interface(config: dict[str, Any]):
 		model_name = getattr(llm, 'model_name', None) or getattr(llm, 'model', 'Unknown model')
 		provider = llm.__class__.__name__
 		temperature = getattr(llm, 'temperature', 0.0)
-		logger.info(f'LLM: {provider} ({model_name}), temperature: {temperature}')
+		logger.info('LLM: %s (%s), temperature: %s', provider, safe_log_value(model_name), temperature)
 		logger.debug(f'LLM initialized successfully: {provider}')
 	except Exception as e:
-		logger.error(f'Error getting LLM: {str(e)}', exc_info=True)
-		raise RuntimeError(f'Failed to initialize LLM: {str(e)}')
+		logger.error('Error getting LLM: %s', safe_log_exception_name(e), exc_info=True)
+		raise RuntimeError(f'Failed to initialize LLM: {safe_log_exception_name(e)}') from e
 
 	logger.debug('Initializing BrowserUseApp instance...')
 	try:
@@ -1704,17 +1704,16 @@ async def textual_interface(config: dict[str, Any]):
 
 		# Log browser and model configuration that will be used
 		browser_type = 'Chromium'  # BrowserSession only supports Chromium
-		model_name = config.get('model', {}).get('name', 'auto-detected')
 		headless = config.get('browser', {}).get('headless', False)
 		headless_str = 'headless' if headless else 'visible'
 
-		logger.info(f'Preparing {browser_type} browser ({headless_str}) with {model_name} LLM')
+		logger.info('Preparing %s browser (%s) with configured LLM', browser_type, headless_str)
 
 		logger.debug('Starting Textual app with run_async()...')
 		# No more logging after this point as we're in fullscreen mode
 		await app.run_async()
 	except Exception as e:
-		logger.error(f'Error in textual_interface: {str(e)}', exc_info=True)
+		logger.error('Error in textual_interface: %s', safe_log_exception_name(e), exc_info=True)
 		# Note: We don't close the browser session here to avoid duplicate stop() calls
 		# The browser session will be cleaned up by its __del__ method if needed
 		raise
@@ -2119,11 +2118,10 @@ def run_main_interface(ctx: click.Context, debug: bool = False, **kwargs):
 
 	# Log browser and model configuration that will be used
 	browser_type = 'Chromium'  # BrowserSession only supports Chromium
-	model_name = config.get('model', {}).get('name', 'auto-detected')
 	headless = config.get('browser', {}).get('headless', False)
 	headless_str = 'headless' if headless else 'visible'
 
-	logger.info(f'Preparing {browser_type} browser ({headless_str}) with {model_name} LLM')
+	logger.info('Preparing %s browser (%s) with configured LLM', browser_type, headless_str)
 
 	try:
 		# Run the Textual UI interface - now all the initialization happens before we go fullscreen
@@ -2136,8 +2134,8 @@ def run_main_interface(ctx: click.Context, debug: bool = False, **kwargs):
 			root_logger.removeHandler(handler)
 		root_logger.addHandler(console_handler)
 
-		logger.error(f'Error initializing Browser-Use: {str(e)}', exc_info=debug)
-		print(f'\nError launching Browser-Use: {str(e)}')
+		logger.error('Error initializing Browser-Use: %s', safe_log_exception_name(e), exc_info=debug)
+		print(f'\nError launching Browser-Use: {safe_log_exception_name(e)}')
 		if debug:
 			import traceback
 

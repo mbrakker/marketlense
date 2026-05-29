@@ -5,6 +5,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urlsplit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:  # pragma: no cover - script execution bootstrap
@@ -74,7 +75,8 @@ def normalize_icon_source(value: str) -> str:
 
 def resolve_icon_download_url(row: WordPressPublisherProfileSeed) -> str:
     override = _ICON_SOURCE_URL_OVERRIDES.get(row.notion_page_id)
-    if override and "prod-files-secure.s3.us-west-2.amazonaws.com" in row.icon_source:
+    host = str(urlsplit(str(row.icon_source or "")).hostname or "").casefold()
+    if override and host == "prod-files-secure.s3.us-west-2.amazonaws.com":
         return override
     return row.icon_source
 

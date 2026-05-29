@@ -683,6 +683,18 @@ def _log_pretty_path(path: str | Path | None) -> str:
 	return pretty_path
 
 
+def safe_log_value(value: object) -> str:
+	"""Return a constant marker for config-derived values that may contain secrets."""
+	if value is None or not str(value).strip():
+		return ''
+	return '<configured>'
+
+
+def safe_log_exception_name(exc: BaseException) -> str:
+	"""Return exception type only; exception messages may contain secret config values."""
+	return type(exc).__name__
+
+
 def _log_pretty_url(s: str, max_len: int | None = 22) -> str:
 	"""Truncate/pretty-print a URL with a maximum length, removing the protocol and www. prefix"""
 	s = s.replace('https://', '').replace('http://', '').replace('www.', '')

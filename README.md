@@ -1037,6 +1037,7 @@ Browser Use is vendored locally at `tools/browser-use` from `https://github.com/
 Root project conventions and the root `AGENTS.md` are authoritative; vendored Browser Use docs and agent-instruction files are wrappers that defer to this repo.
 Preserved upstream reference material lives in `tools/browser-use/UPSTREAM_README.md`, `tools/browser-use/UPSTREAM_AGENTS.md`, `tools/browser-use/UPSTREAM_CLAUDE.md`, and `tools/browser-use/UPSTREAM_CLOUD.md`.
 Browser Use runtime configuration also lives in the root `.env`; the vendored subtree is wired to read `C:\Programing\Market lense\.env` instead of maintaining its own local `.env`.
+The vendored copy also carries local CodeQL remediations for Market Lense CI: startup/setup logs avoid config-derived secret values, sensitive-data placeholder logs report counts and sanitized hosts only, example HTML-to-text conversion uses an HTML parser, and URL assertions use parsed hostnames instead of substring checks. Keep these hardening patches when refreshing the vendored tree, or port them upstream before replacing it.
 To use that local source inside this project virtualenv, install it editable:
 
 ```bash

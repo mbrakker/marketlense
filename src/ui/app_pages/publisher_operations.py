@@ -183,6 +183,23 @@ def resolve_path_choice(
     return str(configured_path or "").strip()
 
 
+def oauth_file_status_label(
+    *,
+    path_mode: str,
+    selected_path: str,
+    configured_path: str,
+) -> str:
+    selected = str(selected_path or "").strip()
+    configured = str(configured_path or "").strip()
+    if not selected:
+        return "Missing: path not set"
+    if path_mode == "Custom path":
+        return "Selected; validated during login"
+    if configured and os.path.exists(configured):
+        return f"Present: {configured}"
+    return f"Missing: {configured or 'path not set'}"
+
+
 def _render_guided_panel(title: str, description: str, *, tooltip: str) -> None:
     st.markdown(
         (
@@ -1311,11 +1328,10 @@ def render_auth_access() -> None:
                 },
                 {
                     "label": "Google OAuth client",
-                    "value": (
-                        f"Present: {resolved_client_path}"
-                        if resolved_client_path.strip()
-                        and os.path.exists(resolved_client_path.strip())
-                        else f"Missing: {resolved_client_path or 'path not set'}"
+                    "value": oauth_file_status_label(
+                        path_mode=str(path_mode or ""),
+                        selected_path=resolved_client_path,
+                        configured_path=configured_client_path,
                     ),
                     "help": _tip(
                         "Whether the OAuth client JSON file exists at the selected path.",
@@ -1324,11 +1340,10 @@ def render_auth_access() -> None:
                 },
                 {
                     "label": "Google OAuth token",
-                    "value": (
-                        f"Present: {resolved_token_path}"
-                        if resolved_token_path.strip()
-                        and os.path.exists(resolved_token_path.strip())
-                        else f"Missing: {resolved_token_path or 'path not set'}"
+                    "value": oauth_file_status_label(
+                        path_mode=str(path_mode or ""),
+                        selected_path=resolved_token_path,
+                        configured_path=configured_token_path,
                     ),
                     "help": _tip(
                         "Whether the OAuth token JSON file exists at the selected path.",

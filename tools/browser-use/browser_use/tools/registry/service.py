@@ -7,6 +7,7 @@ from collections.abc import Callable
 from inspect import Parameter, iscoroutinefunction, signature
 from types import UnionType
 from typing import Any, Generic, Optional, TypeVar, Union, get_args, get_origin
+from urllib.parse import urlparse
 
 import pyotp
 from pydantic import BaseModel, Field, RootModel, create_model
@@ -411,8 +412,11 @@ class Registry(Generic[Context]):
 	def _log_sensitive_data_usage(self, placeholders_used: set[str], current_url: str | None) -> None:
 		"""Log when sensitive data is being used on a page"""
 		if placeholders_used:
-			url_info = f' on {current_url}' if current_url and not is_new_tab_page(current_url) else ''
-			logger.info(f'🔒 Using sensitive data placeholders: {", ".join(sorted(placeholders_used))}{url_info}')
+			host = ''
+			if current_url and not is_new_tab_page(current_url):
+				host = str(urlparse(current_url).hostname or '').strip()
+			url_info = f' on host {host}' if host else ''
+			logger.info('🔒 Using %s sensitive data placeholders%s', len(placeholders_used), url_info)
 
 	def _replace_sensitive_data(
 		self, params: BaseModel, sensitive_data: dict[str, Any], current_url: str | None = None

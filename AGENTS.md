@@ -1047,3 +1047,42 @@ An agent MUST NOT say decomposition work is complete unless:
 * architecture review evidence is updated when required
 * live canary either passes or is explicitly reported as blocked
 * final response names any residual verification gap
+
+### 11.8 Large Module Prevention By Semantic Ownership
+
+Agents MUST NOT create or substantially extend monolithic modules.
+
+Line count alone is not a violation. A module around 1000 lines can be acceptable when it has one clear responsibility, low internal concern diversity, and splitting it would increase coupling or navigation cost.
+
+A split is REQUIRED when a module contains multiple stable semantic responsibilities, such as:
+
+* deterministic policy plus provider/model execution
+* orchestration plus domain decision logic
+* parsing plus rendering plus persistence
+* geometry/raster/text/layout concerns in one file
+* retry/runtime control mixed with business rules
+* compatibility exports mixed with substantial implementation ownership
+
+When new code is expected to make a module semantically broad, or when an existing large module is being substantially extended, the agent MUST first evaluate whether the work should be implemented as a facade plus private child submodules inside the same bounded context.
+
+Required split structure:
+
+* Keep the existing public module as the canonical facade, coordinator, or service boundary.
+* Put implementation owners in a private child subfolder inside the same bounded context.
+* Name child modules by semantic responsibility, not by generic buckets such as `helpers`, `utils`, `misc`, or `part1`.
+* Preserve public imports through the facade unless an explicit public migration is approved.
+* Keep child-module dependencies explicit and acyclic.
+* Avoid pass-through wrappers except for compatibility facade exports.
+* If the split creates 3 or more peer child modules, add an architecture review before merge.
+
+Before adding substantial code to an already large module, the agent MUST ask:
+
+* Is there more than one semantic owner in this file?
+* Would a future engineer naturally search for this logic under separate names?
+* Can the responsibilities be tested independently without patching internals?
+* Would splitting reduce coupling and defect blast radius?
+* Would splitting make the main entrypoint easier to understand?
+
+If the answer supports splitting, split first and then implement. If not, keep the module together and do not create artificial child modules.
+
+Large files are not automatically invalid. A large file is invalid only when it combines multiple semantic responsibilities or architectural roles. Agents MUST split by semantic ownership, not by line count.

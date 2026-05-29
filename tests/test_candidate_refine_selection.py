@@ -1212,6 +1212,26 @@ def test_candidate_prefilter_rejects_obvious_table_text_blocks():
     )
 
 
+def test_candidate_prefilter_does_not_reject_arbitrary_doi_substrings():
+    pseudo_reference = _candidate(
+        cid="table_pseudo_reference",
+        kind="table",
+        preview_text="This table discusses pseudoi.org metrics without a reference URL.",
+        meta={
+            "rows": 48,
+            "cols": 5,
+            "numeric_ratio": 0.107,
+            "avg_words_per_cell": 2.31,
+            "area_frac": 0.7055,
+        },
+    )
+
+    assert (
+        rsg._candidate_prefilter_reject_reason(pseudo_reference)
+        != "table_reference_text_block"
+    )
+
+
 def test_truncate_prefiltered_candidates_keeps_kind_balance():
     candidates = []
     for idx in range(60):

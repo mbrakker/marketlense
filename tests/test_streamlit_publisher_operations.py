@@ -122,6 +122,43 @@ def test_delivery_email_and_path_resolution_helpers() -> None:
     )
 
 
+def test_oauth_file_status_custom_paths_do_not_probe_filesystem(monkeypatch) -> None:
+    def fail_exists(path: str) -> bool:
+        raise AssertionError(f"unexpected filesystem probe for {path}")
+
+    monkeypatch.setattr(pages.os.path, "exists", fail_exists)
+
+    assert (
+        pages.oauth_file_status_label(
+            path_mode="Custom path",
+            selected_path="../untrusted/oauth-client.json",
+            configured_path="",
+        )
+        == "Selected; validated during login"
+    )
+
+
+def test_oauth_file_status_configured_paths_reports_presence(monkeypatch) -> None:
+    monkeypatch.setattr(pages.os.path, "exists", lambda path: path == "client.json")
+
+    assert (
+        pages.oauth_file_status_label(
+            path_mode="Configured path",
+            selected_path="client.json",
+            configured_path="client.json",
+        )
+        == "Present: client.json"
+    )
+    assert (
+        pages.oauth_file_status_label(
+            path_mode="Configured path",
+            selected_path="missing.json",
+            configured_path="missing.json",
+        )
+        == "Missing: missing.json"
+    )
+
+
 def test_resolve_audit_limits_uses_presets_and_custom_values() -> None:
     assert pages.resolve_audit_limits(
         preset="Quick",

@@ -8,6 +8,8 @@ Three focused tests:
 """
 
 import json
+import re
+from urllib.parse import urlparse
 
 import pytest
 
@@ -18,6 +20,13 @@ from browser_use.llm.messages import AssistantMessage, BaseMessage, UserMessage
 # Super long URL to reuse across tests - much longer than the 25 character limit
 # Includes both query params (?...) and fragment params (#...)
 SUPER_LONG_URL = 'https://documentation.example-company.com/api/v3/enterprise/user-management/endpoints/administration/create-new-user-account-with-permissions/advanced-settings?format=detailed-json&version=3.2.1&timestamp=1699123456789&session_id=abc123def456ghi789&authentication_token=very_long_authentication_token_string_here&include_metadata=true&expand_relationships=user_groups,permissions,roles&sort_by=created_at&order=desc&page_size=100&include_deprecated_fields=false&api_key=super_long_api_key_that_exceeds_normal_limits#section=user_management&tab=advanced&view=detailed&scroll_to=permissions_table&highlight=admin_settings&filter=active_users&expand_all=true&debug_mode=enabled'
+
+
+def _contains_url_host(text: str, expected_host: str) -> bool:
+	for candidate in re.findall(r'https?://[^\s)]+', text):
+		if urlparse(candidate).hostname == expected_host:
+			return True
+	return False
 
 
 @pytest.fixture
@@ -43,7 +52,7 @@ class TestUrlShorteningInputProcessing:
 		# Verify URL was shortened in the message (modified in-place)
 		processed_content = messages[0].content or ''
 		assert processed_content != original_content
-		assert 'https://documentation.example-company.com' in processed_content
+		assert _contains_url_host(processed_content, 'documentation.example-company.com')
 		assert len(processed_content) < len(original_content)
 
 		# Verify URL mapping was returned
@@ -67,8 +76,8 @@ class TestUrlShorteningInputProcessing:
 
 		assert user_processed_content != user_content
 		assert assistant_processed_content != assistant_content
-		assert 'https://documentation.example-company.com' in user_processed_content
-		assert 'https://documentation.example-company.com' in assistant_processed_content
+		assert _contains_url_host(user_processed_content, 'documentation.example-company.com')
+		assert _contains_url_host(assistant_processed_content, 'documentation.example-company.com')
 		assert len(user_processed_content) < len(user_content)
 		assert len(assistant_processed_content) < len(assistant_content)
 

@@ -1,4 +1,6 @@
 import pytest
+import io
+import logging
 from pydantic import BaseModel, Field
 
 from browser_use.agent.message_manager.service import MessageManager
@@ -271,6 +273,57 @@ def test_is_new_tab_page():
 	assert is_new_tab_page('http://google.com') is False
 	assert is_new_tab_page('') is False
 	assert is_new_tab_page('chrome://settings') is False
+
+
+def test_sensitive_data_usage_log_omits_placeholder_names_and_query_params(registry):
+	"""Sensitive-data usage logs should expose only counts and sanitized page host."""
+	from browser_use.tools.registry import service as registry_service
+
+	stream = io.StringIO()
+	handler = logging.StreamHandler(stream)
+	registry_service.logger.addHandler(handler)
+	registry_service.logger.setLevel(logging.INFO)
+
+	try:
+		registry._log_sensitive_data_usage(
+			{'password', 'api_key'},
+			'https://example.com/login?token=secret-token&password=secret',
+		)
+	finally:
+		registry_service.logger.removeHandler(handler)
+
+	combined = stream.getvalue()
+	assert '2 sensitive data placeholders' in combined
+	assert 'example.com' in combined
+	assert 'password' not in combined
+	assert 'api_key' not in combined
+	assert 'secret-token' not in combined
+
+
+def test_cli_redaction_helpers_hide_config_values():
+	from browser_use.utils import safe_log_exception_name, safe_log_value
+
+	assert safe_log_value('C:/Users/Alice/AppData/browser/password-profile') == '<configured>'
+	assert safe_log_value('gpt-secret-model') == '<configured>'
+	assert safe_log_exception_name(ValueError('password=secret-token')) == 'ValueError'
+
+
+def test_setup_action_logging_does_not_print_sensitive_descriptions(capsys):
+	from browser_use.skill_cli.commands.setup import _log_actions
+
+	_log_actions(
+		[
+			{
+				'description': 'Write password=secret-token into config',
+				'required': True,
+			}
+		]
+	)
+
+	output = capsys.readouterr().out
+	assert 'Setup action 1' in output
+	assert 'secret-token' not in output
+	assert 'password' not in output
 
 
 def test_sensitive_data_filtered_from_action_results():

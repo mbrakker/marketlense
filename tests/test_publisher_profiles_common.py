@@ -119,3 +119,33 @@ def test_resolve_icon_download_url_prefers_public_override(tmp_path: Path) -> No
         == "https://www.activate.com/assets/icon-light.png"
     )
     assert resolve_icon_download_url(rows[1]) == "https://www.cbcommerce.eu/icon.png"
+
+
+def test_resolve_icon_download_url_does_not_match_nested_s3_hostname(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "publisher-profiles.json"
+    icon_source = (
+        "https://example.com/redirect?"
+        "next=https://prod-files-secure.s3.us-west-2.amazonaws.com/private-icon.png"
+    )
+    config_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "publishers": [
+                    {
+                        "notion_page_id": "157290cc-00d3-80c8-9980-e347ba67fc62",
+                        "notion_page_url": "https://www.notion.so/157290cc00d380c89980e347ba67fc62",
+                        "name": "Activate Consulting",
+                        "icon_source": icon_source,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = load_profile_rows(config_path)
+
+    assert resolve_icon_download_url(rows[0]) == icon_source
