@@ -1,0 +1,27 @@
+<!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"div"} /-->
+
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell","layout":{"type":"constrained"}} -->
+<main id="main-content" class="wp-block-group ml-shell">
+  <!-- wp:group {"className":"ml-taxonomy-header","layout":{"type":"constrained"}} -->
+  <div class="wp-block-group ml-taxonomy-header">
+    <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+    <p class="ml-section-kicker">Signals archive</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:heading {"level":1} -->
+    <h1 class="wp-block-heading">Approved market signals</h1>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph {"className":"ml-page-lead"} -->
+    <p class="ml-page-lead">Durable Signal posts with validated source evidence and publication metadata.</p>
+    <!-- /wp:paragraph -->
+  </div>
+  <!-- /wp:group -->
+
+  <!-- wp:shortcode -->
+  [ml_signal_archive per_page="12"]
+  <!-- /wp:shortcode -->
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"div"} /-->

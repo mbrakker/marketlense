@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import asdict, dataclass, field, replace
 import hashlib
 import logging
@@ -78,6 +79,11 @@ from src.utils.wp_auth import build_auth_header
 logger = logging.getLogger("market_lense.publish_orchestrator")
 _PUBLISH_IDEMPOTENCY_SCOPE = "publish_orchestrator.publish_html"
 _CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE = "publish_orchestrator.cross_report_package"
+_CROSS_REPORT_WORDPRESS_POST_TYPES = {
+    "wordpress:ml_report": "ml_report",
+    "wordpress:ml_briefing": "ml_briefing",
+    "wordpress:ml_signal": "ml_signal",
+}
 
 
 @dataclass(frozen=True)
@@ -721,6 +727,31 @@ def _record_publish_idempotency(
     )
 
 
+def _cross_report_settings_for_target_route(
+    settings: PublishSettings,
+    target_route: str,
+) -> PublishSettings:
+    post_type = _CROSS_REPORT_WORDPRESS_POST_TYPES.get(
+        str(target_route).strip(),
+        settings.wp.post_type,
+    )
+    if post_type == settings.wp.post_type:
+        return settings
+
+    try:
+        route_wp_settings = replace(settings.wp, post_type=post_type)
+    except TypeError:
+        route_wp_settings = copy.copy(settings.wp)
+        route_wp_settings.post_type = post_type
+
+    try:
+        return replace(settings, wp=route_wp_settings)
+    except TypeError:
+        route_settings = copy.copy(settings)
+        route_settings.wp = route_wp_settings
+        return route_settings
+
+
 def _cross_report_publish_checksum(
     package: CrossReportPublishPackage,
     settings: PublishSettings,
@@ -883,10 +914,11 @@ def publish_cross_report_package(
         )
         return result
 
-    checksum = _cross_report_publish_checksum(package, settings)
+    route_settings = _cross_report_settings_for_target_route(settings, package.target_route)
+    checksum = _cross_report_publish_checksum(package, route_settings)
     reused = _lookup_cross_report_publish_idempotency(
         package=package,
-        settings=settings,
+        settings=route_settings,
         checksum=checksum,
         ctx=ctx,
     )
@@ -907,11 +939,11 @@ def publish_cross_report_package(
         )
         return reused
 
-    base_url = settings.wp.site_url.rstrip("/")
+    base_url = route_settings.wp.site_url.rstrip("/")
     auth_header = build_auth_header(
-        username=settings.wp.username,
-        app_password=settings.wp.app_password,
-        bearer_token=settings.wp.bearer_token,
+        username=route_settings.wp.username,
+        app_password=route_settings.wp.app_password,
+        bearer_token=route_settings.wp.bearer_token,
     )
 
     def _publish_attempt() -> CrossReportPublishResultSummary:
@@ -921,9 +953,9 @@ def publish_cross_report_package(
                 base_url=base_url,
                 auth_header=auth_header,
                 file_id=package.file_id,
-                ssl_verify=settings.wp.ssl_verify,
-                ca_bundle_path=settings.wp.ca_bundle_path,
-                post_type=settings.wp.post_type,
+                ssl_verify=route_settings.wp.ssl_verify,
+                ca_bundle_path=route_settings.wp.ca_bundle_path,
+                post_type=route_settings.wp.post_type,
             ),
             ctx,
         )
@@ -976,7 +1008,7 @@ def publish_cross_report_package(
                 ),
                 resolved_terms=PublishResolvedTerms(schema_version="1.0"),
             ),
-            settings,
+            route_settings,
             ctx,
         )
         return _cross_report_result_from_outcome(
@@ -1037,7 +1069,7 @@ def publish_cross_report_package(
     if result.status in {"published", "skipped"}:
         _record_cross_report_publish_idempotency(
             package=package,
-            settings=settings,
+            settings=route_settings,
             result=result,
             checksum=checksum,
             ctx=ctx,

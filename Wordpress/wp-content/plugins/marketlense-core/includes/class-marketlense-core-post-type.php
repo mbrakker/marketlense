@@ -17,6 +17,10 @@ final class Post_Type
 {
     public const POST_TYPE = 'ml_report';
 
+    public const SIGNAL_POST_TYPE = 'ml_signal';
+
+    public const BRIEFING_POST_TYPE = 'ml_briefing';
+
     public const CORE_POST_TYPE = 'post';
 
     /**
@@ -68,6 +72,95 @@ final class Post_Type
                 'has_archive'         => true,
                 'rewrite'             => [
                     'slug'       => 'reports',
+                    'with_front' => false,
+                ],
+                'hierarchical'        => false,
+                'taxonomies'          => ['category', 'post_tag', Taxonomies::PUBLISHER_TAXONOMY],
+                'exclude_from_search' => false,
+                'publicly_queryable'  => true,
+                'query_var'           => true,
+                'capability_type'     => 'post',
+                'map_meta_cap'        => true,
+            ]
+        );
+
+        register_post_type(
+            self::SIGNAL_POST_TYPE,
+            [
+                'labels' => [
+                    'name'               => __('Signals', 'marketlense-core'),
+                    'singular_name'      => __('Signal', 'marketlense-core'),
+                    'add_new'            => __('Add New Signal', 'marketlense-core'),
+                    'add_new_item'       => __('Add New Signal', 'marketlense-core'),
+                    'edit_item'          => __('Edit Signal', 'marketlense-core'),
+                    'new_item'           => __('New Signal', 'marketlense-core'),
+                    'view_item'          => __('View Signal', 'marketlense-core'),
+                    'view_items'         => __('View Signals', 'marketlense-core'),
+                    'search_items'       => __('Search Signals', 'marketlense-core'),
+                    'not_found'          => __('No signals found.', 'marketlense-core'),
+                    'not_found_in_trash' => __('No signals found in trash.', 'marketlense-core'),
+                    'all_items'          => __('All Signals', 'marketlense-core'),
+                    'archives'           => __('Signal Archives', 'marketlense-core'),
+                    'attributes'         => __('Signal Attributes', 'marketlense-core'),
+                    'menu_name'          => __('Market Lense Signals', 'marketlense-core'),
+                ],
+                'public'              => true,
+                'show_ui'             => true,
+                'show_in_menu'        => true,
+                'show_in_rest'        => true,
+                'rest_base'           => self::SIGNAL_POST_TYPE,
+                'menu_position'       => 21,
+                'menu_icon'           => 'dashicons-lightbulb',
+                'supports'            => ['title', 'editor', 'excerpt', 'revisions', 'author', 'custom-fields'],
+                'has_archive'         => true,
+                'rewrite'             => [
+                    'slug'       => 'signals',
+                    'with_front' => false,
+                ],
+                'hierarchical'        => false,
+                'taxonomies'          => ['category', 'post_tag', Taxonomies::PUBLISHER_TAXONOMY],
+                'exclude_from_search' => false,
+                'publicly_queryable'  => true,
+                'query_var'           => true,
+                'capability_type'     => 'post',
+                'map_meta_cap'        => true,
+            ]
+        );
+
+        register_post_type(
+            self::BRIEFING_POST_TYPE,
+            [
+                'labels' => [
+                    'name'                  => __('Briefings', 'marketlense-core'),
+                    'singular_name'         => __('Briefing', 'marketlense-core'),
+                    'add_new'               => __('Add New Briefing', 'marketlense-core'),
+                    'add_new_item'          => __('Add New Briefing', 'marketlense-core'),
+                    'edit_item'             => __('Edit Briefing', 'marketlense-core'),
+                    'new_item'              => __('New Briefing', 'marketlense-core'),
+                    'view_item'             => __('View Briefing', 'marketlense-core'),
+                    'view_items'            => __('View Briefings', 'marketlense-core'),
+                    'search_items'          => __('Search Briefings', 'marketlense-core'),
+                    'not_found'             => __('No briefings found.', 'marketlense-core'),
+                    'not_found_in_trash'    => __('No briefings found in trash.', 'marketlense-core'),
+                    'all_items'             => __('All Briefings', 'marketlense-core'),
+                    'archives'              => __('Briefing Archives', 'marketlense-core'),
+                    'attributes'            => __('Briefing Attributes', 'marketlense-core'),
+                    'featured_image'        => __('Briefing Cover Image', 'marketlense-core'),
+                    'set_featured_image'    => __('Set cover image', 'marketlense-core'),
+                    'remove_featured_image' => __('Remove cover image', 'marketlense-core'),
+                    'menu_name'             => __('Market Lense Briefings', 'marketlense-core'),
+                ],
+                'public'              => true,
+                'show_ui'             => true,
+                'show_in_menu'        => true,
+                'show_in_rest'        => true,
+                'rest_base'           => self::BRIEFING_POST_TYPE,
+                'menu_position'       => 22,
+                'menu_icon'           => 'dashicons-welcome-write-blog',
+                'supports'            => ['title', 'editor', 'excerpt', 'thumbnail', 'revisions', 'author', 'custom-fields'],
+                'has_archive'         => true,
+                'rewrite'             => [
+                    'slug'       => 'briefings',
                     'with_front' => false,
                 ],
                 'hierarchical'        => false,

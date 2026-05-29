@@ -46,6 +46,6 @@ def test_wordpress_navigation_targets_are_resolvable_and_provisioned() -> None:
     shell_source = SHELL_PROVISION_PATH.read_text(encoding="utf-8")
 
     for target, slug in (("signals", "signals"), ("briefings", "briefings")):
-        assert f"'{target}' => home_url('/{slug}/')" in shortcodes_source
+        assert f"'{target}' => $this->post_type_archive_url(Post_Type::" in shortcodes_source
         assert f'title="{target.title()}", slug="{slug}"' in rest_source
         assert f'"{target.title()}|{slug}"' in shell_source

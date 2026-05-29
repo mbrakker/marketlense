@@ -812,8 +812,8 @@ class CrossReportAnalysisOrchestratorRequest:
         metadata={"doc": "Retry jitter controlled by the orchestrator."},
     )
     publish_target_route: str = field(
-        default="wordpress:ml_report",
-        metadata={"doc": "Publication target route reserved for later publish stages."},
+        default="wordpress:ml_briefing",
+        metadata={"doc": "Publication target route for cross-report Briefing posts."},
     )
 
 

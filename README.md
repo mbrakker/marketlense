@@ -270,9 +270,9 @@ Cross-report cost controls are configured under `cross_report_analysis` in `src/
 
 Validated generation persists a deterministic local artifact at `out/cross_report_analysis/<analysis_slug>/analysis.json` or the CLI-specified output root. The orchestrator builds a `CrossReportAnalysisArtifact` with schema version, generated timestamp, request fingerprint, idempotency key, selected report IDs, projection content hashes, prompt hashes, config fingerprint, validation status, generated result, validation result, publish package, and publish summaries, then writes it through `file_service.write_bytes` so the write is atomic and reviewable.
 
-After deterministic validation passes, `src/generators/cross_report_analysis_generator.py::build_cross_report_publish_package` creates a `CrossReportPublishPackage` with publish-ready Briefing title, slug, excerpt, body HTML, full review HTML, source report map, evidence reference appendix, raw metric appendix, uncertainty/divergence notes, prompt hashes, validation hash, artifact hash, category/tag labels, and machine-readable metadata. The HTML is assembled through `src/generators/cross_report_publish_html.py` using the same digest-style shell as ingested report pages: hero, sticky section navigation, executive synthesis, strategic read-through cards, source map, uncertainty notes, evidence references, and raw metric appendix. The package is still built for review in non-live modes, but it fails closed with `AppError(code="cross_report_publish_validation_failed")` when `cross_report_analysis.publish_requires_validation_pass=true` and validation did not pass.
+After deterministic validation passes, `src/generators/cross_report_analysis_generator.py::build_cross_report_publish_package` creates a `CrossReportPublishPackage` with publish-ready Briefing title, slug, excerpt, body HTML, full review HTML, source report map, evidence reference appendix, raw metric appendix, uncertainty/divergence notes, prompt hashes, validation hash, artifact hash, category/tag labels, machine-readable metadata, and default target route `wordpress:ml_briefing`. The HTML is assembled through `src/generators/cross_report_publish_html.py` using the same digest-style shell as ingested report pages: hero, sticky section navigation, executive synthesis, strategic read-through cards, source map, uncertainty notes, evidence references, and raw metric appendix. The package is still built for review in non-live modes, but it fails closed with `AppError(code="cross_report_publish_validation_failed")` when `cross_report_analysis.publish_requires_validation_pass=true` and validation did not pass.
 
-Publication stays inside the existing publish control plane. The cross-report orchestrator decides the operator mode and delegates `publish_dry_run` or `publish_live` to `src/orchestrators/publish_orchestrator.py::publish_cross_report_package`; that path reuses the existing `publish_generator` and WordPress service boundary instead of introducing a peer WordPress client. Its live idempotency key includes selected theme ID, selected report IDs, artifact hash, validation hash, prompt hashes, target route, and WordPress post type, so unchanged live publishes reuse the same canonical outcome instead of creating duplicate posts. If WordPress already contains the same cross-report `file_id` but the current package checksum has no matching publish idempotency record, live publish fails with `AppError(code="cross_report_publish_existing_post_checksum_mismatch")` instead of silently skipping changed content.
+Publication stays inside the existing publish control plane. The cross-report orchestrator decides the operator mode and delegates `publish_dry_run` or `publish_live` to `src/orchestrators/publish_orchestrator.py::publish_cross_report_package`; that path reuses the existing `publish_generator` and WordPress service boundary instead of introducing a peer WordPress client. `publish_cross_report_package` maps `wordpress:ml_briefing` to the bundled `ml_briefing` REST post type for lookup and create calls, leaving the configured report post type untouched. Its live idempotency key includes selected theme ID, selected report IDs, artifact hash, validation hash, prompt hashes, target route, and WordPress post type, so unchanged live publishes reuse the same canonical outcome instead of creating duplicate posts. If WordPress already contains the same cross-report `file_id` but the current package checksum has no matching publish idempotency record, live publish fails with `AppError(code="cross_report_publish_existing_post_checksum_mismatch")` instead of silently skipping changed content.
 
 Publication modes are:
 
@@ -301,7 +301,7 @@ python -m src.cli generate-cross-report-analysis \
 
 Safe rollout for operators is: run `generate_only` for artifact review, run `publish_dry_run` to verify publish routing and package metadata without WordPress side effects, then enable `cross_report_analysis.publish_enabled=true` in YAML and run `publish_live` only after validation is passing and the target WordPress settings are confirmed. `publish_live` remains blocked by configuration by default.
 
-First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no new WordPress plugin or custom post-type dependency; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
+First-release non-goals: no metric normalization, unit conversion, or cross-publisher statistical harmonization; no separate WordPress plugin beyond the bundled Market Lense plugin; no global semantic/vector retrieval product over `vector_projection_queue`; no new deployable worker, microservice, package, or external search service.
 
 Troubleshooting notes:
 
@@ -319,12 +319,22 @@ The `Wordpress/` folder contains the rendering and portal layer for Market Lense
 - core domain plugin: `wp-content/plugins/marketlense-core`
 - packaging, provisioning, sync, and smoke-test scripts: `Wordpress/scripts/*`
 
+### Public Entity Model
+
+The WordPress public navigation follows the README entity model: Reports, Topics, Signals, Briefings, and Publishers.
+
+- Reports use the existing `ml_report` custom post type at `/reports/`, while legacy digest posts in core `post` remain supported through recovered digest metadata.
+- Signals use the `ml_signal` custom post type and the canonical route `wordpress:ml_signal`. The durable Signal publish projection is `src/contracts/wordpress_entities.py::SignalPublishProjection` with schema version `1.0`, title, slug, summary/body HTML, evidence IDs, source report IDs, topic IDs, confidence, uncertainty, validation status, and target route.
+- Briefings use the `ml_briefing` custom post type and the canonical route `wordpress:ml_briefing`. Briefing content is not generated by a duplicate WordPress generator; it is the existing `CrossReportPublishPackage` from cross-report analysis.
+- `/signals/` and `/briefings/` are page-compatible archive landings rendered by block templates and shortcodes, and CPT archives are also available for sites that do not provision those pages.
+- Signal and Briefing detail pages use the `single-ml_signal.html` and `single-ml_briefing.html` block templates.
+
 ### Scope
 
 Included:
 
 - FSE block theme templates/parts/patterns for editorial rendering
-- WordPress plugin for the report CPT/taxonomy/meta domain model
+- WordPress plugin for the Report, Signal, Briefing, and publisher taxonomy domain model
 - ZIP packaging scripts for backoffice installation
 - local sync, provisioning, and smoke-test scripts
 

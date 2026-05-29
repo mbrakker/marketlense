@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import logging
@@ -19,7 +20,7 @@ def _package(tmp_path) -> CrossReportPublishPackage:
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         package_id="cross-report:analysis-ai",
         file_id="cross-report:analysis-ai",
-        target_route="wordpress:ml_report",
+        target_route="wordpress:ml_briefing",
         title="AI Commerce Across Reports",
         slug="ai-commerce-across-reports",
         excerpt="AI commerce is visible across selected reports.",
@@ -81,7 +82,7 @@ def test_publish_cross_report_package_dry_run_skips_wordpress(
     )
 
     assert result.status == "dry_run"
-    assert result.target_route == "wordpress:ml_report"
+    assert result.target_route == "wordpress:ml_briefing"
     assert result.idempotency_reused is False
     assert calls == []
 
@@ -136,6 +137,54 @@ def test_publish_cross_report_package_live_reuses_persisted_publish_outcome(
     assert second.post_url == "https://example.com/cross-report"
     assert len(publish_calls) == 1
     assert publish_calls[0].html_snapshot is not None
+
+
+def test_publish_cross_report_package_routes_briefing_packages_to_briefing_post_type(
+    tmp_path,
+    run_context,
+) -> None:
+    observed_lookup_post_types = []
+    observed_publish_post_types = []
+    package = replace(_package(tmp_path), target_route="wordpress:ml_briefing")
+    settings = _settings(tmp_path)
+    settings.wp.post_type = "ml_report"
+
+    def _lookup(request, ctx):
+        observed_lookup_post_types.append(request.post_type)
+        return WordPressPostLookupResponse(
+            schema_version="1.0",
+            found=False,
+            post_id=None,
+            link=None,
+        )
+
+    def _publish(request, settings, ctx):
+        observed_publish_post_types.append(settings.wp.post_type)
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=request.html_path,
+            file_id=request.file_id,
+            status="published",
+            post_id=321,
+            post_url="https://example.com/briefings/ai-commerce-across-reports/",
+        )
+
+    result = publish_cross_report_package(
+        package,
+        settings,
+        run_context,
+        dry_run=False,
+        publish_html_fn=_publish,
+        find_post_by_file_id_fn=_lookup,
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert result.status == "published"
+    assert result.target_route == "wordpress:ml_briefing"
+    assert result.post_url == "https://example.com/briefings/ai-commerce-across-reports/"
+    assert observed_lookup_post_types == ["ml_briefing"]
+    assert observed_publish_post_types == ["ml_briefing"]
+    assert settings.wp.post_type == "ml_report"
 
 
 def test_publish_cross_report_package_existing_post_with_changed_checksum_errors(

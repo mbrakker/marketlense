@@ -422,7 +422,7 @@ def _build_cross_report_cli_request(
         retry_base_delay_seconds=1.0,
         retry_backoff_step_seconds=1.0,
         retry_jitter_seconds=0.25,
-        publish_target_route="wordpress:ml_report",
+        publish_target_route="wordpress:ml_briefing",
     )
 
 

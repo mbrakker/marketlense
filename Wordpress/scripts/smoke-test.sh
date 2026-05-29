@@ -137,6 +137,12 @@ required_templates=(
   "front-page.html"
   "single-ml_report.html"
   "archive-ml_report.html"
+  "page-signals.html"
+  "page-briefings.html"
+  "single-ml_signal.html"
+  "archive-ml_signal.html"
+  "single-ml_briefing.html"
+  "archive-ml_briefing.html"
   "taxonomy-ml_publisher.html"
   "page-about.html"
   "page-methodology.html"
@@ -160,6 +166,8 @@ done
 echo "Template presence checks passed."
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( home_url('/') ) );" "Front page request"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/types/ml_report') ) );" "REST type ml_report"
+require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/types/ml_signal') ) );" "REST type ml_signal"
+require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/types/ml_briefing') ) );" "REST type ml_briefing"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/taxonomies/ml_publisher') ) );" "REST taxonomy ml_publisher"
 
 echo "Checking ml_report post type..."
@@ -198,6 +206,8 @@ require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( get_post
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( add_query_arg(array('category' => 'smoke-topic'), get_post_type_archive_link('ml_report')) ) );" "Reports topic filter request"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( add_query_arg(array('ml_publisher' => 'smoke-publisher'), get_post_type_archive_link('ml_report')) ) );" "Reports publisher filter request"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( add_query_arg(array('category' => 'smoke-topic', 'ml_publisher' => 'smoke-publisher'), get_post_type_archive_link('ml_report')) ) );" "Reports combined filter request"
+require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( get_post_type_archive_link('ml_signal') ) );" "Signals archive request"
+require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( get_post_type_archive_link('ml_briefing') ) );" "Briefings archive request"
 
 required_pages=(
   "about"
@@ -218,6 +228,8 @@ done
 
 require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(get_post_type_archive_link('ml_report'))), 'ml-report-filter-form') !== false ? '1' : '0';" "Browse reports filter UI rendered"
 require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/topics-directory/'))), 'ml-directory-list') !== false ? '1' : '0';" "Topics directory shortcode rendered"
+require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/signals/'))), 'ml-entity-archive') !== false ? '1' : '0';" "Signals archive shortcode rendered"
+require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/briefings/'))), 'ml-entity-archive') !== false ? '1' : '0';" "Briefings archive shortcode rendered"
 require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/publishers-directory/'))), 'Publisher homepage') !== false ? '1' : '0';" "Publishers directory homepage CTA rendered"
 require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), '/reports/') !== false ? '1' : '0';" "Navigation includes reports link"
 require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), '/topics-directory/') !== false ? '1' : '0';" "Navigation includes topics link"

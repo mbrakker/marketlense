@@ -470,7 +470,7 @@ def build_cross_report_publish_package(
     artifact_path: str,
     html_path: str,
     publish_requires_validation_pass: bool = True,
-    target_route: str = "wordpress:ml_report",
+    target_route: str = "wordpress:ml_briefing",
 ) -> CrossReportPublishPackage:
     validate_cross_report_contract(generated)
     validate_cross_report_contract(validation_result)

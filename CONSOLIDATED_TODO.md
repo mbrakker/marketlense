@@ -335,18 +335,6 @@ Findings summary:
 
 Scope: gaps identified by comparing the README direction against the current `src/` implementation and the `Wordpress/wp-content` block theme/plugin. These items cover public information architecture, WordPress design, publish entities, and naming drift.
 
-- **Title:** Add first-class WordPress destinations for Signals and cross-report Briefings [Impact: 5/5, Effort: 4/5]
-  - Explanation: README treats Signal and Briefing as canonical public entities. Briefing generation already exists as cross-report analysis/publish packages, but WordPress does not expose those packages as a canonical Briefing archive/detail surface. Signals currently exist only as shortcode-driven, signal-like modules.
-  - Pros: Closes the largest entity-model gap while reusing the existing cross-report analysis implementation for Briefings.
-  - Cons: Requires contract, publish, plugin, theme, and migration work if old cross-report outputs need backfill.
-  - Acceptance Criteria:
-    - Signal has an explicit publish contract or documented projection with a schema version.
-    - Briefing WordPress surfaces map to the existing cross-report analysis/publish package contract instead of introducing a duplicate briefing generator.
-    - WordPress registers canonical destinations for Signals and Briefings through CPTs, taxonomies, pages, or a documented alternative with tests.
-    - Theme templates or block patterns render Signal and Briefing archive/detail surfaces.
-    - Publish pipeline can populate those surfaces without empty/default term contracts.
-    - README documents the final WordPress entity implementation and naming.
-
 - **Title:** Route cross-report HTML publication into the Briefings section [Impact: 5/5, Effort: 3/5]
   - Explanation: Cross-report HTML is already generated through `src/generators/cross_report_publish_html.py` and routed through `python -m src.cli generate-cross-report-analysis` plus `publish_orchestrator.publish_cross_report_package`. The remaining gap is making that path explicitly publish the generated cross-report HTML as a WordPress post in the Briefings section, not as a Report/digest or an unclassified WordPress post.
   - Pros: Turns the implemented cross-report analysis capability into the public Briefing workflow without creating a second publication subsystem.

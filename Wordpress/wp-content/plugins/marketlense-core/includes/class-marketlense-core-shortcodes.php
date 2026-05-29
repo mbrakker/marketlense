@@ -35,6 +35,8 @@ final class Shortcodes
         'ml_intelligence_signals' => 'render_intelligence_signals',
         'ml_strategic_themes' => 'render_strategic_themes',
         'ml_publisher_authority' => 'render_publisher_authority',
+        'ml_signal_archive' => 'render_signal_archive',
+        'ml_briefing_archive' => 'render_briefing_archive',
         'ml_button_link' => 'render_button_link',
         'ml_inline_link' => 'render_inline_link',
         'ml_primary_nav' => 'render_primary_nav',
@@ -799,6 +801,40 @@ final class Shortcodes
     }
 
     /**
+     * Renders durable Signal posts on the public Signals landing surface.
+     *
+     * @param array<string,mixed> $attrs Shortcode attributes.
+     */
+    public function render_signal_archive(array $attrs = []): string
+    {
+        return $this->render_entity_archive(
+            $attrs,
+            'ml_signal_archive',
+            Post_Type::SIGNAL_POST_TYPE,
+            __('Published Signals', 'marketlense-core'),
+            __('No approved Signals have been published yet.', 'marketlense-core'),
+            __('Read signal', 'marketlense-core')
+        );
+    }
+
+    /**
+     * Renders cross-report Briefing posts on the public Briefings landing surface.
+     *
+     * @param array<string,mixed> $attrs Shortcode attributes.
+     */
+    public function render_briefing_archive(array $attrs = []): string
+    {
+        return $this->render_entity_archive(
+            $attrs,
+            'ml_briefing_archive',
+            Post_Type::BRIEFING_POST_TYPE,
+            __('Published Briefings', 'marketlense-core'),
+            __('No cross-report Briefings have been published yet.', 'marketlense-core'),
+            __('Read briefing', 'marketlense-core')
+        );
+    }
+
+    /**
      * Renders strategic themes section.
      *
      * @param array<string,mixed> $attrs Shortcode attributes.
@@ -1223,6 +1259,90 @@ final class Shortcodes
         }
 
         return $this->render_navigation($items, 'ml-footer-nav', $label);
+    }
+
+    /**
+     * @param array<string,mixed> $attrs
+     */
+    private function render_entity_archive(
+        array $attrs,
+        string $shortcode,
+        string $post_type,
+        string $aria_label,
+        string $empty_copy,
+        string $link_label
+    ): string {
+        $atts = shortcode_atts(
+            [
+                'per_page' => (string) self::DEFAULT_PER_PAGE,
+            ],
+            $attrs,
+            $shortcode
+        );
+        $per_page = max(1, min(48, (int) $atts['per_page']));
+        $query = new \WP_Query(
+            [
+                'post_type' => $post_type,
+                'post_status' => 'publish',
+                'posts_per_page' => $per_page,
+                'orderby' => 'date',
+                'order' => 'DESC',
+                'no_found_rows' => true,
+            ]
+        );
+
+        ob_start();
+        ?>
+        <section class="ml-entity-archive ml-report-browser-results" aria-label="<?php echo esc_attr($aria_label); ?>">
+            <?php if ($query->have_posts()) : ?>
+                <div class="ml-report-browser-grid">
+                    <?php while ($query->have_posts()) : ?>
+                        <?php
+                        $query->the_post();
+                        $post = get_post();
+                        if (! ($post instanceof \WP_Post)) {
+                            continue;
+                        }
+                        $this->render_entity_card($post, $link_label);
+                        ?>
+                    <?php endwhile; ?>
+                </div>
+            <?php else : ?>
+                <div class="ml-empty-state">
+                    <p><?php echo esc_html($empty_copy); ?></p>
+                </div>
+            <?php endif; ?>
+            <?php wp_reset_postdata(); ?>
+        </section>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    private function render_entity_card(\WP_Post $post, string $link_label): void
+    {
+        $permalink = get_permalink($post);
+        $excerpt = trim((string) get_the_excerpt($post));
+        ?>
+        <article class="ml-report-card ml-surface-card ml-surface-card--standard ml-card">
+            <div class="ml-report-card-body">
+                <p class="ml-report-card-kicker"><?php echo esc_html((string) get_the_date('', $post)); ?></p>
+                <h3 class="ml-report-card-title">
+                    <a href="<?php echo esc_url(is_string($permalink) ? $permalink : ''); ?>">
+                        <?php echo esc_html(get_the_title($post)); ?>
+                    </a>
+                </h3>
+                <?php if ($excerpt !== '') : ?>
+                    <p class="ml-report-card-excerpt"><?php echo esc_html($excerpt); ?></p>
+                <?php endif; ?>
+                <p class="ml-report-card-link">
+                    <a href="<?php echo esc_url(is_string($permalink) ? $permalink : ''); ?>">
+                        <?php echo esc_html($link_label); ?>
+                        <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
+                    </a>
+                </p>
+            </div>
+        </article>
+        <?php
     }
 
     /**
@@ -1708,10 +1828,10 @@ final class Shortcodes
 
         return match ($normalized) {
             'home' => home_url('/'),
-            'reports' => (string) (get_post_type_archive_link(Post_Type::POST_TYPE) ?: home_url('/reports/')),
+            'reports' => $this->post_type_archive_url(Post_Type::POST_TYPE, '/reports/'),
             'topics-directory' => home_url('/topics-directory/'),
-            'signals' => home_url('/signals/'),
-            'briefings' => home_url('/briefings/'),
+            'signals' => $this->post_type_archive_url(Post_Type::SIGNAL_POST_TYPE, '/signals/'),
+            'briefings' => $this->post_type_archive_url(Post_Type::BRIEFING_POST_TYPE, '/briefings/'),
             'publishers-directory' => home_url('/publishers-directory/'),
             'methodology' => home_url('/methodology/'),
             'about' => home_url('/about/'),
@@ -1721,6 +1841,13 @@ final class Shortcodes
             'terms' => home_url('/terms/'),
             default => '',
         };
+    }
+
+    private function post_type_archive_url(string $post_type, string $fallback_path): string
+    {
+        $archive_url = get_post_type_archive_link($post_type);
+
+        return is_string($archive_url) && $archive_url !== '' ? $archive_url : home_url($fallback_path);
     }
 
     private function normalize_external_url(string $value): string
