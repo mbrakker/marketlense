@@ -14,11 +14,6 @@ STATE_SYMBOLS = {
     "_HELPER_AWAIT_TIMEOUT_SECONDS",
     "_INTERNAL_TARGET_URL_PREFIXES",
     "browser_helper_page_info",
-    "browser_helper_wait_for_load",
-    "browser_helper_ensure_real_tab",
-    "_log_wait_result",
-    "_find_real_tab_via_cdp",
-    "_log_real_tab_result",
     "_first_non_empty",
     "_looks_like_browser_use_session",
     "_read_browser_url",
@@ -40,7 +35,6 @@ INSPECTION_SYMBOLS = {
     "_JavaScriptEvaluationError",
     "browser_helper_js",
     "browser_helper_js_async",
-    "browser_helper_http_get",
     "_js_failure",
     "_adapt_js_result_value",
     "_coerce_json_envelope",
@@ -56,18 +50,10 @@ INSPECTION_SYMBOLS = {
 }
 
 INTERACTION_SYMBOLS = {
-    "_SELECTOR_HOSTILE_SURFACE_LABELS",
     "browser_helper_capture_screenshot",
-    "browser_helper_coordinate_fallback_click",
     "browser_helper_form_autocomplete",
     "_autocomplete_result",
     "_screenshot_result",
-    "_coordinate_fallback_result",
-    "_coordinate_fallback_policy",
-    "_normalize_surface_labels",
-    "_has_selector_hostile_surface",
-    "_coordinates_are_usable",
-    "_after_coordinate_screenshot_path",
     "_try_screenshot_call",
 }
 

@@ -1,8 +1,8 @@
 """Browser inspection helpers for report-download automation.
 
-This module owns bounded JavaScript evaluation, result/error adaptation, and
-static HTTP inspection through the shared acquisition service. It consumes
-state-level await/excerpt helpers without depending on interaction helpers.
+This module owns bounded JavaScript evaluation and result/error adaptation. It
+consumes state-level await/excerpt helpers without depending on interaction
+helpers.
 """
 
 from __future__ import annotations
@@ -13,16 +13,8 @@ import re
 import asyncio
 from typing import Any
 
-from src.contracts.browser_download import (
-    BrowserHelperHttpGetResult,
-    BrowserHelperJsResult,
-)
-from src.contracts.http_acquisition import (
-    HttpAcquisitionRequest,
-    HttpAcquisitionResponsePolicy,
-)
+from src.contracts.browser_download import BrowserHelperJsResult
 from src.contracts.run_context import RunContext
-from src.services._http_acquisition import execute_http_acquisition
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -42,7 +34,6 @@ __all__ = (
     "_JavaScriptEvaluationError",
     "browser_helper_js",
     "browser_helper_js_async",
-    "browser_helper_http_get",
     "_js_failure",
     "_adapt_js_result_value",
     "_coerce_json_envelope",
@@ -234,118 +225,6 @@ async def browser_helper_js_async(
                 "snippet": snippet,
                 "result_type": result.result_type,
                 "result_serializable": result.result_serializable,
-            },
-        )
-    )
-    return result
-
-
-def browser_helper_http_get(
-    *,
-    url: str,
-    ctx: RunContext,
-    normalized_url: str,
-    timeout_seconds: float = 20.0,
-    max_body_bytes: int = 262144,
-) -> BrowserHelperHttpGetResult:
-    token = str(url or "").strip()
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="browser_helper_http_get_start",
-            module=logger.name,
-            fields={
-                "normalized_url": normalized_url,
-                "url": token,
-                "timeout_seconds": timeout_seconds,
-                "max_body_bytes": max_body_bytes,
-            },
-        )
-    )
-    try:
-        response = execute_http_acquisition(
-            request=HttpAcquisitionRequest(
-                schema_version="1.0",
-                purpose="browser_helper_http_get",
-                method="GET",
-                url=token,
-                headers={
-                    "User-Agent": "MarketlenseBrowserHelper/1.0",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                },
-                timeout_seconds=max(float(timeout_seconds), 1.0),
-                response_policy=HttpAcquisitionResponsePolicy(
-                    schema_version="1.0",
-                    require_success_status=False,
-                    capture_text=True,
-                    capture_binary=False,
-                    capture_content_type_markers=(),
-                    max_body_bytes=max(int(max_body_bytes), 1),
-                    truncate_body=True,
-                ),
-                error_code="browser_helper_http_get_failed",
-                error_message="Browser helper HTTP GET failed",
-                allow_redirects=True,
-                context_fields={"normalized_url": normalized_url},
-            ),
-            ctx=ctx,
-        )
-    except AppError as exc:
-        result = BrowserHelperHttpGetResult(
-            schema_version="1.0",
-            status="failed",
-            request_url=token,
-            final_url="",
-            status_code=0,
-            content_type="",
-            body_size_bytes=0,
-            body_excerpt="",
-            body_truncated=False,
-            error=exc.message,
-        )
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_helper_http_get_failed",
-                module=logger.name,
-                fields={
-                    "normalized_url": normalized_url,
-                    "url": token,
-                    "error_code": exc.code,
-                    "error": exc.message,
-                },
-            )
-        )
-        return result
-    body = str(response.text_body or "")
-    result = BrowserHelperHttpGetResult(
-        schema_version=_HELPER_SCHEMA_VERSION,
-        status="ok",
-        request_url=response.request_url,
-        final_url=response.final_url,
-        status_code=response.status_code,
-        content_type=response.content_type,
-        body_size_bytes=len(body.encode("utf-8")),
-        body_excerpt=_excerpt(body, _HTML_EXCERPT_CHARS),
-        body_truncated=response.body_truncated,
-        error=None,
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="browser_helper_http_get_complete",
-            module=logger.name,
-            fields={
-                "normalized_url": normalized_url,
-                "url": result.request_url,
-                "final_url": result.final_url,
-                "status_code": result.status_code,
-                "content_type": result.content_type,
-                "body_size_bytes": result.body_size_bytes,
-                "body_truncated": result.body_truncated,
             },
         )
     )

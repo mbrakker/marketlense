@@ -1,22 +1,16 @@
 from __future__ import annotations
 
 import logging
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from threading import Thread
 from typing import Any
 
 import pytest
 
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
-    browser_helper_coordinate_fallback_click,
-    browser_helper_ensure_real_tab,
     browser_helper_form_autocomplete,
-    browser_helper_http_get,
     browser_helper_js,
     browser_helper_page_info,
-    browser_helper_wait_for_load,
     get_browser_helper_surface,
 )
 
@@ -29,14 +23,11 @@ class FakePage:
         title: str = "Publisher Report",
         html: str = "<html><title>Publisher Report</title><body>report</body></html>",
         evaluate_error: Exception | None = None,
-        wait_error: Exception | None = None,
     ) -> None:
         self.url = url
         self._title = title
         self._html = html
         self._evaluate_error = evaluate_error
-        self._wait_error = wait_error
-        self.waited_for: list[str] = []
 
     def title(self) -> str:
         return self._title
@@ -58,11 +49,6 @@ class FakePage:
             "ok": True,
             "expression_prefix": str(expression)[:16],
         }
-
-    def wait_for_load_state(self, state: str, timeout: int | None = None) -> None:
-        if self._wait_error is not None:
-            raise self._wait_error
-        self.waited_for.append(f"{state}:{timeout}")
 
     def screenshot(self, path: str, full_page: bool = True) -> None:
         Path(path).write_bytes(b"fake-png")
@@ -115,76 +101,14 @@ class FakeBrowser:
         self.html = html
 
 
-class FakeCdpClient:
-    def __init__(self, responses: dict[str, dict[str, Any]]) -> None:
-        self.responses = responses
-        self.calls: list[dict[str, Any]] = []
-
-    async def send_raw(
-        self,
-        method: str,
-        params: dict[str, Any] | None = None,
-        session_id: str | None = None,
-    ) -> dict[str, Any]:
-        self.calls.append(
-            {
-                "method": method,
-                "params": params or {},
-                "session_id": session_id or "",
-            }
-        )
-        if method not in self.responses:
-            raise RuntimeError(f"unhandled CDP method: {method}")
-        return self.responses[method]
-
-
-class RootCdpBrowser(FakeBrowser):
-    def __init__(self, client: FakeCdpClient) -> None:
-        super().__init__()
-        self.cdp_client = client
-
-
-class NoWaitPage:
-    url = "https://publisher.example/report"
-
-
-class HelperHttpHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
-        body = b"<html><body>publisher helper page</body></html>"
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, format: str, *args: object) -> None:
-        return
-
-
-@pytest.fixture
-def helper_http_url() -> str:
-    server = ThreadingHTTPServer(("127.0.0.1", 0), HelperHttpHandler)
-    thread = Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    try:
-        yield f"http://127.0.0.1:{server.server_port}/publisher"
-    finally:
-        server.shutdown()
-        server.server_close()
-
-
 def test_helper_surface_documents_owned_approved_helpers() -> None:
     surface = get_browser_helper_surface()
 
     assert surface == {
         "page_info": "Read bounded URL/title/HTML metadata from the active page.",
         "capture_screenshot": "Persist a screenshot through browser, page, or CDP hooks.",
-        "coordinate_fallback_click": "Use a current screenshot to perform one transient coordinate click after selector failure or selector-hostile surface evidence.",
         "js": "Run bounded JavaScript inspection and return structured values.",
         "form_autocomplete": "Recover required form autocompletes with keyboard-style input and verified selection.",
-        "wait_for_load": "Perform one explicit browser/page load-state wait.",
-        "ensure_real_tab": "Diagnose a user-facing page tab and reject internal targets.",
-        "http_get": "Fetch a static page through the shared bounded HTTP executor.",
     }
 
 
@@ -389,98 +313,6 @@ def test_screenshot_positive_and_required_failure(
     )
 
 
-def test_coordinate_fallback_click_recovers_after_selector_failure(
-    tmp_path: Path,
-    run_context,
-    assert_no_defaulted_required_fields,
-) -> None:
-    client = FakeCdpClient(
-        {
-            "Target.getTargets": {
-                "targetInfos": [
-                    {
-                        "targetId": "report-target",
-                        "type": "page",
-                        "url": "https://publisher.example/report",
-                    },
-                ]
-            },
-            "Target.attachToTarget": {"sessionId": "report-session"},
-            "Input.dispatchMouseEvent": {},
-            "Target.detachFromTarget": {},
-        }
-    )
-    screenshot_path = tmp_path / "fallback-before.png"
-
-    result = browser_helper_coordinate_fallback_click(
-        browser=RootCdpBrowser(client),
-        page=FakePage(),
-        screenshot_path=screenshot_path,
-        coordinate_x=180,
-        coordinate_y=96,
-        selector_attempted=True,
-        selector_success=False,
-        selector_error="querySelector returned no visible option",
-        surface_labels=("custom-dropdown",),
-        ctx=run_context,
-        normalized_url="https://publisher.example/report",
-        target_url="https://publisher.example/report",
-    )
-
-    assert_no_defaulted_required_fields(result)
-    assert result.status == "ok"
-    assert result.reason == "known_selector_hostile_surface"
-    assert result.coordinate_source == "current_screenshot"
-    assert result.coordinates_persisted is False
-    assert result.before_screenshot_path == str(screenshot_path)
-    assert result.after_screenshot_path == str(tmp_path / "fallback-before-after.png")
-    assert result.verification_status == "screenshot"
-    assert [call["method"] for call in client.calls] == [
-        "Target.getTargets",
-        "Target.attachToTarget",
-        "Input.dispatchMouseEvent",
-        "Input.dispatchMouseEvent",
-        "Target.detachFromTarget",
-    ]
-    assert client.calls[2]["params"]["type"] == "mousePressed"
-    assert client.calls[3]["params"]["type"] == "mouseReleased"
-    assert client.calls[2]["params"]["x"] == 180.0
-    assert client.calls[2]["params"]["y"] == 96.0
-
-
-def test_coordinate_fallback_blocks_unjustified_coordinates(
-    tmp_path: Path,
-    run_context,
-) -> None:
-    client = FakeCdpClient(
-        {
-            "Target.getTargets": {"targetInfos": []},
-            "Target.attachToTarget": {"sessionId": "unused-session"},
-            "Input.dispatchMouseEvent": {},
-            "Target.detachFromTarget": {},
-        }
-    )
-
-    result = browser_helper_coordinate_fallback_click(
-        browser=RootCdpBrowser(client),
-        page=FakePage(),
-        screenshot_path=tmp_path / "fallback-before.png",
-        coordinate_x=180,
-        coordinate_y=96,
-        selector_attempted=False,
-        selector_success=False,
-        selector_error="",
-        surface_labels=(),
-        ctx=run_context,
-        normalized_url="https://publisher.example/report",
-    )
-
-    assert result.status == "blocked"
-    assert result.reason == "selector_or_state_attempt_required"
-    assert result.before_screenshot_path
-    assert [call["method"] for call in client.calls] == []
-
-
 def test_js_positive_and_required_failure(
     run_context,
     assert_no_defaulted_required_fields,
@@ -554,92 +386,3 @@ def test_js_promise_exception_and_unserializable_values(
     assert exc_info.value.context["error_line"] == 7
     assert exc_info.value.context["error_column"] == 19
 
-
-def test_wait_positive_and_required_failure(
-    run_context,
-    assert_no_defaulted_required_fields,
-    assert_app_error,
-) -> None:
-    page = FakePage()
-    result = browser_helper_wait_for_load(
-        browser=FakeBrowser(),
-        page=page,
-        ctx=run_context,
-        normalized_url="https://publisher.example/report",
-        timeout_seconds=1.0,
-    )
-
-    assert_no_defaulted_required_fields(result)
-    assert result.status == "ok"
-    assert page.waited_for == ["networkidle:1000"]
-
-    with pytest.raises(Exception) as exc_info:
-        browser_helper_wait_for_load(
-            browser=object(),
-            page=NoWaitPage(),
-            ctx=run_context,
-            normalized_url="https://publisher.example/report",
-            required=True,
-        )
-    assert_app_error(
-        exc_info.value,
-        code="browser_helper_wait_for_load_failed",
-        retryable=True,
-    )
-
-
-def test_real_tab_positive_and_required_failure(
-    run_context,
-    assert_no_defaulted_required_fields,
-    assert_app_error,
-) -> None:
-    result = browser_helper_ensure_real_tab(
-        browser=FakeBrowser(),
-        page=FakePage(),
-        ctx=run_context,
-        normalized_url="https://publisher.example/report",
-    )
-
-    assert_no_defaulted_required_fields(result)
-    assert result.status == "ok"
-    assert result.is_real_tab is True
-
-    with pytest.raises(Exception) as exc_info:
-        browser_helper_ensure_real_tab(
-            browser=FakeBrowser(url="about:blank", title=""),
-            page=FakePage(url="about:blank", title="", html=""),
-            ctx=run_context,
-            normalized_url="about:blank",
-            required=True,
-        )
-    assert_app_error(
-        exc_info.value,
-        code="browser_helper_real_tab_unavailable",
-        retryable=True,
-    )
-
-
-def test_http_get_positive_and_failure(
-    helper_http_url: str,
-    run_context,
-    assert_no_defaulted_required_fields,
-) -> None:
-    result = browser_helper_http_get(
-        url=helper_http_url,
-        ctx=run_context,
-        normalized_url=helper_http_url,
-        max_body_bytes=64,
-    )
-
-    assert_no_defaulted_required_fields(result)
-    assert result.status == "ok"
-    assert result.status_code == 200
-    assert "publisher helper page" in result.body_excerpt
-
-    failure = browser_helper_http_get(
-        url="",
-        ctx=run_context,
-        normalized_url="",
-    )
-    assert failure.status == "failed"
-    assert failure.error == "HTTP acquisition requires a non-empty absolute URL"

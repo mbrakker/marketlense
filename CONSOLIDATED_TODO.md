@@ -58,16 +58,6 @@ Suggested priority order:
 
 ## 1. Spend Guardrails, LLM Routing & Prompt Evaluation
 
-- **Title:** Extend the prompt fixture corpus into variant-aware promotion scorecards [Impact: 4/5, Effort: 4/5]
-  - Explanation: The repo already validates active namespaces and measures the prompt fixture corpus, but only for the currently active template pair per namespace. The remaining gap is controlled prompt variants, deterministic selection, offline scorecards, and promotion policy.
-  - Pros: Safer prompt iteration, measurable quality/cost tradeoffs, cleaner rollouts.
-  - Cons: More benchmark maintenance and CI/runtime cost.
-  - Acceptance Criteria:
-    - Config supports multiple named variants per prompt namespace.
-    - Prompt selection is deterministic and logged with namespace, variant, hashes, rendered prompts, model parameters, and cost data.
-    - Corpus metrics are emitted per namespace plus variant, not only per namespace.
-    - Promotion policy defines when a variant can replace the default.
-
 - **Title:** Implement budget-aware model routing with deterministic context compaction [Impact: 5/5, Effort: 4/5]
   - Explanation: Model resolution is still mostly static through `openai_models` and namespace matching, while `llm_service` logs `budget_decision="not_configured"`. The next step is policy-driven model tiering, context budgeting, and deterministic compaction before requests exceed practical token or cost limits.
   - Pros: Material cost and latency reduction, fewer timeout risks, explicit quality/cost tradeoffs.
@@ -78,16 +68,6 @@ Suggested priority order:
     - Over-budget requests are compacted by deterministic policy rather than ad hoc trimming.
     - Regression tests protect key evidence retention.
     - Benchmarks show meaningful token/cost reduction without quality regression on a fixed corpus.
-
-- **Title:** Add provider failover behind one LLM response contract [Impact: 5/5, Effort: 5/5]
-  - Explanation: Production report generation still depends on one OpenAI-backed LLM path even though other repo areas know about OpenRouter/browser-provider settings. The missing piece is a provider-agnostic generator contract plus orchestrated primary/secondary failover for report-pipeline LLM work.
-  - Pros: Higher availability during provider incidents and cleaner provider isolation.
-  - Cons: More integration-test surface and normalized error-handling complexity.
-  - Acceptance Criteria:
-    - Primary and secondary provider policy is explicit and tested.
-    - Provider responses and errors are normalized into one typed generator-facing contract.
-    - Generators do not branch on provider-specific response shapes.
-    - Failure-injection tests prove logged failover behavior and successful fallback.
 
 - **Title:** Enforce real-time spend guardrails across run/day/publisher budgets [Impact: 5/5, Effort: 2/5]
   - Explanation: Cost ledger append and rollup paths exist, but they are post-hoc reporting only. There is still no pre-call policy that warns, pauses, or blocks expensive model/browser/OCR work based on live spend.
@@ -280,15 +260,6 @@ Suggested priority order:
 
 ## 8. Deep Codebase Audit (2026-05-06)
 
-- **Title:** Tighten risk-policy scope so doc-only changes cannot hide repository-wide CI breakage [Impact: 4/5, Effort: 1/5]
-  - Explanation: Current risk classification marks a `CONSOLIDATED_TODO.md`-only change as `docs` while the repository remains red on hard gates. This can create false confidence during maintenance updates.
-  - Pros: Better signal to maintainers, fewer “green-looking” local checks when mainline is failing.
-  - Cons: May mark more changes as higher risk and increase required local preflight work.
-  - Acceptance Criteria:
-    - Risk-policy output surfaces current repository CI health independently from changed-file classification.
-    - For docs-only changes, policy clearly reports whether hard gates are presently failing on mainline baseline.
-    - Operator docs include a “docs-only but repo-red” handling path.
-
 ---
 
 ## 9. Appendix Feature Audit (2026-05-22)
@@ -301,14 +272,6 @@ Findings summary:
 - Keep prompt dry-run validation: `prompt_service.validate_prompt_dry_run` is CI/quality infrastructure used by `scripts/quality/prompt_fixture_corpus_metrics.py` and tests, not an abandoned product feature.
 - Keep optional evidence-pack variety scaffolding: the `key_metrics`, `risk_register`, `recommendations`, and `contradictions` strategies are gated but wired through `evidence_pack_generator`, validation, artifacts, and analytics projection.
 
-- **Title:** Decide whether unused browser helper surface functions are real acquisition tools [Impact: 3/5, Effort: 3/5]
-  - Evidence: README describes `browser_helper_coordinate_fallback_click`, `browser_helper_wait_for_load`, `browser_helper_ensure_real_tab`, `browser_helper_http_get`, and `get_browser_helper_surface` as part of the Marketlense browser helper surface. Runtime browser download currently imports and uses page info, screenshot, JavaScript, and form autocomplete helpers, but not those additional helper functions.
-  - Assessment: Reintroduce only where the acquisition flow can call them with bounded policy and typed results; otherwise remove the unused helpers and README claims. Coordinate fallback is especially sensitive and should not exist as a dormant helper.
-  - Acceptance Criteria:
-    - Reintroduce path: preflight, terminal recovery, or route execution calls the helper through the browser-download service boundary with structured logs, bounded timeouts, and tests proving no persisted coordinate route memory.
-    - Delete path: remove unused helper functions, contracts, README claims, and tests that validate unused narratives.
-    - Browser-download prompts and route evidence labels match the helper surface that is actually callable.
-
 - **Title:** Convert publish queue snapshot into real publish jobs or rename it as an ops snapshot [Impact: 5/5, Effort: 5/5]
   - Evidence: `publish_queue_orchestrator.py` is live in the UI, but it builds a read-only snapshot from HTML files and publish state. It does not enqueue durable publish intents or drive the publish workflow.
   - Assessment: Reintroduce as durable jobs if the product needs a queue. If not, rename the API/UI language to "publish readiness snapshot" to avoid implying a queue exists.
@@ -319,16 +282,6 @@ Findings summary:
 ---
 
 ## 10. Full Codebase Interconnection Audit (2026-05-22)
-
-- **Title:** Reclaim retry, rate-limit, and circuit-breaker ownership from `llm_service` into orchestrators [Impact: 5/5, Effort: 4/5]
-  - Explanation: `src/services/llm_service.py::_execute_with_policy` currently owns retry loops, sleeps, rate limiting, and circuit-breaker state for external LLM calls. That makes model latency, attempt counts, and spend side effects partly hidden inside a service boundary even though retry/backoff decisions belong to orchestrators. The same boundary is also exposed through `openai_service`, `llm_service`, and `vector_store_service`, with `vector_store_service` calling `llm_service` for OpenAI vector-store operations.
-  - Pros: More predictable failure handling, cleaner attempt-count tests, stronger spend controls, and one clearer provider boundary.
-  - Cons: Requires coordinated changes across model callers and retry tests.
-  - Acceptance Criteria:
-    - One canonical LLM/OpenAI service boundary owns raw provider calls and returns typed `AppError` values with retryability metadata, but does not sleep or retry internally.
-    - Orchestrators own retry count, backoff, rate-limit policy, circuit-breaker policy, and spend-threshold checks for LLM/vector-store work.
-    - `vector_store_service` no longer aliases `llm_service` as an OpenAI boundary; vector-store calls route through the canonical boundary or an explicitly documented provider-agnostic contract.
-    - Tests assert retry attempt counts and sleep/backoff decisions at orchestrator level, and assert services make exactly one provider attempt per invocation.
 
 ---
 

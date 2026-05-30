@@ -1,72 +1,40 @@
 """Browser interaction helpers for report-download automation.
 
-This module owns screenshot capture, selector-hostile coordinate fallback, and
-form autocomplete recovery. It may consume state readers and JavaScript
-inspection but does not own page-state diagnostics or HTTP inspection.
+This module owns screenshot capture and form autocomplete recovery. It may
+consume JavaScript inspection but does not own page-state diagnostics or HTTP
+inspection.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import re
 from pathlib import Path
 from typing import Any
 
 from src.contracts.browser_download import (
     BrowserHelperAutocompleteResult,
-    BrowserHelperCoordinateFallbackResult,
     BrowserHelperScreenshot,
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.cdp import (
     capture_terminal_screenshot_via_cdp,
-    dispatch_mouse_click_via_cdp,
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 from .inspection import browser_helper_js
-from .state import (
-    _HELPER_SCHEMA_VERSION,
-    _HTML_EXCERPT_CHARS,
-    _excerpt,
-    _maybe_await,
-    browser_helper_page_info,
-)
+from .state import _HELPER_SCHEMA_VERSION, _HTML_EXCERPT_CHARS, _excerpt, _maybe_await
 
 logger = logging.getLogger("market_lense.browser_report_download_service.helpers")
 
 __all__ = (
-    "_SELECTOR_HOSTILE_SURFACE_LABELS",
     "browser_helper_capture_screenshot",
-    "browser_helper_coordinate_fallback_click",
     "browser_helper_form_autocomplete",
     "_autocomplete_result",
     "_screenshot_result",
-    "_coordinate_fallback_result",
-    "_coordinate_fallback_policy",
-    "_normalize_surface_labels",
-    "_has_selector_hostile_surface",
-    "_coordinates_are_usable",
-    "_after_coordinate_screenshot_path",
     "_try_screenshot_call",
 )
-
-
-_SELECTOR_HOSTILE_SURFACE_LABELS = {
-    "autocomplete",
-    "canvas",
-    "combobox",
-    "cross_origin_iframe",
-    "custom_dropdown",
-    "iframe",
-    "map",
-    "native_dropdown",
-    "pdf_viewer",
-    "shadow_dom",
-    "virtualized_list",
-}
 
 
 def browser_helper_capture_screenshot(
@@ -151,162 +119,6 @@ def browser_helper_capture_screenshot(
         )
     )
     return result
-
-
-def browser_helper_coordinate_fallback_click(
-    *,
-    browser: Any,
-    page: Any,
-    screenshot_path: Path,
-    coordinate_x: float,
-    coordinate_y: float,
-    selector_attempted: bool,
-    selector_success: bool,
-    selector_error: str,
-    surface_labels: tuple[str, ...] | list[str],
-    ctx: RunContext,
-    normalized_url: str,
-    target_url: str = "",
-    required: bool = False,
-) -> BrowserHelperCoordinateFallbackResult:
-    labels = _normalize_surface_labels(surface_labels)
-    sanitized_selector_error = _excerpt(selector_error, _HTML_EXCERPT_CHARS)
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="browser_helper_coordinate_fallback_start",
-            module=logger.name,
-            fields={
-                "normalized_url": normalized_url,
-                "target_url": str(target_url or "").strip(),
-                "selector_attempted": bool(selector_attempted),
-                "selector_success": bool(selector_success),
-                "surface_labels": list(labels),
-                "coordinate_source": "current_screenshot",
-                "required": required,
-            },
-        )
-    )
-    before_screenshot = browser_helper_capture_screenshot(
-        browser=browser,
-        page=page,
-        screenshot_path=screenshot_path,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        required=required,
-    )
-    if before_screenshot.status != "ok":
-        return _coordinate_fallback_result(
-            ctx=ctx,
-            normalized_url=normalized_url,
-            target_url=target_url,
-            status="failed",
-            reason="screenshot_required_before_coordinate_click",
-            selector_attempted=selector_attempted,
-            selector_success=selector_success,
-            selector_error=sanitized_selector_error,
-            surface_labels=labels,
-            before_screenshot_path="",
-            after_screenshot_path="",
-            verification_status="missing",
-            action_source="none",
-            error="required pre-action screenshot was unavailable",
-            required=required,
-        )
-    policy_allowed, policy_reason = _coordinate_fallback_policy(
-        selector_attempted=selector_attempted,
-        selector_success=selector_success,
-        selector_error=sanitized_selector_error,
-        surface_labels=labels,
-        coordinate_x=coordinate_x,
-        coordinate_y=coordinate_y,
-    )
-    if not policy_allowed:
-        return _coordinate_fallback_result(
-            ctx=ctx,
-            normalized_url=normalized_url,
-            target_url=target_url,
-            status="blocked",
-            reason=policy_reason,
-            selector_attempted=selector_attempted,
-            selector_success=selector_success,
-            selector_error=sanitized_selector_error,
-            surface_labels=labels,
-            before_screenshot_path=before_screenshot.path,
-            after_screenshot_path="",
-            verification_status="missing",
-            action_source="policy",
-            error="",
-            required=required,
-        )
-    clicked = dispatch_mouse_click_via_cdp(
-        browser=browser,
-        coordinate_x=coordinate_x,
-        coordinate_y=coordinate_y,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        target_url=target_url,
-        required=required,
-    )
-    if not clicked:
-        return _coordinate_fallback_result(
-            ctx=ctx,
-            normalized_url=normalized_url,
-            target_url=target_url,
-            status="failed",
-            reason="coordinate_click_failed",
-            selector_attempted=selector_attempted,
-            selector_success=selector_success,
-            selector_error=sanitized_selector_error,
-            surface_labels=labels,
-            before_screenshot_path=before_screenshot.path,
-            after_screenshot_path="",
-            verification_status="missing",
-            action_source="cdp_input_dispatch_mouse_event",
-            error="Chrome did not accept the coordinate click",
-            required=required,
-        )
-    after_path = _after_coordinate_screenshot_path(screenshot_path)
-    after_screenshot = browser_helper_capture_screenshot(
-        browser=browser,
-        page=page,
-        screenshot_path=after_path,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        required=False,
-    )
-    verification_status = "missing"
-    after_screenshot_path = ""
-    if after_screenshot.status == "ok":
-        verification_status = "screenshot"
-        after_screenshot_path = after_screenshot.path
-    else:
-        page_info = browser_helper_page_info(
-            browser=browser,
-            page=page,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
-        if page_info.url or page_info.title or page_info.html_size > 0:
-            verification_status = "page_info"
-    return _coordinate_fallback_result(
-        ctx=ctx,
-        normalized_url=normalized_url,
-        target_url=target_url,
-        status="ok",
-        reason=policy_reason,
-        selector_attempted=selector_attempted,
-        selector_success=selector_success,
-        selector_error=sanitized_selector_error,
-        surface_labels=labels,
-        before_screenshot_path=before_screenshot.path,
-        after_screenshot_path=after_screenshot_path,
-        verification_status=verification_status,
-        action_source="cdp_input_dispatch_mouse_event",
-        error="",
-        required=required,
-    )
 
 
 def browser_helper_form_autocomplete(
@@ -696,167 +508,6 @@ def _screenshot_result(
         )
     )
     return result
-
-
-def _coordinate_fallback_result(
-    *,
-    ctx: RunContext,
-    normalized_url: str,
-    target_url: str,
-    status: str,
-    reason: str,
-    selector_attempted: bool,
-    selector_success: bool,
-    selector_error: str,
-    surface_labels: tuple[str, ...],
-    before_screenshot_path: str,
-    after_screenshot_path: str,
-    verification_status: str,
-    action_source: str,
-    error: str,
-    required: bool,
-) -> BrowserHelperCoordinateFallbackResult:
-    result = BrowserHelperCoordinateFallbackResult(
-        schema_version=_HELPER_SCHEMA_VERSION,
-        status=status,
-        reason=reason,
-        selector_attempted=bool(selector_attempted),
-        selector_success=bool(selector_success),
-        selector_error=_excerpt(selector_error, _HTML_EXCERPT_CHARS),
-        surface_labels=surface_labels,
-        coordinate_source="current_screenshot",
-        coordinates_persisted=False,
-        before_screenshot_path=before_screenshot_path,
-        after_screenshot_path=after_screenshot_path,
-        verification_status=verification_status,
-        action_source=action_source,
-        target_url=str(target_url or "").strip(),
-        error=_excerpt(error, _HTML_EXCERPT_CHARS),
-    )
-    event = (
-        "browser_helper_coordinate_fallback_complete"
-        if status == "ok"
-        else "browser_helper_coordinate_fallback_blocked"
-        if status == "blocked"
-        else "browser_helper_coordinate_fallback_failed"
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event=event,
-            module=logger.name,
-            fields={
-                "normalized_url": normalized_url,
-                "target_url": result.target_url,
-                "status": result.status,
-                "reason": result.reason,
-                "selector_attempted": result.selector_attempted,
-                "selector_success": result.selector_success,
-                "surface_labels": list(result.surface_labels),
-                "coordinate_source": result.coordinate_source,
-                "coordinates_persisted": result.coordinates_persisted,
-                "before_screenshot_path": result.before_screenshot_path,
-                "after_screenshot_path": result.after_screenshot_path,
-                "verification_status": result.verification_status,
-                "action_source": result.action_source,
-                "error": result.error,
-            },
-        )
-    )
-    if required and status == "blocked":
-        raise AppError(
-            code="browser_helper_coordinate_fallback_blocked",
-            message="Browser helper coordinate fallback was blocked by policy",
-            retryable=False,
-            severity="error",
-            context={
-                "normalized_url": normalized_url,
-                "target_url": result.target_url,
-                "reason": result.reason,
-                "selector_attempted": result.selector_attempted,
-                "selector_success": result.selector_success,
-                "surface_labels": list(result.surface_labels),
-            },
-        )
-    if required and status == "failed":
-        raise AppError(
-            code="browser_helper_coordinate_fallback_failed",
-            message="Browser helper coordinate fallback failed",
-            retryable=True,
-            severity="error",
-            context={
-                "normalized_url": normalized_url,
-                "target_url": result.target_url,
-                "reason": result.reason,
-                "error": result.error,
-            },
-        )
-    return result
-
-
-def _coordinate_fallback_policy(
-    *,
-    selector_attempted: bool,
-    selector_success: bool,
-    selector_error: str,
-    surface_labels: tuple[str, ...],
-    coordinate_x: float,
-    coordinate_y: float,
-) -> tuple[bool, str]:
-    if not _coordinates_are_usable(coordinate_x, coordinate_y):
-        return False, "invalid_current_screenshot_coordinate"
-    if selector_success:
-        return False, "selector_already_succeeded"
-    if _has_selector_hostile_surface(surface_labels):
-        return True, "known_selector_hostile_surface"
-    if selector_attempted and str(selector_error or "").strip():
-        return True, "selector_failure_to_coordinate_fallback"
-    if selector_attempted:
-        return True, "selector_attempt_exhausted"
-    return False, "selector_or_state_attempt_required"
-
-
-def _normalize_surface_labels(
-    surface_labels: tuple[str, ...] | list[str],
-) -> tuple[str, ...]:
-    normalized: list[str] = []
-    for raw_label in surface_labels or ():
-        label = re.sub(
-            r"[^a-z0-9]+", "_", str(raw_label or "").strip().casefold()
-        ).strip("_")
-        if label and label not in normalized:
-            normalized.append(label)
-    return tuple(normalized)
-
-
-def _has_selector_hostile_surface(surface_labels: tuple[str, ...]) -> bool:
-    return any(label in _SELECTOR_HOSTILE_SURFACE_LABELS for label in surface_labels)
-
-
-def _coordinates_are_usable(coordinate_x: float, coordinate_y: float) -> bool:
-    try:
-        x = float(str(coordinate_x))
-        y = float(str(coordinate_y))
-    except (TypeError, ValueError):
-        return False
-    return (
-        x >= 0
-        and y >= 0
-        and x not in {float("inf"), float("-inf")}
-        and y
-        not in {
-            float("inf"),
-            float("-inf"),
-        }
-        and x == x
-        and y == y
-    )
-
-
-def _after_coordinate_screenshot_path(screenshot_path: Path) -> Path:
-    suffix = screenshot_path.suffix or ".png"
-    return screenshot_path.with_name(f"{screenshot_path.stem}-after{suffix}")
 
 
 def _try_screenshot_call(*, candidate: Any, screenshot_path: Path) -> bool:

@@ -14,8 +14,7 @@ text: |
 
   Always return a concise `route_summary` describing the successful clicks or form steps so the system can reuse it later.
   Every meaningful `route_steps` item must declare `expected_evidence`: use `page_info`, `screenshot`, `network_event`, `artifact`, `dom_hash`, and/or `confirmation_text` to describe how the action was verified after it ran.
-  For selector-hostile visible surfaces such as custom dropdowns, shadow DOM controls, cross-origin iframes, canvas-like controls, and virtualized lists, a screenshot-derived coordinate click is allowed only after selector/state attempts fail or when the surface is already known selector-hostile.
-  Coordinates are transient. Never include raw pixel coordinates in `route_summary`, `route_steps`, or remembered guidance; describe the visible target and the screenshot/page-info verification instead.
+  For selector-hostile visible surfaces such as custom dropdowns, shadow DOM controls, cross-origin iframes, canvas-like controls, and virtualized lists, use visible labels, accessible names, keyboard navigation, and DOM state changes. Remember only visible-target descriptions and verification evidence in `route_summary`, `route_steps`, or remembered guidance.
 
   Use the following configured identity values when a matching form field is available. Do not invent missing values.
   {% for identity in identity_entries %}
