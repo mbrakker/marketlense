@@ -186,6 +186,7 @@ def _run_validation_regeneration_loop(
                     "attempt_index": attempt_index,
                     "mode": plan.mode,
                     "targets": [target.target_section for target in plan.targets],
+                    "target_details": _regeneration_target_details(plan.targets),
                     "unmappable_issue_count": len(plan.unmappable_issues),
                 },
             )
@@ -235,11 +236,13 @@ def _run_validation_regeneration_loop(
                     "attempt_index": attempt_index,
                     "mode": plan.mode,
                     "targets": [target.target_section for target in plan.targets],
+                    "target_details": _regeneration_target_details(plan.targets),
                     "validation_before_status": current_validation_report.status,
                 },
             )
         )
         validation_before_status = current_validation_report.status
+        artifacts_before = deepcopy(current_artifacts)
         regeneration_response = dependencies.regenerate_artifacts(
             ArtifactRegenerationRequest(
                 report_id=ReportId(runtime.file.file_id),
@@ -258,6 +261,7 @@ def _run_validation_regeneration_loop(
             )
         )
         current_artifacts = regeneration_response.updated_artifacts
+        artifact_diff = _artifact_diff_summary(artifacts_before, current_artifacts)
         evidence_paths["artifacts"] = regeneration_response.artifacts_path
         evidence_paths[f"artifacts_regen_attempt_{attempt_index}"] = (
             regeneration_response.artifacts_snapshot_path
@@ -321,6 +325,12 @@ def _run_validation_regeneration_loop(
                     "attempt_index": attempt_index,
                     "mode": plan.mode,
                     "regenerated_sections": regeneration_response.regenerated_sections,
+                    "prompt_namespaces": regeneration_response.prompt_namespaces,
+                    "artifacts_path": regeneration_response.artifacts_path,
+                    "artifacts_snapshot_path": (
+                        regeneration_response.artifacts_snapshot_path
+                    ),
+                    "artifact_diff": artifact_diff,
                     "validation_after_status": current_validation_report.status,
                 },
             )
@@ -345,6 +355,7 @@ def _run_validation_regeneration_loop(
     max_reached = (
         current_validation_report.status != "pass" and len(attempts) >= max_attempts
     )
+
     if max_reached:
         logger.info(
             log_event(
@@ -378,6 +389,43 @@ def _run_validation_regeneration_loop(
         loop_state,
         evidence_paths,
     )
+
+
+def _regeneration_target_details(targets) -> List[Dict[str, Any]]:
+    details: List[Dict[str, Any]] = []
+    for target in targets:
+        rule_ids = sorted(
+            {
+                str(issue.rule_id or "").strip()
+                for issue in target.issues
+                if str(issue.rule_id or "").strip()
+            }
+        )
+        details.append(
+            {
+                "target_section": target.target_section,
+                "regenerate_steps": list(target.regenerate_steps),
+                "prompt_namespaces": list(target.prompt_namespaces),
+                "rule_ids": rule_ids,
+            }
+        )
+    return details
+
+
+def _artifact_diff_summary(
+    before: Dict[str, Any],
+    after: Dict[str, Any],
+) -> Dict[str, List[str]]:
+    before_keys = set(before.keys()) if isinstance(before, dict) else set()
+    after_keys = set(after.keys()) if isinstance(after, dict) else set()
+    common = before_keys & after_keys
+    return {
+        "added_keys": sorted(after_keys - before_keys),
+        "removed_keys": sorted(before_keys - after_keys),
+        "changed_keys": sorted(
+            key for key in common if before.get(key) != after.get(key)
+        ),
+    }
 
 
 def _store_validation_snapshot(

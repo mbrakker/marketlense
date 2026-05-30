@@ -15,6 +15,7 @@ from src.contracts.regeneration import (
     RegenerationTarget,
 )
 from src.contracts.validation import ValidationIssue
+from src.utils.errors import AppError
 
 __all__ = [
     "BROAD_TARGETS",
@@ -195,6 +196,17 @@ BROAD_TARGETS = [
     "linkedin_post",
 ]
 
+SUPPORTED_TARGETS = set(TARGET_ORDER)
+
+RULE_TARGETS = {
+    "claim_support": ["summary"],
+    "metrics": ["insights_bundle"],
+    "quotes": ["quotes"],
+    "semantic": ["insights_bundle", "quotes"],
+}
+
+NUMBER_RULE_TARGETS = ["summary", "expert_comment", "linkedin_post"]
+
 
 def _normalize_regeneration_issue(
     issue: ValidationIssue,
@@ -298,11 +310,10 @@ def _build_regeneration_plan(
     unmappable: List[RegenerationIssue] = []
     for issue in issues:
         normalized = _normalize_regeneration_issue(issue, artifacts)
-        target_key = normalized.repair_target or _target_section(
-            normalized.affected_section
-        )
-        if target_key:
-            grouped.setdefault(target_key, []).append(normalized)
+        target_keys = _target_keys_for_issue(normalized)
+        if target_keys:
+            for target_key in target_keys:
+                grouped.setdefault(target_key, []).append(normalized)
         else:
             unmappable.append(normalized)
     if grouped:
@@ -333,3 +344,51 @@ def _build_regeneration_plan(
         unmappable_issues=unmappable,
         broad_retry_allowed=False,
     )
+
+
+def _target_keys_for_issue(issue: RegenerationIssue) -> List[str]:
+    explicit_target = str(issue.repair_target or "").strip()
+    if explicit_target:
+        if explicit_target not in SUPPORTED_TARGETS:
+            raise AppError(
+                code="regeneration_repair_target_unsupported",
+                message="Validation issue requested an unsupported regeneration repair target",
+                retryable=False,
+                severity="error",
+                context={
+                    "repair_target": explicit_target,
+                    "rule_id": issue.rule_id,
+                    "affected_section": issue.affected_section,
+                },
+            )
+        return [explicit_target]
+    section_target = _target_section(issue.affected_section)
+    if section_target:
+        return [section_target]
+    return _rule_targets_for_issue(issue)
+
+
+def _rule_targets_for_issue(issue: RegenerationIssue) -> List[str]:
+    rule_id = str(issue.rule_id or "").strip().lower()
+    if rule_id == "numbers":
+        return list(NUMBER_RULE_TARGETS)
+    if rule_id == "grounding":
+        return _grounding_rule_targets(issue)
+    return list(RULE_TARGETS.get(rule_id, []))
+
+
+def _grounding_rule_targets(issue: RegenerationIssue) -> List[str]:
+    message = str(issue.message or "").lower()
+    if "quote" in message:
+        return ["quotes"]
+    if "metric" in message or "insight" in message:
+        return ["insights_bundle"]
+    if "linkedin" in message:
+        return ["linkedin_post"]
+    if "expert" in message:
+        return ["expert_comment"]
+    if "summary" in message or "tldr" in message:
+        return ["summary"]
+    if "unsupported_number" in message:
+        return list(NUMBER_RULE_TARGETS)
+    return []

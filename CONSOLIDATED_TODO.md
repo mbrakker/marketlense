@@ -177,16 +177,6 @@ Suggested priority order:
     - Breaking changes require explicit version-bump evidence.
     - Representative stored artifacts are covered by fixture snapshots.
 
-- **Title:** Expand targeted regeneration beyond the current artifact-family repair map [Impact: 4/5, Effort: 4/5]
-  - Explanation: Targeted regeneration already handles mapped artifact families and deterministic TOC repair. The remaining gap is broader pack-level or rule-specific repair routing so more validation failures can be fixed without broad reruns.
-  - Pros: Fewer full reruns and clearer repair behavior.
-  - Cons: Repair-taxonomy maintenance burden.
-  - Acceptance Criteria:
-    - Failure classes map to explicit repair actions beyond the current artifact-family set.
-    - Repair attempts log before/after diffs and the exact regenerated artifacts or packs.
-    - Benchmarks show lower full-regeneration volume on known failure fixtures.
-    - Negative-path tests prove unsupported repair targets fail explicitly.
-
 - **Title:** Precompute validation evidence vectors and use bounded retrieval [Impact: 4/5, Effort: 3/5]
   - Explanation: `src/generators/validation/evidence.py` recomputes character n-gram vectors for every claim/window comparison and sorts every scored window for each retrieval call. Metrics, quotes, numbers, and regeneration grounding all share this path, so large evidence packs and PDF text caches pay the cost repeatedly.
   - Pros: Faster validation and targeted regeneration, especially on long reports with many evidence windows.

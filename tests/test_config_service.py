@@ -928,7 +928,14 @@ class TestConfigService(unittest.TestCase):
             }
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
 
-            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+            with patch.dict(
+                os.environ,
+                {
+                    "OPENROUTER_API_KEY": "key",
+                    "GOOGLE_DRIVE_AUTH_MODE": "service_account",
+                },
+                clear=True,
+            ):
                 settings = load_browser_download_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
                     RunContext(
@@ -1085,7 +1092,11 @@ class TestConfigService(unittest.TestCase):
 
             with patch.dict(
                 os.environ,
-                {"OPENROUTER_API_KEY": "key", "OPENAI_API_KEY": "openai-key"},
+                {
+                    "OPENROUTER_API_KEY": "key",
+                    "OPENAI_API_KEY": "openai-key",
+                    "GOOGLE_DRIVE_AUTH_MODE": "service_account",
+                },
                 clear=True,
             ):
                 settings = load_publisher_inventory_settings(
