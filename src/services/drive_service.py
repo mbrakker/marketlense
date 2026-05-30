@@ -36,6 +36,8 @@ from src.contracts.drive import (
     DriveListRequest,
     DriveOAuthAuthorizeRequest,
     DriveOAuthAuthorizeResponse,
+    DriveWritePreflightRequest,
+    DriveWritePreflightResponse,
     DriveUploadBytesRequest,
     DriveUploadBytesResponse,
     DriveUploadLocalFileRequest,
@@ -65,6 +67,13 @@ class _DriveFolderScopeCacheEntry:
     folder_ids: tuple[str, ...]
     expires_at: float
     last_access_at: float
+
+
+@dataclass(frozen=True)
+class _DriveCredentialResolution:
+    credentials: object
+    refreshed: bool
+    credential_path: str
 
 
 _DRIVE_CLIENTS: dict[tuple[str, str, int], _DriveClientCacheEntry] = {}
@@ -142,6 +151,15 @@ def _persist_authorized_user_credentials(credentials, token_path: str) -> None:
 
 
 def _load_authorized_user_credentials(*, token_path: str, ctx: RunContext):
+    return _resolve_authorized_user_credentials(
+        token_path=token_path,
+        ctx=ctx,
+    ).credentials
+
+
+def _resolve_authorized_user_credentials(
+    *, token_path: str, ctx: RunContext
+) -> _DriveCredentialResolution:
     if not token_path:
         raise AppError(
             code="drive_oauth_token_path_missing",
@@ -169,7 +187,11 @@ def _load_authorized_user_credentials(*, token_path: str, ctx: RunContext):
             context={"oauth_token_path": token_path},
         ) from exc
     if credentials.valid:
-        return credentials
+        return _DriveCredentialResolution(
+            credentials=credentials,
+            refreshed=False,
+            credential_path=token_path,
+        )
     if credentials.expired and credentials.refresh_token:
         try:
             credentials.refresh(GoogleAuthRequest())
@@ -191,7 +213,12 @@ def _load_authorized_user_credentials(*, token_path: str, ctx: RunContext):
                 fields={"oauth_token_path": token_path},
             )
         )
-        return credentials
+        _invalidate_drive_client_cache(auth_mode="oauth_user", credential_path=token_path)
+        return _DriveCredentialResolution(
+            credentials=credentials,
+            refreshed=True,
+            credential_path=token_path,
+        )
     raise AppError(
         code="drive_oauth_refresh_token_missing",
         message="OAuth token is not valid and cannot be refreshed; run drive-oauth-login again",
@@ -200,13 +227,13 @@ def _load_authorized_user_credentials(*, token_path: str, ctx: RunContext):
     )
 
 
-def _build_drive_client(
+def _resolve_drive_credentials(
     *,
     auth_mode: str,
     service_account_path: str,
     oauth_token_path: str | None,
     ctx: RunContext,
-):
+) -> _DriveCredentialResolution:
     if auth_mode == "service_account":
         try:
             creds = Credentials.from_service_account_file(
@@ -220,12 +247,47 @@ def _build_drive_client(
                 retryable=False,
                 context={"service_account_path": service_account_path},
             ) from exc
-        return build("drive", "v3", credentials=creds, cache_discovery=False)
-    creds = _load_authorized_user_credentials(
+        return _DriveCredentialResolution(
+            credentials=creds,
+            refreshed=False,
+            credential_path=service_account_path,
+        )
+    return _resolve_authorized_user_credentials(
         token_path=str(oauth_token_path or ""),
         ctx=ctx,
     )
-    return build("drive", "v3", credentials=creds, cache_discovery=False)
+
+
+def _build_drive_client(
+    *,
+    auth_mode: str,
+    service_account_path: str,
+    oauth_token_path: str | None,
+    ctx: RunContext,
+):
+    resolution = _resolve_drive_credentials(
+        auth_mode=auth_mode,
+        service_account_path=service_account_path,
+        oauth_token_path=oauth_token_path,
+        ctx=ctx,
+    )
+    return build(
+        "drive",
+        "v3",
+        credentials=resolution.credentials,
+        cache_discovery=False,
+    )
+
+
+def _invalidate_drive_client_cache(*, auth_mode: str, credential_path: str) -> int:
+    with _DRIVE_CLIENTS_LOCK:
+        removed = 0
+        for cache_key in list(_DRIVE_CLIENTS.keys()):
+            if cache_key[0] != auth_mode or cache_key[1] != credential_path:
+                continue
+            _DRIVE_CLIENTS.pop(cache_key, None)
+            removed += 1
+        return removed
 
 
 def _prune_drive_client_cache(now: float) -> int:
@@ -1001,6 +1063,327 @@ def list_files_in_folder(
         )
     )
     return response
+
+
+def preflight_drive_write_access(
+    request: DriveWritePreflightRequest, ctx: RunContext
+) -> DriveWritePreflightResponse:
+    auth_mode = _request_auth_mode(request)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_write_preflight_start",
+            module=logger.name,
+            fields={
+                "folder_id": request.folder_id,
+                "supports_all_drives": request.supports_all_drives,
+                "include_items_from_all_drives": request.include_items_from_all_drives,
+                "drive_id": request.drive_id or "",
+                "auth_mode": auth_mode,
+            },
+        )
+    )
+    try:
+        _require_drive_auth(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+        )
+        if not str(request.folder_id or "").strip():
+            raise AppError(
+                code="drive_preflight_folder_id_missing",
+                message="Drive folder ID is required for write preflight",
+                retryable=False,
+            )
+        resolution = _resolve_drive_credentials(
+            auth_mode=auth_mode,
+            service_account_path=request.service_account_path,
+            oauth_token_path=request.oauth_token_path,
+            ctx=ctx,
+        )
+        if not _credentials_include_required_drive_scopes(resolution.credentials):
+            raise AppError(
+                code="drive_preflight_scope_insufficient",
+                message="Drive credentials do not include the required write scope",
+                retryable=False,
+                severity="error",
+                context={
+                    "folder_id": request.folder_id,
+                    "auth_mode": auth_mode,
+                    "required_scopes": list(DRIVE_SCOPES),
+                },
+            )
+        drive = build(
+            "drive",
+            "v3",
+            credentials=resolution.credentials,
+            cache_discovery=False,
+        )
+        folder = _load_drive_folder_write_metadata(
+            drive=drive,
+            folder_id=request.folder_id,
+            supports_all_drives=request.supports_all_drives,
+            ctx=ctx,
+        )
+        mime_type = str(folder.get("mimeType") or "").strip()
+        if mime_type != "application/vnd.google-apps.folder":
+            raise AppError(
+                code="drive_preflight_target_not_folder",
+                message="Drive preflight target is not a folder",
+                retryable=False,
+                severity="error",
+                context={"folder_id": request.folder_id, "mime_type": mime_type},
+            )
+        can_add_children = bool(
+            (folder.get("capabilities") or {}).get("canAddChildren")
+        )
+        if not can_add_children:
+            raise AppError(
+                code="drive_preflight_no_write_access",
+                message="Drive credentials cannot create files in the target folder",
+                retryable=False,
+                severity="error",
+                context={"folder_id": request.folder_id, "auth_mode": auth_mode},
+            )
+        _probe_drive_folder_write_access(
+            drive=drive,
+            folder_id=request.folder_id,
+            supports_all_drives=request.supports_all_drives,
+            ctx=ctx,
+        )
+        response = DriveWritePreflightResponse(
+            schema_version="1.0",
+            folder_id=request.folder_id,
+            auth_mode=auth_mode,
+            credentials_refreshed=resolution.refreshed,
+            scopes_verified=True,
+            folder_access_verified=True,
+            write_access_verified=True,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_write_preflight_complete",
+                module=logger.name,
+                fields={
+                    "folder_id": response.folder_id,
+                    "auth_mode": response.auth_mode,
+                    "credentials_refreshed": response.credentials_refreshed,
+                    "scopes_verified": response.scopes_verified,
+                    "folder_access_verified": response.folder_access_verified,
+                    "write_access_verified": response.write_access_verified,
+                },
+            )
+        )
+        return response
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_write_preflight_failed",
+                module=logger.name,
+                fields={
+                    "folder_id": request.folder_id,
+                    "auth_mode": auth_mode,
+                    "error_code": exc.code,
+                    "retryable": exc.retryable,
+                },
+            )
+        )
+        raise
+
+
+def _credentials_include_required_drive_scopes(credentials) -> bool:
+    has_scopes = getattr(credentials, "has_scopes", None)
+    if callable(has_scopes):
+        try:
+            return bool(has_scopes(DRIVE_SCOPES))
+        except (TypeError, ValueError):
+            return False
+    scopes = getattr(credentials, "scopes", None)
+    if scopes is None:
+        scopes = getattr(credentials, "granted_scopes", None)
+    if scopes is None:
+        return True
+    return set(DRIVE_SCOPES).issubset({str(scope) for scope in scopes})
+
+
+def _load_drive_folder_write_metadata(
+    *,
+    drive,
+    folder_id: str,
+    supports_all_drives: bool,
+    ctx: RunContext,
+) -> dict:
+    try:
+        folder = (
+            drive.files()
+            .get(
+                fileId=folder_id,
+                fields="id,mimeType,capabilities/canAddChildren",
+                supportsAllDrives=supports_all_drives,
+            )
+            .execute()
+        )
+    except HttpError as exc:
+        status = int(getattr(getattr(exc, "resp", None), "status", 0) or 0)
+        retryable = status not in {400, 401, 403, 404}
+        code = (
+            "drive_preflight_folder_access_denied"
+            if status in {401, 403, 404}
+            else "drive_preflight_folder_metadata_failed"
+        )
+        raise AppError(
+            code=code,
+            message="Drive folder metadata could not be loaded during preflight",
+            cause=exc,
+            retryable=retryable,
+            severity="error",
+            context={"folder_id": folder_id, "status": status},
+        ) from exc
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        raise AppError(
+            code="drive_preflight_folder_metadata_failed",
+            message="Drive folder metadata could not be loaded during preflight",
+            cause=exc,
+            retryable=True,
+            severity="error",
+            context={"folder_id": folder_id},
+        ) from exc
+    if not isinstance(folder, dict):
+        raise AppError(
+            code="drive_preflight_folder_metadata_invalid",
+            message="Drive folder metadata response was not an object",
+            retryable=True,
+            severity="error",
+            context={"folder_id": folder_id},
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_write_preflight_folder_loaded",
+            module=logger.name,
+            fields={
+                "folder_id": folder_id,
+                "mime_type": str(folder.get("mimeType") or ""),
+                "can_add_children": bool(
+                    (folder.get("capabilities") or {}).get("canAddChildren")
+                ),
+            },
+        )
+    )
+    return folder
+
+
+def _probe_drive_folder_write_access(
+    *,
+    drive,
+    folder_id: str,
+    supports_all_drives: bool,
+    ctx: RunContext,
+) -> None:
+    probe_name = _drive_write_preflight_probe_name(ctx)
+    media = MediaIoBaseUpload(
+        io.BytesIO(b"market-lense-drive-write-preflight\n"),
+        mimetype="text/plain",
+        resumable=False,
+    )
+    try:
+        created = (
+            drive.files()
+            .create(
+                body={"name": probe_name, "parents": [folder_id]},
+                media_body=media,
+                fields="id",
+                supportsAllDrives=supports_all_drives,
+            )
+            .execute()
+        )
+    except HttpError as exc:
+        status = int(getattr(getattr(exc, "resp", None), "status", 0) or 0)
+        raise AppError(
+            code="drive_preflight_write_probe_failed",
+            message="Drive write preflight could not create a probe file",
+            cause=exc,
+            retryable=status not in {400, 401, 403, 404},
+            severity="error",
+            context={"folder_id": folder_id, "status": status},
+        ) from exc
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        raise AppError(
+            code="drive_preflight_write_probe_failed",
+            message="Drive write preflight could not create a probe file",
+            cause=exc,
+            retryable=True,
+            severity="error",
+            context={"folder_id": folder_id},
+        ) from exc
+    probe_file_id = str((created or {}).get("id") or "").strip()
+    if not probe_file_id:
+        raise AppError(
+            code="drive_preflight_write_probe_invalid",
+            message="Drive write preflight create response did not include a file ID",
+            retryable=True,
+            severity="error",
+            context={"folder_id": folder_id},
+        )
+    try:
+        (
+            drive.files()
+            .delete(fileId=probe_file_id, supportsAllDrives=supports_all_drives)
+            .execute()
+        )
+    except HttpError as exc:
+        status = int(getattr(getattr(exc, "resp", None), "status", 0) or 0)
+        raise AppError(
+            code="drive_preflight_write_probe_cleanup_failed",
+            message="Drive write preflight could not delete its probe file",
+            cause=exc,
+            retryable=status not in {400, 401, 403, 404},
+            severity="error",
+            context={"folder_id": folder_id, "probe_file_id": probe_file_id},
+        ) from exc
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        raise AppError(
+            code="drive_preflight_write_probe_cleanup_failed",
+            message="Drive write preflight could not delete its probe file",
+            cause=exc,
+            retryable=True,
+            severity="error",
+            context={"folder_id": folder_id, "probe_file_id": probe_file_id},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_write_preflight_probe_complete",
+            module=logger.name,
+            fields={"folder_id": folder_id},
+        )
+    )
+
+
+def _drive_write_preflight_probe_name(ctx: RunContext) -> str:
+    tokens = [ctx.run_id, ctx.task_id, ctx.span_id]
+    suffix = "-".join(_safe_drive_probe_token(token) for token in tokens if token)
+    if not suffix:
+        suffix = "run"
+    return f".market-lense-write-preflight-{suffix}.txt"
+
+
+def _safe_drive_probe_token(value: str) -> str:
+    chars = []
+    for char in str(value):
+        if char.isalnum() or char in {"-", "_"}:
+            chars.append(char)
+            continue
+        chars.append("-")
+    token = "".join(chars).strip("-_")
+    return token[:48] or "id"
 
 
 def upload_bytes(

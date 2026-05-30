@@ -10,6 +10,7 @@ from src.contracts.drive import (
     DriveDownloadToPathRequest,
     DriveFolderFileListRequest,
     DriveListRequest,
+    DriveWritePreflightRequest,
     DriveUploadBytesRequest,
     DriveUploadLocalFileRequest,
     DriveFile,
@@ -32,11 +33,21 @@ class _FakeFilesResource:
         self,
         responses: dict[Any, dict],
         raise_on_query: str | None = None,
+        get_response: dict | None = None,
+        get_error: Exception | None = None,
+        create_error: Exception | None = None,
+        delete_error: Exception | None = None,
     ):
         self._responses = responses
         self._raise_on_query = raise_on_query
+        self._get_response = get_response or {}
+        self._get_error = get_error
+        self._create_error = create_error
+        self._delete_error = delete_error
         self.created_payloads: list[dict] = []
+        self.delete_calls: list[dict] = []
         self.list_calls: list[dict] = []
+        self.get_calls: list[dict] = []
 
     def list(self, **kwargs):
         query = kwargs.get("q", "")
@@ -50,6 +61,8 @@ class _FakeFilesResource:
         return _FakeListCall(payload)
 
     def create(self, **kwargs):
+        if self._create_error is not None:
+            raise self._create_error
         payload = {
             "id": "uploaded-file",
             "name": kwargs["body"]["name"],
@@ -60,14 +73,39 @@ class _FakeFilesResource:
         self.created_payloads.append(kwargs)
         return _FakeListCall(payload)
 
+    def delete(self, **kwargs):
+        self.delete_calls.append(dict(kwargs))
+        if self._delete_error is not None:
+            raise self._delete_error
+        return _FakeListCall({})
+
+    def get(self, **kwargs):
+        self.get_calls.append(dict(kwargs))
+        if self._get_error is not None:
+            raise self._get_error
+        return _FakeListCall(self._get_response)
+
     def get_media(self, *, fileId):
         return {"fileId": fileId}
 
 
 class _FakeDriveClient:
-    def __init__(self, responses: dict[str, dict], raise_on_query: str | None = None):
+    def __init__(
+        self,
+        responses: dict[str, dict],
+        raise_on_query: str | None = None,
+        get_response: dict | None = None,
+        get_error: Exception | None = None,
+        create_error: Exception | None = None,
+        delete_error: Exception | None = None,
+    ):
         self._files_resource = _FakeFilesResource(
-            responses, raise_on_query=raise_on_query
+            responses,
+            raise_on_query=raise_on_query,
+            get_response=get_response,
+            get_error=get_error,
+            create_error=create_error,
+            delete_error=delete_error,
         )
 
     def files(self):
@@ -81,13 +119,20 @@ class _FakeAuthorizedUserCredentials:
         valid: bool = True,
         expired: bool = False,
         refresh_token: str | None = "refresh-token",
+        scopes: list[str] | None = None,
+        refresh_error: Exception | None = None,
     ):
         self.valid = valid
         self.expired = expired
         self.refresh_token = refresh_token
-        self.scopes = ["https://www.googleapis.com/auth/drive"]
+        self.scopes = scopes or ["https://www.googleapis.com/auth/drive"]
+        self.refresh_error = refresh_error
+        self.refresh_count = 0
 
     def refresh(self, _request):
+        self.refresh_count += 1
+        if self.refresh_error is not None:
+            raise self.refresh_error
         self.valid = True
         self.expired = False
 
@@ -313,6 +358,236 @@ def test_upload_local_file_requires_existing_file(tmp_path):
         )
 
     assert excinfo.value.code == "drive_upload_source_path_invalid"
+
+
+def test_preflight_drive_write_access_validates_folder_write_readiness(
+    monkeypatch, assert_no_defaulted_required_fields
+):
+    fake_drive = _FakeDriveClient(
+        {},
+        get_response={
+            "id": "root-folder",
+            "mimeType": "application/vnd.google-apps.folder",
+            "capabilities": {"canAddChildren": True},
+        },
+    )
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(lambda _sa_path, scopes: _FakeAuthorizedUserCredentials()),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    _reset_drive_caches()
+
+    response = drive_service.preflight_drive_write_access(
+        DriveWritePreflightRequest(
+            schema_version="1.0",
+            folder_id="root-folder",
+            service_account_path="/tmp/fake-sa.json",
+        ),
+        _ctx(),
+    )
+
+    assert response.folder_id == "root-folder"
+    assert response.scopes_verified is True
+    assert response.folder_access_verified is True
+    assert response.write_access_verified is True
+    assert response.credentials_refreshed is False
+    assert fake_drive.files().get_calls[0]["fileId"] == "root-folder"
+    assert fake_drive.files().get_calls[0]["supportsAllDrives"] is True
+    assert fake_drive.files().created_payloads[0]["body"]["parents"] == ["root-folder"]
+    assert fake_drive.files().delete_calls[0]["fileId"] == "uploaded-file"
+    assert_no_defaulted_required_fields(response)
+
+
+def test_preflight_drive_write_access_refreshes_expired_oauth_token(
+    monkeypatch, tmp_path
+):
+    fake_drive = _FakeDriveClient(
+        {},
+        get_response={
+            "id": "root-folder",
+            "mimeType": "application/vnd.google-apps.folder",
+            "capabilities": {"canAddChildren": True},
+        },
+    )
+    token_path = tmp_path / "token.json"
+    token_path.write_text("{}", encoding="utf-8")
+    credentials = _FakeAuthorizedUserCredentials(valid=False, expired=True)
+
+    monkeypatch.setattr(
+        drive_service.AuthorizedUserCredentials,
+        "from_authorized_user_file",
+        staticmethod(lambda _path, scopes: credentials),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    _reset_drive_caches()
+
+    response = drive_service.preflight_drive_write_access(
+        DriveWritePreflightRequest(
+            schema_version="1.0",
+            folder_id="root-folder",
+            service_account_path="",
+            auth_mode="oauth_user",
+            oauth_token_path=str(token_path),
+        ),
+        _ctx(),
+    )
+
+    assert response.credentials_refreshed is True
+    assert credentials.refresh_count == 1
+    assert token_path.read_text(encoding="utf-8").startswith('{"refresh_token"')
+
+
+def test_preflight_drive_write_access_reports_oauth_refresh_failure(
+    monkeypatch, tmp_path, assert_app_error
+):
+    token_path = tmp_path / "token.json"
+    token_path.write_text("{}", encoding="utf-8")
+    credentials = _FakeAuthorizedUserCredentials(
+        valid=False,
+        expired=True,
+        refresh_error=drive_service.RefreshError("refresh denied"),
+    )
+
+    monkeypatch.setattr(
+        drive_service.AuthorizedUserCredentials,
+        "from_authorized_user_file",
+        staticmethod(lambda _path, scopes: credentials),
+    )
+    _reset_drive_caches()
+
+    with pytest.raises(AppError) as err:
+        drive_service.preflight_drive_write_access(
+            DriveWritePreflightRequest(
+                schema_version="1.0",
+                folder_id="root-folder",
+                service_account_path="",
+                auth_mode="oauth_user",
+                oauth_token_path=str(token_path),
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(err.value, code="drive_oauth_refresh_failed", retryable=False)
+
+
+def test_preflight_drive_write_access_rejects_insufficient_oauth_scope(
+    monkeypatch, tmp_path, assert_app_error
+):
+    token_path = tmp_path / "token.json"
+    token_path.write_text("{}", encoding="utf-8")
+    credentials = _FakeAuthorizedUserCredentials(
+        scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"]
+    )
+
+    monkeypatch.setattr(
+        drive_service.AuthorizedUserCredentials,
+        "from_authorized_user_file",
+        staticmethod(lambda _path, scopes: credentials),
+    )
+    _reset_drive_caches()
+
+    with pytest.raises(AppError) as err:
+        drive_service.preflight_drive_write_access(
+            DriveWritePreflightRequest(
+                schema_version="1.0",
+                folder_id="root-folder",
+                service_account_path="",
+                auth_mode="oauth_user",
+                oauth_token_path=str(token_path),
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        err.value, code="drive_preflight_scope_insufficient", retryable=False
+    )
+
+
+def test_preflight_drive_write_access_reports_missing_oauth_token(
+    tmp_path, assert_app_error
+):
+    with pytest.raises(AppError) as err:
+        drive_service.preflight_drive_write_access(
+            DriveWritePreflightRequest(
+                schema_version="1.0",
+                folder_id="root-folder",
+                service_account_path="",
+                auth_mode="oauth_user",
+                oauth_token_path=str(tmp_path / "missing-token.json"),
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(err.value, code="drive_oauth_token_missing", retryable=False)
+
+
+def test_preflight_drive_write_access_rejects_folder_without_write_capability(
+    monkeypatch, assert_app_error
+):
+    fake_drive = _FakeDriveClient(
+        {},
+        get_response={
+            "id": "root-folder",
+            "mimeType": "application/vnd.google-apps.folder",
+            "capabilities": {"canAddChildren": False},
+        },
+    )
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(lambda _sa_path, scopes: _FakeAuthorizedUserCredentials()),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    _reset_drive_caches()
+
+    with pytest.raises(AppError) as err:
+        drive_service.preflight_drive_write_access(
+            DriveWritePreflightRequest(
+                schema_version="1.0",
+                folder_id="root-folder",
+                service_account_path="/tmp/fake-sa.json",
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(err.value, code="drive_preflight_no_write_access", retryable=False)
+
+
+def test_preflight_drive_write_access_rejects_failed_write_probe(
+    monkeypatch, assert_app_error
+):
+    fake_drive = _FakeDriveClient(
+        {},
+        get_response={
+            "id": "root-folder",
+            "mimeType": "application/vnd.google-apps.folder",
+            "capabilities": {"canAddChildren": True},
+        },
+        create_error=RuntimeError("storage quota exceeded"),
+    )
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(lambda _sa_path, scopes: _FakeAuthorizedUserCredentials()),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    _reset_drive_caches()
+
+    with pytest.raises(AppError) as err:
+        drive_service.preflight_drive_write_access(
+            DriveWritePreflightRequest(
+                schema_version="1.0",
+                folder_id="root-folder",
+                service_account_path="/tmp/fake-sa.json",
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        err.value, code="drive_preflight_write_probe_failed", retryable=True
+    )
 
 
 def test_list_pdfs_uses_oauth_user_credentials(monkeypatch, tmp_path):

@@ -28,6 +28,7 @@ from src.contracts.browser_download import (
 from src.contracts.drive import (
     DriveFile,
     DriveFolderFileListResponse,
+    DriveWritePreflightResponse,
     DriveUploadLocalFileResponse,
 )
 from src.contracts.files import FileHashResponse
@@ -250,6 +251,18 @@ def _drive_enabled_settings(
         drive_upload_auth_mode="service_account",
         drive_upload_supports_all_drives=True,
         drive_upload_include_items_from_all_drives=True,
+    )
+
+
+def _successful_drive_preflight(req, ctx) -> DriveWritePreflightResponse:
+    return DriveWritePreflightResponse(
+        schema_version="1.0",
+        folder_id=req.folder_id,
+        auth_mode=req.auth_mode,
+        credentials_refreshed=False,
+        scopes_verified=True,
+        folder_access_verified=True,
+        write_access_verified=True,
     )
 
 
@@ -1917,6 +1930,7 @@ def test_run_report_download_reuses_idempotent_source_record_and_drive_upload(
             files=[],
         ),
         upload_local_file=_upload_local_file,
+        preflight_drive_write_access=_successful_drive_preflight,
     )
 
     first = run_report_download(
@@ -2042,6 +2056,7 @@ def test_run_report_download_drive_upload_idempotency_is_scoped_by_report_url(
             files=[],
         ),
         upload_local_file=_upload_local_file,
+        preflight_drive_write_access=_successful_drive_preflight,
     )
 
     for url in report_artifacts:
@@ -2142,6 +2157,7 @@ def test_run_report_download_idempotency_allows_changed_artifact_for_same_url(
             files=[],
         ),
         upload_local_file=_upload_local_file,
+        preflight_drive_write_access=_successful_drive_preflight,
     )
 
     for content in [b"%PDF-1.7 first", b"%PDF-1.7 second"]:
@@ -2402,6 +2418,7 @@ def test_run_report_download_uploads_downloaded_pdf_to_publisher_drive_folder(
             schema_version="1.0", folder_id=req.folder_id, files=[]
         ),
         upload_local_file=_upload_file,
+        preflight_drive_write_access=_successful_drive_preflight,
     )
     caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
 
@@ -2427,6 +2444,160 @@ def test_run_report_download_uploads_downloaded_pdf_to_publisher_drive_folder(
     assert uploaded_requests[0].mime_type == "application/pdf"
     assert_logs_have_required_fields(
         _events(caplog, "market_lense.report_download_orchestrator")
+    )
+
+
+def test_run_report_download_preflights_required_drive_archive_before_acquisition(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _drive_enabled_settings(_settings(tmp_path))
+    pdf_path = Path(settings.output_dir) / "report.pdf"
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    pdf_path.write_bytes(b"%PDF-1.7 acquired")
+    calls: list[str] = []
+
+    def _preflight(req, ctx):
+        calls.append("preflight")
+        assert req.folder_id == "folder123"
+        assert req.service_account_path == "/tmp/fake-sa.json"
+        assert req.auth_mode == "service_account"
+        return DriveWritePreflightResponse(
+            schema_version="1.0",
+            folder_id=req.folder_id,
+            auth_mode=req.auth_mode,
+            credentials_refreshed=False,
+            scopes_verified=True,
+            folder_access_verified=True,
+            write_access_verified=True,
+        )
+
+    def _download(req, ctx):
+        calls.append("download")
+        return _result(
+            url="https://example.com/report",
+            used_route_hint=False,
+            path=str(pdf_path),
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5=_md5_for_path(Path(req.path)),
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        record_report_value_score=lambda req, ctx: None,
+        sleep_fn=lambda seconds: None,
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0", folder_id=req.folder_id, files=[]
+        ),
+        upload_local_file=lambda req, ctx: DriveUploadLocalFileResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id="drive-file-1",
+                name=req.file_name,
+                modified_time="2026-04-22T00:00:00Z",
+                md5_checksum=_md5_for_path(Path(req.source_path)),
+                mime_type=req.mime_type,
+            ),
+            source_path=req.source_path,
+            size=Path(req.source_path).stat().st_size,
+            md5=_md5_for_path(Path(req.source_path)),
+        ),
+        preflight_drive_write_access=_preflight,
+    )
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+            publisher_google_folder="https://drive.google.com/drive/folders/folder123",
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert response.outcome == "downloaded"
+    assert calls[:2] == ["preflight", "download"]
+
+
+def test_run_report_download_required_drive_preflight_failure_blocks_acquisition(
+    tmp_path: Path,
+    run_context,
+    assert_app_error,
+) -> None:
+    settings = _drive_enabled_settings(_settings(tmp_path))
+
+    def _preflight(req, ctx):
+        raise AppError(
+            code="drive_preflight_no_write_access",
+            message="Drive folder is not writable",
+            retryable=False,
+            severity="error",
+            context={"folder_id": req.folder_id},
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("download should not start after preflight failure")
+        ),
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: (_ for _ in ()).throw(AssertionError("unused")),
+        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("unused")
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("unused")
+        ),
+        record_report_value_score=lambda req, ctx: None,
+        sleep_fn=lambda seconds: None,
+        preflight_drive_write_access=_preflight,
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                publisher_google_folder=(
+                    "https://drive.google.com/drive/folders/folder123"
+                ),
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert_app_error(
+        excinfo.value, code="drive_preflight_no_write_access", retryable=False
     )
 
 
@@ -2502,6 +2673,7 @@ def test_run_report_download_uploads_all_captured_terminal_artifacts(
             schema_version="1.0", folder_id=req.folder_id, files=[]
         ),
         upload_local_file=_upload_file,
+        preflight_drive_write_access=_successful_drive_preflight,
     )
 
     response = run_report_download(
@@ -2614,6 +2786,7 @@ def test_run_report_download_deduplicates_equivalent_drive_artifact_paths(
             schema_version="1.0", folder_id=req.folder_id, files=[]
         ),
         upload_local_file=_upload_file,
+        preflight_drive_write_access=_successful_drive_preflight,
     )
 
     response = run_report_download(
@@ -2708,6 +2881,7 @@ def test_run_report_download_skips_duplicate_drive_file_by_name_and_md5(
             ],
         ),
         upload_local_file=_upload_file,
+        preflight_drive_write_access=_successful_drive_preflight,
     )
 
     response = run_report_download(
@@ -2856,6 +3030,7 @@ def test_run_report_download_retries_and_propagates_drive_upload_failure(
             schema_version="1.0", folder_id=req.folder_id, files=[]
         ),
         upload_local_file=_upload_file,
+        preflight_drive_write_access=_successful_drive_preflight,
     )
 
     with pytest.raises(AppError) as excinfo:

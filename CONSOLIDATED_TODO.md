@@ -153,17 +153,6 @@ Suggested priority order:
     - Resume tooling supports restarting from a selected stage boundary.
     - Consistency tests compare full-run output with resumed-run output.
 
-- **Title:** Preflight and refresh Google Drive credentials before report download runs [Impact: 4/5, Effort: 2/5]
-  - Explanation: Report download runs can produce valid local artifacts and then fail at the Drive archival/write step if the Google Drive token is expired, missing required scopes, or otherwise unusable. The pipeline should check and refresh Drive credentials before starting report download work so write failures surface before expensive acquisition starts.
-  - Pros: Fewer wasted download/browser runs, clearer operator failures, and more reliable Drive archive writes.
-  - Cons: Adds a credential preflight dependency before acquisition and needs careful secret-safe logging.
-  - Acceptance Criteria:
-    - Report download orchestration runs a Google Drive credential preflight before any expensive download/browser acquisition step that expects Drive output.
-    - The canonical Drive service validates token availability, expiry/refresh status, required scopes, target folder access, and write readiness without logging secrets.
-    - Expired refreshable credentials are refreshed through the Drive service boundary before the run proceeds.
-    - Missing, non-refreshable, insufficient-scope, or no-write-access credentials fail with typed `AppError` values and structured logs.
-    - Tests cover valid credentials, refresh success, refresh failure, insufficient scope, missing token, and target-folder write denial.
-
 - **Title:** Turn the publish queue into durable jobs with transactional outbox, retry, and idempotency [Impact: 5/5, Effort: 5/5]
   - Explanation: The current `publish_queue_orchestrator.py` only builds a snapshot for UI and ops views. It does not persist publish intents as durable jobs or atomically couple publish-side effects to state transitions.
   - Pros: More reliable publishing and clearer recovery from partial failures.

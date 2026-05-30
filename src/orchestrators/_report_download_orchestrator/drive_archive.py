@@ -10,7 +10,11 @@ from src.contracts.browser_download import (
     ReportDownloadDriveUpload,
     ReportDownloadOrchestratorRequest,
 )
-from src.contracts.drive import DriveFolderFileListRequest, DriveUploadLocalFileRequest
+from src.contracts.drive import (
+    DriveFolderFileListRequest,
+    DriveUploadLocalFileRequest,
+    DriveWritePreflightRequest,
+)
 from src.contracts.files import FileHashRequest
 from src.contracts.report_store import ReportDownloadDriveFolderLookupRequest
 from src.contracts.run_context import RunContext
@@ -34,6 +38,57 @@ logger = logging.getLogger("market_lense.report_download_orchestrator")
 _REPORT_DOWNLOAD_DRIVE_UPLOAD_SCOPE = "report_download_orchestrator.drive_upload"
 
 
+def preflight_required_drive_archive(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    normalized_url: str,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> str | None:
+    if not request.settings.drive_upload_enabled:
+        return None
+    if not request.settings.drive_upload_required:
+        return None
+    folder_id = _resolve_drive_upload_folder_id(
+        request=request,
+        normalized_url=normalized_url,
+        ctx=ctx,
+        dependencies=dependencies,
+    )
+    response = dependencies.preflight_drive_write_access(
+        DriveWritePreflightRequest(
+            schema_version="1.0",
+            folder_id=folder_id,
+            service_account_path=request.settings.drive_upload_google_sa_path,
+            supports_all_drives=request.settings.drive_upload_supports_all_drives,
+            include_items_from_all_drives=(
+                request.settings.drive_upload_include_items_from_all_drives
+            ),
+            drive_id=request.settings.drive_upload_drive_id,
+            auth_mode=request.settings.drive_upload_auth_mode,
+            oauth_client_path=request.settings.drive_upload_oauth_client_path,
+            oauth_token_path=request.settings.drive_upload_oauth_token_path,
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_drive_preflight_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "folder_id": response.folder_id,
+                "auth_mode": response.auth_mode,
+                "credentials_refreshed": response.credentials_refreshed,
+                "write_access_verified": response.write_access_verified,
+            },
+        )
+    )
+    return folder_id
+
+
 def archive_successful_report_artifacts(
     *,
     request: ReportDownloadOrchestratorRequest,
@@ -42,6 +97,7 @@ def archive_successful_report_artifacts(
     policy: RetryPolicy,
     ctx: RunContext,
     dependencies: ReportDownloadDependencies,
+    preflighted_folder_id: str | None = None,
 ) -> list[ReportDownloadDriveUpload]:
     if not request.settings.drive_upload_enabled:
         return []
@@ -60,7 +116,7 @@ def archive_successful_report_artifacts(
         )
         return []
     try:
-        folder_id = _resolve_drive_upload_folder_id(
+        folder_id = preflighted_folder_id or _resolve_drive_upload_folder_id(
             request=request,
             normalized_url=normalized_url,
             ctx=ctx,

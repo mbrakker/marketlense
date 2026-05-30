@@ -36,6 +36,7 @@ from src.orchestrators._report_download_orchestrator.dependencies import (
 )
 from src.orchestrators._report_download_orchestrator.drive_archive import (
     archive_successful_report_artifacts,
+    preflight_required_drive_archive,
 )
 from src.orchestrators._report_download_orchestrator.failure_forensics import (
     failure_error_class,
@@ -89,6 +90,12 @@ def run_report_download(
     )
     assert_candidate_download_ready(
         request=request, normalized_url=normalized_url, ctx=ctx
+    )
+    preflighted_drive_folder_id = preflight_required_drive_archive(
+        request=request,
+        normalized_url=normalized_url,
+        ctx=ctx,
+        dependencies=deps,
     )
     remembered_route = deps.get_publisher_download_route(
         PublisherDownloadRouteGetRequest(
@@ -277,6 +284,7 @@ def run_report_download(
         policy=policy,
         ctx=ctx,
         dependencies=deps,
+        preflighted_folder_id=preflighted_drive_folder_id,
     )
     response = ReportDownloadOrchestratorResult(
         schema_version="1.0",

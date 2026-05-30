@@ -16,6 +16,8 @@ from src.contracts.browser_download import (
 from src.contracts.drive import (
     DriveFolderFileListRequest,
     DriveFolderFileListResponse,
+    DriveWritePreflightRequest,
+    DriveWritePreflightResponse,
     DriveUploadLocalFileRequest,
     DriveUploadLocalFileResponse,
 )
@@ -51,7 +53,11 @@ from src.services.browser_report_download_service import (
     promote_validated_browser_route_result_to_playbook,
 )
 from src.services.config_service import upsert_browser_download_identity_fields
-from src.services.drive_service import list_files_in_folder, upload_local_file
+from src.services.drive_service import (
+    list_files_in_folder,
+    preflight_drive_write_access,
+    upload_local_file,
+)
 from src.services.file_service import file_md5, read_bytes, write_bytes
 from src.services.report_store_service import (
     get_report_download_drive_folder,
@@ -130,6 +136,10 @@ class ReportDownloadDependencies:
         [DriveUploadLocalFileRequest, RunContext],
         DriveUploadLocalFileResponse,
     ] = upload_local_file
+    preflight_drive_write_access: Callable[
+        [DriveWritePreflightRequest, RunContext],
+        DriveWritePreflightResponse,
+    ] = preflight_drive_write_access
 
     @classmethod
     def default(cls) -> "ReportDownloadDependencies":

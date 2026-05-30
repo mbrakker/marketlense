@@ -265,6 +265,72 @@ class DriveFolderFileListResponse:
 
 
 @dataclass(frozen=True)
+class DriveWritePreflightRequest:
+    schema_version: str = field(
+        metadata={"doc": "Drive write-preflight request schema version."}
+    )
+    folder_id: str = field(
+        metadata={"doc": "Drive folder ID whose write readiness should be checked."}
+    )
+    service_account_path: str = field(
+        metadata={
+            "doc": "Filesystem path to the Google service account JSON when auth_mode=service_account."
+        }
+    )
+    supports_all_drives: bool = field(
+        default=True,
+        metadata={"doc": "Whether to set supportsAllDrives on metadata calls."},
+    )
+    include_items_from_all_drives: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether the expected archive lookup includes shared-drive items."
+        },
+    )
+    drive_id: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional shared Drive ID associated with the target folder."},
+    )
+    auth_mode: str = field(
+        default="service_account",
+        metadata={"doc": "Drive auth mode: service_account or oauth_user."},
+    )
+    oauth_client_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional OAuth desktop client JSON path when auth_mode=oauth_user."
+        },
+    )
+    oauth_token_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class DriveWritePreflightResponse:
+    schema_version: str = field(
+        metadata={"doc": "Drive write-preflight response schema version."}
+    )
+    folder_id: str = field(metadata={"doc": "Drive folder ID checked."})
+    auth_mode: str = field(metadata={"doc": "Drive auth mode used for the check."})
+    credentials_refreshed: bool = field(
+        metadata={"doc": "Whether OAuth credentials were refreshed during preflight."}
+    )
+    scopes_verified: bool = field(
+        metadata={"doc": "Whether credentials include the required Drive write scope."}
+    )
+    folder_access_verified: bool = field(
+        metadata={"doc": "Whether the target folder metadata was readable."}
+    )
+    write_access_verified: bool = field(
+        metadata={"doc": "Whether the target folder accepts child file creation."}
+    )
+
+
+@dataclass(frozen=True)
 class DriveUploadBytesRequest:
     schema_version: str = field(
         metadata={"doc": "Drive upload-bytes request schema version."}
