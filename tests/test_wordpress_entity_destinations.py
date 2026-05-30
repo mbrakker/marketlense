@@ -9,6 +9,7 @@ PLUGIN_ROOT = REPO_ROOT / "Wordpress" / "wp-content" / "plugins" / "marketlense-
 THEME_TEMPLATES = REPO_ROOT / "Wordpress" / "wp-content" / "themes" / "marketlense" / "templates"
 POST_TYPE_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-post-type.php"
 SHORTCODES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-shortcodes.php"
+TAXONOMIES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-taxonomies.php"
 README_PATH = REPO_ROOT / "README.md"
 GENERATOR_PATH = REPO_ROOT / "src" / "generators" / "cross_report_analysis_generator.py"
 CONTRACT_PATH = REPO_ROOT / "src" / "contracts" / "cross_report_analysis.py"
@@ -49,6 +50,18 @@ def test_wordpress_shortcodes_expose_signal_and_briefing_archives() -> None:
     assert "'ml_briefing_archive' => 'render_briefing_archive'" in source
     assert "Post_Type::SIGNAL_POST_TYPE" in source
     assert "Post_Type::BRIEFING_POST_TYPE" in source
+
+
+def test_publisher_taxonomy_assigns_to_signal_and_briefing_destinations() -> None:
+    source = TAXONOMIES_PATH.read_text(encoding="utf-8")
+
+    assert "Post_Type::SIGNAL_POST_TYPE" in source
+    assert "Post_Type::BRIEFING_POST_TYPE" in source
+    assert re.search(
+        r"register_taxonomy\(\s*self::PUBLISHER_TAXONOMY,\s*\[.*?Post_Type::SIGNAL_POST_TYPE.*?Post_Type::BRIEFING_POST_TYPE",
+        source,
+        re.DOTALL,
+    )
 
 
 def test_cross_report_publish_defaults_to_briefing_route() -> None:

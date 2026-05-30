@@ -83,6 +83,48 @@ def test_create_post_custom_post_type_endpoint(wordpress_http) -> None:
     assert call.verify is True
 
 
+def test_create_post_falls_back_to_query_rest_route_when_pretty_rest_returns_html(
+    wordpress_http,
+) -> None:
+    wordpress_http.add_json(
+        "POST",
+        "https://site/wp-json/wp/v2/ml_signal",
+        status_code=200,
+        text="<!DOCTYPE html><html><body>Home</body></html>",
+        headers={"content-type": "text/html; charset=UTF-8"},
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://site/index.php?rest_route=%2Fwp%2Fv2%2Fml_signal",
+        status_code=201,
+        payload={
+            "id": 12,
+            "link": "https://site/signals/signal-a/",
+            "status": "publish",
+        },
+    )
+    request = WordPressPostCreateRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        title="Signal A",
+        content_html="<p>x</p>",
+        status="publish",
+        post_type="ml_signal",
+        slug="signal-a",
+    )
+
+    response = svc.create_post(request, _ctx())
+
+    fallback_call = wordpress_http.calls_for(
+        "POST",
+        "https://site/index.php?rest_route=%2Fwp%2Fv2%2Fml_signal",
+    )[0]
+    assert response.post_id == 12
+    assert response.link == "https://site/signals/signal-a/"
+    assert fallback_call.json_data["slug"] == "signal-a"
+
+
 def test_create_post_client_error(wordpress_http, assert_app_error) -> None:
     wordpress_http.add_json(
         "POST",

@@ -1,0 +1,280 @@
+from __future__ import annotations
+
+from dataclasses import replace
+
+from src.contracts.cross_report_analysis import (
+    CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportEvidenceReference,
+    CrossReportProjectedDataReadResponse,
+    CrossReportPublishResultSummary,
+    CrossReportSourceReportCandidate,
+)
+from src.contracts.publish import PublishOutcome
+from src.contracts.wordpress import (
+    WordPressPostLookupResponse,
+    WordPressTagEnsureResponse,
+    WordPressTaxonomyEnsureResponse,
+)
+from src.contracts.wordpress_entities import (
+    WORDPRESS_ENTITY_SCHEMA_VERSION,
+    SignalPostGenerationRequest,
+    SignalPostWorkflowRequest,
+)
+from src.orchestrators.publish_orchestrator import publish_signal_projection
+from src.orchestrators.signal_post_orchestrator import run_signal_post_workflow
+
+
+def _candidate(report_id: str, publisher: str) -> CrossReportSourceReportCandidate:
+    return CrossReportSourceReportCandidate(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        report_id=report_id,
+        title=f"{publisher} AI Commerce Report",
+        publisher=publisher,
+        publisher_id=publisher.lower().replace(" ", "-"),
+        report_date="2026-05-20",
+        projection_status="projected",
+        content_hash=f"{report_id}-hash",
+        category_labels=["Retail Strategy"],
+        tags=["AI Commerce"],
+        evidence_count=2,
+        claim_count=2,
+        finding_count=0,
+        quote_count=0,
+        metric_count=0,
+        recency_score=0.0,
+        relevance_score=0.0,
+        diversity_score=0.0,
+        density_score=2.0,
+        total_score=0.0,
+        selection_reasons=["projection_status:projected"],
+        rejection_reasons=[],
+        category_ids=["retail-strategy"],
+    )
+
+
+def _evidence(evidence_id: str, report_id: str, publisher: str) -> CrossReportEvidenceReference:
+    return CrossReportEvidenceReference(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        evidence_id=evidence_id,
+        report_id=report_id,
+        publisher=publisher,
+        title=f"{publisher} AI Commerce Report",
+        source_table="report_claims",
+        entity_uid=f"{report_id}:claim:{evidence_id}",
+        content_class="claim",
+        text=f"{publisher} reports AI commerce adoption is changing checkout behavior.",
+        source_metadata={"pages": [2]},
+    )
+
+
+def _projected_data() -> CrossReportProjectedDataReadResponse:
+    return CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[
+            _candidate("report-a", "Publisher A"),
+            _candidate("report-b", "Publisher B"),
+        ],
+        evidence=[
+            _evidence("report-a:claim:1", "report-a", "Publisher A"),
+            _evidence("report-b:claim:1", "report-b", "Publisher B"),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+
+
+def _generation_request() -> SignalPostGenerationRequest:
+    return SignalPostGenerationRequest(
+        schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
+        request_id="signal-ai-commerce",
+        topic="AI commerce checkout behavior",
+        category_filters=["Retail Strategy"],
+        tag_filters=["AI Commerce"],
+        publisher_filters=[],
+        date_range_start=None,
+        date_range_end=None,
+        max_source_reports=3,
+        max_evidence_items=6,
+        minimum_source_reports=2,
+        minimum_evidence_items=2,
+    )
+
+
+def _workflow_request(tmp_path, publication_mode: str = "publish_dry_run") -> SignalPostWorkflowRequest:
+    return SignalPostWorkflowRequest(
+        schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
+        request_id="signal-workflow-ai-commerce",
+        generation_request=_generation_request(),
+        db_path=str(tmp_path / "analytics.sqlite"),
+        output_root=str(tmp_path),
+        publication_mode=publication_mode,
+    )
+
+
+def _ensure_taxonomy(request, ctx):
+    if request.taxonomy_rest_base == "categories":
+        return WordPressTaxonomyEnsureResponse(
+            schema_version="1.0",
+            slug_to_id={"retail-strategy": 11},
+        )
+    if request.taxonomy_rest_base == "ml_publisher":
+        return WordPressTaxonomyEnsureResponse(
+            schema_version="1.0",
+            slug_to_id={"publisher-a": 21, "publisher-b": 22},
+        )
+    raise AssertionError(request.taxonomy_rest_base)
+
+
+def _ensure_tags(request, ctx):
+    return WordPressTagEnsureResponse(
+        schema_version="1.0",
+        slug_to_id={"ai-commerce": 31},
+    )
+
+
+def test_signal_workflow_dry_run_reads_projected_data_and_reports_payload(
+    tmp_path,
+    run_context,
+) -> None:
+    read_requests = []
+
+    def _read_projected_data(request, ctx):
+        read_requests.append(request)
+        return _projected_data()
+
+    outcome = run_signal_post_workflow(
+        _workflow_request(tmp_path, "publish_dry_run"),
+        run_context,
+        read_projected_data_fn=_read_projected_data,
+    )
+
+    assert outcome.publish_result.status == "dry_run"
+    assert outcome.publish_result.target_route == "wordpress:ml_signal"
+    assert outcome.publish_result.target_post_type == "ml_signal"
+    assert outcome.publish_result.target_slug == "ai-commerce-checkout-behavior-signal"
+    assert outcome.publish_result.category_slugs == ["retail-strategy"]
+    assert outcome.publish_result.tag_slugs == ["ai-commerce"]
+    assert outcome.publish_result.taxonomy_term_slugs == {
+        "ml_publisher": ["publisher-a", "publisher-b"]
+    }
+    assert read_requests[0].db_path == str(tmp_path / "analytics.sqlite")
+    assert read_requests[0].minimum_projection_status == "projected"
+
+
+def test_publish_signal_projection_live_builds_payload_and_reuses_idempotency(
+    tmp_path,
+    run_context,
+    publish_settings_factory,
+) -> None:
+    from src.generators.signal_post_generator import build_signal_publish_projection
+
+    settings = publish_settings_factory(validation_policy="warn")
+    settings = replace(settings, wp=replace(settings.wp, post_type="ml_report"))
+    projection = build_signal_publish_projection(
+        _generation_request(),
+        _projected_data(),
+        run_context,
+    )
+    publish_calls = []
+
+    def _lookup(request, ctx):
+        assert request.post_type == "ml_signal"
+        return WordPressPostLookupResponse(
+            schema_version="1.0",
+            found=False,
+            post_id=None,
+            link=None,
+        )
+
+    def _publish(request, settings, ctx):
+        publish_calls.append((request, settings))
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=request.html_path,
+            file_id=request.file_id,
+            status="published",
+            post_id=77,
+            post_url="https://example.com/signals/ai-commerce-checkout-behavior-signal/",
+        )
+
+    first = publish_signal_projection(
+        projection,
+        settings,
+        run_context,
+        dry_run=False,
+        publish_html_fn=_publish,
+        find_post_by_file_id_fn=_lookup,
+        ensure_taxonomy_terms_fn=_ensure_taxonomy,
+        ensure_tags_fn=_ensure_tags,
+        sleep_fn=lambda seconds: None,
+    )
+    second = publish_signal_projection(
+        projection,
+        settings,
+        run_context,
+        dry_run=False,
+        publish_html_fn=_publish,
+        find_post_by_file_id_fn=_lookup,
+        ensure_taxonomy_terms_fn=_ensure_taxonomy,
+        ensure_tags_fn=_ensure_tags,
+        sleep_fn=lambda seconds: None,
+    )
+
+    publish_request, publish_settings = publish_calls[0]
+    assert first.status == "published"
+    assert first.target_post_type == "ml_signal"
+    assert first.target_slug == "ai-commerce-checkout-behavior-signal"
+    assert second.idempotency_reused is True
+    assert len(publish_calls) == 1
+    assert publish_settings.wp.post_type == "ml_signal"
+    assert publish_request.slug == "ai-commerce-checkout-behavior-signal"
+    assert publish_request.resolved_terms.category_ids == [11]
+    assert publish_request.resolved_terms.tag_ids == [31]
+    assert publish_request.resolved_terms.taxonomy_terms == {"ml_publisher": [21, 22]}
+
+
+def test_publish_signal_projection_rejects_url_outside_signals_section(
+    tmp_path,
+    run_context,
+    publish_settings_factory,
+) -> None:
+    from src.generators.signal_post_generator import build_signal_publish_projection
+
+    projection = build_signal_publish_projection(
+        _generation_request(),
+        _projected_data(),
+        run_context,
+    )
+
+    def _publish(request, settings, ctx):
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=request.html_path,
+            file_id=request.file_id,
+            status="published",
+            post_id=77,
+            post_url="https://example.com/reports/ai-commerce-checkout-behavior-signal/",
+        )
+
+    result = publish_signal_projection(
+        projection,
+        publish_settings_factory(validation_policy="warn"),
+        run_context,
+        dry_run=False,
+        publish_html_fn=_publish,
+        find_post_by_file_id_fn=lambda request, ctx: WordPressPostLookupResponse(
+            schema_version="1.0",
+            found=False,
+            post_id=None,
+            link=None,
+        ),
+        ensure_taxonomy_terms_fn=_ensure_taxonomy,
+        ensure_tags_fn=_ensure_tags,
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert isinstance(result, CrossReportPublishResultSummary)
+    assert result.status == "error"
+    assert result.error_code == "signal_publish_url_mismatch"
+    assert result.post_id is None

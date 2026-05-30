@@ -7,7 +7,7 @@ import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, NoReturn, Optional
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import requests
 import urllib3
@@ -103,6 +103,45 @@ def _session_pool_key(url: str) -> str:
     return f"{scheme}://{host}" if host else scheme
 
 
+def _rest_query_fallback_url(url: str) -> str | None:
+    parsed = urlsplit(str(url or "").strip())
+    marker = "/wp-json"
+    marker_index = parsed.path.find(marker)
+    if marker_index < 0:
+        return None
+    rest_route = parsed.path[marker_index + len(marker) :] or "/"
+    base_path = parsed.path[:marker_index].rstrip("/")
+    query_parts = [urlencode({"rest_route": rest_route})]
+    if parsed.query:
+        query_parts.append(parsed.query)
+    return urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            f"{base_path}/index.php" if base_path else "/index.php",
+            "&".join(query_parts),
+            parsed.fragment,
+        )
+    )
+
+
+def _should_retry_rest_query_mode(response: Any, url: str, files: Any) -> bool:
+    if files is not None or _rest_query_fallback_url(url) is None:
+        return False
+    status_code = int(getattr(response, "status_code", 0) or 0)
+    if status_code == 404:
+        return True
+    content_type = str(
+        getattr(getattr(response, "headers", {}) or {}, "get", lambda _key, _default="": "")(
+            "content-type",
+            "",
+        )
+        or ""
+    ).casefold()
+    body_prefix = str(getattr(response, "text", "") or "")[:300].casefold()
+    return "text/html" in content_type and "<html" in body_prefix
+
+
 def _patched_direct_transport(method: str) -> Any | None:
     candidate = getattr(requests, str(method or "").strip().lower(), None)
     original = _ORIGINAL_REQUEST_CALLS.get(str(method or "").strip().upper())
@@ -145,26 +184,53 @@ def _execute_request(
         request_kwargs["files"] = dict(files)
     if allow_redirects is not None:
         request_kwargs["allow_redirects"] = bool(allow_redirects)
-    pool_key = _session_pool_key(url)
-    try:
-        with _suppress_insecure_request_warning(ssl_verify=ssl_verify):
-            direct_transport = _patched_direct_transport(normalized_method)
-            if direct_transport is not None:
-                response = direct_transport(url, **request_kwargs)
-                return _WordPressRequestResult(
-                    response=response,
-                    used_pooled_session=False,
-                    pool_key=pool_key,
-                    pool_reused=False,
-                )
-            session, pool_reused = _SESSION_POOL.acquire(pool_key)
-            response = session.request(normalized_method, url, **request_kwargs)
+    def _send(request_url: str) -> _WordPressRequestResult:
+        pool_key = _session_pool_key(request_url)
+        direct_transport = _patched_direct_transport(normalized_method)
+        if direct_transport is not None:
+            response = direct_transport(request_url, **request_kwargs)
             return _WordPressRequestResult(
                 response=response,
-                used_pooled_session=True,
+                used_pooled_session=False,
                 pool_key=pool_key,
-                pool_reused=pool_reused,
+                pool_reused=False,
             )
+        session, pool_reused = _SESSION_POOL.acquire(pool_key)
+        response = session.request(normalized_method, request_url, **request_kwargs)
+        return _WordPressRequestResult(
+            response=response,
+            used_pooled_session=True,
+            pool_key=pool_key,
+            pool_reused=pool_reused,
+        )
+
+    try:
+        with _suppress_insecure_request_warning(ssl_verify=ssl_verify):
+            result = _send(url)
+            fallback_url = _rest_query_fallback_url(url)
+            if (
+                fallback_url
+                and fallback_url != url
+                and _should_retry_rest_query_mode(result.response, url, files)
+            ):
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="wordpress_rest_query_mode_fallback",
+                        module=logger.name,
+                        fields={
+                            "method": normalized_method,
+                            "url": url,
+                            "fallback_url": fallback_url,
+                            "status_code": int(
+                                getattr(result.response, "status_code", 0) or 0
+                            ),
+                        },
+                    )
+                )
+                return _send(fallback_url)
+            return result
     except requests.RequestException as exc:
         _raise_request_exception(
             ctx=ctx,
@@ -176,7 +242,7 @@ def _execute_request(
                 **(request_error_fields or {}),
                 "url": url,
                 "method": normalized_method,
-                "pool_key": pool_key,
+                "pool_key": _session_pool_key(url),
             },
         )
 

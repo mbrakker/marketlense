@@ -54,6 +54,10 @@ from src.contracts.wordpress import (
     WordPressTaxonomyTerm,
     WordPressTagEnsureRequest,
 )
+from src.contracts.wordpress_entities import (
+    WORDPRESS_ENTITY_SCHEMA_VERSION,
+    SignalPublishProjection,
+)
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
 )
@@ -916,6 +920,12 @@ def _briefing_url_is_in_section(url: str) -> bool:
     return path == "briefings" or path.startswith("briefings/")
 
 
+def _signal_url_is_in_section(url: str) -> bool:
+    parsed = urlparse(str(url or ""))
+    path = parsed.path.strip("/")
+    return path == "signals" or path.startswith("signals/")
+
+
 def _cross_report_publish_checksum(
     package: CrossReportPublishPackage,
     settings: PublishSettings,
@@ -1218,6 +1228,25 @@ def publish_cross_report_package(
                     "target_post_type": classification.post_type,
                 },
             )
+        if (
+            package.target_route == "wordpress:ml_signal"
+            and outcome.status == "published"
+            and outcome.post_url
+            and not _signal_url_is_in_section(outcome.post_url)
+        ):
+            raise AppError(
+                code="signal_publish_url_mismatch",
+                message="Published Signal URL is outside /signals/.",
+                retryable=False,
+                severity="error",
+                context={
+                    "package_id": package.package_id,
+                    "post_id": outcome.post_id,
+                    "post_url": outcome.post_url,
+                    "target_route": package.target_route,
+                    "target_post_type": classification.post_type,
+                },
+            )
         return _cross_report_result_from_outcome(
             package=package,
             publication_mode="publish_live",
@@ -1298,6 +1327,98 @@ def publish_cross_report_package(
         )
     )
     return result
+
+
+def _signal_projection_package(
+    projection: SignalPublishProjection,
+) -> CrossReportPublishPackage:
+    payload = asdict(projection)
+    content_hash = hashlib.sha256(
+        json.dumps(
+            payload,
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    stable_file_id = projection.file_id or f"signal:{projection.slug}"
+    return CrossReportPublishPackage(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        package_id=stable_file_id,
+        file_id=stable_file_id,
+        target_route=projection.target_route,
+        title=projection.title,
+        slug=projection.slug,
+        excerpt=projection.summary_html,
+        body_html=projection.body_html,
+        html_text=projection.html_text
+        or f"<html><body>{projection.body_html}</body></html>",
+        html_path=f"signal_posts/{projection.slug}.html",
+        canonical_artifact_path=f"signal_posts/{projection.slug}.json",
+        artifact_sha256=content_hash,
+        validation_sha256=content_hash,
+        selected_theme_id=projection.slug,
+        selected_report_ids=list(projection.source_report_ids),
+        source_metadata=[
+            {"publisher": publisher} for publisher in projection.publisher_labels
+        ],
+        category_labels=list(projection.topic_labels or projection.topic_ids),
+        tag_labels=list(projection.tag_labels),
+        evidence_reference_ids=list(projection.evidence_ids),
+        raw_metric_ids=[],
+        prompt_hashes={"signal_post_generator": content_hash},
+        machine_metadata={
+            "schema_version": WORDPRESS_ENTITY_SCHEMA_VERSION,
+            "signal_slug": projection.slug,
+            "validation_status": projection.validation_status,
+            "confidence": projection.confidence,
+            "uncertainty": projection.uncertainty,
+        },
+    )
+
+
+def publish_signal_projection(
+    projection: SignalPublishProjection,
+    settings: PublishSettings,
+    ctx: RunContext,
+    *,
+    dry_run: bool = False,
+    publish_html_fn: Callable[
+        [PublishRequest, PublishSettings, RunContext], PublishOutcome
+    ] = publish_html,
+    find_post_by_file_id_fn: Callable[
+        [WordPressPostLookupRequest, RunContext], WordPressPostLookupResponse
+    ] = find_post_by_file_id,
+    ensure_taxonomy_terms_fn: Callable[
+        [WordPressTaxonomyEnsureRequest, RunContext], WordPressTaxonomyEnsureResponse
+    ] = ensure_taxonomy_terms,
+    ensure_tags_fn: Callable[
+        [WordPressTagEnsureRequest, RunContext], WordPressTagEnsureResponse
+    ] = ensure_tags,
+    sleep_fn: Callable[[float], None] = time.sleep,
+) -> CrossReportPublishResultSummary:
+    if projection.validation_status != "approved":
+        raise AppError(
+            code="signal_publish_validation_status_invalid",
+            message="Only approved Signal projections can be published.",
+            retryable=False,
+            severity="error",
+            context={
+                "slug": projection.slug,
+                "validation_status": projection.validation_status,
+            },
+        )
+    return publish_cross_report_package(
+        _signal_projection_package(projection),
+        settings,
+        ctx,
+        dry_run=dry_run,
+        publish_html_fn=publish_html_fn,
+        find_post_by_file_id_fn=find_post_by_file_id_fn,
+        ensure_taxonomy_terms_fn=ensure_taxonomy_terms_fn,
+        ensure_tags_fn=ensure_tags_fn,
+        sleep_fn=sleep_fn,
+    )
 
 
 def run_publish(

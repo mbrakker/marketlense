@@ -59,7 +59,12 @@ final class Taxonomies
 
         register_taxonomy(
             self::PUBLISHER_TAXONOMY,
-            Post_Type::report_post_types(),
+            [
+                Post_Type::POST_TYPE,
+                Post_Type::CORE_POST_TYPE,
+                Post_Type::SIGNAL_POST_TYPE,
+                Post_Type::BRIEFING_POST_TYPE,
+            ],
             [
                 'labels' => [
                     'name'          => __('Publishers', 'marketlense-core'),

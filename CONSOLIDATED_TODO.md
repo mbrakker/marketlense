@@ -335,19 +335,6 @@ Findings summary:
 
 Scope: gaps identified by comparing the README direction against the current `src/` implementation and the `Wordpress/wp-content` block theme/plugin. These items cover public information architecture, WordPress design, publish entities, and naming drift.
 
-- **Title:** Build the grounded Signal-post generation and WordPress publish flow [Impact: 5/5, Effort: 5/5]
-  - Explanation: Signals are a canonical README entity, but current WordPress signal modules are render-time heuristics over WP posts/categories rather than durable, approved Signal posts. The required flow is to derive grounded Signal entities from approved Python projections and evidence references, generate publish-ready Signal HTML/metadata, and publish them through the existing WordPress service boundary.
-  - Pros: Makes Signals reproducible, evidence-backed, and independently publishable instead of homepage-only UI fragments.
-  - Cons: Requires new contracts, generator/orchestrator work, WordPress routing, and migration/removal of current heuristic signal modules.
-  - Acceptance Criteria:
-    - Signal contracts define schema version, title, slug, summary/body HTML, evidence IDs, source report IDs, topic/category IDs, confidence/uncertainty fields, and validation status.
-    - Signal generation reads only approved projections/Data Points through existing service boundaries such as `analytics_store_service`, reusing cross-report signal scoring where appropriate without making Briefing-specific contracts the public Signal contract.
-    - A Signal generator validates grounding by requiring cited projected evidence, source reports, and topic/category relationships before any publish package is created.
-    - A Signal orchestrator or documented CLI/script path creates Signal publish packages and routes them through the canonical publish/WordPress boundary without adding a peer WordPress client.
-    - WordPress publishes Signal posts into the Signals section with deterministic post type or taxonomy route, slug/permalink, category/topic assignment, metadata, and readback verification.
-    - Dry-run output shows the exact Signal WordPress payload classification and target route without side effects.
-    - Tests cover positive grounded Signal creation, insufficient-evidence failure, dry-run payload construction, live payload construction, idempotent republish, and WordPress readback/URL placement.
-
 - **Title:** Stop WordPress from synthesizing intelligence, freshness, and authority claims at render time [Impact: 5/5, Effort: 3/5]
   - Explanation: README says WordPress must not synthesize new intelligence, freshness, or quality judgments and should assemble approved projections/artifacts. Current plugin code computes weekly signals, strategic themes, freshness windows, and publisher authority from live WordPress counts and dates in `class-marketlense-core-intelligence-stats.php`.
   - Pros: Keeps analytical claims owned by the Python pipeline and makes published site content reproducible from approved artifacts.
