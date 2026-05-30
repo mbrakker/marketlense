@@ -11,7 +11,11 @@ from src.contracts.cross_report_analysis import (
     CrossReportPublishPackage,
 )
 from src.contracts.publish import PublishOutcome
-from src.contracts.wordpress import WordPressPostLookupResponse
+from src.contracts.wordpress import (
+    WordPressPostLookupResponse,
+    WordPressTagEnsureResponse,
+    WordPressTaxonomyEnsureResponse,
+)
 from src.orchestrators.publish_orchestrator import publish_cross_report_package
 
 
@@ -66,6 +70,27 @@ def _settings(tmp_path):
     )
 
 
+def _ensure_cross_report_taxonomy(request, ctx):
+    if request.taxonomy_rest_base == "categories":
+        return WordPressTaxonomyEnsureResponse(
+            schema_version="1.0",
+            slug_to_id={"retail": 11},
+        )
+    if request.taxonomy_rest_base == "ml_publisher":
+        return WordPressTaxonomyEnsureResponse(
+            schema_version="1.0",
+            slug_to_id={"publisher-a": 21, "publisher-b": 22},
+        )
+    raise AssertionError(request.taxonomy_rest_base)
+
+
+def _ensure_cross_report_tags(request, ctx):
+    return WordPressTagEnsureResponse(
+        schema_version="1.0",
+        slug_to_id={"ai": 31},
+    )
+
+
 def test_publish_cross_report_package_dry_run_skips_wordpress(
     tmp_path,
     run_context,
@@ -84,6 +109,33 @@ def test_publish_cross_report_package_dry_run_skips_wordpress(
     assert result.status == "dry_run"
     assert result.target_route == "wordpress:ml_briefing"
     assert result.idempotency_reused is False
+    assert calls == []
+
+
+def test_publish_cross_report_package_dry_run_reports_briefing_payload_classification(
+    tmp_path,
+    run_context,
+) -> None:
+    calls = []
+
+    result = publish_cross_report_package(
+        _package(tmp_path),
+        _settings(tmp_path),
+        run_context,
+        dry_run=True,
+        publish_html_fn=lambda request, settings, ctx: calls.append("publish"),
+        find_post_by_file_id_fn=lambda request, ctx: calls.append("lookup"),
+    )
+
+    assert result.status == "dry_run"
+    assert result.target_route == "wordpress:ml_briefing"
+    assert result.target_post_type == "ml_briefing"
+    assert result.target_slug == "ai-commerce-across-reports"
+    assert result.category_slugs == ["retail"]
+    assert result.tag_slugs == ["ai"]
+    assert result.taxonomy_term_slugs == {
+        "ml_publisher": ["publisher-a", "publisher-b"]
+    }
     assert calls == []
 
 
@@ -109,7 +161,7 @@ def test_publish_cross_report_package_live_reuses_persisted_publish_outcome(
             file_id=request.file_id,
             status="published",
             post_id=123,
-            post_url="https://example.com/cross-report",
+            post_url="https://example.com/briefings/ai-commerce-across-reports/",
         )
 
     first = publish_cross_report_package(
@@ -119,6 +171,8 @@ def test_publish_cross_report_package_live_reuses_persisted_publish_outcome(
         dry_run=False,
         publish_html_fn=_publish,
         find_post_by_file_id_fn=_lookup,
+        ensure_taxonomy_terms_fn=_ensure_cross_report_taxonomy,
+        ensure_tags_fn=_ensure_cross_report_tags,
         sleep_fn=lambda seconds: None,
     )
     second = publish_cross_report_package(
@@ -128,13 +182,17 @@ def test_publish_cross_report_package_live_reuses_persisted_publish_outcome(
         dry_run=False,
         publish_html_fn=_publish,
         find_post_by_file_id_fn=_lookup,
+        ensure_taxonomy_terms_fn=_ensure_cross_report_taxonomy,
+        ensure_tags_fn=_ensure_cross_report_tags,
         sleep_fn=lambda seconds: None,
     )
 
     assert first.status == "published"
     assert first.post_id == 123
     assert second.idempotency_reused is True
-    assert second.post_url == "https://example.com/cross-report"
+    assert (
+        second.post_url == "https://example.com/briefings/ai-commerce-across-reports/"
+    )
     assert len(publish_calls) == 1
     assert publish_calls[0].html_snapshot is not None
 
@@ -176,6 +234,8 @@ def test_publish_cross_report_package_routes_briefing_packages_to_briefing_post_
         dry_run=False,
         publish_html_fn=_publish,
         find_post_by_file_id_fn=_lookup,
+        ensure_taxonomy_terms_fn=_ensure_cross_report_taxonomy,
+        ensure_tags_fn=_ensure_cross_report_tags,
         sleep_fn=lambda seconds: None,
     )
 
@@ -185,6 +245,132 @@ def test_publish_cross_report_package_routes_briefing_packages_to_briefing_post_
     assert observed_lookup_post_types == ["ml_briefing"]
     assert observed_publish_post_types == ["ml_briefing"]
     assert settings.wp.post_type == "ml_report"
+
+
+def test_publish_cross_report_package_builds_briefing_terms_and_slug_payload(
+    tmp_path,
+    run_context,
+) -> None:
+    taxonomy_calls = []
+    tag_calls = []
+    publish_calls = []
+
+    def _lookup(request, ctx):
+        return WordPressPostLookupResponse(
+            schema_version="1.0",
+            found=False,
+            post_id=None,
+            link=None,
+        )
+
+    def _ensure_taxonomy(request, ctx):
+        taxonomy_calls.append(request)
+        if request.taxonomy_rest_base == "categories":
+            return WordPressTaxonomyEnsureResponse(
+                schema_version="1.0",
+                slug_to_id={"retail": 11},
+            )
+        if request.taxonomy_rest_base == "ml_publisher":
+            return WordPressTaxonomyEnsureResponse(
+                schema_version="1.0",
+                slug_to_id={"publisher-a": 21, "publisher-b": 22},
+            )
+        raise AssertionError(request.taxonomy_rest_base)
+
+    def _ensure_tags(request, ctx):
+        tag_calls.append(request)
+        return WordPressTagEnsureResponse(
+            schema_version="1.0",
+            slug_to_id={"ai": 31},
+        )
+
+    def _publish(request, settings, ctx):
+        publish_calls.append((request, settings))
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=request.html_path,
+            file_id=request.file_id,
+            status="published",
+            post_id=321,
+            post_url="https://example.com/briefings/ai-commerce-across-reports/",
+        )
+
+    result = publish_cross_report_package(
+        _package(tmp_path),
+        _settings(tmp_path),
+        run_context,
+        dry_run=False,
+        publish_html_fn=_publish,
+        find_post_by_file_id_fn=_lookup,
+        ensure_taxonomy_terms_fn=_ensure_taxonomy,
+        ensure_tags_fn=_ensure_tags,
+        sleep_fn=lambda seconds: None,
+    )
+
+    publish_request, publish_settings = publish_calls[0]
+    assert result.status == "published"
+    assert result.target_post_type == "ml_briefing"
+    assert result.target_slug == "ai-commerce-across-reports"
+    assert result.category_slugs == ["retail"]
+    assert result.tag_slugs == ["ai"]
+    assert result.taxonomy_term_slugs == {
+        "ml_publisher": ["publisher-a", "publisher-b"]
+    }
+    assert publish_settings.wp.post_type == "ml_briefing"
+    assert publish_request.slug == "ai-commerce-across-reports"
+    assert publish_request.resolved_terms.category_ids == [11]
+    assert publish_request.resolved_terms.tag_ids == [31]
+    assert publish_request.resolved_terms.taxonomy_terms == {"ml_publisher": [21, 22]}
+    assert [call.taxonomy_rest_base for call in taxonomy_calls] == [
+        "categories",
+        "ml_publisher",
+    ]
+    assert tag_calls[0].tags == ["ai"]
+
+
+def test_publish_cross_report_package_rejects_briefing_url_outside_briefings_section(
+    tmp_path,
+    run_context,
+) -> None:
+    def _lookup(request, ctx):
+        return WordPressPostLookupResponse(
+            schema_version="1.0",
+            found=False,
+            post_id=None,
+            link=None,
+        )
+
+    def _publish(request, settings, ctx):
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=request.html_path,
+            file_id=request.file_id,
+            status="published",
+            post_id=321,
+            post_url="https://example.com/reports/ai-commerce-across-reports/",
+        )
+
+    result = publish_cross_report_package(
+        _package(tmp_path),
+        _settings(tmp_path),
+        run_context,
+        dry_run=False,
+        publish_html_fn=_publish,
+        find_post_by_file_id_fn=_lookup,
+        ensure_taxonomy_terms_fn=lambda request, ctx: WordPressTaxonomyEnsureResponse(
+            schema_version="1.0",
+            slug_to_id={"retail": 11, "publisher-a": 21, "publisher-b": 22},
+        ),
+        ensure_tags_fn=lambda request, ctx: WordPressTagEnsureResponse(
+            schema_version="1.0",
+            slug_to_id={"ai": 31},
+        ),
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert result.status == "error"
+    assert result.error_code == "cross_report_briefing_url_mismatch"
+    assert result.post_id is None
 
 
 def test_publish_cross_report_package_existing_post_with_changed_checksum_errors(
@@ -249,7 +435,7 @@ def test_publish_cross_report_package_logs_idempotency_reuse(
             file_id=request.file_id,
             status="published",
             post_id=123,
-            post_url="https://example.com/cross-report",
+            post_url="https://example.com/briefings/ai-commerce-across-reports/",
         )
 
     caplog.set_level(logging.INFO, logger="market_lense.publish_orchestrator")
@@ -260,6 +446,8 @@ def test_publish_cross_report_package_logs_idempotency_reuse(
         dry_run=False,
         publish_html_fn=_publish,
         find_post_by_file_id_fn=_lookup,
+        ensure_taxonomy_terms_fn=_ensure_cross_report_taxonomy,
+        ensure_tags_fn=_ensure_cross_report_tags,
         sleep_fn=lambda seconds: None,
     )
     reused = publish_cross_report_package(
@@ -269,6 +457,8 @@ def test_publish_cross_report_package_logs_idempotency_reuse(
         dry_run=False,
         publish_html_fn=_publish,
         find_post_by_file_id_fn=_lookup,
+        ensure_taxonomy_terms_fn=_ensure_cross_report_taxonomy,
+        ensure_tags_fn=_ensure_cross_report_tags,
         sleep_fn=lambda seconds: None,
     )
 

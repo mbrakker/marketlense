@@ -107,6 +107,12 @@ class PublishRequest:
             "doc": "Optional preloaded publish HTML snapshot carrying loaded HTML plus parsed metadata for reuse across the publish path."
         },
     )
+    slug: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional deterministic WordPress slug supplied by prebuilt publish packages."
+        },
+    )
     resolved_terms: Optional[PublishResolvedTerms] = field(
         default=None,
         metadata={

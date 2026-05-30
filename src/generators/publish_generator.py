@@ -204,7 +204,7 @@ def publish_html(
     )
 
     title = str(html_snapshot.title or "").strip() or Path(request.html_path).stem
-    slug = slugify(title)
+    slug = str(request.slug or "").strip() or slugify(title)
 
     post_resp = create_post(
         WordPressPostCreateRequest(

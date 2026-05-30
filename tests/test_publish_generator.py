@@ -533,3 +533,40 @@ def test_publish_html_uses_pre_resolved_terms_without_term_lookups(
     assert (
         wordpress_http.calls_for("GET", "https://example.com/wp-json/wp/v2/tags") == []
     )
+
+
+def test_publish_html_uses_request_slug_override_for_prebuilt_publish_packages(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_text = (
+        "<html><head><title>AI Commerce Across Reports</title></head>"
+        "<body>Drive fileId: cross-report:analysis-ai</body></html>"
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    pg.publish_html(
+        PublishRequest(
+            schema_version="1.0",
+            html_path="out/briefing.html",
+            auth_header="Bearer token",
+            file_id="cross-report:analysis-ai",
+            html_text=html_text,
+            slug="ai-commerce-across-reports",
+            resolved_terms=PublishResolvedTerms(schema_version="1.0"),
+        ),
+        settings,
+        run_context,
+    )
+
+    post_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )[0]
+    assert post_call.json_data["slug"] == "ai-commerce-across-reports"

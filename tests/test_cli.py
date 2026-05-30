@@ -177,7 +177,7 @@ def _cross_report_cli_outcome() -> CrossReportOrchestratorOutcome:
     publish_request = CrossReportPublishRequestSummary(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         publication_mode="generate_only",
-        target_route="wordpress:ml_report",
+        target_route="wordpress:ml_briefing",
         title=generated.title,
         slug=generated.slug,
         artifact_path="out/cross_report_analysis/ai-commerce/analysis.json",
@@ -189,8 +189,13 @@ def _cross_report_cli_outcome() -> CrossReportOrchestratorOutcome:
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         publication_mode="generate_only",
         status="not_requested",
-        target_route="wordpress:ml_report",
+        target_route="wordpress:ml_briefing",
         idempotency_reused=False,
+        target_post_type="ml_briefing",
+        target_slug="ai-commerce-across-reports",
+        category_slugs=["retail"],
+        tag_slugs=["ai"],
+        taxonomy_term_slugs={"ml_publisher": ["publisher-a"]},
     )
     return CrossReportOrchestratorOutcome(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -494,7 +499,7 @@ class TestCli(unittest.TestCase):
                     publication_mode="publish_live",
                     status="published",
                     post_id=123,
-                    post_url="https://example.com/cross-report",
+                    post_url="https://example.com/briefings/ai-commerce-across-reports/",
                 )
                 outcome = replace(
                     base_outcome,
@@ -531,10 +536,20 @@ class TestCli(unittest.TestCase):
         self.assertIn("Publication mode", output)
         self.assertIn("publish_live", output)
         self.assertIn("Target route", output)
-        self.assertIn("wordpress:ml_report", output)
+        self.assertIn("wordpress:ml_briefing", output)
+        self.assertIn("Target post type", output)
+        self.assertIn("ml_briefing", output)
+        self.assertIn("Target slug", output)
+        self.assertIn("ai-commerce-across-reports", output)
+        self.assertIn("Categories", output)
+        self.assertIn("retail", output)
+        self.assertIn("Tags", output)
+        self.assertIn("ai", output)
+        self.assertIn("Taxonomy terms", output)
+        self.assertIn("publisher-a", output)
         self.assertIn("Post ID", output)
         self.assertIn("123", output)
-        self.assertIn("https://example.com/cross-report", output)
+        self.assertIn("https://example.com/briefings/ai-commerce-across-reports/", output)
 
     def test_ingest_wires_settings_and_orchestrator(self) -> None:
         # Avoid importing heavy dependencies during test import.

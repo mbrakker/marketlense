@@ -8,6 +8,7 @@ import time
 import json
 from pathlib import Path
 from typing import Callable, List, Optional, cast
+from urllib.parse import urlparse
 
 from src.contracts.files import ListHtmlRequest, ReadTextRequest
 from src.contracts.categories import CategoryMappingLoadRequest
@@ -47,7 +48,9 @@ from src.contracts.wordpress import (
     WordPressPostLookupBatchRequest,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
+    WordPressTagEnsureResponse,
     WordPressTaxonomyEnsureRequest,
+    WordPressTaxonomyEnsureResponse,
     WordPressTaxonomyTerm,
     WordPressTagEnsureRequest,
 )
@@ -101,6 +104,15 @@ class _PublishPreflightEntry:
     validation_issues: List[str] = field(default_factory=list)
     existing_post_lookup: WordPressPostLookupBatchItem | None = None
     resolved_terms: PublishResolvedTerms | None = None
+
+
+@dataclass(frozen=True)
+class _CrossReportWordPressClassification:
+    post_type: str
+    slug: str
+    category_terms: list[WordPressTaxonomyTerm]
+    tag_slugs: list[str]
+    taxonomy_terms: dict[str, list[WordPressTaxonomyTerm]]
 
 
 def _metadata_index(
@@ -752,6 +764,158 @@ def _cross_report_settings_for_target_route(
         return route_settings
 
 
+def _unique_terms_from_labels(labels: list[str]) -> list[WordPressTaxonomyTerm]:
+    terms: list[WordPressTaxonomyTerm] = []
+    seen: set[str] = set()
+    for label in labels:
+        name = str(label or "").strip()
+        slug = slugify(name)
+        if name == "" or slug == "" or slug in seen:
+            continue
+        seen.add(slug)
+        terms.append(WordPressTaxonomyTerm(schema_version="1.0", slug=slug, name=name))
+    return terms
+
+
+def _cross_report_publisher_labels(package: CrossReportPublishPackage) -> list[str]:
+    publishers: list[str] = []
+    seen: set[str] = set()
+    for item in package.source_metadata:
+        publisher = str((item or {}).get("publisher") or "").strip()
+        slug = slugify(publisher)
+        if publisher == "" or slug == "" or slug in seen:
+            continue
+        seen.add(slug)
+        publishers.append(publisher)
+    return publishers
+
+
+def _cross_report_wordpress_classification(
+    package: CrossReportPublishPackage,
+    settings: PublishSettings,
+) -> _CrossReportWordPressClassification:
+    return _CrossReportWordPressClassification(
+        post_type=settings.wp.post_type,
+        slug=str(package.slug or "").strip() or slugify(package.title),
+        category_terms=_unique_terms_from_labels(package.category_labels),
+        tag_slugs=[
+            term.slug for term in _unique_terms_from_labels(package.tag_labels)
+        ],
+        taxonomy_terms={
+            "ml_publisher": _unique_terms_from_labels(
+                _cross_report_publisher_labels(package)
+            )
+        },
+    )
+
+
+def _cross_report_result_fields(
+    classification: _CrossReportWordPressClassification,
+) -> dict[str, object]:
+    return {
+        "target_post_type": classification.post_type,
+        "target_slug": classification.slug,
+        "category_slugs": [term.slug for term in classification.category_terms],
+        "tag_slugs": list(classification.tag_slugs),
+        "taxonomy_term_slugs": {
+            taxonomy: [term.slug for term in terms]
+            for taxonomy, terms in classification.taxonomy_terms.items()
+            if terms
+        },
+    }
+
+
+def _resolve_cross_report_terms(
+    *,
+    classification: _CrossReportWordPressClassification,
+    settings: PublishSettings,
+    base_url: str,
+    auth_header: str,
+    ctx: RunContext,
+    ensure_taxonomy_terms_fn: Callable[
+        [WordPressTaxonomyEnsureRequest, RunContext], WordPressTaxonomyEnsureResponse
+    ],
+    ensure_tags_fn: Callable[
+        [WordPressTagEnsureRequest, RunContext], WordPressTagEnsureResponse
+    ],
+) -> PublishResolvedTerms:
+    category_ids: list[int] = []
+    if classification.category_terms:
+        category_response = ensure_taxonomy_terms_fn(
+            WordPressTaxonomyEnsureRequest(
+                schema_version="1.0",
+                base_url=base_url,
+                auth_header=auth_header,
+                taxonomy_rest_base="categories",
+                terms=classification.category_terms,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+            ),
+            ctx,
+        )
+        category_ids = [
+            category_response.slug_to_id[term.slug]
+            for term in classification.category_terms
+            if term.slug in category_response.slug_to_id
+        ]
+
+    tag_ids: list[int] = []
+    if classification.tag_slugs:
+        tag_response = ensure_tags_fn(
+            WordPressTagEnsureRequest(
+                schema_version="1.0",
+                base_url=base_url,
+                auth_header=auth_header,
+                tags=classification.tag_slugs,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+            ),
+            ctx,
+        )
+        tag_ids = [
+            tag_response.slug_to_id[tag_slug]
+            for tag_slug in classification.tag_slugs
+            if tag_slug in tag_response.slug_to_id
+        ]
+
+    taxonomy_term_ids: dict[str, list[int]] = {}
+    for taxonomy_rest_base, terms in classification.taxonomy_terms.items():
+        if not terms:
+            continue
+        taxonomy_response = ensure_taxonomy_terms_fn(
+            WordPressTaxonomyEnsureRequest(
+                schema_version="1.0",
+                base_url=base_url,
+                auth_header=auth_header,
+                taxonomy_rest_base=taxonomy_rest_base,
+                terms=terms,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+            ),
+            ctx,
+        )
+        ids = [
+            taxonomy_response.slug_to_id[term.slug]
+            for term in terms
+            if term.slug in taxonomy_response.slug_to_id
+        ]
+        if ids:
+            taxonomy_term_ids[taxonomy_rest_base] = ids
+
+    return PublishResolvedTerms(
+        schema_version="1.0",
+        category_ids=category_ids,
+        tag_ids=tag_ids,
+        taxonomy_terms=taxonomy_term_ids,
+    )
+
+
+def _briefing_url_is_in_section(url: str) -> bool:
+    parsed = urlparse(str(url or ""))
+    path = parsed.path.strip("/")
+    return path == "briefings" or path.startswith("briefings/")
+
+
 def _cross_report_publish_checksum(
     package: CrossReportPublishPackage,
     settings: PublishSettings,
@@ -789,6 +953,7 @@ def _cross_report_result_from_outcome(
     publication_mode: str,
     outcome: PublishOutcome,
     idempotency_reused: bool,
+    classification: _CrossReportWordPressClassification,
 ) -> CrossReportPublishResultSummary:
     status = "published" if outcome.status == "published" else "skipped"
     if outcome.status == "error":
@@ -799,6 +964,7 @@ def _cross_report_result_from_outcome(
         status=cast(CrossReportPublishStatus, status),
         target_route=package.target_route,
         idempotency_reused=idempotency_reused,
+        **_cross_report_result_fields(classification),
         post_id=outcome.post_id,
         post_url=outcome.post_url,
         error_code=outcome.error if status == "error" else None,
@@ -871,10 +1037,20 @@ def publish_cross_report_package(
     find_post_by_file_id_fn: Callable[
         [WordPressPostLookupRequest, RunContext], WordPressPostLookupResponse
     ] = find_post_by_file_id,
+    ensure_taxonomy_terms_fn: Callable[
+        [WordPressTaxonomyEnsureRequest, RunContext], WordPressTaxonomyEnsureResponse
+    ] = ensure_taxonomy_terms,
+    ensure_tags_fn: Callable[
+        [WordPressTagEnsureRequest, RunContext], WordPressTagEnsureResponse
+    ] = ensure_tags,
     sleep_fn: Callable[[float], None] = time.sleep,
 ) -> CrossReportPublishResultSummary:
     validate_cross_report_contract(package)
     publication_mode = "publish_dry_run" if dry_run else "publish_live"
+    route_settings = _cross_report_settings_for_target_route(
+        settings, package.target_route
+    )
+    classification = _cross_report_wordpress_classification(package, route_settings)
     logger.info(
         log_event(
             ctx,
@@ -885,6 +1061,8 @@ def publish_cross_report_package(
                 "package_id": package.package_id,
                 "publication_mode": publication_mode,
                 "target_route": package.target_route,
+                "target_post_type": classification.post_type,
+                "target_slug": classification.slug,
                 "selected_theme_id": package.selected_theme_id,
                 "selected_report_ids": package.selected_report_ids,
                 "validation_sha256": package.validation_sha256,
@@ -898,6 +1076,7 @@ def publish_cross_report_package(
             status="dry_run",
             target_route=package.target_route,
             idempotency_reused=False,
+            **_cross_report_result_fields(classification),
         )
         logger.info(
             log_event(
@@ -914,7 +1093,6 @@ def publish_cross_report_package(
         )
         return result
 
-    route_settings = _cross_report_settings_for_target_route(settings, package.target_route)
     checksum = _cross_report_publish_checksum(package, route_settings)
     reused = _lookup_cross_report_publish_idempotency(
         package=package,
@@ -991,12 +1169,22 @@ def publish_cross_report_package(
                     "checksum": checksum,
                 },
             )
+        resolved_terms = _resolve_cross_report_terms(
+            classification=classification,
+            settings=route_settings,
+            base_url=base_url,
+            auth_header=auth_header,
+            ctx=ctx,
+            ensure_taxonomy_terms_fn=ensure_taxonomy_terms_fn,
+            ensure_tags_fn=ensure_tags_fn,
+        )
         outcome = publish_html_fn(
             PublishRequest(
                 schema_version="1.0",
                 html_path=package.html_path,
                 auth_header=auth_header,
                 file_id=package.file_id,
+                slug=classification.slug,
                 html_snapshot=PublishHtmlSnapshot(
                     schema_version="1.0",
                     html_text=package.html_text,
@@ -1006,16 +1194,36 @@ def publish_cross_report_package(
                     image_sources=[],
                     preview_image_src=None,
                 ),
-                resolved_terms=PublishResolvedTerms(schema_version="1.0"),
+                resolved_terms=resolved_terms,
             ),
             route_settings,
             ctx,
         )
+        if (
+            package.target_route == "wordpress:ml_briefing"
+            and outcome.status == "published"
+            and outcome.post_url
+            and not _briefing_url_is_in_section(outcome.post_url)
+        ):
+            raise AppError(
+                code="cross_report_briefing_url_mismatch",
+                message="Published cross-report Briefing URL is outside /briefings/.",
+                retryable=False,
+                severity="error",
+                context={
+                    "package_id": package.package_id,
+                    "post_id": outcome.post_id,
+                    "post_url": outcome.post_url,
+                    "target_route": package.target_route,
+                    "target_post_type": classification.post_type,
+                },
+            )
         return _cross_report_result_from_outcome(
             package=package,
             publication_mode="publish_live",
             outcome=outcome,
             idempotency_reused=False,
+            classification=classification,
         )
 
     try:
@@ -1047,6 +1255,7 @@ def publish_cross_report_package(
             status="error",
             target_route=package.target_route,
             idempotency_reused=False,
+            **_cross_report_result_fields(classification),
             error_code=exc.code,
             error_message=exc.message,
         )

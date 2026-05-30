@@ -335,17 +335,6 @@ Findings summary:
 
 Scope: gaps identified by comparing the README direction against the current `src/` implementation and the `Wordpress/wp-content` block theme/plugin. These items cover public information architecture, WordPress design, publish entities, and naming drift.
 
-- **Title:** Route cross-report HTML publication into the Briefings section [Impact: 5/5, Effort: 3/5]
-  - Explanation: Cross-report HTML is already generated through `src/generators/cross_report_publish_html.py` and routed through `python -m src.cli generate-cross-report-analysis` plus `publish_orchestrator.publish_cross_report_package`. The remaining gap is making that path explicitly publish the generated cross-report HTML as a WordPress post in the Briefings section, not as a Report/digest or an unclassified WordPress post.
-  - Pros: Turns the implemented cross-report analysis capability into the public Briefing workflow without creating a second publication subsystem.
-  - Cons: Requires a clear WordPress routing choice for the Briefings section and migration handling for previously published cross-report posts.
-  - Acceptance Criteria:
-    - A documented command or script path publishes cross-report HTML to WordPress, starting from `python -m src.cli generate-cross-report-analysis --publish-mode publish_live` or a thin script that calls the same orchestrator.
-    - `publish_cross_report_package` maps the package to the Briefings section deterministically, including post type, slug/permalink route, category/term assignment, and any required metadata.
-    - Cross-report publications do not land in the Reports archive or use report/digest labels unless README explicitly redefines the sectioning model.
-    - Dry-run output shows the target Briefings route and the exact WordPress payload classification without making side effects.
-    - Tests cover live payload construction, dry-run payload classification, idempotent republish, and readback/URL placement for a Briefing post.
-
 - **Title:** Build the grounded Signal-post generation and WordPress publish flow [Impact: 5/5, Effort: 5/5]
   - Explanation: Signals are a canonical README entity, but current WordPress signal modules are render-time heuristics over WP posts/categories rather than durable, approved Signal posts. The required flow is to derive grounded Signal entities from approved Python projections and evidence references, generate publish-ready Signal HTML/metadata, and publish them through the existing WordPress service boundary.
   - Pros: Makes Signals reproducible, evidence-backed, and independently publishable instead of homepage-only UI fragments.

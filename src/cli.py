@@ -1777,6 +1777,24 @@ def generate_cross_report_analysis_cli(
     table.add_row("Validation", outcome.validation_result.status)
     table.add_row("Publication mode", outcome.publish_result.publication_mode)
     table.add_row("Target route", outcome.publish_result.target_route)
+    if outcome.publish_result.target_post_type:
+        table.add_row("Target post type", outcome.publish_result.target_post_type)
+    if outcome.publish_result.target_slug:
+        table.add_row("Target slug", outcome.publish_result.target_slug)
+    if outcome.publish_result.category_slugs:
+        table.add_row("Categories", ", ".join(outcome.publish_result.category_slugs))
+    if outcome.publish_result.tag_slugs:
+        table.add_row("Tags", ", ".join(outcome.publish_result.tag_slugs))
+    if outcome.publish_result.taxonomy_term_slugs:
+        taxonomy_labels = [
+            f"{taxonomy}: {', '.join(slugs)}"
+            for taxonomy, slugs in sorted(
+                outcome.publish_result.taxonomy_term_slugs.items()
+            )
+            if slugs
+        ]
+        if taxonomy_labels:
+            table.add_row("Taxonomy terms", "; ".join(taxonomy_labels))
     if outcome.publish_result.post_id is not None:
         table.add_row("Post ID", str(outcome.publish_result.post_id))
     if outcome.publish_result.post_url:

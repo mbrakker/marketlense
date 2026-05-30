@@ -582,6 +582,28 @@ class CrossReportPublishResultSummary:
     idempotency_reused: bool = field(
         metadata={"doc": "Whether an existing publish outcome was reused."}
     )
+    target_post_type: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Resolved WordPress REST post type for the evaluated route."},
+    )
+    target_slug: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Deterministic WordPress post slug for the publish payload."},
+    )
+    category_slugs: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Native WordPress category slugs assigned to the payload."},
+    )
+    tag_slugs: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Native WordPress tag slugs assigned to the payload."},
+    )
+    taxonomy_term_slugs: Dict[str, List[str]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Custom taxonomy REST base to assigned term slugs for the payload."
+        },
+    )
     post_id: Optional[int] = field(
         default=None,
         metadata={"doc": "WordPress post ID when live publication produced one."},
