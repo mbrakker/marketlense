@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import heapq
 import re
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
@@ -216,6 +217,7 @@ def build_evidence_windows(texts: Sequence[str]) -> List[EvidenceWindow]:
             continue
         tokens = tokenize(raw)
         if len(tokens) <= WINDOW_TOKEN_TARGET:
+            char_counts = char_ngram_counts(raw, n=3)
             windows.append(
                 EvidenceWindow(
                     idx=idx,
@@ -223,6 +225,8 @@ def build_evidence_windows(texts: Sequence[str]) -> List[EvidenceWindow]:
                     normalized=normalize_for_lookup(raw),
                     tokens=set(tokens),
                     quantities=extract_quantities(raw),
+                    char_ngram_counts=char_counts,
+                    char_ngram_norm=vector_norm(char_counts),
                 )
             )
             idx += 1
@@ -231,6 +235,7 @@ def build_evidence_windows(texts: Sequence[str]) -> List[EvidenceWindow]:
             chunk_text = " ".join(chunk).strip()
             if len(chunk_text) < 20:
                 continue
+            char_counts = char_ngram_counts(chunk_text, n=3)
             windows.append(
                 EvidenceWindow(
                     idx=idx,
@@ -238,6 +243,8 @@ def build_evidence_windows(texts: Sequence[str]) -> List[EvidenceWindow]:
                     normalized=normalize_for_lookup(chunk_text),
                     tokens=set(chunk),
                     quantities=extract_quantities(chunk_text),
+                    char_ngram_counts=char_counts,
+                    char_ngram_norm=vector_norm(char_counts),
                 )
             )
             idx += 1
@@ -267,16 +274,23 @@ def retrieve_evidence_windows(
     *,
     top_k: int = RETRIEVE_TOP_K,
 ) -> List[EvidenceWindow]:
-    if not claim_text or not windows:
+    if not claim_text or not windows or top_k <= 0:
         return []
     claim_norm = normalize_for_lookup(claim_text)
     claim_tokens = set(tokenize(claim_norm))
     claim_quantities = extract_quantities(claim_text)
     if not claim_tokens and not claim_quantities:
         return []
-    ranked: List[Tuple[float, int]] = []
-    for window in windows:
-        embedding_sim = pseudo_embedding_similarity(claim_norm, window.normalized)
+    claim_vector = char_ngram_counts(claim_norm, n=3)
+    claim_vector_norm = vector_norm(claim_vector)
+    best: List[Tuple[float, int, int]] = []
+    for position, window in enumerate(windows):
+        embedding_sim = pseudo_embedding_similarity_from_vectors(
+            claim_vector,
+            claim_vector_norm,
+            window.char_ngram_counts,
+            window.char_ngram_norm,
+        )
         overlap = token_overlap_score(claim_tokens, window.tokens)
         bm25_score = bm25ish(claim_tokens, window.tokens)
         quantity_score = quantity_boost(claim_quantities, window.quantities)
@@ -287,11 +301,14 @@ def retrieve_evidence_windows(
             + (0.15 * quantity_score)
         )
         if score > 0:
-            ranked.append((score, window.idx))
-    if not ranked:
+            candidate = (score, -position, window.idx)
+            if len(best) < top_k:
+                heapq.heappush(best, candidate)
+            elif candidate > best[0]:
+                heapq.heapreplace(best, candidate)
+    if not best:
         return []
-    ranked.sort(key=lambda item: item[0], reverse=True)
-    selected_idx = {idx for _, idx in ranked[:top_k]}
+    selected_idx = {idx for _, _, idx in best}
     max_idx = max(window.idx for window in windows)
     expanded_idx = set(selected_idx)
     for idx in list(selected_idx):
@@ -323,13 +340,25 @@ def bm25ish(query_tokens: set[str], doc_tokens: set[str]) -> float:
 def pseudo_embedding_similarity(left: str, right: str) -> float:
     left_vec = char_ngram_counts(left, n=3)
     right_vec = char_ngram_counts(right, n=3)
+    return pseudo_embedding_similarity_from_vectors(
+        left_vec,
+        vector_norm(left_vec),
+        right_vec,
+        vector_norm(right_vec),
+    )
+
+
+def pseudo_embedding_similarity_from_vectors(
+    left_vec: Dict[str, float],
+    left_norm: float,
+    right_vec: Dict[str, float],
+    right_norm: float,
+) -> float:
     if not left_vec or not right_vec:
         return 0.0
     dot = 0.0
     for key, left_value in left_vec.items():
         dot += left_value * right_vec.get(key, 0.0)
-    left_norm = sum(value * value for value in left_vec.values()) ** 0.5
-    right_norm = sum(value * value for value in right_vec.values()) ** 0.5
     if left_norm == 0.0 or right_norm == 0.0:
         return 0.0
     return dot / (left_norm * right_norm)
@@ -345,6 +374,10 @@ def char_ngram_counts(text: str, *, n: int) -> Dict[str, float]:
         gram = compact[idx : idx + n]
         counts[gram] = counts.get(gram, 0.0) + 1.0
     return counts
+
+
+def vector_norm(vector: Dict[str, float]) -> float:
+    return sum(value * value for value in vector.values()) ** 0.5
 
 
 def quantity_boost(claim: Sequence[Any], evidence: Sequence[Any]) -> float:

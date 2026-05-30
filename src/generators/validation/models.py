@@ -29,6 +29,8 @@ class EvidenceWindow:
     normalized: str
     tokens: set[str]
     quantities: List[Any]
+    char_ngram_counts: Dict[str, float]
+    char_ngram_norm: float
 
 
 @dataclass(frozen=True)

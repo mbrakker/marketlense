@@ -177,16 +177,6 @@ Suggested priority order:
     - Breaking changes require explicit version-bump evidence.
     - Representative stored artifacts are covered by fixture snapshots.
 
-- **Title:** Precompute validation evidence vectors and use bounded retrieval [Impact: 4/5, Effort: 3/5]
-  - Explanation: `src/generators/validation/evidence.py` recomputes character n-gram vectors for every claim/window comparison and sorts every scored window for each retrieval call. Metrics, quotes, numbers, and regeneration grounding all share this path, so large evidence packs and PDF text caches pay the cost repeatedly.
-  - Pros: Faster validation and targeted regeneration, especially on long reports with many evidence windows.
-  - Cons: Retrieval ranking is correctness-sensitive; precomputed vectors must preserve deterministic ordering and tie behavior.
-  - Acceptance Criteria:
-    - `EvidenceWindow` or an adjacent validation contract stores precomputed n-gram counts/norms without ad hoc sentinel fields.
-    - `retrieve_evidence_windows` computes the claim vector once and selects top results with a bounded heap or equivalent top-k strategy instead of sorting every scored window.
-    - Golden tests assert retrieved window order for ties, duplicate text, quantity-heavy claims, empty inputs, and long PDF text.
-    - Benchmarks show lower validation runtime on a large evidence fixture with no validation issue regression.
-
 ---
 
 ## 7. Architecture Simplification, CI & Observability
