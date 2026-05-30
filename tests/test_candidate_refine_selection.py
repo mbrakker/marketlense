@@ -835,6 +835,147 @@ def test_refine_selection_recovers_missing_batched_decisions(tmp_path):
     assert [candidate.id for candidate in accepted] == ["chart_1", "chart_2"]
 
 
+def test_refine_selection_recovers_multiple_missing_decisions_without_rescanning(
+    tmp_path,
+    caplog,
+):
+    settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="always")
+    caplog.set_level(logging.WARNING, logger="market_lense.report_generator")
+    candidate_id_eq_checks = {"count": 0}
+
+    class TrackingId(str):
+        __hash__ = str.__hash__
+
+        def __eq__(self, other):
+            candidate_id_eq_checks["count"] += 1
+            return super().__eq__(other)
+
+    ids = [TrackingId(f"chart_{idx}") for idx in range(1, 5)]
+    llm_calls: list[tuple[str, list[str]]] = []
+
+    def _result_for(candidate):
+        return CropRefineResult(
+            schema_version="1.0",
+            id=candidate.id,
+            is_valid_candidate=True,
+            refined_bbox=(
+                float(candidate.bbox[0]) + 5.0,
+                float(candidate.bbox[1]) + 5.0,
+                float(candidate.bbox[2]) + 10.0,
+                float(candidate.bbox[3]) + 10.0,
+            ),
+            include_title=True,
+            include_note_if_present=True,
+            confidence=0.93,
+            reason="valid",
+        )
+
+    def _refine(req, ctx):
+        candidate_ids = [str(candidate.id) for candidate in req.candidates]
+        phase = "finalize" if "finalize" in req.user_prompt else "coarse"
+        llm_calls.append((phase, candidate_ids))
+        results = [_result_for(req.candidates[0])] if len(req.candidates) > 1 else [
+            _result_for(candidate) for candidate in req.candidates
+        ]
+        return CropRefineResponse(
+            schema_version="1.0",
+            results=results,
+            raw_content='{"results":[]}',
+            prompt_tokens=10,
+            completion_tokens=5,
+            total_tokens=15,
+            request_id=f"req-{phase}",
+        )
+
+    deps = _deps(
+        render_prompt=lambda req, ctx: SimpleNamespace(
+            text=str(req.variables.get("phase") or "prompt")
+        ),
+        refine_candidate_crops=_refine,
+    )
+    candidates = [
+        _candidate(
+            cid=cid,
+            kind="chart",
+            page=0,
+            bbox=(
+                12.0 + (idx * 40.0),
+                12.0,
+                260.0 + (idx * 40.0),
+                200.0,
+            ),
+            meta={"area_frac": 0.08, "text_ratio": 0.42},
+        )
+        for idx, cid in enumerate(ids)
+    ]
+    ranked = [
+        RankedCandidate(
+            id=cid,
+            type="chart",
+            score=95 - idx,
+            quality_score=93 - idx,
+            insight_score=92 - idx,
+            data_score=91 - idx,
+            keep=True,
+        )
+        for idx, cid in enumerate(ids)
+    ]
+
+    items, accepted = rsg.select_refined_candidate_items(
+        ranked_rows=ranked,
+        ranked_candidates=candidates,
+        settings=settings,
+        local_pdf_path=_pdf_path(tmp_path),
+        report_name="report",
+        file_id="file",
+        md5=None,
+        ctx=_ctx(),
+        pdf_context=None,
+        fallback_model="gpt-5-mini",
+        selected_kind_max=max(1, int(settings.rank_selected_max)),
+        dependencies=deps,
+    )
+
+    assert llm_calls[:4] == [
+        ("coarse", ["chart_1", "chart_2", "chart_3", "chart_4"]),
+        ("coarse", ["chart_2"]),
+        ("coarse", ["chart_3"]),
+        ("coarse", ["chart_4"]),
+    ]
+    assert ("finalize", ["chart_2"]) in llm_calls
+    assert ("finalize", ["chart_3"]) in llm_calls
+    assert ("finalize", ["chart_4"]) in llm_calls
+    assert [str(item.id) for item in items] == [
+        "chart_1",
+        "chart_2",
+        "chart_3",
+        "chart_4",
+    ]
+    assert [str(candidate.id) for candidate in accepted] == [
+        "chart_1",
+        "chart_2",
+        "chart_3",
+        "chart_4",
+    ]
+    recovery_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if json.loads(record.message).get("event")
+        == "crop_refine_batch_missing_decisions_recover"
+    ]
+    assert [
+        (
+            event["fields"]["phase"],
+            event["fields"]["missing_candidate_ids"],
+        )
+        for event in recovery_events
+    ] == [
+        ("coarse", ["chart_2", "chart_3", "chart_4"]),
+        ("finalize", ["chart_2", "chart_3", "chart_4"]),
+    ]
+    assert candidate_id_eq_checks["count"] <= len(candidates)
+
+
 def test_refine_selection_early_stops_at_selected_max(tmp_path):
     settings = _settings(
         tmp_path,

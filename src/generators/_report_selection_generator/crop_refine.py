@@ -594,15 +594,11 @@ def select_refined_candidate_items(
                     },
                 )
             )
+            coarse_index_by_candidate_id = {
+                candidate.id: index for index, candidate in enumerate(phase_candidates)
+            }
             for missing_id in sorted(missing_coarse_ids):
-                recovery_index = next(
-                    (
-                        index
-                        for index, candidate in enumerate(phase_candidates)
-                        if candidate.id == missing_id
-                    ),
-                    None,
-                )
+                recovery_index = coarse_index_by_candidate_id.get(missing_id)
                 if recovery_index is None:
                     continue
                 recovery_resp = _invoke_phase(
@@ -702,15 +698,12 @@ def select_refined_candidate_items(
                     },
                 )
             )
+            finalize_index_by_candidate_id = {
+                candidate.id: index
+                for index, candidate in enumerate(finalize_candidates)
+            }
             for missing_id in sorted(missing_finalize_ids):
-                recovery_index = next(
-                    (
-                        index
-                        for index, candidate in enumerate(finalize_candidates)
-                        if candidate.id == missing_id
-                    ),
-                    None,
-                )
+                recovery_index = finalize_index_by_candidate_id.get(missing_id)
                 if recovery_index is None:
                     continue
                 recovery_resp = _invoke_phase(

@@ -113,16 +113,6 @@ Suggested priority order:
     - PDF visual/table fixture tests cover dense-panel, multi-chart, decorative-image, and wrapper-image pages.
     - Benchmarks on dense visual fixtures show lower per-page runtime without candidate-quality regression.
 
-- **Title:** Remove repeated crop-refinement recovery scans [Impact: 3/5, Effort: 1/5]
-  - Explanation: `src/generators/_report_selection_generator/crop_refine.py` recovers missing LLM decisions by sorting missing IDs and repeatedly scanning phase candidate lists to find matching indices. This is a recovery-only path, but it is a straightforward O(m*n) hotspot when a batch returns many incomplete decisions.
-  - Pros: Localized speedup, simpler recovery code, low behavioral risk.
-  - Cons: Limited impact unless model responses omit many decisions.
-  - Acceptance Criteria:
-    - Coarse and finalize recovery paths build `{candidate.id: index}` once per phase before processing missing IDs.
-    - Existing recovery ordering and logged `missing_candidate_ids` remain deterministic.
-    - `tests/test_candidate_refine_selection.py` covers multiple missing IDs in one batch.
-    - Type check and candidate-refine tests pass.
-
 ---
 
 ## 3. Publisher Discovery Rollout & Precision
