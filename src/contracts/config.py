@@ -401,6 +401,12 @@ class AppSettings:
         default=True,
         metadata={"doc": "Whether to keep the vector store cache after runs."},
     )
+    vector_store_retention_days: int = field(
+        default=30,
+        metadata={
+            "doc": "Days to retain kept vector stores before retention cleanup; <=0 disables expiry cleanup."
+        },
+    )
     artifacts_use_vector_store: bool = field(
         default=False,
         metadata={

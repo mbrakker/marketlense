@@ -27,6 +27,8 @@ from src.contracts.openai import (
     OpenAIVectorStoreAttachFileResponse,
     OpenAIVectorStoreCreateRequest,
     OpenAIVectorStoreCreateResponse,
+    OpenAIVectorStoreDeleteRequest,
+    OpenAIVectorStoreDeleteResponse,
     OpenAIVectorStoreFileUploadRequest,
     OpenAIVectorStoreFileUploadResponse,
     OpenAIVectorStoreStatusRequest,
@@ -172,6 +174,13 @@ _VECTOR_STORE_STATUS_OPERATION = _VectorStoreOperationSpec(
     complete_event="openai_vector_store_status_complete",
     error_code="openai_vector_store_status_failed",
     error_message="OpenAI vector store status request failed",
+)
+_VECTOR_STORE_DELETE_OPERATION = _VectorStoreOperationSpec(
+    operation="vector_store_delete",
+    start_event="openai_vector_store_delete_start",
+    complete_event="openai_vector_store_delete_complete",
+    error_code="openai_vector_store_delete_failed",
+    error_message="OpenAI vector store delete request failed",
 )
 _VECTOR_STORE_UPDATE_METADATA_OPERATION = _VectorStoreOperationSpec(
     operation="vector_store_update_metadata",
@@ -856,6 +865,8 @@ __all__ = [
     "OpenAIVectorStoreAttachFileResponse",
     "OpenAIVectorStoreCreateRequest",
     "OpenAIVectorStoreCreateResponse",
+    "OpenAIVectorStoreDeleteRequest",
+    "OpenAIVectorStoreDeleteResponse",
     "OpenAIVectorStoreFileUploadRequest",
     "OpenAIVectorStoreFileUploadResponse",
     "OpenAIVectorStoreStatusRequest",
@@ -876,6 +887,7 @@ __all__ = [
     "_SemanticResponseCacheSpec",
     "_VECTOR_STORE_ATTACH_OPERATION",
     "_VECTOR_STORE_CREATE_OPERATION",
+    "_VECTOR_STORE_DELETE_OPERATION",
     "_VECTOR_STORE_STATUS_OPERATION",
     "_VECTOR_STORE_UPDATE_METADATA_OPERATION",
     "_VECTOR_STORE_UPLOAD_OPERATION",

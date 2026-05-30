@@ -38,6 +38,20 @@ def _resolve_analysis_settings(
                 env_first=True,
             ),
             _SettingSpec(
+                field_name="vector_store_retention_days",
+                config_key="vector_store_retention_days",
+                default=int(
+                    _default_config_value(
+                        "analysis", "vector_store_retention_days", fallback=30
+                    )
+                    or 30
+                ),
+                coerce=_to_int,
+                env_key="VECTOR_STORE_RETENTION_DAYS",
+                env_first=True,
+                minimum=0,
+            ),
+            _SettingSpec(
                 field_name="validation_grounding_use_vector_store",
                 config_key="validation_grounding_use_vector_store",
                 default=_to_config_bool(

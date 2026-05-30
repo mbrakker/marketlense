@@ -121,6 +121,91 @@ class VectorStoreStatusResponse:
 
 
 @dataclass(frozen=True)
+class VectorStoreDeleteRequest:
+    schema_version: str = field(
+        metadata={"doc": "Vector store delete request schema version."}
+    )
+    vector_store_id: str = field(metadata={"doc": "Vector store identifier."})
+    missing_ok: bool = field(
+        default=True,
+        metadata={
+            "doc": "When true, missing remote vector stores are treated as already cleaned up."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class VectorStoreDeleteResponse:
+    schema_version: str = field(
+        metadata={"doc": "Vector store delete response schema version."}
+    )
+    vector_store_id: str = field(metadata={"doc": "Vector store identifier."})
+    deleted: bool = field(metadata={"doc": "True when the remote store was deleted."})
+    missing_remote: bool = field(
+        default=False,
+        metadata={"doc": "True when the provider reported the store was already absent."},
+    )
+
+
+@dataclass(frozen=True)
+class VectorStorePruneItem:
+    schema_version: str = field(
+        metadata={"doc": "Vector store prune item schema version."}
+    )
+    vector_store_id: str = field(metadata={"doc": "Vector store identifier to prune."})
+    reason: str = field(metadata={"doc": "Cleanup reason, e.g. retention_expired."})
+    file_id: str = field(
+        default="", metadata={"doc": "Optional source Drive file ID for audit logs."}
+    )
+
+
+@dataclass(frozen=True)
+class VectorStorePruneRequest:
+    schema_version: str = field(
+        metadata={"doc": "Vector store prune request schema version."}
+    )
+    items: List[VectorStorePruneItem] = field(
+        metadata={"doc": "Vector store cleanup candidates."}
+    )
+    missing_ok: bool = field(
+        default=True,
+        metadata={
+            "doc": "When true, missing remote vector stores are treated as already cleaned up."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class VectorStorePruneResponse:
+    schema_version: str = field(
+        metadata={"doc": "Vector store prune response schema version."}
+    )
+    requested_count: int = field(metadata={"doc": "Number of requested prune items."})
+    deleted_vector_store_ids: List[str] = field(
+        metadata={"doc": "Vector store IDs deleted by this prune call."}
+    )
+    missing_vector_store_ids: List[str] = field(
+        metadata={"doc": "Vector store IDs already absent remotely."}
+    )
+    skipped_duplicate_vector_store_ids: List[str] = field(
+        metadata={"doc": "Duplicate vector store IDs skipped within the request."}
+    )
+
+
+@dataclass(frozen=True)
+class VectorStoreRetentionCleanupResponse:
+    schema_version: str = field(
+        metadata={"doc": "Vector store retention cleanup response schema version."}
+    )
+    scanned_count: int = field(metadata={"doc": "Number of state rows scanned."})
+    candidate_count: int = field(metadata={"doc": "Number of cleanup candidates."})
+    pruned_vector_store_ids: List[str] = field(
+        metadata={"doc": "Vector store IDs deleted or already absent remotely."}
+    )
+    retention_days: int = field(metadata={"doc": "Retention window used in days."})
+
+
+@dataclass(frozen=True)
 class VectorStoreUpdateMetadataRequest:
     schema_version: str = field(
         metadata={"doc": "Vector store metadata update request schema version."}

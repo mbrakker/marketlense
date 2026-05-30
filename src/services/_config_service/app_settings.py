@@ -133,6 +133,7 @@ def _config_load_complete_fields(
         "artifact_global_max_in_flight": settings.artifact_global_max_in_flight,
         "artifact_global_min_interval_ms": settings.artifact_global_min_interval_ms,
         "vector_store_keep": settings.vector_store_keep,
+        "vector_store_retention_days": settings.vector_store_retention_days,
         "artifacts_use_vector_store": settings.artifacts_use_vector_store,
         "validation_grounding_use_vector_store": settings.validation_grounding_use_vector_store,
         "strict_schema_validation": settings.strict_schema_validation,
@@ -352,6 +353,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "artifact_global_min_interval_ms"
         ],
         vector_store_keep=analysis_settings["vector_store_keep"],
+        vector_store_retention_days=analysis_settings["vector_store_retention_days"],
         artifacts_use_vector_store=analysis_settings["artifacts_use_vector_store"],
         validation_grounding_use_vector_store=analysis_settings[
             "validation_grounding_use_vector_store"

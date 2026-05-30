@@ -15,6 +15,8 @@ from src.contracts.openai import (
     OpenAIVectorStoreAttachFileResponse,
     OpenAIVectorStoreCreateRequest,
     OpenAIVectorStoreCreateResponse,
+    OpenAIVectorStoreDeleteRequest,
+    OpenAIVectorStoreDeleteResponse,
     OpenAIVectorStoreFileUploadRequest,
     OpenAIVectorStoreFileUploadResponse,
     OpenAIVectorStoreStatusRequest,
@@ -109,6 +111,14 @@ def openai_vector_store_status(
     return _vector_store.openai_vector_store_status(request, ctx)
 
 
+def openai_vector_store_delete(
+    request: OpenAIVectorStoreDeleteRequest, ctx: RunContext
+) -> OpenAIVectorStoreDeleteResponse:
+    """Delete an OpenAI vector store through the canonical OpenAI boundary."""
+    _sync_runtime_patch_points()
+    return _vector_store.openai_vector_store_delete(request, ctx)
+
+
 def openai_vector_store_update_metadata(
     request: OpenAIVectorStoreUpdateMetadataRequest, ctx: RunContext
 ) -> OpenAIVectorStoreUpdateMetadataResponse:
@@ -129,6 +139,7 @@ __all__ = [
     "openai_respond_with_vector_store",
     "openai_vector_store_attach_file",
     "openai_vector_store_create",
+    "openai_vector_store_delete",
     "openai_vector_store_status",
     "openai_vector_store_update_metadata",
     "openai_vector_store_upload_file",

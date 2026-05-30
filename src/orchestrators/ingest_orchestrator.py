@@ -4,7 +4,7 @@ import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional
@@ -33,6 +33,9 @@ from src.orchestrators.report_generation_orchestrator import (
 from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.report_pipeline_orchestrator import (
     run_report_pipeline as run_report_pipeline_orchestrator,
+)
+from src.orchestrators.vector_store_retention_orchestrator import (
+    run_vector_store_retention_cleanup,
 )
 from src.services.drive_service import (
     download_pdf_to_path,
@@ -91,6 +94,9 @@ class IngestBatchDependencies:
         [DriveFile, int, IngestSettings, RunContext], _FileProcessResult
     ]
     thread_pool_executor_factory: Callable[[int], Any]
+    vector_store_retention_cleanup: Callable[[IngestSettings, RunContext], Any] = field(
+        default=run_vector_store_retention_cleanup
+    )
 
     @classmethod
     def default(cls) -> "IngestBatchDependencies":
@@ -913,6 +919,7 @@ def run_ingest(
                 fields={"processed": processed},
             )
         )
+        deps.vector_store_retention_cleanup(settings, root_ctx)
         _update_ingest_cursor(
             settings,
             processed=processed,

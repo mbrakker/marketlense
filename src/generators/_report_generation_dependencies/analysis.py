@@ -25,6 +25,7 @@ from src.contracts.validation import ValidationReport
 from src.contracts.vector_store import (
     VectorStoreAttachFileRequest,
     VectorStoreCreateRequest,
+    VectorStoreDeleteRequest,
     VectorStoreStatusRequest,
     VectorStoreUpdateMetadataRequest,
     VectorStoreUploadFileRequest,
@@ -55,6 +56,7 @@ class ReportAnalysisDependencies:
     vector_store_create: Callable[[VectorStoreCreateRequest, RunContext], Any]
     vector_store_upload_file: Callable[[VectorStoreUploadFileRequest, RunContext], Any]
     vector_store_attach_file: Callable[[VectorStoreAttachFileRequest, RunContext], Any]
+    vector_store_delete: Callable[[VectorStoreDeleteRequest, RunContext], Any]
     vector_store_update_metadata: Callable[
         [VectorStoreUpdateMetadataRequest, RunContext], Any
     ]
@@ -84,6 +86,7 @@ class ReportAnalysisDependencies:
             vector_store_create=vector_store_service.create_vector_store,
             vector_store_upload_file=vector_store_service.upload_file,
             vector_store_attach_file=vector_store_service.attach_file,
+            vector_store_delete=vector_store_service.delete_vector_store,
             vector_store_update_metadata=vector_store_service.update_metadata,
             extract_taxonomy=extract_taxonomy,
             build_report_category_context=build_report_category_context,
@@ -96,4 +99,3 @@ class ReportAnalysisDependencies:
             analysis_store_pack=report_analysis_store_service.store_pack,
             figure_caption=FigureCaptionDependencies.default(),
         )
-

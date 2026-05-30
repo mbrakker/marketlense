@@ -174,6 +174,42 @@ def openai_vector_store_status(
     )
 
 
+def openai_vector_store_delete(
+    request: OpenAIVectorStoreDeleteRequest,
+    ctx: RunContext,
+) -> OpenAIVectorStoreDeleteResponse:
+    _log_vector_store_event(
+        ctx,
+        event=_VECTOR_STORE_DELETE_OPERATION.start_event,
+        fields={
+            "vector_store_id": request.vector_store_id,
+            "timeout_seconds": request.timeout_seconds,
+        },
+    )
+    resp = _run_vector_store_request(
+        api_key=request.api_key,
+        timeout_seconds=request.timeout_seconds,
+        spec=_VECTOR_STORE_DELETE_OPERATION,
+        ctx=ctx,
+        request_fn=lambda client: client.vector_stores.delete(
+            request.vector_store_id
+        ),
+        error_context={"vector_store_id": request.vector_store_id},
+    )
+    deleted_id = _value_from_response(resp, "id") or request.vector_store_id
+    deleted = bool(_value_from_response(resp, "deleted"))
+    _log_vector_store_event(
+        ctx,
+        event=_VECTOR_STORE_DELETE_OPERATION.complete_event,
+        fields={"vector_store_id": str(deleted_id), "deleted": deleted},
+    )
+    return OpenAIVectorStoreDeleteResponse(
+        schema_version="1.0",
+        vector_store_id=str(deleted_id),
+        deleted=deleted,
+    )
+
+
 def openai_vector_store_update_metadata(
     request: OpenAIVectorStoreUpdateMetadataRequest,
     ctx: RunContext,

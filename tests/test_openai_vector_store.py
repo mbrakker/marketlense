@@ -11,6 +11,7 @@ from src.contracts.openai import (
     OpenAIJSONImagePromptRequest,
     OpenAIResponseRequest,
     OpenAIVectorStoreCreateRequest,
+    OpenAIVectorStoreDeleteRequest,
     OpenAIVectorStoreFileUploadRequest,
     OpenAIVectorStoreStatusRequest,
     OpenAIVectorStoreUpdateMetadataRequest,
@@ -570,6 +571,26 @@ def test_openai_vector_store_status_reads_dict_response(fake_openai) -> None:
     assert resp.indexed_at_utc == "2026-01-07T00:00:00Z"
 
 
+def test_openai_vector_store_delete_success(fake_openai) -> None:
+    fake_openai.add("vector_stores.delete", {"id": "vs_123", "deleted": True})
+
+    resp = svc.openai_vector_store_delete(
+        OpenAIVectorStoreDeleteRequest(
+            schema_version="1.0",
+            api_key="key",
+            vector_store_id="vs_123",
+            timeout_seconds=7.0,
+        ),
+        _ctx(),
+    )
+
+    assert resp.vector_store_id == "vs_123"
+    assert resp.deleted is True
+    assert fake_openai.calls["vector_stores.delete"] == [
+        {"vector_store_id": "vs_123"}
+    ]
+
+
 def test_openai_vector_store_update_metadata_missing_id(
     fake_openai, assert_app_error
 ) -> None:
@@ -635,6 +656,19 @@ def test_openai_vector_store_update_metadata_missing_id(
                 ),
             ),
             "openai_vector_store_status_failed",
+            {"vector_store_id": "vs_123"},
+        ),
+        (
+            "vector_stores.delete",
+            lambda: (
+                svc.openai_vector_store_delete,
+                OpenAIVectorStoreDeleteRequest(
+                    schema_version="1.0",
+                    api_key="key",
+                    vector_store_id="vs_123",
+                ),
+            ),
+            "openai_vector_store_delete_failed",
             {"vector_store_id": "vs_123"},
         ),
         (

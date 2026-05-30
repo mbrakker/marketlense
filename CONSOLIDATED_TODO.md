@@ -81,21 +81,7 @@ Suggested priority order:
 
 ---
 
-## 2. Resource Lifecycle & Vector Stores
-
-- **Title:** Add vector-store deletion, prune, and retention cleanup [Impact: 3/5, Effort: 3/5]
-  - Explanation: The vector-store boundary currently covers create/upload/attach/status/update, but not retention cleanup. `analysis.vector_store_keep` can express intent, yet no canonical delete/prune path exists to clean up remote assets deterministically.
-  - Pros: Avoids orphaned remote storage and repeated provider cost.
-  - Cons: Risk of deleting useful assets if retention policy is wrong; requires strong idempotency.
-  - Acceptance Criteria:
-    - Delete and prune request/response dataclass contracts exist.
-    - `vector_store_service` exposes canonical delete/prune operations with structured logging.
-    - Orchestrators run cleanup when retention is disabled or expiry is reached.
-    - Tests cover missing remote assets, duplicate cleanup calls, and retention-disabled runs.
-
----
-
-## 3. PDF Extraction, OCR & Candidate Ranking
+## 2. PDF Extraction, OCR & Candidate Ranking
 
 - **Title:** Upgrade binary page triage into scored, recall-calibrated page gating [Impact: 5/5, Effort: 4/5]
   - Explanation: Candidate extraction already skips obvious full-page-scan/no-text negatives and excludes contents pages. The remaining gap is richer page-value scoring before chart/table extraction and crop refinement so expensive PDF work is reduced with measurable recall protection.
@@ -139,9 +125,9 @@ Suggested priority order:
 
 ---
 
-## 4. Publisher Discovery Rollout & Precision
+## 3. Publisher Discovery Rollout & Precision
 
-## 5. Idempotency, Checkpoints & Publish Durability
+## 4. Idempotency, Checkpoints & Publish Durability
 
 - **Title:** Introduce durable, checkpointed pipeline stages with semantic restart [Impact: 5/5, Effort: 5/5]
   - Explanation: Replay manifests exist for UI runs, but the report pipeline itself still resumes by rerunning whole stages rather than restarting from durable semantic checkpoints with artifact references.
@@ -165,7 +151,7 @@ Suggested priority order:
 
 ---
 
-## 6. Schema Compatibility & Repair
+## 5. Schema Compatibility & Repair
 
 - **Title:** Build a backward/forward contract compatibility matrix [Impact: 4/5, Effort: 4/5]
   - Explanation: Contract round-trip tests and schema snapshots already exist, but the repo still lacks a first-class compatibility matrix for persisted artifacts and stored rows across schema versions.
@@ -179,7 +165,7 @@ Suggested priority order:
 
 ---
 
-## 7. Architecture Simplification, CI & Observability
+## 6. Architecture Simplification, CI & Observability
 
 - **Title:** Extend CI gates from current quality coverage into role-mixing and monolith-growth enforcement [Impact: 4/5, Effort: 3/5]
   - Explanation: The repo already has strong CI coverage, so the remaining gap is not "add more generic checks." The useful next step is automation around role mixing, direct-I/O drift, service integration coverage waivers, and first-party long-file growth.
@@ -227,11 +213,11 @@ Suggested priority order:
 
 ---
 
-## 8. Deep Codebase Audit (2026-05-06)
+## 7. Deep Codebase Audit (2026-05-06)
 
 ---
 
-## 9. Appendix Feature Audit (2026-05-22)
+## 8. Appendix Feature Audit (2026-05-22)
 
 Scope: first-party runtime code under `src/`, CLI/UI entrypoints, and connected operator flows. This audit treats dynamically launched subprocess modules as live when a runtime caller invokes them by module name. It does not classify tests, CI-only gates, or vendored `tools/browser-use` code as product-flow usage.
 
@@ -250,11 +236,11 @@ Findings summary:
 
 ---
 
-## 10. Full Codebase Interconnection Audit (2026-05-22)
+## 9. Full Codebase Interconnection Audit (2026-05-22)
 
 ---
 
-## 11. README, WordPress Design & Publish Entity Alignment Audit (2026-05-29)
+## 10. README, WordPress Design & Publish Entity Alignment Audit (2026-05-29)
 
 Scope: gaps identified by comparing the README direction against the current `src/` implementation and the `Wordpress/wp-content` block theme/plugin. These items cover public information architecture, WordPress design, publish entities, and naming drift.
 

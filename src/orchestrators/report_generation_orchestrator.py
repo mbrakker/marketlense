@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from typing import Callable, Optional
+from dataclasses import replace
 
 from src.contracts.analytics_projection import (
     AnalyticsProjectionRunRequest,
@@ -11,6 +12,7 @@ from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.run_context import RunContext
+from src.contracts.vector_store import VectorStoreDeleteRequest
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
 from src.generators.report_generation_shared import derive_title, report_slug
@@ -23,7 +25,7 @@ from src.generators.report_source_generator import prepare_report_source
 from src.orchestrators.analytics_projection_orchestrator import run_analytics_projection
 from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.utils.errors import AppError
-from src.utils.logging import log_event
+from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.report_generation_orchestrator")
 
@@ -133,6 +135,56 @@ def _doc_map_empty_outcome(
     )
 
 
+def _cleanup_transient_vector_store(
+    outcome: IngestOutcome,
+    runtime: ReportRuntimeState,
+    dependencies: ReportGenerationDependencies,
+) -> IngestOutcome:
+    vector_store_id = str(outcome.vector_store_id or "").strip()
+    if runtime.settings.vector_store_keep or not vector_store_id:
+        return outcome
+    cleanup_ctx = child_context(
+        runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store_cleanup"
+    )
+    logger.info(
+        log_event(
+            cleanup_ctx,
+            role="orchestrator",
+            event="vector_store_cleanup_retention_disabled_start",
+            module=logger.name,
+            fields={"file_id": runtime.file.file_id, "vector_store_id": vector_store_id},
+        )
+    )
+    response = dependencies.analysis.vector_store_delete(
+        VectorStoreDeleteRequest(
+            schema_version="1.0",
+            vector_store_id=vector_store_id,
+            missing_ok=True,
+        ),
+        cleanup_ctx,
+    )
+    logger.info(
+        log_event(
+            cleanup_ctx,
+            role="orchestrator",
+            event="vector_store_cleanup_retention_disabled_complete",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "vector_store_id": vector_store_id,
+                "deleted": bool(response.deleted),
+                "missing_remote": bool(response.missing_remote),
+            },
+        )
+    )
+    return replace(
+        outcome,
+        vector_store_id=None,
+        vector_store_status="deleted",
+        vector_store_last_error=None,
+    )
+
+
 def run_report_generation(
     file: DriveFile,
     local_pdf_path: str,
@@ -225,7 +277,7 @@ def run_report_generation(
                     },
                 )
             )
-        return outcome
+        return _cleanup_transient_vector_store(outcome, runtime, deps)
     except AppError as exc:
         if exc.code == "pdf_text_unextractable":
             return _pdf_text_unextractable_outcome(runtime, exc)
@@ -236,7 +288,11 @@ def run_report_generation(
             and source is not None
             and vector_state is not None
         ):
-            return _doc_map_empty_outcome(runtime, source, vector_state, exc)
+            return _cleanup_transient_vector_store(
+                _doc_map_empty_outcome(runtime, source, vector_state, exc),
+                runtime,
+                deps,
+            )
         raise
     finally:
         if source is not None and source.pdf_context is not None:

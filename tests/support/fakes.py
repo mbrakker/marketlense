@@ -204,6 +204,7 @@ class FakeOpenAIBoundary:
         self.calls: dict[str, list[dict[str, Any]]] = {
             "responses.create": [],
             "vector_stores.create": [],
+            "vector_stores.delete": [],
             "vector_stores.retrieve": [],
             "vector_stores.update": [],
             "vector_stores.files.create": [],
@@ -285,6 +286,11 @@ class _FakeVectorStoresResource:
 
     def update(self, **kwargs: Any) -> Any:
         return self._boundary._resolve("vector_stores.update", kwargs)
+
+    def delete(self, vector_store_id: str) -> Any:
+        return self._boundary._resolve(
+            "vector_stores.delete", {"vector_store_id": vector_store_id}
+        )
 
 
 class _FakeFilesResource:

@@ -112,6 +112,7 @@ class TestConfigService(unittest.TestCase):
                 )
 
         self.assertTrue(settings.vector_store_keep)
+        self.assertEqual(30, settings.vector_store_retention_days)
         self.assertFalse(settings.artifacts_use_vector_store)
         self.assertFalse(settings.validation_grounding_use_vector_store)
         self.assertEqual("./out/cost-ledger.jsonl", settings.cost_ledger_path)
@@ -195,6 +196,7 @@ class TestConfigService(unittest.TestCase):
             env = {
                 "OPENAI_API_KEY": "key",
                 "VECTOR_STORE_KEEP": "false",
+                "VECTOR_STORE_RETENTION_DAYS": "14",
                 "ARTIFACTS_USE_VECTOR_STORE": "true",
                 "VALIDATION_GROUNDING_USE_VECTOR_STORE": "true",
                 "COST_LEDGER_PATH": f"{tmp_dir}/ledger.jsonl",
@@ -208,6 +210,7 @@ class TestConfigService(unittest.TestCase):
                 )
 
         self.assertFalse(settings.vector_store_keep)
+        self.assertEqual(14, settings.vector_store_retention_days)
         self.assertTrue(settings.artifacts_use_vector_store)
         self.assertTrue(settings.validation_grounding_use_vector_store)
         self.assertEqual(f"{tmp_dir}/ledger.jsonl", settings.cost_ledger_path)

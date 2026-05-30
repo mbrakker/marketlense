@@ -8,6 +8,7 @@ from typing import Callable, Dict, NoReturn, Optional, TypeVar
 from src.contracts.openai import (
     OpenAIVectorStoreAttachFileRequest,
     OpenAIVectorStoreCreateRequest,
+    OpenAIVectorStoreDeleteRequest,
     OpenAIVectorStoreFileUploadRequest,
     OpenAIVectorStoreStatusRequest,
     OpenAIVectorStoreUpdateMetadataRequest,
@@ -18,7 +19,11 @@ from src.contracts.vector_store import (
     VectorStoreAttachFileResponse,
     VectorStoreCreateRequest,
     VectorStoreCreateResponse,
+    VectorStoreDeleteRequest,
+    VectorStoreDeleteResponse,
     VectorStoreMetadata,
+    VectorStorePruneRequest,
+    VectorStorePruneResponse,
     VectorStoreStatusResponse,
     VectorStoreStatusRequest,
     VectorStoreUpdateMetadataRequest,
@@ -84,6 +89,17 @@ def _require_response_id(value: str, *, code: str, message: str) -> str:
     if not resolved:
         raise AppError(code=code, message=message, retryable=True)
     return resolved
+
+
+def _is_missing_remote_error(exc: AppError) -> bool:
+    if "not_found" in str(exc.code or "").lower():
+        return True
+    cause = exc.cause
+    status_code = getattr(cause, "status_code", None)
+    if status_code == 404:
+        return True
+    text = f"{exc.message} {cause}".lower()
+    return "not found" in text or "no such vector store" in text
 
 
 def _serialize_metadata(metadata: VectorStoreMetadata) -> Dict[str, str]:
@@ -314,6 +330,137 @@ def get_vector_store_status(
         indexed_at_utc=str(indexed_at) if indexed_at is not None else None,
         last_error=str(last_error) if last_error else None,
     )
+
+
+def delete_vector_store(
+    request: VectorStoreDeleteRequest, ctx: Optional[RunContext] = None
+) -> VectorStoreDeleteResponse:
+    ctx = _ctx_or_new(ctx)
+    vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
+    api_key = _api_key_from_env()
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_delete_start",
+            module=logger.name,
+            fields={
+                "vector_store_id": vector_store_id,
+                "missing_ok": bool(request.missing_ok),
+            },
+        )
+    )
+    try:
+        resp = llm_service.openai_vector_store_delete(
+            OpenAIVectorStoreDeleteRequest(
+                schema_version="1.0",
+                api_key=api_key,
+                vector_store_id=vector_store_id,
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        if request.missing_ok and _is_missing_remote_error(exc):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="vector_store_delete_missing_remote",
+                    module=logger.name,
+                    fields={"vector_store_id": vector_store_id},
+                )
+            )
+            return VectorStoreDeleteResponse(
+                schema_version="1.0",
+                vector_store_id=vector_store_id,
+                deleted=False,
+                missing_remote=True,
+            )
+        _raise_vector_store_error(
+            exc,
+            code="vector_store_delete_failed",
+            message="Vector store delete request failed",
+        )
+    response = VectorStoreDeleteResponse(
+        schema_version="1.0",
+        vector_store_id=vector_store_id,
+        deleted=bool(resp.deleted),
+        missing_remote=False,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_delete_complete",
+            module=logger.name,
+            fields={
+                "vector_store_id": response.vector_store_id,
+                "deleted": response.deleted,
+                "missing_remote": response.missing_remote,
+            },
+        )
+    )
+    return response
+
+
+def prune_vector_stores(
+    request: VectorStorePruneRequest, ctx: Optional[RunContext] = None
+) -> VectorStorePruneResponse:
+    ctx = _ctx_or_new(ctx)
+    requested_count = len(request.items or [])
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_prune_start",
+            module=logger.name,
+            fields={"requested_count": requested_count},
+        )
+    )
+    seen: set[str] = set()
+    deleted: list[str] = []
+    missing: list[str] = []
+    duplicates: list[str] = []
+    for item in request.items or []:
+        vector_store_id = _require_non_empty(item.vector_store_id, "vector_store_id")
+        if vector_store_id in seen:
+            duplicates.append(vector_store_id)
+            continue
+        seen.add(vector_store_id)
+        result = delete_vector_store(
+            VectorStoreDeleteRequest(
+                schema_version="1.0",
+                vector_store_id=vector_store_id,
+                missing_ok=request.missing_ok,
+            ),
+            ctx,
+        )
+        if result.missing_remote:
+            missing.append(vector_store_id)
+        elif result.deleted:
+            deleted.append(vector_store_id)
+    response = VectorStorePruneResponse(
+        schema_version="1.0",
+        requested_count=requested_count,
+        deleted_vector_store_ids=deleted,
+        missing_vector_store_ids=missing,
+        skipped_duplicate_vector_store_ids=duplicates,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_prune_complete",
+            module=logger.name,
+            fields={
+                "requested_count": requested_count,
+                "deleted_count": len(deleted),
+                "missing_count": len(missing),
+                "duplicate_count": len(duplicates),
+            },
+        )
+    )
+    return response
 
 
 def update_metadata(

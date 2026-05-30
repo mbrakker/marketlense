@@ -328,6 +328,11 @@ def _base_vector_report_dependencies(
             openai_file_id="file_upload"
         ),
         "vector_store_attach_file": lambda req, ctx: None,
+        "vector_store_delete": lambda req, ctx: SimpleNamespace(
+            vector_store_id=req.vector_store_id,
+            deleted=True,
+            missing_remote=False,
+        ),
         "extract_pdf_info": lambda req, ctx: SimpleNamespace(
             schema_version="1.0",
             path=req.path,
@@ -1028,6 +1033,106 @@ def test_generate_report_doc_map_empty_halts(
     assert outcome.doc_map_summary is not None
     assert outcome.doc_map_summary.get("sections_count") == 0
     assert outcome.doc_map_summary.get("not_found_reason") == "model_returned_no_json"
+
+
+def test_generate_report_deletes_vector_store_when_retention_disabled(
+    tmp_path,
+) -> None:
+    settings = replace(_ingest_settings(tmp_path), vector_store_keep=False)
+    pdf_path = tmp_path / "sample.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    with pdf_path.open("wb") as handle:
+        writer.write(handle)
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="file_vs",
+        name="vector.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run-vs",
+        task_id="task-vs",
+        span_id="span-vs",
+    )
+    delete_calls = []
+
+    def _store_pack(request, ctx):
+        return SimpleNamespace(
+            output_path=str(
+                Path(request.output_dir)
+                / slugify(request.report_slug or request.report_id)
+                / "report_analysis"
+                / f"{request.pack_name}.json"
+            )
+        )
+
+    def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):
+        return ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            severity="pass",
+            issues=[],
+            source_path=str(
+                Path(settings.output_dir)
+                / slugify(kwargs.get("report_name") or req.report_id)
+                / "report_analysis"
+                / f"{pack_name}.json"
+            ),
+        )
+
+    def _fake_render_report(req, ctx):
+        html_path = tmp_path / "out.html"
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return RenderResponse(schema_version="1.0", html_path=str(html_path))
+
+    deps = _base_vector_report_dependencies(
+        tmp_path,
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {
+                "docMap": {
+                    "title": "DocMap Title",
+                    "publisher": "DocMap Publisher",
+                    "sections": [{"title": "Overview"}],
+                },
+                "doc_id": "d",
+            },
+            "scope": {},
+            "methods": {},
+            "findings": {},
+            "limitations": {},
+            "quote_candidates": {},
+        },
+        generate_artifacts=lambda **kwargs: _analysis_artifacts(),
+        run_validation=_fake_validation,
+        analysis_store_pack=_store_pack,
+        render_report=_fake_render_report,
+        upsert_report_metadata=lambda req, ctx: None,
+        vector_store_delete=lambda req, ctx: (
+            delete_calls.append(req.vector_store_id)
+            or SimpleNamespace(
+                vector_store_id=req.vector_store_id,
+                deleted=True,
+                missing_remote=False,
+            )
+        ),
+    )
+
+    outcome = rgo.run_report_generation(
+        file,
+        str(pdf_path),
+        settings,
+        md5="md5",
+        ctx=ctx,
+        dependencies=deps,
+    )
+
+    assert delete_calls == ["vs_new"]
+    assert outcome.status == "processed"
+    assert outcome.vector_store_id is None
+    assert outcome.vector_store_status == "deleted"
 
 
 def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_visuals(

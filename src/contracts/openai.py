@@ -479,6 +479,29 @@ class OpenAIVectorStoreStatusResponse:
 
 
 @dataclass(frozen=True)
+class OpenAIVectorStoreDeleteRequest:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI vector store delete request schema version."}
+    )
+    api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    vector_store_id: str = field(metadata={"doc": "Vector store identifier."})
+    timeout_seconds: Optional[float] = field(
+        default=None, metadata={"doc": "Request timeout in seconds, if set."}
+    )
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreDeleteResponse:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI vector store delete response schema version."}
+    )
+    vector_store_id: str = field(metadata={"doc": "Deleted vector store identifier."})
+    deleted: bool = field(
+        metadata={"doc": "True when the provider reports the vector store was deleted."}
+    )
+
+
+@dataclass(frozen=True)
 class OpenAIVectorStoreUpdateMetadataRequest:
     schema_version: str = field(
         metadata={"doc": "OpenAI vector store metadata update request schema version."}

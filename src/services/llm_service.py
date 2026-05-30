@@ -753,5 +753,9 @@ def openai_vector_store_status(req: Any, ctx: RunContext) -> Any:
     return _openai_boundary().openai_vector_store_status(req, ctx)
 
 
+def openai_vector_store_delete(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_vector_store_delete(req, ctx)
+
+
 def openai_vector_store_update_metadata(req: Any, ctx: RunContext) -> Any:
     return _openai_boundary().openai_vector_store_update_metadata(req, ctx)
