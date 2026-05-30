@@ -21,6 +21,7 @@ from ..visual_heuristics import (
     _rect_iou,
     _text_stats,
     _vertical_overlap_ratio,
+    _VisualCandidateRelationships,
 )
 
 __all__ = [
@@ -170,8 +171,18 @@ def _has_side_by_side_visual_sibling(
     rect_item,
     candidates,
     page_rect: fitz.Rect,
+    *,
+    relationships: Optional[_VisualCandidateRelationships] = None,
 ) -> bool:
-    for other in candidates:
+    related_candidates = (
+        relationships.candidates_intersecting_y(
+            ("xref", "block"),
+            rect_item.rect,
+        )
+        if relationships is not None
+        else candidates
+    )
+    for other in related_candidates:
         if other is rect_item:
             continue
         if other.kind not in ("xref", "block"):
@@ -426,6 +437,8 @@ def _embedded_visual_is_oversized_wrapper(
     rect_item,
     candidates,
     page_rect: fitz.Rect,
+    *,
+    relationships: Optional[_VisualCandidateRelationships] = None,
 ) -> bool:
     if rect_item.kind != "xref":
         return False
@@ -438,7 +451,15 @@ def _embedded_visual_is_oversized_wrapper(
     clipped_area = clipped_rect.get_area()
     if clipped_area <= 0.0:
         return False
-    for other in candidates:
+    related_candidates = (
+        relationships.candidates_intersecting_y(
+            ("xref", "block"),
+            clipped_rect,
+        )
+        if relationships is not None
+        else candidates
+    )
+    for other in related_candidates:
         if other is rect_item or other.kind not in ("xref", "block"):
             continue
         other_rect = fitz.Rect(other.rect) & page_rect

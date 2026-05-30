@@ -1,6 +1,81 @@
 from __future__ import annotations
 
 from .builders import *  # noqa: F401,F403
+from src.services._pdf.visual_candidates import (
+    _embedded_visual_is_oversized_wrapper,
+    _has_side_by_side_visual_sibling,
+)
+from src.services._pdf.visual_heuristics import _VisualCandidateRelationships
+
+
+class _TrackedRectItem:
+    def __init__(self, *, rect: fitz.Rect, kind: str, xref: int | None = None):
+        self._rect = rect
+        self.kind = kind
+        self.xref = xref
+        self.rect_access_count = 0
+
+    @property
+    def rect(self) -> fitz.Rect:
+        self.rect_access_count += 1
+        return self._rect
+
+    def reset_rect_access_count(self) -> None:
+        self.rect_access_count = 0
+
+
+def test_visual_relationship_index_bounds_sibling_and_wrapper_scans() -> None:
+    page_rect = fitz.Rect(0.0, 0.0, 600.0, 800.0)
+    side_target = _TrackedRectItem(
+        rect=fitz.Rect(100.0, 120.0, 210.0, 260.0),
+        kind="xref",
+    )
+    side_sibling = _TrackedRectItem(
+        rect=fitz.Rect(220.0, 130.0, 330.0, 270.0),
+        kind="block",
+    )
+    wrapper = _TrackedRectItem(
+        rect=fitz.Rect(-30.0, 390.0, 620.0, 610.0),
+        kind="xref",
+    )
+    wrapped_child = _TrackedRectItem(
+        rect=fitz.Rect(120.0, 430.0, 460.0, 560.0),
+        kind="block",
+    )
+    far_items = [
+        _TrackedRectItem(
+            rect=fitz.Rect(40.0, 690.0 + index, 130.0, 730.0 + index),
+            kind="xref",
+        )
+        for index in range(30)
+    ]
+    candidates = [side_target, side_sibling, wrapper, wrapped_child, *far_items]
+    relationships = _VisualCandidateRelationships.build(
+        candidates,
+        page_rect=page_rect,
+    )
+    for item in candidates:
+        item.reset_rect_access_count()
+
+    assert (
+        _has_side_by_side_visual_sibling(
+            side_target,
+            candidates,
+            page_rect,
+            relationships=relationships,
+        )
+        is True
+    )
+    assert (
+        _embedded_visual_is_oversized_wrapper(
+            wrapper,
+            candidates,
+            page_rect,
+            relationships=relationships,
+        )
+        is True
+    )
+    assert sum(item.rect_access_count for item in far_items) == 0
 
 
 def test_collect_candidates_chart_bbox_excludes_corner_page_number_and_body_text(

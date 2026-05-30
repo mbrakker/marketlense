@@ -103,16 +103,6 @@ Suggested priority order:
     - Correctness tests cover near-duplicate, overlapping, and distinct-table cases.
     - Candidate quality does not regress on existing fixture reports.
 
-- **Title:** Precompute PDF visual candidate relationships per page [Impact: 4/5, Effort: 4/5]
-  - Explanation: Visual extraction still calls sibling, wrapper, and panel-shadow helpers that rescan `page_ctx.rect_items` for many candidates in `src/services/_pdf/visual_candidates.py` and `src/services/_pdf/_visual_heuristics/panel_detection.py`. This creates repeated O(r^2)-style page work on visually dense PDFs.
-  - Pros: Faster chart/image extraction on report pages with many raster, drawing, or panel candidates.
-  - Cons: Spatial-index behavior is easy to get subtly wrong; false accepts/rejects would affect figure quality.
-  - Acceptance Criteria:
-    - Per-page visual relationships are precomputed once using a bounded spatial index or equivalent grouped lookup.
-    - Existing helper semantics for side-by-side siblings, oversized wrappers, heading-shadowed panels, stacked panels, and caption clamping are preserved.
-    - PDF visual/table fixture tests cover dense-panel, multi-chart, decorative-image, and wrapper-image pages.
-    - Benchmarks on dense visual fixtures show lower per-page runtime without candidate-quality regression.
-
 ---
 
 ## 3. Publisher Discovery Rollout & Precision

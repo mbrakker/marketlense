@@ -76,6 +76,7 @@ from ..visual_heuristics import (
     _tally_reason,
     _text_stats,
     _trim_top_page_number,
+    _VisualCandidateRelationships,
 )
 from .raster import (
     _RasterProbeCache,
@@ -140,6 +141,7 @@ class _VisualPageContext:
     page_has_chart_captions: bool
     artifacts: PdfPageArtifacts
     rect_items: List[_ChartRect]
+    relationships: _VisualCandidateRelationships
     probe_cache: _RasterProbeCache
 
 
@@ -170,6 +172,16 @@ def _build_visual_page_context(
         return None
     page_chars = artifacts.text_char_count
     page_rect = page.rect
+    rect_items = _collect_chart_rects(
+        page,
+        text_dict=artifacts.text_dict,
+        blocks=artifacts.text_blocks,
+    )
+    relationship_items = [
+        item
+        for item in rect_items
+        if item.kind in {"xref", "block", "panel", "heading"}
+    ]
     return _VisualPageContext(
         page_number=page_number,
         page=page,
@@ -181,10 +193,10 @@ def _build_visual_page_context(
         relaxed_bot=page_rect.y1 - page_rect.height * CHART_MARGIN_RELAX_FRAC,
         page_has_chart_captions=_page_has_chart_caption_blocks(artifacts.text_blocks),
         artifacts=artifacts,
-        rect_items=_collect_chart_rects(
-            page,
-            text_dict=artifacts.text_dict,
-            blocks=artifacts.text_blocks,
+        rect_items=rect_items,
+        relationships=_VisualCandidateRelationships.build(
+            relationship_items,
+            page_rect=page_rect,
         ),
         probe_cache=_RasterProbeCache(images={}, profiles={}),
     )
@@ -426,6 +438,7 @@ def _extract_visuals_sequential(
                         rect_item,
                         page_ctx.rect_items,
                         page_ctx.page_rect,
+                        relationships=page_ctx.relationships,
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "oversized_wrapper_image")
@@ -502,13 +515,18 @@ def _extract_visuals_sequential(
                         _panel_component_looks_like_guidance_card(panel_text)
                     )
                     if _panel_candidate_shadowed_by_heading_candidate(
-                        rect_item, page_ctx.rect_items
+                        rect_item,
+                        page_ctx.rect_items,
+                        relationships=page_ctx.relationships,
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "panel_shadowed_by_heading")
                         continue
                     if _panel_candidate_shadowed_by_larger_panel(
-                        rect_item, page_ctx.rect_items, panel_text
+                        rect_item,
+                        page_ctx.rect_items,
+                        panel_text,
+                        relationships=page_ctx.relationships,
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "panel_shadowed_by_larger_panel")
@@ -550,6 +568,7 @@ def _extract_visuals_sequential(
                             rect_item,
                             page_ctx.rect_items,
                             page_ctx.page_rect,
+                            relationships=page_ctx.relationships,
                         )
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
@@ -661,6 +680,7 @@ def _extract_visuals_sequential(
                             rect_item,
                             page_ctx.rect_items,
                             page_ctx.page_rect,
+                            relationships=page_ctx.relationships,
                         )
                         if neighbor_min_x is not None:
                             panel_min_x = (
@@ -763,6 +783,7 @@ def _extract_visuals_sequential(
                         page_ctx.page,
                         rect_item,
                         page_ctx.rect_items,
+                        relationships=page_ctx.relationships,
                     )
                     if rect_item.kind == "panel"
                     else None
@@ -824,6 +845,7 @@ def _extract_visuals_sequential(
                 if cap_rect is not None and _panel_should_clamp_to_internal_caption(
                     rect_item,
                     page_ctx.rect_items,
+                    relationships=page_ctx.relationships,
                 ):
                     final_rect = _clamp_top_to_caption(
                         final_rect,

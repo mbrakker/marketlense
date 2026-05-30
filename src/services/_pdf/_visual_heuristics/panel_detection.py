@@ -104,6 +104,7 @@ if TYPE_CHECKING:
 
     _ChartRect: TypeAlias = Any
     _PageTextLine: TypeAlias = Any
+    _VisualCandidateRelationships: TypeAlias = Any
     _alpha_ratio: Any
     _horizontal_overlap_ratio: Any
     _is_page_number_text: Any
@@ -151,6 +152,8 @@ if TYPE_CHECKING:
 def _panel_should_clamp_to_internal_caption(
     rect_item: _ChartRect,
     candidates: List[_ChartRect],
+    *,
+    relationships: Optional[_VisualCandidateRelationships] = None,
 ) -> bool:
     if rect_item.kind != "panel":
         return False
@@ -163,7 +166,16 @@ def _panel_should_clamp_to_internal_caption(
     rect = rect_item.rect
     if cap_rect.y0 <= rect.y0 + rect.height * 0.18:
         return False
-    for other in candidates:
+    related_candidates = (
+        relationships.candidates_in_y_range(
+            ("panel",),
+            rect.y0 + rect.height * 0.12,
+            rect.y0 + rect.height * 0.45,
+        )
+        if relationships is not None
+        else candidates
+    )
+    for other in related_candidates:
         if other is rect_item or other.kind != "panel":
             continue
         other_rect = other.rect
@@ -182,6 +194,8 @@ def _panel_should_clamp_to_internal_caption(
 def _panel_candidate_shadowed_by_heading_candidate(
     rect_item: _ChartRect,
     candidates: List[_ChartRect],
+    *,
+    relationships: Optional[_VisualCandidateRelationships] = None,
 ) -> bool:
     if rect_item.kind != "panel":
         return False
@@ -189,7 +203,16 @@ def _panel_candidate_shadowed_by_heading_candidate(
     if not _panel_caption_looks_metric_stub(caption):
         return False
     rect = rect_item.rect
-    for other in candidates:
+    related_candidates = (
+        relationships.candidates_in_y_range(
+            ("heading",),
+            rect.y0 - max(28.0, rect.height * 0.18),
+            rect.y1,
+        )
+        if relationships is not None
+        else candidates
+    )
+    for other in related_candidates:
         if other is rect_item or other.kind != "heading":
             continue
         other_caption = str(other.caption or "").strip()
@@ -218,6 +241,8 @@ def _panel_candidate_shadowed_by_larger_panel(
     rect_item: _ChartRect,
     candidates: List[_ChartRect],
     panel_text: str,
+    *,
+    relationships: Optional[_VisualCandidateRelationships] = None,
 ) -> bool:
     if rect_item.kind != "panel":
         return False
@@ -235,7 +260,16 @@ def _panel_candidate_shadowed_by_larger_panel(
         return False
     if _numeric_token_hits(panel_text) > 3:
         return False
-    for other in candidates:
+    related_candidates = (
+        relationships.candidates_in_y_range(
+            ("panel",),
+            rect.y1 - 4.0,
+            rect.y1 + max(36.0, rect.height * 0.5),
+        )
+        if relationships is not None
+        else candidates
+    )
+    for other in related_candidates:
         if other is rect_item or other.kind != "panel":
             continue
         other_rect = other.rect
@@ -269,6 +303,8 @@ def _panel_stacked_bottom_clip_y(
     page: fitz.Page,
     rect_item: _ChartRect,
     candidates: List[_ChartRect],
+    *,
+    relationships: Optional[_VisualCandidateRelationships] = None,
 ) -> Optional[float]:
     if rect_item.kind != "panel":
         return None
@@ -278,7 +314,16 @@ def _panel_stacked_bottom_clip_y(
     rect = rect_item.rect
     compact_stat_caption = _panel_caption_looks_metric_stub(caption)
     candidate_y: Optional[float] = None
-    for other in candidates:
+    related_candidates = (
+        relationships.candidates_in_y_range(
+            ("panel",),
+            rect.y0 + 8.0,
+            rect.y1 - 8.0,
+        )
+        if relationships is not None
+        else candidates
+    )
+    for other in related_candidates:
         if other is rect_item or other.kind != "panel":
             continue
         other_caption = str(other.caption or "").strip()
@@ -367,6 +412,8 @@ def _panel_neighbor_x_bounds(
     rect_item: _ChartRect,
     candidates: List[_ChartRect],
     page_rect: fitz.Rect,
+    *,
+    relationships: Optional[_VisualCandidateRelationships] = None,
 ) -> Tuple[Optional[float], Optional[float]]:
     if rect_item.kind != "panel":
         return None, None
@@ -377,7 +424,12 @@ def _panel_neighbor_x_bounds(
     center_x = (rect.x0 + rect.x1) / 2.0
     min_x: Optional[float] = None
     max_x: Optional[float] = None
-    for other in candidates:
+    related_candidates = (
+        relationships.candidates_intersecting_y(("panel",), rect)
+        if relationships is not None
+        else candidates
+    )
+    for other in related_candidates:
         if other is rect_item or other.kind != "panel":
             continue
         other_rect = other.rect

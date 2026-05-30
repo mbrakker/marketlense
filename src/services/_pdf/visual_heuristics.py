@@ -567,6 +567,147 @@ class _ChartRect:
 
 
 @dataclass(frozen=True)
+class _VisualCandidateRelationships:
+    """Per-page visual-candidate lookup for relationship helpers.
+
+    The index deliberately returns ordered supersets. Existing helper predicates
+    still decide the exact semantics, while callers avoid scanning every visual
+    item for relationships that can only involve candidates near the same page
+    band.
+    """
+
+    page_rect: fitz.Rect
+    candidates: Tuple[Any, ...]
+    bin_height: float
+    by_kind: Dict[str, Tuple[Any, ...]]
+    y_bins_by_kind: Dict[str, Dict[int, Tuple[Any, ...]]]
+    order_by_identity: Dict[int, int]
+
+    @classmethod
+    def build(
+        cls,
+        candidates: Iterable[Any],
+        *,
+        page_rect: fitz.Rect,
+        bin_height: float = 96.0,
+    ) -> "_VisualCandidateRelationships":
+        items = tuple(candidates)
+        resolved_page_rect = fitz.Rect(page_rect)
+        resolved_bin_height = max(1.0, float(bin_height))
+        order_by_identity = {
+            id(candidate): index for index, candidate in enumerate(items)
+        }
+        by_kind_rows: Dict[str, List[Any]] = {}
+        y_bin_rows: Dict[str, Dict[int, List[Any]]] = {}
+        for candidate in items:
+            kind = str(getattr(candidate, "kind", "") or "")
+            if not kind:
+                continue
+            try:
+                rect = fitz.Rect(getattr(candidate, "rect"))
+            except PDF_FIGURE_EXCEPTIONS:
+                continue
+            if rect.is_empty:
+                continue
+            by_kind_rows.setdefault(kind, []).append(candidate)
+            kind_bins = y_bin_rows.setdefault(kind, {})
+            for bin_index in cls._bin_indexes_for_range(
+                rect.y0,
+                rect.y1,
+                page_rect=resolved_page_rect,
+                bin_height=resolved_bin_height,
+            ):
+                kind_bins.setdefault(bin_index, []).append(candidate)
+        return cls(
+            page_rect=resolved_page_rect,
+            candidates=items,
+            bin_height=resolved_bin_height,
+            by_kind={
+                kind: tuple(rows)
+                for kind, rows in by_kind_rows.items()
+            },
+            y_bins_by_kind={
+                kind: {
+                    bin_index: tuple(rows)
+                    for bin_index, rows in bins.items()
+                }
+                for kind, bins in y_bin_rows.items()
+            },
+            order_by_identity=order_by_identity,
+        )
+
+    @staticmethod
+    def _bin_indexes_for_range(
+        y0: float,
+        y1: float,
+        *,
+        page_rect: fitz.Rect,
+        bin_height: float,
+    ) -> range:
+        top = min(float(y0), float(y1))
+        bottom = max(float(y0), float(y1))
+        start = math.floor((top - page_rect.y0) / bin_height)
+        end = math.floor((bottom - page_rect.y0) / bin_height)
+        return range(int(start), int(end) + 1)
+
+    def candidates_by_kind(self, kinds: Iterable[str]) -> Tuple[Any, ...]:
+        rows: List[Any] = []
+        for kind in kinds:
+            rows.extend(self.by_kind.get(str(kind), ()))
+        return self._ordered_unique(rows)
+
+    def candidates_in_y_range(
+        self,
+        kinds: Iterable[str],
+        y0: float,
+        y1: float,
+        *,
+        pad: float = 0.0,
+    ) -> Tuple[Any, ...]:
+        rows: List[Any] = []
+        bins = tuple(
+            self._bin_indexes_for_range(
+                float(y0) - float(pad),
+                float(y1) + float(pad),
+                page_rect=self.page_rect,
+                bin_height=self.bin_height,
+            )
+        )
+        for kind in kinds:
+            by_bin = self.y_bins_by_kind.get(str(kind), {})
+            for bin_index in bins:
+                rows.extend(by_bin.get(bin_index, ()))
+        return self._ordered_unique(rows)
+
+    def candidates_intersecting_y(
+        self,
+        kinds: Iterable[str],
+        rect: fitz.Rect,
+        *,
+        pad: float = 0.0,
+    ) -> Tuple[Any, ...]:
+        resolved = fitz.Rect(rect)
+        return self.candidates_in_y_range(
+            kinds,
+            resolved.y0,
+            resolved.y1,
+            pad=pad,
+        )
+
+    def _ordered_unique(self, rows: Iterable[Any]) -> Tuple[Any, ...]:
+        seen: set[int] = set()
+        out: List[Any] = []
+        for row in rows:
+            identity = id(row)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            out.append(row)
+        out.sort(key=lambda row: self.order_by_identity.get(id(row), 0))
+        return tuple(out)
+
+
+@dataclass(frozen=True)
 class _PageTextLine:
     rect: fitz.Rect
     text: str
@@ -1022,6 +1163,7 @@ def _tally_reason(stats: Dict[str, object], reason: str) -> None:
 
 _LOCAL_PRIVATE_EXPORTS = [
     "_ChartRect",
+    "_VisualCandidateRelationships",
     "_PageTextLine",
     "_s",
     "_int_count",
