@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .builders import *  # noqa: F401,F403
+from src.services._pdf._table_heuristics.screening import _TableDedupeSpatialIndex
 
 
 def test_collect_candidates_detects_ranked_table_slide_without_chart_duplicate(
@@ -1204,3 +1205,18 @@ def test_dedupe_table_candidates_prefers_inner_lattice_over_stream_shadow() -> N
     deduped = _dedupe_table_candidates([stream_candidate, lattice_candidate])
 
     assert deduped == [lattice_candidate]
+
+
+def test_table_dedupe_spatial_index_limits_lookup_to_overlapping_rows() -> None:
+    index = _TableDedupeSpatialIndex()
+    far_above = _table_candidate(bbox=(40.0, 10.0, 560.0, 60.0))
+    near = _table_candidate(bbox=(40.0, 210.0, 560.0, 280.0))
+    far_below = _table_candidate(bbox=(40.0, 700.0, 560.0, 760.0))
+
+    index.add(0, far_above)
+    index.add(1, near)
+    index.add(2, far_below)
+
+    matches = index.lookup(_table_candidate(bbox=(50.0, 220.0, 550.0, 260.0)))
+
+    assert matches == [1]

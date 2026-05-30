@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List, Literal, Tuple
 
 import pymupdf as fitz
 
 __all__ = [
+    "_TableDedupeSpatialIndex",
     "_dedupe_table_candidates",
     "_table_quality",
     "_validate_table_candidate",
@@ -995,44 +996,121 @@ def _prefer_inner_lattice_table(
     return width_ratio >= 0.7 and height_ratio >= 0.75
 
 
+class _TableDedupeSpatialIndex:
+    _BIN_HEIGHT = 96.0
+
+    def __init__(self) -> None:
+        self._bins: Dict[int, List[int]] = {}
+        self._candidate_bins: Dict[int, Tuple[int, ...]] = {}
+        self._candidates: Dict[int, _TableCandidate] = {}
+
+    def add(self, index: int, candidate: _TableCandidate) -> None:
+        previous_bins = self._candidate_bins.get(index, ())
+        for bucket in previous_bins:
+            values = self._bins.get(bucket)
+            if values is None:
+                continue
+            self._bins[bucket] = [value for value in values if value != index]
+
+        buckets = tuple(self._buckets(candidate.bbox))
+        for bucket in buckets:
+            self._bins.setdefault(bucket, []).append(index)
+        self._candidate_bins[index] = buckets
+        self._candidates[index] = candidate
+
+    def lookup(self, candidate: _TableCandidate) -> List[int]:
+        matches: Dict[int, None] = {}
+        for bucket in self._buckets(candidate.bbox):
+            for index in self._bins.get(bucket, []):
+                existing = self._candidates.get(index)
+                if existing is None:
+                    continue
+                if self._intersects(candidate.bbox, existing.bbox):
+                    matches[index] = None
+        return sorted(matches)
+
+    def _buckets(self, bbox: Tuple[float, float, float, float]) -> range:
+        y0 = min(float(bbox[1]), float(bbox[3]))
+        y1 = max(float(bbox[1]), float(bbox[3]))
+        start = math.floor(y0 / self._BIN_HEIGHT)
+        end = math.floor(max(y0, y1 - 0.000001) / self._BIN_HEIGHT)
+        return range(start, end + 1)
+
+    @staticmethod
+    def _intersects(
+        a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]
+    ) -> bool:
+        ax0, ay0, ax1, ay1 = a
+        bx0, by0, bx1, by1 = b
+        return min(ax1, bx1) > max(ax0, bx0) and min(ay1, by1) > max(ay0, by0)
+
+
+def _table_area(candidate: _TableCandidate) -> float:
+    return max(
+        0.0,
+        (candidate.bbox[2] - candidate.bbox[0])
+        * (candidate.bbox[3] - candidate.bbox[1]),
+    )
+
+
+def _preferred_duplicate_table(
+    candidate: _TableCandidate,
+    existing: _TableCandidate,
+    *,
+    containment: float,
+    contained_table_preference: Literal["quality", "larger"],
+) -> _TableCandidate:
+    if containment >= 0.98:
+        area_candidate = _table_area(candidate)
+        area_existing = _table_area(existing)
+        smaller, larger = (
+            (candidate, existing) if area_candidate <= area_existing else (existing, candidate)
+        )
+        if contained_table_preference == "larger":
+            preferred = (
+                smaller if _prefer_inner_lattice_table(smaller, larger) else larger
+            )
+            if _table_quality(candidate) <= _table_quality(existing):
+                return existing
+            return preferred
+        if _prefer_inner_lattice_table(smaller, larger):
+            return smaller
+        if _table_quality(candidate) <= _table_quality(existing):
+            return existing
+        return candidate
+    if _table_quality(candidate) <= _table_quality(existing):
+        return existing
+    return candidate
+
+
 def _dedupe_table_candidates(
     candidates: List[_TableCandidate],
+    *,
+    contained_table_preference: Literal["quality", "larger"] = "quality",
 ) -> List[_TableCandidate]:
     kept: List[_TableCandidate] = []
+    index = _TableDedupeSpatialIndex()
     for cand in candidates:
         replaced = False
-        for idx, existing in enumerate(kept):
+        for idx in index.lookup(cand):
+            existing = kept[idx]
             iou = _table_iou(cand.bbox, existing.bbox)
             containment = _table_containment_ratio(cand.bbox, existing.bbox)
             ranked_overlap = containment >= 0.8 and (
                 "ranked" in (cand.method, existing.method)
             )
             if iou >= TABLE_DEDUP_IOU or containment >= 0.98 or ranked_overlap:
-                preferred = cand
-                if containment >= 0.98:
-                    area_cand = max(
-                        0.0,
-                        (cand.bbox[2] - cand.bbox[0]) * (cand.bbox[3] - cand.bbox[1]),
-                    )
-                    area_existing = max(
-                        0.0,
-                        (existing.bbox[2] - existing.bbox[0])
-                        * (existing.bbox[3] - existing.bbox[1]),
-                    )
-                    smaller, larger = (
-                        (cand, existing)
-                        if area_cand <= area_existing
-                        else (existing, cand)
-                    )
-                    if _prefer_inner_lattice_table(smaller, larger):
-                        preferred = smaller
-                    elif _table_quality(cand) <= _table_quality(existing):
-                        preferred = existing
-                elif _table_quality(cand) <= _table_quality(existing):
-                    preferred = existing
+                preferred = _preferred_duplicate_table(
+                    cand,
+                    existing,
+                    containment=containment,
+                    contained_table_preference=contained_table_preference,
+                )
                 kept[idx] = preferred
+                index.add(idx, preferred)
                 replaced = True
                 break
         if not replaced:
+            index.add(len(kept), cand)
             kept.append(cand)
     return kept

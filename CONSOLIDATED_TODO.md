@@ -93,16 +93,6 @@ Suggested priority order:
     - Evaluation fixtures define a recall floor that the triage gate must preserve.
     - Stage metrics show extraction work avoided without quality regression.
 
-- **Title:** Fix the table dedupe hot path in `table_candidates.py` and `table_heuristics.py` [Impact: 4/5, Effort: 3/5]
-  - Explanation: Table extraction still performs nested candidate comparison in the final dedupe path, and the deeper heuristics module remains one of the largest first-party hotspots. The 2026-05-20 complexity audit reconfirmed `src/services/_pdf/table_heuristics.py::_dedupe_table_candidates` as a concrete O(n^2) candidate merge path. Replace it with a keyed or spatially indexed approach while preserving conservative merge behavior.
-  - Pros: Faster processing on dense and wide PDFs.
-  - Cons: Requires careful correctness tests to avoid false merges or missed duplicates.
-  - Acceptance Criteria:
-    - Dedupe logic is rewritten around an indexed candidate lookup instead of repeated full scans.
-    - Benchmarks on large fixtures show lower runtime.
-    - Correctness tests cover near-duplicate, overlapping, and distinct-table cases.
-    - Candidate quality does not regress on existing fixture reports.
-
 ---
 
 ## 3. Publisher Discovery Rollout & Precision

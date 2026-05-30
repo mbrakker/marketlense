@@ -21,7 +21,6 @@ from src.contracts.candidates import Candidate, CandidateFeatures
 from .table_heuristics import (
     TABLE_SETTINGS_LATTICE,
     TABLE_SETTINGS_STREAM,
-    TABLE_DEDUP_IOU,
     TABLE_WIDE_FIGURE_CONTEXT_HORIZONTAL_PAD,
     TABLE_WIDE_FIGURE_CONTEXT_MAX_DIST,
     TABLE_WIDE_FIGURE_CONTEXT_TOP_BAND,
@@ -48,13 +47,9 @@ from .table_heuristics import (
     _s,
     _suppress_pdfminer_warnings,
     _table_preview,
-    _table_containment_ratio,
-    _table_iou,
     _table_page_text_blocks,
     _table_text_bands,
-    _table_quality,
     _table_sort_key,
-    _prefer_inner_lattice_table,
     _tally_reason,
     _text_block_stats,
     _text_stats,
@@ -493,54 +488,10 @@ def _extract_tables_sequential(
                         )
                     )
 
-                final_deduped: List[_TableCandidate] = []
-                for candidate in final_candidates:
-                    merged = False
-                    for idx, existing in enumerate(final_deduped):
-                        iou = _table_iou(candidate.bbox, existing.bbox)
-                        containment = _table_containment_ratio(
-                            candidate.bbox, existing.bbox
-                        )
-                        ranked_overlap = containment >= 0.8 and (
-                            "ranked" in (candidate.method, existing.method)
-                        )
-                        if (
-                            iou < TABLE_DEDUP_IOU
-                            and containment < 0.98
-                            and not ranked_overlap
-                        ):
-                            continue
-                        preferred = candidate
-                        if containment >= 0.98:
-                            area_candidate = max(
-                                0.0,
-                                (candidate.bbox[2] - candidate.bbox[0])
-                                * (candidate.bbox[3] - candidate.bbox[1]),
-                            )
-                            area_existing = max(
-                                0.0,
-                                (existing.bbox[2] - existing.bbox[0])
-                                * (existing.bbox[3] - existing.bbox[1]),
-                            )
-                            smaller, larger = (
-                                (candidate, existing)
-                                if area_candidate <= area_existing
-                                else (existing, candidate)
-                            )
-                            preferred = (
-                                smaller
-                                if _prefer_inner_lattice_table(smaller, larger)
-                                else larger
-                            )
-                            if _table_quality(candidate) <= _table_quality(existing):
-                                preferred = existing
-                        elif _table_quality(candidate) <= _table_quality(existing):
-                            preferred = existing
-                        final_deduped[idx] = preferred
-                        merged = True
-                        break
-                    if not merged:
-                        final_deduped.append(candidate)
+                final_deduped = _dedupe_table_candidates(
+                    final_candidates,
+                    contained_table_preference="larger",
+                )
 
                 for index, candidate in enumerate(
                     sorted(final_deduped, key=_table_sort_key)
