@@ -173,6 +173,17 @@ Suggested priority order:
     - Resume tooling supports restarting from a selected stage boundary.
     - Consistency tests compare full-run output with resumed-run output.
 
+- **Title:** Preflight and refresh Google Drive credentials before report download runs [Impact: 4/5, Effort: 2/5]
+  - Explanation: Report download runs can produce valid local artifacts and then fail at the Drive archival/write step if the Google Drive token is expired, missing required scopes, or otherwise unusable. The pipeline should check and refresh Drive credentials before starting report download work so write failures surface before expensive acquisition starts.
+  - Pros: Fewer wasted download/browser runs, clearer operator failures, and more reliable Drive archive writes.
+  - Cons: Adds a credential preflight dependency before acquisition and needs careful secret-safe logging.
+  - Acceptance Criteria:
+    - Report download orchestration runs a Google Drive credential preflight before any expensive download/browser acquisition step that expects Drive output.
+    - The canonical Drive service validates token availability, expiry/refresh status, required scopes, target folder access, and write readiness without logging secrets.
+    - Expired refreshable credentials are refreshed through the Drive service boundary before the run proceeds.
+    - Missing, non-refreshable, insufficient-scope, or no-write-access credentials fail with typed `AppError` values and structured logs.
+    - Tests cover valid credentials, refresh success, refresh failure, insufficient scope, missing token, and target-folder write denial.
+
 - **Title:** Turn the publish queue into durable jobs with transactional outbox, retry, and idempotency [Impact: 5/5, Effort: 5/5]
   - Explanation: The current `publish_queue_orchestrator.py` only builds a snapshot for UI and ops views. It does not persist publish intents as durable jobs or atomically couple publish-side effects to state transitions.
   - Pros: More reliable publishing and clearer recovery from partial failures.
@@ -319,16 +330,6 @@ Findings summary:
     - `vector_store_service` no longer aliases `llm_service` as an OpenAI boundary; vector-store calls route through the canonical boundary or an explicitly documented provider-agnostic contract.
     - Tests assert retry attempt counts and sleep/backoff decisions at orchestrator level, and assert services make exactly one provider attempt per invocation.
 
-- **Title:** Reduce browser-download and publisher-discovery internal monolith risk without adding pass-through layers [Impact: 4/5, Effort: 4/5]
-  - Explanation: The largest first-party modules remain concentrated in behavior-heavy internals: `src/services/_browser_report_download/artifact.py`, `src/services/_browser_report_download/browser.py`, `src/orchestrators/_report_download_orchestrator/workflow.py`, `src/services/_publisher_inventory_service/workflow.py`, and `src/orchestrators/publisher_inventory_orchestrator.py`. These files combine many route, recovery, evidence, and terminal-state paths, making defect containment and review difficult even though public facades already exist.
-  - Pros: Easier reasoning about failure paths, lower review risk, better targeted tests.
-  - Cons: Refactor risk is meaningful because these flows are integration-heavy and stateful.
-  - Acceptance Criteria:
-    - Split only by stable capability families such as terminal evidence, route memory, browser execution, artifact finalization, recovery cache, and snapshot/state recording.
-    - Public service/orchestrator entrypoints remain singular; callers do not choose between competing routes.
-    - Each extracted module has real behavior and tests, not pass-through forwarding.
-    - Golden and failure-injection tests prove report download and publisher discovery outputs remain unchanged.
-
 ---
 
 ## 11. README, WordPress Design & Publish Entity Alignment Audit (2026-05-29)
@@ -356,6 +357,17 @@ Scope: gaps identified by comparing the README direction against the current `sr
     - WordPress publish code can map each public projection entity to a stable route/template/surface.
     - Integration tests cover report-to-entity projection and WordPress publish/readback for each implemented entity.
 
+- **Title:** Expose original report source URLs and page-only grounding citations [Impact: 5/5, Effort: 3/5]
+  - Explanation: Public report pages need a clear source URL so readers can manually download the full original report. Grounding citations also need to resolve to the original report page only, using stable display text like `Report Name, page XX`, instead of pointing at generated artifacts, intermediate evidence windows, or local pipeline paths.
+  - Pros: Improves reader trust, makes source verification practical, and prevents generated pages from exposing pipeline-internal citation targets.
+  - Cons: Requires careful source-url capture for every acquisition route and citation normalization across report, signal, briefing, and regenerated artifact paths.
+  - Acceptance Criteria:
+    - Public report pages render the original source URL when it is available, with deterministic missing-source behavior when it is not.
+    - Source URL is stored in a typed, versioned contract and propagated through projection, render, and WordPress publish boundaries.
+    - Grounding citations displayed in generated outputs reference only the original report page as `report name, page XX`. The artifacts generated contain this data to be a trusted source
+    - Generated artifact paths, local evidence-window IDs, crop paths, cache files, and intermediate pipeline URLs are never exposed as public grounding citation targets.
+    - Tests cover source URL propagation, missing source URL handling, and citation normalization for reports, signals, and briefings.
+
 - **Title:** Resolve publish post-type and entity naming drift between README, config, and WordPress [Impact: 4/5, Effort: 2/5]
   - Explanation: README says publishing currently targets core `posts`, while `src/config/app.yaml` sets `publish.wp.post_type` to `ml_report`. The WordPress plugin supports both core `post` and `ml_report` as report-like types, and public copy mixes Report, Digest, Brief, and Latest brief labels.
   - Pros: Removes ambiguity from the publish path and prevents operators from publishing to the wrong content type.
@@ -365,6 +377,17 @@ Scope: gaps identified by comparing the README direction against the current `sr
     - Compatibility behavior for old core `post` digests is explicitly documented or removed.
     - Public UI copy consistently uses Report for report entities and Briefing only for briefing entities.
     - Tests verify configured post type, WP payload post type, and resulting WordPress content type.
+
+- **Title:** Route WordPress publishing by generated HTML entity metadata [Impact: 5/5, Effort: 4/5]
+  - Explanation: Generated HTML artifacts need explicit metadata declaring their public entity type, such as report, signal, briefing, figure, region, or time period. WordPress publishing should use that metadata to route each artifact to the correct post type, taxonomy, template, and front-end section through one unified publish path, instead of relying on filename conventions, caller-specific branches, or duplicated publish flows.
+  - Pros: Makes publication deterministic across entity types, reduces post-type drift, and gives WordPress one routing contract for all generated public artifacts.
+  - Cons: Requires contract changes across rendering, publish payload construction, and WordPress route/template selection.
+  - Acceptance Criteria:
+    - Every generated HTML artifact includes typed metadata for entity type, schema version, source artifact ID, canonical route intent, and publish eligibility.
+    - Publish orchestration reads entity metadata through a dataclass contract and routes through one canonical WordPress publish boundary.
+    - WordPress publish code maps each supported entity type to the correct post type, taxonomy assignments, template, and front-end section.
+    - Unsupported or missing entity metadata fails with a typed `AppError` and structured logs instead of publishing to a default section.
+    - Tests cover report, signal, and briefing routing plus negative paths for missing, unknown, and mismatched metadata.
 
 - **Title:** Make WordPress categories the canonical Topic surface with full topic semantics [Impact: 4/5, Effort: 3/5]
   - Explanation: The current implementation already uses WordPress categories as the public Topic path, populated from `category-mappings.yaml`. The remaining gap is that categories currently publish mostly as labels, while README defines Topics as controlled taxonomy entries with definition, inclusion, and exclusion rules.

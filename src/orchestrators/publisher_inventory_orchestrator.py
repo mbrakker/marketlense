@@ -10,9 +10,8 @@ controls, and candidate post-processing.
 import hashlib
 import logging
 import time
-from dataclasses import asdict, replace
+from dataclasses import replace
 
-from src.contracts.drive import DriveUploadBytesRequest
 from src.contracts.publisher_inventory import (
     PublisherInventoryBuildRequest,
     PublisherInventoryBuildResponse,
@@ -37,7 +36,6 @@ from src.contracts.report_store import (
     PublisherInventoryStateGetRequest,
     PublisherInventoryRunQualityRecordRequest,
     PublisherInventoryStateRecordRequest,
-    ReportSourceDiscoveryRecordRequest,
 )
 from src.contracts.run_context import RunContext
 from src.orchestrators._publisher_inventory_orchestrator.candidate_flow import (
@@ -92,12 +90,15 @@ from src.orchestrators._publisher_inventory_orchestrator.snapshot_io import (
     _load_previous_snapshot,
     _snapshot_file_name,
 )
+from src.orchestrators._publisher_inventory_orchestrator.snapshot_records import (
+    _record_qualified_report_sources,
+    _upload_snapshot_if_changed,
+)
 from src.orchestrators.retry_orchestrator import (
     RetryPolicy,
     is_retryable_app_error,
     run_with_retry,
 )
-from src.utils.cache_utils import sha256_json
 from src.utils.drive_utils import extract_drive_folder_id
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -600,207 +601,38 @@ def run_publisher_inventory_discovery(
                     "coverage_verdict": coverage_response.verdict,
                 },
             )
-        snapshot_drive_file_id = previous_snapshot_file_id
-        snapshot_drive_file_name = previous_snapshot_file_name
-        snapshot_sha256 = previous_snapshot_sha256
-        if snapshot_changed:
-            _assert_time_budget_remaining(
-                deadline_monotonic=deadline_monotonic,
-                normalized_url=normalized_url,
-                step_name="publisher_inventory_snapshot_upload",
-                ctx=ctx,
-            )
-            snapshot_upload_request = DriveUploadBytesRequest(
-                schema_version="1.0",
-                folder_id=folder_id,
-                service_account_path=request.settings.google_sa_path,
-                auth_mode=request.settings.drive_auth_mode,
-                oauth_client_path=request.settings.google_oauth_client_path,
-                oauth_token_path=request.settings.google_oauth_token_path,
-                file_name=_snapshot_file_name(),
-                content=build_response.snapshot_json.encode("utf-8"),
-                mime_type="application/json",
-                supports_all_drives=True,
-            )
-            snapshot_upload_key = f"{normalized_url}:{build_response.snapshot_sha256}"
-            snapshot_upload_checksum = sha256_json(
-                {
-                    "schema_version": "1.0",
-                    "folder_id": snapshot_upload_request.folder_id,
-                    "mime_type": snapshot_upload_request.mime_type,
-                    "snapshot_sha256": build_response.snapshot_sha256,
-                }
-            )
-            existing_snapshot_upload = _lookup_idempotency_record(
-                db_path=request.reports_db,
-                scope=_SNAPSHOT_UPLOAD_IDEMPOTENCY_SCOPE,
-                idempotency_key=snapshot_upload_key,
-                input_checksum=snapshot_upload_checksum,
-                ctx=ctx,
-            )
-            if existing_snapshot_upload is not None:
-                upload_response = _restore_upload_bytes_response(
-                    dict(existing_snapshot_upload.outcome_payload or {})
-                )
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="orchestrator",
-                        event="publisher_inventory_snapshot_upload_idempotency_reused",
-                        module=logger.name,
-                        fields={
-                            "normalized_url": normalized_url,
-                            "snapshot_drive_file_id": upload_response.file.file_id,
-                            "snapshot_drive_file_name": upload_response.file.name or "",
-                            "snapshot_sha256": build_response.snapshot_sha256,
-                        },
-                    )
-                )
-            else:
-                upload_response = run_with_retry(
-                    step_name="publisher_inventory_snapshot_upload",
-                    operation=lambda: deps.upload_bytes(
-                        snapshot_upload_request,
-                        ctx,
-                    ),
-                    ctx=ctx,
-                    logger=logger,
-                    module_name=logger.name,
-                    policy=policy,
-                    retry_event="publisher_inventory_snapshot_upload_retry",
-                    failure_event="publisher_inventory_snapshot_upload_failed",
-                )
-                _record_idempotency_outcome(
-                    db_path=request.reports_db,
-                    scope=_SNAPSHOT_UPLOAD_IDEMPOTENCY_SCOPE,
-                    idempotency_key=snapshot_upload_key,
-                    input_checksum=snapshot_upload_checksum,
-                    outcome_payload=asdict(upload_response),
-                    artifact_references={
-                        "folder_id": snapshot_upload_request.folder_id,
-                        "snapshot_drive_file_id": upload_response.file.file_id,
-                        "snapshot_drive_file_name": upload_response.file.name or "",
-                        "snapshot_sha256": build_response.snapshot_sha256,
-                    },
-                    ctx=ctx,
-                )
-            snapshot_drive_file_id = upload_response.file.file_id
-            snapshot_drive_file_name = upload_response.file.name
-            snapshot_sha256 = build_response.snapshot_sha256
-            logger.info(
-                log_event(
-                    ctx,
-                    role="orchestrator",
-                    event="publisher_inventory_snapshot_uploaded",
-                    module=logger.name,
-                    fields={
-                        "normalized_url": normalized_url,
-                        "snapshot_drive_file_id": snapshot_drive_file_id,
-                        "snapshot_drive_file_name": snapshot_drive_file_name or "",
-                        "snapshot_sha256": snapshot_sha256,
-                    },
-                )
-            )
-        for item in qualified_items:
-            _assert_time_budget_remaining(
-                deadline_monotonic=deadline_monotonic,
-                normalized_url=normalized_url,
-                step_name="publisher_inventory_report_source_record",
-                ctx=ctx,
-            )
-            source_record_request = ReportSourceDiscoveryRecordRequest(
-                schema_version="1.0",
-                db_path=request.reports_db,
-                publisher_name=publisher_state.publisher_name,
-                source_domain=_source_domain_for_url(item.canonical_url),
-                report_name=item.title,
-                landing_page_url=item.canonical_url,
-                source_page_url=page_url_by_number.get(
-                    item.discovered_on_page_number, publisher_state.insights_url
-                ),
-                discovered_at_utc=build_response.snapshot.discovered_at_utc,
-                discovered_on_page_number=item.discovered_on_page_number,
-            )
-            source_record_key = f"{normalized_url}:{item.canonical_url}"
-            source_record_checksum = sha256_json(
-                {
-                    "schema_version": "1.0",
-                    "publisher_name": source_record_request.publisher_name,
-                    "source_domain": source_record_request.source_domain,
-                    "report_name": source_record_request.report_name,
-                    "landing_page_url": source_record_request.landing_page_url,
-                    "source_page_url": source_record_request.source_page_url,
-                    "discovered_on_page_number": source_record_request.discovered_on_page_number,
-                }
-            )
-            existing_source_record = _lookup_idempotency_record(
-                db_path=request.reports_db,
-                scope=_REPORT_SOURCE_RECORD_IDEMPOTENCY_SCOPE,
-                idempotency_key=source_record_key,
-                input_checksum=source_record_checksum,
-                ctx=ctx,
-            )
-            if existing_source_record is not None:
-                source_record = _restore_report_source_record(
-                    dict(existing_source_record.outcome_payload or {})
-                )
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="orchestrator",
-                        event="publisher_inventory_report_source_record_idempotency_reused",
-                        module=logger.name,
-                        fields={
-                            "publisher_name": source_record.publisher_name,
-                            "landing_page_url": source_record.landing_page_url,
-                            "record_id": source_record.record_id,
-                        },
-                    )
-                )
-            else:
-                source_record = run_with_retry(
-                    step_name="publisher_inventory_report_source_record",
-                    operation=lambda: deps.record_discovered_report_source(
-                        source_record_request,
-                        ctx,
-                    ),
-                    ctx=ctx,
-                    logger=logger,
-                    module_name=logger.name,
-                    policy=policy,
-                    retry_event="publisher_inventory_report_source_record_retry",
-                    failure_event="publisher_inventory_report_source_record_failed",
-                )
-                _record_idempotency_outcome(
-                    db_path=request.reports_db,
-                    scope=_REPORT_SOURCE_RECORD_IDEMPOTENCY_SCOPE,
-                    idempotency_key=source_record_key,
-                    input_checksum=source_record_checksum,
-                    outcome_payload=asdict(source_record),
-                    artifact_references={
-                        "record_id": source_record.record_id,
-                        "landing_page_url": source_record.landing_page_url,
-                        "source_page_url": source_record.source_page_url,
-                    },
-                    ctx=ctx,
-                )
-            logger.info(
-                log_event(
-                    ctx,
-                    role="orchestrator",
-                    event="publisher_inventory_report_source_recorded",
-                    module=logger.name,
-                    fields={
-                        "record_id": source_record.record_id,
-                        "publisher_name": source_record.publisher_name,
-                        "report_name": source_record.report_name,
-                        "landing_page_url": source_record.landing_page_url,
-                        "source_page_url": source_record.source_page_url,
-                        "discovered_on_page_number": source_record.discovered_on_page_number,
-                        "created_new": source_record.created_new,
-                    },
-                )
-            )
+        (
+            snapshot_drive_file_id,
+            snapshot_drive_file_name,
+            snapshot_sha256,
+        ) = _upload_snapshot_if_changed(
+            snapshot_changed=snapshot_changed,
+            previous_snapshot_file_id=previous_snapshot_file_id,
+            previous_snapshot_file_name=previous_snapshot_file_name,
+            previous_snapshot_sha256=previous_snapshot_sha256,
+            build_response=build_response,
+            folder_id=folder_id,
+            normalized_url=normalized_url,
+            reports_db=request.reports_db,
+            settings=request.settings,
+            deadline_monotonic=deadline_monotonic,
+            policy=policy,
+            ctx=ctx,
+            dependencies=deps,
+        )
+        _record_qualified_report_sources(
+            qualified_items=qualified_items,
+            page_url_by_number=page_url_by_number,
+            publisher_name=publisher_state.publisher_name,
+            publisher_insights_url=publisher_state.insights_url,
+            normalized_url=normalized_url,
+            reports_db=request.reports_db,
+            discovered_at_utc=build_response.snapshot.discovered_at_utc,
+            deadline_monotonic=deadline_monotonic,
+            policy=policy,
+            ctx=ctx,
+            dependencies=deps,
+        )
         _record_state_if_needed(
             request=PublisherInventoryStateRecordRequest(
                 schema_version="1.0",

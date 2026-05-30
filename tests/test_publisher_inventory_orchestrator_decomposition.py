@@ -65,6 +65,11 @@ RUNTIME_SYMBOLS = {
     "_utc_now_iso",
 }
 
+SNAPSHOT_RECORD_SYMBOLS = {
+    "_upload_snapshot_if_changed",
+    "_record_qualified_report_sources",
+}
+
 PUBLIC_COORDINATOR_SYMBOLS = {
     "run_publisher_inventory_discovery",
 }
@@ -75,6 +80,7 @@ ALL_MOVED_SYMBOLS = (
     | SNAPSHOT_SYMBOLS
     | CANDIDATE_FLOW_SYMBOLS
     | RUNTIME_SYMBOLS
+    | SNAPSHOT_RECORD_SYMBOLS
 )
 ALL_PUBLIC_SYMBOLS = ALL_MOVED_SYMBOLS | PUBLIC_COORDINATOR_SYMBOLS
 
@@ -100,6 +106,7 @@ def test_publisher_inventory_orchestrator_owner_modules_exist() -> None:
     assert (PACKAGE / "snapshot_io.py").is_file()
     assert (PACKAGE / "candidate_flow.py").is_file()
     assert (PACKAGE / "runtime.py").is_file()
+    assert (PACKAGE / "snapshot_records.py").is_file()
 
 
 def test_publisher_inventory_orchestrator_symbols_have_semantic_owners() -> None:
@@ -109,12 +116,14 @@ def test_publisher_inventory_orchestrator_symbols_have_semantic_owners() -> None
     snapshot_symbols = _owned_symbols(PACKAGE / "snapshot_io.py")
     candidate_flow_symbols = _owned_symbols(PACKAGE / "candidate_flow.py")
     runtime_symbols = _owned_symbols(PACKAGE / "runtime.py")
+    snapshot_record_symbols = _owned_symbols(PACKAGE / "snapshot_records.py")
 
     assert DEPENDENCY_SYMBOLS <= dependency_symbols
     assert IDEMPOTENCY_SYMBOLS <= idempotency_symbols
     assert SNAPSHOT_SYMBOLS <= snapshot_symbols
     assert CANDIDATE_FLOW_SYMBOLS <= candidate_flow_symbols
     assert RUNTIME_SYMBOLS <= runtime_symbols
+    assert SNAPSHOT_RECORD_SYMBOLS <= snapshot_record_symbols
     assert PUBLIC_COORDINATOR_SYMBOLS <= public_symbols
 
     assert not (ALL_MOVED_SYMBOLS & public_symbols)
@@ -123,6 +132,7 @@ def test_publisher_inventory_orchestrator_symbols_have_semantic_owners() -> None
     assert snapshot_symbols & ALL_PUBLIC_SYMBOLS == SNAPSHOT_SYMBOLS
     assert candidate_flow_symbols & ALL_PUBLIC_SYMBOLS == CANDIDATE_FLOW_SYMBOLS
     assert runtime_symbols & ALL_PUBLIC_SYMBOLS == RUNTIME_SYMBOLS
+    assert snapshot_record_symbols & ALL_PUBLIC_SYMBOLS == SNAPSHOT_RECORD_SYMBOLS
     assert public_symbols & ALL_PUBLIC_SYMBOLS == PUBLIC_COORDINATOR_SYMBOLS
 
 
