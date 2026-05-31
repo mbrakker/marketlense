@@ -23,6 +23,11 @@ from src.contracts.files import (
     ListDirectoryResponse,
     ListHtmlRequest,
     ListHtmlResponse,
+    PipelineCheckpointReadRequest,
+    PipelineCheckpointReadResponse,
+    PipelineCheckpointWriteRequest,
+    PipelineCheckpointWriteResponse,
+    PipelineStageCheckpoint,
     PdfCacheTextReadRequest,
     PdfCacheTextReadResponse,
     ReadBytesRequest,
@@ -39,6 +44,9 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.file_service")
 _WINDOWS_ABSOLUTE_PATH_RX = re.compile(r"^[A-Za-z]:[\\/]")
 _PDF_CACHE_MD5_RX = re.compile(r"^[0-9a-fA-F]{32}$")
+_PIPELINE_CHECKPOINT_TOKEN_RX = re.compile(r"^[A-Za-z0-9_.=-]+$")
+_PIPELINE_CHECKPOINT_SCHEMA_VERSION = "1.0"
+_PIPELINE_CHECKPOINT_DIR = ".checkpoints"
 _ATOMIC_WRITE_STALE_SECONDS = 3600.0
 _ATOMIC_WRITE_TEMP_TAG = ".tmp-write-"
 
@@ -73,6 +81,95 @@ def _require_pdf_cache_md5(raw_md5: str) -> str:
             context={"md5": token},
         )
     return token.lower()
+
+
+def _require_checkpoint_token(raw_value: str, field_name: str) -> str:
+    token = str(raw_value or "").strip()
+    if not token or not _PIPELINE_CHECKPOINT_TOKEN_RX.fullmatch(token):
+        raise AppError(
+            code="pipeline_checkpoint_key_invalid",
+            message=f"Pipeline checkpoint {field_name} is invalid",
+            retryable=False,
+            context={field_name: token},
+        )
+    return token
+
+
+def _pipeline_checkpoint_path(
+    checkpoint_root: str,
+    pipeline_name: str,
+    file_id: str,
+    stage_name: str,
+) -> Path:
+    root = Path(checkpoint_root).expanduser().resolve()
+    pipeline_token = _require_checkpoint_token(pipeline_name, "pipeline_name")
+    file_token = _require_checkpoint_token(file_id, "file_id")
+    stage_token = _require_checkpoint_token(stage_name, "stage_name")
+    return (
+        root
+        / _PIPELINE_CHECKPOINT_DIR
+        / pipeline_token
+        / file_token
+        / f"{stage_token}.json"
+    )
+
+
+def _checkpoint_to_payload(checkpoint: PipelineStageCheckpoint) -> dict:
+    return {
+        "schema_version": checkpoint.schema_version,
+        "pipeline_name": checkpoint.pipeline_name,
+        "file_id": checkpoint.file_id,
+        "report_slug": checkpoint.report_slug,
+        "stage_name": checkpoint.stage_name,
+        "stage_status": checkpoint.stage_status,
+        "artifact_refs": dict(checkpoint.artifact_refs),
+        "payload": dict(checkpoint.payload),
+        "completed_at_utc": checkpoint.completed_at_utc,
+        "source_run_id": checkpoint.source_run_id,
+        "source_task_id": checkpoint.source_task_id,
+    }
+
+
+def _checkpoint_from_payload(payload: object) -> PipelineStageCheckpoint:
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="pipeline_checkpoint_invalid",
+            message="Pipeline checkpoint payload must be a JSON object",
+            retryable=False,
+        )
+    schema_version = str(payload.get("schema_version") or "").strip()
+    artifact_refs = payload.get("artifact_refs")
+    checkpoint_payload = payload.get("payload")
+    if schema_version != _PIPELINE_CHECKPOINT_SCHEMA_VERSION:
+        raise AppError(
+            code="pipeline_checkpoint_invalid",
+            message="Pipeline checkpoint schema version is unsupported",
+            retryable=False,
+            context={"schema_version": schema_version},
+        )
+    if not isinstance(artifact_refs, dict) or not isinstance(checkpoint_payload, dict):
+        raise AppError(
+            code="pipeline_checkpoint_invalid",
+            message="Pipeline checkpoint artifact_refs and payload must be objects",
+            retryable=False,
+        )
+    return PipelineStageCheckpoint(
+        schema_version=schema_version,
+        pipeline_name=_require_checkpoint_token(
+            str(payload.get("pipeline_name") or ""), "pipeline_name"
+        ),
+        file_id=_require_checkpoint_token(str(payload.get("file_id") or ""), "file_id"),
+        report_slug=str(payload.get("report_slug") or "").strip(),
+        stage_name=_require_checkpoint_token(
+            str(payload.get("stage_name") or ""), "stage_name"
+        ),
+        stage_status=str(payload.get("stage_status") or "").strip(),
+        artifact_refs={str(k): str(v) for k, v in artifact_refs.items()},
+        payload=checkpoint_payload,
+        completed_at_utc=str(payload.get("completed_at_utc") or "").strip(),
+        source_run_id=str(payload.get("source_run_id") or "").strip(),
+        source_task_id=str(payload.get("source_task_id") or "").strip(),
+    )
 
 
 def read_text(request: ReadTextRequest, ctx: RunContext) -> ReadTextResponse:
@@ -313,6 +410,160 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
         path=request.path,
         bytes_written=len(request.content),
         md5=md5,
+    )
+
+
+def write_pipeline_checkpoint(
+    request: PipelineCheckpointWriteRequest,
+    ctx: RunContext,
+) -> PipelineCheckpointWriteResponse:
+    checkpoint = request.checkpoint
+    path = _pipeline_checkpoint_path(
+        request.checkpoint_root,
+        checkpoint.pipeline_name,
+        checkpoint.file_id,
+        checkpoint.stage_name,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pipeline_checkpoint_write_start",
+            module=logger.name,
+            fields={
+                "checkpoint_root": request.checkpoint_root,
+                "pipeline_name": checkpoint.pipeline_name,
+                "file_id": checkpoint.file_id,
+                "stage_name": checkpoint.stage_name,
+                "stage_status": checkpoint.stage_status,
+                "artifact_ref_count": len(checkpoint.artifact_refs),
+            },
+        )
+    )
+    if checkpoint.schema_version != _PIPELINE_CHECKPOINT_SCHEMA_VERSION:
+        raise AppError(
+            code="pipeline_checkpoint_invalid",
+            message="Pipeline checkpoint schema version is unsupported",
+            retryable=False,
+            context={"schema_version": checkpoint.schema_version},
+        )
+    if checkpoint.stage_status not in {"completed", "failed"}:
+        raise AppError(
+            code="pipeline_checkpoint_invalid",
+            message="Pipeline checkpoint stage_status must be completed or failed",
+            retryable=False,
+            context={"stage_status": checkpoint.stage_status},
+        )
+    payload = _checkpoint_to_payload(checkpoint)
+    content = (
+        json.dumps(payload, ensure_ascii=True, sort_keys=True, indent=2) + "\n"
+    ).encode("utf-8")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        _atomic_write_bytes(path, content)
+    except OSError as exc:
+        raise AppError(
+            code="pipeline_checkpoint_write_failed",
+            message=f"Failed to write pipeline checkpoint: {path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pipeline_checkpoint_write_complete",
+            module=logger.name,
+            fields={
+                "checkpoint_path": str(path),
+                "pipeline_name": checkpoint.pipeline_name,
+                "file_id": checkpoint.file_id,
+                "stage_name": checkpoint.stage_name,
+                "bytes_written": len(content),
+            },
+        )
+    )
+    return PipelineCheckpointWriteResponse(
+        schema_version="1.0",
+        checkpoint_path=str(path),
+        bytes_written=len(content),
+    )
+
+
+def read_pipeline_checkpoint(
+    request: PipelineCheckpointReadRequest,
+    ctx: RunContext,
+) -> PipelineCheckpointReadResponse:
+    path = _pipeline_checkpoint_path(
+        request.checkpoint_root,
+        request.pipeline_name,
+        request.file_id,
+        request.stage_name,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pipeline_checkpoint_read_start",
+            module=logger.name,
+            fields={
+                "checkpoint_root": request.checkpoint_root,
+                "pipeline_name": request.pipeline_name,
+                "file_id": request.file_id,
+                "stage_name": request.stage_name,
+            },
+        )
+    )
+    if not path.exists():
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pipeline_checkpoint_read_complete",
+                module=logger.name,
+                fields={"checkpoint_path": str(path), "found": False},
+            )
+        )
+        return PipelineCheckpointReadResponse(
+            schema_version="1.0",
+            checkpoint_path=str(path),
+            found=False,
+            checkpoint=None,
+        )
+    try:
+        raw_payload = json.loads(path.read_text(encoding="utf-8"))
+        checkpoint = _checkpoint_from_payload(raw_payload)
+    except AppError:
+        raise
+    except (OSError, json.JSONDecodeError) as exc:
+        raise AppError(
+            code="pipeline_checkpoint_read_failed",
+            message=f"Failed to read pipeline checkpoint: {path}",
+            cause=exc,
+            retryable=False,
+            context={"checkpoint_path": str(path)},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pipeline_checkpoint_read_complete",
+            module=logger.name,
+            fields={
+                "checkpoint_path": str(path),
+                "pipeline_name": checkpoint.pipeline_name,
+                "file_id": checkpoint.file_id,
+                "stage_name": checkpoint.stage_name,
+                "found": True,
+                "artifact_ref_count": len(checkpoint.artifact_refs),
+            },
+        )
+    )
+    return PipelineCheckpointReadResponse(
+        schema_version="1.0",
+        checkpoint_path=str(path),
+        found=True,
+        checkpoint=checkpoint,
     )
 
 

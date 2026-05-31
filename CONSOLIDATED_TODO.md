@@ -89,16 +89,6 @@ Suggested priority order:
 
 ## 4. Idempotency, Checkpoints & Publish Durability
 
-- **Title:** Introduce durable, checkpointed pipeline stages with semantic restart [Impact: 5/5, Effort: 5/5]
-  - Explanation: Replay manifests exist for UI runs, but the report pipeline itself still resumes by rerunning whole stages rather than restarting from durable semantic checkpoints with artifact references.
-  - Pros: Faster recovery, lower rerun cost, better operator control.
-  - Cons: Requires checkpoint versioning, storage modeling, and migration discipline.
-  - Acceptance Criteria:
-    - Checkpoint contracts exist for major pipeline stages.
-    - Stage checkpoints store artifact references plus schema versions.
-    - Resume tooling supports restarting from a selected stage boundary.
-    - Consistency tests compare full-run output with resumed-run output.
-
 - **Title:** Turn the publish queue into durable jobs with transactional outbox, retry, and idempotency [Impact: 5/5, Effort: 5/5]
   - Explanation: The current `publish_queue_orchestrator.py` only builds a snapshot for UI and ops views. It does not persist publish intents as durable jobs or atomically couple publish-side effects to state transitions.
   - Pros: More reliable publishing and clearer recovery from partial failures.

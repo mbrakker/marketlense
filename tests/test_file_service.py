@@ -8,6 +8,9 @@ import pytest
 
 from src.contracts.files import (
     ListDirectoryRequest,
+    PipelineCheckpointReadRequest,
+    PipelineCheckpointWriteRequest,
+    PipelineStageCheckpoint,
     PdfCacheTextReadRequest,
     ReadTextRequest,
     WriteBytesRequest,
@@ -15,8 +18,10 @@ from src.contracts.files import (
 from src.contracts.run_context import RunContext
 from src.services.file_service import (
     list_directory,
+    read_pipeline_checkpoint,
     read_latest_pdf_cache_text,
     read_text,
+    write_pipeline_checkpoint,
     write_bytes,
 )
 from src.utils.errors import AppError
@@ -228,3 +233,76 @@ def test_write_bytes_preserves_existing_file_when_replace_fails(
     assert created_temp_paths
     assert all(not path.exists() for path in created_temp_paths)
     monkeypatch.setattr(os, "replace", original_replace)
+
+
+def test_pipeline_checkpoint_roundtrip_persists_artifact_refs_and_schema(
+    tmp_path: Path,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level("INFO", logger="market_lense.file_service")
+    checkpoint = PipelineStageCheckpoint(
+        schema_version="1.0",
+        pipeline_name="report_generation",
+        file_id="file-1",
+        report_slug="market-report",
+        stage_name="analysis_complete",
+        stage_status="completed",
+        artifact_refs={
+            "analysis_snapshot": str(tmp_path / "out" / "analysis_vector_store.json"),
+            "preview_image": str(tmp_path / "out" / "preview.png"),
+        },
+        payload={
+            "schema_version": "1.0",
+            "analysis": {"vector_store_id": "vs_123"},
+        },
+        completed_at_utc="2026-05-31T00:00:00+00:00",
+        source_run_id="run-1",
+        source_task_id="task-1",
+    )
+
+    write_response = write_pipeline_checkpoint(
+        PipelineCheckpointWriteRequest(
+            schema_version="1.0",
+            checkpoint_root=str(tmp_path),
+            checkpoint=checkpoint,
+        ),
+        _ctx(),
+    )
+    read_response = read_pipeline_checkpoint(
+        PipelineCheckpointReadRequest(
+            schema_version="1.0",
+            checkpoint_root=str(tmp_path),
+            pipeline_name="report_generation",
+            file_id="file-1",
+            stage_name="analysis_complete",
+        ),
+        _ctx(),
+    )
+
+    assert Path(write_response.checkpoint_path).parts[-3:] == (
+        "report_generation",
+        "file-1",
+        "analysis_complete.json",
+    )
+    assert read_response.found is True
+    assert read_response.checkpoint == checkpoint
+    assert read_response.checkpoint_path == write_response.checkpoint_path
+
+    event_payloads = []
+    for record in caplog.records:
+        try:
+            event_payloads.append(json.loads(record.message))
+        except json.JSONDecodeError:
+            continue
+    checkpoint_events = [
+        event
+        for event in event_payloads
+        if event.get("event")
+        in {"pipeline_checkpoint_write_complete", "pipeline_checkpoint_read_complete"}
+    ]
+    assert {event["event"] for event in checkpoint_events} == {
+        "pipeline_checkpoint_write_complete",
+        "pipeline_checkpoint_read_complete",
+    }
+    assert_logs_have_required_fields(checkpoint_events)

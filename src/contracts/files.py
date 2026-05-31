@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -124,6 +124,94 @@ class WriteBytesResponse:
     path: str = field(metadata={"doc": "Filesystem path written."})
     bytes_written: int = field(metadata={"doc": "Number of bytes written."})
     md5: str = field(metadata={"doc": "MD5 checksum of written content."})
+
+
+@dataclass(frozen=True)
+class PipelineStageCheckpoint:
+    schema_version: str = field(
+        metadata={"doc": "Pipeline checkpoint contract schema version."}
+    )
+    pipeline_name: str = field(
+        metadata={"doc": "Canonical pipeline name that owns this checkpoint."}
+    )
+    file_id: str = field(metadata={"doc": "Report/source file identifier."})
+    report_slug: str = field(
+        metadata={"doc": "Report slug used for artifact path layout."}
+    )
+    stage_name: str = field(
+        metadata={"doc": "Semantic stage boundary represented by this checkpoint."}
+    )
+    stage_status: str = field(
+        metadata={"doc": "Checkpointed stage status, usually completed or failed."}
+    )
+    artifact_refs: Dict[str, str] = field(
+        metadata={"doc": "Durable artifact references produced by the stage."}
+    )
+    payload: Dict[str, Any] = field(
+        metadata={"doc": "JSON-serializable semantic state required for restart."}
+    )
+    completed_at_utc: str = field(
+        metadata={"doc": "UTC ISO timestamp when the checkpoint was written."}
+    )
+    source_run_id: str = field(
+        metadata={"doc": "Run identifier that produced the checkpoint."}
+    )
+    source_task_id: str = field(
+        metadata={"doc": "Task identifier that produced the checkpoint."}
+    )
+
+
+@dataclass(frozen=True)
+class PipelineCheckpointWriteRequest:
+    schema_version: str = field(
+        metadata={"doc": "Pipeline checkpoint write request schema version."}
+    )
+    checkpoint_root: str = field(
+        metadata={"doc": "Root directory where pipeline checkpoints are stored."}
+    )
+    checkpoint: PipelineStageCheckpoint = field(
+        metadata={"doc": "Checkpoint payload to persist."}
+    )
+
+
+@dataclass(frozen=True)
+class PipelineCheckpointWriteResponse:
+    schema_version: str = field(
+        metadata={"doc": "Pipeline checkpoint write response schema version."}
+    )
+    checkpoint_path: str = field(
+        metadata={"doc": "Filesystem path where the checkpoint was written."}
+    )
+    bytes_written: int = field(
+        metadata={"doc": "Serialized checkpoint byte count written."}
+    )
+
+
+@dataclass(frozen=True)
+class PipelineCheckpointReadRequest:
+    schema_version: str = field(
+        metadata={"doc": "Pipeline checkpoint read request schema version."}
+    )
+    checkpoint_root: str = field(
+        metadata={"doc": "Root directory where pipeline checkpoints are stored."}
+    )
+    pipeline_name: str = field(metadata={"doc": "Canonical pipeline name."})
+    file_id: str = field(metadata={"doc": "Report/source file identifier."})
+    stage_name: str = field(metadata={"doc": "Semantic stage boundary name."})
+
+
+@dataclass(frozen=True)
+class PipelineCheckpointReadResponse:
+    schema_version: str = field(
+        metadata={"doc": "Pipeline checkpoint read response schema version."}
+    )
+    checkpoint_path: str = field(
+        metadata={"doc": "Filesystem path inspected for the checkpoint."}
+    )
+    found: bool = field(metadata={"doc": "True when a checkpoint was found."})
+    checkpoint: Optional[PipelineStageCheckpoint] = field(
+        default=None, metadata={"doc": "Parsed checkpoint when found."}
+    )
 
 
 @dataclass(frozen=True)

@@ -594,3 +594,39 @@ def test_run_report_pipeline_uses_shared_llm_retry_policy(monkeypatch) -> None:
     assert response.status == "processed"
     assert base_client.calls == 2
     assert sleep_calls == [1.0]
+
+
+def test_run_report_pipeline_forwards_resume_stage_to_report_generation() -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    captured: dict[str, str] = {}
+
+    def _gen(file, local_pdf_path, settings, md5, ctx, *, resume_from_stage=None):
+        captured["resume_from_stage"] = str(resume_from_stage or "")
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.name or file.file_id,
+            md5=md5,
+            html_path="./out/a.html",
+            status="processed",
+        )
+
+    response = orch.run_report_pipeline(
+        file,
+        local_pdf_path="./cache/a.pdf",
+        settings=_settings(),
+        md5="md5",
+        ctx=_ctx(),
+        retries=0,
+        generate_report_fn=_gen,
+        resume_from_stage="analysis_complete",
+    )
+
+    assert response.status == "processed"
+    assert captured == {"resume_from_stage": "analysis_complete"}

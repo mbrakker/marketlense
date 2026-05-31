@@ -64,6 +64,7 @@ def _invoke_report_fn(
     ctx: RunContext,
     evidence_pack_openai_client,
     artifact_openai_client,
+    resume_from_stage: Optional[str] = None,
 ) -> IngestOutcome:
     kwargs = {}
     try:
@@ -76,6 +77,8 @@ def _invoke_report_fn(
         kwargs["evidence_pack_openai_client"] = evidence_pack_openai_client
     if "artifact_openai_client" in parameters:
         kwargs["artifact_openai_client"] = artifact_openai_client
+    if "resume_from_stage" in parameters:
+        kwargs["resume_from_stage"] = resume_from_stage
     return report_fn(file, local_pdf_path, settings, md5, ctx, **kwargs)
 
 
@@ -89,6 +92,7 @@ def run_report_pipeline(
     retries: int = 2,
     generate_report_fn: Optional[Callable[..., IngestOutcome]] = None,
     openai_client_override=None,
+    resume_from_stage: Optional[str] = None,
 ) -> IngestOutcome:
     report_fn = generate_report_fn or generate_report_orchestrator
     evidence_max_in_flight = coerce_int(
@@ -149,6 +153,7 @@ def run_report_pipeline(
                 "evidence_pack_global_min_interval_ms": evidence_min_interval_ms,
                 "artifact_global_max_in_flight": artifact_max_in_flight,
                 "artifact_global_min_interval_ms": artifact_min_interval_ms,
+                "resume_from_stage": resume_from_stage or "",
             },
         )
     )
@@ -167,6 +172,7 @@ def run_report_pipeline(
             ctx=ctx,
             evidence_pack_openai_client=evidence_openai_client,
             artifact_openai_client=artifact_openai_client,
+            resume_from_stage=resume_from_stage,
         )
         doc_map_reason = _doc_map_reason(outcome)
         should_retry_doc_map = (

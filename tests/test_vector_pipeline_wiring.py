@@ -1035,6 +1035,151 @@ def test_generate_report_doc_map_empty_halts(
     assert outcome.doc_map_summary.get("not_found_reason") == "model_returned_no_json"
 
 
+def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun(
+    tmp_path,
+) -> None:
+    settings = replace(_ingest_settings(tmp_path), report_worker_limit=1)
+    pdf_path = tmp_path / "sample.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    with pdf_path.open("wb") as handle:
+        writer.write(handle)
+
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="file_vs",
+        name="vector.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run-vs",
+        task_id="task-vs",
+        span_id="span-vs",
+    )
+    upstream_calls = {"evidence": 0, "artifacts": 0, "validation": 0}
+    rendered_payloads: list[dict] = []
+
+    def _store_pack(request: AnalysisStorePackRequest, ctx):
+        path = (
+            Path(request.output_dir)
+            / slugify(request.report_slug or str(request.report_id))
+            / "report_analysis"
+            / f"{request.pack_name}.json"
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(request.payload, ensure_ascii=True), encoding="utf-8"
+        )
+        return SimpleNamespace(output_path=str(path))
+
+    def _fake_evidence(*args, **kwargs):
+        upstream_calls["evidence"] += 1
+        return {
+            "doc_map": {
+                "docMap": {
+                    "title": "Checkpoint Title",
+                    "publisher": "Checkpoint Publisher",
+                    "sections": [{"title": "Overview"}],
+                },
+                "doc_id": "d",
+            },
+            "scope": {},
+            "methods": {},
+            "findings": {},
+            "limitations": {},
+            "quote_candidates": {},
+        }
+
+    def _fake_artifacts(*args, **kwargs):
+        upstream_calls["artifacts"] += 1
+        return _analysis_artifacts()
+
+    def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):
+        upstream_calls["validation"] += 1
+        return ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            severity="pass",
+            issues=[],
+            source_path=str(
+                Path(settings.output_dir)
+                / slugify(kwargs.get("report_name") or str(req.report_id))
+                / "report_analysis"
+                / f"{pack_name}.json"
+            ),
+        )
+
+    def _render_report(req, ctx):
+        rendered_payloads.append(dict(req.data))
+        html_path = Path(req.out_dir) / f"{req.file_id}-{len(rendered_payloads)}.html"
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+        html_path.write_text(
+            json.dumps(req.data, ensure_ascii=True, sort_keys=True),
+            encoding="utf-8",
+        )
+        return RenderResponse(schema_version="1.0", html_path=str(html_path))
+
+    full_deps = _base_vector_report_dependencies(
+        tmp_path,
+        generate_evidence_packs=_fake_evidence,
+        generate_artifacts=_fake_artifacts,
+        run_validation=_fake_validation,
+        analysis_store_pack=_store_pack,
+        render_report=_render_report,
+        upsert_report_metadata=lambda req, ctx: None,
+        get_report_metadata=lambda req, ctx: None,
+        generate_cover_images=lambda req, ctx: [],
+    )
+
+    full_outcome = rgo.run_report_generation(
+        file,
+        str(pdf_path),
+        settings,
+        md5="md5",
+        ctx=ctx,
+        dependencies=full_deps,
+    )
+    full_render_payload = rendered_payloads[-1]
+
+    def _unexpected_upstream(*args, **kwargs):
+        pytest.fail("resume from analysis checkpoint reran an upstream stage")
+
+    resume_deps = _base_vector_report_dependencies(
+        tmp_path,
+        build_pdf_context=_unexpected_upstream,
+        extract_pdf_info=_unexpected_upstream,
+        extract_best_figure=_unexpected_upstream,
+        collect_candidates=_unexpected_upstream,
+        vector_store_create=_unexpected_upstream,
+        generate_evidence_packs=_unexpected_upstream,
+        generate_artifacts=_unexpected_upstream,
+        run_validation=_unexpected_upstream,
+        render_report=_render_report,
+        upsert_report_metadata=lambda req, ctx: None,
+        get_report_metadata=lambda req, ctx: None,
+        generate_cover_images=lambda req, ctx: [],
+    )
+
+    resumed_outcome = rgo.run_report_generation(
+        file,
+        str(pdf_path),
+        settings,
+        md5="md5",
+        ctx=ctx,
+        dependencies=resume_deps,
+        resume_from_stage="analysis_complete",
+    )
+    resumed_render_payload = rendered_payloads[-1]
+
+    assert full_outcome.status == "processed"
+    assert resumed_outcome.status == "processed"
+    assert full_render_payload == resumed_render_payload
+    assert resumed_outcome.evidence_packs == full_outcome.evidence_packs
+    assert upstream_calls == {"evidence": 1, "artifacts": 1, "validation": 1}
+
+
 def test_generate_report_deletes_vector_store_when_retention_disabled(
     tmp_path,
 ) -> None:
