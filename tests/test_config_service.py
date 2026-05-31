@@ -679,6 +679,31 @@ class TestConfigService(unittest.TestCase):
             settings.rank_timeout_seconds, settings.crop_refine_timeout_seconds
         )
 
+    def test_candidate_page_gate_settings_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["candidate_page_gate"] = {
+                "enabled": True,
+                "min_score": 0.31,
+                "min_recall_pages": 7,
+                "min_recall_page_fraction": 0.42,
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertTrue(settings.candidate_page_gate_enabled)
+        self.assertEqual(0.31, settings.candidate_page_gate_min_score)
+        self.assertEqual(7, settings.candidate_page_gate_min_recall_pages)
+        self.assertEqual(0.42, settings.candidate_page_gate_min_recall_page_fraction)
+
     def test_taxonomy_temperature_uses_config_and_env_override(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)

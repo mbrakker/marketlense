@@ -75,6 +75,19 @@ def test_collect_candidates_returns_chart_and_table_contracts(
     assert_logs_have_required_fields(events)
     event_names = {str(event["event"]) for event in events}
     assert {"extract_candidates_start", "extract_candidates_complete"} <= event_names
+    complete = next(
+        event for event in events if event.get("event") == "extract_candidates_complete"
+    )
+    complete_fields = cast(dict[str, Any], complete.get("fields") or {})
+    page_triage_records = complete_fields.get("page_triage_records") or []
+    assert page_triage_records
+    assert {"page", "score", "threshold", "action", "reasons"} <= set(
+        page_triage_records[0]
+    )
+    assert response.stats.page_triage_records
+    assert response.stats.page_triage_evaluated_count == len(
+        response.stats.page_triage_records
+    )
 
 
 def test_pdf_page_artifact_cache_reused_across_candidate_and_crop_passes(
@@ -253,6 +266,98 @@ def test_candidate_page_plan_fails_on_triage_failure_fail_policy() -> None:
         assert exc.context["page"] == 0
     else:
         raise AssertionError("fail policy must raise AppError")
+
+
+def test_candidate_page_plan_scores_and_skips_low_value_pages() -> None:
+    doc = fitz.open()
+    try:
+        prose_page = doc.new_page(width=420, height=560)
+        prose_page.insert_textbox(
+            fitz.Rect(40, 60, 380, 220),
+            "This page contains narrative context without figures, tables, or metrics.",
+            fontsize=11,
+        )
+        chart_page = doc.new_page(width=420, height=560)
+        chart_page.insert_text((48, 42), "Figure 1. Quarterly growth", fontsize=12)
+        chart_page.draw_rect(fitz.Rect(60, 110, 360, 360), color=(0, 0, 0), width=1.2)
+        chart_page.draw_line(
+            fitz.Point(80, 320), fitz.Point(330, 150), color=(0, 0, 1), width=2.0
+        )
+        table_page = doc.new_page(width=420, height=560)
+        table_page.insert_textbox(
+            fitz.Rect(45, 70, 390, 230),
+            (
+                "Table 2. Market size\n"
+                "Region 2023 2024 2025\n"
+                "North America 12.5 14.0 15.2\n"
+                "Europe 8.2 8.9 9.4\n"
+                "Asia 15.1 17.4 19.0\n"
+            ),
+            fontsize=10,
+        )
+        trailing_prose = doc.new_page(width=420, height=560)
+        trailing_prose.insert_textbox(
+            fitz.Rect(40, 60, 380, 220),
+            "Additional prose without visual extraction value.",
+            fontsize=11,
+        )
+
+        plan = _plan_candidate_pages(
+            doc,
+            set(),
+            artifact_cache=create_page_artifact_cache(),
+            page_gate_enabled=True,
+            page_gate_min_score=0.25,
+            page_gate_min_recall_pages=0,
+            page_gate_min_recall_page_fraction=0.0,
+        )
+    finally:
+        doc.close()
+
+    assert plan.chart_pages == [1, 2]
+    assert plan.table_pages == [1, 2]
+    assert [record.action for record in plan.page_triage_records] == [
+        "skip_low_score",
+        "include_score",
+        "include_score",
+        "skip_low_score",
+    ]
+    assert plan.page_triage_records[1].score >= 0.25
+    assert "visual_drawing_signal" in plan.page_triage_records[1].reasons
+    assert "tabular_text_signal" in plan.page_triage_records[2].reasons
+
+
+def test_candidate_page_plan_recall_floor_includes_top_scoring_pages() -> None:
+    doc = fitz.open()
+    try:
+        for page_index in range(4):
+            page = doc.new_page(width=420, height=560)
+            page.insert_textbox(
+                fitz.Rect(40, 60, 380, 220),
+                f"Low-signal prose page {page_index} with limited metric detail.",
+                fontsize=11,
+            )
+
+        plan = _plan_candidate_pages(
+            doc,
+            set(),
+            artifact_cache=create_page_artifact_cache(),
+            page_gate_enabled=True,
+            page_gate_min_score=0.99,
+            page_gate_min_recall_pages=0,
+            page_gate_min_recall_page_fraction=0.5,
+        )
+    finally:
+        doc.close()
+
+    assert len(plan.chart_pages or []) == 2
+    assert plan.chart_pages == plan.table_pages
+    assert sum(
+        1
+        for record in plan.page_triage_records
+        if record.action == "include_recall_floor"
+    ) == 2
+    assert plan.page_triage_skipped_pages == 2
 
 
 def test_extract_best_figure_writes_asset_and_logs(

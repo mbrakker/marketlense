@@ -921,7 +921,7 @@ This section keeps implementation-heavy extraction and crop heuristics out of th
 ### Visual Candidate Pipeline
 
 - `pdf_service.collect_candidates` is the single public PDF-candidate boundary; internal heuristics are split by capability under `src/services/_pdf/` so table and chart flows can evolve independently without creating competing service entrypoints. `src/services/_pdf/visual_heuristics.py` stays as the geometric heuristic facade over chart-layout, panel-detection, and chart-collection families, while `src/services/_pdf/visual_candidates.py` stays as the extraction compatibility facade over raster qualification, deterministic screening, and extraction coordination.
-- The candidate path starts with cheap page triage, skips obvious scanned-image negatives, excludes the detected contents/index page from output, and then runs table/chart discovery in parallel within `ingest.report_worker_limit`.
+- The candidate path starts with scored page triage, excludes the detected contents/index page from output, and then runs table/chart discovery in parallel within `ingest.report_worker_limit`. `ingest.candidate_page_gate` configures the page-value threshold and recall floor; each evaluated page logs its score, action, and deterministic reasons so operators can see when low-signal pages were skipped or re-included for recall.
 - Deterministic prefiltering removes obvious non-data fragments before ranking, including figure/box text leaks, reference-style table blocks, narrative callouts, and weak table-shadow/chart-shadow overlaps.
 - Kind-aware truncation is applied after deterministic prefiltering so noisy table pages cannot starve chart candidates or vice versa before LLM ranking.
 

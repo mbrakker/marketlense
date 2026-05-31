@@ -194,6 +194,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         temperature=ingest_runtime["temperature"],
         openai_timeout_seconds=ingest_runtime["openai_timeout_seconds"],
     )
+    candidate_page_gate_settings = _resolve_candidate_page_gate_settings(
+        sections.candidate_page_gate_cfg
+    )
     figure_caption_settings = _resolve_figure_caption_settings(
         sections.figure_captions_cfg,
         openai_timeout_seconds=ingest_runtime["openai_timeout_seconds"],
@@ -293,6 +296,18 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         rank_min_quality_score=rank_settings["rank_min_quality_score"],
         rank_min_insight_score=rank_settings["rank_min_insight_score"],
         rank_min_data_score=rank_settings["rank_min_data_score"],
+        candidate_page_gate_enabled=candidate_page_gate_settings[
+            "candidate_page_gate_enabled"
+        ],
+        candidate_page_gate_min_score=candidate_page_gate_settings[
+            "candidate_page_gate_min_score"
+        ],
+        candidate_page_gate_min_recall_pages=candidate_page_gate_settings[
+            "candidate_page_gate_min_recall_pages"
+        ],
+        candidate_page_gate_min_recall_page_fraction=candidate_page_gate_settings[
+            "candidate_page_gate_min_recall_page_fraction"
+        ],
         crop_refine_enabled=rank_settings["crop_refine_enabled"],
         crop_refine_mode=rank_settings["crop_refine_mode"],
         crop_refine_page_dpi=rank_settings["crop_refine_page_dpi"],

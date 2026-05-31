@@ -71,6 +71,11 @@ ingest:
       - "index"
     preview_enabled: true
     render_dpi: 144
+  candidate_page_gate:
+    enabled: true
+    min_score: 0.2
+    min_recall_pages: 12
+    min_recall_page_fraction: 0.65
   evidence_packs:
     parallel_workers: 3
     global_max_in_flight: 2

@@ -21,6 +21,39 @@ class PdfDegradedPage:
 
 
 @dataclass(frozen=True)
+class PdfCandidatePageTriageRecord:
+    schema_version: str = field(
+        metadata={"doc": "Candidate page-triage record schema version."}
+    )
+    page: int = field(metadata={"doc": "Zero-based page index evaluated."})
+    score: float = field(metadata={"doc": "Normalized candidate-page value score."})
+    threshold: float = field(
+        metadata={"doc": "Configured minimum score for direct page inclusion."}
+    )
+    action: str = field(
+        metadata={
+            "doc": "Triage action: include_score, include_recall_floor, include_disabled, include_table_only_full_scan, skip_low_score, or degraded_*."
+        }
+    )
+    reasons: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Deterministic score/action reasons for this page."},
+    )
+    text_chars: int = field(
+        default=0, metadata={"doc": "Text characters observed during triage."}
+    )
+    text_blocks: int = field(
+        default=0, metadata={"doc": "Text blocks observed during triage."}
+    )
+    image_blocks: int = field(
+        default=0, metadata={"doc": "Image blocks observed during triage."}
+    )
+    drawing_count: int = field(
+        default=0, metadata={"doc": "Drawing objects observed during triage."}
+    )
+
+
+@dataclass(frozen=True)
 class PdfCandidateExtractionStats:
     schema_version: str = field(
         metadata={"doc": "PDF candidate-extraction stats schema version."}
@@ -36,6 +69,18 @@ class PdfCandidateExtractionStats:
     extraction_failure_count: int = field(
         default=0,
         metadata={"doc": "Count of non-fatal extraction failures encountered."},
+    )
+    page_triage_records: List[PdfCandidatePageTriageRecord] = field(
+        default_factory=list,
+        metadata={"doc": "Per-page scored triage decisions for candidate extraction."},
+    )
+    page_triage_evaluated_count: int = field(
+        default=0,
+        metadata={"doc": "Number of pages evaluated by candidate page triage."},
+    )
+    page_triage_skipped_count: int = field(
+        default=0,
+        metadata={"doc": "Number of pages skipped by scored candidate page triage."},
     )
 
 
@@ -69,6 +114,24 @@ class ExtractCandidatesRequest:
         default="include_with_warning",
         metadata={
             "doc": "Policy for degraded page triage: fail, include_with_warning, or skip_with_warning."
+        },
+    )
+    page_gate_enabled: bool = field(
+        default=True,
+        metadata={"doc": "Whether scored candidate-page gating is enabled."},
+    )
+    page_gate_min_score: float = field(
+        default=0.2,
+        metadata={"doc": "Minimum page score required for direct extraction."},
+    )
+    page_gate_min_recall_pages: int = field(
+        default=12,
+        metadata={"doc": "Minimum number of requested pages kept for recall safety."},
+    )
+    page_gate_min_recall_page_fraction: float = field(
+        default=0.65,
+        metadata={
+            "doc": "Minimum fraction of requested pages kept for recall safety."
         },
     )
 

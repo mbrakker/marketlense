@@ -83,16 +83,6 @@ Suggested priority order:
 
 ## 2. PDF Extraction, OCR & Candidate Ranking
 
-- **Title:** Upgrade binary page triage into scored, recall-calibrated page gating [Impact: 5/5, Effort: 4/5]
-  - Explanation: Candidate extraction already skips obvious full-page-scan/no-text negatives and excludes contents pages. The remaining gap is richer page-value scoring before chart/table extraction and crop refinement so expensive PDF work is reduced with measurable recall protection.
-  - Pros: Better throughput on large reports and fewer wasted extraction passes.
-  - Cons: False negatives become dangerous if scoring is aggressive or poorly calibrated.
-  - Acceptance Criteria:
-    - Per-page triage reason and score are logged.
-    - Thresholds and skip policy are configurable.
-    - Evaluation fixtures define a recall floor that the triage gate must preserve.
-    - Stage metrics show extraction work avoided without quality regression.
-
 ---
 
 ## 3. Publisher Discovery Rollout & Precision

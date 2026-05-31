@@ -317,6 +317,7 @@ class _ConfigLoadSections:
     llm_cfg: dict[str, Any]
     drive_cfg: dict[str, Any]
     pdf_text: dict[str, Any]
+    candidate_page_gate_cfg: dict[str, Any]
     figure_captions_cfg: dict[str, Any]
     rank: dict[str, Any]
     validation_cfg: dict[str, Any]
@@ -348,6 +349,7 @@ def _load_config_sections(request: ConfigLoadRequest) -> _ConfigLoadSections:
         llm_cfg=ingest.get("llm", {}) or {},
         drive_cfg=ingest.get("drive", {}) or {},
         pdf_text=ingest.get("pdf_text", {}) or {},
+        candidate_page_gate_cfg=ingest.get("candidate_page_gate", {}) or {},
         figure_captions_cfg=ingest.get("figure_captions", {}) or {},
         rank=data.get("rank", {}) or {},
         validation_cfg=ingest.get("validation", {}) or {},

@@ -10,6 +10,11 @@ ingest:
     auth_mode: "service_account"
     oauth_client_path: "./google_oauth_client.json"
     oauth_token_path: "./google_oauth_token.json"
+  candidate_page_gate:
+    enabled: true
+    min_score: 0.2
+    min_recall_pages: 12
+    min_recall_page_fraction: 0.65
 
 publish:
   wp:

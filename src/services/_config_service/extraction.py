@@ -2,6 +2,81 @@ from __future__ import annotations
 
 from src.services._config_service.common import *
 
+
+def _resolve_candidate_page_gate_settings(
+    candidate_page_gate_cfg: dict[str, Any],
+) -> dict[str, Any]:
+    resolved = _resolve_scalar_settings(
+        candidate_page_gate_cfg,
+        [
+            _SettingSpec(
+                field_name="candidate_page_gate_enabled",
+                config_key="enabled",
+                default=_to_config_bool(
+                    _default_config_value(
+                        "ingest", "candidate_page_gate", "enabled", fallback=True
+                    ),
+                    True,
+                ),
+                coerce=_to_config_bool,
+                env_key="CANDIDATE_PAGE_GATE_ENABLED",
+            ),
+            _SettingSpec(
+                field_name="candidate_page_gate_min_score",
+                config_key="min_score",
+                default=_to_float(
+                    _default_config_value(
+                        "ingest", "candidate_page_gate", "min_score", fallback=0.2
+                    ),
+                    0.2,
+                ),
+                coerce=_to_float,
+                env_key="CANDIDATE_PAGE_GATE_MIN_SCORE",
+                minimum=0.0,
+            ),
+            _SettingSpec(
+                field_name="candidate_page_gate_min_recall_pages",
+                config_key="min_recall_pages",
+                default=_to_int(
+                    _default_config_value(
+                        "ingest",
+                        "candidate_page_gate",
+                        "min_recall_pages",
+                        fallback=12,
+                    ),
+                    12,
+                ),
+                coerce=_to_int,
+                env_key="CANDIDATE_PAGE_GATE_MIN_RECALL_PAGES",
+                minimum=0,
+            ),
+            _SettingSpec(
+                field_name="candidate_page_gate_min_recall_page_fraction",
+                config_key="min_recall_page_fraction",
+                default=_to_float(
+                    _default_config_value(
+                        "ingest",
+                        "candidate_page_gate",
+                        "min_recall_page_fraction",
+                        fallback=0.65,
+                    ),
+                    0.65,
+                ),
+                coerce=_to_float,
+                env_key="CANDIDATE_PAGE_GATE_MIN_RECALL_PAGE_FRACTION",
+                minimum=0.0,
+            ),
+        ],
+    )
+    resolved["candidate_page_gate_min_score"] = min(
+        1.0, float(resolved["candidate_page_gate_min_score"])
+    )
+    resolved["candidate_page_gate_min_recall_page_fraction"] = min(
+        1.0, float(resolved["candidate_page_gate_min_recall_page_fraction"])
+    )
+    return resolved
+
+
 def _resolve_figure_caption_settings(
     figure_captions_cfg: dict[str, Any],
     *,

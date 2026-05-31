@@ -381,6 +381,14 @@ def select_report_figures(
                 pdf_context=source.pdf_context_for_tasks,
                 parallel_workers=runtime.report_worker_limit,
                 exclude_page_indices=exclude_page_indices,
+                page_gate_enabled=runtime.settings.candidate_page_gate_enabled,
+                page_gate_min_score=runtime.settings.candidate_page_gate_min_score,
+                page_gate_min_recall_pages=(
+                    runtime.settings.candidate_page_gate_min_recall_pages
+                ),
+                page_gate_min_recall_page_fraction=(
+                    runtime.settings.candidate_page_gate_min_recall_page_fraction
+                ),
             ),
             runtime.ctx,
         )

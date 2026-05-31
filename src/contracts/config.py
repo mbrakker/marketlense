@@ -219,6 +219,24 @@ class AppSettings:
             "doc": "Minimum data-density score required for a candidate to pass threshold gate."
         },
     )
+    candidate_page_gate_enabled: bool = field(
+        default=True,
+        metadata={"doc": "Whether candidate extraction uses scored page gating."},
+    )
+    candidate_page_gate_min_score: float = field(
+        default=0.2,
+        metadata={"doc": "Minimum scored page value required for direct extraction."},
+    )
+    candidate_page_gate_min_recall_pages: int = field(
+        default=12,
+        metadata={"doc": "Minimum candidate-extraction pages retained for recall."},
+    )
+    candidate_page_gate_min_recall_page_fraction: float = field(
+        default=0.65,
+        metadata={
+            "doc": "Minimum requested-page fraction retained for candidate recall."
+        },
+    )
     crop_refine_enabled: bool = field(
         default=True,
         metadata={

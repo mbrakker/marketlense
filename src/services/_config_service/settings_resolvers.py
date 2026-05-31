@@ -10,6 +10,7 @@ from src.services._config_service.drive import (
 )
 from src.services._config_service.extraction import (
     _resolve_artifact_settings,
+    _resolve_candidate_page_gate_settings,
     _resolve_contents_settings,
     _resolve_evidence_pack_settings,
     _resolve_figure_caption_settings,
@@ -24,6 +25,7 @@ from src.services._config_service.validation import _resolve_validation_settings
 __all__ = [
     "_resolve_analysis_settings",
     "_resolve_artifact_settings",
+    "_resolve_candidate_page_gate_settings",
     "_resolve_contents_settings",
     "_resolve_cross_report_analysis_settings",
     "_resolve_drive_auth_settings",
