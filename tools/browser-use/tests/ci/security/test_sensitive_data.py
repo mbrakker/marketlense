@@ -294,7 +294,8 @@ def test_sensitive_data_usage_log_omits_placeholder_names_and_query_params(regis
 
 	combined = stream.getvalue()
 	assert '2 sensitive data placeholders' in combined
-	assert 'example.com' in combined
+	logged_hosts = {token.strip() for chunk in combined.split(' on host ')[1:] for token in chunk.split()}
+	assert logged_hosts == {'example.com'}
 	assert 'password' not in combined
 	assert 'api_key' not in combined
 	assert 'secret-token' not in combined

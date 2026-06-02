@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import replace
-from typing import Callable, cast
+from typing import Callable, Protocol, cast
 
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -28,6 +28,17 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.signal_post_orchestrator")
+
+
+class _PublishSignalFn(Protocol):
+    def __call__(
+        self,
+        projection: SignalPublishProjection,
+        settings: PublishSettings,
+        ctx: RunContext,
+        *,
+        dry_run: bool,
+    ) -> CrossReportPublishResultSummary: ...
 
 
 def _projected_data_request(
@@ -95,10 +106,7 @@ def run_signal_post_workflow(
         [CrossReportProjectedDataReadRequest, RunContext],
         CrossReportProjectedDataReadResponse,
     ] = analytics_store_service.read_cross_report_projected_data,
-    publish_signal_fn: Callable[
-        [SignalPublishProjection, PublishSettings, RunContext],
-        CrossReportPublishResultSummary,
-    ] = publish_signal_projection,
+    publish_signal_fn: _PublishSignalFn = publish_signal_projection,
 ) -> SignalPostWorkflowResult:
     logger.info(
         log_event(

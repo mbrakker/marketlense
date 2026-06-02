@@ -383,129 +383,6 @@
       ],
       "type": "object"
     },
-    "src.contracts._browser_download.helpers.BrowserHelperCoordinateFallbackResult": {
-      "additionalProperties": false,
-      "properties": {
-        "action_source": {
-          "type": "string"
-        },
-        "after_screenshot_path": {
-          "type": "string"
-        },
-        "before_screenshot_path": {
-          "type": "string"
-        },
-        "coordinate_source": {
-          "type": "string"
-        },
-        "coordinates_persisted": {
-          "type": "boolean"
-        },
-        "error": {
-          "type": "string"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "selector_attempted": {
-          "type": "boolean"
-        },
-        "selector_error": {
-          "type": "string"
-        },
-        "selector_success": {
-          "type": "boolean"
-        },
-        "status": {
-          "type": "string"
-        },
-        "surface_labels": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "target_url": {
-          "type": "string"
-        },
-        "verification_status": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "schema_version",
-        "status",
-        "reason",
-        "selector_attempted",
-        "selector_success",
-        "selector_error",
-        "surface_labels",
-        "coordinate_source",
-        "coordinates_persisted",
-        "before_screenshot_path",
-        "after_screenshot_path",
-        "verification_status",
-        "action_source"
-      ],
-      "type": "object"
-    },
-    "src.contracts._browser_download.helpers.BrowserHelperHttpGetResult": {
-      "additionalProperties": false,
-      "properties": {
-        "body_excerpt": {
-          "type": "string"
-        },
-        "body_size_bytes": {
-          "type": "integer"
-        },
-        "body_truncated": {
-          "type": "boolean"
-        },
-        "content_type": {
-          "type": "string"
-        },
-        "error": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "final_url": {
-          "type": "string"
-        },
-        "request_url": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "status_code": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "schema_version",
-        "status",
-        "request_url",
-        "final_url",
-        "status_code",
-        "content_type",
-        "body_size_bytes",
-        "body_excerpt",
-        "body_truncated"
-      ],
-      "type": "object"
-    },
     "src.contracts._browser_download.helpers.BrowserHelperJsResult": {
       "additionalProperties": false,
       "properties": {
@@ -601,40 +478,6 @@
       ],
       "type": "object"
     },
-    "src.contracts._browser_download.helpers.BrowserHelperRealTabResult": {
-      "additionalProperties": false,
-      "properties": {
-        "error": {
-          "type": "string"
-        },
-        "is_real_tab": {
-          "type": "boolean"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "target_id": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
-        },
-        "url": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "schema_version",
-        "status",
-        "is_real_tab",
-        "url",
-        "title"
-      ],
-      "type": "object"
-    },
     "src.contracts._browser_download.helpers.BrowserHelperScreenshot": {
       "additionalProperties": false,
       "properties": {
@@ -660,33 +503,6 @@
         "path",
         "source",
         "size_bytes"
-      ],
-      "type": "object"
-    },
-    "src.contracts._browser_download.helpers.BrowserHelperWaitResult": {
-      "additionalProperties": false,
-      "properties": {
-        "elapsed_seconds": {
-          "type": "number"
-        },
-        "error": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "waited_for": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "schema_version",
-        "status",
-        "waited_for",
-        "elapsed_seconds"
       ],
       "type": "object"
     },
@@ -9051,6 +8867,18 @@
         "cache_dir": {
           "type": "string"
         },
+        "candidate_page_gate_enabled": {
+          "type": "boolean"
+        },
+        "candidate_page_gate_min_recall_page_fraction": {
+          "type": "number"
+        },
+        "candidate_page_gate_min_recall_pages": {
+          "type": "integer"
+        },
+        "candidate_page_gate_min_score": {
+          "type": "number"
+        },
         "category_mapping_path": {
           "type": "string"
         },
@@ -9403,6 +9231,9 @@
         },
         "vector_store_keep": {
           "type": "boolean"
+        },
+        "vector_store_retention_days": {
+          "type": "integer"
         }
       },
       "required": [
@@ -11716,6 +11547,12 @@
     "src.contracts.cross_report_analysis.CrossReportPublishResultSummary": {
       "additionalProperties": false,
       "properties": {
+        "category_slugs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "error_code": {
           "anyOf": [
             {
@@ -11779,8 +11616,43 @@
             "error"
           ]
         },
+        "tag_slugs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target_post_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "target_route": {
           "type": "string"
+        },
+        "target_slug": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "taxonomy_term_slugs": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
         }
       },
       "required": [
@@ -13613,6 +13485,101 @@
       ],
       "type": "object"
     },
+    "src.contracts.drive.DriveWritePreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_mode": {
+          "type": "string"
+        },
+        "drive_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "folder_id": {
+          "type": "string"
+        },
+        "include_items_from_all_drives": {
+          "type": "boolean"
+        },
+        "oauth_client_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oauth_token_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "service_account_path": {
+          "type": "string"
+        },
+        "supports_all_drives": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "folder_id",
+        "service_account_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.drive.DriveWritePreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_mode": {
+          "type": "string"
+        },
+        "credentials_refreshed": {
+          "type": "boolean"
+        },
+        "folder_access_verified": {
+          "type": "boolean"
+        },
+        "folder_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scopes_verified": {
+          "type": "boolean"
+        },
+        "write_access_verified": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "folder_id",
+        "auth_mode",
+        "credentials_refreshed",
+        "scopes_verified",
+        "folder_access_verified",
+        "write_access_verified"
+      ],
+      "type": "object"
+    },
     "src.contracts.file_cache.FileCacheMd5SidecarRecord": {
       "additionalProperties": false,
       "properties": {
@@ -14192,6 +14159,160 @@
       "required": [
         "schema_version",
         "text"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.PipelineCheckpointReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_root": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "pipeline_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stage_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "checkpoint_root",
+        "pipeline_name",
+        "file_id",
+        "stage_name"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.PipelineCheckpointReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.files.PipelineStageCheckpoint"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkpoint_path": {
+          "type": "string"
+        },
+        "found": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "checkpoint_path",
+        "found"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.PipelineCheckpointWriteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint": {
+          "$ref": "#/$defs/src.contracts.files.PipelineStageCheckpoint"
+        },
+        "checkpoint_root": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "checkpoint_root",
+        "checkpoint"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.PipelineCheckpointWriteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes_written": {
+          "type": "integer"
+        },
+        "checkpoint_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "checkpoint_path",
+        "bytes_written"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.PipelineStageCheckpoint": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_refs": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "completed_at_utc": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "pipeline_name": {
+          "type": "string"
+        },
+        "report_slug": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_run_id": {
+          "type": "string"
+        },
+        "source_task_id": {
+          "type": "string"
+        },
+        "stage_name": {
+          "type": "string"
+        },
+        "stage_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "pipeline_name",
+        "file_id",
+        "report_slug",
+        "stage_name",
+        "stage_status",
+        "artifact_refs",
+        "payload",
+        "completed_at_utc",
+        "source_run_id",
+        "source_task_id"
       ],
       "type": "object"
     },
@@ -14933,6 +15054,18 @@
         "cache_dir": {
           "type": "string"
         },
+        "candidate_page_gate_enabled": {
+          "type": "boolean"
+        },
+        "candidate_page_gate_min_recall_page_fraction": {
+          "type": "number"
+        },
+        "candidate_page_gate_min_recall_pages": {
+          "type": "integer"
+        },
+        "candidate_page_gate_min_score": {
+          "type": "number"
+        },
         "category_mapping_path": {
           "type": "string"
         },
@@ -15237,6 +15370,9 @@
         },
         "vector_store_keep": {
           "type": "boolean"
+        },
+        "vector_store_retention_days": {
+          "type": "integer"
         }
       },
       "required": [
@@ -16386,6 +16522,56 @@
       "required": [
         "schema_version",
         "vector_store_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.openai.OpenAIVectorStoreDeleteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "vector_store_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "api_key",
+        "vector_store_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.openai.OpenAIVectorStoreDeleteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "deleted": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "vector_store_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "vector_store_id",
+        "deleted"
       ],
       "type": "object"
     },
@@ -17671,11 +17857,49 @@
       ],
       "type": "object"
     },
+    "src.contracts.publish.PublishEntityMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_route_intent": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "publish_eligible": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_artifact_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "entity_type",
+        "source_artifact_id",
+        "canonical_route_intent",
+        "publish_eligible"
+      ],
+      "type": "object"
+    },
     "src.contracts.publish.PublishHtmlSnapshot": {
       "additionalProperties": false,
       "properties": {
         "body_html": {
           "type": "string"
+        },
+        "entity_metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.publish.PublishEntityMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "file_id": {
           "anyOf": [
@@ -17943,6 +18167,16 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "slug": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -19105,6 +19339,18 @@
         "out_dir": {
           "type": "string"
         },
+        "page_gate_enabled": {
+          "type": "boolean"
+        },
+        "page_gate_min_recall_page_fraction": {
+          "type": "number"
+        },
+        "page_gate_min_recall_pages": {
+          "type": "integer"
+        },
+        "page_gate_min_score": {
+          "type": "number"
+        },
         "parallel_workers": {
           "type": "integer"
         },
@@ -19241,6 +19487,18 @@
         "extraction_failure_count": {
           "type": "integer"
         },
+        "page_triage_evaluated_count": {
+          "type": "integer"
+        },
+        "page_triage_records": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.report_assets.PdfCandidatePageTriageRecord"
+          },
+          "type": "array"
+        },
+        "page_triage_skipped_count": {
+          "type": "integer"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -19250,6 +19508,52 @@
       },
       "required": [
         "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_assets.PdfCandidatePageTriageRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "drawing_count": {
+          "type": "integer"
+        },
+        "image_blocks": {
+          "type": "integer"
+        },
+        "page": {
+          "type": "integer"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        },
+        "text_blocks": {
+          "type": "integer"
+        },
+        "text_chars": {
+          "type": "integer"
+        },
+        "threshold": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "page",
+        "score",
+        "threshold",
+        "action"
       ],
       "type": "object"
     },
@@ -24197,6 +24501,48 @@
       ],
       "type": "object"
     },
+    "src.contracts.vector_store.VectorStoreDeleteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "missing_ok": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "vector_store_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "vector_store_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.vector_store.VectorStoreDeleteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "deleted": {
+          "type": "boolean"
+        },
+        "missing_remote": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "vector_store_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "vector_store_id",
+        "deleted"
+      ],
+      "type": "object"
+    },
     "src.contracts.vector_store.VectorStoreMetadata": {
       "additionalProperties": false,
       "properties": {
@@ -24232,6 +24578,119 @@
         "schema_version",
         "report_id",
         "report_name"
+      ],
+      "type": "object"
+    },
+    "src.contracts.vector_store.VectorStorePruneItem": {
+      "additionalProperties": false,
+      "properties": {
+        "file_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "vector_store_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "vector_store_id",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts.vector_store.VectorStorePruneRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.vector_store.VectorStorePruneItem"
+          },
+          "type": "array"
+        },
+        "missing_ok": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "items"
+      ],
+      "type": "object"
+    },
+    "src.contracts.vector_store.VectorStorePruneResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "deleted_vector_store_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "missing_vector_store_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "requested_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "skipped_duplicate_vector_store_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "requested_count",
+        "deleted_vector_store_ids",
+        "missing_vector_store_ids",
+        "skipped_duplicate_vector_store_ids"
+      ],
+      "type": "object"
+    },
+    "src.contracts.vector_store.VectorStoreRetentionCleanupResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_count": {
+          "type": "integer"
+        },
+        "pruned_vector_store_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "retention_days": {
+          "type": "integer"
+        },
+        "scanned_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "scanned_count",
+        "candidate_count",
+        "pruned_vector_store_ids",
+        "retention_days"
       ],
       "type": "object"
     },
@@ -25116,6 +25575,231 @@
         "schema_version",
         "slug",
         "name"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_entities.SignalPostGenerationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "category_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "date_range_end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "date_range_start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_evidence_items": {
+          "type": "integer"
+        },
+        "max_source_reports": {
+          "type": "integer"
+        },
+        "minimum_evidence_items": {
+          "type": "integer"
+        },
+        "minimum_source_reports": {
+          "type": "integer"
+        },
+        "publisher_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "tag_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target_route": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request_id",
+        "topic"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_entities.SignalPostWorkflowRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "generation_request": {
+          "$ref": "#/$defs/src.contracts.wordpress_entities.SignalPostGenerationRequest"
+        },
+        "output_root": {
+          "type": "string"
+        },
+        "publication_mode": {
+          "enum": [
+            "generate_only",
+            "validate_only",
+            "publish_dry_run",
+            "publish_live"
+          ]
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request_id",
+        "generation_request",
+        "db_path",
+        "output_root"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_entities.SignalPostWorkflowResult": {
+      "additionalProperties": false,
+      "properties": {
+        "projected_data_request": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportProjectedDataReadRequest"
+        },
+        "projection": {
+          "$ref": "#/$defs/src.contracts.wordpress_entities.SignalPublishProjection"
+        },
+        "publish_result": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportPublishResultSummary"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request_id",
+        "projected_data_request",
+        "projection",
+        "publish_result"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_entities.SignalPublishProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "body_html": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "html_text": {
+          "type": "string"
+        },
+        "publisher_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "source_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary_html": {
+          "type": "string"
+        },
+        "tag_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target_route": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "topic_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "topic_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "uncertainty": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "title",
+        "slug",
+        "summary_html",
+        "body_html",
+        "evidence_ids",
+        "source_report_ids",
+        "topic_ids",
+        "confidence",
+        "uncertainty",
+        "validation_status"
       ],
       "type": "object"
     }
