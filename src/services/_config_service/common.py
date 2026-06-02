@@ -57,6 +57,9 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.config_service")
 
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "app.yaml"
+DEFAULT_LLM_COSTS_PATH = (
+    Path(__file__).resolve().parents[2] / "config" / "llm-costs.yaml"
+)
 CONFIG_PATH_ENV_KEY = "MARKET_LENSE_CONFIG_PATH"
 CONFIG_PROFILE_ENV_KEY = "MARKET_LENSE_CONFIG_PROFILE"
 DEFAULT_HTML_TAG_ACRONYMS_PATH = (
@@ -256,6 +259,49 @@ def _load_config(path: str, *, include_overlays: bool = True) -> dict[str, Any]:
         raise RuntimeError(str(exc)) from exc
 
 
+def _resolve_pricing_path(
+    cost_cfg: dict[str, Any], *, config_path: Path, runtime_base_path: Path
+) -> Path:
+    raw_path = str(cost_cfg.get("pricing_path") or "").strip()
+    if raw_path:
+        candidate = Path(raw_path).expanduser()
+        if not candidate.is_absolute():
+            candidate = runtime_base_path / candidate
+        return candidate.resolve()
+    sibling = config_path.with_name("llm-costs.yaml")
+    if sibling.exists():
+        return sibling.resolve()
+    return DEFAULT_LLM_COSTS_PATH.resolve()
+
+
+def _load_model_pricing_from_cost_config(
+    cost_cfg: dict[str, Any], *, config_path: Path, runtime_base_path: Path
+) -> dict[str, Any]:
+    inline_pricing = cost_cfg.get("pricing")
+    if isinstance(inline_pricing, dict) and inline_pricing:
+        return inline_pricing
+    pricing_path = _resolve_pricing_path(
+        cost_cfg, config_path=config_path, runtime_base_path=runtime_base_path
+    )
+    payload = _load_yaml_mapping_or_runtime_error(pricing_path, label="LLM costs")
+    pricing = payload.get("pricing")
+    if not isinstance(pricing, dict):
+        raise RuntimeError(
+            f"LLM costs YAML must contain a non-empty 'pricing' mapping: {pricing_path}"
+        )
+    return pricing
+
+
+def _resolve_cost_config(
+    data: dict[str, Any], *, config_path: Path, runtime_base_path: Path
+) -> dict[str, Any]:
+    cost_cfg = dict(data.get("cost", {}) or {})
+    cost_cfg["pricing"] = _load_model_pricing_from_cost_config(
+        cost_cfg, config_path=config_path, runtime_base_path=runtime_base_path
+    )
+    return cost_cfg
+
+
 def _resolve_config_path(path: str) -> Path:
     return _resolve_bootstrap_config_path(path)
 
@@ -280,6 +326,40 @@ def write_app_config(
         resolve_config_path=_resolve_config_path,
         parse_yaml_mapping=_parse_yaml_mapping,
     )
+
+
+def load_model_pricing(request: ConfigLoadRequest, ctx: RunContext) -> dict[str, Any]:
+    config_path = _resolve_bootstrap_config_path(request.path)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="model_pricing_load_start",
+            module=logger.name,
+            fields={"path": str(config_path)},
+        )
+    )
+    data = _load_config(str(config_path))
+    cost_cfg = _resolve_cost_config(
+        data,
+        config_path=config_path,
+        runtime_base_path=_resolve_runtime_base_path(config_path),
+    )
+    pricing = cost_cfg["pricing"]
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="model_pricing_load_complete",
+            module=logger.name,
+            fields={
+                "path": str(config_path),
+                "model_count": len(pricing),
+                "models": sorted(str(key) for key in pricing.keys()),
+            },
+        )
+    )
+    return dict(pricing)
 
 
 class _ConfigResolver:
@@ -338,10 +418,11 @@ class _ResolvedAppSettingsLoad:
 def _load_config_sections(request: ConfigLoadRequest) -> _ConfigLoadSections:
     config_path = _resolve_bootstrap_config_path(request.path)
     data = _load_config(str(config_path))
+    runtime_base_path = _resolve_runtime_base_path(config_path)
     ingest = data.get("ingest", {}) or {}
     return _ConfigLoadSections(
         config_path=config_path,
-        runtime_base_path=_resolve_runtime_base_path(config_path),
+        runtime_base_path=runtime_base_path,
         data=data,
         resolver=_ConfigResolver(),
         paths=data.get("paths", {}) or {},
@@ -357,7 +438,9 @@ def _load_config_sections(request: ConfigLoadRequest) -> _ConfigLoadSections:
         evidence_packs_cfg=ingest.get("evidence_packs", {}) or {},
         artifacts_cfg=ingest.get("artifacts", {}) or {},
         analysis_cfg=data.get("analysis", {}) or {},
-        cost_cfg=data.get("cost", {}) or {},
+        cost_cfg=_resolve_cost_config(
+            data, config_path=config_path, runtime_base_path=runtime_base_path
+        ),
         cross_report_analysis_cfg=data.get("cross_report_analysis", {}) or {},
     )
 
@@ -439,6 +522,7 @@ __all__ = [
     "BrowserDownloadSessionReusePolicy",
     "BrowserDownloadSettings",
     "CONFIG_PATH",
+    "DEFAULT_LLM_COSTS_PATH",
     "CONFIG_PATH_ENV_KEY",
     "CONFIG_PROFILE_ENV_KEY",
     "DEFAULT_BROWSER_DOWNLOAD_IDENTITY_PATH",
@@ -465,6 +549,7 @@ __all__ = [
     "_load_config",
     "_load_config_sections",
     "_load_html_tag_acronyms",
+    "_load_model_pricing_from_cost_config",
     "_load_yaml_mapping",
     "_load_yaml_mapping_or_runtime_error",
     "_normalize_evidence_pack_registry",
@@ -476,6 +561,8 @@ __all__ = [
     "_read_yaml_mapping",
     "_resolve_allowed_string",
     "_resolve_bootstrap_config_path",
+    "_resolve_cost_config",
+    "_resolve_pricing_path",
     "_resolve_optional_path",
     "_resolve_runtime_base_path",
     "_resolve_scalar_settings",
@@ -489,6 +576,7 @@ __all__ = [
     "asdict",
     "fields",
     "find_dotenv",
+    "load_model_pricing",
     "load_dotenv",
     "log_event",
     "logger",

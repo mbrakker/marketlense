@@ -19,9 +19,9 @@ from scripts.quality.prompt_fixture_corpus_metrics import (  # noqa: E402
     collect_prompt_fixture_corpus_metrics,
     metrics_to_payload,
 )
-from src.contracts.config import AppConfigReadRequest  # noqa: E402
+from src.contracts.config import ConfigLoadRequest  # noqa: E402
 from src.contracts.run_context import RunContext  # noqa: E402
-from src.services.config_service import read_app_config  # noqa: E402
+from src.services.config_service import load_model_pricing  # noqa: E402
 
 REGRESSION_METRICS = (
     "runtime_ms",
@@ -339,11 +339,10 @@ def _print_section(
 
 
 def _load_pricing(config_path: str) -> dict[str, dict[str, float]]:
-    config = read_app_config(
-        AppConfigReadRequest(schema_version="1.0", path=config_path),
+    return load_model_pricing(
+        ConfigLoadRequest(schema_version="1.0", path=config_path),
         _ctx("prompt_fixture_regression_config"),
     )
-    return (config.payload.get("cost") or {}).get("pricing") or {}
 
 
 def _ctx(span_id: str) -> RunContext:

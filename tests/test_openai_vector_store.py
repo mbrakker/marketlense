@@ -586,9 +586,25 @@ def test_openai_vector_store_delete_success(fake_openai) -> None:
 
     assert resp.vector_store_id == "vs_123"
     assert resp.deleted is True
-    assert fake_openai.calls["vector_stores.delete"] == [
-        {"vector_store_id": "vs_123"}
-    ]
+    assert fake_openai.calls["vector_stores.delete"] == [{"vector_store_id": "vs_123"}]
+
+
+def test_openai_vector_store_delete_uses_requested_id_when_response_omits_id(
+    fake_openai,
+) -> None:
+    fake_openai.add("vector_stores.delete", {"deleted": True})
+
+    resp = svc.openai_vector_store_delete(
+        OpenAIVectorStoreDeleteRequest(
+            schema_version="1.0",
+            api_key="key",
+            vector_store_id="vs_requested",
+        ),
+        _ctx(),
+    )
+
+    assert resp.vector_store_id == "vs_requested"
+    assert resp.deleted is True
 
 
 def test_openai_vector_store_update_metadata_missing_id(

@@ -217,6 +217,53 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("./out/cost-daily.json", settings.cost_daily_path)
         self.assertIsInstance(settings.model_pricing, dict)
 
+    def test_model_pricing_loads_from_separate_llm_costs_yaml(self) -> None:
+        pricing = {
+            "gpt-5-mini": {
+                "input_tokens_per_1k_usd": 0.111,
+                "output_tokens_per_1k_usd": 0.222,
+                "tool_call_usd": 0.333,
+            }
+        }
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=True)
+            costs_path = Path(tmp_dir) / "llm-costs.yaml"
+            costs_path.write_text(
+                yaml.safe_dump(
+                    {
+                        "schema_version": "1.0",
+                        "pricing": pricing,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["cost"] = {
+                "daily_path": "./out/custom-cost-daily.json",
+                "pricing_path": "./llm-costs.yaml",
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            env = {
+                "OPENAI_API_KEY": "openai-key",
+                "OPENROUTER_API_KEY": "openrouter-key",
+                "GOOGLE_DRIVE_AUTH_MODE": "service_account",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                request = ConfigLoadRequest(schema_version="1.0", path=cfg_path)
+                ctx = RunContext(
+                    schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                )
+                app_settings = load_settings(request, ctx)
+                inventory_settings = load_publisher_inventory_settings(request, ctx)
+
+        self.assertEqual("./out/custom-cost-daily.json", app_settings.cost_daily_path)
+        self.assertEqual(pricing, app_settings.model_pricing)
+        self.assertEqual(pricing, inventory_settings.model_pricing)
+        self.assertEqual("gpt-5", app_settings.openai_model)
+        self.assertEqual(0.5, app_settings.temperature)
+        self.assertEqual(2, app_settings.report_worker_limit)
+
     def test_cross_report_analysis_settings_load_defaults_and_config_values(
         self,
     ) -> None:

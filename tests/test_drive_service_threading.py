@@ -1,7 +1,21 @@
 import threading
+from dataclasses import FrozenInstanceError
+
+import pytest
 
 from src.contracts.run_context import RunContext
 from src.services import drive_service
+
+
+def test_drive_credential_resolution_is_immutable_value() -> None:
+    resolution = drive_service._DriveCredentialResolution(
+        credentials=object(),
+        refreshed=False,
+        credential_path="sa.json",
+    )
+
+    with pytest.raises(FrozenInstanceError):
+        resolution.refreshed = True
 
 
 def test_drive_client_is_thread_local(monkeypatch):
@@ -105,7 +119,10 @@ def test_drive_client_isolated_under_concurrent_access(monkeypatch):
 
     def _worker(name: str):
         worker_ctx = RunContext(
-            schema_version="1.0", run_id=f"r-{name}", task_id=f"t-{name}", span_id=f"s-{name}"
+            schema_version="1.0",
+            run_id=f"r-{name}",
+            task_id=f"t-{name}",
+            span_id=f"s-{name}",
         )
         barrier.wait()
         first = drive_service._get_drive_client(

@@ -13,9 +13,9 @@ from scripts.quality.prompt_fixture_corpus_metrics import (  # noqa: E402
     collect_prompt_fixture_corpus_metrics,
     metrics_to_payload,
 )
-from src.contracts.config import AppConfigReadRequest  # noqa: E402
+from src.contracts.config import ConfigLoadRequest  # noqa: E402
 from src.contracts.run_context import RunContext  # noqa: E402
-from src.services.config_service import read_app_config  # noqa: E402
+from src.services.config_service import load_model_pricing  # noqa: E402
 
 
 def _parse_args() -> argparse.Namespace:
@@ -43,11 +43,10 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = _parse_args()
-    config = read_app_config(
-        AppConfigReadRequest(schema_version="1.0", path=args.config),
+    pricing = load_model_pricing(
+        ConfigLoadRequest(schema_version="1.0", path=args.config),
         _ctx("prompt_fixture_baseline_config"),
     )
-    pricing = (config.payload.get("cost") or {}).get("pricing") or {}
     metrics = collect_prompt_fixture_corpus_metrics(
         pricing=pricing,
         iterations=max(1, int(args.iterations)),

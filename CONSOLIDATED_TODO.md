@@ -1,110 +1,238 @@
 # Consolidated TODO
 
-Last compiled: 2026-05-29
+Last audited: 2026-06-02
 
-This file is the single source of truth for open backlog items. It supersedes the remaining backlog plus the archived planning work from `docs/quality/deep-analysis-x10-plan-2026-04-15.md`.
+This file is the single active backlog for this repository. It supersedes older backlog notes, archived planning docs, and ad hoc audit intake.
 
-Items below were re-based against the current repository state, not against earlier planning assumptions. Completed or materially landed capabilities are removed from the active backlog. Partially landed capabilities stay only when there is a clear remaining gap.
+Items below were rechecked against the current repository state. Completed capabilities are listed as closed evidence and are not active backlog. Partially landed capabilities remain only when a concrete implementation gap is still visible in code, tests, README, or local WordPress assets.
 
-Deep-analysis evidence used for this consolidation:
-
-- Architecture import gate passed on 2026-05-01: `python scripts/ci/check_architecture_imports.py`.
-- Forbidden patching gate passed on 2026-05-01: `python scripts/ci/check_forbidden_patching.py`.
-- CI already runs formatting, typing, architecture-import, forbidden-patching, repository-hygiene, quality-ledger, remediation-runbook, backlog-source, contract-schema, coverage, mutation, quality-regression, and prompt-fixture regression gates through `.github/workflows/ci.yml`.
-- Prompt dry-run infrastructure and fixture-corpus regression are already landed through `src/contracts/prompts.py`, `src/services/prompt_service.py`, `scripts/ci/check_prompt_fixture_regression.py`, `tests/test_prompt_dry_run_validation.py`, and `tests/test_prompt_fixture_corpus_regression.py`.
-- `docs/quality/initiative_ledger.yaml` now marks `ocr-confidence-gating` as completed. Native-text confidence thresholds and OCR fallback controls already exist in `src/config/app.yaml` and `src/generators/report_source_generator.py`.
-- Publisher-discovery typed route traces, scenario summaries, deferred recovery recipes, recovery-cache persistence, direct-detail handling, default-on rollout flags, and KPI guardrail logs are already landed in code, tests, and docs.
-- Targeted validation regeneration and claim/evidence binding are already landed through `src/generators/report_regeneration_generator.py`, `src/generators/validation/*`, and the current README validation sections.
-- `src/services/idempotency_service.py` is already live and now backs the publish boundary plus the remaining side-effecting write steps in `report_download_orchestrator` and `publisher_inventory_orchestrator`, with checksum/outcome/artifact-reference persistence documented in `README.md`.
-- Candidate extraction already performs binary page triage and shared page-artifact/fingerprint caching through `src/services/_pdf/figures.py`, `src/services/_pdf/page_artifacts.py`, and `src/services/_pdf/fingerprint_cache.py`.
-- `src/services/llm_service.py` still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"`, which is the strongest current signal that dynamic routing, provider failover, and spend-aware policy are still missing.
-- `src/services/vector_store_service.py` supports create/upload/attach/status/update, but delete/prune lifecycle operations are still absent.
-- Long-file concentration shifted after April refactors and the May facade work. Remaining first-party hotspots from `python scripts/count_long_files.py` are concentrated in deeper PDF/browser internals, publisher-discovery workflow internals, and large paired tests rather than the public `config_service`, `openai_service`, `artifact_generator`, `publisher_inventory_service`, and `report_download_orchestrator` boundaries.
-- Recent facade splits establish the required shape for future hotspot work: keep one public boundary file and move semantic families into a same-name internal folder. Current reference examples are `src/services/report_store_service.py` over `src/services/_report_store_service/*`, `src/generators/report_generation_dependencies.py` over `src/generators/_report_generation_dependencies/*`, `src/services/config_service.py` over `src/services/_config_service/*`, `src/services/openai_service.py` over `src/services/_openai_service/*`, and `src/generators/artifact_generator.py` over `src/generators/_artifact_generator/*`.
-- Complexity audit on 2026-05-20 identified remaining performance hotspots in validation retrieval, PDF visual/table candidate filtering, Streamlit dashboard read models, and crop-refinement recovery paths. WordPress shortcode/theme-loop scanner hits were reviewed as lower-priority small-collection/template loops unless profiling proves otherwise.
-- GitHub Codex Connector PR review comments from PRs #24-#37 were triaged on 2026-05-21 and resolved on 2026-05-22.
-
-Removed from the active backlog because the core capability already ships:
-
-- OCR confidence gating and native-confidence-based OCR fallback controls.
-- Prompt dry-run namespace validation scaffolding and prompt-fixture corpus regression baseline.
-- Targeted artifact regeneration for mapped validation failures, including deterministic TOC repair.
-- Claim/evidence span binding and validation-level evidence normalization.
-- Core publisher-discovery memory/recovery/direct-detail implementation work.
-- Report-store and report-generation dependency facade splits.
-- UI-run dead-letter workflow, replay manifests, and operator triage surfaces.
-
-How to use this backlog:
+## Backlog Rules
 
 - Treat this file as the only active TODO source.
-- Remove items once their acceptance criteria are fully met.
-- Keep overlapping work merged into one item with explicit source notes in the explanation when needed.
-- Every prioritized item must get an owner, baseline metric, target metric, and expiry/review date before implementation starts.
+- Remove an item when all acceptance criteria are met.
+- Merge overlapping work into one item instead of creating parallel tasks.
+- Before implementation starts, every prioritized item must have an owner, baseline metric, target metric, and review/expiry date.
+- Keep changes compliant with `AGENTS.md`: no placeholder logic, no role mixing, no prompt text in code, no private-helper monkeypatching, and no new deployable boundary without architecture review.
 
-Scoring rubric:
+Scoring:
 
 - `Impact`: `1` low leverage, `5` highest leverage across reliability, quality, cost, speed, or architecture.
 - `Effort`: `1` localized change, `5` broad refactor/migration with cross-module coordination.
 
-Suggested priority order:
+## Current-State Evidence
 
-1. `1. Spend Guardrails, LLM Routing & Prompt Evaluation`
-2. `4. Publisher Discovery Rollout & Precision`
-3. `5. Idempotency, Checkpoints & Publish Durability`
-4. `3. PDF Extraction, OCR & Candidate Ranking`
-5. `7. Architecture Simplification, CI & Observability`
+- CI currently runs formatting, risk classification, split-symbol linking, typing, architecture import, forbidden patching, repository hygiene, quality ledger, remediation runbook, backlog source, contract schema snapshot, WordPress subproject, default pytest with coverage, coverage gate, mutation gate, quality non-regression, and prompt fixture corpus regression through `.github/workflows/ci.yml`.
+- Prompt dry-run validation and fixture-corpus regression are landed through `src/contracts/prompts.py`, `src/services/prompt_service.py`, `scripts/ci/check_prompt_fixture_regression.py`, `tests/test_prompt_dry_run_validation.py`, and `tests/test_prompt_fixture_corpus_regression.py`.
+- OCR confidence gating and native-confidence-based OCR fallback controls are landed in `src/config/app.yaml`, `src/generators/report_source_generator.py`, and the quality ledger.
+- Publisher discovery route memory, deferred recovery, direct-detail handling, KPI guardrail logging, and default-on rollout controls are landed. There is no active "publisher discovery rollout" backlog item unless a new measured gap is opened.
+- Targeted validation regeneration and claim/evidence binding are landed through `src/generators/report_regeneration_generator.py`, `src/generators/validation/*`, and README validation docs.
+- Idempotency service support is live in `src/services/idempotency_service.py` and backs publish, report-download, and publisher-inventory write paths documented in `README.md`.
+- Candidate extraction already performs binary page triage and shared page-artifact/fingerprint caching through `src/services/_pdf/figures.py`, `src/services/_pdf/page_artifacts.py`, and `src/services/_pdf/fingerprint_cache.py`.
+- Vector-store cleanup is no longer backlog: `src/services/vector_store_service.py` exposes delete/prune operations, `src/orchestrators/vector_store_retention_orchestrator.py` runs retention cleanup, and README documents `analysis.vector_store_retention_days`.
+- The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
+- `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
+- `vector_projection_queue` persists `embedding_status` and `embedding_version`, but there is no stored embedding vector/provider reference or embedding workflow beyond queue staging.
+- Cross-report Briefing and grounded Signal publish paths exist locally. Durable Signal candidate extraction/clustering from ingested reports is not implemented.
+- The local bundled WordPress plugin registers `ml_report`, `ml_signal`, and `ml_briefing` with REST enabled. Remote WordPress exposure remains an external deployment/readback verification item.
+- README/config drift remains: README still states report publishing uses core `posts` in one section, while `src/config/app.yaml` defaults `publish.wp.post_type` to `ml_report`.
+- WordPress design token drift remains: README documents `settings.layout.wideSize` as `82rem`, while `Wordpress/wp-content/themes/marketlense/theme.json` currently uses `84rem`.
+
+## Priority Order
+
+1. Cost and LLM controls.
+2. Analytics projection, Signal candidates, and embeddings.
+3. Publish durability and WordPress/public entity alignment.
+4. PDF/performance hotspots.
+5. Architecture, schema compatibility, and observability gates.
 
 ---
 
-## 1. Spend Guardrails, LLM Routing & Prompt Evaluation
+## 1. Cost and LLM Controls
+
+- **Title:** Enforce real-time spend guardrails across run/day/publisher budgets [Impact: 5/5, Effort: 2/5]
+  - Explanation: Cost ledger append and rollup paths exist, but they are post-hoc reporting. There is still no pre-call policy that warns, pauses, or blocks expensive model/browser/OCR work based on live spend.
+  - Pros: Prevents runaway spend and makes cost decisions operationally visible.
+  - Cons: Needs a clear operator override path so legitimate runs are not blocked silently.
+  - Acceptance Criteria:
+    - YAML config defines thresholds for run, day, and publisher scopes.
+    - Orchestrators check thresholds before model, browser, OCR, or other expensive calls.
+    - Breaches emit typed events, structured logs, and explicit outcomes: `warn`, `pause`, `stop`, or `override`.
+    - Tests cover warn, hard-stop, and operator-override paths with output contract and log assertions.
 
 - **Title:** Implement budget-aware model routing with deterministic context compaction [Impact: 5/5, Effort: 4/5]
-  - Explanation: Model resolution is still mostly static through `openai_models` and namespace matching, while `llm_service` logs `budget_decision="not_configured"`. The next step is policy-driven model tiering, context budgeting, and deterministic compaction before requests exceed practical token or cost limits.
-  - Pros: Material cost and latency reduction, fewer timeout risks, explicit quality/cost tradeoffs.
+  - Explanation: Model resolution is still mostly static through configured OpenAI models and namespace matching. `llm_service` records budget policy as not configured.
+  - Pros: Reduces cost, latency, timeout risk, and unreviewable ad hoc prompt trimming.
   - Cons: Requires careful evidence-retention tests and benchmark ownership.
   - Acceptance Criteria:
     - Policy table maps task families to model tier, max input budget, fallback tier, and quality threshold.
     - Routing decision, budget decision, compaction strategy, and reason are logged for each call.
-    - Over-budget requests are compacted by deterministic policy rather than ad hoc trimming.
-    - Regression tests protect key evidence retention.
-    - Benchmarks show meaningful token/cost reduction without quality regression on a fixed corpus.
+    - Over-budget requests are compacted deterministically before model calls.
+    - Regression tests protect evidence retention on a fixed prompt/output corpus.
+    - Benchmarks show token/cost reduction without quality regression on that corpus.
 
-- **Title:** Enforce real-time spend guardrails across run/day/publisher budgets [Impact: 5/5, Effort: 2/5]
-  - Explanation: Cost ledger append and rollup paths exist, but they are post-hoc reporting only. There is still no pre-call policy that warns, pauses, or blocks expensive model/browser/OCR work based on live spend.
-  - Pros: Prevents runaway spend and makes cost decisions operationally visible.
-  - Cons: May block legitimate runs without a good override flow.
+- **Title:** Add provider failover behind the single LLM response contract [Impact: 4/5, Effort: 4/5]
+  - Explanation: The canonical LLM boundary exists, but provider choice is still OpenAI-primary with no tested fallback path behind a stable response contract.
+  - Pros: Improves resilience to provider outages and quota events without adding peer service entrypoints.
+  - Cons: Requires contract-normalization tests across provider responses.
   - Acceptance Criteria:
-    - YAML config defines thresholds for run, day, and publisher scopes.
-    - Orchestrators check thresholds before model, browser, OCR, or other expensive calls.
-    - Breaches emit typed events, structured logs, and explicit policy outcome (`warn`, `pause`, `stop`, `override`).
-    - Tests cover warn, hard-stop, and operator-override paths.
+    - One canonical LLM service boundary owns provider selection and response adaptation.
+    - Failover is policy-driven, bounded, logged, and orchestrator-visible.
+    - Provider-specific responses adapt into one typed contract before generators see them.
+    - Tests cover primary success, retryable provider failure, fallback success, fallback exhaustion, and provider mismatch validation.
 
 ---
 
-## 2. PDF Extraction, OCR & Candidate Ranking
+## 2. Analytics Projection, Signals, and Embeddings
+
+- **Title:** Persist claim-level embeddings beyond the vector projection queue [Impact: 5/5, Effort: 4/5]
+  - Explanation: Claims are projected into `report_claims` and queued in `vector_projection_queue`, but the system does not store actual embedding vectors, provider/vector-store references, embedding lifecycle timestamps, or completed/failed embedding records per claim.
+  - Pros: Enables reusable semantic retrieval over claims and makes Signal/Briefing grounding cheaper and reproducible.
+  - Cons: Requires a storage contract, migration, embedding workflow, and retention/versioning policy.
+  - Acceptance Criteria:
+    - A versioned embedding storage contract links each embedded claim to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`.
+    - An orchestrator-owned embedding workflow reads pending queue rows, calls the embedding service boundary, persists vectors or external vector IDs, and updates status.
+    - `embedding_version`, `content_hash`, provider/model metadata, generated timestamp, and retry/error taxonomy are stored and logged.
+    - Re-embedding behavior is deterministic when claim text, metadata, content hash, or embedding model version changes.
+    - Tests cover successful embedding, failed status, idempotent reruns, stale-content re-embedding, and retrieval by claim/report/topic metadata.
+
+- **Title:** Extract, store, and cluster traceable Signal candidates from ingested reports [Impact: 5/5, Effort: 5/5]
+  - Explanation: Cross-report features can score transient signal candidates and `signal_post_generator` can build a publishable Signal projection. The missing layer is a durable Signal-candidate store produced from ingested reports with source lineage and validation status.
+  - Pros: Makes Signals reusable across briefings and publish workflows while preserving evidence traceability.
+  - Cons: Requires new contracts/tables, validation rules, grouping logic, and integration with existing cross-report selection.
+  - Acceptance Criteria:
+    - A versioned Signal candidate contract captures type, title, summary, confidence/strength, support level, caveats, source report IDs, evidence IDs, and raw source context.
+    - Projection stores Signal candidates durably with lineage to projected claims, findings, metrics, quotes, figures, and page references where applicable.
+    - Validation enforces source-backed evidence, support classification, explicit caveats, and weak/divergent coverage notes.
+    - Related candidates can be clustered into stable Signal groups without normalizing raw metrics or erasing source caveats.
+    - Cross-report source selection, signal scoring, and `signal_post_generator` can consume stored candidates/groups.
+    - Tests cover single-report support, multi-report convergence, contradiction, weak coverage, unsupported Signal rejection, grouping idempotency, and publish reuse.
+
+- **Title:** Complete public entity projection coverage or narrow the README entity contract [Impact: 5/5, Effort: 5/5]
+  - Explanation: Reports, Briefings, and Signals have local publish paths, but README still describes a broader public entity model including Figures, Regions, and Time Periods. Those surfaces need either durable public projection contracts/routes or explicit README-scoped exclusions.
+  - Pros: Gives publishing one typed source of truth for every public entity.
+  - Cons: Broad schema, migration, and publish/readback work if all surfaces remain in scope.
+  - Acceptance Criteria:
+    - Figures, Regions, and Time Periods have documented public projection contracts or explicit README exclusions.
+    - Implemented public entities map to stable WordPress route/template/readback semantics.
+    - Empty-state behavior is deterministic and does not invent content.
+    - Integration tests cover report-to-entity projection and WordPress publish/readback for each implemented entity.
 
 ---
 
-## 3. Publisher Discovery Rollout & Precision
+## 3. Publish Durability and WordPress Alignment
 
-## 4. Idempotency, Checkpoints & Publish Durability
-
-- **Title:** Turn the publish queue into durable jobs with transactional outbox, retry, and idempotency [Impact: 5/5, Effort: 5/5]
-  - Explanation: The current `publish_queue_orchestrator.py` only builds a snapshot for UI and ops views. It does not persist publish intents as durable jobs or atomically couple publish-side effects to state transitions.
-  - Pros: More reliable publishing and clearer recovery from partial failures.
-  - Cons: Adds queue/outbox infrastructure and operational behavior.
+- **Title:** Turn the publish snapshot into durable jobs or rename it as an ops readiness snapshot [Impact: 5/5, Effort: 5/5]
+  - Explanation: `publish_queue_orchestrator.py` is live in UI/ops flows but only builds a read-only snapshot from HTML files and publish state. It does not enqueue durable publish intents or atomically couple publish side effects to state transitions.
+  - Pros: Either creates a real reliable publish queue or removes misleading queue language.
+  - Cons: Durable jobs require queue/outbox infrastructure; renaming requires UI/docs/API cleanup.
   - Acceptance Criteria:
-    - Publish jobs can be enqueued, persisted, retried, and dead-lettered.
-    - Outbox records side-effect intents atomically with related state changes.
-    - Delivery attempts are idempotent and logged.
+    - If implemented as jobs: publish intents can be enqueued, persisted, retried, dead-lettered, and idempotently delivered.
+    - If kept read-only: contracts, UI labels, docs, and logs stop using queue terminology for this feature.
+    - Outbox records side-effect intents atomically with related state changes if job delivery is implemented.
     - Failure-injection tests cover restart, retry, duplicate dispatch, and partial WordPress failures.
 
+- **Title:** Stop WordPress from synthesizing intelligence, freshness, and authority claims at render time [Impact: 5/5, Effort: 3/5]
+  - Explanation: README says WordPress must assemble approved projections/artifacts, but current WordPress shortcode/stat code still computes weekly signals, strategic themes, freshness-style movement, and publisher authority from WordPress counts and dates.
+  - Pros: Keeps analytical claims owned by the Python pipeline and reproducible from approved artifacts.
+  - Cons: Homepage modules need replacement data contracts and fail-closed behavior when projections are absent.
+  - Acceptance Criteria:
+    - WordPress intelligence modules read approved projection/artifact data instead of deriving claims from live WP queries.
+    - Missing projections fail closed with neutral UI or admin-visible diagnostics.
+    - Tests prove no Signal, freshness, strategic-theme, or publisher-authority claim is generated solely from WordPress post counts.
+    - README documents the projection source used by each WordPress intelligence module.
+
+- **Title:** Verify/deploy WordPress REST exposure for Briefing and Signal publish entities [Impact: 5/5, Effort: 2/5]
+  - Explanation: The local plugin registers `ml_briefing` and `ml_signal` with REST enabled. Live publish/readback still depends on the deployed WordPress site exposing the same routes.
+  - Pros: Unblocks live end-to-end publish/readback validation for Briefings and Signals.
+  - Cons: Requires coordinated WordPress deployment or plugin activation verification outside the Python repo.
+  - Acceptance Criteria:
+    - Remote `/wp-json/wp/v2/types` exposes `ml_briefing` and `ml_signal` with REST collection routes.
+    - Live WordPress publish can create draft `ml_briefing` and `ml_signal` posts from generated artifacts.
+    - Readback confirms post type, slug, title, permalink route, and publish metadata.
+    - Deployment notes document the plugin/version state required for all public publish entities.
+
+- **Title:** Resolve report post-type and entity naming drift between README, config, and WordPress [Impact: 4/5, Effort: 2/5]
+  - Explanation: README still says publishing targets core `posts` in one section, while `src/config/app.yaml` defaults to `ml_report`. The plugin supports both `post` legacy digests and `ml_report`, and public copy mixes Report, Digest, Brief, and Briefing.
+  - Pros: Prevents operators from publishing to the wrong content type.
+  - Cons: Requires a deliberate compatibility decision and copy/test updates.
+  - Acceptance Criteria:
+    - README, YAML config, WordPress plugin behavior, and publish tests agree on the canonical report post type.
+    - Compatibility behavior for old core `post` digests is explicitly documented or removed.
+    - Public UI copy consistently uses Report for report entities and Briefing only for briefing entities.
+    - Tests verify configured post type, WordPress payload post type, and resulting content type.
+
+- **Title:** Expose original report source URLs and page-only grounding citations [Impact: 5/5, Effort: 3/5]
+  - Explanation: Source URLs are stored in report-store paths, but public report/signal/briefing outputs still need a guaranteed source URL and citation normalization policy that never exposes local artifact or evidence-window paths.
+  - Pros: Improves reader trust and prevents leaking pipeline-internal targets.
+  - Cons: Requires source-url propagation and citation normalization across multiple artifact paths.
+  - Acceptance Criteria:
+    - Public report pages render the original source URL when available, with deterministic missing-source behavior.
+    - Source URL is stored in a typed, versioned contract and propagated through projection, render, and publish boundaries.
+    - Grounding citations display only original report/page references, such as `Report Name, page XX`.
+    - Generated artifact paths, local evidence IDs, crop paths, cache files, and pipeline URLs are never public citation targets.
+    - Tests cover source URL propagation, missing source URL handling, and citation normalization for reports, signals, and briefings.
+
+- **Title:** Make WordPress categories the canonical Topic surface with full topic semantics [Impact: 4/5, Effort: 3/5]
+  - Explanation: WordPress categories already serve the public Topic path, but they publish mostly as labels. README defines Topics as controlled taxonomy entries with definitions plus inclusion/exclusion rules.
+  - Pros: Reuses the existing category implementation while making taxonomy governance visible.
+  - Cons: Requires term contract expansion and migration/update behavior.
+  - Acceptance Criteria:
+    - README explicitly states native WordPress categories are the canonical public Topic implementation, or documents a different canonical taxonomy.
+    - Topic/category contract includes definition, inclusion rules, exclusion rules, and version metadata.
+    - WordPress category creation/update writes approved topic descriptions or term meta through the service boundary.
+    - Topic directory and category archive templates render approved topic semantics without ad hoc copy.
+    - Tests assert term semantics survive publish and readback.
+
+- **Title:** Bring WordPress design tokens and CSS organization back in line with README [Impact: 3/5, Effort: 2/5]
+  - Explanation: README documents `wideSize` as `82rem`, while `theme.json` uses `84rem`. The theme also has repeated CSS hooks and header styling that should be auditable against the documented design contract.
+  - Pros: Reduces design drift and keeps styling centralized and testable.
+  - Cons: Visual regressions are possible without screenshot review.
+  - Acceptance Criteria:
+    - README and `theme.json` agree on `wideSize` and other documented layout tokens.
+    - Header-specific styling is either centralized in the theme stylesheet or explicitly documented as approved block markup styling.
+    - Repeated CSS hooks are consolidated only when rendering is preserved.
+    - WordPress static checks and at least one desktop/mobile visual review pass.
+
 ---
 
-## 5. Schema Compatibility & Repair
+## 4. PDF, Dashboard, and Runtime Performance
+
+- **Title:** Optimize measured PDF table/visual candidate hot paths without changing the public PDF boundary [Impact: 4/5, Effort: 3/5]
+  - Explanation: PDF facade decomposition has landed, but `long_scripts.md` still identifies focused hot paths in table dedupe/screening, visual candidate extraction, panel detection, and crop refinement. The next work should be measured algorithmic improvement, not another size-only split.
+  - Pros: Improves runtime on visually dense reports while preserving the canonical `pdf_service` boundary.
+  - Cons: Needs careful real-PDF equivalence gates to avoid extraction regressions.
+  - Acceptance Criteria:
+    - Baseline and target metrics are captured on dense PDF fixtures before implementation.
+    - Indexed table dedupe and/or precomputed per-page visual relationships reduce measured runtime or asymptotic scan cost.
+    - Candidate output remains semantically equivalent unless a documented quality change is approved.
+    - Tests cover near-duplicate/distinct tables, dense panels, multi-chart layouts, decorative images, wrappers, and crop boundaries.
+
+- **Title:** Bound Streamlit dashboard log and directory read-model work [Impact: 3/5, Effort: 2/5]
+  - Explanation: `src/generators/streamlit_dashboard_generator.py` reads full log files before slicing and runs repeated recursive directory walks for dashboard count cards. UI cache helps reruns but cache misses still scale with full log size and repeated walks.
+  - Pros: More predictable dashboard latency and memory use as logs and output directories grow.
+  - Cons: Requires service-boundary changes so generators do not add direct filesystem optimizations.
+  - Acceptance Criteria:
+    - `file_service` exposes a bounded tail-read contract for text logs and the Streamlit generator uses it.
+    - Directory counts use one grouped walk per root where possible, or a service-level multi-count operation with deterministic limits.
+    - Tests cover large-log tail behavior, malformed log lines, overlapping directory patterns, and directory listing errors.
+    - Dashboard read-model logs include bounded byte/line counts and grouped-walk metrics.
+
+---
+
+## 5. Architecture, Schema Compatibility, and Observability
+
+- **Title:** Extend CI gates into role-mixing and monolith-growth enforcement [Impact: 4/5, Effort: 3/5]
+  - Explanation: The repo already has broad CI coverage. The remaining useful gap is automation for role mixing, direct-I/O drift, service integration coverage waivers, and first-party long-file growth.
+  - Pros: Prevents architectural drift earlier and keeps the current rule set enforceable.
+  - Cons: Requires careful allowlist design for legitimate edge cases.
+  - Acceptance Criteria:
+    - Gate logic flags role mixing, direct I/O drift, or monolith-growth violations on first-party files.
+    - Allowlist entries require owner plus expiry date.
+    - Missing per-service integration coverage requires a marked test or explicit temporary waiver.
+    - README documents how to add and retire waivers.
 
 - **Title:** Build a backward/forward contract compatibility matrix [Impact: 4/5, Effort: 4/5]
-  - Explanation: Contract round-trip tests and schema snapshots already exist, but the repo still lacks a first-class compatibility matrix for persisted artifacts and stored rows across schema versions.
+  - Explanation: Contract round-trip tests and schema snapshots exist, but persisted artifacts and stored rows still lack a first-class compatibility matrix across schema versions.
   - Pros: Safer staged deploys and clearer breaking-change discipline.
   - Cons: Larger fixture surface and more adapter maintenance.
   - Acceptance Criteria:
@@ -113,176 +241,51 @@ Suggested priority order:
     - Breaking changes require explicit version-bump evidence.
     - Representative stored artifacts are covered by fixture snapshots.
 
----
-
-## 6. Architecture Simplification, CI & Observability
-
-- **Title:** Extend CI gates from current quality coverage into role-mixing and monolith-growth enforcement [Impact: 4/5, Effort: 3/5]
-  - Explanation: The repo already has strong CI coverage, so the remaining gap is not "add more generic checks." The useful next step is automation around role mixing, direct-I/O drift, service integration coverage waivers, and first-party long-file growth.
-  - Pros: Prevents architectural drift earlier and keeps the current rule set enforceable.
-  - Cons: Requires careful allowlist design for legitimate edge cases.
+- **Title:** Add end-to-end tracing across orchestrator/generator/service boundaries [Impact: 4/5, Effort: 3/5]
+  - Explanation: Structured logs carry run/task/span fields, but there is no complete trace assembly view across a full report, publish, or cross-report workflow.
+  - Pros: Faster incident analysis and better verification of control-plane/domain/service separation.
+  - Cons: Needs trace correlation without creating new cross-role coupling.
   - Acceptance Criteria:
-    - New gate logic flags role mixing, direct I/O drift, or monolith-growth violations on first-party files.
-    - Allowlist entries require owner plus expiry date.
-    - Missing per-service integration coverage requires either a marked test or an explicit temporary waiver.
-    - README documents how to add and retire waivers.
-
-- **Title:** Bound Streamlit dashboard log and directory read-model work [Impact: 3/5, Effort: 2/5]
-  - Explanation: `src/generators/streamlit_dashboard_generator.py` currently reads full log files before slicing the last N lines and runs repeated recursive directory walks for dashboard count cards. The UI cache reduces repeated reruns, but cache misses can still scale with full log size and `checks * files`.
-  - Pros: More predictable dashboard latency and memory use as logs and output directories grow.
-  - Cons: Requires a service-boundary change so generators do not add direct filesystem optimizations.
-  - Acceptance Criteria:
-    - `file_service` exposes a bounded tail-read contract for text logs and the Streamlit generator uses it.
-    - Directory count collection performs one grouped walk per root where possible, or a service-level multi-count operation with deterministic limits.
-    - Tests cover large-log tail behavior, malformed log lines, overlapping directory patterns, and directory listing errors.
-    - Dashboard read-model logs include bounded byte/line counts and grouped-walk metrics.
+    - A trace read model reconstructs workflow stages from existing structured events.
+    - Missing required log fields or broken parent/child span relationships are detectable in tests.
+    - At least one report workflow, one publish workflow, and one cross-report workflow have trace coverage.
+    - README documents trace inspection and common failure interpretation.
 
 ---
 
-## Priority Launch Plan
+## Closed or Removed From Active Backlog
 
-### Phase 1: Highest-Leverage Controls (2-4 weeks)
+- OCR confidence gating and native-confidence-based OCR fallback controls.
+- Prompt dry-run namespace validation and prompt-fixture corpus regression baseline.
+- Targeted artifact regeneration for mapped validation failures, including deterministic TOC repair.
+- Claim/evidence span binding and validation-level evidence normalization.
+- Core publisher-discovery memory, deferred recovery, direct-detail routing, and KPI rollout controls.
+- Report-store, config-service, OpenAI-service, PDF-service, browser-download, report-download, cross-report-input, and report-generation dependency facade splits.
+- UI-run dead-letter workflow, replay manifests, and operator triage surfaces.
+- Vector-store delete/prune lifecycle and retention orchestration.
+- Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
+- Empty audit sections from earlier consolidated TODO versions.
+
+## Near-Term Launch Plan
+
+### Phase 1: Highest-Leverage Controls
 
 - Real-time spend guardrails at run/day/publisher scopes with explicit override flow.
-- Discovery rollout of structured memory, deferred recovery, and direct-detail routing with KPI gates.
-- Prompt variant scorecards on top of the existing prompt-fixture corpus.
+- Budget-aware model routing with deterministic compaction.
+- Durable publish snapshot decision: real jobs/outbox or explicit readiness-snapshot naming.
+- WordPress report post-type naming cleanup.
 
-### Phase 2: Throughput and Durability (4-8 weeks)
+### Phase 2: Intelligence Reuse and Public Entity Alignment
 
-- Budget-aware model routing with deterministic context compaction.
-- Scored PDF page gating and table-dedupe rewrite.
-- Vector-store cleanup and retention orchestration.
+- Claim-level embedding persistence and embedding workflow.
+- Durable Signal candidate extraction and grouping.
+- Public entity projection coverage for Figures, Regions, and Time Periods, or README narrowing.
+- WordPress render-time intelligence synthesis replacement with approved projections.
 
-### Phase 3: Resilience and Compatibility (8-16+ weeks)
+### Phase 3: Resilience and Performance
 
-- Provider failover behind one LLM response contract.
-- Durable checkpoint/restart for report pipeline stages.
-- Durable publish jobs with transactional outbox.
-- Contract compatibility matrix for persisted artifacts and stored rows.
-- End-to-end tracing across orchestrator/generator/service boundaries.
-
----
-
-## 7. Deep Codebase Audit (2026-05-06)
-
----
-
-## 8. Appendix Feature Audit (2026-05-22)
-
-Scope: first-party runtime code under `src/`, CLI/UI entrypoints, and connected operator flows. This audit treats dynamically launched subprocess modules as live when a runtime caller invokes them by module name. It does not classify tests, CI-only gates, or vendored `tools/browser-use` code as product-flow usage.
-
-Findings summary:
-
-- Keep `src/services/_browser_report_download/browser_worker.py`: it is not statically imported, but `browser.py` launches it with `python -m src.services._browser_report_download.browser_worker`.
-- Keep prompt dry-run validation: `prompt_service.validate_prompt_dry_run` is CI/quality infrastructure used by `scripts/quality/prompt_fixture_corpus_metrics.py` and tests, not an abandoned product feature.
-- Keep optional evidence-pack variety scaffolding: the `key_metrics`, `risk_register`, `recommendations`, and `contradictions` strategies are gated but wired through `evidence_pack_generator`, validation, artifacts, and analytics projection.
-
-- **Title:** Convert publish queue snapshot into real publish jobs or rename it as an ops snapshot [Impact: 5/5, Effort: 5/5]
-  - Evidence: `publish_queue_orchestrator.py` is live in the UI, but it builds a read-only snapshot from HTML files and publish state. It does not enqueue durable publish intents or drive the publish workflow.
-  - Assessment: Reintroduce as durable jobs if the product needs a queue. If not, rename the API/UI language to "publish readiness snapshot" to avoid implying a queue exists.
-  - Acceptance Criteria:
-    - Covered by the existing Section 5 item: "Turn the publish queue into durable jobs with transactional outbox, retry, and idempotency."
-    - If not implemented as a queue, contracts, UI labels, docs, and logs stop using queue terminology for the snapshot-only feature.
-
----
-
-## 9. Full Codebase Interconnection Audit (2026-05-22)
-
----
-
-## 10. README, WordPress Design & Publish Entity Alignment Audit (2026-05-29)
-
-Scope: gaps identified by comparing the README direction against the current `src/` implementation and the `Wordpress/wp-content` block theme/plugin. These items cover public information architecture, WordPress design, publish entities, and naming drift.
-
-- **Title:** Stop WordPress from synthesizing intelligence, freshness, and authority claims at render time [Impact: 5/5, Effort: 3/5]
-  - Explanation: README says WordPress must not synthesize new intelligence, freshness, or quality judgments and should assemble approved projections/artifacts. Current plugin code computes weekly signals, strategic themes, freshness windows, and publisher authority from live WordPress counts and dates in `class-marketlense-core-intelligence-stats.php`.
-  - Pros: Keeps analytical claims owned by the Python pipeline and makes published site content reproducible from approved artifacts.
-  - Cons: Existing home-page modules need replacement data contracts and fallback behavior when projections are absent.
-  - Acceptance Criteria:
-    - WordPress intelligence modules read approved projection/artifact data instead of deriving claims from live WP queries.
-    - Any missing projection fails closed with neutral UI or typed/admin-visible diagnostics, not invented metrics.
-    - Tests prove no signal, freshness, strategic-theme, or publisher-authority claim is generated solely from WordPress post counts.
-    - README documents the projection source used by each WordPress intelligence module.
-
-- **Title:** Make Signals, cross-report Briefings, Figures, Regions, and Time Periods durable public entities [Impact: 5/5, Effort: 5/5]
-  - Explanation: The analytics projection layer persists reports, sections, findings, metrics, quotes, claims, tags, categories, figures, and vector queue state. Cross-report analysis already implements the Briefing-generation capability, but that output is not consistently exposed as a durable public Briefing entity with WordPress taxonomy/route/readback semantics. Signals are still not durable public projection entities. Figures exist in storage but lack a public WordPress destination, and Regions/Time Periods are stored mostly as metadata rather than complete public surfaces.
-  - Pros: Gives the publishing layer one typed source of truth for every README entity and reduces UI-specific inference.
-  - Cons: Broad schema, migration, and publish workflow changes.
-  - Acceptance Criteria:
-    - Projection contracts/tables exist for public Signals with schema versions and round-trip tests.
-    - Existing cross-report analysis outputs are explicitly versioned and mapped to the public Briefing entity contract.
-    - Figures, Regions, and Time Periods have documented public projection contracts or explicit README-scoped exclusions.
-    - WordPress publish code can map each public projection entity to a stable route/template/surface.
-    - Integration tests cover report-to-entity projection and WordPress publish/readback for each implemented entity.
-
-- **Title:** Deploy WordPress REST exposure for Briefing and Signal publish entities [Impact: 5/5, Effort: 2/5]
-  - Explanation: The local bundled WordPress plugin registers `ml_report`, `ml_briefing`, and `ml_signal`, but the remote WordPress site currently exposes only `ml_report` through REST. Metadata-routed publish can create report drafts, while live Briefing and Signal publication is blocked by remote deployment/site state rather than Python publish routing.
-  - Pros: Unblocks live end-to-end publish/readback validation for generated Briefing and Signal HTML and aligns the deployed site with the local plugin contract.
-  - Cons: Requires coordinated WordPress deployment or plugin activation verification outside the Python repository.
-  - Acceptance Criteria:
-    - Remote `/wp-json/wp/v2/types` exposes `ml_briefing` and `ml_signal` with REST collection routes.
-    - Live WordPress publish can create draft `ml_briefing` and `ml_signal` posts from existing generated artifacts with embedded publish entity metadata.
-    - Readback confirms the created posts retain the expected post type, slug, title, and publish metadata route intent.
-    - README or deployment notes document the plugin/version state required for all public publish entities.
-
-- **Title:** Expose original report source URLs and page-only grounding citations [Impact: 5/5, Effort: 3/5]
-  - Explanation: Public report pages need a clear source URL so readers can manually download the full original report. Grounding citations also need to resolve to the original report page only, using stable display text like `Report Name, page XX`, instead of pointing at generated artifacts, intermediate evidence windows, or local pipeline paths.
-  - Pros: Improves reader trust, makes source verification practical, and prevents generated pages from exposing pipeline-internal citation targets.
-  - Cons: Requires careful source-url capture for every acquisition route and citation normalization across report, signal, briefing, and regenerated artifact paths.
-  - Acceptance Criteria:
-    - Public report pages render the original source URL when it is available, with deterministic missing-source behavior when it is not.
-    - Source URL is stored in a typed, versioned contract and propagated through projection, render, and WordPress publish boundaries.
-    - Grounding citations displayed in generated outputs reference only the original report page as `report name, page XX`. The artifacts generated contain this data to be a trusted source
-    - Generated artifact paths, local evidence-window IDs, crop paths, cache files, and intermediate pipeline URLs are never exposed as public grounding citation targets.
-    - Tests cover source URL propagation, missing source URL handling, and citation normalization for reports, signals, and briefings.
-
-- **Title:** Resolve publish post-type and entity naming drift between README, config, and WordPress [Impact: 4/5, Effort: 2/5]
-  - Explanation: README says publishing currently targets core `posts`, while `src/config/app.yaml` sets `publish.wp.post_type` to `ml_report`. The WordPress plugin supports both core `post` and `ml_report` as report-like types, and public copy mixes Report, Digest, Brief, and Latest brief labels.
-  - Pros: Removes ambiguity from the publish path and prevents operators from publishing to the wrong content type.
-  - Cons: Requires a deliberate migration choice and updates to screenshots/copy/tests.
-  - Acceptance Criteria:
-    - README, YAML config, WordPress plugin behavior, and publish tests agree on the canonical report post type.
-    - Compatibility behavior for old core `post` digests is explicitly documented or removed.
-    - Public UI copy consistently uses Report for report entities and Briefing only for briefing entities.
-    - Tests verify configured post type, WP payload post type, and resulting WordPress content type.
-
-- **Title:** Make WordPress categories the canonical Topic surface with full topic semantics [Impact: 4/5, Effort: 3/5]
-  - Explanation: The current implementation already uses WordPress categories as the public Topic path, populated from `category-mappings.yaml`. The remaining gap is that categories currently publish mostly as labels, while README defines Topics as controlled taxonomy entries with definition, inclusion, and exclusion rules.
-  - Pros: Reuses the existing category-based Topic implementation while making taxonomy governance visible on the public site.
-  - Cons: Requires term contract expansion and careful migration/update behavior for existing categories.
-  - Acceptance Criteria:
-    - README explicitly states that WordPress categories are the canonical public implementation of Topics, or config/docs are updated to name a different canonical taxonomy.
-    - Topic/category contract includes definition, inclusion rules, exclusion rules, and version metadata where required.
-    - WordPress category creation/update writes approved topic descriptions or term meta through the service boundary.
-    - Topic directory and category archive templates render approved topic semantics without ad hoc copy.
-    - Tests assert term semantics survive publish and readback.
-
-- **Title:** Add secondary public surfaces for Figures, Regions, and Time Periods or narrow the README contract [Impact: 3/5, Effort: 3/5]
-  - Explanation: README lists Figures, Regions, and Time Periods as secondary public surfaces. Current WordPress templates include reports, topics, publishers, methodology, and support pages, but no figure, region, or time-period destination.
-  - Pros: Completes the documented browsing model and improves report discoverability by artifact, geography, and period.
-  - Cons: More templates and projection/read-model work; some surfaces may be low value until there is enough content.
-  - Acceptance Criteria:
-    - Figures, Regions, and Time Periods each have a WordPress route/template/surface, or README explicitly removes/defers them with rationale.
-    - Publish/projection code provides stable data for each implemented surface.
-    - Empty-state behavior is deterministic and does not invent content.
-    - Static or integration tests cover route existence and representative rendering.
-
-- **Title:** Replace publisher authority heuristics with approved publisher projections [Impact: 4/5, Effort: 3/5]
-  - Explanation: Publisher surfaces are partly implemented, but current WordPress code derives authority-style rankings and labels from local post/category counts. README positions Publisher as a canonical entity and forbids WordPress from creating quality judgments outside approved artifacts.
-  - Pros: Keeps publisher claims auditable and avoids misleading authority language from incomplete WordPress data.
-  - Cons: Requires a publisher projection or metric artifact and revised homepage/publisher modules.
-  - Acceptance Criteria:
-    - Publisher authority/coverage modules consume approved pipeline projections, not WP count heuristics.
-    - Public labels avoid authority/ranking language unless backed by a documented metric contract.
-    - Publisher term metadata and templates expose only approved fields.
-    - Tests prove missing publisher projections do not produce inferred authority claims.
-
-- **Title:** Bring WordPress design tokens and CSS organization back in line with README [Impact: 3/5, Effort: 2/5]
-  - Explanation: README documents the theme `wideSize` as `82rem`, while `theme.json` currently uses `84rem`. The block theme also includes inline CSS in `parts/header.html`, and the main theme CSS has grown large with repeated hooks, making the WordPress design contract harder to audit.
-  - Pros: Reduces design drift and keeps styling centralized and testable.
-  - Cons: Visual regressions are possible without screenshot review.
-  - Acceptance Criteria:
-    - README and `theme.json` agree on `wideSize` and other documented layout tokens.
-    - Inline header CSS is moved into the theme stylesheet or an approved block/style asset.
-    - Repeated CSS hooks are consolidated without changing intended rendering.
-    - WordPress static checks and at least one visual/screenshot review pass for desktop and mobile.
+- Provider failover behind the canonical LLM service contract.
+- Measured PDF hot-path optimization.
+- Contract compatibility matrix.
+- Role-mixing/monolith-growth CI enforcement.
+- End-to-end trace read model.

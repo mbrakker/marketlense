@@ -34,7 +34,11 @@ def load_publisher_inventory_settings(
     candidate_quality_cfg = publisher_discovery.get("candidate_quality_check", {}) or {}
     resource_quality_cfg = publisher_discovery.get("resource_quality_ranking", {}) or {}
     analysis_cfg = data.get("analysis", {}) or {}
-    cost_cfg = data.get("cost", {}) or {}
+    cost_cfg = _resolve_cost_config(
+        data,
+        config_path=config_path,
+        runtime_base_path=runtime_base_path,
+    )
     retry_cfg = publisher_discovery.get("retry", {}) or browser_retry_cfg
 
     browser_output_root = (

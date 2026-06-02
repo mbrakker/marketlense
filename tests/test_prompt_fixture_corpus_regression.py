@@ -6,6 +6,7 @@ from pathlib import Path
 from scripts.ci.check_prompt_fixture_regression import (
     PromptRegressionAllowlistEntry,
     compare_prompt_fixture_metrics,
+    _load_pricing,
 )
 from scripts.quality.prompt_fixture_corpus_metrics import (
     collect_prompt_fixture_corpus_metrics,
@@ -208,3 +209,45 @@ def test_prompt_fixture_regression_uses_larger_total_runtime_tolerance() -> None
     }
 
     assert compare_prompt_fixture_metrics(baseline=baseline, current=current) == ()
+
+
+def test_prompt_fixture_regression_loads_pricing_from_separate_yaml(
+    tmp_path: Path,
+) -> None:
+    pricing = {
+        "gpt-5-mini": {
+            "input_tokens_per_1k_usd": 0.111,
+            "output_tokens_per_1k_usd": 0.222,
+            "tool_call_usd": 0.333,
+        }
+    }
+    config_path = tmp_path / "app.yaml"
+    costs_path = tmp_path / "llm-costs.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                'schema_version: "1.0"',
+                "cost:",
+                '  pricing_path: "./llm-costs.yaml"',
+                '  daily_path: "./out/cost-daily.json"',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    costs_path.write_text(
+        "\n".join(
+            [
+                'schema_version: "1.0"',
+                "pricing:",
+                "  gpt-5-mini:",
+                "    input_tokens_per_1k_usd: 0.111",
+                "    output_tokens_per_1k_usd: 0.222",
+                "    tool_call_usd: 0.333",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert _load_pricing(str(config_path)) == pricing
