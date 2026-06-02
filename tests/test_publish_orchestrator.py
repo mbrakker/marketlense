@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
 
 from src.contracts.report_store import ReportMetadataUpsertRequest
@@ -17,11 +18,54 @@ from src.services.state_service import get_publish, record, record_publish
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 
 
-def _write_html(output_dir: str, name: str, body: str) -> Path:
+def _publish_entity_metadata_script(
+    *,
+    entity_type: str = "report",
+    source_artifact_id: str = "file123",
+    canonical_route_intent: str = "wordpress:ml_report",
+    publish_eligible: bool = True,
+) -> str:
+    return (
+        '<script type="application/json" '
+        'data-market-lense-publish-entity="true">'
+        + json.dumps(
+            {
+                "schema_version": "1.0",
+                "entity_type": entity_type,
+                "source_artifact_id": source_artifact_id,
+                "canonical_route_intent": canonical_route_intent,
+                "publish_eligible": publish_eligible,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "</script>"
+    )
+
+
+def _write_html(
+    output_dir: str,
+    name: str,
+    body: str,
+    *,
+    entity_type: str = "report",
+    canonical_route_intent: str = "wordpress:ml_report",
+    source_artifact_id: str = "file123",
+    include_entity_metadata: bool = True,
+) -> Path:
     html_path = Path(output_dir) / name
     html_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata = (
+        _publish_entity_metadata_script(
+            entity_type=entity_type,
+            source_artifact_id=source_artifact_id,
+            canonical_route_intent=canonical_route_intent,
+        )
+        if include_entity_metadata
+        else ""
+    )
     html_path.write_text(
-        f"<html><head><title>Report</title></head><body>{body}</body></html>",
+        f"<html><head><title>Report</title>{metadata}</head><body>{body}</body></html>",
         encoding="utf-8",
     )
     return html_path
@@ -122,6 +166,99 @@ def test_publish_runs_when_processed(
     assert publish_row is not None
     assert publish_row.wp_post_id == 10
     assert publish_row.wp_post_url == "https://example.com/post/10"
+
+
+def test_publish_routes_report_by_embedded_entity_metadata(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    settings = replace(settings, wp=replace(settings.wp, post_type="posts"))
+    _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    _record_processed(settings.state_db, "file123", run_context)
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={
+            "id": 10,
+            "link": "https://example.com/reports/10",
+            "status": "publish",
+        },
+    )
+
+    results = orch.run_publish(settings, limit=1)
+
+    publish_row = get_publish(
+        StatePublishCheckRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="file123",
+            post_type="ml_report",
+        ),
+        run_context,
+    )
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert publish_row is not None
+    assert publish_row.post_type == "ml_report"
+    assert (
+        wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/posts")
+        == []
+    )
+
+
+def test_publish_routes_signal_by_embedded_entity_metadata(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(
+        settings.output_dir,
+        "signal.html",
+        "Drive fileId: signal:checkout-trust",
+        entity_type="signal",
+        canonical_route_intent="wordpress:ml_signal",
+        source_artifact_id="signal:checkout-trust",
+    )
+    _record_processed(settings.state_db, "signal:checkout-trust", run_context)
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_signal",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_signal",
+        status_code=201,
+        payload={
+            "id": 15,
+            "link": "https://example.com/signals/checkout-trust/",
+            "status": "publish",
+        },
+    )
+
+    results = orch.run_publish(settings, limit=1)
+
+    publish_row = get_publish(
+        StatePublishCheckRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="signal:checkout-trust",
+            post_type="ml_signal",
+        ),
+        run_context,
+    )
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].post_url == "https://example.com/signals/checkout-trust/"
+    assert publish_row is not None
+    assert publish_row.post_type == "ml_signal"
 
 
 def test_publish_uses_explicit_html_paths_over_output_listing(
@@ -263,6 +400,70 @@ def test_publish_blocks_when_validation_fails(
     assert results[0].validation_issues == ["bad data"]
     assert wordpress_http.calls == []
     assert publish_row is None
+
+
+def test_publish_missing_entity_metadata_fails_before_wordpress(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(
+        settings.output_dir,
+        "report.html",
+        "Drive fileId: file123",
+        include_entity_metadata=False,
+    )
+    _record_processed(settings.state_db, "file123", run_context)
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "error"
+    assert results[0].error == "publish_entity_metadata_missing"
+    assert wordpress_http.calls == []
+
+
+def test_publish_unknown_entity_metadata_fails_before_wordpress(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(
+        settings.output_dir,
+        "unknown.html",
+        "Drive fileId: entity123",
+        entity_type="unknown",
+        canonical_route_intent="wordpress:ml_unknown",
+        source_artifact_id="entity123",
+    )
+    _record_processed(settings.state_db, "entity123", run_context)
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "error"
+    assert results[0].error == "publish_entity_metadata_unsupported"
+    assert wordpress_http.calls == []
+
+
+def test_publish_mismatched_entity_metadata_fails_before_wordpress(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(
+        settings.output_dir,
+        "mismatch.html",
+        "Drive fileId: file123",
+        entity_type="report",
+        canonical_route_intent="wordpress:ml_signal",
+        source_artifact_id="file123",
+    )
+    _record_processed(settings.state_db, "file123", run_context)
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "error"
+    assert results[0].error == "publish_entity_metadata_mismatch"
+    assert wordpress_http.calls == []
 
 
 def test_publish_prefers_reports_db_file_id_mapping(
@@ -522,7 +723,9 @@ def test_publish_batches_preflight_and_term_resolution(
         raise AssertionError(f"unexpected tag payload: {payload}")
 
     caplog.set_level(logging.INFO)
-    wordpress_http.add("GET", "https://example.com/wp-json/wp/v2/ml_report", _lookup_posts)
+    wordpress_http.add(
+        "GET", "https://example.com/wp-json/wp/v2/ml_report", _lookup_posts
+    )
     wordpress_http.add(
         "GET", "https://example.com/wp-json/wp/v2/categories", _lookup_categories
     )
@@ -569,7 +772,11 @@ def test_publish_batches_preflight_and_term_resolution(
     assert first_publish_row is not None
     assert first_publish_row.wp_post_id == 501
     assert (
-        len(wordpress_http.calls_for("GET", "https://example.com/wp-json/wp/v2/categories"))
+        len(
+            wordpress_http.calls_for(
+                "GET", "https://example.com/wp-json/wp/v2/categories"
+            )
+        )
         == 2
     )
     assert (
@@ -578,7 +785,9 @@ def test_publish_batches_preflight_and_term_resolution(
     )
     assert (
         len(
-            wordpress_http.calls_for("GET", "https://example.com/wp-json/wp/v2/ml_publisher")
+            wordpress_http.calls_for(
+                "GET", "https://example.com/wp-json/wp/v2/ml_publisher"
+            )
         )
         == 1
     )
@@ -657,7 +866,9 @@ def test_publish_preflight_term_batch_failure_does_not_block_other_files(
             )
         return FakeHttpResponse.from_payload(status_code=200, payload=[])
 
-    wordpress_http.add("GET", "https://example.com/wp-json/wp/v2/ml_report", _lookup_posts)
+    wordpress_http.add(
+        "GET", "https://example.com/wp-json/wp/v2/ml_report", _lookup_posts
+    )
     wordpress_http.add("GET", "https://example.com/wp-json/wp/v2/tags", _lookup_tags)
     wordpress_http.add_json(
         "POST",
@@ -672,7 +883,11 @@ def test_publish_preflight_term_batch_failure_does_not_block_other_files(
     assert results[0].file_id == "file-bad"
     assert results[1].file_id == "file-ok"
     assert (
-        len(wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report"))
+        len(
+            wordpress_http.calls_for(
+                "POST", "https://example.com/wp-json/wp/v2/ml_report"
+            )
+        )
         == 1
     )
 

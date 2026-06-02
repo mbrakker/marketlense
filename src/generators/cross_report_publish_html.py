@@ -15,6 +15,8 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceAgreementResult,
     CrossReportGeneratedAnalysisResult,
 )
+from src.contracts.publish import PublishEntityMetadata
+from src.utils.html_utils import publish_entity_metadata_script
 
 _CROSS_REPORT_DOCUMENT_CSS = """
 body {
@@ -310,6 +312,7 @@ def build_cross_report_html_document(
     source_metadata: list[dict[str, Any]],
     machine_metadata: dict[str, Any],
     file_id: str,
+    publish_entity_metadata: PublishEntityMetadata,
 ) -> tuple[str, str]:
     body = "\n".join(
         [
@@ -342,6 +345,7 @@ def build_cross_report_html_document(
         '<meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         f'<meta name="description" content="{_html_text(generated.executive_summary[:180])}">'
+        f"{publish_entity_metadata_script(publish_entity_metadata)}"
         f"<title>{_html_text(generated.title)}</title>"
         f"<style>{_CROSS_REPORT_DOCUMENT_CSS}</style>"
         "</head><body>"

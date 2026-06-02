@@ -109,15 +109,18 @@ def test_render_includes_artifact_sections(tmp_path):
     assert 'id="section-expert"' not in html
     assert 'id="section-linkedin"' not in html
     assert '<section class="panel" id="section-summary"' in html
-    assert "<ul class=\"summary-list\">" in html
+    assert '<ul class="summary-list">' in html
     assert "<li>Artifact TLDR</li>" in html
     assert "<li>Artifact executive summary</li>" in html
     assert '<section class="panel" id="section-snapshot"' in html
     assert "Metadata below the lead" in html
-    assert "<ul class=\"claim-list\"" in html
+    assert '<ul class="claim-list"' in html
     assert "f1 · report page 4" in html
     assert "q1 · report page 2 · Report" in html
-    assert "style=\"max-width:none\"" not in html
+    assert 'style="max-width:none"' not in html
+    assert 'data-market-lense-publish-entity="true"' in html
+    assert '"entity_type":"report"' in html
+    assert '"canonical_route_intent":"wordpress:ml_report"' in html
 
 
 def test_render_expands_covered_topics_with_briefs(tmp_path):
@@ -324,7 +327,9 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
     assert "Source URL was not available in the extracted report metadata." in html
 
 
-def test_render_relabels_unknown_quote_speakers_and_shows_citation_micro_lines(tmp_path):
+def test_render_relabels_unknown_quote_speakers_and_shows_citation_micro_lines(
+    tmp_path,
+):
     data = {
         "title": "Unknown speaker report",
         "tldr": "TLDR",
@@ -412,7 +417,10 @@ def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):
         "time_period": "2026 (fieldwork Oct 2025)",
         "contents_page_number": 0,
         "artifacts": {
-            "summary": {"tldr": "Concise lead.", "executive_summary": "Longer summary."},
+            "summary": {
+                "tldr": "Concise lead.",
+                "executive_summary": "Longer summary.",
+            },
             "toc_entries": [
                 {
                     "display_title": "Demand outlook",
@@ -714,7 +722,9 @@ def test_render_adds_responsive_srcset_when_variant_exists(tmp_path):
     resp = render_report(req, _ctx())
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
-    assert 'srcset="report/slices/primary.png 1x, report/slices/primary@2x.png 2x"' in html
+    assert (
+        'srcset="report/slices/primary.png 1x, report/slices/primary@2x.png 2x"' in html
+    )
     assert 'sizes="(max-width: 800px) 100vw, 980px"' in html
     assert 'width="800"' in html
     assert 'height="450"' in html

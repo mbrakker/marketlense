@@ -1071,6 +1071,9 @@ def test_build_cross_report_publish_package_contains_traceable_html_and_metadata
     assert "Raw metric appendix" in package.html_text
     assert "Uncertainty and divergence notes" in package.html_text
     assert "data-market-lense-cross-report-metadata" in package.html_text
+    assert 'data-market-lense-publish-entity="true"' in package.html_text
+    assert '"entity_type":"briefing"' in package.html_text
+    assert '"canonical_route_intent":"wordpress:ml_briefing"' in package.html_text
     assert "Drive fileId: cross-report:analysis-ai-commerce" in package.html_text
     assert "normalized average" not in package.html_text.casefold()
     assert "average across publishers" not in package.html_text.casefold()

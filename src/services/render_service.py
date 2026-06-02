@@ -8,10 +8,12 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image
 from src.contracts.files import WriteBytesRequest
+from src.contracts.publish import PublishEntityMetadata
 from src.contracts.report_assets import RenderRequest, RenderResponse
 from src.contracts.run_context import RunContext
 from src.services import file_service
 from src.utils.errors import AppError
+from src.utils.html_utils import publish_entity_metadata_script
 from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
@@ -1017,6 +1019,15 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
         preview_png=request.preview_png,
         tag_acronym_map=tag_acronym_map,
         json_ld=json_ld,
+        publish_entity_metadata_script=publish_entity_metadata_script(
+            PublishEntityMetadata(
+                schema_version="1.0",
+                entity_type="report",
+                source_artifact_id=request.file_id,
+                canonical_route_intent="wordpress:ml_report",
+                publish_eligible=True,
+            )
+        ),
     )
     report_name = slugify(request.doc_name)
     out_dir = Path(request.out_dir)

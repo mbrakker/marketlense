@@ -6,6 +6,8 @@ from types import SimpleNamespace
 import logging
 import json
 
+import pytest
+
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportPublishPackage,
@@ -17,6 +19,7 @@ from src.contracts.wordpress import (
     WordPressTaxonomyEnsureResponse,
 )
 from src.orchestrators.publish_orchestrator import publish_cross_report_package
+from src.utils.errors import AppError
 
 
 def _package(tmp_path) -> CrossReportPublishPackage:
@@ -110,6 +113,38 @@ def test_publish_cross_report_package_dry_run_skips_wordpress(
     assert result.target_route == "wordpress:ml_briefing"
     assert result.idempotency_reused is False
     assert calls == []
+
+
+def test_publish_cross_report_package_dry_run_routes_without_publish_settings(
+    tmp_path,
+    run_context,
+) -> None:
+    result = publish_cross_report_package(
+        _package(tmp_path),
+        None,
+        run_context,
+        dry_run=True,
+    )
+
+    assert result.status == "dry_run"
+    assert result.target_post_type == "ml_briefing"
+    assert result.target_route == "wordpress:ml_briefing"
+
+
+def test_publish_cross_report_package_live_requires_publish_settings(
+    tmp_path,
+    run_context,
+) -> None:
+    with pytest.raises(AppError) as error_info:
+        publish_cross_report_package(
+            _package(tmp_path),
+            None,
+            run_context,
+            dry_run=False,
+        )
+
+    assert error_info.value.code == "cross_report_publish_settings_missing"
+    assert error_info.value.retryable is False
 
 
 def test_publish_cross_report_package_dry_run_reports_briefing_payload_classification(
@@ -241,7 +276,9 @@ def test_publish_cross_report_package_routes_briefing_packages_to_briefing_post_
 
     assert result.status == "published"
     assert result.target_route == "wordpress:ml_briefing"
-    assert result.post_url == "https://example.com/briefings/ai-commerce-across-reports/"
+    assert (
+        result.post_url == "https://example.com/briefings/ai-commerce-across-reports/"
+    )
     assert observed_lookup_post_types == ["ml_briefing"]
     assert observed_publish_post_types == ["ml_briefing"]
     assert settings.wp.post_type == "ml_report"

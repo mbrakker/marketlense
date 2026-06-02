@@ -1,6 +1,7 @@
 import unittest
 
 from src.utils.html_utils import (
+    extract_publish_entity_metadata,
     extract_body_html,
     extract_file_id,
     extract_image_sources,
@@ -51,6 +52,26 @@ class TestHtmlUtils(unittest.TestCase):
         self.assertIn('src="cover.png"', stripped)
         self.assertNotIn("srcset=", stripped)
         self.assertNotIn("sizes=", stripped)
+
+    def test_extract_publish_entity_metadata(self) -> None:
+        html = (
+            '<script type="application/json" '
+            'data-market-lense-publish-entity="true">'
+            '{"schema_version":"1.0","entity_type":"signal",'
+            '"source_artifact_id":"signal:checkout-trust",'
+            '"canonical_route_intent":"wordpress:ml_signal",'
+            '"publish_eligible":true}'
+            "</script>"
+        )
+
+        metadata = extract_publish_entity_metadata(html)
+
+        self.assertIsNotNone(metadata)
+        assert metadata is not None
+        self.assertEqual(metadata.entity_type, "signal")
+        self.assertEqual(metadata.source_artifact_id, "signal:checkout-trust")
+        self.assertEqual(metadata.canonical_route_intent, "wordpress:ml_signal")
+        self.assertTrue(metadata.publish_eligible)
 
 
 if __name__ == "__main__":

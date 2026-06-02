@@ -14,7 +14,7 @@ Core WordPress domain plugin for Market Lense.
 
 Market Lense Core provides the WordPress data model required by the Market Lense publishing pipeline and block theme:
 
-* Custom post type: `ml_report`
+* Custom post types: `ml_report`, `ml_signal`, and `ml_briefing`
 * Taxonomies: native `category` support for report topics and `ml_publisher`
 * Publisher term profile metadata:
   * `ml_publisher_homepage`
@@ -22,7 +22,7 @@ Market Lense Core provides the WordPress data model required by the Market Lense
   * `ml_publisher_icon_source`
   * `ml_publisher_notion_page_id`
   * `ml_publisher_notion_page_url`
-* REST exposure for the CPT, native categories, publisher taxonomy, and core report metadata
+* REST exposure for the CPTs, native categories, publisher taxonomy, and core report metadata
 * Metadata synchronization from rendered digest content (`ml_file_id`, publisher, time period, region)
 * Publisher projection from digest metadata and taxonomy panels
 * Homepage hero snapshot includes a rotating `Signal of the moment` card sourced from a random report full-text key-data insight with linked report attribution
@@ -44,7 +44,7 @@ This plugin is intended to be used together with the `marketlense` block theme.
 1. Upload the plugin ZIP in WordPress Admin: `Plugins -> Add New -> Upload Plugin`.
 2. Activate `Market Lense Core`.
 3. Ensure the `marketlense` theme is installed and activated.
-4. Confirm that `/wp-json/wp/v2/ml_report` is reachable.
+4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
 

@@ -18,6 +18,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportValidationResult,
     validate_cross_report_contract,
 )
+from src.contracts.publish import PublishEntityMetadata
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
 from src.contracts.run_context import RunContext
 from src.generators.cross_report_publish_html import build_cross_report_html_document
@@ -516,6 +517,26 @@ def build_cross_report_publish_package(
     evidence_reference_ids = [item.evidence_id for item in generated.evidence]
     raw_metric_ids = [item.metric_id for item in generated.raw_metrics]
     package_id = f"cross-report:{generated.analysis_id}"
+    entity_type_by_route = {
+        "wordpress:ml_briefing": "briefing",
+        "wordpress:ml_signal": "signal",
+    }
+    entity_type = entity_type_by_route.get(target_route)
+    if entity_type is None:
+        raise AppError(
+            code="publish_entity_metadata_unsupported",
+            message="Cross-report package target route is not a supported public entity route.",
+            retryable=False,
+            severity="error",
+            context={"target_route": target_route},
+        )
+    publish_entity_metadata = PublishEntityMetadata(
+        schema_version="1.0",
+        entity_type=entity_type,
+        source_artifact_id=package_id,
+        canonical_route_intent=target_route,
+        publish_eligible=True,
+    )
     machine_metadata = {
         "schema_version": CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         "analysis_id": generated.analysis_id,
@@ -526,6 +547,7 @@ def build_cross_report_publish_package(
         "canonical_artifact_path": artifact_path,
         "prompt_hashes": dict(generated.prompt_hashes),
         "validation_status": validation_result.status,
+        "public_entity_metadata": asdict(publish_entity_metadata),
     }
     body_html, html_text = build_cross_report_html_document(
         generated=generated,
@@ -533,6 +555,7 @@ def build_cross_report_publish_package(
         source_metadata=source_metadata,
         machine_metadata=machine_metadata,
         file_id=package_id,
+        publish_entity_metadata=publish_entity_metadata,
     )
     package = CrossReportPublishPackage(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,

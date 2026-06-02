@@ -7,6 +7,33 @@ from src.contracts.wordpress import WordPressAuthSettings
 
 
 @dataclass(frozen=True)
+class PublishEntityMetadata:
+    schema_version: str = field(
+        metadata={"doc": "Generated public entity metadata schema version."}
+    )
+    entity_type: str = field(
+        metadata={
+            "doc": "Public entity type represented by the generated HTML artifact."
+        }
+    )
+    source_artifact_id: str = field(
+        metadata={
+            "doc": "Stable source artifact identifier used to trace the published entity."
+        }
+    )
+    canonical_route_intent: str = field(
+        metadata={
+            "doc": "Canonical publication route intent, for example wordpress:ml_report."
+        }
+    )
+    publish_eligible: bool = field(
+        metadata={
+            "doc": "True when the generated artifact is eligible for WordPress publication."
+        }
+    )
+
+
+@dataclass(frozen=True)
 class PublishSettings:
     schema_version: str = field(metadata={"doc": "Publish settings schema version."})
     output_dir: str = field(metadata={"doc": "Output directory containing HTML files."})
@@ -67,7 +94,9 @@ class PublishHtmlSnapshot:
     )
     title: Optional[str] = field(
         default=None,
-        metadata={"doc": "Parsed publish title extracted from h1/title tags, if present."},
+        metadata={
+            "doc": "Parsed publish title extracted from h1/title tags, if present."
+        },
     )
     body_html: str = field(
         default="",
@@ -79,7 +108,15 @@ class PublishHtmlSnapshot:
     )
     preview_image_src: Optional[str] = field(
         default=None,
-        metadata={"doc": "Preview image src extracted from the dedicated preview block, if present."},
+        metadata={
+            "doc": "Preview image src extracted from the dedicated preview block, if present."
+        },
+    )
+    entity_metadata: Optional[PublishEntityMetadata] = field(
+        default=None,
+        metadata={
+            "doc": "Typed public entity metadata embedded in the generated HTML artifact."
+        },
     )
 
 

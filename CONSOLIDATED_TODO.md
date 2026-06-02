@@ -215,6 +215,16 @@ Scope: gaps identified by comparing the README direction against the current `sr
     - WordPress publish code can map each public projection entity to a stable route/template/surface.
     - Integration tests cover report-to-entity projection and WordPress publish/readback for each implemented entity.
 
+- **Title:** Deploy WordPress REST exposure for Briefing and Signal publish entities [Impact: 5/5, Effort: 2/5]
+  - Explanation: The local bundled WordPress plugin registers `ml_report`, `ml_briefing`, and `ml_signal`, but the remote WordPress site currently exposes only `ml_report` through REST. Metadata-routed publish can create report drafts, while live Briefing and Signal publication is blocked by remote deployment/site state rather than Python publish routing.
+  - Pros: Unblocks live end-to-end publish/readback validation for generated Briefing and Signal HTML and aligns the deployed site with the local plugin contract.
+  - Cons: Requires coordinated WordPress deployment or plugin activation verification outside the Python repository.
+  - Acceptance Criteria:
+    - Remote `/wp-json/wp/v2/types` exposes `ml_briefing` and `ml_signal` with REST collection routes.
+    - Live WordPress publish can create draft `ml_briefing` and `ml_signal` posts from existing generated artifacts with embedded publish entity metadata.
+    - Readback confirms the created posts retain the expected post type, slug, title, and publish metadata route intent.
+    - README or deployment notes document the plugin/version state required for all public publish entities.
+
 - **Title:** Expose original report source URLs and page-only grounding citations [Impact: 5/5, Effort: 3/5]
   - Explanation: Public report pages need a clear source URL so readers can manually download the full original report. Grounding citations also need to resolve to the original report page only, using stable display text like `Report Name, page XX`, instead of pointing at generated artifacts, intermediate evidence windows, or local pipeline paths.
   - Pros: Improves reader trust, makes source verification practical, and prevents generated pages from exposing pipeline-internal citation targets.
@@ -235,17 +245,6 @@ Scope: gaps identified by comparing the README direction against the current `sr
     - Compatibility behavior for old core `post` digests is explicitly documented or removed.
     - Public UI copy consistently uses Report for report entities and Briefing only for briefing entities.
     - Tests verify configured post type, WP payload post type, and resulting WordPress content type.
-
-- **Title:** Route WordPress publishing by generated HTML entity metadata [Impact: 5/5, Effort: 4/5]
-  - Explanation: Generated HTML artifacts need explicit metadata declaring their public entity type, such as report, signal, briefing, figure, region, or time period. WordPress publishing should use that metadata to route each artifact to the correct post type, taxonomy, template, and front-end section through one unified publish path, instead of relying on filename conventions, caller-specific branches, or duplicated publish flows.
-  - Pros: Makes publication deterministic across entity types, reduces post-type drift, and gives WordPress one routing contract for all generated public artifacts.
-  - Cons: Requires contract changes across rendering, publish payload construction, and WordPress route/template selection.
-  - Acceptance Criteria:
-    - Every generated HTML artifact includes typed metadata for entity type, schema version, source artifact ID, canonical route intent, and publish eligibility.
-    - Publish orchestration reads entity metadata through a dataclass contract and routes through one canonical WordPress publish boundary.
-    - WordPress publish code maps each supported entity type to the correct post type, taxonomy assignments, template, and front-end section.
-    - Unsupported or missing entity metadata fails with a typed `AppError` and structured logs instead of publishing to a default section.
-    - Tests cover report, signal, and briefing routing plus negative paths for missing, unknown, and mismatched metadata.
 
 - **Title:** Make WordPress categories the canonical Topic surface with full topic semantics [Impact: 4/5, Effort: 3/5]
   - Explanation: The current implementation already uses WordPress categories as the public Topic path, populated from `category-mappings.yaml`. The remaining gap is that categories currently publish mostly as labels, while README defines Topics as controlled taxonomy entries with definition, inclusion, and exclusion rules.

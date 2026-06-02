@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import html
+import json
 import re
 from typing import Dict, List, Optional
 
-from src.contracts.publish import PublishHtmlSnapshot
+from src.contracts.publish import PublishEntityMetadata, PublishHtmlSnapshot
 
 
 _IMG_SRC_RX = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
@@ -20,9 +21,14 @@ _FILE_ID_META_RX = re.compile(
     r'<meta[^>]+name=["\']drive-file-id["\'][^>]+content=["\']([^"\']+)["\']',
     re.IGNORECASE,
 )
-_FILE_ID_TEXT_RX = re.compile(r"Drive fileId:\s*([A-Za-z0-9._-]+)", re.IGNORECASE)
+_FILE_ID_TEXT_RX = re.compile(r"Drive fileId:\s*([A-Za-z0-9._:-]+)", re.IGNORECASE)
 _PREVIEW_BLOCK_RX = re.compile(
     r'<div class="preview".*?</div>', re.IGNORECASE | re.DOTALL
+)
+_PUBLISH_ENTITY_METADATA_RX = re.compile(
+    r'<script\b[^>]*data-market-lense-publish-entity=["\']true["\'][^>]*>'
+    r"(.*?)</script>",
+    re.IGNORECASE | re.DOTALL,
 )
 
 
@@ -104,6 +110,77 @@ def extract_preview_image(html_text: str) -> Optional[str]:
     return imgs[0] if imgs else None
 
 
+def publish_entity_metadata_script(metadata: PublishEntityMetadata) -> str:
+    payload = {
+        "schema_version": metadata.schema_version,
+        "entity_type": metadata.entity_type,
+        "source_artifact_id": metadata.source_artifact_id,
+        "canonical_route_intent": metadata.canonical_route_intent,
+        "publish_eligible": metadata.publish_eligible,
+    }
+    metadata_json = json.dumps(
+        payload,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return (
+        '<script type="application/json" '
+        'data-market-lense-publish-entity="true">'
+        f"{html.escape(metadata_json, quote=False)}</script>"
+    )
+
+
+def extract_publish_entity_metadata(html_text: str) -> Optional[PublishEntityMetadata]:
+    m = _PUBLISH_ENTITY_METADATA_RX.search(html_text)
+    if not m:
+        return None
+    try:
+        payload = json.loads(html.unescape(m.group(1)).strip())
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    try:
+        schema_version = str(payload.get("schema_version") or "").strip()
+        entity_type = str(payload.get("entity_type") or "").strip()
+        source_artifact_id = str(payload.get("source_artifact_id") or "").strip()
+        canonical_route_intent = str(
+            payload.get("canonical_route_intent") or ""
+        ).strip()
+        publish_eligible = bool(payload["publish_eligible"])
+    except KeyError:
+        return None
+    if not (
+        schema_version and entity_type and source_artifact_id and canonical_route_intent
+    ):
+        return None
+    return PublishEntityMetadata(
+        schema_version=schema_version,
+        entity_type=entity_type,
+        source_artifact_id=source_artifact_id,
+        canonical_route_intent=canonical_route_intent,
+        publish_eligible=publish_eligible,
+    )
+
+
+def ensure_publish_entity_metadata_html(
+    html_text: str, metadata: PublishEntityMetadata
+) -> str:
+    if extract_publish_entity_metadata(html_text) is not None:
+        return html_text
+    script = publish_entity_metadata_script(metadata)
+    head_close = re.search(r"</head\s*>", html_text, re.IGNORECASE)
+    if head_close:
+        return (
+            html_text[: head_close.start()] + script + html_text[head_close.start() :]
+        )
+    body_open = re.search(r"<body\b[^>]*>", html_text, re.IGNORECASE)
+    if body_open:
+        return html_text[: body_open.end()] + script + html_text[body_open.end() :]
+    return script + html_text
+
+
 def build_publish_html_snapshot(html_text: str) -> PublishHtmlSnapshot:
     return PublishHtmlSnapshot(
         schema_version="1.0",
@@ -113,6 +190,7 @@ def build_publish_html_snapshot(html_text: str) -> PublishHtmlSnapshot:
         body_html=extract_body_html(html_text),
         image_sources=extract_image_sources(html_text),
         preview_image_src=extract_preview_image(html_text),
+        entity_metadata=extract_publish_entity_metadata(html_text),
     )
 
 

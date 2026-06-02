@@ -7,7 +7,7 @@ import logging
 import time
 import json
 from pathlib import Path
-from typing import Callable, List, Optional, cast
+from typing import Callable, List, Optional, TypedDict, cast
 from urllib.parse import urlparse
 
 from src.contracts.files import ListHtmlRequest, ReadTextRequest
@@ -25,6 +25,7 @@ from src.contracts.idempotency import (
     OrchestratorIdempotencyRecordRequest,
 )
 from src.contracts.publish import (
+    PublishEntityMetadata,
     PublishHtmlSnapshot,
     PublishOutcome,
     PublishRequest,
@@ -77,6 +78,7 @@ from src.services.wordpress_service import (
     find_posts_by_file_id_batch,
 )
 from src.utils.html_utils import build_publish_html_snapshot
+from src.utils.html_utils import ensure_publish_entity_metadata_html
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.slugify import slugify
@@ -86,10 +88,46 @@ from src.utils.wp_auth import build_auth_header
 logger = logging.getLogger("market_lense.publish_orchestrator")
 _PUBLISH_IDEMPOTENCY_SCOPE = "publish_orchestrator.publish_html"
 _CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE = "publish_orchestrator.cross_report_package"
+
+
+@dataclass(frozen=True)
+class _PublishEntityRoute:
+    entity_type: str
+    canonical_route_intent: str
+    post_type: str
+    front_end_section: str
+    template: str
+
+
+_PUBLISH_ENTITY_ROUTES = {
+    "report": _PublishEntityRoute(
+        entity_type="report",
+        canonical_route_intent="wordpress:ml_report",
+        post_type="ml_report",
+        front_end_section="reports",
+        template="single-ml_report",
+    ),
+    "briefing": _PublishEntityRoute(
+        entity_type="briefing",
+        canonical_route_intent="wordpress:ml_briefing",
+        post_type="ml_briefing",
+        front_end_section="briefings",
+        template="single-ml_briefing",
+    ),
+    "signal": _PublishEntityRoute(
+        entity_type="signal",
+        canonical_route_intent="wordpress:ml_signal",
+        post_type="ml_signal",
+        front_end_section="signals",
+        template="single-ml_signal",
+    ),
+}
+_PUBLISH_ROUTES_BY_INTENT = {
+    route.canonical_route_intent: route for route in _PUBLISH_ENTITY_ROUTES.values()
+}
 _CROSS_REPORT_WORDPRESS_POST_TYPES = {
-    "wordpress:ml_report": "ml_report",
-    "wordpress:ml_briefing": "ml_briefing",
-    "wordpress:ml_signal": "ml_signal",
+    route.canonical_route_intent: route.post_type
+    for route in _PUBLISH_ENTITY_ROUTES.values()
 }
 
 
@@ -98,6 +136,8 @@ class _PublishCandidate:
     html_path: str
     file_id: Optional[str]
     html_snapshot: Optional[PublishHtmlSnapshot]
+    entity_route: _PublishEntityRoute | None
+    entity_error: AppError | None
 
 
 @dataclass(frozen=True)
@@ -117,6 +157,14 @@ class _CrossReportWordPressClassification:
     category_terms: list[WordPressTaxonomyTerm]
     tag_slugs: list[str]
     taxonomy_terms: dict[str, list[WordPressTaxonomyTerm]]
+
+
+class _CrossReportResultFields(TypedDict):
+    target_post_type: str
+    target_slug: str
+    category_slugs: list[str]
+    tag_slugs: list[str]
+    taxonomy_term_slugs: dict[str, list[str]]
 
 
 def _metadata_index(
@@ -158,6 +206,113 @@ def _metadata_index(
     return html_file_id_map, metadata_by_file_id
 
 
+def _publish_settings_for_post_type(
+    settings: PublishSettings,
+    post_type: str,
+) -> PublishSettings:
+    if post_type == settings.wp.post_type:
+        return settings
+
+    try:
+        route_wp_settings = replace(settings.wp, post_type=post_type)
+    except TypeError:
+        route_wp_settings = copy.copy(settings.wp)
+        object.__setattr__(route_wp_settings, "post_type", post_type)
+
+    try:
+        return replace(settings, wp=route_wp_settings)
+    except TypeError:
+        route_settings = copy.copy(settings)
+        object.__setattr__(route_settings, "wp", route_wp_settings)
+        return route_settings
+
+
+def _require_publish_settings(settings: PublishSettings | None) -> PublishSettings:
+    if settings is None:
+        raise AppError(
+            code="cross_report_publish_settings_missing",
+            message="Cross-report live publishing requires WordPress publish settings.",
+            retryable=False,
+            severity="error",
+            context={},
+        )
+    return settings
+
+
+def _publish_entity_error(
+    *,
+    code: str,
+    message: str,
+    html_path: str,
+    metadata: PublishEntityMetadata | None,
+    context: dict[str, object] | None = None,
+) -> AppError:
+    return AppError(
+        code=code,
+        message=message,
+        retryable=False,
+        severity="error",
+        context={
+            "html_path": html_path,
+            "entity_type": metadata.entity_type if metadata else "",
+            "canonical_route_intent": metadata.canonical_route_intent
+            if metadata
+            else "",
+            **dict(context or {}),
+        },
+    )
+
+
+def _route_publish_entity_metadata(
+    *,
+    metadata: PublishEntityMetadata | None,
+    html_path: str,
+) -> _PublishEntityRoute:
+    if metadata is None:
+        raise _publish_entity_error(
+            code="publish_entity_metadata_missing",
+            message="Generated HTML artifact is missing public entity metadata.",
+            html_path=html_path,
+            metadata=None,
+        )
+    if metadata.schema_version != "1.0":
+        raise _publish_entity_error(
+            code="publish_entity_metadata_schema_unsupported",
+            message="Generated HTML artifact has unsupported entity metadata schema.",
+            html_path=html_path,
+            metadata=metadata,
+            context={"schema_version": metadata.schema_version},
+        )
+    if not metadata.publish_eligible:
+        raise _publish_entity_error(
+            code="publish_entity_not_eligible",
+            message="Generated HTML artifact is not eligible for publication.",
+            html_path=html_path,
+            metadata=metadata,
+        )
+    route_by_entity = _PUBLISH_ENTITY_ROUTES.get(metadata.entity_type)
+    route_by_intent = _PUBLISH_ROUTES_BY_INTENT.get(metadata.canonical_route_intent)
+    if route_by_entity is None or route_by_intent is None:
+        raise _publish_entity_error(
+            code="publish_entity_metadata_unsupported",
+            message="Generated HTML artifact declares an unsupported public entity route.",
+            html_path=html_path,
+            metadata=metadata,
+        )
+    if route_by_entity != route_by_intent:
+        raise _publish_entity_error(
+            code="publish_entity_metadata_mismatch",
+            message="Generated HTML artifact entity type and route intent do not match.",
+            html_path=html_path,
+            metadata=metadata,
+            context={
+                "expected_route_intent": route_by_entity.canonical_route_intent,
+                "expected_post_type": route_by_entity.post_type,
+            },
+        )
+    return route_by_entity
+
+
 def _resolve_publish_candidates(
     *,
     html_paths: list[str],
@@ -167,7 +322,49 @@ def _resolve_publish_candidates(
     candidates: list[_PublishCandidate] = []
     for html_path in html_paths:
         file_ctx = child_context(ctx, task_id=html_path)
-        html_snapshot: Optional[PublishHtmlSnapshot] = None
+        html_text = read_text(
+            ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
+        ).content
+        html_snapshot = build_publish_html_snapshot(html_text)
+        entity_route: _PublishEntityRoute | None = None
+        entity_error: AppError | None = None
+        try:
+            entity_route = _route_publish_entity_metadata(
+                metadata=html_snapshot.entity_metadata,
+                html_path=html_path,
+            )
+            logger.info(
+                log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="publish_entity_metadata_routed",
+                    module=logger.name,
+                    fields={
+                        "html_path": html_path,
+                        "entity_type": entity_route.entity_type,
+                        "canonical_route_intent": entity_route.canonical_route_intent,
+                        "post_type": entity_route.post_type,
+                        "front_end_section": entity_route.front_end_section,
+                        "template": entity_route.template,
+                    },
+                )
+            )
+        except AppError as exc:
+            entity_error = exc
+            logger.info(
+                log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="publish_entity_metadata_invalid",
+                    module=logger.name,
+                    fields={
+                        "html_path": html_path,
+                        "code": exc.code,
+                        "error": exc.message,
+                        **exc.context,
+                    },
+                )
+            )
         file_id = html_file_id_map.get(canonicalize_html_path(html_path), "")
         if file_id:
             logger.info(
@@ -184,11 +381,14 @@ def _resolve_publish_candidates(
                 )
             )
         else:
-            html_text = read_text(
-                ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
-            ).content
-            html_snapshot = build_publish_html_snapshot(html_text)
-            file_id = str(html_snapshot.file_id or "").strip()
+            file_id = str(
+                html_snapshot.file_id
+                or (
+                    html_snapshot.entity_metadata.source_artifact_id
+                    if html_snapshot.entity_metadata
+                    else ""
+                )
+            ).strip()
             if file_id:
                 logger.info(
                     log_event(
@@ -199,7 +399,9 @@ def _resolve_publish_candidates(
                         fields={
                             "html_path": html_path,
                             "file_id": file_id,
-                            "source": "html",
+                            "source": "html"
+                            if html_snapshot.file_id
+                            else "entity_metadata",
                         },
                     )
                 )
@@ -208,6 +410,8 @@ def _resolve_publish_candidates(
                 html_path=html_path,
                 file_id=file_id or None,
                 html_snapshot=html_snapshot,
+                entity_route=entity_route,
+                entity_error=entity_error,
             )
         )
     return candidates
@@ -244,6 +448,7 @@ def _batch_lookup_existing_posts(
     auth_header: str,
     candidates: list[_PublishCandidate],
     state_rows_by_file_id: dict[str, StateGetResponse],
+    post_type: str,
     ctx: RunContext,
 ) -> dict[str, WordPressPostLookupBatchItem]:
     eligible_file_ids = [
@@ -261,7 +466,7 @@ def _batch_lookup_existing_posts(
             file_ids=eligible_file_ids,
             ssl_verify=settings.wp.ssl_verify,
             ca_bundle_path=settings.wp.ca_bundle_path,
-            post_type=settings.wp.post_type,
+            post_type=post_type,
         ),
         ctx,
     )
@@ -491,6 +696,8 @@ def _build_publish_preflight_entries(
     eligible_network_preflight_file_ids: list[str] = []
 
     for candidate in candidates:
+        if candidate.entity_error is not None:
+            continue
         file_id = str(candidate.file_id or "").strip()
         if not file_id:
             continue
@@ -523,23 +730,39 @@ def _build_publish_preflight_entries(
         ):
             eligible_network_preflight_file_ids.append(file_id)
 
-    existing_posts_by_file_id = _batch_lookup_existing_posts(
-        settings=settings,
-        base_url=base_url,
-        auth_header=auth_header,
-        candidates=[
+    eligible_candidates = [
+        candidate
+        for candidate in candidates
+        if str(candidate.file_id or "").strip() in eligible_network_preflight_file_ids
+        and candidate.entity_route is not None
+    ]
+    existing_posts_by_file_id: dict[str, WordPressPostLookupBatchItem] = {}
+    eligible_post_types = {
+        candidate.entity_route.post_type
+        for candidate in eligible_candidates
+        if candidate.entity_route
+    }
+    for post_type in sorted(eligible_post_types):
+        post_type_candidates = [
             candidate
-            for candidate in candidates
-            if str(candidate.file_id or "").strip()
-            in eligible_network_preflight_file_ids
-        ],
-        state_rows_by_file_id={
-            file_id: state_rows_by_file_id[file_id]
-            for file_id in eligible_network_preflight_file_ids
-            if file_id in state_rows_by_file_id
-        },
-        ctx=ctx,
-    )
+            for candidate in eligible_candidates
+            if candidate.entity_route and candidate.entity_route.post_type == post_type
+        ]
+        existing_posts_by_file_id.update(
+            _batch_lookup_existing_posts(
+                settings=settings,
+                base_url=base_url,
+                auth_header=auth_header,
+                candidates=post_type_candidates,
+                state_rows_by_file_id={
+                    file_id: state_rows_by_file_id[file_id]
+                    for file_id in eligible_network_preflight_file_ids
+                    if file_id in state_rows_by_file_id
+                },
+                post_type=post_type,
+                ctx=ctx,
+            )
+        )
     resolved_terms_by_file_id = _resolve_batch_term_assignments(
         settings=settings,
         metadata_by_file_id=metadata_by_file_id,
@@ -743,29 +966,26 @@ def _record_publish_idempotency(
     )
 
 
+def _cross_report_post_type_for_target_route(target_route: str) -> str:
+    normalized_route = str(target_route).strip()
+    post_type = _CROSS_REPORT_WORDPRESS_POST_TYPES.get(normalized_route)
+    if post_type is None:
+        raise AppError(
+            code="publish_entity_metadata_unsupported",
+            message="Cross-report package declares an unsupported WordPress target route.",
+            retryable=False,
+            severity="error",
+            context={"target_route": normalized_route},
+        )
+    return post_type
+
+
 def _cross_report_settings_for_target_route(
     settings: PublishSettings,
     target_route: str,
 ) -> PublishSettings:
-    post_type = _CROSS_REPORT_WORDPRESS_POST_TYPES.get(
-        str(target_route).strip(),
-        settings.wp.post_type,
-    )
-    if post_type == settings.wp.post_type:
-        return settings
-
-    try:
-        route_wp_settings = replace(settings.wp, post_type=post_type)
-    except TypeError:
-        route_wp_settings = copy.copy(settings.wp)
-        route_wp_settings.post_type = post_type
-
-    try:
-        return replace(settings, wp=route_wp_settings)
-    except TypeError:
-        route_settings = copy.copy(settings)
-        route_settings.wp = route_wp_settings
-        return route_settings
+    post_type = _cross_report_post_type_for_target_route(target_route)
+    return _publish_settings_for_post_type(settings, post_type)
 
 
 def _unique_terms_from_labels(labels: list[str]) -> list[WordPressTaxonomyTerm]:
@@ -796,15 +1016,13 @@ def _cross_report_publisher_labels(package: CrossReportPublishPackage) -> list[s
 
 def _cross_report_wordpress_classification(
     package: CrossReportPublishPackage,
-    settings: PublishSettings,
+    post_type: str,
 ) -> _CrossReportWordPressClassification:
     return _CrossReportWordPressClassification(
-        post_type=settings.wp.post_type,
+        post_type=post_type,
         slug=str(package.slug or "").strip() or slugify(package.title),
         category_terms=_unique_terms_from_labels(package.category_labels),
-        tag_slugs=[
-            term.slug for term in _unique_terms_from_labels(package.tag_labels)
-        ],
+        tag_slugs=[term.slug for term in _unique_terms_from_labels(package.tag_labels)],
         taxonomy_terms={
             "ml_publisher": _unique_terms_from_labels(
                 _cross_report_publisher_labels(package)
@@ -813,9 +1031,32 @@ def _cross_report_wordpress_classification(
     )
 
 
+def _publish_entity_metadata_for_route(
+    *,
+    source_artifact_id: str,
+    canonical_route_intent: str,
+) -> PublishEntityMetadata:
+    route = _PUBLISH_ROUTES_BY_INTENT.get(str(canonical_route_intent or "").strip())
+    if route is None:
+        raise AppError(
+            code="publish_entity_metadata_unsupported",
+            message="Generated artifact declares an unsupported WordPress route intent.",
+            retryable=False,
+            severity="error",
+            context={"canonical_route_intent": canonical_route_intent},
+        )
+    return PublishEntityMetadata(
+        schema_version="1.0",
+        entity_type=route.entity_type,
+        source_artifact_id=source_artifact_id,
+        canonical_route_intent=route.canonical_route_intent,
+        publish_eligible=True,
+    )
+
+
 def _cross_report_result_fields(
     classification: _CrossReportWordPressClassification,
-) -> dict[str, object]:
+) -> _CrossReportResultFields:
     return {
         "target_post_type": classification.post_type,
         "target_slug": classification.slug,
@@ -1037,7 +1278,7 @@ def _lookup_cross_report_publish_idempotency(
 
 def publish_cross_report_package(
     package: CrossReportPublishPackage,
-    settings: PublishSettings,
+    settings: PublishSettings | None,
     ctx: RunContext,
     *,
     dry_run: bool = False,
@@ -1057,10 +1298,8 @@ def publish_cross_report_package(
 ) -> CrossReportPublishResultSummary:
     validate_cross_report_contract(package)
     publication_mode = "publish_dry_run" if dry_run else "publish_live"
-    route_settings = _cross_report_settings_for_target_route(
-        settings, package.target_route
-    )
-    classification = _cross_report_wordpress_classification(package, route_settings)
+    route_post_type = _cross_report_post_type_for_target_route(package.target_route)
+    classification = _cross_report_wordpress_classification(package, route_post_type)
     logger.info(
         log_event(
             ctx,
@@ -1103,6 +1342,9 @@ def publish_cross_report_package(
         )
         return result
 
+    route_settings = _cross_report_settings_for_target_route(
+        _require_publish_settings(settings), package.target_route
+    )
     checksum = _cross_report_publish_checksum(package, route_settings)
     reused = _lookup_cross_report_publish_idempotency(
         package=package,
@@ -1203,6 +1445,10 @@ def publish_cross_report_package(
                     body_html=package.body_html,
                     image_sources=[],
                     preview_image_src=None,
+                    entity_metadata=_publish_entity_metadata_for_route(
+                        source_artifact_id=package.file_id,
+                        canonical_route_intent=package.target_route,
+                    ),
                 ),
                 resolved_terms=resolved_terms,
             ),
@@ -1342,6 +1588,14 @@ def _signal_projection_package(
         ).encode("utf-8")
     ).hexdigest()
     stable_file_id = projection.file_id or f"signal:{projection.slug}"
+    publish_entity_metadata = _publish_entity_metadata_for_route(
+        source_artifact_id=stable_file_id,
+        canonical_route_intent=projection.target_route,
+    )
+    signal_html_text = ensure_publish_entity_metadata_html(
+        projection.html_text or f"<html><body>{projection.body_html}</body></html>",
+        publish_entity_metadata,
+    )
     return CrossReportPublishPackage(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         package_id=stable_file_id,
@@ -1351,8 +1605,7 @@ def _signal_projection_package(
         slug=projection.slug,
         excerpt=projection.summary_html,
         body_html=projection.body_html,
-        html_text=projection.html_text
-        or f"<html><body>{projection.body_html}</body></html>",
+        html_text=signal_html_text,
         html_path=f"signal_posts/{projection.slug}.html",
         canonical_artifact_path=f"signal_posts/{projection.slug}.json",
         artifact_sha256=content_hash,
@@ -1373,6 +1626,7 @@ def _signal_projection_package(
             "validation_status": projection.validation_status,
             "confidence": projection.confidence,
             "uncertainty": projection.uncertainty,
+            "public_entity_metadata": asdict(publish_entity_metadata),
         },
     )
 
@@ -1512,11 +1766,36 @@ def run_publish(
         file_ctx = child_context(root_ctx, task_id=html_path)
         html_snapshot = entry.candidate.html_snapshot
         file_id = str(entry.candidate.file_id or "")
+        entity_route = entry.candidate.entity_route
         state_row = entry.state_row
         validation_status = entry.validation_status
         validation_issues = list(entry.validation_issues)
         existing_post_lookup = entry.existing_post_lookup
         resolved_terms = entry.resolved_terms
+
+        if entry.candidate.entity_error is not None:
+            entity_error = entry.candidate.entity_error
+            outcomes.append(
+                PublishOutcome(
+                    schema_version="1.0",
+                    html_path=html_path,
+                    file_id=file_id or None,
+                    status="error",
+                    error=entity_error.code,
+                )
+            )
+            continue
+        if entity_route is None:
+            outcomes.append(
+                PublishOutcome(
+                    schema_version="1.0",
+                    html_path=html_path,
+                    file_id=file_id or None,
+                    status="error",
+                    error="publish_entity_metadata_missing",
+                )
+            )
+            continue
 
         if existing_post_lookup and existing_post_lookup.error_code:
             logger.info(
@@ -1582,14 +1861,14 @@ def run_publish(
             file_id=file_id,
             html_path=html_path,
             html_text=html_snapshot.html_text,
-            post_type=settings.wp.post_type,
+            post_type=entity_route.post_type,
             validation_status=validation_status,
             validation_issues=validation_issues,
         )
         reused_outcome = _lookup_publish_idempotency(
             settings=settings,
             file_id=file_id,
-            post_type=settings.wp.post_type,
+            post_type=entity_route.post_type,
             checksum=publish_checksum,
             ctx=file_ctx,
         )
@@ -1602,7 +1881,7 @@ def run_publish(
                     module=logger.name,
                     fields={
                         "file_id": file_id,
-                        "post_type": settings.wp.post_type,
+                        "post_type": entity_route.post_type,
                         "status": reused_outcome.status,
                         "post_id": reused_outcome.post_id,
                     },
@@ -1617,7 +1896,7 @@ def run_publish(
                 schema_version="1.0",
                 state_db=settings.state_db,
                 file_id=file_id,
-                post_type=settings.wp.post_type,
+                post_type=entity_route.post_type,
             ),
             file_ctx,
         ):
@@ -1687,6 +1966,10 @@ def run_publish(
         def _publish_attempt() -> PublishOutcome:
             nonlocal outcome
             lookup_resp: WordPressPostLookupBatchItem | WordPressPostLookupResponse
+            route_settings = _publish_settings_for_post_type(
+                settings,
+                entity_route.post_type,
+            )
             if existing_post_lookup is not None and not existing_post_lookup.error_code:
                 lookup_resp = existing_post_lookup
             else:
@@ -1698,7 +1981,7 @@ def run_publish(
                         file_id=file_id,
                         ssl_verify=settings.wp.ssl_verify,
                         ca_bundle_path=settings.wp.ca_bundle_path,
-                        post_type=settings.wp.post_type,
+                        post_type=entity_route.post_type,
                     ),
                     file_ctx,
                 )
@@ -1720,7 +2003,7 @@ def run_publish(
                         md5=state_row.md5,
                         wp_post_id=lookup_resp.post_id,
                         wp_post_url=lookup_resp.link,
-                        post_type=settings.wp.post_type,
+                        post_type=entity_route.post_type,
                     ),
                     file_ctx,
                 )
@@ -1744,7 +2027,7 @@ def run_publish(
                     html_snapshot=html_snapshot,
                     resolved_terms=resolved_terms,
                 ),
-                settings,
+                route_settings,
                 file_ctx,
             )
             outcome = _with_validation(outcome, validation_status, validation_issues)
@@ -1757,7 +2040,7 @@ def run_publish(
                         md5=state_row.md5,
                         wp_post_id=outcome.post_id,
                         wp_post_url=outcome.post_url,
-                        post_type=settings.wp.post_type,
+                        post_type=entity_route.post_type,
                     ),
                     file_ctx,
                 )
@@ -1765,7 +2048,7 @@ def run_publish(
                 _record_publish_idempotency(
                     settings=settings,
                     outcome=outcome,
-                    post_type=settings.wp.post_type,
+                    post_type=entity_route.post_type,
                     checksum=publish_checksum,
                     ctx=file_ctx,
                 )
