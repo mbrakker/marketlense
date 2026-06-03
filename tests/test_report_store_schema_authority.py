@@ -73,7 +73,7 @@ def test_report_store_schema_authority_is_sqlite_migration_service(
             """
         ).fetchone()
 
-    assert schema_version == (12,)
+    assert schema_version == (13,)
     assert applied_migrations == [
         ("reports_db_001_create_reports_core",),
         ("reports_db_002_create_report_sources_base",),
@@ -87,6 +87,7 @@ def test_report_store_schema_authority_is_sqlite_migration_service(
         ("reports_db_010_create_analytics_projection_tables",),
         ("reports_db_011_add_report_source_value_scores",),
         ("reports_db_012_create_private_api_candidate_ledger",),
+        ("reports_db_013_create_signal_candidate_projection",),
     ]
     assert private_api_table == ("publisher_private_api_candidates",)
     assert publisher == (

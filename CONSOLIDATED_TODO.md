@@ -32,7 +32,7 @@ Scoring:
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
 - `vector_projection_queue` persists `embedding_status` and `embedding_version`, but there is no stored embedding vector/provider reference or embedding workflow beyond queue staging.
-- Cross-report Briefing and grounded Signal publish paths exist locally. Durable Signal candidate extraction/clustering from ingested reports is not implemented.
+- Cross-report Briefing and grounded Signal publish paths exist locally. Durable Signal candidate extraction, ingestion-time Signal artifact-pack generation, separate Signal-store persistence, grouping, readback, and publish reuse are landed through `src/contracts/signal_candidates.py`, `src/generators/signal_candidate_generator.py`, `src/generators/report_signal_artifact_generator.py`, `src/orchestrators/signal_candidate_orchestrator.py`, `src/orchestrators/report_generation_orchestrator.py`, and `src/services/analytics_store_service.py`.
 - The local bundled WordPress plugin registers `ml_report`, `ml_signal`, and `ml_briefing` with REST enabled. Remote WordPress exposure remains an external deployment/readback verification item.
 - README/config drift remains: README still states report publishing uses core `posts` in one section, while `src/config/app.yaml` defaults `publish.wp.post_type` to `ml_report`.
 - WordPress design token drift remains: README documents `settings.layout.wideSize` as `82rem`, while `Wordpress/wp-content/themes/marketlense/theme.json` currently uses `84rem`.
@@ -40,7 +40,7 @@ Scoring:
 ## Priority Order
 
 1. Cost and LLM controls.
-2. Analytics projection, Signal candidates, and embeddings.
+2. Analytics projection and embeddings.
 3. Publish durability and WordPress/public entity alignment.
 4. PDF/performance hotspots.
 5. Architecture, schema compatibility, and observability gates.
@@ -94,18 +94,6 @@ Scoring:
     - `embedding_version`, `content_hash`, provider/model metadata, generated timestamp, and retry/error taxonomy are stored and logged.
     - Re-embedding behavior is deterministic when claim text, metadata, content hash, or embedding model version changes.
     - Tests cover successful embedding, failed status, idempotent reruns, stale-content re-embedding, and retrieval by claim/report/topic metadata.
-
-- **Title:** Extract, store, and cluster traceable Signal candidates from ingested reports [Impact: 5/5, Effort: 5/5]
-  - Explanation: Cross-report features can score transient signal candidates and `signal_post_generator` can build a publishable Signal projection. The missing layer is a durable Signal-candidate store produced from ingested reports with source lineage and validation status.
-  - Pros: Makes Signals reusable across briefings and publish workflows while preserving evidence traceability.
-  - Cons: Requires new contracts/tables, validation rules, grouping logic, and integration with existing cross-report selection.
-  - Acceptance Criteria:
-    - A versioned Signal candidate contract captures type, title, summary, confidence/strength, support level, caveats, source report IDs, evidence IDs, and raw source context.
-    - Projection stores Signal candidates durably with lineage to projected claims, findings, metrics, quotes, figures, and page references where applicable.
-    - Validation enforces source-backed evidence, support classification, explicit caveats, and weak/divergent coverage notes.
-    - Related candidates can be clustered into stable Signal groups without normalizing raw metrics or erasing source caveats.
-    - Cross-report source selection, signal scoring, and `signal_post_generator` can consume stored candidates/groups.
-    - Tests cover single-report support, multi-report convergence, contradiction, weak coverage, unsupported Signal rejection, grouping idempotency, and publish reuse.
 
 - **Title:** Complete public entity projection coverage or narrow the README entity contract [Impact: 5/5, Effort: 5/5]
   - Explanation: Reports, Briefings, and Signals have local publish paths, but README still describes a broader public entity model including Figures, Regions, and Time Periods. Those surfaces need either durable public projection contracts/routes or explicit README-scoped exclusions.
@@ -263,6 +251,8 @@ Scoring:
 - Report-store, config-service, OpenAI-service, PDF-service, browser-download, report-download, cross-report-input, and report-generation dependency facade splits.
 - UI-run dead-letter workflow, replay manifests, and operator triage surfaces.
 - Vector-store delete/prune lifecycle and retention orchestration.
+- Durable Signal candidate extraction, clustering, storage, readback, and publish reuse.
+- Ingestion-time grounded Signal artifacts, separate Signal-store persistence, and publish workflow reuse from the Signal base.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
 
@@ -278,7 +268,6 @@ Scoring:
 ### Phase 2: Intelligence Reuse and Public Entity Alignment
 
 - Claim-level embedding persistence and embedding workflow.
-- Durable Signal candidate extraction and grouping.
 - Public entity projection coverage for Figures, Regions, and Time Periods, or README narrowing.
 - WordPress render-time intelligence synthesis replacement with approved projections.
 

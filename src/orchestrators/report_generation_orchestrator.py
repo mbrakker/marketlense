@@ -9,6 +9,7 @@ from src.contracts.analytics_projection import (
     AnalyticsProjectionRunRequest,
     PROJECTION_SCHEMA_VERSION,
 )
+from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.drive import DriveFile
 from src.contracts.files import (
     PipelineCheckpointReadRequest,
@@ -39,6 +40,12 @@ from src.generators.report_generation_shared import derive_title, report_slug
 from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
+)
+from src.generators.report_signal_artifact_generator import (
+    SIGNAL_ARTIFACT_PACK_NAME,
+    build_ingestion_signal_artifact_payload,
+    build_ingestion_signal_extraction_request,
+    planned_signal_artifact_path,
 )
 from src.generators.report_selection_generator import select_report_figures
 from src.generators.report_source_generator import prepare_report_source
@@ -427,6 +434,23 @@ def _analysis_checkpoint_refs(
     return {key: value for key, value in refs.items() if value}
 
 
+def _render_checkpoint_refs(
+    runtime: ReportRuntimeState,
+    source: ReportSourceState,
+    analysis: ReportAnalysisState,
+    preview_resp,
+    outcome: IngestOutcome,
+) -> dict[str, str]:
+    refs = {
+        **_analysis_checkpoint_refs(runtime, source, analysis, preview_resp),
+        "rendered_html": outcome.html_path or "",
+    }
+    for name, path in dict(outcome.evidence_packs or {}).items():
+        if path:
+            refs[str(name)] = str(path)
+    return refs
+
+
 def _source_state_from_checkpoint(
     runtime: ReportRuntimeState,
     raw_source: object,
@@ -570,10 +594,10 @@ def _run_projection(
     analytics_projection_fn: Optional[
         Callable[[AnalyticsProjectionRunRequest], object]
     ],
-) -> None:
+) -> object | None:
     project = analytics_projection_fn or run_analytics_projection
     try:
-        project(
+        return project(
             AnalyticsProjectionRunRequest(
                 schema_version=PROJECTION_SCHEMA_VERSION,
                 db_path=runtime.settings.reports_db,
@@ -597,6 +621,72 @@ def _run_projection(
                 },
             )
         )
+    return None
+
+
+def _run_signal_artifact_generation(
+    runtime: ReportRuntimeState,
+    analysis: ReportAnalysisState,
+    outcome: IngestOutcome,
+    dependencies: ReportGenerationDependencies,
+) -> IngestOutcome:
+    signal_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:signals")
+    extraction_request = build_ingestion_signal_extraction_request(runtime, analysis)
+    logger.info(
+        log_event(
+            signal_ctx,
+            role="orchestrator",
+            event="report_signal_artifact_start",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "reports_db": extraction_request.projected_data_request.db_path,
+                "signal_store_db": extraction_request.db_path,
+                "extraction_request_id": extraction_request.extraction_request_id,
+            },
+        )
+    )
+    extraction = dependencies.signal.run_signal_candidate_extraction(
+        extraction_request,
+        signal_ctx,
+    )
+    artifact_path = planned_signal_artifact_path(runtime)
+    payload = build_ingestion_signal_artifact_payload(
+        runtime,
+        analysis,
+        extraction,
+        artifact_path=artifact_path,
+    )
+    stored = dependencies.signal.analysis_store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=runtime.file.file_id,
+            pack_name=SIGNAL_ARTIFACT_PACK_NAME,
+            payload=payload,
+            report_slug=runtime.report_name,
+        ),
+        signal_ctx,
+    )
+    stored_path = str(getattr(stored, "output_path", "") or artifact_path)
+    evidence_packs = dict(outcome.evidence_packs or {})
+    evidence_packs[SIGNAL_ARTIFACT_PACK_NAME] = stored_path
+    logger.info(
+        log_event(
+            signal_ctx,
+            role="orchestrator",
+            event="report_signal_artifact_complete",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "artifact_path": stored_path,
+                "candidate_count": extraction.candidate_count,
+                "group_count": extraction.group_count,
+                "signal_store_db": extraction_request.db_path,
+            },
+        )
+    )
+    return replace(outcome, evidence_packs=evidence_packs)
 
 
 def _resume_from_analysis_checkpoint(
@@ -663,11 +753,38 @@ def _resume_from_analysis_checkpoint(
         stage_name=STAGE_RENDER_COMPLETE,
         artifact_refs={
             **dict(response.checkpoint.artifact_refs),
-            "rendered_html": outcome.html_path or "",
+            **_render_checkpoint_refs(
+                runtime,
+                source,
+                analysis,
+                preview_resp,
+                outcome,
+            ),
         },
         payload={"schema_version": "1.0", "outcome": asdict(outcome)},
     )
-    _run_projection(runtime, analysis, outcome, analytics_projection_fn)
+    if _run_projection(runtime, analysis, outcome, analytics_projection_fn) is not None:
+        outcome = _run_signal_artifact_generation(
+            runtime,
+            analysis,
+            outcome,
+            dependencies,
+        )
+        _write_stage_checkpoint(
+            runtime,
+            stage_name=STAGE_RENDER_COMPLETE,
+            artifact_refs={
+                **dict(response.checkpoint.artifact_refs),
+                **_render_checkpoint_refs(
+                    runtime,
+                    source,
+                    analysis,
+                    preview_resp,
+                    outcome,
+                ),
+            },
+            payload={"schema_version": "1.0", "outcome": asdict(outcome)},
+        )
     return _cleanup_transient_vector_store(outcome, runtime, dependencies)
 
 
@@ -921,13 +1038,32 @@ def run_report_generation(
         _write_stage_checkpoint(
             runtime,
             stage_name=STAGE_RENDER_COMPLETE,
-            artifact_refs={
-                **_analysis_checkpoint_refs(runtime, source, analysis, preview_resp),
-                "rendered_html": outcome.html_path or "",
-            },
+            artifact_refs=_render_checkpoint_refs(
+                runtime,
+                source,
+                analysis,
+                preview_resp,
+                outcome,
+            ),
             payload={"schema_version": "1.0", "outcome": asdict(outcome)},
         )
-        _run_projection(runtime, analysis, outcome, analytics_projection_fn)
+        if (
+            _run_projection(runtime, analysis, outcome, analytics_projection_fn)
+            is not None
+        ):
+            outcome = _run_signal_artifact_generation(runtime, analysis, outcome, deps)
+            _write_stage_checkpoint(
+                runtime,
+                stage_name=STAGE_RENDER_COMPLETE,
+                artifact_refs=_render_checkpoint_refs(
+                    runtime,
+                    source,
+                    analysis,
+                    preview_resp,
+                    outcome,
+                ),
+                payload={"schema_version": "1.0", "outcome": asdict(outcome)},
+            )
         return _cleanup_transient_vector_store(outcome, runtime, deps)
     except AppError as exc:
         if exc.code == "pdf_text_unextractable":

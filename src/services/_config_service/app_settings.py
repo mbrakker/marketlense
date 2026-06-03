@@ -25,6 +25,7 @@ def build_ingest_settings(
                 "cache_dir": request.app_settings.cache_dir,
                 "state_db": request.app_settings.state_db,
                 "reports_db": request.app_settings.reports_db,
+                "signal_store_db": request.app_settings.signal_store_db,
             },
         )
     )
@@ -61,6 +62,7 @@ def _config_load_complete_fields(
         "cache_dir": settings.cache_dir,
         "state_db": settings.state_db,
         "reports_db": settings.reports_db,
+        "signal_store_db": settings.signal_store_db,
         "publisher_profiles_path": settings.publisher_profiles_path,
         "category_mapping_path": settings.category_mapping_path,
         "html_tag_acronyms_path": paths_settings["html_tag_acronyms_path"],
@@ -258,6 +260,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         cache_dir=paths_settings["cache_dir"],
         state_db=paths_settings["state_db"],
         reports_db=paths_settings["reports_db"],
+        signal_store_db=paths_settings["signal_store_db"],
         publisher_profiles_path=paths_settings["publisher_profiles_path"],
         category_mapping_path=paths_settings["category_mapping_path"],
         cover_style_path=paths_settings["cover_style_path"],
@@ -446,6 +449,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     Path(settings.cache_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
     Path(settings.reports_db).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.signal_store_db).parent.mkdir(parents=True, exist_ok=True)
     Path(settings.ingest_lock_path).parent.mkdir(parents=True, exist_ok=True)
     Path(settings.cost_ledger_path).parent.mkdir(parents=True, exist_ok=True)
     Path(settings.cost_daily_path).parent.mkdir(parents=True, exist_ok=True)

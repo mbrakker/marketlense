@@ -457,6 +457,12 @@ class AppSettings:
             "doc": "Per-model pricing table; keys are model IDs with per-1k token pricing."
         },
     )
+    signal_store_db: str = field(
+        default="",
+        metadata={
+            "doc": "SQLite path for reusable grounded Signal candidates and groups."
+        },
+    )
     html_tag_acronyms: List[str] = field(
         default_factory=list,
         metadata={

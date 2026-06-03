@@ -112,6 +112,10 @@ class TestConfigService(unittest.TestCase):
                 )
 
         self.assertTrue(settings.vector_store_keep)
+        self.assertEqual(
+            Path(tmp_dir, "state", "signals.sqlite").resolve(),
+            Path(settings.signal_store_db).resolve(),
+        )
         self.assertEqual(30, settings.vector_store_retention_days)
         self.assertFalse(settings.artifacts_use_vector_store)
         self.assertFalse(settings.validation_grounding_use_vector_store)
@@ -120,6 +124,27 @@ class TestConfigService(unittest.TestCase):
         self.assertIn("ROI", settings.html_tag_acronyms)
         self.assertTrue(
             settings.publisher_profiles_path.endswith("publisher-profiles.json")
+        )
+
+    def test_signal_store_path_can_be_configured(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["paths"]["signal_store_db"] = str(
+                Path(tmp_dir, "signal-base", "signals.sqlite")
+            )
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertEqual(
+            Path(tmp_dir, "signal-base", "signals.sqlite").resolve(),
+            Path(settings.signal_store_db).resolve(),
         )
 
     def test_capability_settings_loaders_honor_env_config_path(self) -> None:

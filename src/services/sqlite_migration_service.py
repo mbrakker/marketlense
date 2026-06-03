@@ -451,6 +451,52 @@ CREATE TABLE IF NOT EXISTS vector_projection_queue (
 );
 """
 
+_SIGNAL_CANDIDATES_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS signal_candidates (
+  candidate_id TEXT PRIMARY KEY,
+  extraction_request_id TEXT NOT NULL,
+  candidate_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  confidence REAL NOT NULL,
+  strength REAL NOT NULL,
+  support_level TEXT NOT NULL,
+  caveats_json TEXT NOT NULL,
+  source_report_ids_json TEXT NOT NULL,
+  evidence_ids_json TEXT NOT NULL,
+  source_refs_json TEXT NOT NULL,
+  raw_source_context_json TEXT NOT NULL,
+  validation_status TEXT NOT NULL,
+  validation_notes_json TEXT NOT NULL,
+  group_id TEXT NOT NULL,
+  schema_version TEXT NOT NULL,
+  generated_at_utc TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+"""
+
+_SIGNAL_CANDIDATE_GROUPS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS signal_candidate_groups (
+  group_id TEXT PRIMARY KEY,
+  extraction_request_id TEXT NOT NULL,
+  stable_key TEXT NOT NULL,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  support_level TEXT NOT NULL,
+  candidate_ids_json TEXT NOT NULL,
+  source_report_ids_json TEXT NOT NULL,
+  evidence_ids_json TEXT NOT NULL,
+  caveats_json TEXT NOT NULL,
+  raw_group_context_json TEXT NOT NULL,
+  validation_status TEXT NOT NULL,
+  schema_version TEXT NOT NULL,
+  generated_at_utc TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+"""
+
 _STATE_PROCESSED_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS processed (
   file_id TEXT PRIMARY KEY,
@@ -1520,6 +1566,37 @@ def _reports_db_012_create_private_api_candidate_ledger(
     )
 
 
+def _reports_db_013_create_signal_candidate_projection(
+    conn: sqlite3.Connection,
+) -> None:
+    conn.execute(_SIGNAL_CANDIDATES_TABLE_SQL)
+    conn.execute(_SIGNAL_CANDIDATE_GROUPS_TABLE_SQL)
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_signal_candidates_extraction_request
+        ON signal_candidates(extraction_request_id)
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_signal_candidates_validation_status
+        ON signal_candidates(validation_status)
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_signal_candidates_group_id
+        ON signal_candidates(group_id)
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_signal_candidate_groups_extraction_request
+        ON signal_candidate_groups(extraction_request_id)
+        """
+    )
+
+
 _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="reports_db_001_create_reports_core",
@@ -1580,6 +1657,11 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_012_create_private_api_candidate_ledger",
         version=12,
         apply_fn=_reports_db_012_create_private_api_candidate_ledger,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_013_create_signal_candidate_projection",
+        version=13,
+        apply_fn=_reports_db_013_create_signal_candidate_projection,
     ),
 )
 

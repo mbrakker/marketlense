@@ -16,6 +16,12 @@ from src.contracts.file_cache import (
     FileCacheMd5SidecarWriteResponse,
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidateBatch,
+    SignalCandidateExtractionOutcome,
+    SignalCandidateStoreResponse,
+)
 from src.contracts.context_category_fit import (
     CategoryFitCandidate,
     ContextCategoryFitResponse,
@@ -36,6 +42,7 @@ from src.generators.report_generation_dependencies import (
     ReportAnalysisDependencies,
     ReportGenerationDependencies,
     ReportRenderDependencies,
+    ReportSignalDependencies,
     ReportSelectionDependencies,
     ReportSourceDependencies,
 )
@@ -67,6 +74,7 @@ def _ingest_settings(tmp_path: Path) -> IngestSettings:
         cache_dir=str(tmp_path / "cache"),
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
+        signal_store_db=str(tmp_path / "signals.sqlite"),
         category_mapping_path="cats.yaml",
         cover_style_path=str(cover_style_path),
         ingest_lock_path=str(tmp_path / "lock"),
@@ -189,6 +197,7 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
     analysis_updates = {}
     render_updates = {}
     figure_caption_updates = {}
+    signal_updates = {}
     source_fields = set(ReportSourceDependencies.__dataclass_fields__)
     selection_fields = set(ReportSelectionDependencies.__dataclass_fields__)
     analysis_fields = set(ReportAnalysisDependencies.__dataclass_fields__) - {
@@ -196,6 +205,7 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
     }
     render_fields = set(ReportRenderDependencies.__dataclass_fields__)
     figure_caption_fields = set(FigureCaptionDependencies.__dataclass_fields__)
+    signal_fields = set(ReportSignalDependencies.__dataclass_fields__)
 
     for key, value in overrides.items():
         applied = False
@@ -214,6 +224,9 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
         if key in figure_caption_fields:
             figure_caption_updates[key] = value
             applied = True
+        if key in signal_fields:
+            signal_updates[key] = value
+            applied = True
         if not applied:
             raise AssertionError(f"Unknown report dependency override: {key}")
 
@@ -229,6 +242,7 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
         selection=replace(base.selection, **selection_updates),
         analysis=analysis,
         render=replace(base.render, **render_updates),
+        signal=replace(base.signal, **signal_updates),
     )
 
 
@@ -966,6 +980,172 @@ def test_generate_report_vector_store_with_validation(
     assert artifacts_entries[0]["summary"]["tldr"] == "tldr"
     assert len(artifacts_entries[0]["insights_final"]) == 5
     assert artifacts_entries[0]["quotes_final"][0]["text"] == "Quote"
+
+
+def test_generate_report_adds_signal_artifact_pack_after_projection(tmp_path) -> None:
+    settings = _ingest_settings(tmp_path)
+    pdf_path = tmp_path / "sample.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    with pdf_path.open("wb") as handle:
+        writer.write(handle)
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="file_signal",
+        name="signal.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run-signal",
+        task_id="task-signal",
+        span_id="span-signal",
+    )
+    execution_trace: list[str] = []
+    signal_requests = []
+
+    def _store_pack(request, ctx):
+        path = (
+            Path(request.output_dir)
+            / slugify(request.report_slug or request.report_id)
+            / "report_analysis"
+            / f"{request.pack_name}.json"
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(request.payload), encoding="utf-8")
+        return SimpleNamespace(output_path=str(path))
+
+    def _fake_artifacts(
+        report_id,
+        doc_map,
+        evidence_packs,
+        settings,
+        vector_store_id=None,
+        source_status=None,
+        ctx=None,
+        report_name=None,
+        **kwargs,
+    ):
+        payload = _analysis_artifacts()
+        _store_pack(
+            AnalysisStorePackRequest(
+                schema_version="1.0",
+                output_dir=settings.output_dir,
+                report_id=report_id,
+                pack_name="artifacts",
+                payload=payload,
+                report_slug=report_name,
+            ),
+            ctx,
+        )
+        return payload
+
+    def _fake_evidence(report_id, vector_store_id, settings, ctx, **kwargs):
+        return {
+            "doc_map": {
+                "docMap": {
+                    "title": "Signal Report",
+                    "publisher": "Signal Publisher",
+                    "sections": [{"title": "Market movement"}],
+                },
+                "doc_id": "d",
+            },
+            "scope": {},
+            "methods": {},
+            "findings": {},
+            "limitations": {},
+            "quote_candidates": {},
+        }
+
+    def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):
+        return ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            severity="pass",
+            issues=[],
+            source_path=str(
+                Path(settings.output_dir)
+                / slugify(kwargs.get("report_name") or req.report_id)
+                / "report_analysis"
+                / f"{pack_name}.json"
+            ),
+        )
+
+    def _fake_render_report(req, ctx):
+        html_path = tmp_path / "out.html"
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return RenderResponse(schema_version="1.0", html_path=str(html_path))
+
+    def _projection(req):
+        execution_trace.append("projection")
+        return SimpleNamespace(rows_upserted=3)
+
+    def _signal_extraction(request, ctx):
+        execution_trace.append("signal_extraction")
+        signal_requests.append(request)
+        batch = SignalCandidateBatch(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            extraction_request_id=request.extraction_request_id,
+            generated_at_utc="2026-06-02T00:00:00+00:00",
+            candidates=[],
+            groups=[],
+        )
+        stored = SignalCandidateStoreResponse(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=request.db_path,
+            extraction_request_id=request.extraction_request_id,
+            candidate_count=0,
+            group_count=0,
+            stale_candidate_count=0,
+            stale_group_count=0,
+        )
+        return SignalCandidateExtractionOutcome(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            extraction_request_id=request.extraction_request_id,
+            status="stored",
+            batch=batch,
+            stored_response=stored,
+            candidate_count=0,
+            group_count=0,
+            state_transitions=["started", "completed"],
+        )
+
+    deps = _base_vector_report_dependencies(
+        tmp_path,
+        generate_evidence_packs=_fake_evidence,
+        generate_artifacts=_fake_artifacts,
+        run_validation=_fake_validation,
+        analysis_store_pack=_store_pack,
+        render_report=_fake_render_report,
+        run_signal_candidate_extraction=_signal_extraction,
+    )
+
+    outcome = rgo.run_report_generation(
+        file,
+        str(pdf_path),
+        settings,
+        md5="md5",
+        ctx=ctx,
+        dependencies=deps,
+        analytics_projection_fn=_projection,
+    )
+
+    assert execution_trace == ["projection", "signal_extraction"]
+    assert signal_requests
+    signal_request = signal_requests[0]
+    assert signal_request.projected_data_request.db_path == settings.reports_db
+    assert signal_request.db_path == settings.signal_store_db
+    assert signal_request.analysis_request.publisher_filters == ["Signal Publisher"]
+    assert signal_request.analysis_request.max_source_reports == 1
+    assert outcome.evidence_packs is not None
+    signal_path = outcome.evidence_packs["signals"]
+    assert Path(signal_path).exists()
+    payload = json.loads(Path(signal_path).read_text(encoding="utf-8"))
+    assert payload["artifact_type"] == "signals"
+    assert payload["source_report_id"] == "file_signal"
+    assert payload["signal_store_db"] == settings.signal_store_db
+    assert payload["candidate_count"] == 0
 
 
 def test_generate_report_doc_map_empty_halts(

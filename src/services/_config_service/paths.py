@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.services._config_service.common import *
 
+
 def _resolve_paths_settings(
     paths: dict[str, Any],
     resolver: _ConfigResolver,
@@ -10,6 +11,12 @@ def _resolve_paths_settings(
     cache_dir = resolver.need(paths, "cache_dir", "paths.cache_dir", "CACHE_DIR")
     state_db = resolver.need(paths, "state_db", "paths.state_db", "STATE_DB")
     reports_db = resolver.need(paths, "reports_db", "paths.reports_db", "REPORTS_DB")
+    signal_store_db = _resolve_optional_path(
+        paths.get("signal_store_db") or _env_value("SIGNAL_STORE_DB"),
+        base_path=Path(".").resolve(),
+    )
+    if _is_missing(signal_store_db):
+        signal_store_db = str(Path(state_db).parent / "signals.sqlite")
     lock_path_raw = paths.get("ingest_lock")
     if _is_missing(lock_path_raw):
         lock_path_raw = _env_value("INGEST_LOCK_PATH")
@@ -20,6 +27,7 @@ def _resolve_paths_settings(
         "cache_dir": cache_dir,
         "state_db": state_db,
         "reports_db": reports_db,
+        "signal_store_db": signal_store_db,
         "publisher_profiles_path": paths.get("publisher_profiles")
         or str(
             Path(__file__).resolve().parents[3]
@@ -37,5 +45,6 @@ def _resolve_paths_settings(
         or str(Path(__file__).resolve().parents[2] / "config" / "cover-styles.yaml"),
         "ingest_lock_path": str(lock_path_raw),
     }
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

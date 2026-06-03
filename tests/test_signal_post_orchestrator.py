@@ -20,6 +20,13 @@ from src.contracts.wordpress_entities import (
     SignalPostGenerationRequest,
     SignalPostWorkflowRequest,
 )
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidate,
+    SignalCandidateGroup,
+    SignalCandidateReadResponse,
+    SignalCandidateSourceRef,
+)
 from src.orchestrators.publish_orchestrator import publish_signal_projection
 from src.orchestrators.signal_post_orchestrator import run_signal_post_workflow
 
@@ -52,7 +59,9 @@ def _candidate(report_id: str, publisher: str) -> CrossReportSourceReportCandida
     )
 
 
-def _evidence(evidence_id: str, report_id: str, publisher: str) -> CrossReportEvidenceReference:
+def _evidence(
+    evidence_id: str, report_id: str, publisher: str
+) -> CrossReportEvidenceReference:
     return CrossReportEvidenceReference(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         evidence_id=evidence_id,
@@ -101,12 +110,15 @@ def _generation_request() -> SignalPostGenerationRequest:
     )
 
 
-def _workflow_request(tmp_path, publication_mode: str = "publish_dry_run") -> SignalPostWorkflowRequest:
+def _workflow_request(
+    tmp_path, publication_mode: str = "publish_dry_run", signal_store_db: str = ""
+) -> SignalPostWorkflowRequest:
     return SignalPostWorkflowRequest(
         schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
         request_id="signal-workflow-ai-commerce",
         generation_request=_generation_request(),
         db_path=str(tmp_path / "analytics.sqlite"),
+        signal_store_db=signal_store_db,
         output_root=str(tmp_path),
         publication_mode=publication_mode,
     )
@@ -160,6 +172,118 @@ def test_signal_workflow_dry_run_reads_projected_data_and_reports_payload(
     }
     assert read_requests[0].db_path == str(tmp_path / "analytics.sqlite")
     assert read_requests[0].minimum_projection_status == "projected"
+
+
+def test_signal_workflow_reads_candidates_from_separate_signal_store(
+    tmp_path,
+    run_context,
+) -> None:
+    projected_requests = []
+    signal_candidate_requests = []
+
+    def _read_projected_data(request, ctx):
+        projected_requests.append(request)
+        return _projected_data()
+
+    def _read_signal_candidates(request, ctx):
+        signal_candidate_requests.append(request)
+        return SignalCandidateReadResponse(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=request.db_path,
+            candidates=[],
+            groups=[],
+        )
+
+    run_signal_post_workflow(
+        _workflow_request(
+            tmp_path,
+            "generate_only",
+            signal_store_db=str(tmp_path / "signals.sqlite"),
+        ),
+        run_context,
+        read_projected_data_fn=_read_projected_data,
+        read_signal_candidates_fn=_read_signal_candidates,
+    )
+
+    assert projected_requests[0].db_path == str(tmp_path / "analytics.sqlite")
+    assert signal_candidate_requests[0].db_path == str(tmp_path / "signals.sqlite")
+
+
+def test_signal_workflow_reads_stored_signal_candidates_before_publish(
+    tmp_path,
+    run_context,
+) -> None:
+    candidate = SignalCandidate(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        candidate_id="signal-candidate:theme-ai:signal-ai",
+        candidate_type="market_signal",
+        title="AI commerce adoption",
+        summary="Stored Signal candidate.",
+        confidence=0.81,
+        strength=4.1,
+        support_level="multi_report_convergent",
+        caveats=["coverage limited to selected projected reports"],
+        source_report_ids=["report-a", "report-b"],
+        evidence_ids=["report-a:claim:1", "report-b:claim:1"],
+        source_refs=[
+            SignalCandidateSourceRef(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                report_id="report-a",
+                evidence_id="report-a:claim:1",
+                source_table="report_claims",
+                entity_uid="report-a:claim:1",
+                content_class="claim",
+                page_refs=[2],
+                source_metadata={"pages": [2]},
+            )
+        ],
+        raw_source_context={
+            "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+        },
+        validation_status="approved",
+        validation_notes=["source_backed"],
+        group_id="signal-group:theme-ai:signal-ai",
+        extraction_request_id="extract-ai",
+        generated_at_utc="2026-06-02T12:00:00Z",
+    )
+    group = SignalCandidateGroup(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        group_id="signal-group:theme-ai:signal-ai",
+        stable_key="theme-ai:signal-ai",
+        title="AI commerce adoption",
+        summary="Stored group.",
+        support_level="multi_report_convergent",
+        candidate_ids=[candidate.candidate_id],
+        source_report_ids=["report-a", "report-b"],
+        evidence_ids=["report-a:claim:1", "report-b:claim:1"],
+        caveats=["coverage limited to selected projected reports"],
+        raw_group_context={"agreement_type": "convergent"},
+        validation_status="approved",
+        extraction_request_id="extract-ai",
+        generated_at_utc="2026-06-02T12:00:00Z",
+    )
+    read_candidate_requests = []
+
+    def _read_signal_candidates(request, ctx):
+        read_candidate_requests.append(request)
+        return SignalCandidateReadResponse(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=request.db_path,
+            candidates=[candidate],
+            groups=[group],
+        )
+
+    outcome = run_signal_post_workflow(
+        _workflow_request(tmp_path, "generate_only"),
+        run_context,
+        read_projected_data_fn=lambda request, ctx: _projected_data(),
+        read_signal_candidates_fn=_read_signal_candidates,
+    )
+
+    assert read_candidate_requests[0].db_path == str(tmp_path / "analytics.sqlite")
+    assert read_candidate_requests[0].validation_statuses == ["approved"]
+    assert outcome.projection.confidence == 0.81
+    assert candidate.candidate_id in outcome.projection.body_html
 
 
 def test_publish_signal_projection_live_builds_payload_and_reuses_idempotency(

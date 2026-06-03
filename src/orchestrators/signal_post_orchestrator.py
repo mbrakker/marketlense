@@ -14,6 +14,11 @@ from src.contracts.cross_report_analysis import (
 )
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidateReadRequest,
+    SignalCandidateReadResponse,
+)
 from src.contracts.wordpress import WordPressAuthSettings
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
@@ -38,7 +43,8 @@ class _PublishSignalFn(Protocol):
         ctx: RunContext,
         *,
         dry_run: bool,
-    ) -> CrossReportPublishResultSummary: ...
+    ) -> CrossReportPublishResultSummary:
+        ...
 
 
 def _projected_data_request(
@@ -106,6 +112,10 @@ def run_signal_post_workflow(
         [CrossReportProjectedDataReadRequest, RunContext],
         CrossReportProjectedDataReadResponse,
     ] = analytics_store_service.read_cross_report_projected_data,
+    read_signal_candidates_fn: Callable[
+        [SignalCandidateReadRequest, RunContext],
+        SignalCandidateReadResponse,
+    ] = analytics_store_service.read_signal_candidates,
     publish_signal_fn: _PublishSignalFn = publish_signal_projection,
 ) -> SignalPostWorkflowResult:
     logger.info(
@@ -123,10 +133,28 @@ def run_signal_post_workflow(
     )
     projected_request = _projected_data_request(request)
     projected_data = read_projected_data_fn(projected_request, ctx)
+    generation = request.generation_request
+    candidate_data = read_signal_candidates_fn(
+        SignalCandidateReadRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=request.signal_store_db or request.db_path,
+            validation_statuses=["approved"],
+            source_report_ids=[],
+            evidence_ids=[],
+            topic_filters=[
+                generation.topic,
+                *generation.tag_filters,
+                *generation.category_filters,
+            ],
+            limit=max(1, generation.max_source_reports),
+        ),
+        ctx,
+    )
     projection = build_signal_publish_projection(
         request.generation_request,
         projected_data,
         ctx,
+        candidate_data=candidate_data,
     )
 
     if request.publication_mode in {"generate_only", "validate_only"}:

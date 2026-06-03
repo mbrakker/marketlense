@@ -2260,8 +2260,8 @@ class TestReportStoreService(unittest.TestCase):
                 ],
                 columns,
             )
-            self.assertEqual((12,), schema_version)
-            self.assertEqual(12, ledger_count)
+            self.assertEqual((13,), schema_version)
+            self.assertEqual(13, ledger_count)
             self.assertEqual(
                 (
                     "Activate Consulting",

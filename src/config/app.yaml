@@ -5,6 +5,7 @@ paths:
   cache_dir: "./cache"
   state_db: "./state/index.sqlite"
   reports_db: "./state/reports.sqlite"
+  signal_store_db: "./state/signals.sqlite"
   publisher_profiles: "./Wordpress/config/publisher-profiles.json"
   category_mappings: "./src/config/category-mappings.yaml"
   html_tag_acronyms: "./src/config/html-tag-acronyms.yaml"

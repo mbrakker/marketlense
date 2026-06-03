@@ -54,7 +54,9 @@ class SignalPublishProjection:
     )
     topic_labels: List[str] = field(
         default_factory=list,
-        metadata={"doc": "Human-readable category/topic labels assigned to the Signal."},
+        metadata={
+            "doc": "Human-readable category/topic labels assigned to the Signal."
+        },
     )
     tag_labels: List[str] = field(
         default_factory=list,
@@ -72,12 +74,16 @@ class SignalPublishProjection:
 
 @dataclass(frozen=True)
 class SignalPostGenerationRequest:
-    schema_version: str = field(metadata={"doc": "Signal generation request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Signal generation request schema version."}
+    )
     request_id: str = field(metadata={"doc": "Stable Signal generation request ID."})
     topic: str = field(metadata={"doc": "Operator-selected Signal topic."})
     category_filters: List[str] = field(
         default_factory=list,
-        metadata={"doc": "Projected category labels/IDs used to scope Signal evidence."},
+        metadata={
+            "doc": "Projected category labels/IDs used to scope Signal evidence."
+        },
     )
     tag_filters: List[str] = field(
         default_factory=list,
@@ -119,22 +125,34 @@ class SignalPostGenerationRequest:
 
 @dataclass(frozen=True)
 class SignalPostWorkflowRequest:
-    schema_version: str = field(metadata={"doc": "Signal workflow request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Signal workflow request schema version."}
+    )
     request_id: str = field(metadata={"doc": "Stable Signal workflow request ID."})
     generation_request: SignalPostGenerationRequest = field(
         metadata={"doc": "Deterministic Signal generation request."}
     )
     db_path: str = field(metadata={"doc": "Analytics projection SQLite database path."})
-    output_root: str = field(metadata={"doc": "Output root for Signal publish artifacts."})
+    output_root: str = field(
+        metadata={"doc": "Output root for Signal publish artifacts."}
+    )
     publication_mode: PublicationMode = field(
         default="publish_dry_run",
         metadata={"doc": "Publication mode for the Signal workflow."},
+    )
+    signal_store_db: str = field(
+        default="",
+        metadata={
+            "doc": "Optional separate SQLite database path for reusable approved Signal candidates."
+        },
     )
 
 
 @dataclass(frozen=True)
 class SignalPostWorkflowResult:
-    schema_version: str = field(metadata={"doc": "Signal workflow result schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Signal workflow result schema version."}
+    )
     request_id: str = field(metadata={"doc": "Signal workflow request ID."})
     projected_data_request: CrossReportProjectedDataReadRequest = field(
         metadata={"doc": "Projected-data service request used by the workflow."}
