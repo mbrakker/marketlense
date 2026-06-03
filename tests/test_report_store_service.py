@@ -22,6 +22,7 @@ from src.contracts.report_store import (
     PublisherInventoryStateGetRequest,
     PublisherInventoryStateRecordRequest,
     PublisherInventoryTestStatusRecordRequest,
+    PublisherGoogleFolderUpdateRequest,
     PublishersReplaceRequest,
     ReportDownloadDriveFolderLookupRequest,
     ReportMetadataDbAccessRequest,
@@ -59,6 +60,7 @@ from src.services.report_store_service import (
     record_publisher_download_route,
     record_publisher_inventory_state,
     replace_publishers,
+    update_publisher_google_folder,
     upsert_metadata,
 )
 from src.utils.errors import AppError
@@ -2024,6 +2026,103 @@ class TestReportStoreService(unittest.TestCase):
                 response.google_folder,
             )
             self.assertEqual("report_source_publisher", response.resolution_source)
+
+    def test_get_report_download_drive_folder_returns_publisher_without_folder(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_report_download_missing_folder_lookup")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://notion.local/report-sources",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Strategy consultancy.",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            response = get_report_download_drive_folder(
+                ReportDownloadDriveFolderLookupRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_landing_page_url="",
+                    publisher_insights_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+
+            assert response is not None
+            self.assertEqual("Activate Consulting", response.publisher_name)
+            self.assertEqual("", response.google_folder)
+            self.assertEqual("publisher_insights_url", response.resolution_source)
+
+    def test_update_publisher_google_folder_persists_folder_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publisher_google_folder_update")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://notion.local/report-sources",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Strategy consultancy.",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            response = update_publisher_google_folder(
+                PublisherGoogleFolderUpdateRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    publisher_name="Activate Consulting",
+                    publisher_insights_url="https://www.activate.com/insights",
+                    google_folder="https://drive.google.com/drive/folders/folder123",
+                ),
+                ctx,
+            )
+            lookup = get_report_download_drive_folder(
+                ReportDownloadDriveFolderLookupRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_landing_page_url="",
+                    publisher_insights_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+
+            self.assertEqual("Activate Consulting", response.publisher_name)
+            self.assertEqual(1, response.updated_count)
+            assert lookup is not None
+            self.assertEqual(
+                "https://drive.google.com/drive/folders/folder123",
+                lookup.google_folder,
+            )
 
     def test_record_discovered_report_source_inserts_pending_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

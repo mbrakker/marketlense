@@ -193,6 +193,12 @@ class BrowserDownloadSettings:
             "doc": "Whether Drive archival failure should fail the report download workflow."
         },
     )
+    drive_upload_parent_folder_id: str = field(
+        default="",
+        metadata={
+            "doc": "Drive parent folder ID where missing publisher archive folders should be created."
+        },
+    )
     drive_upload_google_sa_path: str = field(
         default="",
         metadata={

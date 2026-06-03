@@ -331,6 +331,64 @@ class DriveWritePreflightResponse:
 
 
 @dataclass(frozen=True)
+class DriveFolderEnsureRequest:
+    schema_version: str = field(
+        metadata={"doc": "Drive folder-ensure request schema version."}
+    )
+    parent_folder_id: str = field(
+        metadata={"doc": "Drive parent folder ID where the child folder should exist."}
+    )
+    folder_name: str = field(
+        metadata={"doc": "Exact child folder name to find or create."}
+    )
+    service_account_path: str = field(
+        metadata={
+            "doc": "Filesystem path to the Google service account JSON when auth_mode=service_account."
+        }
+    )
+    supports_all_drives: bool = field(
+        default=True,
+        metadata={"doc": "Whether to set supportsAllDrives on Drive folder calls."},
+    )
+    include_items_from_all_drives: bool = field(
+        default=True,
+        metadata={"doc": "Whether child-folder lookup includes shared-drive items."},
+    )
+    drive_id: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional shared Drive ID for corpora=drive folder lookup."},
+    )
+    auth_mode: str = field(
+        default="service_account",
+        metadata={"doc": "Drive auth mode: service_account or oauth_user."},
+    )
+    oauth_client_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional OAuth desktop client JSON path when auth_mode=oauth_user."
+        },
+    )
+    oauth_token_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class DriveFolderEnsureResponse:
+    schema_version: str = field(
+        metadata={"doc": "Drive folder-ensure response schema version."}
+    )
+    folder: DriveFile = field(metadata={"doc": "Existing or newly created folder."})
+    parent_folder_id: str = field(metadata={"doc": "Drive parent folder ID searched."})
+    created: bool = field(
+        metadata={"doc": "True when a new Drive folder was created."}
+    )
+
+
+@dataclass(frozen=True)
 class DriveUploadBytesRequest:
     schema_version: str = field(
         metadata={"doc": "Drive upload-bytes request schema version."}

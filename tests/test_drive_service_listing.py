@@ -14,6 +14,7 @@ from src.contracts.drive import (
     DriveUploadBytesRequest,
     DriveUploadLocalFileRequest,
     DriveFile,
+    DriveFolderEnsureRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services import drive_service
@@ -308,6 +309,75 @@ def test_upload_bytes_creates_drive_file(monkeypatch):
     assert response.file.file_id == "uploaded-file"
     assert response.file.mime_type == "application/json"
     assert fake_drive.files().created_payloads[0]["body"]["parents"] == ["root-folder"]
+
+
+def test_ensure_folder_reuses_existing_child_folder(monkeypatch):
+    fake_drive = _FakeDriveClient(
+        {
+            "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' and name='Publisher A' and trashed=false": {
+                "files": [
+                    {
+                        "id": "publisher-folder",
+                        "name": "Publisher A",
+                        "modifiedTime": "2026-06-03T00:00:00Z",
+                        "mimeType": "application/vnd.google-apps.folder",
+                    }
+                ],
+                "nextPageToken": None,
+            }
+        }
+    )
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(lambda _sa_path, scopes: object()),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    _reset_drive_caches()
+
+    response = drive_service.ensure_folder(
+        DriveFolderEnsureRequest(
+            schema_version="1.0",
+            parent_folder_id="root-folder",
+            folder_name="Publisher A",
+            service_account_path="/tmp/fake-sa.json",
+        ),
+        _ctx(),
+    )
+
+    assert response.folder.file_id == "publisher-folder"
+    assert response.created is False
+    assert fake_drive.files().created_payloads == []
+
+
+def test_ensure_folder_creates_missing_child_folder(monkeypatch):
+    fake_drive = _FakeDriveClient({})
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(lambda _sa_path, scopes: object()),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    _reset_drive_caches()
+
+    response = drive_service.ensure_folder(
+        DriveFolderEnsureRequest(
+            schema_version="1.0",
+            parent_folder_id="root-folder",
+            folder_name="Publisher A",
+            service_account_path="/tmp/fake-sa.json",
+        ),
+        _ctx(),
+    )
+
+    assert response.folder.file_id == "uploaded-file"
+    assert response.created is True
+    created = fake_drive.files().created_payloads[0]
+    assert created["body"] == {
+        "name": "Publisher A",
+        "parents": ["root-folder"],
+        "mimeType": "application/vnd.google-apps.folder",
+    }
 
 
 def test_upload_local_file_reads_and_uploads_artifact(monkeypatch, tmp_path):
@@ -858,10 +928,10 @@ def test_drive_client_cache_expires_and_evicts_oldest(monkeypatch):
     created: list[object] = []
     timestamps = iter([0.0, 1.0, 2.0, 3.0, 4.0, 11.0])
 
-    def _fake_build(service_name: str, version: str, credentials, cache_discovery: bool):
+    def _fake_build(service_name: str, version: str, http, cache_discovery: bool):
         assert service_name == "drive"
         assert version == "v3"
-        assert credentials is not None
+        assert http is not None
         assert cache_discovery is False
         client = object()
         created.append(client)

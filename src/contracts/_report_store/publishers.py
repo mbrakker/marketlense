@@ -105,3 +105,38 @@ class PublishersListResponse:
         metadata={"doc": "Publisher rows with non-empty insights URLs."}
     )
 
+
+@dataclass(frozen=True)
+class PublisherGoogleFolderUpdateRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher Google-folder update request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    publisher_name: str = field(
+        metadata={"doc": "Publisher display name whose google_folder should be set."}
+    )
+    google_folder: str = field(
+        metadata={"doc": "Google Drive folder URL or folder ID to store."}
+    )
+    publisher_insights_url: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional publisher insights URL used as the preferred update key."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class PublisherGoogleFolderUpdateResponse:
+    schema_version: str = field(
+        metadata={"doc": "Publisher Google-folder update response schema version."}
+    )
+    publisher_name: str = field(metadata={"doc": "Updated publisher display name."})
+    google_folder: str = field(metadata={"doc": "Persisted Google Drive folder URL."})
+    updated_count: int = field(metadata={"doc": "Number of publisher rows updated."})
+    resolution_source: str = field(
+        metadata={"doc": "Update key used: publisher_insights_url or publisher_name."}
+    )
+

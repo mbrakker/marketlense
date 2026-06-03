@@ -29,6 +29,7 @@ from src.services._report_store_service.metadata import (
 from src.services._report_store_service.publishers import (
     list_publishers,
     replace_publishers,
+    update_publisher_google_folder,
 )
 from src.services._report_store_service.sources import (
     get_report_download_drive_folder,
@@ -59,5 +60,6 @@ __all__ = [
     "record_publisher_inventory_test_status",
     "record_report_source",
     "replace_publishers",
+    "update_publisher_google_folder",
     "upsert_metadata",
 ]

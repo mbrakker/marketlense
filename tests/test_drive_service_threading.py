@@ -27,12 +27,10 @@ def test_drive_client_is_thread_local(monkeypatch):
         assert scopes == ["https://www.googleapis.com/auth/drive"]
         return object()
 
-    def _fake_build(
-        service_name: str, version: str, credentials, cache_discovery: bool
-    ):
+    def _fake_build(service_name: str, version: str, http, cache_discovery: bool):
         assert service_name == "drive"
         assert version == "v3"
-        assert credentials is not None
+        assert http is not None
         assert cache_discovery is False
         obj = object()
         created.append(obj)
@@ -99,12 +97,10 @@ def test_drive_client_isolated_under_concurrent_access(monkeypatch):
         assert scopes == ["https://www.googleapis.com/auth/drive"]
         return object()
 
-    def _fake_build(
-        service_name: str, version: str, credentials, cache_discovery: bool
-    ):
+    def _fake_build(service_name: str, version: str, http, cache_discovery: bool):
         assert service_name == "drive"
         assert version == "v3"
-        assert credentials is not None
+        assert http is not None
         assert cache_discovery is False
         obj = object()
         created.append(obj)

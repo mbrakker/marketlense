@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import httplib2
 import io
 import logging
 import json
@@ -12,6 +13,7 @@ from typing import Iterable, Iterator, Optional
 
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request as GoogleAuthRequest
+from google_auth_httplib2 import AuthorizedHttp
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
@@ -31,6 +33,8 @@ from src.contracts.drive import (
     DriveFile,
     DriveFileMetadataRequest,
     DriveFileMetadataResponse,
+    DriveFolderEnsureRequest,
+    DriveFolderEnsureResponse,
     DriveFolderFileListRequest,
     DriveFolderFileListResponse,
     DriveListRequest,
@@ -53,6 +57,7 @@ DRIVE_CLIENT_CACHE_TTL_SECONDS = 900.0
 DRIVE_CLIENT_CACHE_MAX_ENTRIES = 32
 DRIVE_FOLDER_SCOPE_CACHE_TTL_SECONDS = 300.0
 DRIVE_FOLDER_SCOPE_CACHE_MAX_ENTRIES = 128
+DRIVE_HTTP_TIMEOUT_SECONDS = 30.0
 
 
 @dataclass
@@ -274,8 +279,15 @@ def _build_drive_client(
     return build(
         "drive",
         "v3",
-        credentials=resolution.credentials,
+        http=_build_authorized_drive_http(resolution.credentials),
         cache_discovery=False,
+    )
+
+
+def _build_authorized_drive_http(credentials) -> AuthorizedHttp:
+    return AuthorizedHttp(
+        credentials,
+        http=httplib2.Http(timeout=DRIVE_HTTP_TIMEOUT_SECONDS),
     )
 
 
@@ -1117,7 +1129,7 @@ def preflight_drive_write_access(
         drive = build(
             "drive",
             "v3",
-            credentials=resolution.credentials,
+            http=_build_authorized_drive_http(resolution.credentials),
             cache_discovery=False,
         )
         folder = _load_drive_folder_write_metadata(
@@ -1384,6 +1396,206 @@ def _safe_drive_probe_token(value: str) -> str:
         chars.append("-")
     token = "".join(chars).strip("-_")
     return token[:48] or "id"
+
+
+def _escape_drive_query_value(value: str) -> str:
+    return str(value).replace("\\", "\\\\").replace("'", "\\'")
+
+
+def ensure_folder(
+    request: DriveFolderEnsureRequest, ctx: RunContext
+) -> DriveFolderEnsureResponse:
+    auth_mode = _request_auth_mode(request)
+    parent_folder_id = str(request.parent_folder_id or "").strip()
+    folder_name = str(request.folder_name or "").strip()
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_folder_ensure_start",
+            module=logger.name,
+            fields={
+                "parent_folder_id": parent_folder_id,
+                "folder_name": folder_name,
+                "supports_all_drives": request.supports_all_drives,
+                "include_items_from_all_drives": request.include_items_from_all_drives,
+                "drive_id": request.drive_id or "",
+                "auth_mode": auth_mode,
+            },
+        )
+    )
+    _require_drive_auth(
+        auth_mode=auth_mode,
+        service_account_path=request.service_account_path,
+        oauth_token_path=request.oauth_token_path,
+    )
+    if not parent_folder_id:
+        raise AppError(
+            code="drive_folder_parent_missing",
+            message="Drive parent folder ID is required to ensure a child folder",
+            retryable=False,
+            severity="error",
+        )
+    if not folder_name:
+        raise AppError(
+            code="drive_folder_name_missing",
+            message="Drive folder name is required to ensure a child folder",
+            retryable=False,
+            severity="error",
+        )
+    drive = _get_drive_client(
+        auth_mode=auth_mode,
+        service_account_path=request.service_account_path,
+        oauth_token_path=request.oauth_token_path,
+        ctx=ctx,
+    )
+    escaped_name = _escape_drive_query_value(folder_name)
+    query = (
+        f"'{parent_folder_id}' in parents "
+        "and mimeType='application/vnd.google-apps.folder' "
+        f"and name='{escaped_name}' and trashed=false"
+    )
+    list_kwargs = {
+        "q": query,
+        "fields": "files(id,name,modifiedTime,mimeType),nextPageToken",
+        "pageSize": 10,
+        "supportsAllDrives": request.supports_all_drives,
+        "includeItemsFromAllDrives": request.include_items_from_all_drives,
+    }
+    if request.drive_id:
+        list_kwargs["driveId"] = request.drive_id
+        list_kwargs["corpora"] = "drive"
+    try:
+        existing = drive.files().list(**list_kwargs).execute()
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_folder_lookup_failed",
+                module=logger.name,
+                fields={
+                    "parent_folder_id": parent_folder_id,
+                    "folder_name": folder_name,
+                    "error": str(exc),
+                },
+            )
+        )
+        raise AppError(
+            code="drive_folder_lookup_failed",
+            message="Drive folder lookup failed",
+            cause=exc,
+            retryable=True,
+            severity="error",
+            context={"parent_folder_id": parent_folder_id, "folder_name": folder_name},
+        ) from exc
+    for row in existing.get("files", []) if isinstance(existing, dict) else []:
+        file_id = str((row or {}).get("id") or "").strip()
+        name = str((row or {}).get("name") or "").strip()
+        if file_id and name == folder_name:
+            response = DriveFolderEnsureResponse(
+                schema_version="1.0",
+                folder=DriveFile(
+                    schema_version="1.0",
+                    file_id=file_id,
+                    name=name,
+                    modified_time=(row or {}).get("modifiedTime"),
+                    md5_checksum=None,
+                    mime_type=(row or {}).get("mimeType")
+                    or "application/vnd.google-apps.folder",
+                ),
+                parent_folder_id=parent_folder_id,
+                created=False,
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="drive_folder_ensure_complete",
+                    module=logger.name,
+                    fields={
+                        "parent_folder_id": parent_folder_id,
+                        "folder_id": response.folder.file_id,
+                        "folder_name": folder_name,
+                        "created": response.created,
+                    },
+                )
+            )
+            return response
+    try:
+        created = (
+            drive.files()
+            .create(
+                body={
+                    "name": folder_name,
+                    "parents": [parent_folder_id],
+                    "mimeType": "application/vnd.google-apps.folder",
+                },
+                fields="id,name,modifiedTime,mimeType",
+                supportsAllDrives=request.supports_all_drives,
+            )
+            .execute()
+        )
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_folder_create_failed",
+                module=logger.name,
+                fields={
+                    "parent_folder_id": parent_folder_id,
+                    "folder_name": folder_name,
+                    "error": str(exc),
+                },
+            )
+        )
+        raise AppError(
+            code="drive_folder_create_failed",
+            message="Drive folder creation failed",
+            cause=exc,
+            retryable=True,
+            severity="error",
+            context={"parent_folder_id": parent_folder_id, "folder_name": folder_name},
+        ) from exc
+    folder_id = str((created or {}).get("id") or "").strip()
+    if not folder_id:
+        raise AppError(
+            code="drive_folder_create_invalid_response",
+            message="Drive folder creation did not return a folder ID",
+            retryable=True,
+            severity="error",
+            context={"parent_folder_id": parent_folder_id, "folder_name": folder_name},
+        )
+    response = DriveFolderEnsureResponse(
+        schema_version="1.0",
+        folder=DriveFile(
+            schema_version="1.0",
+            file_id=folder_id,
+            name=(created or {}).get("name") or folder_name,
+            modified_time=(created or {}).get("modifiedTime"),
+            md5_checksum=None,
+            mime_type=(created or {}).get("mimeType")
+            or "application/vnd.google-apps.folder",
+        ),
+        parent_folder_id=parent_folder_id,
+        created=True,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_folder_ensure_complete",
+            module=logger.name,
+            fields={
+                "parent_folder_id": parent_folder_id,
+                "folder_id": response.folder.file_id,
+                "folder_name": folder_name,
+                "created": response.created,
+            },
+        )
+    )
+    return response
 
 
 def upload_bytes(

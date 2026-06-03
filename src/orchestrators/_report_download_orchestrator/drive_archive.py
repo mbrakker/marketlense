@@ -11,12 +11,16 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorRequest,
 )
 from src.contracts.drive import (
+    DriveFolderEnsureRequest,
     DriveFolderFileListRequest,
     DriveUploadLocalFileRequest,
     DriveWritePreflightRequest,
 )
 from src.contracts.files import FileHashRequest
-from src.contracts.report_store import ReportDownloadDriveFolderLookupRequest
+from src.contracts.report_store import (
+    PublisherGoogleFolderUpdateRequest,
+    ReportDownloadDriveFolderLookupRequest,
+)
 from src.contracts.run_context import RunContext
 from src.orchestrators._report_download_orchestrator.dependencies import (
     ReportDownloadDependencies,
@@ -201,6 +205,14 @@ def _resolve_drive_upload_folder_id(
             )
         )
         return folder_id
+    if lookup is not None and lookup.publisher_name.strip():
+        return _create_missing_publisher_drive_folder(
+            request=request,
+            normalized_url=normalized_url,
+            lookup=lookup,
+            ctx=ctx,
+            dependencies=dependencies,
+        )
     logger.info(
         log_event(
             ctx,
@@ -223,6 +235,112 @@ def _resolve_drive_upload_folder_id(
             "publisher_insights_url": request.publisher_insights_url or "",
         },
     )
+
+
+def _create_missing_publisher_drive_folder(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    normalized_url: str,
+    lookup,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> str:
+    parent_folder_id = extract_drive_folder_id(
+        request.settings.drive_upload_parent_folder_id
+    )
+    publisher_name = str(lookup.publisher_name or "").strip()
+    if not parent_folder_id:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_drive_folder_parent_missing",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "publisher_name": publisher_name,
+                    "resolution_source": lookup.resolution_source,
+                },
+            )
+        )
+        raise AppError(
+            code="report_download_drive_folder_parent_missing",
+            message="Drive upload parent folder is required to create a missing publisher folder",
+            retryable=False,
+            severity="error",
+            context={
+                "normalized_url": normalized_url,
+                "publisher_name": publisher_name,
+                "resolution_source": lookup.resolution_source,
+            },
+        )
+    ensure_policy = RetryPolicy(
+        retries=request.settings.retry_retries,
+        base_delay_seconds=request.settings.retry_base_delay_seconds,
+        backoff_step_seconds=request.settings.retry_backoff_step_seconds,
+        jitter_seconds=request.settings.retry_jitter_seconds,
+    )
+    ensure_response = run_with_retry(
+        step_name="report_download_drive_folder_ensure",
+        operation=lambda: dependencies.ensure_folder(
+            DriveFolderEnsureRequest(
+                schema_version="1.0",
+                parent_folder_id=parent_folder_id,
+                folder_name=publisher_name,
+                service_account_path=request.settings.drive_upload_google_sa_path,
+                supports_all_drives=request.settings.drive_upload_supports_all_drives,
+                include_items_from_all_drives=(
+                    request.settings.drive_upload_include_items_from_all_drives
+                ),
+                drive_id=request.settings.drive_upload_drive_id,
+                auth_mode=request.settings.drive_upload_auth_mode,
+                oauth_client_path=request.settings.drive_upload_oauth_client_path,
+                oauth_token_path=request.settings.drive_upload_oauth_token_path,
+            ),
+            ctx,
+        ),
+        ctx=ctx,
+        logger=logger,
+        module_name=logger.name,
+        policy=ensure_policy,
+        retry_event="report_download_drive_folder_ensure_retry",
+        failure_event="report_download_drive_folder_ensure_failed",
+        sleep_fn=dependencies.sleep_fn,
+    )
+    folder_id = ensure_response.folder.file_id.strip()
+    google_folder = _drive_folder_url(folder_id)
+    dependencies.update_publisher_google_folder(
+        PublisherGoogleFolderUpdateRequest(
+            schema_version="1.0",
+            db_path=request.reports_db,
+            publisher_name=publisher_name,
+            publisher_insights_url=request.publisher_insights_url,
+            google_folder=google_folder,
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_drive_folder_created",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "publisher_name": publisher_name,
+                "parent_folder_id": parent_folder_id,
+                "folder_id": folder_id,
+                "google_folder": google_folder,
+                "created": ensure_response.created,
+                "resolution_source": lookup.resolution_source,
+            },
+        )
+    )
+    return folder_id
+
+
+def _drive_folder_url(folder_id: str) -> str:
+    return f"https://drive.google.com/drive/folders/{folder_id.strip()}"
 
 
 def archive_single_artifact(

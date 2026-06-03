@@ -162,6 +162,7 @@ browser_download:
   drive_upload:
     enabled: true
     required: true
+    parent_folder_id: "1lavfpSqJIbGIbWQ1Z65_Kq4aKS6Qj_zB"
   failure_forensics:
     enabled: true
     policy: "copy_artifacts"

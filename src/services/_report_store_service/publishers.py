@@ -4,6 +4,8 @@ import sqlite3
 
 from src.contracts.report_store import (
     PublisherListItem,
+    PublisherGoogleFolderUpdateRequest,
+    PublisherGoogleFolderUpdateResponse,
     PublishersListRequest,
     PublishersListResponse,
     PublishersReplaceRequest,
@@ -352,6 +354,150 @@ def list_publishers(
             event="publishers_list_complete",
             module=logger.name,
             fields={"db_path": db_path, "publisher_count": len(response.publishers)},
+        )
+    )
+    return response
+
+
+def update_publisher_google_folder(
+    request: PublisherGoogleFolderUpdateRequest,
+    ctx: RunContext,
+) -> PublisherGoogleFolderUpdateResponse:
+    db_path = request.db_path.strip()
+    publisher_name = request.publisher_name.strip()
+    google_folder = request.google_folder.strip()
+    publisher_insights_url = _normalize_optional_url_key(
+        str(request.publisher_insights_url or "").strip()
+    )
+    if not db_path:
+        raise AppError(
+            code="publisher_google_folder_db_missing",
+            message="Report metadata DB path is required for publisher folder update",
+            retryable=False,
+            severity="error",
+        )
+    if not publisher_name and not publisher_insights_url:
+        raise AppError(
+            code="publisher_google_folder_lookup_key_missing",
+            message="Publisher name or insights URL is required for publisher folder update",
+            retryable=False,
+            severity="error",
+        )
+    if not google_folder:
+        raise AppError(
+            code="publisher_google_folder_missing",
+            message="Google folder value is required for publisher folder update",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_google_folder_update_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "publisher_name": publisher_name,
+                "has_publisher_insights_url": bool(publisher_insights_url),
+                "google_folder": google_folder,
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path, ctx) as conn:
+            updated_count = 0
+            resolution_source = "publisher_name"
+            if publisher_insights_url:
+                cursor = conn.execute(
+                    """
+                    UPDATE publishers
+                    SET google_folder=?
+                    WHERE normalized_insights_url=?
+                    """,
+                    (google_folder, publisher_insights_url),
+                )
+                updated_count = int(cursor.rowcount or 0)
+                resolution_source = "publisher_insights_url"
+            if updated_count <= 0 and publisher_name:
+                cursor = conn.execute(
+                    """
+                    UPDATE publishers
+                    SET google_folder=?
+                    WHERE lower(trim(name))=lower(trim(?))
+                    """,
+                    (google_folder, publisher_name),
+                )
+                updated_count = int(cursor.rowcount or 0)
+                resolution_source = "publisher_name"
+            if updated_count <= 0:
+                raise AppError(
+                    code="publisher_google_folder_publisher_not_found",
+                    message="Publisher row was not found for Google folder update",
+                    retryable=False,
+                    severity="error",
+                    context={
+                        "db_path": db_path,
+                        "publisher_name": publisher_name,
+                        "publisher_insights_url": publisher_insights_url or "",
+                    },
+                )
+            row = conn.execute(
+                """
+                SELECT name, google_folder
+                FROM publishers
+                WHERE google_folder=?
+                  AND (
+                    (? <> '' AND normalized_insights_url=?)
+                    OR (? <> '' AND lower(trim(name))=lower(trim(?)))
+                  )
+                ORDER BY id ASC
+                LIMIT 1
+                """,
+                (
+                    google_folder,
+                    publisher_insights_url or "",
+                    publisher_insights_url or "",
+                    publisher_name,
+                    publisher_name,
+                ),
+            ).fetchone()
+    except AppError:
+        raise
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="publisher_google_folder_update_failed",
+            message="Failed to update publisher Google folder in the reports database",
+            cause=exc,
+            retryable=True,
+            severity="error",
+            context={
+                "db_path": db_path,
+                "publisher_name": publisher_name,
+                "publisher_insights_url": publisher_insights_url or "",
+            },
+        ) from exc
+    resolved_name = str(row[0] if row else publisher_name).strip()
+    resolved_folder = str(row[1] if row else google_folder).strip()
+    response = PublisherGoogleFolderUpdateResponse(
+        schema_version="1.0",
+        publisher_name=resolved_name,
+        google_folder=resolved_folder,
+        updated_count=updated_count,
+        resolution_source=resolution_source,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_google_folder_update_complete",
+            module=logger.name,
+            fields={
+                "publisher_name": response.publisher_name,
+                "updated_count": response.updated_count,
+                "resolution_source": response.resolution_source,
+                "google_folder": response.google_folder,
+            },
         )
     )
     return response

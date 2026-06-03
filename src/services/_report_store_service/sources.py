@@ -463,8 +463,6 @@ def get_report_download_drive_folder(
                 SELECT name, insights_url, google_folder
                 FROM publishers
                 WHERE normalized_insights_url=?
-                  AND google_folder IS NOT NULL
-                  AND trim(google_folder) <> ''
                 ORDER BY id ASC
                 LIMIT 1
                 """,
@@ -502,8 +500,6 @@ def get_report_download_drive_folder(
                 WHERE rs.normalized_landing_page_url=?
                   AND rs.publisher_name IS NOT NULL
                   AND trim(rs.publisher_name) <> ''
-                  AND p.google_folder IS NOT NULL
-                  AND trim(p.google_folder) <> ''
                 ORDER BY rs.updated_at DESC, rs.id DESC
                 LIMIT 1
                 """,

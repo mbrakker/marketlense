@@ -1068,6 +1068,7 @@ class TestConfigService(unittest.TestCase):
         )
         self.assertTrue(settings.drive_upload_enabled)
         self.assertTrue(settings.drive_upload_required)
+        self.assertEqual("folder", settings.drive_upload_parent_folder_id)
         self.assertEqual("service_account", settings.drive_upload_auth_mode)
         self.assertTrue(settings.failure_forensics_enabled)
         self.assertEqual("metadata_only", settings.failure_forensics_policy)

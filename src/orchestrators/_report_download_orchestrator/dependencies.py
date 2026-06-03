@@ -14,6 +14,8 @@ from src.contracts.browser_download import (
     BrowserRoutePlaybookPromotionResponse,
 )
 from src.contracts.drive import (
+    DriveFolderEnsureRequest,
+    DriveFolderEnsureResponse,
     DriveFolderFileListRequest,
     DriveFolderFileListResponse,
     DriveWritePreflightRequest,
@@ -32,6 +34,8 @@ from src.contracts.files import (
 from src.contracts.report_store import (
     PublisherPrivateApiCandidateObservationRecordRequest,
     PublisherPrivateApiCandidateObservationRecordResponse,
+    PublisherGoogleFolderUpdateRequest,
+    PublisherGoogleFolderUpdateResponse,
     PublisherPrivateApiCandidatePromotedRequest,
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
@@ -54,6 +58,7 @@ from src.services.browser_report_download_service import (
 )
 from src.services.config_service import upsert_browser_download_identity_fields
 from src.services.drive_service import (
+    ensure_folder,
     list_files_in_folder,
     preflight_drive_write_access,
     upload_local_file,
@@ -67,6 +72,7 @@ from src.services.report_store_service import (
     record_publisher_download_route,
     record_report_source,
     record_report_value_score,
+    update_publisher_google_folder,
 )
 
 
@@ -140,6 +146,14 @@ class ReportDownloadDependencies:
         [DriveWritePreflightRequest, RunContext],
         DriveWritePreflightResponse,
     ] = preflight_drive_write_access
+    ensure_folder: Callable[
+        [DriveFolderEnsureRequest, RunContext],
+        DriveFolderEnsureResponse,
+    ] = ensure_folder
+    update_publisher_google_folder: Callable[
+        [PublisherGoogleFolderUpdateRequest, RunContext],
+        PublisherGoogleFolderUpdateResponse,
+    ] = update_publisher_google_folder
 
     @classmethod
     def default(cls) -> "ReportDownloadDependencies":
@@ -156,6 +170,8 @@ class ReportDownloadDependencies:
             get_report_download_drive_folder=get_report_download_drive_folder,
             list_files_in_folder=list_files_in_folder,
             upload_local_file=upload_local_file,
+            ensure_folder=ensure_folder,
+            update_publisher_google_folder=update_publisher_google_folder,
             upsert_browser_download_identity_fields=upsert_browser_download_identity_fields,
             sleep_fn=time.sleep,
         )

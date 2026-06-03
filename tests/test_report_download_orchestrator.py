@@ -27,6 +27,7 @@ from src.contracts.browser_download import (
 )
 from src.contracts.drive import (
     DriveFile,
+    DriveFolderEnsureResponse,
     DriveFolderFileListResponse,
     DriveWritePreflightResponse,
     DriveUploadLocalFileResponse,
@@ -38,6 +39,7 @@ from src.contracts.report_store import (
     PublisherDownloadRouteResponse,
     ReportDownloadDriveFolderLookupResponse,
     ReportSourceRecordResponse,
+    PublisherGoogleFolderUpdateResponse,
 )
 from src.orchestrators.report_download_orchestrator import (
     ReportDownloadDependencies,
@@ -247,6 +249,7 @@ def _drive_enabled_settings(
         settings,
         drive_upload_enabled=True,
         drive_upload_required=True,
+        drive_upload_parent_folder_id="root-folder",
         drive_upload_google_sa_path="/tmp/fake-sa.json",
         drive_upload_auth_mode="service_account",
         drive_upload_supports_all_drives=True,
@@ -2544,6 +2547,211 @@ def test_run_report_download_preflights_required_drive_archive_before_acquisitio
 
     assert response.outcome == "downloaded"
     assert calls[:2] == ["preflight", "download"]
+
+
+def test_run_report_download_creates_missing_publisher_drive_folder_before_upload(
+    tmp_path: Path,
+    run_context,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    settings = _drive_enabled_settings(_settings(tmp_path))
+    pdf_path = Path(settings.output_dir) / "report.pdf"
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    pdf_path.write_bytes(b"%PDF-1.7 acquired")
+    calls: list[str] = []
+    updated_folders: list[str] = []
+
+    def _download(req, ctx):
+        calls.append("download")
+        return _result(
+            url="https://example.com/report",
+            used_route_hint=False,
+            path=str(pdf_path),
+        )
+
+    def _ensure_folder(req, ctx):
+        calls.append("ensure_folder")
+        assert req.parent_folder_id == "root-folder"
+        assert req.folder_name == "Example Publisher"
+        return DriveFolderEnsureResponse(
+            schema_version="1.0",
+            folder=DriveFile(
+                schema_version="1.0",
+                file_id="created-publisher-folder",
+                name=req.folder_name,
+                modified_time="2026-06-03T00:00:00Z",
+                md5_checksum=None,
+                mime_type="application/vnd.google-apps.folder",
+            ),
+            parent_folder_id=req.parent_folder_id,
+            created=True,
+        )
+
+    def _update_folder(req, ctx):
+        calls.append("update_folder")
+        updated_folders.append(req.google_folder)
+        assert req.publisher_name == "Example Publisher"
+        assert req.publisher_insights_url == "https://example.com/insights"
+        return PublisherGoogleFolderUpdateResponse(
+            schema_version="1.0",
+            publisher_name=req.publisher_name,
+            google_folder=req.google_folder,
+            updated_count=1,
+            resolution_source="publisher_insights_url",
+        )
+
+    def _preflight(req, ctx):
+        calls.append("preflight")
+        assert req.folder_id == "created-publisher-folder"
+        return _successful_drive_preflight(req, ctx)
+
+    def _upload(req, ctx):
+        calls.append("upload")
+        assert req.folder_id == "created-publisher-folder"
+        return DriveUploadLocalFileResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id="drive-file-1",
+                name=req.file_name,
+                modified_time="2026-06-03T00:00:00Z",
+                md5_checksum=_md5_for_path(Path(req.source_path)),
+                mime_type=req.mime_type,
+            ),
+            source_path=req.source_path,
+            size=Path(req.source_path).stat().st_size,
+            md5=_md5_for_path(Path(req.source_path)),
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5=_md5_for_path(Path(req.path)),
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        record_report_value_score=lambda req, ctx: None,
+        sleep_fn=lambda seconds: None,
+        get_report_download_drive_folder=lambda req, ctx: (
+            ReportDownloadDriveFolderLookupResponse(
+                schema_version="1.0",
+                publisher_name="Example Publisher",
+                google_folder="",
+                resolution_source="publisher_insights_url",
+            )
+        ),
+        ensure_folder=_ensure_folder,
+        update_publisher_google_folder=_update_folder,
+        preflight_drive_write_access=_preflight,
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0", folder_id=req.folder_id, files=[]
+        ),
+        upload_local_file=_upload,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+            publisher_insights_url="https://example.com/insights",
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    events = _events(caplog, "market_lense.report_download_orchestrator")
+    assert response.outcome == "downloaded"
+    assert response.drive_uploads[0].folder_id == "created-publisher-folder"
+    assert calls[:4] == ["ensure_folder", "update_folder", "preflight", "download"]
+    assert updated_folders == [
+        "https://drive.google.com/drive/folders/created-publisher-folder"
+    ]
+    assert any(
+        event.get("event") == "report_download_drive_folder_created"
+        for event in events
+    )
+    assert_logs_have_required_fields(events)
+
+
+def test_run_report_download_missing_publisher_folder_requires_parent_folder(
+    tmp_path: Path,
+    run_context,
+    assert_app_error,
+) -> None:
+    settings = replace(
+        _drive_enabled_settings(_settings(tmp_path)),
+        drive_upload_parent_folder_id="",
+    )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("download should not start without archive folder")
+        ),
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: (_ for _ in ()).throw(AssertionError("unused")),
+        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("unused")
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("unused")
+        ),
+        record_report_value_score=lambda req, ctx: None,
+        sleep_fn=lambda seconds: None,
+        get_report_download_drive_folder=lambda req, ctx: (
+            ReportDownloadDriveFolderLookupResponse(
+                schema_version="1.0",
+                publisher_name="Example Publisher",
+                google_folder="",
+                resolution_source="publisher_insights_url",
+            )
+        ),
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                publisher_insights_url="https://example.com/insights",
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert_app_error(
+        excinfo.value,
+        code="report_download_drive_folder_parent_missing",
+        retryable=False,
+    )
 
 
 def test_run_report_download_required_drive_preflight_failure_blocks_acquisition(

@@ -53,6 +53,14 @@ def load_browser_download_settings(
             True,
         ),
     )
+    drive_upload_parent_folder_id = str(
+        drive_upload_cfg.get("parent_folder_id")
+        if not _is_missing(drive_upload_cfg.get("parent_folder_id"))
+        else _env_value("BROWSER_DOWNLOAD_DRIVE_UPLOAD_PARENT_FOLDER_ID")
+        or ingest.get("gdrive_folder_id")
+        or _env_value("GDRIVE_FOLDER_ID")
+        or ""
+    ).strip()
     failure_forensics_enabled = _to_bool(
         failure_forensics_cfg.get("enabled")
         if not _is_missing(failure_forensics_cfg.get("enabled"))
@@ -392,6 +400,7 @@ def load_browser_download_settings(
         ),
         drive_upload_enabled=drive_upload_enabled,
         drive_upload_required=drive_upload_required,
+        drive_upload_parent_folder_id=drive_upload_parent_folder_id,
         drive_upload_google_sa_path=str(drive_auth_settings["google_sa_path"] or ""),
         drive_upload_auth_mode=str(
             drive_auth_settings["drive_auth_mode"] or "service_account"
@@ -442,6 +451,9 @@ def load_browser_download_settings(
                 "retry_jitter_seconds": settings.retry_jitter_seconds,
                 "drive_upload_enabled": settings.drive_upload_enabled,
                 "drive_upload_required": settings.drive_upload_required,
+                "has_drive_upload_parent_folder": bool(
+                    settings.drive_upload_parent_folder_id
+                ),
                 "drive_upload_auth_mode": settings.drive_upload_auth_mode,
                 "failure_forensics_enabled": settings.failure_forensics_enabled,
                 "failure_forensics_policy": settings.failure_forensics_policy,
