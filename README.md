@@ -407,11 +407,17 @@ Wordpress/
 
 Plugin slug: `marketlense-core`
 
+Current plugin package version: `1.2.10`. Deploy this package or newer when the
+live WordPress REST schema must expose `ml_signal` and `ml_briefing`; older or
+stale deployed payloads can still report the same plugin slug while exposing
+only `ml_report`.
+
 Primary responsibilities:
 
 - Registers custom post type `ml_report` (`show_in_rest=true`, REST base `ml_report`)
+- Registers custom post types `ml_signal` and `ml_briefing` (`show_in_rest=true`, REST bases `ml_signal` and `ml_briefing`)
 - Registers taxonomies:
-  - native WordPress `category` support on `ml_report` for public topic/archive/filter UX
+  - native WordPress `category` support on `ml_report`, `ml_signal`, and `ml_briefing` for public topic/archive/filter UX
   - `ml_publisher`
 - Keeps legacy `ml_topic` taxonomy data internal only for backward compatibility; it is not a public archive/filter surface
 - Registers publisher term metadata:

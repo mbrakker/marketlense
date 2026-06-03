@@ -1,0 +1,43 @@
+schema_version: '1.0'
+playbook_id: learned-www-harriswilliams-com-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-06-03T05:45:22Z'
+stale_after_days: 120
+publisher_pattern: www.harriswilliams.com
+host_patterns:
+- www.harriswilliams.com
+url_path_markers:
+- our-insights
+- hcls-outsourced-medical-device-services-ma-trends-tri-imaging-spotlights-momentum
+route_family: browser_onsite_report
+route_kind: pdf_download
+summary: click Accept All (cookie banner) (Cookie consent banner dismissed); then
+  scroll Scroll to reveal article body (Page scrolled; article/footer visible in viewport);
+  then save_as_pdf Save full page as PDF (Saved page as PDF artifact (local file))
+steps:
+- schema_version: '1.0'
+  action: click
+  target: Accept All (cookie banner)
+  verification: Cookie consent banner dismissed
+- schema_version: '1.0'
+  action: scroll
+  target: Scroll to reveal article body
+  verification: Page scrolled; article/footer visible in viewport
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Save full page as PDF
+  verification: Saved page as PDF artifact (local file)
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-06-03T05:45:22Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.

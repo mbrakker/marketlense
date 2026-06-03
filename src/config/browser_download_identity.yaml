@@ -311,6 +311,73 @@ fields:
   label: cookie toggles (privacy preferences)
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: country_select
+  label: Country (select)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: opt_in_checkbox
+  label: Opt-in checkbox
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: submit_button
+  label: Submit button
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: optional_i_would_like_to_receive_email_updates_about_sita_products_services_and_events_i_understand_that_i_can_update_my_preferences_or_unsubscribe_at_any_time_via_the_preference_centre_or_by_following_the_link_included_in_our_emails
+  label: (Optional) I would like to receive email updates about SITA products, services,
+    and events. I understand that I can update my preferences or unsubscribe at any
+    time via the Preference Centre or by following the link included in our emails.
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: type_the_code_from_the_image
+  label: Type the code from the image *
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: captcha_input
+  label: Captcha (input)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: contact_me_about
+  label: Contact me about
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: comment
+  label: Comment
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: first_name_name_firstname
+  label: First name (name=firstname)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: last_name_name_lastname
+  label: Last name (name=lastname)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: work_email_name_email
+  label: Work email (name=email)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: company_size_name_company_size_legacy
+  label: Company size (name=company_size_legacy)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: country_name_country_dropdown
+  label: Country (name=country_dropdown)
+  value: null
+  aliases: []
 publisher_overrides:
 - schema_version: '1.0'
   host_pattern: centricsoftware.com

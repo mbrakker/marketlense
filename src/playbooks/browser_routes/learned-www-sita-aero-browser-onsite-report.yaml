@@ -1,0 +1,46 @@
+schema_version: '1.0'
+playbook_id: learned-www-sita-aero-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-06-03T05:50:43Z'
+stale_after_days: 120
+publisher_pattern: www.sita.aero
+host_patterns:
+- www.sita.aero
+url_path_markers:
+- globalassets
+- docs
+- surveys--reports
+- passenger-it-insights-2024-cnpdf
+route_family: browser_onsite_report
+route_kind: onsite_report
+summary: Navigated to the direct PDF URL which caused the browser to save a local
+  PDF file at C:\Programing\Market lense\out\browser_downloads\www.sita.aero\767a92bdbc4a\document.pdf.
+  The live page redirected to a guest-login lead form ('Access this free content').
+  Repeated read_file attempts on the downloaded file failed with 'Stream has ended
+  unexpectedly'. Returning artifact info and visible form details; no form submission
+  attempted.
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Direct PDF URL
+  verification: Browser initiated navigation; a local PDF file was saved to the downloads
+    directory, and the site redirected to a guest-login lead form.
+- schema_version: '1.0'
+  action: page_load
+  target: Access this free content
+  verification: Guest-login form visible with required fields and cookie banner; form
+    not submitted.
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome captured.
+source_evidence:
+- structured_result
+- captured
+- onsite_report
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-06-03T05:50:43Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/onsite_report after captured evidence.
