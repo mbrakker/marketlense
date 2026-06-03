@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from typing import Any
 
 from src.contracts.cross_report_analysis import (
@@ -304,6 +305,10 @@ body {
 }
 """
 
+_INTERNAL_EVIDENCE_REF_RE = re.compile(
+    r"\b[A-Za-z0-9_-]+:(?:claim|finding|quote):[A-Za-z0-9_.-]+\b"
+)
+
 
 def build_cross_report_html_document(
     *,
@@ -325,7 +330,7 @@ def build_cross_report_html_document(
             _summary_html(generated, source_metadata),
             _analysis_sections_html(generated),
             _source_map_html(source_metadata),
-            _agreement_html(agreement_result),
+            _agreement_html(agreement_result, generated),
             _evidence_html(generated),
             _raw_metric_html(generated),
             _metadata_script(machine_metadata),
@@ -374,8 +379,39 @@ def _metadata_script(metadata: dict[str, Any]) -> str:
     )
 
 
-def _prose_html(value: Any) -> str:
-    text = str(value or "").replace("\r\n", "\n").strip()
+def _public_reference_text(
+    value: Any,
+    *,
+    evidence_references: dict[str, str] | None = None,
+    raw_metric_references: dict[str, str] | None = None,
+) -> str:
+    text = str(value or "")
+    replacements = {
+        **(evidence_references or {}),
+        **(raw_metric_references or {}),
+    }
+    for source_id in sorted(replacements, key=len, reverse=True):
+        label = str(replacements.get(source_id) or "").strip() or "source evidence"
+        text = re.sub(
+            rf"(?<![\w:-]){re.escape(source_id)}(?![\w:-])",
+            label,
+            text,
+        )
+    return _INTERNAL_EVIDENCE_REF_RE.sub("source evidence", text)
+
+
+def _prose_html(
+    value: Any,
+    *,
+    evidence_references: dict[str, str] | None = None,
+    raw_metric_references: dict[str, str] | None = None,
+) -> str:
+    text = _public_reference_text(
+        value,
+        evidence_references=evidence_references,
+        raw_metric_references=raw_metric_references,
+    )
+    text = text.replace("\r\n", "\n").strip()
     if not text:
         return '<p class="muted">Not available from supplied evidence.</p>'
     lines = [line.strip() for line in text.splitlines() if line.strip()]
@@ -386,16 +422,90 @@ def _prose_html(value: Any) -> str:
     )
 
 
+def _coerce_pages(metadata: dict[str, Any]) -> list[int]:
+    pages: list[int] = []
+    for raw_page in metadata.get("pages") or []:
+        try:
+            page = int(raw_page)
+        except (TypeError, ValueError):
+            continue
+        if page > 0 and page not in pages:
+            pages.append(page)
+    try:
+        page = int(metadata.get("page"))
+    except (TypeError, ValueError):
+        page = 0
+    if page > 0 and page not in pages:
+        pages.append(page)
+    return pages
+
+
+def _grounding_reference(title: str, metadata: dict[str, Any]) -> str:
+    pages = _coerce_pages(metadata)
+    title_text = str(title or "").strip()
+    if pages:
+        page_label = "page" if len(pages) == 1 else "pages"
+        page_text = f"{page_label} {', '.join(str(page) for page in pages)}"
+        return f"{title_text}, {page_text}" if title_text else page_text
+    return title_text
+
+
+def _evidence_reference_map(
+    generated: CrossReportGeneratedAnalysisResult,
+) -> dict[str, str]:
+    return {
+        evidence.evidence_id: _grounding_reference(
+            evidence.title,
+            dict(evidence.source_metadata or {}),
+        )
+        for evidence in generated.evidence
+    }
+
+
+def _raw_metric_reference_map(
+    generated: CrossReportGeneratedAnalysisResult,
+) -> dict[str, str]:
+    return {
+        metric.metric_id: _grounding_reference(
+            next(
+                (
+                    source.title
+                    for source in generated.selected_sources
+                    if source.report_id == metric.report_id
+                ),
+                metric.report_id,
+            ),
+            dict(metric.source_metadata or {}),
+        )
+        for metric in generated.raw_metrics
+    }
+
+
 def _citation_line(
     *,
     evidence_ids: list[str],
     raw_metric_ids: list[str] | None = None,
+    evidence_references: dict[str, str] | None = None,
+    raw_metric_references: dict[str, str] | None = None,
 ) -> str:
     parts: list[str] = []
-    if evidence_ids:
-        parts.append(f"Evidence: {', '.join(evidence_ids)}")
+    evidence_labels = _unique_ordered(
+        [
+            (evidence_references or {}).get(evidence_id, "")
+            for evidence_id in evidence_ids
+        ]
+    )
+    if evidence_labels:
+        parts.append("Evidence: " + "; ".join(evidence_labels))
     if raw_metric_ids:
-        parts.append(f"Raw metrics: {', '.join(raw_metric_ids)}")
+        metric_labels = _unique_ordered(
+            [
+                (raw_metric_references or {}).get(metric_id, "")
+                for metric_id in raw_metric_ids
+            ]
+        )
+        if metric_labels:
+            parts.append("Raw metrics: " + "; ".join(metric_labels))
     return " | ".join(parts)
 
 
@@ -435,6 +545,8 @@ def _hero_html(
     generated: CrossReportGeneratedAnalysisResult,
     source_metadata: list[dict[str, Any]],
 ) -> str:
+    evidence_references = _evidence_reference_map(generated)
+    raw_metric_references = _raw_metric_reference_map(generated)
     publisher_count = _publisher_count(source_metadata)
     source_count = len(source_metadata)
     evidence_count = len(generated.evidence)
@@ -485,7 +597,11 @@ def _hero_html(
             "</div>",
             '<aside class="hero-brief" aria-label="Executive brief">',
             "<strong>Executive synthesis</strong>",
-            f'<div class="prose-block">{_prose_html(generated.executive_summary)}</div>',
+            (
+                '<div class="prose-block">'
+                f"{_prose_html(generated.executive_summary, evidence_references=evidence_references, raw_metric_references=raw_metric_references)}"
+                "</div>"
+            ),
             '<div style="margin-top: 14px">',
             '<span class="meta-label">Topic signals</span>',
             taxonomy,
@@ -528,6 +644,8 @@ def _summary_html(
     generated: CrossReportGeneratedAnalysisResult,
     source_metadata: list[dict[str, Any]],
 ) -> str:
+    evidence_references = _evidence_reference_map(generated)
+    raw_metric_references = _raw_metric_reference_map(generated)
     facts = [
         ("Selected reports", str(len(source_metadata))),
         ("Distinct publishers", str(_publisher_count(source_metadata))),
@@ -553,7 +671,11 @@ def _summary_html(
             '<p class="panel-kicker">Lead takeaway</p>',
             "<h2>Executive synthesis</h2>",
             "</div></div>",
-            f'<div class="summary-copy prose-block">{_prose_html(generated.executive_summary)}</div>',
+            (
+                '<div class="summary-copy prose-block">'
+                f"{_prose_html(generated.executive_summary, evidence_references=evidence_references, raw_metric_references=raw_metric_references)}"
+                "</div>"
+            ),
             f'<div class="fact-grid" style="margin-top: 18px">{fact_cards}</div>',
             "</section>",
         ]
@@ -562,10 +684,14 @@ def _summary_html(
 
 def _analysis_sections_html(generated: CrossReportGeneratedAnalysisResult) -> str:
     cards: list[str] = []
+    evidence_references = _evidence_reference_map(generated)
+    raw_metric_references = _raw_metric_reference_map(generated)
     for index, section in enumerate(generated.sections, start=1):
         citation = _citation_line(
             evidence_ids=section.evidence_ids,
             raw_metric_ids=section.raw_metric_ids,
+            evidence_references=evidence_references,
+            raw_metric_references=raw_metric_references,
         )
         citation_html = (
             f'<div class="citation-micro">{_html_text(citation)}</div>'
@@ -584,7 +710,11 @@ def _analysis_sections_html(generated: CrossReportGeneratedAnalysisResult) -> st
                     f'<span class="insight-index">{index}</span>',
                     "<div>",
                     f"<h3>{_html_text(section.heading)}</h3>",
-                    f'<div class="insight-text prose-block">{_prose_html(section.body)}</div>',
+                    (
+                        '<div class="insight-text prose-block">'
+                        f"{_prose_html(section.body, evidence_references=evidence_references, raw_metric_references=raw_metric_references)}"
+                        "</div>"
+                    ),
                     citation_html,
                     "</div>",
                     "</div>",
@@ -609,29 +739,37 @@ def _analysis_sections_html(generated: CrossReportGeneratedAnalysisResult) -> st
 
 
 def _source_map_html(source_metadata: list[dict[str, Any]]) -> str:
-    cards = [
-        "\n".join(
-            [
-                (
-                    '<article class="editorial-card" '
-                    f'data-report-id="{_html_text(item["report_id"])}">'
-                ),
-                f"<h3>{_html_text(item['title'])}</h3>",
-                (
-                    '<p class="fact-value">'
-                    f"{_html_text(item['publisher'])} | "
-                    f"{_html_text(item['report_date'])}</p>"
-                ),
-                (
-                    '<div class="citation-micro">'
-                    f"Rank {_html_text(item['rank'])} | "
-                    f"evidence items: {_html_text(item['evidence_count'])}</div>"
-                ),
-                "</article>",
-            ]
+    cards: list[str] = []
+    for item in source_metadata:
+        source_url = str(item.get("source_url") or "").strip()
+        title = _html_text(item["title"])
+        title_html = (
+            f'<h3><a href="{_html_text(source_url)}" rel="noopener" target="_blank">{title}</a></h3>'
+            if source_url
+            else f"<h3>{title}</h3>"
         )
-        for item in source_metadata
-    ]
+        cards.append(
+            "\n".join(
+                [
+                    (
+                        '<article class="editorial-card" '
+                        f'data-report-id="{_html_text(item["report_id"])}">'
+                    ),
+                    title_html,
+                    (
+                        '<p class="fact-value">'
+                        f"{_html_text(item['publisher'])} | "
+                        f"{_html_text(item['report_date'])}</p>"
+                    ),
+                    (
+                        '<div class="citation-micro">'
+                        f"Rank {_html_text(item['rank'])} | "
+                        f"evidence items: {_html_text(item['evidence_count'])}</div>"
+                    ),
+                    "</article>",
+                ]
+            )
+        )
     return "\n".join(
         [
             '<section class="panel" id="section-sources" aria-label="Source report map">',
@@ -647,11 +785,10 @@ def _source_map_html(source_metadata: list[dict[str, Any]]) -> str:
 
 def _evidence_html(generated: CrossReportGeneratedAnalysisResult) -> str:
     items = [
-        "<li "
-        f'id="{_html_text(evidence.evidence_id)}">'
+        "<li>"
         f"<strong>{_html_text(evidence.publisher)}</strong>, "
-        f"{_html_text(evidence.title)}: {_html_text(evidence.text)}"
-        f" <code>{_html_text(evidence.evidence_id)}</code>"
+        f"{_html_text(_grounding_reference(evidence.title, dict(evidence.source_metadata or {})))}: "
+        f"{_html_text(evidence.text)}"
         "</li>"
         for evidence in generated.evidence
     ]
@@ -669,14 +806,13 @@ def _evidence_html(generated: CrossReportGeneratedAnalysisResult) -> str:
 
 
 def _raw_metric_html(generated: CrossReportGeneratedAnalysisResult) -> str:
+    metric_references = _raw_metric_reference_map(generated)
     items = [
-        "<li "
-        f'id="{_html_text(metric.metric_id)}">'
+        "<li>"
         f"<strong>{_html_text(metric.publisher)}</strong>: "
         f"{_html_text(metric.label)} = {_html_text(metric.raw_value)} "
         f"{_html_text(metric.unit)}"
-        f" ({_html_text(metric.context)})"
-        f" <code>{_html_text(metric.metric_id)}</code>"
+        f"{' (' + _html_text(metric_references[metric.metric_id]) + ')' if metric_references.get(metric.metric_id) else ''}"
         "</li>"
         for metric in generated.raw_metrics
     ]
@@ -698,12 +834,16 @@ def _raw_metric_html(generated: CrossReportGeneratedAnalysisResult) -> str:
     )
 
 
-def _agreement_html(agreement_result: CrossReportEvidenceAgreementResult) -> str:
+def _agreement_html(
+    agreement_result: CrossReportEvidenceAgreementResult,
+    generated: CrossReportGeneratedAnalysisResult,
+) -> str:
+    evidence_lookup = _evidence_reference_map(generated)
     items = [
         "<li>"
         f"<strong>{_html_text(group.agreement_type)}</strong>: "
         f"{_html_text(group.label)}"
-        f" | evidence: {_html_text(', '.join(group.evidence_ids))}"
+        f" | evidence: {_html_text('; '.join(_unique_ordered([evidence_lookup.get(evidence_id, '') for evidence_id in group.evidence_ids])))}"
         f" | notes: {_html_text(', '.join(group.uncertainty_reasons))}"
         "</li>"
         for group in agreement_result.evidence_groups

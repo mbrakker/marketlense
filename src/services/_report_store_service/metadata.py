@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from dataclasses import replace
 from typing import List, Optional
 
 from src.contracts.report_store import (
@@ -27,6 +28,61 @@ from .common import (
     _is_lock_error,
 )
 from .connection import _metadata_conn
+
+
+def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1
+        FROM sqlite_master
+        WHERE type='table' AND name=?
+        """,
+        (table_name,),
+    ).fetchone()
+    return row is not None
+
+
+def _report_source_url_from_store(
+    conn: sqlite3.Connection,
+    *,
+    report_title: str,
+    publisher: Optional[str],
+    md5: Optional[str],
+) -> Optional[str]:
+    if not _table_exists(conn, "report_sources"):
+        return None
+    clean_md5 = str(md5 or "").strip()
+    if clean_md5:
+        row = conn.execute(
+            """
+            SELECT landing_page_url
+            FROM report_sources
+            WHERE md5=? AND COALESCE(landing_page_url, '') <> ''
+            ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (clean_md5,),
+        ).fetchone()
+        if row and str(row[0] or "").strip():
+            return str(row[0]).strip()
+    normalized_title = report_title.strip().casefold()
+    normalized_publisher = str(publisher or "").strip().casefold()
+    if not normalized_title:
+        return None
+    row = conn.execute(
+        """
+        SELECT landing_page_url
+        FROM report_sources
+        WHERE lower(report_name)=?
+          AND (?='' OR lower(COALESCE(publisher_name, ''))=?)
+          AND COALESCE(landing_page_url, '') <> ''
+        ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
+        LIMIT 1
+        """,
+        (normalized_title, normalized_publisher, normalized_publisher),
+    ).fetchone()
+    return str(row[0]).strip() if row and str(row[0] or "").strip() else None
+
 
 def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetResponse:
     file_id = row[0]
@@ -383,6 +439,12 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
         )
     )
     with _metadata_conn(request.db_path, ctx) as conn:
+        resolved_source_url = source_url or _report_source_url_from_store(
+            conn,
+            report_title=title,
+            publisher=publisher,
+            md5=md5,
+        )
         conn.execute(
             """
             INSERT INTO reports(file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at)
@@ -415,7 +477,7 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 categories_json,
                 region,
                 time_period,
-                source_url,
+                resolved_source_url,
                 html_path,
                 md5,
                 page_count,
@@ -459,6 +521,14 @@ def get_metadata(
             (request.file_id,),
         )
         row = cur.fetchone()
+        fallback_source_url = None
+        if row and not str(row[8] or "").strip():
+            fallback_source_url = _report_source_url_from_store(
+                conn,
+                report_title=str(row[2] or ""),
+                publisher=str(row[3] or "") or None,
+                md5=str(row[10] or "") or None,
+            )
 
     if not row:
         logger.info(
@@ -473,6 +543,8 @@ def get_metadata(
         return None
 
     response = _row_to_metadata_response(row, ctx)
+    if fallback_source_url:
+        response = replace(response, source_url=fallback_source_url)
     logger.info(
         log_event(
             ctx,

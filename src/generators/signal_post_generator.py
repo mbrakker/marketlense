@@ -14,6 +14,7 @@ from src.contracts.signal_candidates import (
     SignalCandidate,
     SignalCandidateGroup,
     SignalCandidateReadResponse,
+    SignalCandidateSourceRef,
     validate_signal_candidate_contract,
 )
 from src.contracts.wordpress_entities import (
@@ -156,6 +157,51 @@ def _summary_html(evidence: list[CrossReportEvidenceReference]) -> str:
     return f"<p>{first_text}</p>"
 
 
+def _page_refs_from_metadata(metadata: dict) -> list[int]:
+    pages: list[int] = []
+    for raw_page in metadata.get("pages") or []:
+        try:
+            page = int(raw_page)
+        except (TypeError, ValueError):
+            continue
+        if page > 0 and page not in pages:
+            pages.append(page)
+    for key in ("page",):
+        try:
+            page = int(metadata.get(key))
+        except (TypeError, ValueError):
+            page = 0
+        if page > 0 and page not in pages:
+            pages.append(page)
+    return pages
+
+
+def _citation_label(title: str, pages: list[int]) -> str:
+    clean_title = str(title or "").strip()
+    if pages:
+        page_label = "page" if len(pages) == 1 else "pages"
+        page_text = f"{page_label} {', '.join(str(page) for page in pages)}"
+        return f"{clean_title}, {page_text}" if clean_title else page_text
+    return clean_title
+
+
+def _evidence_citation(item: CrossReportEvidenceReference) -> str:
+    return _citation_label(item.title, _page_refs_from_metadata(item.source_metadata))
+
+
+def _source_item_html(source: CrossReportSourceReportCandidate) -> str:
+    label = f"{html.escape(source.publisher)}: {html.escape(source.title)}"
+    source_url = str(source.source_url or "").strip()
+    if source_url:
+        return (
+            "<li>"
+            f'<a href="{html.escape(source_url)}" rel="noopener" target="_blank">'
+            f"{label}</a>"
+            "</li>"
+        )
+    return f"<li>{label}</li>"
+
+
 def _body_html(
     *,
     projection_title: str,
@@ -165,16 +211,12 @@ def _body_html(
 ) -> str:
     evidence_items = "".join(
         "<li>"
-        f"<strong>{html.escape(item.evidence_id)}</strong>: "
-        f"{html.escape(item.text)} "
-        f"<span>({html.escape(item.publisher)} / {html.escape(item.title)})</span>"
+        f"<strong>{html.escape(_evidence_citation(item))}</strong>: "
+        f"{html.escape(item.text)}"
         "</li>"
         for item in evidence
     )
-    source_items = "".join(
-        "<li>" f"{html.escape(source.publisher)}: {html.escape(source.title)}" "</li>"
-        for source in sources
-    )
+    source_items = "".join(_source_item_html(source) for source in sources)
     return (
         '<article class="ml-signal-post">'
         f"<h1>{html.escape(projection_title)}</h1>"
@@ -194,42 +236,53 @@ def _body_html_from_candidates(
     candidates: list[SignalCandidate],
     groups: list[SignalCandidateGroup],
     sources: list[CrossReportSourceReportCandidate],
+    evidence: list[CrossReportEvidenceReference],
     uncertainty: str,
 ) -> str:
-    group_by_id = {group.group_id: group for group in groups}
+    del groups
+    source_title_by_report_id = {source.report_id: source.title for source in sources}
+    evidence_by_id = {item.evidence_id: item for item in evidence}
     candidate_items = "".join(
         "<li>"
-        f"<strong>{html.escape(candidate.candidate_id)}</strong>: "
+        f"<strong>{html.escape(candidate.title)}</strong>: "
         f"{html.escape(candidate.summary)} "
-        f"<span>({html.escape(candidate.support_level)} / "
-        f"{html.escape(candidate.group_id)})</span>"
+        f"<span>({html.escape(candidate.support_level)})</span>"
         "</li>"
         for candidate in candidates
     )
-    group_items = "".join(
+    citation_items = "".join(
         "<li>"
-        f"<strong>{html.escape(group.group_id)}</strong>: "
-        f"{html.escape(group.summary)}"
+        f"{html.escape(_stored_source_ref_citation(ref, source_title_by_report_id, evidence_by_id))}"
         "</li>"
-        for group in group_by_id.values()
+        for candidate in candidates
+        for ref in candidate.source_refs
     )
-    source_items = "".join(
-        "<li>" f"{html.escape(source.publisher)}: {html.escape(source.title)}" "</li>"
-        for source in sources
-    )
+    source_items = "".join(_source_item_html(source) for source in sources)
     return (
         '<article class="ml-signal-post">'
         f"<h1>{html.escape(projection_title)}</h1>"
         "<h2>Stored Signal candidates</h2>"
         f"<ul>{candidate_items}</ul>"
-        "<h2>Signal groups</h2>"
-        f"<ul>{group_items}</ul>"
+        "<h2>Grounding citations</h2>"
+        f"<ul>{citation_items}</ul>"
         "<h2>Source reports</h2>"
         f"<ul>{source_items}</ul>"
         "<h2>Uncertainty</h2>"
         f"<p>{html.escape(uncertainty)}</p>"
         "</article>"
     )
+
+
+def _stored_source_ref_citation(
+    ref: SignalCandidateSourceRef,
+    source_title_by_report_id: dict[str, str],
+    evidence_by_id: dict[str, CrossReportEvidenceReference],
+) -> str:
+    evidence = evidence_by_id.get(ref.evidence_id)
+    if evidence is not None:
+        return _evidence_citation(evidence)
+    pages = list(ref.page_refs) or _page_refs_from_metadata(ref.source_metadata)
+    return _citation_label(source_title_by_report_id.get(ref.report_id, "Source report"), pages)
 
 
 def _approved_candidates(
@@ -307,12 +360,13 @@ def _projection_from_candidates(
         request=request,
         selected_sources=selected_sources,
         selected_evidence=[
-            item
-            for item in projected_data.evidence
-            if item.evidence_id in set(evidence_ids)
+            item for item in projected_data.evidence if item.evidence_id in set(evidence_ids)
         ],
         topic_ids=topic_ids,
     )
+    selected_evidence = [
+        item for item in projected_data.evidence if item.evidence_id in set(evidence_ids)
+    ]
     title_topic = (
         " ".join(str(request.topic or "").strip().split()) or candidates[0].title
     )
@@ -337,6 +391,7 @@ def _projection_from_candidates(
         candidates=candidates,
         groups=groups,
         sources=selected_sources,
+        evidence=selected_evidence,
         uncertainty=uncertainty,
     )
     summary = html.escape(candidates[0].summary)

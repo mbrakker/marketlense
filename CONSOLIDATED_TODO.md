@@ -149,17 +149,6 @@ Scoring:
     - Public UI copy consistently uses Report for report entities and Briefing only for briefing entities.
     - Tests verify configured post type, WordPress payload post type, and resulting content type.
 
-- **Title:** Expose original report source URLs and page-only grounding citations [Impact: 5/5, Effort: 3/5]
-  - Explanation: Source URLs are stored in report-store paths, but public report/signal/briefing outputs still need a guaranteed source URL and citation normalization policy that never exposes local artifact or evidence-window paths.
-  - Pros: Improves reader trust and prevents leaking pipeline-internal targets.
-  - Cons: Requires source-url propagation and citation normalization across multiple artifact paths.
-  - Acceptance Criteria:
-    - Public report pages render the original source URL when available, with deterministic missing-source behavior.
-    - Source URL is stored in a typed, versioned contract and propagated through projection, render, and publish boundaries.
-    - Grounding citations display only original report/page references, such as `Report Name, page XX`.
-    - Generated artifact paths, local evidence IDs, crop paths, cache files, and pipeline URLs are never public citation targets.
-    - Tests cover source URL propagation, missing source URL handling, and citation normalization for reports, signals, and briefings.
-
 - **Title:** Make WordPress categories the canonical Topic surface with full topic semantics [Impact: 4/5, Effort: 3/5]
   - Explanation: WordPress categories already serve the public Topic path, but they publish mostly as labels. README defines Topics as controlled taxonomy entries with definitions plus inclusion/exclusion rules.
   - Pros: Reuses the existing category implementation while making taxonomy governance visible.

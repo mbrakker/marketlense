@@ -39,6 +39,7 @@ def _candidate(report_id: str, publisher: str) -> CrossReportSourceReportCandida
         publisher=publisher,
         publisher_id=publisher.lower().replace(" ", "-"),
         report_date="2026-05-20",
+        source_url=f"https://sources.example/{report_id}",
         projection_status="projected",
         content_hash=f"{report_id}-hash",
         category_labels=["Retail Strategy"],
@@ -72,7 +73,7 @@ def _evidence(
         entity_uid=f"{report_id}:claim:{evidence_id}",
         content_class="claim",
         text=f"{publisher} reports AI commerce adoption is changing checkout behavior.",
-        source_metadata={"pages": [2]},
+        source_metadata={"pages": [2], "source_url": f"https://sources.example/{report_id}"},
     )
 
 
@@ -283,7 +284,8 @@ def test_signal_workflow_reads_stored_signal_candidates_before_publish(
     assert read_candidate_requests[0].db_path == str(tmp_path / "analytics.sqlite")
     assert read_candidate_requests[0].validation_statuses == ["approved"]
     assert outcome.projection.confidence == 0.81
-    assert candidate.candidate_id in outcome.projection.body_html
+    assert "Publisher A AI Commerce Report, page 2" in outcome.projection.body_html
+    assert candidate.candidate_id not in outcome.projection.body_html
 
 
 def test_publish_signal_projection_live_builds_payload_and_reuses_idempotency(

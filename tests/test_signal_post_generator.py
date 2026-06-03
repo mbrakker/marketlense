@@ -40,6 +40,7 @@ def _candidate(
         publisher=publisher,
         publisher_id=publisher.lower().replace(" ", "-"),
         report_date="2026-05-20",
+        source_url=f"https://sources.example/{report_id}",
         projection_status="projected",
         content_hash=f"{report_id}-hash",
         category_labels=category_labels or ["Retail Strategy"],
@@ -73,7 +74,11 @@ def _evidence(
         entity_uid=f"{report_id}:claim:{evidence_id}",
         content_class="claim",
         text=f"{publisher} reports that AI commerce adoption is changing checkout behavior.",
-        source_metadata={"pages": [2], "evidence": "projected claim"},
+        source_metadata={
+            "pages": [2],
+            "evidence": "projected claim",
+            "source_url": f"https://sources.example/{report_id}",
+        },
     )
 
 
@@ -140,7 +145,8 @@ def test_signal_generator_builds_grounded_publish_projection(
     assert projection.validation_status == "approved"
     assert projection.confidence >= 0.7
     assert "projected evidence" in projection.uncertainty
-    assert "report-a:claim:1" in projection.body_html
+    assert "Publisher A AI Commerce Report, page 2" in projection.body_html
+    assert "report-a:claim:1" not in projection.body_html
     assert "Publisher A" in projection.body_html
 
 
@@ -231,8 +237,9 @@ def test_signal_generator_reuses_stored_signal_candidates(run_context) -> None:
     assert projection.source_report_ids == ["report-a", "report-b"]
     assert projection.confidence == 0.84
     assert "opposed_directional_language" in projection.uncertainty
-    assert candidate.candidate_id in projection.body_html
-    assert group.group_id in projection.body_html
+    assert "Publisher A AI Commerce Report, page 2" in projection.body_html
+    assert candidate.candidate_id not in projection.body_html
+    assert group.group_id not in projection.body_html
 
 
 def test_signal_generator_keeps_stored_candidate_source_lineage_after_reranking(

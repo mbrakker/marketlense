@@ -98,6 +98,13 @@ class AnalyticsReportRow(SemanticIdContract):
         default="",
         metadata={"doc": "UTC timestamp when the projection batch was generated."},
     )
+    source_url: str = field(
+        default="",
+        metadata={
+            "doc": "Original public source URL for the report, when available.",
+            "required": False,
+        },
+    )
 
 
 @dataclass(frozen=True)

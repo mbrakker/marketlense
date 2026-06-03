@@ -274,6 +274,7 @@ def test_projection_generator_stable_ids_and_vector_serialization(
 
     assert first.report.report_id == "drive-file-1"
     assert "source_file_id" not in asdict(first.report)
+    assert first.report.source_url == "https://example.com/report"
     assert first.sections[0].section_uid == second.sections[0].section_uid
     assert first.findings[0].finding_uid == second.findings[0].finding_uid
     assert first.metrics[0].metric_uid == second.metrics[0].metric_uid
@@ -336,13 +337,14 @@ def test_projection_store_idempotent_upsert_and_report_scoped_stale_cleanup(
     ] == len(batch.findings)
     report = _fetch_one(
         db_path,
-        "SELECT projection_status, projection_attempt_count, projection_error_code FROM reports WHERE file_id=?",
+        "SELECT projection_status, projection_attempt_count, projection_error_code, source_url FROM reports WHERE file_id=?",
         ("drive-file-1",),
     )
     assert dict(report) == {
         "projection_status": "projected",
         "projection_attempt_count": 2,
         "projection_error_code": None,
+        "source_url": "https://example.com/report",
     }
     with sqlite3.connect(db_path) as conn:
         columns = {
@@ -390,6 +392,107 @@ def test_projection_store_idempotent_upsert_and_report_scoped_stale_cleanup(
         )["count"]
         == 1
     )
+
+
+def test_projection_store_uses_existing_report_source_url_when_payload_is_blank(
+    ingest_settings: IngestSettings,
+    run_context: RunContext,
+) -> None:
+    batch = _batch(ingest_settings, run_context)
+    batch = replace(batch, report=replace(batch.report, source_url=""))
+    with sqlite3.connect(ingest_settings.reports_db) as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS report_sources (
+              id INTEGER PRIMARY KEY,
+              source_domain TEXT NOT NULL,
+              report_name TEXT NOT NULL,
+              landing_page_url TEXT NOT NULL,
+              normalized_landing_page_url TEXT NOT NULL,
+              source_status TEXT NOT NULL,
+              source_page_url TEXT,
+              publisher_name TEXT,
+              discovered_at_utc TEXT,
+              discovered_on_page_number INTEGER,
+              downloaded_at_utc TEXT,
+              md5 TEXT,
+              created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+              updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO report_sources(
+                source_domain,
+                report_name,
+                landing_page_url,
+                normalized_landing_page_url,
+                source_status,
+                publisher_name,
+                downloaded_at_utc,
+                md5
+            )
+            VALUES(
+                'example.com',
+                'Future Markets 2026',
+                'https://example.com/original-market-report',
+                'https://example.com/original-market-report',
+                'downloaded',
+                'Acme Research',
+                '2026-04-20T00:00:00Z',
+                'source-md5'
+            )
+            """
+        )
+        conn.commit()
+
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=ingest_settings.reports_db,
+            batch=batch,
+        ),
+        run_context,
+    )
+
+    report = _fetch_one(
+        ingest_settings.reports_db,
+        "SELECT source_url FROM reports WHERE file_id=?",
+        ("drive-file-1",),
+    )
+    assert report["source_url"] == "https://example.com/original-market-report"
+
+
+def test_projection_readback_exposes_original_source_url_and_page_metadata(
+    ingest_settings: IngestSettings,
+    run_context: RunContext,
+) -> None:
+    batch = _batch(ingest_settings, run_context)
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=ingest_settings.reports_db,
+            batch=batch,
+        ),
+        run_context,
+    )
+
+    from src.contracts.cross_report_analysis import CrossReportProjectedDataReadRequest
+    from src.services.analytics_store_service import read_cross_report_projected_data
+
+    response = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version="1.0",
+            db_path=ingest_settings.reports_db,
+        ),
+        run_context,
+    )
+
+    assert response.source_candidates[0].source_url == "https://example.com/report"
+    claim = next(item for item in response.evidence if item.content_class == "claim")
+    assert claim.source_metadata["source_url"] == "https://example.com/report"
+    assert claim.source_metadata["pages"] == [2]
 
 
 def test_projection_store_records_failure_and_validates_embedding_status(

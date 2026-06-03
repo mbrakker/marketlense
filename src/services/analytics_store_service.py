@@ -271,6 +271,7 @@ _REPORT_PROJECTION_COLUMNS: tuple[tuple[str, str], ...] = (
     ("report_id", "TEXT"),
     ("publisher_id", "TEXT"),
     ("source_md5", "TEXT"),
+    ("source_url", "TEXT"),
     ("ingest_run_id", "TEXT"),
     ("analysis_run_id", "TEXT"),
     ("validation_status", "TEXT"),
@@ -368,6 +369,59 @@ def _uid_set(rows: Iterable[Any], attr_name: str) -> set[str]:
     return {str(getattr(row, attr_name)) for row in rows}
 
 
+def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1
+        FROM sqlite_master
+        WHERE type='table' AND name=?
+        """,
+        (table_name,),
+    ).fetchone()
+    return row is not None
+
+
+def _report_source_url_from_store(
+    conn: sqlite3.Connection,
+    *,
+    report_title: str,
+    publisher: str,
+    source_md5: str,
+) -> str:
+    if not _table_exists(conn, "report_sources"):
+        return ""
+    if source_md5:
+        row = conn.execute(
+            """
+            SELECT landing_page_url
+            FROM report_sources
+            WHERE md5=? AND COALESCE(landing_page_url, '') <> ''
+            ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (source_md5,),
+        ).fetchone()
+        if row and str(row[0] or "").strip():
+            return str(row[0]).strip()
+    normalized_title = report_title.strip().casefold()
+    normalized_publisher = publisher.strip().casefold()
+    if not normalized_title:
+        return ""
+    row = conn.execute(
+        """
+        SELECT landing_page_url
+        FROM report_sources
+        WHERE lower(report_name)=?
+          AND (?='' OR lower(COALESCE(publisher_name, ''))=?)
+          AND COALESCE(landing_page_url, '') <> ''
+        ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
+        LIMIT 1
+        """,
+        (normalized_title, normalized_publisher, normalized_publisher),
+    ).fetchone()
+    return str(row[0]).strip() if row and str(row[0] or "").strip() else ""
+
+
 def _delete_stale(
     conn: sqlite3.Connection,
     *,
@@ -392,6 +446,14 @@ def _upsert_report(
     report = request.batch.report
     report_id = str(report.report_id)
     title = report.title.strip()
+    publisher = report.publisher.strip()
+    source_md5 = str(report.source_md5 or "").strip()
+    source_url = report.source_url.strip() or _report_source_url_from_store(
+        conn,
+        report_title=title,
+        publisher=publisher,
+        source_md5=source_md5,
+    )
     if not title:
         raise AppError(
             code="analytics_projection_title_missing",
@@ -413,6 +475,7 @@ def _upsert_report(
             report_id,
             publisher_id,
             source_md5,
+            source_url,
             ingest_run_id,
             analysis_run_id,
             validation_status,
@@ -431,7 +494,7 @@ def _upsert_report(
             created_at,
             updated_at
         )
-        VALUES(?, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'projected', 1, NULL, NULL, NULL, ?, ?, strftime('%s','now'), strftime('%s','now'))
+        VALUES(?, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'projected', 1, NULL, NULL, NULL, ?, ?, strftime('%s','now'), strftime('%s','now'))
         ON CONFLICT(file_id) DO UPDATE SET
             title=excluded.title,
             publisher=excluded.publisher,
@@ -440,6 +503,7 @@ def _upsert_report(
             report_id=excluded.report_id,
             publisher_id=excluded.publisher_id,
             source_md5=excluded.source_md5,
+            source_url=excluded.source_url,
             ingest_run_id=excluded.ingest_run_id,
             analysis_run_id=excluded.analysis_run_id,
             validation_status=excluded.validation_status,
@@ -460,12 +524,13 @@ def _upsert_report(
         (
             report_id,
             title,
-            report.publisher.strip() or None,
+            publisher or None,
             report.time_period.strip() or None,
-            report.source_md5,
+            source_md5 or None,
             report_id,
             str(report.publisher_id) if report.publisher_id else None,
-            report.source_md5,
+            source_md5 or None,
+            source_url or None,
             report.ingest_run_id,
             report.analysis_run_id,
             report.validation_status,
@@ -1044,6 +1109,7 @@ def _source_candidate(
                 if _row_text(row, "category_id")
             }
         ),
+        source_url=_row_text(report_row, "source_url"),
         tags=sorted({_row_text(row, "tag") for row in tags if _row_text(row, "tag")}),
         evidence_count=evidence_count,
         claim_count=claim_count,
@@ -1076,6 +1142,7 @@ def _claim_evidence(
         source_metadata={
             "evidence": _row_text(row, "evidence"),
             "pages": _json_list(row["pages_json"]),
+            "source_url": _row_text(report_row, "source_url"),
         },
     )
 
@@ -1097,6 +1164,7 @@ def _finding_evidence(
             "evidence": _row_text(row, "evidence"),
             "confidence": _row_text(row, "confidence"),
             "pages": _json_list(row["pages_json"]),
+            "source_url": _row_text(report_row, "source_url"),
         },
     )
 
@@ -1118,6 +1186,7 @@ def _quote_evidence(
             "speaker": _row_text(row, "speaker"),
             "citation": _row_text(row, "citation"),
             "page": row["page"],
+            "source_url": _row_text(report_row, "source_url"),
             "quote_id": _row_text(row, "quote_id"),
         },
     )
@@ -1140,6 +1209,7 @@ def _raw_metric(
             "source_table": "report_metrics",
             "entity_uid": _row_text(row, "metric_uid"),
             "pages": _json_list(row["pages_json"]),
+            "source_url": _row_text(report_row, "source_url"),
         },
     )
 
@@ -1608,7 +1678,7 @@ def read_cross_report_projected_data(
             all_rows = conn.execute(
                 """
                 SELECT file_id, report_id, title, publisher, publisher_id, source_md5,
-                       md5, time_period, projection_status,
+                       source_url, md5, time_period, projection_status,
                        projection_generated_at_utc
                 FROM reports
                 ORDER BY report_id

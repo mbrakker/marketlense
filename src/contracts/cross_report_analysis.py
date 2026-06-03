@@ -249,6 +249,13 @@ class CrossReportSourceReportCandidate:
             "required": False,
         },
     )
+    source_url: str = field(
+        default="",
+        metadata={
+            "doc": "Original public source URL for the report, when available.",
+            "required": False,
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -294,6 +301,13 @@ class CrossReportSelectedSourceReport:
         default_factory=list,
         metadata={
             "doc": "Projected category identifiers retained for exact filtering.",
+            "required": False,
+        },
+    )
+    source_url: str = field(
+        default="",
+        metadata={
+            "doc": "Original public source URL for the selected report, when available.",
             "required": False,
         },
     )

@@ -177,6 +177,87 @@ class TestReportStoreService(unittest.TestCase):
             assert third is not None
             self.assertEqual("2026", third.time_period)
 
+    def test_metadata_uses_report_source_url_when_payload_url_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_metadata_source_fallback")
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.execute(
+                    """
+                    CREATE TABLE report_sources (
+                      id INTEGER PRIMARY KEY,
+                      source_domain TEXT NOT NULL,
+                      report_name TEXT NOT NULL,
+                      landing_page_url TEXT NOT NULL,
+                      normalized_landing_page_url TEXT NOT NULL,
+                      source_status TEXT NOT NULL,
+                      source_page_url TEXT,
+                      publisher_name TEXT,
+                      discovered_at_utc TEXT,
+                      discovered_on_page_number INTEGER,
+                      downloaded_at_utc TEXT,
+                      md5 TEXT,
+                      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+                      updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO report_sources(
+                        source_domain,
+                        report_name,
+                        landing_page_url,
+                        normalized_landing_page_url,
+                        source_status,
+                        publisher_name,
+                        downloaded_at_utc,
+                        md5
+                    )
+                    VALUES(
+                        'publisher.example',
+                        'Original Source Report',
+                        'https://publisher.example/reports/original-source-report',
+                        'https://publisher.example/reports/original-source-report',
+                        'downloaded',
+                        'Publisher Inc',
+                        '2026-04-20T00:00:00Z',
+                        'source-md5'
+                    )
+                    """
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            upsert_metadata(
+                ReportMetadataUpsertRequest(
+                    schema_version="1.1",
+                    db_path=db_path,
+                    file_id="file-source-fallback",
+                    title="Original Source Report",
+                    publisher="Publisher Inc",
+                    source_url=None,
+                    md5="source-md5",
+                ),
+                ctx,
+            )
+            metadata = get_metadata(
+                ReportMetadataGetRequest(
+                    schema_version="1.1",
+                    db_path=db_path,
+                    file_id="file-source-fallback",
+                ),
+                ctx,
+            )
+
+            assert metadata is not None
+            self.assertEqual(
+                "https://publisher.example/reports/original-source-report",
+                metadata.source_url,
+            )
+
     def test_missing_record_returns_none(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")

@@ -243,7 +243,9 @@ def _build_report_identity_items(
     return items
 
 
-def _coerce_claim_map(summary: dict[str, Any]) -> list[dict[str, str]]:
+def _coerce_claim_map(
+    summary: dict[str, Any], *, report_title: str
+) -> list[dict[str, str]]:
     items: list[dict[str, str]] = []
     for raw_item in _coerce_list(summary.get("claim_evidence_map")):
         item = _coerce_dict(raw_item)
@@ -252,6 +254,7 @@ def _coerce_claim_map(summary: dict[str, Any]) -> list[dict[str, str]]:
             continue
         evidence_id = _s(item.get("evidence_id"))
         citation_line = _build_citation_micro_line(
+            report_title=report_title,
             evidence_id=evidence_id,
             citation="",
             evidence_spans=item.get("evidence_spans"),
@@ -268,7 +271,7 @@ def _coerce_claim_map(summary: dict[str, Any]) -> list[dict[str, str]]:
     return items
 
 
-def _coerce_insights(raw_insights: object) -> list[dict[str, str]]:
+def _coerce_insights(raw_insights: object, *, report_title: str) -> list[dict[str, str]]:
     insights: list[dict[str, str]] = []
     for raw_item in _coerce_list(raw_insights):
         item = _coerce_dict(raw_item)
@@ -282,6 +285,7 @@ def _coerce_insights(raw_insights: object) -> list[dict[str, str]]:
             {
                 "text": text,
                 "citation_line": _build_citation_micro_line(
+                    report_title=report_title,
                     evidence_id=_s(item.get("evidence_id")),
                     citation="",
                     evidence_spans=item.get("evidence_spans"),
@@ -293,7 +297,7 @@ def _coerce_insights(raw_insights: object) -> list[dict[str, str]]:
 
 
 def _coerce_quotes(
-    raw_quotes: object, data: dict[str, Any], publisher: str
+    raw_quotes: object, data: dict[str, Any], publisher: str, *, report_title: str
 ) -> list[dict[str, str]]:
     quotes: list[dict[str, str]] = []
     for raw_item in _coerce_list(raw_quotes):
@@ -310,8 +314,9 @@ def _coerce_quotes(
                     _pick_first_text(item.get("speaker"), item.get("author")),
                     publisher,
                 ),
-                "citation": _s(item.get("citation")),
+                "citation": "",
                 "citation_line": _build_citation_micro_line(
+                    report_title=report_title,
                     evidence_id=_s(item.get("evidence_id")),
                     citation=_s(item.get("citation")),
                     evidence_spans=item.get("evidence_spans"),
@@ -384,14 +389,14 @@ def _coerce_evidence_spans(raw_spans: object) -> list[dict[str, Any]]:
 
 def _build_citation_micro_line(
     *,
+    report_title: str,
     evidence_id: str,
     citation: str,
     evidence_spans: object,
     pages: object,
 ) -> str:
     parts: list[str] = []
-    if evidence_id:
-        parts.append(evidence_id)
+    del evidence_id, citation
     span_pages = [
         page
         for page in (
@@ -406,12 +411,13 @@ def _build_citation_micro_line(
         if page is not None
     ]
     all_pages = list(dict.fromkeys([*span_pages, *explicit_pages]))
+    source_label = _s(report_title)
     if all_pages:
-        page_label = "report page" if len(all_pages) == 1 else "report pages"
-        parts.append(f"{page_label} {', '.join(str(page) for page in all_pages)}")
-    normalized_citation = _s(citation)
-    if normalized_citation:
-        parts.append(normalized_citation)
+        page_label = "page" if len(all_pages) == 1 else "pages"
+        page_text = f"{page_label} {', '.join(str(page) for page in all_pages)}"
+        parts.append(f"{source_label}, {page_text}" if source_label else page_text)
+    elif source_label:
+        parts.append(source_label)
     return " · ".join(part for part in parts if part)
 
 
@@ -781,9 +787,15 @@ def _build_render_view(
     insights = _coerce_insights(
         artifacts.get("insights_final")
         if _coerce_list(artifacts.get("insights_final"))
-        else data.get("insights")
+        else data.get("insights"),
+        report_title=report_title,
     )
-    quotes = _coerce_quotes(artifacts.get("quotes_final"), data, publisher)
+    quotes = _coerce_quotes(
+        artifacts.get("quotes_final"),
+        data,
+        publisher,
+        report_title=report_title,
+    )
     figure_section_enabled = bool(data.get("_figure_section_enabled", True))
     figure_slides = (
         _build_figure_slides(data, out_dir, report_title)
@@ -875,7 +887,7 @@ def _build_render_view(
             "tldr_bullets": _split_summary_bullets(tldr_text, max_items=4),
             "executive_summary": executive_summary,
             "executive_bullets": _split_summary_bullets(executive_summary, max_items=6),
-            "claim_map": _coerce_claim_map(summary),
+            "claim_map": _coerce_claim_map(summary, report_title=report_title),
         },
         "snapshot": {
             "facts": [

@@ -905,6 +905,7 @@ def build_projection(
         text_density=float(getattr(payload, "_text_density", 0.0) or 0.0),
         text_not_available=bool(getattr(payload, "_text_not_available", False)),
         projection_generated_at_utc=generated_at_utc,
+        source_url=_clean_text(payload.source),
     )
     sections = _build_sections(
         report_id=report_id,

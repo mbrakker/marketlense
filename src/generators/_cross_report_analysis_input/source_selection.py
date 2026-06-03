@@ -283,6 +283,7 @@ def _select_diverse_sources(
                 category_labels=winner.category_labels,
                 tags=winner.tags,
                 category_ids=winner.category_ids,
+                source_url=winner.source_url,
             )
         )
         rank += 1

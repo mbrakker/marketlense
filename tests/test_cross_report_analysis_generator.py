@@ -200,6 +200,7 @@ def _source(
         publisher=publisher,
         publisher_id=publisher.lower().replace(" ", "-"),
         report_date="2026-05-01",
+        source_url=f"https://sources.example/{report_id}",
         projection_status="projected",
         content_hash=f"{report_id}-hash",
         rank=rank,
@@ -223,7 +224,7 @@ def _evidence(
         entity_uid=evidence_id,
         content_class="claim",
         text=text,
-        source_metadata={"page": 1},
+        source_metadata={"page": 1, "source_url": f"https://sources.example/{report_id}"},
     )
 
 
@@ -1026,6 +1027,19 @@ def test_build_cross_report_publish_package_contains_traceable_html_and_metadata
     run_context,
 ) -> None:
     generated = _generated_result(tmp_path, run_context)
+    generated = replace(
+        generated,
+        sections=[
+            replace(
+                generated.sections[0],
+                body=(
+                    "The board should treat ev-report-a-claim-1 as directional "
+                    "evidence, not as a public citation token."
+                ),
+            ),
+            *generated.sections[1:],
+        ],
+    )
     _, _, agreement_result = _analysis_inputs()
     validation = validate_cross_report_generated_analysis(generated, run_context)
 
@@ -1055,6 +1069,14 @@ def test_build_cross_report_publish_package_contains_traceable_html_and_metadata
     ]
     assert package.raw_metric_ids == ["metric-a"]
     assert package.source_metadata[0]["report_id"] == "report-a"
+    assert package.source_metadata[0]["source_url"] == "https://sources.example/report-a"
+    assert "report-a title, page 1" in package.html_text
+    assert "report-b title, page 1" in package.html_text
+    assert "report-a title, page 4" in package.html_text
+    assert "The board should treat report-a title, page 1 as directional" in package.html_text
+    assert "The board should treat ev-report-a-claim-1 as directional" not in package.html_text
+    assert "<code>ev-report-a-claim-1</code>" not in package.html_text
+    assert "<code>metric-a</code>" not in package.html_text
     assert 'class="ml-ingest-report-content"' in package.html_text
     assert 'class="page-shell"' in package.html_text
     assert 'class="sticky-nav"' in package.html_text

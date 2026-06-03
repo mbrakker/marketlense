@@ -250,6 +250,45 @@ def test_render_report_output_sources_metadata_from_db_and_returns_complete_outc
     assert Path(outcome.html_path).exists()
 
 
+def test_render_report_output_passes_db_source_url_to_public_renderer(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    captured = {}
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del ctx
+        captured["source"] = req.data["source"]
+        captured["canonical_url"] = req.data["canonical_url"]
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(
+        render_report=_render_report,
+        get_report_metadata=lambda req, ctx: replace(
+            _deps().get_report_metadata(req, ctx),
+            source_url="https://publisher.example/reports/original-study",
+        ),
+    )
+
+    render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert captured == {
+        "source": "https://publisher.example/reports/original-study",
+        "canonical_url": "https://publisher.example/reports/original-study",
+    }
+
+
 def test_render_report_output_preserves_analysis_metadata_when_db_metadata_missing(
     tmp_path,
 ):
@@ -288,6 +327,82 @@ def test_render_report_output_preserves_analysis_metadata_when_db_metadata_missi
         "publisher": "Doc Publisher",
         "time_period": "2026",
     }
+
+
+def test_render_report_citations_use_report_page_labels_without_internal_targets(
+    tmp_path, run_context
+):
+    from src.contracts.report_assets import RenderRequest
+    from src.services.render_service import render_report
+
+    out_dir = tmp_path / "out"
+    data = {
+        "title": "Retail Forecast 2026",
+        "publisher": "Forecast Co",
+        "source": "https://forecast.example/report",
+        "_figure_section_enabled": False,
+        "artifacts": {
+                "summary": {
+                    "tldr": "Retail demand is changing.",
+                    "executive_summary": "Retail demand is changing across channels.",
+                    "claim_evidence_map": [
+                    {
+                        "claim": "Retail demand is changing.",
+                        "evidence_id": "local-evidence-123",
+                        "evidence": "Demand moved across channels.",
+                        "pages": [7],
+                        "evidence_spans": [
+                            {
+                                "evidence_id": "local-evidence-123",
+                                "source_pack": "cache/evidence-window.json",
+                                "page": 7,
+                            }
+                        ],
+                    }
+                ],
+            },
+            "insights_final": [
+                {
+                    "text": "Demand moved across channels.",
+                    "evidence_id": "local-insight-456",
+                    "pages": [8],
+                }
+            ],
+            "quotes_final": [
+                {
+                    "text": "Consumers are shifting channels.",
+                    "speaker": "Analyst",
+                    "citation": "C:/tmp/evidence-window.json",
+                    "page": 9,
+                    "evidence_id": "local-quote-789",
+                }
+            ],
+        },
+        "evidence_packs": {"doc_map": {"title": "Retail Forecast 2026"}},
+    }
+
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data=data,
+            doc_name="retail-forecast.pdf",
+            file_id="file-1",
+            out_dir=str(out_dir),
+            preview_png="",
+            tag_acronyms=[],
+        ),
+        run_context,
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+    assert "Retail Forecast 2026, page 7" in html
+    assert "Retail Forecast 2026, page 8" in html
+    assert "Retail Forecast 2026, page 9" in html
+    assert "local-evidence-123" not in html
+    assert "local-insight-456" not in html
+    assert "local-quote-789" not in html
+    assert "cache/evidence-window.json" not in html
+    assert "C:/tmp/evidence-window.json" not in html
 
 
 def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):

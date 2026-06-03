@@ -72,6 +72,7 @@ def _source_metadata(
             "evidence_count": source.evidence_count,
             "category_labels": list(source.category_labels),
             "tags": list(source.tags),
+            "source_url": source.source_url,
         }
         for source in generated.selected_sources
     ]

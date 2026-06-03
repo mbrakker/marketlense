@@ -149,6 +149,10 @@ def render_report_output(
         render_data_dict["time_period"] = str(
             render_meta.time_period or existing_time_period
         ).strip()
+        source_url = str(render_meta.source_url or "").strip()
+        if source_url:
+            render_data_dict["source"] = source_url
+            render_data_dict["canonical_url"] = source_url
         logger.info(
             log_event(
                 runtime.ctx,
