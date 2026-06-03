@@ -696,6 +696,9 @@
             }
           ]
         },
+        "drive_upload_parent_folder_id": {
+          "type": "string"
+        },
         "drive_upload_required": {
           "type": "boolean"
         },
@@ -6121,6 +6124,68 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.publishers.PublisherGoogleFolderUpdateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "google_folder": {
+          "type": "string"
+        },
+        "publisher_insights_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "publisher_name",
+        "google_folder"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.publishers.PublisherGoogleFolderUpdateResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "google_folder": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "resolution_source": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "updated_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_name",
+        "google_folder",
+        "updated_count",
+        "resolution_source"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.publishers.PublisherListItem": {
       "additionalProperties": false,
       "properties": {
@@ -7559,6 +7624,9 @@
               "type": "null"
             }
           ]
+        },
+        "source_url": {
+          "type": "string"
         },
         "text_density": {
           "type": "number"
@@ -9206,6 +9274,9 @@
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "signal_store_db": {
           "type": "string"
         },
         "state_db": {
@@ -11816,6 +11887,9 @@
           },
           "type": "array"
         },
+        "source_url": {
+          "type": "string"
+        },
         "tags": {
           "items": {
             "type": "string"
@@ -12078,6 +12152,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "source_url": {
+          "type": "string"
         },
         "tags": {
           "items": {
@@ -13034,6 +13111,93 @@
       "required": [
         "schema_version",
         "file"
+      ],
+      "type": "object"
+    },
+    "src.contracts.drive.DriveFolderEnsureRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_mode": {
+          "type": "string"
+        },
+        "drive_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "folder_name": {
+          "type": "string"
+        },
+        "include_items_from_all_drives": {
+          "type": "boolean"
+        },
+        "oauth_client_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oauth_token_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_folder_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "service_account_path": {
+          "type": "string"
+        },
+        "supports_all_drives": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "parent_folder_id",
+        "folder_name",
+        "service_account_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.drive.DriveFolderEnsureResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "created": {
+          "type": "boolean"
+        },
+        "folder": {
+          "$ref": "#/$defs/src.contracts.drive.DriveFile"
+        },
+        "parent_folder_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "folder",
+        "parent_folder_id",
+        "created"
       ],
       "type": "object"
     },
@@ -15345,6 +15509,9 @@
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "signal_store_db": {
           "type": "string"
         },
         "state_db": {
@@ -20554,6 +20721,524 @@
       ],
       "type": "object"
     },
+    "src.contracts.signal_candidates.SignalCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "candidate_type": {
+          "enum": [
+            "market_signal",
+            "risk_signal",
+            "opportunity_signal",
+            "contradiction_signal",
+            "weak_signal"
+          ]
+        },
+        "caveats": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "group_id": {
+          "type": "string"
+        },
+        "raw_source_context": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateSourceRef"
+          },
+          "type": "array"
+        },
+        "source_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "strength": {
+          "type": "number"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "support_level": {
+          "enum": [
+            "single_report",
+            "multi_report_convergent",
+            "multi_report_divergent",
+            "weak_coverage"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "validation_notes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "validation_status": {
+          "enum": [
+            "approved",
+            "blocked"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "candidate_id",
+        "candidate_type",
+        "title",
+        "summary",
+        "confidence",
+        "strength",
+        "support_level",
+        "caveats",
+        "source_report_ids",
+        "evidence_ids",
+        "source_refs",
+        "raw_source_context",
+        "validation_status",
+        "validation_notes",
+        "group_id",
+        "extraction_request_id",
+        "generated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_candidates.SignalCandidateBatch": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidate"
+          },
+          "type": "array"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateGroup"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "extraction_request_id",
+        "generated_at_utc",
+        "candidates",
+        "groups"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_candidates.SignalCandidateExtractionOutcome": {
+      "additionalProperties": false,
+      "properties": {
+        "batch": {
+          "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateBatch"
+        },
+        "candidate_count": {
+          "type": "integer"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "group_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_transitions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "stored",
+            "skipped",
+            "failed"
+          ]
+        },
+        "stored_response": {
+          "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateStoreResponse"
+        }
+      },
+      "required": [
+        "schema_version",
+        "extraction_request_id",
+        "status",
+        "batch",
+        "stored_response",
+        "candidate_count",
+        "group_count",
+        "state_transitions"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_candidates.SignalCandidateExtractionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_request": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportAnalysisRequest"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "max_evidence_items": {
+          "type": "integer"
+        },
+        "max_signals": {
+          "type": "integer"
+        },
+        "projected_data_request": {
+          "$ref": "#/$defs/src.contracts.cross_report_analysis.CrossReportProjectedDataReadRequest"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "extraction_request_id",
+        "analysis_request",
+        "projected_data_request",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_candidates.SignalCandidateGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "caveats": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "group_id": {
+          "type": "string"
+        },
+        "raw_group_context": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "stable_key": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "support_level": {
+          "enum": [
+            "single_report",
+            "multi_report_convergent",
+            "multi_report_divergent",
+            "weak_coverage"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "validation_status": {
+          "enum": [
+            "approved",
+            "blocked"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "group_id",
+        "stable_key",
+        "title",
+        "summary",
+        "support_level",
+        "candidate_ids",
+        "source_report_ids",
+        "evidence_ids",
+        "caveats",
+        "raw_group_context",
+        "validation_status",
+        "extraction_request_id",
+        "generated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_candidates.SignalCandidateReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "group_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "topic_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "validation_statuses": {
+          "items": {
+            "enum": [
+              "approved",
+              "blocked"
+            ]
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_candidates.SignalCandidateReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidate"
+          },
+          "type": "array"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateGroup"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "candidates",
+        "groups"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_candidates.SignalCandidateSourceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "content_class": {
+          "type": "string"
+        },
+        "entity_uid": {
+          "type": "string"
+        },
+        "evidence_id": {
+          "type": "string"
+        },
+        "page_refs": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "source_table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_id",
+        "evidence_id",
+        "source_table",
+        "entity_uid",
+        "content_class",
+        "page_refs",
+        "source_metadata"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_candidates.SignalCandidateStoreRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidate"
+          },
+          "type": "array"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateGroup"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "extraction_request_id",
+        "candidates",
+        "groups"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_candidates.SignalCandidateStoreResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_count": {
+          "type": "integer"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "group_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stale_candidate_count": {
+          "type": "integer"
+        },
+        "stale_group_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "extraction_request_id",
+        "candidate_count",
+        "group_count",
+        "stale_candidate_count",
+        "stale_group_count"
+      ],
+      "type": "object"
+    },
     "src.contracts.sqlite_migration.SqliteMigrationAppliedStep": {
       "additionalProperties": false,
       "properties": {
@@ -22358,6 +23043,15 @@
     "src.contracts.tracing.TraceBuildResult": {
       "additionalProperties": false,
       "properties": {
+        "diagnostic_count": {
+          "type": "integer"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.tracing.TraceDiagnostic"
+          },
+          "type": "array"
+        },
         "event_count": {
           "type": "integer"
         },
@@ -22387,6 +23081,15 @@
         },
         "trace_id": {
           "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "workflow_stages": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.tracing.TraceWorkflowStageSummary"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -22398,6 +23101,45 @@
         "span_count",
         "root_span_ids",
         "spans"
+      ],
+      "type": "object"
+    },
+    "src.contracts.tracing.TraceDiagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "event_index": {
+          "type": "integer"
+        },
+        "field_name": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "parent_span_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "span_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "code",
+        "severity",
+        "message",
+        "span_id",
+        "event_index",
+        "field_name"
       ],
       "type": "object"
     },
@@ -22465,6 +23207,60 @@
         "end_utc",
         "duration_ms",
         "child_span_ids"
+      ],
+      "type": "object"
+    },
+    "src.contracts.tracing.TraceWorkflowStageSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "event_count": {
+          "type": "integer"
+        },
+        "has_generator": {
+          "type": "boolean"
+        },
+        "has_orchestrator": {
+          "type": "boolean"
+        },
+        "has_service": {
+          "type": "boolean"
+        },
+        "module_count": {
+          "type": "integer"
+        },
+        "roles_seen": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "span_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workflow_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow_name",
+        "span_ids",
+        "roles_seen",
+        "module_count",
+        "event_count",
+        "has_orchestrator",
+        "has_generator",
+        "has_service",
+        "complete"
       ],
       "type": "object"
     },
@@ -25675,6 +26471,9 @@
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "signal_store_db": {
           "type": "string"
         }
       },

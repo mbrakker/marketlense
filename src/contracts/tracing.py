@@ -47,6 +47,53 @@ class TraceSpanSummary:
 
 
 @dataclass(frozen=True)
+class TraceDiagnostic:
+    schema_version: str = field(metadata={"doc": "Trace diagnostic schema version."})
+    code: str = field(metadata={"doc": "Stable diagnostic code."})
+    severity: str = field(metadata={"doc": "Diagnostic severity."})
+    message: str = field(metadata={"doc": "Human-readable diagnostic message."})
+    span_id: str = field(metadata={"doc": "Span associated with the diagnostic."})
+    event_index: int = field(metadata={"doc": "Zero-based index in the filtered event list."})
+    field_name: str = field(metadata={"doc": "Field associated with the diagnostic."})
+    parent_span_id: str = field(
+        default="",
+        metadata={"doc": "Broken or missing parent span identifier, if applicable."},
+    )
+
+
+@dataclass(frozen=True)
+class TraceWorkflowStageSummary:
+    schema_version: str = field(
+        metadata={"doc": "Trace workflow-stage summary schema version."}
+    )
+    workflow_name: str = field(metadata={"doc": "Workflow family detected in the trace."})
+    span_ids: list[str] = field(
+        metadata={"doc": "Span identifiers associated with this workflow."}
+    )
+    roles_seen: list[str] = field(
+        metadata={"doc": "Architectural roles observed for this workflow."}
+    )
+    module_count: int = field(
+        metadata={"doc": "Number of distinct modules observed for this workflow."}
+    )
+    event_count: int = field(
+        metadata={"doc": "Number of events associated with this workflow."}
+    )
+    has_orchestrator: bool = field(
+        metadata={"doc": "True when an orchestrator span is present."}
+    )
+    has_generator: bool = field(
+        metadata={"doc": "True when a generator span is present."}
+    )
+    has_service: bool = field(metadata={"doc": "True when a service span is present."})
+    complete: bool = field(
+        metadata={
+            "doc": "True when orchestrator, generator, and service roles are all present."
+        }
+    )
+
+
+@dataclass(frozen=True)
 class TraceBuildResult:
     schema_version: str = field(metadata={"doc": "Trace build result schema version."})
     trace_id: str = field(metadata={"doc": "Resolved trace identifier."})
@@ -59,4 +106,20 @@ class TraceBuildResult:
     )
     spans: list[TraceSpanSummary] = field(
         metadata={"doc": "Span summaries sorted by first event time."}
+    )
+    diagnostics: list[TraceDiagnostic] = field(
+        default_factory=list,
+        metadata={"doc": "Trace integrity diagnostics sorted by event/span order."},
+    )
+    diagnostic_count: int = field(
+        default=0,
+        metadata={"doc": "Number of trace integrity diagnostics."},
+    )
+    valid: bool = field(
+        default=True,
+        metadata={"doc": "True when no trace integrity diagnostics were found."},
+    )
+    workflow_stages: list[TraceWorkflowStageSummary] = field(
+        default_factory=list,
+        metadata={"doc": "Workflow boundary coverage summaries."},
     )

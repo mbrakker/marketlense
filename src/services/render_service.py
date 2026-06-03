@@ -396,7 +396,8 @@ def _build_citation_micro_line(
     pages: object,
 ) -> str:
     parts: list[str] = []
-    del evidence_id, citation
+    normalized_evidence_id = _public_citation_label(_s(evidence_id))
+    normalized_citation = _public_citation_label(_s(citation))
     span_pages = [
         page
         for page in (
@@ -412,13 +413,36 @@ def _build_citation_micro_line(
     ]
     all_pages = list(dict.fromkeys([*span_pages, *explicit_pages]))
     source_label = _s(report_title)
+    if normalized_evidence_id:
+        parts.append(normalized_evidence_id)
     if all_pages:
         page_label = "page" if len(all_pages) == 1 else "pages"
         page_text = f"{page_label} {', '.join(str(page) for page in all_pages)}"
-        parts.append(f"{source_label}, {page_text}" if source_label else page_text)
-    elif source_label:
+        if normalized_evidence_id:
+            parts.append(f"report {page_text}")
+        else:
+            parts.append(f"{source_label}, {page_text}" if source_label else page_text)
+    elif source_label and not normalized_evidence_id:
         parts.append(source_label)
+    if normalized_citation:
+        parts.append(normalized_citation)
     return " · ".join(part for part in parts if part)
+
+
+def _public_citation_label(value: str) -> str:
+    label = _s(value)
+    if not label:
+        return ""
+    lowered = label.casefold()
+    if lowered.startswith("local-"):
+        return ""
+    if "\\" in label or "/" in label:
+        return ""
+    if ":" in label and len(label) >= 2 and label[1] == ":":
+        return ""
+    if lowered.endswith((".json", ".jsonl", ".txt", ".sqlite", ".db")):
+        return ""
+    return label
 
 
 def _coerce_topic_briefs(artifacts: dict[str, Any]) -> list[dict[str, Any]]:

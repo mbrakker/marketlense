@@ -41,7 +41,7 @@ Key traits:
 - SQLite schema migrations now run through `src/services/sqlite_migration_service.py`, which is the schema authority for `state_db`, `reports_db`, and `ui_run_registry`. Each database persists a `schema_version` row plus ordered `schema_migration_ledger` entries, and service startup applies only pending migrations while logging migration IDs and durations with the active run context. Legacy schema upgrades, rollback-on-failure, and idempotent reruns are covered in the service test suite.
 - Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
 - Artifact reference robustness: artifact evidence IDs are canonicalized against docpacks before validation (supports comma/list-like model output and quote aliases such as `quote_1 -> q1`), preventing TL;DR/insights/quotes dropouts caused by malformed IDs.
-- Claim-span grounding: summary `claim_evidence_map` entries now carry normalized `evidence_spans` derived deterministically from known evidence packs/doc-map sections, validation rejects summary claims that lack a bound evidence ID/span path, and rendered HTML exposes compact public citation micro-lines using report-title/page labels when available for summary claims, insights, and quotes. Unknown quote speakers now render as `<Publisher name> expert team`.
+- Claim-span grounding: summary `claim_evidence_map` entries now carry normalized `evidence_spans` derived deterministically from known evidence packs/doc-map sections, validation rejects summary claims that lack a bound evidence ID/span path, and rendered HTML exposes compact public citation micro-lines using safe evidence ID, report page, and citation labels when available for summary claims, insights, and quotes while suppressing local artifact IDs and path-like citation targets. Unknown quote speakers now render as `<Publisher name> expert team`.
 - Deterministic TOC structure: artifacts now include authoritative `toc_entries`, built directly from eligible `doc_map.sections` in source order. Legacy `toc_topics` and `toc_topics_expanded` are compatibility projections derived from `toc_entries`, and HTML renders the Covered topics section from those deterministic entries.
 - TOC integrity guard: validation now enforces one-to-one coverage between eligible DocMap sections and generated TOC structure, flags missing/duplicate/stale/out-of-order entries with machine-readable repair metadata, logs `artifact_topic_brief_mapping_audit` diagnostics for mapped and unmapped `toc_topics_expanded` topic briefs, and targeted regeneration rebuilds `toc_entries`, `toc_topics`, and `toc_topics_expanded` deterministically from DocMap without another model call.
 - HTML digest quality: rendered HTML now uses semantic sections (`header/main/section`), premium split hero layout, sticky glass navigation with scrollspy + reading progress, reveal animations (with reduced-motion fallback), signal-style insight cards, editorial quote cards, and long-text chunking for generated prose.
@@ -996,6 +996,14 @@ python -m src.cli trace-run --trace-id <trace_id> --json
 ```
 
 The trace inspector uses `src/generators/trace_generator.py` to group structured log events into span summaries with event counts, parent/child edges, and observed duration in milliseconds.
+It also validates trace integrity while building the read model:
+
+- `valid=false` means at least one required structured log field is missing or a span references a parent span that is absent from the selected event set.
+- `trace_event_missing_required_field` and `trace_event_empty_required_field` identify malformed log events by `span_id`, event index, and field name.
+- `trace_orphan_span` identifies broken parent/child relationships, usually caused by filtering a trace too narrowly or by a context propagation bug.
+- Workflow coverage summarizes detected `report`, `publish`, and `cross_report` stages and marks a stage complete only when orchestrator, generator, and service roles all appear in the same reconstructed workflow tree.
+
+For incident review, start with `--run-id` to see the whole run. Use `--task-id` only after confirming that the narrower filter does not create expected orphan diagnostics by excluding parent spans.
 
 UI-run worker orchestration also records replay metadata beside the registry DB:
 

@@ -160,16 +160,6 @@ Scoring:
     - Topic directory and category archive templates render approved topic semantics without ad hoc copy.
     - Tests assert term semantics survive publish and readback.
 
-- **Title:** Bring WordPress design tokens and CSS organization back in line with README [Impact: 3/5, Effort: 2/5]
-  - Explanation: README documents `wideSize` as `82rem`, while `theme.json` uses `84rem`. The theme also has repeated CSS hooks and header styling that should be auditable against the documented design contract.
-  - Pros: Reduces design drift and keeps styling centralized and testable.
-  - Cons: Visual regressions are possible without screenshot review.
-  - Acceptance Criteria:
-    - README and `theme.json` agree on `wideSize` and other documented layout tokens.
-    - Header-specific styling is either centralized in the theme stylesheet or explicitly documented as approved block markup styling.
-    - Repeated CSS hooks are consolidated only when rendering is preserved.
-    - WordPress static checks and at least one desktop/mobile visual review pass.
-
 ---
 
 ## 4. PDF, Dashboard, and Runtime Performance
@@ -208,25 +198,6 @@ Scoring:
     - Missing per-service integration coverage requires a marked test or explicit temporary waiver.
     - README documents how to add and retire waivers.
 
-- **Title:** Build a backward/forward contract compatibility matrix [Impact: 4/5, Effort: 4/5]
-  - Explanation: Contract round-trip tests and schema snapshots exist, but persisted artifacts and stored rows still lack a first-class compatibility matrix across schema versions.
-  - Pros: Safer staged deploys and clearer breaking-change discipline.
-  - Cons: Larger fixture surface and more adapter maintenance.
-  - Acceptance Criteria:
-    - Compatibility suites run in CI for representative current and previous contract versions.
-    - Adapter or migration logic has positive and negative tests.
-    - Breaking changes require explicit version-bump evidence.
-    - Representative stored artifacts are covered by fixture snapshots.
-
-- **Title:** Add end-to-end tracing across orchestrator/generator/service boundaries [Impact: 4/5, Effort: 3/5]
-  - Explanation: Structured logs carry run/task/span fields, but there is no complete trace assembly view across a full report, publish, or cross-report workflow.
-  - Pros: Faster incident analysis and better verification of control-plane/domain/service separation.
-  - Cons: Needs trace correlation without creating new cross-role coupling.
-  - Acceptance Criteria:
-    - A trace read model reconstructs workflow stages from existing structured events.
-    - Missing required log fields or broken parent/child span relationships are detectable in tests.
-    - At least one report workflow, one publish workflow, and one cross-report workflow have trace coverage.
-    - README documents trace inspection and common failure interpretation.
 
 ---
 

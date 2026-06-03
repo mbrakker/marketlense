@@ -777,6 +777,8 @@ def trace_run(
                 "run_id": result.run_id,
                 "event_count": result.event_count,
                 "span_count": result.span_count,
+                "diagnostic_count": result.diagnostic_count,
+                "valid": result.valid,
             },
         )
     )
@@ -803,8 +805,42 @@ def trace_run(
             span.parent_span_id,
         )
     console.print(table)
+    if result.workflow_stages:
+        workflow_table = Table(title="Workflow Coverage", box=box.SIMPLE_HEAVY)
+        workflow_table.add_column("Workflow")
+        workflow_table.add_column("Roles")
+        workflow_table.add_column("Spans", justify="right")
+        workflow_table.add_column("Events", justify="right")
+        workflow_table.add_column("Complete")
+        for stage in result.workflow_stages:
+            workflow_table.add_row(
+                stage.workflow_name,
+                ", ".join(stage.roles_seen),
+                str(len(stage.span_ids)),
+                str(stage.event_count),
+                "yes" if stage.complete else "no",
+            )
+        console.print(workflow_table)
+    if result.diagnostics:
+        diagnostic_table = Table(title="Trace Diagnostics", box=box.SIMPLE_HEAVY)
+        diagnostic_table.add_column("Severity")
+        diagnostic_table.add_column("Code")
+        diagnostic_table.add_column("Span")
+        diagnostic_table.add_column("Field")
+        diagnostic_table.add_column("Message")
+        for diagnostic in result.diagnostics:
+            diagnostic_table.add_row(
+                diagnostic.severity,
+                diagnostic.code,
+                diagnostic.span_id,
+                diagnostic.field_name,
+                diagnostic.message,
+            )
+        console.print(diagnostic_table)
     console.print(
-        f"[green]Done: {result.span_count} span(s), {result.event_count} event(s).[/green]"
+        "[green]Done: "
+        f"{result.span_count} span(s), {result.event_count} event(s), "
+        f"{result.diagnostic_count} diagnostic(s).[/green]"
     )
 
 
