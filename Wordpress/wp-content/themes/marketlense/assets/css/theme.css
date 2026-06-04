@@ -474,6 +474,16 @@ summary:focus-visible,
   padding: 1rem;
 }
 
+.ml-institutional-empty-state {
+  color: var(--ml-text-secondary);
+  font-size: var(--ml-type-support-size);
+  line-height: var(--ml-type-support-line);
+}
+
+.ml-institutional-empty-state p {
+  margin: 0;
+}
+
 .ml-pagination {
   margin-top: 1rem;
 }

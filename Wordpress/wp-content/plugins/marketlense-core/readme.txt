@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.6
 Requires PHP: 8.2
-Stable tag: 1.2.9
+Stable tag: 1.2.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -30,9 +30,14 @@ Market Lense Core provides the WordPress data model required by the Market Lense
   * `[ml_report_browser]` (`category` maps to native category slugs; `ml_publisher` maps to publisher taxonomy slugs; legacy `ml_topic` query params remain accepted)
   * `[ml_home_metrics]`
   * `[ml_featured_digest]`
+  * `[ml_featured_briefing]`
   * `[ml_intelligence_signals]` (optional `show_publishers="0"` removes the Top publishers column)
   * `[ml_strategic_themes]`
   * `[ml_publisher_authority]`
+  * `[ml_signals_index]`
+  * `[ml_briefings_index]`
+  * `[ml_signal_archive]` (legacy alias for `[ml_signals_index]`)
+  * `[ml_briefing_archive]` (legacy alias for `[ml_briefings_index]`)
   * `[ml_topics_directory]`
   * `[ml_publishers_directory]`
   * `[ml_publisher_profile]`
@@ -47,6 +52,10 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.2.10 =
+* Added reusable Briefings and Signals shortcode entrypoints for homepage and landing-page rendering: `[ml_featured_briefing]`, `[ml_briefings_index]`, and `[ml_signals_index]`.
+* Briefings and Signals surfaces now render explicit institutional empty states when published validated content is unavailable.
 
 = 1.2.9 =
 * Restored digest visibility for generated core `post` entries by persisting a dedicated `ml_is_digest` contract during metadata backfill instead of requiring `ml_file_id` to exist up front.

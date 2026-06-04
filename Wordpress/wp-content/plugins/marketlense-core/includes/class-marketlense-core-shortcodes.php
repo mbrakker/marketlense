@@ -32,9 +32,12 @@ final class Shortcodes
         'ml_home_metrics' => 'render_home_metrics',
         'ml_hero_snapshot' => 'render_hero_snapshot',
         'ml_featured_digest' => 'render_featured_digest',
+        'ml_featured_briefing' => 'render_featured_briefing',
         'ml_intelligence_signals' => 'render_intelligence_signals',
         'ml_strategic_themes' => 'render_strategic_themes',
         'ml_publisher_authority' => 'render_publisher_authority',
+        'ml_signals_index' => 'render_signals_index',
+        'ml_briefings_index' => 'render_briefings_index',
         'ml_signal_archive' => 'render_signal_archive',
         'ml_briefing_archive' => 'render_briefing_archive',
         'ml_button_link' => 'render_button_link',
@@ -753,6 +756,56 @@ final class Shortcodes
     }
 
     /**
+     * Renders the latest approved Briefing for homepage placement.
+     */
+    public function render_featured_briefing(): string
+    {
+        $query = new \WP_Query(
+            [
+                'post_type' => Post_Type::BRIEFING_POST_TYPE,
+                'post_status' => 'publish',
+                'posts_per_page' => 1,
+                'orderby' => 'date',
+                'order' => 'DESC',
+                'no_found_rows' => true,
+            ]
+        );
+
+        $post = null;
+        if ($query->have_posts()) {
+            $query->the_post();
+            $candidate = get_post();
+            $post = $candidate instanceof \WP_Post ? $candidate : null;
+        }
+
+        ob_start();
+        ?>
+        <section class="ml-featured-briefing" aria-label="<?php esc_attr_e('Featured Briefing', 'marketlense-core'); ?>">
+            <div class="ml-section-heading ml-section-anchor">
+                <p class="ml-section-kicker ml-section-eyebrow"><?php esc_html_e('BRIEFINGS', 'marketlense-core'); ?></p>
+                <div class="ml-section-heading-row">
+                    <h2 class="ml-section-title"><?php esc_html_e('Featured Briefing', 'marketlense-core'); ?></h2>
+                    <a class="ml-inline-link" href="<?php echo esc_url($this->post_type_archive_url(Post_Type::BRIEFING_POST_TYPE, '/briefings/')); ?>">
+                        <?php esc_html_e('Open Briefings', 'marketlense-core'); ?>
+                        <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
+                    </a>
+                </div>
+                <span class="ml-section-rule" aria-hidden="true"></span>
+            </div>
+
+            <?php if ($post instanceof \WP_Post) : ?>
+                <?php $this->render_featured_entity_card($post, __('Read Briefing', 'marketlense-core')); ?>
+            <?php else : ?>
+                <?php $this->render_institutional_empty_state(__('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core')); ?>
+            <?php endif; ?>
+        </section>
+        <?php
+        wp_reset_postdata();
+
+        return (string) ob_get_clean();
+    }
+
+    /**
      * Renders the weekly intelligence signals panel.
      */
     public function render_intelligence_signals(array $attrs = []): string
@@ -801,37 +854,57 @@ final class Shortcodes
     }
 
     /**
-     * Renders durable Signal posts on the public Signals landing surface.
+     * Renders durable Signals on the public Signals landing surface.
+     *
+     * @param array<string,mixed> $attrs Shortcode attributes.
+     */
+    public function render_signals_index(array $attrs = []): string
+    {
+        return $this->render_entity_archive(
+            $attrs,
+            'ml_signals_index',
+            Post_Type::SIGNAL_POST_TYPE,
+            __('Published Signals', 'marketlense-core'),
+            __('No validated Signals are available yet. Signals appear here after approved Signals have been published.', 'marketlense-core'),
+            __('Read Signal', 'marketlense-core')
+        );
+    }
+
+    /**
+     * Renders the legacy Signal archive shortcode through the canonical index surface.
      *
      * @param array<string,mixed> $attrs Shortcode attributes.
      */
     public function render_signal_archive(array $attrs = []): string
     {
+        return $this->render_signals_index($attrs);
+    }
+
+    /**
+     * Renders Briefing posts on the public Briefings landing surface.
+     *
+     * @param array<string,mixed> $attrs Shortcode attributes.
+     */
+    public function render_briefings_index(array $attrs = []): string
+    {
         return $this->render_entity_archive(
             $attrs,
-            'ml_signal_archive',
-            Post_Type::SIGNAL_POST_TYPE,
-            __('Published Signals', 'marketlense-core'),
-            __('No approved Signals have been published yet.', 'marketlense-core'),
-            __('Read signal', 'marketlense-core')
+            'ml_briefings_index',
+            Post_Type::BRIEFING_POST_TYPE,
+            __('Published Briefings', 'marketlense-core'),
+            __('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core'),
+            __('Read Briefing', 'marketlense-core')
         );
     }
 
     /**
-     * Renders cross-report Briefing posts on the public Briefings landing surface.
+     * Renders the legacy Briefing archive shortcode through the canonical index surface.
      *
      * @param array<string,mixed> $attrs Shortcode attributes.
      */
     public function render_briefing_archive(array $attrs = []): string
     {
-        return $this->render_entity_archive(
-            $attrs,
-            'ml_briefing_archive',
-            Post_Type::BRIEFING_POST_TYPE,
-            __('Published Briefings', 'marketlense-core'),
-            __('No cross-report Briefings have been published yet.', 'marketlense-core'),
-            __('Read briefing', 'marketlense-core')
-        );
+        return $this->render_briefings_index($attrs);
     }
 
     /**
@@ -1308,9 +1381,7 @@ final class Shortcodes
                     <?php endwhile; ?>
                 </div>
             <?php else : ?>
-                <div class="ml-empty-state">
-                    <p><?php echo esc_html($empty_copy); ?></p>
-                </div>
+                <?php $this->render_institutional_empty_state($empty_copy); ?>
             <?php endif; ?>
             <?php wp_reset_postdata(); ?>
         </section>
@@ -1342,6 +1413,66 @@ final class Shortcodes
                 </p>
             </div>
         </article>
+        <?php
+    }
+
+    private function render_featured_entity_card(\WP_Post $post, string $link_label): void
+    {
+        $permalink = get_permalink($post);
+        $excerpt = trim((string) get_the_excerpt($post));
+        $thumbnail = get_the_post_thumbnail(
+            $post,
+            'large',
+            [
+                'loading' => 'eager',
+                'fetchpriority' => 'high',
+                'sizes' => '(max-width: 720px) 100vw, 42rem',
+            ]
+        );
+        ?>
+        <article class="ml-featured-digest-card ml-featured-briefing-card ml-surface-card ml-surface-card--standard ml-card">
+            <?php if (is_string($thumbnail) && $thumbnail !== '') : ?>
+                <a class="ml-featured-media" href="<?php echo esc_url(is_string($permalink) ? $permalink : ''); ?>">
+                    <?php echo $thumbnail; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                </a>
+            <?php endif; ?>
+
+            <div class="ml-featured-copy ml-featured-content">
+                <div class="ml-featured-header">
+                    <div class="ml-featured-meta ml-featured-meta-block">
+                        <p class="ml-featured-meta-line ml-featured-meta-date">
+                            <strong><?php esc_html_e('Publish date:', 'marketlense-core'); ?></strong>
+                            <span><?php echo esc_html((string) get_the_date('', $post)); ?></span>
+                        </p>
+                    </div>
+                </div>
+                <h3 class="ml-featured-title">
+                    <a href="<?php echo esc_url(is_string($permalink) ? $permalink : ''); ?>">
+                        <?php echo esc_html(get_the_title($post)); ?>
+                    </a>
+                </h3>
+
+                <?php if ($excerpt !== '') : ?>
+                    <p class="ml-featured-excerpt"><?php echo esc_html($excerpt); ?></p>
+                <?php endif; ?>
+
+                <p class="ml-report-card-link ml-featured-link">
+                    <a href="<?php echo esc_url(is_string($permalink) ? $permalink : ''); ?>">
+                        <?php echo esc_html($link_label); ?>
+                        <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
+                    </a>
+                </p>
+            </div>
+        </article>
+        <?php
+    }
+
+    private function render_institutional_empty_state(string $copy): void
+    {
+        ?>
+        <div class="ml-empty-state ml-institutional-empty-state">
+            <p><?php echo esc_html($copy); ?></p>
+        </div>
         <?php
     }
 
