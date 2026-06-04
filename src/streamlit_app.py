@@ -44,6 +44,7 @@ from src.ui.app_pages.publisher_operations import (
     render_publisher_sync,
     render_report_download_lab,
 )
+from src.ui.app_pages.strategy_outputs import render_strategy_outputs
 
 NAVIGATION_GROUPS = {
     "Overview": ["Cockpit Overview", "Run Center"],
@@ -65,6 +66,7 @@ NAVIGATION_GROUPS = {
         "Analysis & Evidence",
         "Validation Center",
     ],
+    "Strategy outputs": ["Strategy Outputs"],
     "Observability": [
         "Cost & Usage",
         "Logs & Live Events",
@@ -200,6 +202,13 @@ def _build_navigation(valid_settings: bool):
                     render_validation_center,
                     title="Validation Center",
                     icon=":material/rule:",
+                ),
+            ],
+            "Strategy outputs": [
+                st.Page(
+                    render_strategy_outputs,
+                    title="Strategy Outputs",
+                    icon=":material/insights:",
                 ),
             ],
             "Observability": [

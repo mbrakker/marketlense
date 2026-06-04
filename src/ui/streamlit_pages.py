@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """Compatibility facade for Streamlit page helpers and legacy imports.
 
 Workflow-owned page implementations now live in `src.ui.app_pages`, while shared
 read-model/runtime helpers live under `src.ui._streamlit_pages`. This module
 keeps older imports stable.
 """
+
+from __future__ import annotations
 
 import streamlit as st
 
@@ -82,6 +82,9 @@ from src.ui.app_pages.overview import (
 from src.ui.app_pages.overview import (
     render_run_center as _render_run_center,
 )
+from src.ui.app_pages.strategy_outputs import (
+    render_strategy_outputs as _render_strategy_outputs,
+)
 from src.ui.common import (
     UI_SURFACE_EXCEPTIONS,
     _append_terminal,
@@ -148,6 +151,7 @@ __all__ = [
     "_render_report_command_center",
     "_render_run_center",
     "_render_settings_and_prompts",
+    "_render_strategy_outputs",
     "_render_structured_config_form",
     "_render_structured_config_form_legacy",
     "_render_system_and_storage",

@@ -80,6 +80,7 @@ agent-skills/
 .ipynb_checkpoints
 
 # Logs & temporary files
+temp/
 *.log
 *.bak
 *.tmp

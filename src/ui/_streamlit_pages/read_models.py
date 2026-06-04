@@ -9,7 +9,6 @@ import streamlit as st
 
 from src.contracts.costs import CostReportingRequest, CostRollupRequest
 from src.contracts.ops import OpsDashboardSnapshotRequest
-from src.contracts.state import StateGetRequest
 from src.contracts.streamlit_dashboard import (
     DirectoryCountCheck,
     DirectoryCountsRequest,
@@ -91,6 +90,10 @@ _UI_RUN_INVALIDATION_BY_TYPE: dict[str, str | None] = {
     "publisher_discovery": None,
     "report_download": None,
     "acquisition_audit": None,
+    "cross_report_analysis": None,
+    "signal_candidate_extraction": None,
+    "signal_post": "publish",
+    "ui_run_replay": None,
 }
 
 INGEST_STEPS = [

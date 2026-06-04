@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import List
 
 
 PAYLOAD_SCHEMA_VERSION = "1.0"
@@ -119,4 +120,195 @@ class AcquisitionAuditUiRunPayload:
     delivery_email: str | None = field(
         default=None,
         metadata={"doc": "Optional delivery email used for gated report forms."},
+    )
+
+
+@dataclass(frozen=True)
+class CrossReportAnalysisUiRunPayload:
+    schema_version: str = field(
+        metadata={"doc": "UI cross-report analysis payload schema version."}
+    )
+    topic: str = field(
+        default="",
+        metadata={"doc": "Operator topic; optional only when auto-theme is enabled."},
+    )
+    auto_theme: bool = field(
+        default=True,
+        metadata={"doc": "Whether deterministic automatic theme selection may run."},
+    )
+    category_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Projected category filters selected in the UI."},
+    )
+    tag_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Projected tag filters selected in the UI."},
+    )
+    publisher_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Projected publisher filters selected in the UI."},
+    )
+    date_range_start: str | None = field(
+        default=None,
+        metadata={"doc": "Optional inclusive YYYY-MM-DD lower date bound."},
+    )
+    date_range_end: str | None = field(
+        default=None,
+        metadata={"doc": "Optional inclusive YYYY-MM-DD upper date bound."},
+    )
+    max_source_reports: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive selected-source cap."},
+    )
+    max_evidence_items: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive evidence input cap."},
+    )
+    max_prompt_chars: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive rendered prompt character cap."},
+    )
+    publication_mode: str = field(
+        default="generate_only",
+        metadata={"doc": "Publication mode requested by the UI."},
+    )
+    output_root: str = field(
+        default="",
+        metadata={"doc": "Optional output root override."},
+    )
+    idempotency_db: str = field(
+        default="",
+        metadata={"doc": "Optional idempotency database override."},
+    )
+    request_id: str = field(
+        default="",
+        metadata={"doc": "Optional stable request id override."},
+    )
+    diagnostic: bool = field(
+        default=False,
+        metadata={"doc": "Whether diagnostic mode may inspect weak source sets."},
+    )
+    override_publishability: bool = field(
+        default=False,
+        metadata={"doc": "Explicit operator override for publishability gates."},
+    )
+
+
+@dataclass(frozen=True)
+class SignalCandidateExtractionUiRunPayload:
+    schema_version: str = field(
+        metadata={"doc": "UI Signal candidate extraction payload schema version."}
+    )
+    topic: str = field(metadata={"doc": "Operator-selected Signal topic."})
+    category_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Projected category filters selected in the UI."},
+    )
+    tag_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Projected tag filters selected in the UI."},
+    )
+    publisher_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Projected publisher filters selected in the UI."},
+    )
+    date_range_start: str | None = field(
+        default=None,
+        metadata={"doc": "Optional inclusive YYYY-MM-DD lower date bound."},
+    )
+    date_range_end: str | None = field(
+        default=None,
+        metadata={"doc": "Optional inclusive YYYY-MM-DD upper date bound."},
+    )
+    max_source_reports: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive selected-source cap."},
+    )
+    max_evidence_items: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive evidence input cap."},
+    )
+    max_signals: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive Signal candidate cap."},
+    )
+    extraction_request_id: str = field(
+        default="",
+        metadata={"doc": "Optional stable extraction request id override."},
+    )
+    signal_store_db: str = field(
+        default="",
+        metadata={"doc": "Optional Signal candidate store database override."},
+    )
+
+
+@dataclass(frozen=True)
+class SignalPostUiRunPayload:
+    schema_version: str = field(
+        metadata={"doc": "UI Signal post workflow payload schema version."}
+    )
+    topic: str = field(metadata={"doc": "Operator-selected Signal topic."})
+    category_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Projected category filters selected in the UI."},
+    )
+    tag_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Projected tag filters selected in the UI."},
+    )
+    publisher_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Projected publisher filters selected in the UI."},
+    )
+    date_range_start: str | None = field(
+        default=None,
+        metadata={"doc": "Optional inclusive YYYY-MM-DD lower date bound."},
+    )
+    date_range_end: str | None = field(
+        default=None,
+        metadata={"doc": "Optional inclusive YYYY-MM-DD upper date bound."},
+    )
+    max_source_reports: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive selected-source cap."},
+    )
+    max_evidence_items: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive evidence input cap."},
+    )
+    minimum_source_reports: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive minimum source-report requirement."},
+    )
+    minimum_evidence_items: int | None = field(
+        default=None,
+        metadata={"doc": "Optional positive minimum evidence-item requirement."},
+    )
+    publication_mode: str = field(
+        default="publish_dry_run",
+        metadata={"doc": "Publication mode requested by the UI."},
+    )
+    request_id: str = field(
+        default="",
+        metadata={"doc": "Optional stable Signal workflow request id override."},
+    )
+    output_root: str = field(
+        default="",
+        metadata={"doc": "Optional output root override."},
+    )
+    signal_store_db: str = field(
+        default="",
+        metadata={"doc": "Optional Signal candidate store database override."},
+    )
+
+
+@dataclass(frozen=True)
+class UiRunReplayUiRunPayload:
+    schema_version: str = field(
+        metadata={"doc": "UI-run replay payload schema version."}
+    )
+    run_id: str = field(metadata={"doc": "Original UI run identifier to replay."})
+    registry_path: str = field(
+        default="",
+        metadata={"doc": "Optional UI-run registry path override."},
     )

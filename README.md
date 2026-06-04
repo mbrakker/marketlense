@@ -1571,7 +1571,7 @@ The repository includes a Streamlit control panel aligned to `GUI-ARCHITECTURE.m
 The entrypoint is thin and the UI is now split into grouped multi-page surfaces plus a persisted run-control layer:
 
 - `src/streamlit_app.py`: entrypoint only, grouped `st.navigation(...)`, runtime state bootstrap, theme load.
-- `src/ui/app_pages/`: bounded page modules for overview, core operations, publisher operations, QA, observability, and configuration.
+- `src/ui/app_pages/`: bounded page modules for overview, core operations, publisher operations, QA, strategy outputs, observability, and configuration.
 - `src/ui/streamlit_pages.py`: compatibility facade for legacy imports; page-owned helpers live in neutral modules so page owners do not import the facade.
 - `src/ui/_streamlit_pages/`: shared Streamlit runtime/read-model/structured-config helpers used across page families without reintroducing one page-owner monolith.
 - `src/ui/settings_page.py`: config studio for `app.yaml`, operational YAML/JSON assets, prompt files, and auth/source status.
@@ -1594,6 +1594,7 @@ Grouped sidebar navigation:
 - `Core operations`: Ingest Control, Candidate Extraction, Cover Images, Publishing & Taxonomy
 - `Publisher operations`: Publisher Discovery, Report Download Lab, Acquisition Audit, Publisher Sync, Auth & External Access
 - `Content QA`: Report Command Center, Analysis & Evidence, Validation Center
+- `Strategy outputs`: Strategy Outputs
 - `Observability`: Cost & Usage, Logs & Live Events, System & Storage, Developer & Test Tools
 - `Configuration`: Settings & Prompts
 
@@ -1604,6 +1605,7 @@ Design and behavior highlights:
 - Long-running workflows launched from Streamlit now run through the persisted UI run registry instead of blocking the browser session inline. The Run Center can inspect, cancel, retry, and discard tracked jobs, and failed runs auto-enter a dead-letter workflow with typed triage categories instead of remaining ambiguous `failed` rows.
 - The overview and Run Center now use card-based dashboard composition with bordered KPI rows, tighter run/history tables, selected-run context that carries into observability pages, and dead-letter backlog plus age-trend views for operator triage.
 - Workflow coverage now includes publisher discovery, report download, acquisition audit, publisher sync, and Drive OAuth/auth visibility in addition to ingest, candidate extraction, cover generation, publish, taxonomy, QA, and observability pages.
+- Strategy Outputs compares codebase capabilities against Streamlit coverage and adds guided controls, charts, and indicators for cross-report Briefings, durable Signal candidates, Signal post workflows, and UI-run replay.
 - The configuration surface now covers `app.yaml`, category mappings, cover styles, browser download identity, publisher snapshot JSON, and prompt YAML files through service-backed editors with validation, diff visibility, and optional backups.
 - The config studio defaults to four task-oriented workspaces: `Common`, `Assets`, `Prompts`, and `Advanced`, so routine operator changes no longer open on the raw YAML editor by default.
 - Selected run IDs now flow into observability surfaces such as cost and log filters, and selected report IDs persist across the report/analysis pages.

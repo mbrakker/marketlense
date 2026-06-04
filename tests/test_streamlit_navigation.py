@@ -9,6 +9,7 @@ def test_navigation_groups_cover_required_pages() -> None:
         "Core operations",
         "Publisher operations",
         "Content QA",
+        "Strategy outputs",
         "Observability",
         "Configuration",
     }
@@ -21,6 +22,7 @@ def test_navigation_groups_cover_required_pages() -> None:
     assert (
         "Report Download Lab" in streamlit_app.NAVIGATION_GROUPS["Publisher operations"]
     )
+    assert "Strategy Outputs" in streamlit_app.NAVIGATION_GROUPS["Strategy outputs"]
     assert "Logs & Live Events" in streamlit_app.NAVIGATION_GROUPS["Observability"]
     assert all(section.strip() for section in streamlit_app.NAV_SECTIONS)
 
@@ -54,5 +56,8 @@ def test_build_navigation_registers_grouped_pages(monkeypatch) -> None:
         "Acquisition Audit",
         "Publisher Sync",
         "Auth & External Access",
+    ]
+    assert [item["title"] for item in pages["Strategy outputs"]] == [
+        "Strategy Outputs"
     ]
     assert result == {"pages": pages}
