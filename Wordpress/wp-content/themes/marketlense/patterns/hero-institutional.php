@@ -27,35 +27,28 @@
       <!-- wp:group {"className":"ml-hero-stack","layout":{"type":"default"}} -->
       <div class="wp-block-group ml-hero-stack">
         <!-- wp:heading {"level":1,"fontSize":"4xl","className":"ml-hero-title"} -->
-        <h1 class="wp-block-heading ml-hero-title has-4-xl-font-size">Executive research intelligence with traceable evidence.</h1>
+        <h1 class="wp-block-heading ml-hero-title has-4-xl-font-size">Search validated market intelligence.</h1>
         <!-- /wp:heading -->
 
         <!-- wp:group {"className":"ml-hero-support","layout":{"type":"default"}} -->
         <div class="wp-block-group ml-hero-support">
           <!-- wp:paragraph {"className":"ml-hero-copy"} -->
-          <p class="ml-hero-copy">Market Lense converts long-form market, strategy, and industry reports into concise digests built for strategy, insights, and leadership teams.</p>
-          <!-- /wp:paragraph -->
-
-          <!-- wp:paragraph {"className":"ml-hero-credibility"} -->
-          <p class="ml-hero-credibility">Validated coverage spanning OECD, Deloitte, Morningstar, Kantar, IAS, and other leading research publishers.</p>
+          <p class="ml-hero-copy">Find reports, Briefings, Signals, topics, and publishers.</p>
           <!-- /wp:paragraph -->
         </div>
         <!-- /wp:group -->
       </div>
       <!-- /wp:group -->
 
-      <!-- wp:search {"label":"Search Market Lense","showLabel":false,"placeholder":"Search reports, topics, and publishers","buttonPosition":"button-inside","buttonUseIcon":true,"className":"ml-hero-search"} /-->
+      <!-- wp:search {"label":"Search Market Lense","showLabel":false,"placeholder":"Search reports, Briefings, Signals, topics","buttonPosition":"button-inside","buttonUseIcon":true,"className":"ml-hero-search"} /-->
 
-      <!-- wp:buttons {"className":"ml-hero-actions"} -->
-      <div class="wp-block-buttons ml-hero-actions">
-        <!-- wp:button -->
-        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button ml-button" href="<?php echo esc_url((string) (get_post_type_archive_link('ml_report') ?: home_url('/reports/'))); ?>">Browse reports</a></div>
-        <!-- /wp:button -->
-        <!-- wp:button {"className":"is-style-outline"} -->
-        <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button ml-button" href="<?php echo esc_url(home_url('/methodology/')); ?>">Review methodology</a></div>
-        <!-- /wp:button -->
+      <!-- wp:group {"className":"ml-hero-metrics","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-hero-metrics">
+        <!-- wp:shortcode -->
+        [ml_home_metrics]
+        <!-- /wp:shortcode -->
       </div>
-      <!-- /wp:buttons -->
+      <!-- /wp:group -->
     </div>
     <!-- /wp:group -->
 
@@ -68,7 +61,7 @@
     <!-- /wp:group -->
 
     <!-- wp:paragraph {"className":"ml-capability-strip"} -->
-    <p class="ml-capability-strip">Source-traceable &middot; Claim-linked &middot; Freshly updated &middot; Executive-ready &middot; Figure-indexed</p>
+    <p class="ml-capability-strip">Reports &middot; Briefings &middot; Signals &middot; Publishers</p>
     <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->

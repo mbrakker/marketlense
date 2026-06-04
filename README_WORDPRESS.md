@@ -15,7 +15,7 @@ Reusable shortcode entrypoints are registered by `Wordpress/wp-content/plugins/m
 - `[ml_signals_index]`: canonical Signals landing surface for `/signals/`. Renders published Signals or an explicit institutional empty state.
 - `[ml_signal_archive]`: compatibility alias for `[ml_signals_index]`; existing custom archive routes should prefer `[ml_signals_index]`.
 - `[ml_briefing_archive]`: compatibility alias for `[ml_briefings_index]`; existing custom archive routes should prefer `[ml_briefings_index]`.
-- `[ml_home_metrics]`, `[ml_hero_snapshot]`, `[ml_intelligence_signals]`, `[ml_strategic_themes]`, and `[ml_publisher_authority]`: homepage intelligence and discovery modules sourced from already published WordPress content and metadata.
+- `[ml_home_metrics]`, `[ml_hero_snapshot]`, `[ml_intelligence_signals]`, `[ml_strategic_themes]`, and `[ml_publisher_authority]`: homepage intelligence and discovery modules sourced from already published WordPress content and metadata. The homepage hero uses native WordPress search as the primary action and renders `[ml_home_metrics]` and `[ml_hero_snapshot]` without changing shortcode queries.
 - `[ml_topics_directory]`, `[ml_publishers_directory]`, and `[ml_publisher_profile]`: taxonomy and publisher discovery surfaces.
 - `[ml_button_link]`, `[ml_inline_link]`, `[ml_primary_nav]`, and `[ml_footer_nav]`: navigation and link helpers.
 

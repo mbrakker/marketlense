@@ -452,7 +452,7 @@ Primary responsibilities:
 The block theme is organized as an editorial intelligence portal:
 
 - Full-site editing templates and template parts for header, footer, archives, trust pages, search, and ingest-first singles
-- Homepage assembled from reorderable patterns with a consultancy-style hero, proof bands, and discovery bands
+- Homepage assembled from reorderable patterns with a search-first institutional hero, proof bands, and discovery bands
 - Public product navigation is Reports, Topics, Signals, Briefings, and Publishers, with Figures, Regions, Time Periods, and Methodology as secondary discovery/trust surfaces. Signal and Briefing surfaces are product destinations even when the current theme exposes them first through homepage modules or generated publish packages.
 - Theme-driven editorial token system in `theme.json` with semantic enterprise-blue tokens mirrored into `assets/css/theme.css` for non-block components
 - Sans-first typography roles for display, page titles, section titles, card titles, body copy, metadata, navigation, and buttons are defined centrally in `theme.json` and reinforced in `assets/css/theme.css`
@@ -463,12 +463,12 @@ The block theme is organized as an editorial intelligence portal:
 Current theme highlights:
 
 - shortcode-driven header/footer navigation resolution
-- a proof-led homepage hero and dynamic homepage intelligence surfaces
+- a search-first homepage hero and dynamic homepage intelligence surfaces
 - a semantic enterprise-blue token foundation in `theme.json` plus `assets/css/theme.css` (`text-primary`, `text-secondary`, `text-muted`, `brand-navy`, `signal-blue`, `support-blue`, `surface-white`, `background-cool`, `border-subtle`, `shadow-premium`) while keeping legacy slugs as compatibility aliases
 - a sans-first enterprise typography system in `theme.json` and `assets/css/theme.css` covering display/page/section/card/meta/nav/button roles without changing shortcode structure or homepage composition
 - a reusable homepage section-anchor system (`.ml-section-anchor`, `.ml-section-eyebrow`, `.ml-section-title`, `.ml-section-rule`) so editorial chapters read as distinct premium intelligence surfaces without changing inner module grids
 - a centralized premium surface-card system in `assets/css/theme.css` (`.ml-surface-card`, standard/compact padding, 12px radius, semantic border/shadow states, and 24px card gaps) applied to featured, report, signals, themes, authority, and method cards without changing shortcode logic or grid templates
-- a two-column premium homepage hero in `patterns/hero-institutional.php` with native search, stronger entry hierarchy, and a right-side intelligence panel powered by the existing hero snapshot shortcode without changing shortcode/query behavior
+- a two-column homepage hero in `patterns/hero-institutional.php` with native search as the primary above-the-fold action, compact `[ml_home_metrics]`, and a right-side intelligence panel powered by the existing hero snapshot shortcode without changing shortcode/query behavior
 - a signal-list treatment for `This Week in Intelligence` so topic rows use premium intelligence cues (`.ml-signals-column`, `.ml-signal-row`, `.ml-signal-indicator`) instead of generic badge/bar styling while preserving topic order, counts, and shortcode queries
 - a premium strategic-theme discovery treatment so taxonomy cards use lighter surfaces, stronger title/count hierarchy, and directional affordance cues without changing topic ordering or taxonomy shortcode queries
 - a publisher-authority presentation upgrade so institutional source cards use a vertically stacked name/meta hierarchy, lighter premium surfaces, and internal profile-link pills without changing publisher ordering, counts, or shortcode queries
@@ -669,7 +669,7 @@ The `marketlense` theme uses an explicit reading frame and a wider discovery fra
 - `settings.layout.contentSize`: `48rem`
 - `settings.layout.wideSize`: `82rem`
 
-The homepage hero uses a two-column proof-led composition, the proof rail is rendered by `[ml_hero_snapshot]`, homepage sections are grouped into proof and discovery bands, and the header/footer use the same home frame width as the hero and homepage section bands.
+The homepage hero uses a two-column search-first composition, native WordPress search is the primary action, `[ml_home_metrics]` and `[ml_hero_snapshot]` render above the first proof band, homepage sections are grouped into proof and discovery bands, and the header/footer use the same home frame width as the hero and homepage section bands.
 
 ### `ml_report` Ingest Rendering
 

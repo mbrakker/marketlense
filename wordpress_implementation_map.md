@@ -15,7 +15,7 @@ The homepage is defined by `Wordpress/wp-content/themes/marketlense/templates/fr
 Render order:
 
 1. Header template part.
-2. `marketlense/hero-institutional`, which includes `[ml_hero_snapshot]`.
+2. `marketlense/hero-institutional`, which leads with native WordPress search and includes `[ml_home_metrics]` plus `[ml_hero_snapshot]`.
 3. Proof band:
    - `marketlense/featured-digest` -> `[ml_featured_digest]`
    - `marketlense/this-week-intelligence` -> `[ml_intelligence_signals show_publishers="0"]`

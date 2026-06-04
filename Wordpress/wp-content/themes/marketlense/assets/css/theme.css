@@ -5889,19 +5889,19 @@ a {
 }
 
 .ml-hero .ml-hero-title {
-  max-width: 10ch;
-  margin: 0 0 20px;
+  max-width: 13ch;
+  margin: 0 0 14px;
 }
 
 .ml-hero-support {
   display: grid;
-  gap: 12px;
-  max-width: 52ch;
-  margin: 0 0 28px;
+  gap: 8px;
+  max-width: 44ch;
+  margin: 0 0 20px;
 }
 
 .ml-hero .ml-hero-copy {
-  max-width: 52ch;
+  max-width: 44ch;
   margin: 0;
   font-size: 16px;
   line-height: 1.6;
@@ -5921,30 +5921,31 @@ a {
 
 .ml-hero-search {
   width: 100%;
-  margin: 0 0 20px;
+  max-width: 760px;
+  margin: 0 0 18px;
 }
 
 .ml-hero-search .wp-block-search__inside-wrapper {
-  min-height: 48px;
+  min-height: 64px;
   padding: 0;
   border: 1px solid var(--ml-border-subtle);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--ml-surface-white);
-  box-shadow: none;
+  box-shadow: 0 18px 48px rgba(13, 33, 70, 0.12);
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .ml-hero-search .wp-block-search__inside-wrapper:focus-within {
   border-color: var(--ml-signal-blue);
-  box-shadow: 0 0 0 3px rgba(88, 191, 234, 0.18);
+  box-shadow: 0 0 0 3px rgba(88, 191, 234, 0.18), 0 18px 48px rgba(13, 33, 70, 0.14);
 }
 
 .ml-hero-search .wp-block-search__input {
-  min-height: 48px;
-  padding: 0 16px;
+  min-height: 64px;
+  padding: 0 20px;
   border: 0;
   background: transparent;
-  font-size: 15px;
+  font-size: 18px;
   line-height: 1.2;
   color: var(--ml-text-primary);
 }
@@ -5958,17 +5959,57 @@ a {
 }
 
 .ml-hero-search .wp-block-search__button {
-  min-width: 40px;
-  min-height: 48px;
-  padding: 0 12px 0 0;
+  min-width: 64px;
+  min-height: 64px;
+  padding: 0 18px;
   border: 0;
-  background: transparent;
-  color: var(--ml-text-muted);
+  border-radius: 0 12px 12px 0;
+  background: var(--ml-brand-navy);
+  color: var(--ml-surface-white);
 }
 
 .ml-hero-search .wp-block-search__button:hover,
 .ml-hero-search .wp-block-search__button:focus-visible {
-  color: var(--ml-brand-navy);
+  background: #142f60;
+  color: var(--ml-surface-white);
+}
+
+.ml-hero-metrics {
+  max-width: 760px;
+  margin: 0;
+}
+
+.ml-hero-metrics .ml-home-metrics {
+  max-width: none;
+  margin: 0;
+}
+
+.ml-hero-metrics .ml-home-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ml-hero-metrics .ml-metric-item {
+  min-height: 76px;
+  padding: 12px 14px;
+  border: 1px solid var(--ml-border-subtle);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ml-surface-white) 86%, var(--ml-background-cool) 14%);
+}
+
+.ml-hero-metrics .ml-metric-value {
+  font-size: clamp(1.25rem, 1rem + 0.45vw, 1.7rem);
+  line-height: 1;
+}
+
+.ml-hero-metrics .ml-metric-label {
+  font-size: 11px;
 }
 
 .ml-hero-actions {
@@ -6653,14 +6694,19 @@ a {
 
   .ml-hero-title,
   .ml-hero .ml-hero-title {
-    max-width: 10ch;
+    max-width: 13ch;
     font-size: clamp(2.75rem, 5vw, 3.25rem);
     line-height: 1;
   }
 
   .ml-hero-support,
   .ml-hero .ml-hero-copy {
-    max-width: 60ch;
+    max-width: 52ch;
+  }
+
+  .ml-hero-search,
+  .ml-hero-metrics {
+    max-width: none;
   }
 
   .ml-hero-actions {
@@ -6845,7 +6891,7 @@ a {
 
   .ml-hero-title,
   .ml-hero .ml-hero-title {
-    max-width: 10ch;
+    max-width: 12ch;
     font-size: 40px;
     line-height: 1;
   }
@@ -6858,6 +6904,36 @@ a {
   .ml-hero .ml-hero-copy {
     max-width: none;
     font-size: 15px;
+  }
+
+  .ml-hero-search {
+    margin-bottom: 14px;
+  }
+
+  .ml-hero-search .wp-block-search__inside-wrapper,
+  .ml-hero-search .wp-block-search__input,
+  .ml-hero-search .wp-block-search__button {
+    min-height: 56px;
+  }
+
+  .ml-hero-search .wp-block-search__input {
+    padding-inline: 16px;
+    font-size: 16px;
+  }
+
+  .ml-hero-search .wp-block-search__button {
+    min-width: 56px;
+    padding-inline: 16px;
+  }
+
+  .ml-hero-metrics .ml-home-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .ml-hero-metrics .ml-metric-item {
+    min-height: 68px;
+    padding: 10px 12px;
   }
 
   .ml-hero-actions {
