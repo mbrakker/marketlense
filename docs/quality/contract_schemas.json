@@ -6768,6 +6768,9 @@
         "md5": {
           "type": "string"
         },
+        "publisher_name": {
+          "type": "string"
+        },
         "report_name": {
           "type": "string"
         },
@@ -6775,6 +6778,9 @@
           "type": "string"
         },
         "source_domain": {
+          "type": "string"
+        },
+        "source_page_url": {
           "type": "string"
         }
       },
@@ -24455,6 +24461,110 @@
       ],
       "type": "object"
     },
+    "src.contracts.ui_run_payloads.CrossReportAnalysisUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "auto_theme": {
+          "type": "boolean"
+        },
+        "category_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "date_range_end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "date_range_start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostic": {
+          "type": "boolean"
+        },
+        "idempotency_db": {
+          "type": "string"
+        },
+        "max_evidence_items": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_prompt_chars": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_source_reports": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output_root": {
+          "type": "string"
+        },
+        "override_publishability": {
+          "type": "boolean"
+        },
+        "publication_mode": {
+          "type": "string"
+        },
+        "publisher_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "tag_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.ui_run_payloads.IngestUiRunPayload": {
       "additionalProperties": false,
       "properties": {
@@ -24568,6 +24678,221 @@
       "required": [
         "schema_version",
         "url"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.SignalCandidateExtractionUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "category_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "date_range_end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "date_range_start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "max_evidence_items": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_signals": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_source_reports": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "signal_store_db": {
+          "type": "string"
+        },
+        "tag_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "topic"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.SignalPostUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "category_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "date_range_end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "date_range_start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_evidence_items": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_source_reports": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "minimum_evidence_items": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "minimum_source_reports": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output_root": {
+          "type": "string"
+        },
+        "publication_mode": {
+          "type": "string"
+        },
+        "publisher_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "signal_store_db": {
+          "type": "string"
+        },
+        "tag_filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "topic"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.UiRunReplayUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "registry_path": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id"
       ],
       "type": "object"
     },

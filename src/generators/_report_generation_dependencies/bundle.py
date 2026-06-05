@@ -7,6 +7,7 @@ from .render import ReportRenderDependencies
 from .selection import ReportSelectionDependencies
 from .signal import ReportSignalDependencies
 from .source import ReportSourceDependencies
+from .source_scoring import ReportSourceScoringDependencies
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,7 @@ class ReportGenerationDependencies:
     analysis: ReportAnalysisDependencies
     render: ReportRenderDependencies
     signal: ReportSignalDependencies
+    source_scoring: ReportSourceScoringDependencies
 
     @classmethod
     def default(cls) -> "ReportGenerationDependencies":
@@ -25,4 +27,5 @@ class ReportGenerationDependencies:
             analysis=ReportAnalysisDependencies.default(),
             render=ReportRenderDependencies.default(),
             signal=ReportSignalDependencies.default(),
+            source_scoring=ReportSourceScoringDependencies.default(),
         )

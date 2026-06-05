@@ -6,6 +6,7 @@ from src.generators.report_generation_dependencies import (
     ReportSelectionDependencies,
     ReportSignalDependencies,
     ReportSourceDependencies,
+    ReportSourceScoringDependencies,
 )
 
 
@@ -15,6 +16,7 @@ def test_report_generation_stage_dependencies_are_capability_scoped() -> None:
     analysis_fields = set(ReportAnalysisDependencies.__dataclass_fields__)
     render_fields = set(ReportRenderDependencies.__dataclass_fields__)
     signal_fields = set(ReportSignalDependencies.__dataclass_fields__)
+    source_scoring_fields = set(ReportSourceScoringDependencies.__dataclass_fields__)
     figure_caption_fields = set(FigureCaptionDependencies.__dataclass_fields__)
     root_fields = set(ReportGenerationDependencies.__dataclass_fields__)
 
@@ -45,4 +47,17 @@ def test_report_generation_stage_dependencies_are_capability_scoped() -> None:
     assert "run_signal_candidate_extraction" in signal_fields
     assert "analysis_store_pack" in signal_fields
 
-    assert root_fields == {"source", "selection", "analysis", "render", "signal"}
+    assert "render_report" not in source_scoring_fields
+    assert "generate_evidence_packs" not in source_scoring_fields
+    assert "record_report_source" in source_scoring_fields
+    assert "score_report_value" in source_scoring_fields
+    assert "record_report_value_score" in source_scoring_fields
+
+    assert root_fields == {
+        "source",
+        "selection",
+        "analysis",
+        "render",
+        "signal",
+        "source_scoring",
+    }

@@ -2227,7 +2227,9 @@ class TestReportStoreService(unittest.TestCase):
                         source_status,
                         discovered_at_utc,
                         downloaded_at_utc,
-                        md5
+                        md5,
+                        publisher_name,
+                        source_page_url
                     FROM report_sources
                     WHERE id=?
                     """,
@@ -2242,6 +2244,8 @@ class TestReportStoreService(unittest.TestCase):
                     "2026-03-29T14:00:00Z",
                     "2026-03-29T15:00:00Z",
                     "abc123def456",
+                    "Activate Consulting",
+                    "https://www.activate.com/insights",
                 ),
                 row,
             )

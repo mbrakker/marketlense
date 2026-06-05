@@ -237,6 +237,8 @@ def record_report_source(
     landing_page_url = request.landing_page_url.strip()
     downloaded_at_utc = request.downloaded_at_utc.strip()
     md5 = request.md5.strip().lower()
+    publisher_name = request.publisher_name.strip()
+    source_page_url = request.source_page_url.strip() or landing_page_url
     normalized_landing_page_url = _normalize_optional_url_key(landing_page_url)
 
     if not db_path:
@@ -299,6 +301,8 @@ def record_report_source(
                 "source_domain": source_domain,
                 "report_name": report_name,
                 "landing_page_url": landing_page_url,
+                "publisher_name": publisher_name,
+                "source_page_url": source_page_url,
                 "downloaded_at_utc": downloaded_at_utc,
                 "md5": md5,
             },
@@ -327,7 +331,8 @@ def record_report_source(
                         report_name=?,
                         landing_page_url=?,
                         source_status='downloaded',
-                        source_page_url=COALESCE(NULLIF(source_page_url, ''), ?),
+                        source_page_url=COALESCE(NULLIF(?, ''), NULLIF(source_page_url, ''), ?),
+                        publisher_name=COALESCE(NULLIF(?, ''), NULLIF(publisher_name, '')),
                         discovered_at_utc=COALESCE(NULLIF(discovered_at_utc, ''), ?),
                         downloaded_at_utc=?,
                         md5=?,
@@ -338,7 +343,9 @@ def record_report_source(
                         source_domain,
                         report_name,
                         landing_page_url,
+                        request.source_page_url.strip(),
                         landing_page_url,
+                        publisher_name,
                         discovered_at_utc_value,
                         downloaded_at_utc,
                         md5,
@@ -368,8 +375,8 @@ def record_report_source(
                         report_name,
                         landing_page_url,
                         normalized_landing_page_url,
-                        landing_page_url,
-                        None,
+                        source_page_url,
+                        publisher_name or None,
                         downloaded_at_utc,
                         None,
                         downloaded_at_utc,
@@ -410,6 +417,8 @@ def record_report_source(
                 "source_domain": response.source_domain,
                 "report_name": response.report_name,
                 "landing_page_url": response.landing_page_url,
+                "publisher_name": publisher_name,
+                "source_page_url": source_page_url,
                 "downloaded_at_utc": response.downloaded_at_utc,
                 "md5": response.md5,
             },

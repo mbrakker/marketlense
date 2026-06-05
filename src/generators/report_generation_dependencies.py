@@ -15,6 +15,9 @@ from ._report_generation_dependencies.render import ReportRenderDependencies
 from ._report_generation_dependencies.selection import ReportSelectionDependencies
 from ._report_generation_dependencies.signal import ReportSignalDependencies
 from ._report_generation_dependencies.source import ReportSourceDependencies
+from ._report_generation_dependencies.source_scoring import (
+    ReportSourceScoringDependencies,
+)
 
 __all__ = [
     "FigureCaptionDependencies",
@@ -24,4 +27,5 @@ __all__ = [
     "ReportSelectionDependencies",
     "ReportSignalDependencies",
     "ReportSourceDependencies",
+    "ReportSourceScoringDependencies",
 ]

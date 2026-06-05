@@ -4,6 +4,7 @@ from dataclasses import asdict, replace
 from datetime import datetime, timezone
 import logging
 from typing import Callable, Optional
+from urllib.parse import urlsplit
 
 from src.contracts.analytics_projection import (
     AnalyticsProjectionRunRequest,
@@ -31,6 +32,12 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
+from src.contracts.report_store import (
+    ReportMetadataGetRequest,
+    ReportSourceRecordRequest,
+    ReportValueScoreRecordRequest,
+    ReportValueScoreRequest,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.contracts.vector_store import VectorStoreDeleteRequest
@@ -624,6 +631,143 @@ def _run_projection(
     return None
 
 
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _utc_now_year() -> int:
+    return datetime.now(timezone.utc).year
+
+
+def _source_domain_for_url(url: str) -> str:
+    parsed = urlsplit(url.strip())
+    return (parsed.hostname or "").lower()
+
+
+def _first_nonempty(*values: object) -> str:
+    for value in values:
+        token = str(value or "").strip()
+        if token:
+            return token
+    return ""
+
+
+def _score_ingested_report_source(
+    runtime: ReportRuntimeState,
+    analysis: ReportAnalysisState,
+    outcome: IngestOutcome,
+    dependencies: ReportGenerationDependencies,
+) -> None:
+    if outcome.status != "processed":
+        return
+    score_ctx = child_context(
+        runtime.ctx, task_id=f"{runtime.ctx.task_id}:report_source_score"
+    )
+    report_metadata = dependencies.render.get_report_metadata(
+        ReportMetadataGetRequest(
+            schema_version="1.0",
+            db_path=runtime.settings.reports_db,
+            file_id=runtime.file.file_id,
+        ),
+        score_ctx,
+    )
+    title = _first_nonempty(
+        getattr(report_metadata, "title", ""),
+        analysis.normalized_payload.title,
+        analysis.payload.title,
+        runtime.report_title,
+    )
+    publisher_name = _first_nonempty(
+        getattr(report_metadata, "publisher", ""),
+        analysis.normalized_payload.publisher,
+        analysis.payload.publisher,
+    )
+    landing_page_url = _first_nonempty(
+        getattr(report_metadata, "source_url", ""),
+        analysis.normalized_payload.source,
+        analysis.payload.source,
+    )
+    md5 = _first_nonempty(getattr(report_metadata, "md5", ""), outcome.md5, runtime.md5)
+    source_domain = _source_domain_for_url(landing_page_url)
+    if not landing_page_url or not source_domain or not md5:
+        logger.info(
+            log_event(
+                score_ctx,
+                role="orchestrator",
+                event="report_source_value_score_skipped",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "has_landing_page_url": bool(landing_page_url),
+                    "has_source_domain": bool(source_domain),
+                    "has_md5": bool(md5),
+                },
+            )
+        )
+        return
+    downloaded_at_utc = _utc_now_iso()
+    source_record = dependencies.source_scoring.record_report_source(
+        ReportSourceRecordRequest(
+            schema_version="1.0",
+            db_path=runtime.settings.reports_db,
+            source_domain=source_domain,
+            report_name=title,
+            landing_page_url=landing_page_url,
+            downloaded_at_utc=downloaded_at_utc,
+            md5=md5,
+            publisher_name=publisher_name,
+            source_page_url="",
+        ),
+        score_ctx,
+    )
+    report_value_score = dependencies.source_scoring.score_report_value(
+        ReportValueScoreRequest(
+            schema_version="1.0",
+            publisher_name=publisher_name,
+            source_domain=source_record.source_domain,
+            report_name=source_record.report_name,
+            landing_page_url=source_record.landing_page_url,
+            source_page_url=landing_page_url,
+            source_status="downloaded",
+            discovered_at_utc="",
+            downloaded_at_utc=source_record.downloaded_at_utc,
+            md5=source_record.md5,
+            evaluation_year=_utc_now_year(),
+        ),
+        score_ctx,
+    )
+    dependencies.source_scoring.record_report_value_score(
+        ReportValueScoreRecordRequest(
+            schema_version="1.0",
+            db_path=runtime.settings.reports_db,
+            record_id=source_record.record_id,
+            score=report_value_score,
+            scored_at_utc=_utc_now_iso(),
+        ),
+        score_ctx,
+    )
+    logger.info(
+        log_event(
+            score_ctx,
+            role="orchestrator",
+            event="report_source_value_scored",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "record_id": source_record.record_id,
+                "publisher_name": publisher_name,
+                "landing_page_url": source_record.landing_page_url,
+                "overall_score": report_value_score.overall_score,
+                "value_band": report_value_score.value_band,
+                "component_scores": {
+                    component.dimension: component.score
+                    for component in report_value_score.components
+                },
+            },
+        )
+    )
+
+
 def _run_signal_artifact_generation(
     runtime: ReportRuntimeState,
     analysis: ReportAnalysisState,
@@ -763,6 +907,7 @@ def _resume_from_analysis_checkpoint(
         },
         payload={"schema_version": "1.0", "outcome": asdict(outcome)},
     )
+    _score_ingested_report_source(runtime, analysis, outcome, dependencies)
     if _run_projection(runtime, analysis, outcome, analytics_projection_fn) is not None:
         outcome = _run_signal_artifact_generation(
             runtime,
@@ -1047,6 +1192,7 @@ def run_report_generation(
             ),
             payload={"schema_version": "1.0", "outcome": asdict(outcome)},
         )
+        _score_ingested_report_source(runtime, analysis, outcome, deps)
         if (
             _run_projection(runtime, analysis, outcome, analytics_projection_fn)
             is not None

@@ -25,6 +25,18 @@ class ReportSourceRecordRequest:
         metadata={"doc": "UTC timestamp when the report download completed."}
     )
     md5: str = field(metadata={"doc": "MD5 checksum of the downloaded report file."})
+    publisher_name: str = field(
+        default="",
+        metadata={
+            "doc": "Publisher display name attached to this downloaded source, when known."
+        },
+    )
+    source_page_url: str = field(
+        default="",
+        metadata={
+            "doc": "Publisher resource or inventory page URL where this report was found, when known."
+        },
+    )
 
 
 @dataclass(frozen=True)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -32,6 +33,8 @@ from src.contracts.pdf_text import PdfTextSample, PdfTextSampleResponse
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_assets import RenderResponse
 from src.contracts.report_store import ReportMetadataGetResponse
+from src.contracts.report_store import ReportSourceDiscoveryRecordRequest
+from src.contracts.report_store import ReportSourceQualityHistoryRequest
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractResponse
@@ -45,6 +48,7 @@ from src.generators.report_generation_dependencies import (
     ReportSignalDependencies,
     ReportSelectionDependencies,
     ReportSourceDependencies,
+    ReportSourceScoringDependencies,
 )
 from src.generators.report_generation_shared import derive_title, report_slug
 from src.orchestrators import ingest_orchestrator as orch
@@ -54,6 +58,10 @@ from src.orchestrators.ingest_file_orchestrator import (
 )
 from src.orchestrators import report_generation_orchestrator as rgo
 from src.services.file_service import file_stat
+from src.services.report_store_service import (
+    list_report_source_quality_history,
+    record_discovered_report_source,
+)
 from src.services.state_service import get as state_get, record as state_record
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
@@ -198,6 +206,7 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
     render_updates = {}
     figure_caption_updates = {}
     signal_updates = {}
+    source_scoring_updates = {}
     source_fields = set(ReportSourceDependencies.__dataclass_fields__)
     selection_fields = set(ReportSelectionDependencies.__dataclass_fields__)
     analysis_fields = set(ReportAnalysisDependencies.__dataclass_fields__) - {
@@ -206,6 +215,7 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
     render_fields = set(ReportRenderDependencies.__dataclass_fields__)
     figure_caption_fields = set(FigureCaptionDependencies.__dataclass_fields__)
     signal_fields = set(ReportSignalDependencies.__dataclass_fields__)
+    source_scoring_fields = set(ReportSourceScoringDependencies.__dataclass_fields__)
 
     for key, value in overrides.items():
         applied = False
@@ -227,6 +237,9 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
         if key in signal_fields:
             signal_updates[key] = value
             applied = True
+        if key in source_scoring_fields:
+            source_scoring_updates[key] = value
+            applied = True
         if not applied:
             raise AssertionError(f"Unknown report dependency override: {key}")
 
@@ -243,6 +256,7 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
         analysis=analysis,
         render=replace(base.render, **render_updates),
         signal=replace(base.signal, **signal_updates),
+        source_scoring=replace(base.source_scoring, **source_scoring_updates),
     )
 
 
@@ -1146,6 +1160,196 @@ def test_generate_report_adds_signal_artifact_pack_after_projection(tmp_path) ->
     assert payload["source_report_id"] == "file_signal"
     assert payload["signal_store_db"] == settings.signal_store_db
     assert payload["candidate_count"] == 0
+
+
+def test_report_generation_scores_two_ingested_reports_for_same_publisher(
+    tmp_path,
+) -> None:
+    settings = replace(_ingest_settings(tmp_path), report_worker_limit=1)
+    publisher_name = "Example Research"
+    source_rows = [
+        (
+            "file_score_1",
+            "2026 Global Retail Market Outlook Benchmark Survey",
+            "https://research.example.com/reports/2026-retail-market-outlook",
+        ),
+        (
+            "file_score_2",
+            "2026 Consumer Commerce Trends Benchmark Survey",
+            "https://research.example.com/reports/2026-commerce-trends-benchmark",
+        ),
+    ]
+    seed_ctx = RunContext(
+        schema_version="1.0",
+        run_id="run-seed",
+        task_id="seed-report-sources",
+        span_id="span-seed",
+    )
+    for _file_id, title, url in source_rows:
+        record_discovered_report_source(
+            ReportSourceDiscoveryRecordRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                publisher_name=publisher_name,
+                source_domain="research.example.com",
+                report_name=title,
+                landing_page_url=url,
+                source_page_url="https://research.example.com/research/reports",
+                discovered_at_utc="2026-06-05T00:00:00Z",
+                discovered_on_page_number=1,
+            ),
+            seed_ctx,
+        )
+
+    def _store_pack(request, ctx):
+        path = (
+            Path(request.output_dir)
+            / slugify(request.report_slug or request.report_id)
+            / "report_analysis"
+            / f"{request.pack_name}.json"
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(request.payload), encoding="utf-8")
+        return SimpleNamespace(output_path=str(path))
+
+    def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):
+        return ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            severity="pass",
+            issues=[],
+            source_path=str(
+                Path(settings.output_dir)
+                / slugify(kwargs.get("report_name") or req.report_id)
+                / "report_analysis"
+                / f"{pack_name}.json"
+            ),
+        )
+
+    def _render_report(req, ctx):
+        html_path = Path(settings.output_dir) / f"{req.file_id}.html"
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return RenderResponse(schema_version="1.0", html_path=str(html_path))
+
+    files = [
+        DriveFile(
+            schema_version="1.0",
+            file_id=file_id,
+            name=f"{title}.pdf",
+            modified_time=None,
+            md5_checksum=f"md5-{file_id}",
+        )
+        for file_id, title, _url in source_rows
+    ]
+    titles_by_file_id = {file_id: title for file_id, title, _url in source_rows}
+
+    def _generate_report(current_file, cache_path, current_settings, md5, ctx):
+        title = titles_by_file_id[current_file.file_id]
+
+        def _evidence(report_id, vector_store_id, settings, ctx, **kwargs):
+            return {
+                "doc_map": {
+                    "docMap": {
+                        "title": title,
+                        "publisher": publisher_name,
+                        "sections": [{"title": "Overview"}],
+                    },
+                    "doc_id": "d",
+                },
+                "scope": {},
+                "methods": {},
+                "findings": {},
+                "limitations": {},
+                "quote_candidates": {},
+            }
+
+        def _artifacts(
+            report_id,
+            doc_map,
+            evidence_packs,
+            settings,
+            vector_store_id=None,
+            source_status=None,
+            ctx=None,
+            report_name=None,
+            **kwargs,
+        ):
+            payload = _analysis_artifacts()
+            _store_pack(
+                AnalysisStorePackRequest(
+                    schema_version="1.0",
+                    output_dir=settings.output_dir,
+                    report_id=report_id,
+                    pack_name="artifacts",
+                    payload=payload,
+                    report_slug=report_name,
+                ),
+                ctx,
+            )
+            return payload
+
+        deps = _base_vector_report_dependencies(
+            tmp_path,
+            generate_evidence_packs=_evidence,
+            generate_artifacts=_artifacts,
+            run_validation=_fake_validation,
+            analysis_store_pack=_store_pack,
+            render_report=_render_report,
+        )
+        return rgo.run_report_generation(
+            current_file,
+            cache_path,
+            current_settings,
+            md5=md5,
+            ctx=ctx,
+            dependencies=deps,
+            analytics_projection_fn=lambda req: None,
+        )
+
+    outcomes = orch.run_ingest(
+        settings,
+        limit=2,
+        dependencies=_batch_dependencies(
+            list_pdfs=lambda req, ctx: files,
+            process_file=_make_ingest_process(generate_report=_generate_report),
+        ),
+    )
+
+    assert [outcome.status for outcome in outcomes] == ["processed", "processed"]
+
+    history = list_report_source_quality_history(
+        ReportSourceQualityHistoryRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            publisher_name=publisher_name,
+            limit=10,
+        ),
+        seed_ctx,
+    )
+
+    assert len(history.items) == 2
+    assert {item.report_name for item in history.items} == {
+        title for _file_id, title, _url in source_rows
+    }
+    assert {item.source_page_url for item in history.items} == {
+        "https://research.example.com/research/reports"
+    }
+    assert all(item.source_status == "downloaded" for item in history.items)
+    assert all(item.overall_score >= 78.0 for item in history.items)
+
+    with sqlite3.connect(settings.reports_db) as conn:
+        scored_rows = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM report_sources
+            WHERE publisher_name=?
+              AND report_value_score IS NOT NULL
+              AND report_value_score_json IS NOT NULL
+            """,
+            (publisher_name,),
+        ).fetchone()[0]
+    assert scored_rows == 2
 
 
 def test_generate_report_doc_map_empty_halts(
