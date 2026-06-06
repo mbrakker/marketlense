@@ -115,6 +115,44 @@ def test_render_includes_artifact_sections(tmp_path):
     assert '"canonical_route_intent":"wordpress:ml_report"' in html
 
 
+def test_render_body_excludes_wordpress_owned_chrome_and_nested_main(tmp_path):
+    data = {
+        "title": "Chrome Contract Report",
+        "tldr": "TLDR",
+        "insights": ["Insight A"] * 5,
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["tag"],
+        "region": "US",
+        "time_period": "2024",
+        "contents_page_number": 0,
+        "artifacts": {
+            "summary": {
+                "tldr": "Artifact TLDR",
+                "executive_summary": "Artifact executive summary",
+            },
+            "insights_final": [{"id": "i1", "text": "Insight A"}],
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="chrome.pdf",
+        file_id="file_chrome",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+    body = html.split("<body", 1)[1].split("</body>", 1)[0]
+
+    assert '<header class="site-header"' not in body
+    assert '<footer class="footer"' not in body
+    assert "<main" not in body
+    assert 'class="report-document"' in body
+
+
 def test_render_expands_covered_topics_with_briefs(tmp_path):
     data = {
         "title": "Topic Brief Report",

@@ -29,6 +29,7 @@ require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-plugin.php
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-post-type.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-taxonomies.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-content-parser.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-content-formatting.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-meta.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-media-proxy.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-report-view-model-builder.php';

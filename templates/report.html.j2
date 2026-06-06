@@ -28,30 +28,8 @@
 {% include "report.css.j2" %}
 </style>
 </head>
-<body>
-<a class="skip-link" href="#content">Skip to report</a>
-<header class="site-header">
-  <div class="header-inner">
-    <a class="brand" href="#overview" aria-label="MarketBearing report home">
-      <span class="brand-mark">Market<span>Bearing</span></span>
-      <span class="brand-rule" aria-hidden="true"></span>
-    </a>
-    <nav class="top-nav" aria-label="Primary report sections">
-      <a aria-current="page" href="#overview">Overview</a>
-      <a href="#findings">Findings</a>
-      {% if view.display.has_figures %}<a href="#candidates">Visual evidence</a>{% endif %}
-      <a href="#signals">Signals</a>
-      <a href="#evidence">Evidence</a>
-      {% if view.display.has_appendix %}<a href="#expert">Expert view</a>{% endif %}
-      {% if view.display.has_metadata or view.display.has_topics %}<a href="#taxonomy">Taxonomy</a>{% endif %}
-      <a href="#source">Source</a>
-    </nav>
-    <div class="header-meta">{{ view.publisher if view.publisher else "Source report" }}{% if view.focus_year %} &middot; {{ view.focus_year }}{% endif %}</div>
-  </div>
-  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
-</header>
-
-<main>
+<body class="ml-ingest-report-content">
+<article class="report-document">
   <section class="hero" aria-labelledby="report-title">
     <div class="hero-inner">
       <div class="hero-intro">
@@ -394,14 +372,7 @@
       </section>
     </div>
   </div>
-</main>
-
-<footer class="footer">
-  <div class="footer-inner">
-    <span>MarketBearing executive report page</span>
-    <span>Source: {{ view.publisher if view.publisher else "Unknown publisher" }} &middot; {{ view.report_title }}</span>
-  </div>
-</footer>
+</article>
 
 <script>
 (function () {
