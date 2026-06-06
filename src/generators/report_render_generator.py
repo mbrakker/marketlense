@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import os
 from pathlib import Path
+from urllib.parse import quote
 
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.files import FileStatRequest
@@ -58,6 +60,45 @@ def _build_metadata_upsert_request(
         vector_store_id=analysis.vector_store_id,
         evidence_pack_paths=analysis.evidence_paths,
     )
+
+
+def _relative_href(from_dir: str, target_path: str) -> str:
+    base = Path(from_dir).resolve()
+    target = Path(target_path).resolve()
+    try:
+        relative = os.path.relpath(target, start=base)
+    except ValueError:
+        return target.as_uri()
+    return quote(relative.replace(os.sep, "/"), safe="/#?=&:%")
+
+
+def _report_template_bundle_sha(runtime: ReportRuntimeState, dependencies) -> str | None:
+    template_dir = Path(__file__).resolve().parents[2] / "templates"
+    hashes: dict[str, str] = {}
+    for template_name in ("report.html.j2", "report.css.j2", "_report_macros.j2"):
+        digest = template_sha256(template_dir / template_name, runtime.ctx, dependencies)
+        if not digest:
+            return None
+        hashes[template_name] = digest
+    return sha256_json(
+        {
+            "schema_version": "1.0",
+            "templates": hashes,
+        }
+    )
+
+
+def _file_exists_via_service(
+    runtime: ReportRuntimeState,
+    dependencies: ReportRenderDependencies,
+    path: str,
+    task_suffix: str,
+) -> bool:
+    stat = dependencies.file_stat(
+        FileStatRequest(schema_version="1.0", path=path),
+        child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:{task_suffix}"),
+    )
+    return bool(stat.exists)
 
 
 def render_preview_asset(
@@ -119,6 +160,16 @@ def render_report_output(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:render_metadata"),
     )
     render_data_dict = deepcopy(analysis.data_dict)
+    if runtime.local_pdf_path and _file_exists_via_service(
+        runtime,
+        dependencies,
+        runtime.local_pdf_path,
+        "source_pdf_stat",
+    ):
+        render_data_dict["_source_download_href"] = _relative_href(
+            runtime.settings.output_dir,
+            runtime.local_pdf_path,
+        )
     existing_title = str(render_data_dict.get("title") or "").strip()
     existing_publisher = str(render_data_dict.get("publisher") or "").strip()
     existing_time_period = str(render_data_dict.get("time_period") or "").strip()
@@ -179,10 +230,7 @@ def render_report_output(
         Path(runtime.settings.output_dir) / f"{runtime.report_name}.html"
     )
     if runtime.md5:
-        template_path = (
-            Path(__file__).resolve().parents[2] / "templates" / "report.html.j2"
-        )
-        template_sha = template_sha256(template_path, runtime.ctx, dependencies)
+        template_sha = _report_template_bundle_sha(runtime, dependencies)
         if template_sha:
             data_sha = sha256_json(render_data_dict)
             html_cache_meta = {

@@ -95,29 +95,21 @@ def test_render_includes_artifact_sections(tmp_path):
     resp = render_report(req, _ctx())
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
-    assert "Covered topics" in html
+    assert "Signals to watch after reading this report" in html
     assert "Artifact TLDR" in html
     assert "Artifact executive summary" in html
-    assert "Key data insights" in html
+    assert "What leaders should take from the report" in html
     assert "Artifact insight 1" in html
-    assert "Key metric:" not in html
-    assert "Key quotes" in html
+    assert "Source language behind the read" in html
     assert "Artifact quote" in html
-    assert "Expert comment (generated)" in html
-    assert "LinkedIn post" in html
-    assert 'id="section-appendix"' in html
-    assert 'id="section-expert"' not in html
-    assert 'id="section-linkedin"' not in html
-    assert '<section class="panel" id="section-summary"' in html
-    assert '<ul class="summary-list">' in html
-    assert "<li>Artifact TLDR</li>" in html
-    assert "<li>Artifact executive summary</li>" in html
-    assert '<section class="panel" id="section-snapshot"' in html
-    assert "Metadata below the lead" in html
-    assert '<ul class="claim-list"' in html
+    assert "MarketBearing expert view" in html
+    assert "LinkedIn-ready post" in html
+    assert 'id="expert"' in html
+    assert 'id="overview"' in html
+    assert 'class="summary-panel summary-panel-executive"' in html
+    assert 'class="claim-strip"' in html
     assert "f1 · report page 4" in html
     assert "q1 · report page 2 · Report" in html
-    assert 'style="max-width:none"' not in html
     assert 'data-market-lense-publish-entity="true"' in html
     assert '"entity_type":"report"' in html
     assert '"canonical_route_intent":"wordpress:ml_report"' in html
@@ -199,8 +191,80 @@ def test_render_fallbacks_without_artifacts(tmp_path):
     assert "Insight A" in html and "Insight E" in html
     assert "Legacy quote" in html
     assert "Legacy commentary" in html
-    assert "Key data insights" in html
+    assert "What leaders should take from the report" in html
     assert "Source URL was not available in the extracted report metadata." in html
+
+
+def test_render_surfaces_report_quality_score_and_download_link(tmp_path):
+    data = {
+        "title": "Scored Report",
+        "tldr": "TLDR",
+        "insights": ["Insight A", "Insight B"],
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["tag"],
+        "region": "US",
+        "time_period": "2026",
+        "contents_page_number": 0,
+        "_source_download_href": "../cache/scored.pdf",
+        "_report_value_score": {
+            "schema_version": "1.0",
+            "overall_score": 87.0,
+            "value_band": "high",
+            "rationale": "Strong original market report.",
+            "components": [
+                {
+                    "schema_version": "1.0",
+                    "dimension": "market_insight_depth",
+                    "score": 90.0,
+                    "rationale": "Deep market lens.",
+                },
+                {
+                    "schema_version": "1.0",
+                    "dimension": "evidence_specificity",
+                    "score": 82.0,
+                    "rationale": "Specific evidence.",
+                },
+                {
+                    "schema_version": "1.0",
+                    "dimension": "decision_relevance",
+                    "score": 88.0,
+                    "rationale": "Decision relevant.",
+                },
+                {
+                    "schema_version": "1.0",
+                    "dimension": "recency_timeliness",
+                    "score": 86.0,
+                    "rationale": "Recent enough.",
+                },
+                {
+                    "schema_version": "1.0",
+                    "dimension": "source_authority_originality",
+                    "score": 89.0,
+                    "rationale": "Authoritative source.",
+                },
+            ],
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="scored.pdf",
+        file_id="file_scored",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert "Report quality" in html
+    assert ">87<" in html
+    assert "High source value" in html
+    assert 'data-dimension="market_insight_depth"' in html
+    assert 'data-dimension="source_authority_originality"' in html
+    assert 'href="../cache/scored.pdf" download' in html
 
 
 def test_render_surfaces_explicit_abstain_notices(tmp_path):
@@ -285,12 +349,12 @@ def test_render_surfaces_explicit_abstain_notices(tmp_path):
     resp = render_report(req, _ctx())
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
-    assert "TL;DR omitted because evidence support was too weak" in html
-    assert "Key data insights omitted because evidence support was too weak" in html
+    assert "TLDR omitted because evidence support was too weak" in html
+    assert "Key findings omitted because evidence support was too weak" in html
     assert "Key quotes omitted because evidence support was too weak" in html
     assert "Expert comment omitted because evidence support was too weak" in html
     assert "LinkedIn post omitted because evidence support was too weak" in html
-    assert 'id="section-appendix"' in html
+    assert 'id="expert"' in html
 
 
 def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
@@ -319,11 +383,10 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
     resp = render_report(req, _ctx())
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
-    assert (
-        '<p class="report-identity">Title: Retail trends 2026 · Publisher: Capgemini · Year: 2026 · Author: Mark Ruston</p>'
-        in html
-    )
-    assert "Publisher:</span> Capgemini" in html
+    assert "Title: Retail trends 2026" in html
+    assert "Publisher: Capgemini" in html
+    assert "Year: 2026" in html
+    assert "Author: Mark Ruston" in html
     assert "Source URL was not available in the extracted report metadata." in html
 
 
@@ -485,7 +548,7 @@ def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):
     resp = render_report(req, _ctx())
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
-    assert "Editorial details" in html
+    assert "Read the source and check provenance" in html
     assert "Methodology" in html
     assert "Survey fielded in October 2025 across 12 markets." in html
     assert "Coverage" in html
@@ -499,9 +562,9 @@ def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):
     assert "Ordered chapters" in html
     assert "1. Demand outlook" in html
     assert "Pages: 4, 5" in html
-    assert "Report focus year" in html
+    assert "Year: 2026" in html
     assert "2026" in html
-    assert "Fieldwork" in html
+    assert "Fieldwork: fieldwork Oct 2025" in html
     assert "fieldwork Oct 2025" in html
 
 
@@ -639,8 +702,8 @@ def test_render_keeps_legacy_figure_captions_without_figure_assets(tmp_path):
     resp = render_report(req, _ctx())
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
-    assert "Legacy figure caption" in html
-    assert "Additional figure 2" in html
+    assert 'id="candidates"' not in html
+    assert "Legacy figure caption" not in html
 
 
 def test_render_formats_slug_chips_with_acronyms(tmp_path):
@@ -728,8 +791,7 @@ def test_render_adds_responsive_srcset_when_variant_exists(tmp_path):
     assert 'sizes="(max-width: 800px) 100vw, 980px"' in html
     assert 'width="800"' in html
     assert 'height="450"' in html
-    assert 'fetchpriority="high"' in html
-    assert 'loading="eager"' in html
+    assert 'loading="lazy"' in html
 
 
 def test_render_is_deterministic_across_calls(tmp_path):

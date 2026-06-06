@@ -1,0 +1,300 @@
+- generic [active] [ref=e1]:
+  - link "Skip to report" [ref=e2] [cursor=pointer]:
+    - /url: "#content"
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "MarketBearing report home" [ref=e5] [cursor=pointer]:
+        - /url: "#overview"
+        - generic [ref=e6]: MarketBearing
+      - navigation "Primary report sections" [ref=e8]:
+        - link "Overview" [ref=e9] [cursor=pointer]:
+          - /url: "#overview"
+        - link "Findings" [ref=e10] [cursor=pointer]:
+          - /url: "#findings"
+        - link "Signals" [ref=e11] [cursor=pointer]:
+          - /url: "#signals"
+        - link "Evidence" [ref=e12] [cursor=pointer]:
+          - /url: "#evidence"
+        - link "Expert view" [ref=e13] [cursor=pointer]:
+          - /url: "#expert"
+        - link "Taxonomy" [ref=e14] [cursor=pointer]:
+          - /url: "#taxonomy"
+        - link "Source" [ref=e15] [cursor=pointer]:
+          - /url: "#source"
+      - generic [ref=e16]: The Moore Agency · 2026
+  - main [ref=e18]:
+    - region "The 2026 M.CAST™ Trends Report" [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: Executive intelligence brief
+          - heading "The 2026 M.CAST™ Trends Report" [level=1] [ref=e23]
+          - paragraph [ref=e24]: "The 2026 M.CAST™ Trends Report finds that AI is shifting from experimental pilots to invisible, embedded infrastructure that should be treated as enterprise-level capability. Leaders must prepare for regulatory and operational shifts—where compliance and mission-critical AI risk management (TRiSM) become competitive advantages—rather than treating AI as a series of point tools. The report emphasizes that human 'durable skills' (creative judgment, communication, critical thinking) are rising in employer demand, even as many organizations plan AI investments without proportional upskilling. Because trust is fragile (with substantial share of firms experiencing major trust declines), organizations should invest in verifiable systems, governance, and multi-layered verification to protect reputation. Finally, consumers increasingly expect precision personalization enabled by integrated data and AI; the recommended path is to start with high-impact journeys, prove ROI, and scale to break down data silos. The practical prescription: embed AI as invisible infrastructure while prioritizing authenticity, community-driven loyalty, precision, and durable human skills to convert foresight into strategic advantage."
+          - list "Report metadata" [ref=e25]:
+            - listitem [ref=e26]: "Title: The 2026 M.CAST™ Trends Report"
+            - listitem [ref=e27]: "Publisher: The Moore Agency"
+            - listitem [ref=e28]: "Year: 2026"
+        - complementary "Core report signal and score" [ref=e29]:
+          - generic [ref=e30]:
+            - paragraph [ref=e31]: Core signal
+            - heading "AI is shifting from experimental projects to invisible..." [level=2] [ref=e32]
+            - paragraph [ref=e33]: By 2026 AI will be embedded as invisible infrastructure, and organizations that pair that embedding with trust, compliance, precision personalization, community-led loyalty, and...
+          - generic [ref=e34]:
+            - generic [ref=e35]:
+              - strong [ref=e36]: "5"
+              - generic [ref=e37]: source-backed findings
+            - generic [ref=e38]:
+              - strong [ref=e39]: "3"
+              - generic [ref=e40]: verbatim report signals
+            - generic [ref=e41]:
+              - strong [ref=e42]: "13"
+              - generic [ref=e43]: taxonomy themes
+          - generic "Downloaded report quality score" [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]: Report quality
+              - strong [ref=e47]: Pending
+              - generic [ref=e48]: Source quality score unavailable for this report.
+            - list "Score dimensions" [ref=e50]:
+              - listitem [ref=e51]:
+                - generic [ref=e52]: Market insight depth
+                - generic [ref=e53]: N/A
+              - listitem [ref=e55]:
+                - generic [ref=e56]: Evidence specificity
+                - generic [ref=e57]: N/A
+              - listitem [ref=e59]:
+                - generic [ref=e60]: Decision relevance
+                - generic [ref=e61]: N/A
+              - listitem [ref=e63]:
+                - generic [ref=e64]: Recency timeliness
+                - generic [ref=e65]: N/A
+              - listitem [ref=e67]:
+                - generic [ref=e68]: Source authority originality
+                - generic [ref=e69]: N/A
+    - generic [ref=e71]:
+      - complementary "Report sections" [ref=e72]:
+        - paragraph [ref=e73]: Navigate
+        - navigation [ref=e74]:
+          - link "Overview" [ref=e75] [cursor=pointer]:
+            - /url: "#overview"
+          - link "Findings" [ref=e76] [cursor=pointer]:
+            - /url: "#findings"
+          - link "Visual candidates" [ref=e77] [cursor=pointer]:
+            - /url: "#candidates"
+          - link "Signals" [ref=e78] [cursor=pointer]:
+            - /url: "#signals"
+          - link "Evidence" [ref=e79] [cursor=pointer]:
+            - /url: "#evidence"
+          - link "Expert view" [ref=e80] [cursor=pointer]:
+            - /url: "#expert"
+          - link "Taxonomy" [ref=e81] [cursor=pointer]:
+            - /url: "#taxonomy"
+          - link "Source" [ref=e82] [cursor=pointer]:
+            - /url: "#source"
+      - generic [ref=e83]:
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - paragraph [ref=e86]: 01. Overview
+            - generic [ref=e87]:
+              - heading "The 2026 M.CAST™ Trends Report" [level=2] [ref=e88]
+              - paragraph [ref=e89]: MarketBearing synthesis of the source report for fast executive review, publishing and reuse.
+          - article "Report TLDR and executive summary" [ref=e90]:
+            - generic [ref=e91]:
+              - generic [ref=e92]: TLDR
+              - paragraph [ref=e93]: By 2026 AI will be embedded as invisible infrastructure, and organizations that pair that embedding with trust, compliance, precision personalization, community-led loyalty, and investment in durable human skills will gain strategic advantage.
+            - generic [ref=e95]:
+              - heading "Executive summary" [level=3] [ref=e96]
+              - paragraph [ref=e97]: "The 2026 M.CAST™ Trends Report finds that AI is shifting from experimental pilots to invisible, embedded infrastructure that should be treated as enterprise-level capability. Leaders must prepare for regulatory and operational shifts—where compliance and mission-critical AI risk management (TRiSM) become competitive advantages—rather than treating AI as a series of point tools. The report emphasizes that human 'durable skills' (creative judgment, communication, critical thinking) are rising in employer demand, even as many organizations plan AI investments without proportional upskilling. Because trust is fragile (with substantial share of firms experiencing major trust declines), organizations should invest in verifiable systems, governance, and multi-layered verification to protect reputation. Finally, consumers increasingly expect precision personalization enabled by integrated data and AI; the recommended path is to start with high-impact journeys, prove ROI, and scale to break down data silos. The practical prescription: embed AI as invisible infrastructure while prioritizing authenticity, community-driven loyalty, precision, and durable human skills to convert foresight into strategic advantage."
+          - generic "Executive claim evidence map" [ref=e98]:
+            - article [ref=e99]:
+              - text: "01"
+              - paragraph [ref=e100]:
+                - strong [ref=e101]: AI is transitioning from experimental technology to invisible, embedded infrastructure.
+                - generic [ref=e102]: F2 · report page 3
+            - article [ref=e103]:
+              - text: "02"
+              - paragraph [ref=e104]:
+                - strong [ref=e105]: Durable human skills are rising in employer demand.
+                - generic [ref=e106]: F1 · report page 13
+            - article [ref=e107]:
+              - text: "03"
+              - paragraph [ref=e108]:
+                - strong [ref=e109]: "There is a mismatch between AI investment intent and upskilling: many plan AI investments but few invest in building durable skills and AI fluency."
+                - generic [ref=e110]: F5 · report page 14
+        - generic [ref=e111]:
+          - generic [ref=e112]:
+            - paragraph [ref=e113]: 02. Findings
+            - generic [ref=e114]:
+              - heading "High-confidence findings from the report analysis." [level=2] [ref=e115]
+              - paragraph [ref=e116]: Each finding is generated from the report artifacts and keeps available page evidence visible.
+          - generic [ref=e117]:
+            - article [ref=e118]:
+              - generic [ref=e119]:
+                - generic [ref=e120]: Report-supported
+                - generic [ref=e121]: F2 · report page 3
+              - heading "AI is shifting from experimental projects to invisible infrastructure embedded across business operations." [level=3] [ref=e122]
+            - article [ref=e123]:
+              - generic [ref=e124]:
+                - generic [ref=e125]: Report-supported
+                - generic [ref=e126]: F3 · report page 18
+              - 'heading "Trust erosion is measurable and costly: nearly 30% of companies experienced large-scale trust declines over a three-year period." [level=3] [ref=e127]'
+            - article [ref=e128]:
+              - generic [ref=e129]:
+                - generic [ref=e130]: Report-supported
+                - generic [ref=e131]: F5 · report page 14
+              - 'heading "Large upskilling gap: 92% of companies plan AI investments but only 28% are investing in upskilling for durable skills and AI fluency." [level=3] [ref=e132]'
+            - article [ref=e133]:
+              - generic [ref=e134]:
+                - generic [ref=e135]: Report-supported
+                - generic [ref=e136]: F1 · report page 13
+              - 'heading "Rising employer demand for durable human skills: 76% of job postings request at least one durable skill; 47% request three or more; 8 of the top 10 most-requested skills are durable." [level=3] [ref=e137]'
+            - article [ref=e138]:
+              - generic [ref=e139]:
+                - generic [ref=e140]: Report-supported
+                - generic [ref=e141]: F6 · report page 20
+              - 'heading "Precision personalization is expected: 71% of consumers expect personalized experiences and 76% are frustrated when they don’t receive them." [level=3] [ref=e142]'
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - paragraph [ref=e145]: 03. Visual candidates
+            - generic [ref=e146]:
+              - heading "Top extracted tables and charts." [level=2] [ref=e147]
+              - paragraph [ref=e148]: The carousel shows cropped visual candidates selected from report extraction. It is hidden when no cropped visual evidence exists.
+          - generic [ref=e149]:
+            - paragraph [ref=e150]: Showing 2 visual candidates from this analysis.
+            - generic "Visual candidate carousel controls" [ref=e151]:
+              - button "Previous visual candidate" [ref=e152] [cursor=pointer]: ‹
+              - button "Next visual candidate" [ref=e153] [cursor=pointer]: ›
+          - generic "Top extracted visual candidates" [ref=e154]:
+            - article [ref=e155]:
+              - figure "Chart · page 16 Quality Over Quantity Wins" [ref=e156]:
+                - img "Selected figure from The 2026 M.CAST™ Trends Report" [ref=e157]
+                - generic [ref=e158]:
+                  - generic [ref=e159]: Chart · page 16
+                  - heading "Quality Over Quantity Wins" [level=3] [ref=e160]
+            - article [ref=e161]:
+              - figure "Chart · page 8 Additional figure 2" [ref=e162]:
+                - img "Additional figure 2 from The 2026 M.CAST™ Trends Report" [ref=e163]
+                - generic [ref=e164]:
+                  - generic [ref=e165]: Chart · page 8
+                  - heading "Additional figure 2" [level=3] [ref=e166]
+        - generic [ref=e167]:
+          - generic [ref=e168]:
+            - paragraph [ref=e169]: 04. Signals
+            - generic [ref=e170]:
+              - heading "Report signals organized for decision review." [level=2] [ref=e171]
+              - paragraph [ref=e172]: These are directional signals extracted from this report and grounded in its claims, topics and findings. Single-report support should be read as source evidence, not cross-market consensus.
+          - generic [ref=e173]:
+            - article [ref=e174]:
+              - heading "Welcome to the 2026 M.cast™ Trends Report" [level=3] [ref=e175]
+              - paragraph [ref=e176]: "Introductory framing that describes the report's purpose: to examine forces driving change and encourage action so leaders can anticipate trends and apply findings to strategy and operations. Report applies a futurist lens to identify trends shaping business and culture. Designed for decision-makers to spot opportunities early and act with clarity."
+            - article [ref=e177]:
+              - heading "The Invisible AI Revolution" [level=3] [ref=e178]
+              - paragraph [ref=e179]: Argues that the most transformative AI trend is embedding AI so deeply into operations that it becomes invisible infrastructure rather than standalone tools. AI will shift from experimental projects to embedded business intelligence. Invisible AI succeeds when users don't have to notice it but benefit from outcomes.
+            - article [ref=e180]:
+              - heading "The Internet Playbook" [level=3] [ref=e181]
+              - paragraph [ref=e182]: "Compares AI's maturation to the internet's evolution from separate channel to invisible infrastructure, highlighting the strategic shift from pilots to enterprise-wide AI integration. Early web lessons: integration across operations becomes the norm, and AI follows the same path. Embedding AI into existing tools (API-first) drives natural adoption; differentiation requires strategic, enterprise deployment."
+            - article [ref=e183]:
+              - heading "Four AI Shifts That Will Redefine Business in 2026" [level=3] [ref=e184]
+              - paragraph [ref=e185]: "Summarizes four specific AI-driven shifts businesses must prepare for: compliance as advantage, an AI literacy gap, AI-native startup disruption, and mission-critical AI risk management. Compliance with AI regulation will be a competitive advantage. AI fluency (literacy) across job functions is essential to future productivity. AI-native startups will disrupt legacy models, prompting transformation or specialization. AI risk management, including TRiSM (Trust, Risk, and Security Management), becomes mandatory."
+            - article [ref=e186]:
+              - heading "Perfectly Imperfect" [level=3] [ref=e187]
+              - paragraph [ref=e188]: Describes consumers' growing demand for authenticity as AI-generated content becomes ubiquitous; brands should demonstrate humanity and strategic imperfection to build trust. Consumers crave unmistakably human signals as AI makes polished content ubiquitous. Showing process, admitting mistakes, and humanizing teams are concrete authenticity tactics. Imperfection operates as a trust signal; competent brands become more magnetic when they reveal humanity.
+            - article [ref=e189]:
+              - heading "Communities in Command" [level=3] [ref=e190]
+              - paragraph [ref=e191]: Explains the shift of influence from polished mass channels to participatory, community-driven spaces where engaged members co-create value and drive loyalty. Community networks—Discord, Substack, private forums, TikTok—are increasingly central to loyalty and engagement. Brands should treat community as strategic infrastructure and cultivate core advocates and leaders. AI tools layered on community infrastructure enable real-time sentiment analysis and personalized responses.
+        - generic [ref=e192]:
+          - generic [ref=e193]:
+            - paragraph [ref=e194]: 05. Evidence
+            - generic [ref=e195]:
+              - heading "Verbatim signals from the report." [level=2] [ref=e196]
+              - paragraph [ref=e197]: Quoted evidence is kept close to its report citation when page references are available.
+          - generic [ref=e198]:
+            - 'figure "The Moore Agency expert team q1 · report page 6 · Perfectly Imperfect: Why Brands Must Prove They’re Real in the Age of AI" [ref=e199]':
+              - blockquote [ref=e200]: “In the age of AI, where content is increasingly seamless and ubiquitous, consumers are craving what feels unmistakably human.”
+              - generic [ref=e201]:
+                - text: The Moore Agency expert team
+                - text: "q1 · report page 6 · Perfectly Imperfect: Why Brands Must Prove They’re Real in the Age of AI"
+            - generic [ref=e202]:
+              - 'figure "The Moore Agency expert team q2 · report page 13 · Durable Skills: The New Competitive Advantage" [ref=e203]':
+                - blockquote [ref=e204]: ““Durable skills” represent the evolution of what was once called “soft skills”—but they go further. These include not only interpersonal capabilities like strategic communication, adaptability, and leadership, but also higher-order competencies such as critical thinking and creativity.”
+                - generic [ref=e205]:
+                  - text: The Moore Agency expert team
+                  - text: "q2 · report page 13 · Durable Skills: The New Competitive Advantage"
+              - 'figure "The Moore Agency expert team q3 · report page 17 · Verified or Vulnerable: Why Trust Is the New Business Imperative" [ref=e206]':
+                - blockquote [ref=e207]: “In an era where AI can fabricate anything and misinformation spreads faster than fact-checks, trust has become a technical problem requiring technical solutions.”
+                - generic [ref=e208]:
+                  - text: The Moore Agency expert team
+                  - text: "q3 · report page 17 · Verified or Vulnerable: Why Trust Is the New Business Imperative"
+        - generic [ref=e209]:
+          - generic [ref=e210]:
+            - paragraph [ref=e211]: 06. Expert view
+            - generic [ref=e212]:
+              - heading "MarketBearing analyst comment." [level=2] [ref=e213]
+              - paragraph [ref=e214]: Our team's reading of the report connects the extracted evidence to decisions facing business, brand and digital leaders.
+          - article [ref=e215]:
+            - complementary [ref=e216]:
+              - generic [ref=e217]: MB
+              - generic [ref=e218]:
+                - heading "Expert perspective from our intelligence team" [level=3] [ref=e219]
+                - paragraph [ref=e220]: Focused on trust, operating model and commercial execution.
+            - generic [ref=e222]:
+              - paragraph [ref=e223]: AI is shifting into invisible infrastructure and that transition exposes a capability mismatch that leadership must address immediately. The report shows a strong push to embed AI across operations while investment in human capabilities lags, so organizations risk underleveraging embedded AI unless they align skills and systems.
+              - paragraph [ref=e224]: "- AI transitioning from pilot to embedded infrastructure (report finding)."
+              - paragraph [ref=e225]: "- 92% of companies plan AI investments while only 28% invest in upskilling for durable skills and AI fluency (mismatch)."
+              - paragraph [ref=e226]: "- Employer demand for durable skills: 76% of job postings request at least one durable skill; 47% request three or more; 8 of top 10 requested skills are durable."
+              - paragraph [ref=e227]: Trust is a binding constraint on this trajectory and elevates governance from compliance burden to strategic capability. Nearly 30% of companies experienced large-scale trust declines over three years, and the report explicitly recommends investment in trust-verification systems and multi-layered verification; leaders should therefore treat TRiSM and verifiable governance as prerequisites for scaling invisible AI.
+              - paragraph [ref=e228]: "- Nearly 30% of companies surveyed reported large-scale trust declines over three years."
+              - paragraph [ref=e229]: "- Report recommendation: surge investment in trust-verification systems and multi-layered verification; treat TRiSM as competitive advantage."
+              - paragraph [ref=e230]: Precision personalization is the commercial pathway for capturing value from embedded AI, but it depends on integrated data and disciplined scaling. The report prescribes starting with high-impact journeys, proving ROI, and then scaling to break down data silos; combining that sequence with durable-skills investment and verifiable trust systems creates a reinforcing operating model that converts technical embedding into strategic advantage.
+              - paragraph [ref=e231]: "- 71% of consumers expect personalized experiences and 76% express frustration when they do not receive them."
+              - paragraph [ref=e232]: "- Recommended approach: start with high-impact journeys, prove ROI, then scale to unify customer data and cross-team alignment."
+          - group [ref=e233]:
+            - generic "LinkedIn-ready post" [ref=e234] [cursor=pointer]:
+              - generic [ref=e235]:
+                - generic [ref=e236]: in
+                - text: LinkedIn-ready post
+        - generic [ref=e237]:
+          - generic [ref=e238]:
+            - paragraph [ref=e239]: 07. Taxonomy
+            - generic [ref=e240]:
+              - heading "The report taxonomy and coverage map." [level=2] [ref=e241]
+              - paragraph [ref=e242]: Tags, categories and chapter structure are generated from the normalized report analysis.
+          - generic [ref=e243]:
+            - group [ref=e244]:
+              - generic "Categories" [ref=e245] [cursor=pointer]
+              - list [ref=e247]:
+                - listitem [ref=e248]:
+                  - generic [ref=e249]: AI & Automation
+            - group [ref=e250]:
+              - generic "Tags" [ref=e251] [cursor=pointer]
+            - group [ref=e252]:
+              - generic "Ordered chapters" [ref=e253] [cursor=pointer]
+        - generic [ref=e254]:
+          - generic [ref=e255]:
+            - paragraph [ref=e256]: 08. Source
+            - generic [ref=e257]:
+              - heading "Source basis and method." [level=2] [ref=e258]
+              - paragraph [ref=e259]: The report page keeps the source PDF, original URL and extraction method visible for traceability.
+          - generic [ref=e260]:
+            - figure "Preview panel for the source report." [ref=e261]:
+              - img "Report preview visual for The 2026 M.CAST™ Trends Report" [ref=e262]
+              - generic [ref=e263]: Preview panel for the source report.
+            - generic [ref=e264]:
+              - generic [ref=e265]:
+                - heading "Full report" [level=3] [ref=e266]
+                - paragraph [ref=e267]: Open the source material used for this MarketBearing analysis.
+                - link "Download full report" [ref=e269] [cursor=pointer]:
+                  - /url: ../cache/15tGQsCeWdAADVHTsnAGrLABsRqCf8sk0.pdf
+              - generic [ref=e270]:
+                - generic [ref=e271]:
+                  - generic [ref=e272]: "01"
+                  - paragraph [ref=e273]:
+                    - strong [ref=e274]: Coverage.
+                    - text: A 2026 trends report that identifies seven business and cultural shifts driven by AI, attention scarcity, community-driven loyalty, and the rising importance of human skills and trust; the report urges leaders to embed AI as invisible infrastructure while prioritizing authenticity, community, precision, and durable human skills.
+                - generic [ref=e275]:
+                  - generic [ref=e276]: "02"
+                  - paragraph [ref=e277]:
+                    - strong [ref=e278]: Rendering.
+                    - text: Generated from report artifacts, normalized metadata, persisted figures and source scoring where available.
+  - contentinfo [ref=e279]:
+    - generic [ref=e280]:
+      - generic [ref=e281]: MarketBearing executive report page
+      - generic [ref=e282]: "Source: The Moore Agency · The 2026 M.CAST™ Trends Report"

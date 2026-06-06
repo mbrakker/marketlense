@@ -34,9 +34,11 @@ from src.contracts.report_generation import (
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
+    ReportMetadataUpsertRequest,
     ReportSourceRecordRequest,
     ReportValueScoreRecordRequest,
     ReportValueScoreRequest,
+    ReportValueScoreResponse,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationReport
@@ -644,6 +646,13 @@ def _source_domain_for_url(url: str) -> str:
     return (parsed.hostname or "").lower()
 
 
+def _drive_file_landing_url(file_id: str) -> str:
+    clean_file_id = str(file_id or "").strip()
+    if not clean_file_id:
+        return ""
+    return f"https://drive.google.com/file/d/{clean_file_id}/view"
+
+
 def _first_nonempty(*values: object) -> str:
     for value in values:
         token = str(value or "").strip()
@@ -655,13 +664,34 @@ def _first_nonempty(*values: object) -> str:
 def _score_ingested_report_source(
     runtime: ReportRuntimeState,
     analysis: ReportAnalysisState,
-    outcome: IngestOutcome,
     dependencies: ReportGenerationDependencies,
-) -> None:
-    if outcome.status != "processed":
-        return
+) -> ReportValueScoreResponse | None:
     score_ctx = child_context(
         runtime.ctx, task_id=f"{runtime.ctx.task_id}:report_source_score"
+    )
+    dependencies.render.upsert_report_metadata(
+        ReportMetadataUpsertRequest(
+            schema_version="1.1",
+            db_path=runtime.settings.reports_db,
+            file_id=runtime.file.file_id,
+            title=analysis.payload.title or runtime.report_title,
+            file_name=runtime.file_name,
+            publisher=analysis.payload.publisher or None,
+            taxonomy=analysis.payload.taxonomy,
+            categories=analysis.payload.categories,
+            region=analysis.payload.region or None,
+            time_period=analysis.payload.time_period or None,
+            source_url=analysis.payload.source,
+            html_path=None,
+            md5=runtime.md5,
+            page_count=None,
+            contents_page_number=analysis.payload.contents_page_number,
+            pdf_metadata={},
+            analysis_mode=runtime.analysis_mode,
+            vector_store_id=analysis.vector_store_id,
+            evidence_pack_paths=analysis.evidence_paths,
+        ),
+        score_ctx,
     )
     report_metadata = dependencies.render.get_report_metadata(
         ReportMetadataGetRequest(
@@ -687,7 +717,11 @@ def _score_ingested_report_source(
         analysis.normalized_payload.source,
         analysis.payload.source,
     )
-    md5 = _first_nonempty(getattr(report_metadata, "md5", ""), outcome.md5, runtime.md5)
+    source_url_fallback = ""
+    if not landing_page_url:
+        landing_page_url = _drive_file_landing_url(runtime.file.file_id)
+        source_url_fallback = "drive_file_url" if landing_page_url else ""
+    md5 = _first_nonempty(getattr(report_metadata, "md5", ""), runtime.md5)
     source_domain = _source_domain_for_url(landing_page_url)
     if not landing_page_url or not source_domain or not md5:
         logger.info(
@@ -701,10 +735,11 @@ def _score_ingested_report_source(
                     "has_landing_page_url": bool(landing_page_url),
                     "has_source_domain": bool(source_domain),
                     "has_md5": bool(md5),
+                    "source_url_fallback": source_url_fallback,
                 },
             )
         )
-        return
+        return None
     downloaded_at_utc = _utc_now_iso()
     source_record = dependencies.source_scoring.record_report_source(
         ReportSourceRecordRequest(
@@ -757,6 +792,7 @@ def _score_ingested_report_source(
                 "record_id": source_record.record_id,
                 "publisher_name": publisher_name,
                 "landing_page_url": source_record.landing_page_url,
+                "source_url_fallback": source_url_fallback,
                 "overall_score": report_value_score.overall_score,
                 "value_band": report_value_score.value_band,
                 "component_scores": {
@@ -766,6 +802,18 @@ def _score_ingested_report_source(
             },
         )
     )
+    return report_value_score
+
+
+def _analysis_with_report_value_score(
+    analysis: ReportAnalysisState,
+    report_value_score: ReportValueScoreResponse | None,
+) -> ReportAnalysisState:
+    if report_value_score is None:
+        return analysis
+    render_data = dict(analysis.data_dict)
+    render_data["_report_value_score"] = asdict(report_value_score)
+    return replace(analysis, data_dict=render_data)
 
 
 def _run_signal_artifact_generation(
@@ -884,6 +932,8 @@ def _resume_from_analysis_checkpoint(
         runtime, source, selection, checkpoint_payload.get("analysis")
     )
     preview_resp = _preview_from_checkpoint(checkpoint_payload.get("preview"))
+    report_value_score = _score_ingested_report_source(runtime, analysis, dependencies)
+    analysis = _analysis_with_report_value_score(analysis, report_value_score)
     outcome = render_report_output(
         runtime,
         source,
@@ -907,7 +957,6 @@ def _resume_from_analysis_checkpoint(
         },
         payload={"schema_version": "1.0", "outcome": asdict(outcome)},
     )
-    _score_ingested_report_source(runtime, analysis, outcome, dependencies)
     if _run_projection(runtime, analysis, outcome, analytics_projection_fn) is not None:
         outcome = _run_signal_artifact_generation(
             runtime,
@@ -1172,6 +1221,8 @@ def run_report_generation(
                 source, selection, analysis, preview_resp
             ),
         )
+        report_value_score = _score_ingested_report_source(runtime, analysis, deps)
+        analysis = _analysis_with_report_value_score(analysis, report_value_score)
         outcome = render_report_output(
             runtime,
             source,
@@ -1192,7 +1243,6 @@ def run_report_generation(
             ),
             payload={"schema_version": "1.0", "outcome": asdict(outcome)},
         )
-        _score_ingested_report_source(runtime, analysis, outcome, deps)
         if (
             _run_projection(runtime, analysis, outcome, analytics_projection_fn)
             is not None

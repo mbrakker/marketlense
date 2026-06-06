@@ -5,7 +5,9 @@ import json
 import logging
 import os
 import re
+import threading
 import time
+import uuid
 from pathlib import Path
 from typing import List
 
@@ -49,6 +51,8 @@ _PIPELINE_CHECKPOINT_SCHEMA_VERSION = "1.0"
 _PIPELINE_CHECKPOINT_DIR = ".checkpoints"
 _ATOMIC_WRITE_STALE_SECONDS = 3600.0
 _ATOMIC_WRITE_TEMP_TAG = ".tmp-write-"
+_WRITE_LOCKS_GUARD = threading.Lock()
+_WRITE_LOCKS: dict[str, threading.Lock] = {}
 
 
 def _normalize_glob_pattern(raw_pattern: str) -> str:
@@ -387,7 +391,8 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
     if request.make_parents:
         path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        _atomic_write_bytes(path, request.content)
+        with _write_lock_for_path(path):
+            _atomic_write_bytes(path, request.content)
     except OSError as exc:
         raise AppError(
             code="file_write_failed",
@@ -411,6 +416,16 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
         bytes_written=len(request.content),
         md5=md5,
     )
+
+
+def _write_lock_for_path(path: Path) -> threading.Lock:
+    lock_key = str(path.resolve())
+    with _WRITE_LOCKS_GUARD:
+        lock = _WRITE_LOCKS.get(lock_key)
+        if lock is None:
+            lock = threading.Lock()
+            _WRITE_LOCKS[lock_key] = lock
+        return lock
 
 
 def write_pipeline_checkpoint(
@@ -585,7 +600,7 @@ def _atomic_write_bytes(path: Path, content: bytes) -> None:
 
 
 def _atomic_temp_path(path: Path) -> Path:
-    token = f"{os.getpid()}-{time.time_ns()}"
+    token = f"{os.getpid()}-{uuid.uuid4().hex}"
     name_hash = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[:16]
     return path.with_name(f".{name_hash}{_ATOMIC_WRITE_TEMP_TAG}{token}")
 

@@ -27,11 +27,18 @@ def test_drive_client_is_thread_local(monkeypatch):
         assert scopes == ["https://www.googleapis.com/auth/drive"]
         return object()
 
-    def _fake_build(service_name: str, version: str, http, cache_discovery: bool):
+    def _fake_build(
+        service_name: str,
+        version: str,
+        http,
+        cache_discovery: bool,
+        static_discovery: bool,
+    ):
         assert service_name == "drive"
         assert version == "v3"
         assert http is not None
         assert cache_discovery is False
+        assert static_discovery is True
         obj = object()
         created.append(obj)
         return obj
@@ -86,6 +93,50 @@ def test_drive_client_is_thread_local(monkeypatch):
     assert len(created) == 2
 
 
+def test_drive_client_build_happens_outside_cache_lock(monkeypatch):
+    drive_service._DRIVE_CLIENTS = {}
+    drive_service._FOLDER_SCOPE_CACHE = {}
+
+    def _fake_credentials_from_file(_sa_path: str, scopes):
+        assert scopes == ["https://www.googleapis.com/auth/drive"]
+        return object()
+
+    def _fake_build(
+        service_name: str,
+        version: str,
+        http,
+        cache_discovery: bool,
+        static_discovery: bool,
+    ):
+        assert service_name == "drive"
+        assert version == "v3"
+        assert http is not None
+        assert cache_discovery is False
+        assert static_discovery is True
+        acquired = drive_service._DRIVE_CLIENTS_LOCK.acquire(blocking=False)
+        try:
+            assert acquired, "Drive client construction ran under cache lock"
+        finally:
+            if acquired:
+                drive_service._DRIVE_CLIENTS_LOCK.release()
+        return object()
+
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(_fake_credentials_from_file),
+    )
+    monkeypatch.setattr(drive_service, "build", _fake_build)
+    ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+    drive_service._get_drive_client(
+        auth_mode="service_account",
+        service_account_path="sa.json",
+        oauth_token_path=None,
+        ctx=ctx,
+    )
+
+
 def test_drive_client_isolated_under_concurrent_access(monkeypatch):
     drive_service._DRIVE_CLIENTS = {}
     drive_service._FOLDER_SCOPE_CACHE = {}
@@ -97,11 +148,18 @@ def test_drive_client_isolated_under_concurrent_access(monkeypatch):
         assert scopes == ["https://www.googleapis.com/auth/drive"]
         return object()
 
-    def _fake_build(service_name: str, version: str, http, cache_discovery: bool):
+    def _fake_build(
+        service_name: str,
+        version: str,
+        http,
+        cache_discovery: bool,
+        static_discovery: bool,
+    ):
         assert service_name == "drive"
         assert version == "v3"
         assert http is not None
         assert cache_discovery is False
+        assert static_discovery is True
         obj = object()
         created.append(obj)
         return obj

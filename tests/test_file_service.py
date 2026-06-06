@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
@@ -199,6 +200,29 @@ def test_write_bytes_uses_short_atomic_temp_for_long_target_name(
 
     assert response.path == str(target)
     assert target.read_bytes() == b'{"status":"ok"}'
+    assert list(tmp_path.glob("*.tmp-write-*")) == []
+
+
+def test_write_bytes_serializes_same_target_concurrent_writes(tmp_path: Path) -> None:
+    target = tmp_path / "shared-cache.json"
+
+    def _write(index: int) -> int:
+        response = write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0",
+                path=str(target),
+                content=f'{{"index":{index}}}'.encode("utf-8"),
+            ),
+            _ctx(),
+        )
+        return response.bytes_written
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        lengths = list(executor.map(_write, range(12)))
+
+    assert len(lengths) == 12
+    assert all(length > 0 for length in lengths)
+    assert json.loads(target.read_text(encoding="utf-8"))["index"] in range(12)
     assert list(tmp_path.glob("*.tmp-write-*")) == []
 
 

@@ -446,7 +446,13 @@ def test_preflight_drive_write_access_validates_folder_write_readiness(
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: _FakeAuthorizedUserCredentials()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+
+    def _fake_build(*_args, **kwargs):
+        assert kwargs["cache_discovery"] is False
+        assert kwargs["static_discovery"] is True
+        return fake_drive
+
+    monkeypatch.setattr(drive_service, "build", _fake_build)
     _reset_drive_caches()
 
     response = drive_service.preflight_drive_write_access(
@@ -926,13 +932,22 @@ def test_list_pdfs_reuses_cached_folder_scope_until_invalidated(monkeypatch):
 
 def test_drive_client_cache_expires_and_evicts_oldest(monkeypatch):
     created: list[object] = []
-    timestamps = iter([0.0, 1.0, 2.0, 3.0, 4.0, 11.0])
+    timestamps = iter(
+        [0.0, 1.0, 2.0, 3.0, 4.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0]
+    )
 
-    def _fake_build(service_name: str, version: str, http, cache_discovery: bool):
+    def _fake_build(
+        service_name: str,
+        version: str,
+        http,
+        cache_discovery: bool,
+        static_discovery: bool,
+    ):
         assert service_name == "drive"
         assert version == "v3"
         assert http is not None
         assert cache_discovery is False
+        assert static_discovery is True
         client = object()
         created.append(client)
         return client

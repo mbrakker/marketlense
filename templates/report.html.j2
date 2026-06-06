@@ -9,9 +9,9 @@
 <meta name="robots" content="{{ view.seo.robots }}">
 <meta name="drive-file-id" content="{{ file_id }}">
 {{ publish_entity_metadata_script|safe }}
-<meta name="theme-color" content="#0d3b66">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d3b66'/%3E%3Cpath d='M18 46V18h8l10 14 10-14h8v28h-8V30L36 44h-2L26 30v16z' fill='white'/%3E%3C/svg%3E">
-<meta property="og:site_name" content="Market Lense">
+<meta name="theme-color" content="#082b52">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23082b52'/%3E%3Ccircle cx='43' cy='43' r='7' fill='%23005cc8'/%3E%3Cpath d='M13 38h30v4H13z' fill='white'/%3E%3C/svg%3E">
+<meta property="og:site_name" content="MarketBearing">
 <meta property="og:type" content="article">
 <meta property="og:title" content="{{ view.seo.title }}">
 <meta property="og:description" content="{{ view.seo.description }}">
@@ -22,606 +22,459 @@
 <meta name="twitter:description" content="{{ view.seo.description }}">
 {% if view.seo.primary_image %}<meta name="twitter:image" content="{{ view.seo.primary_image }}">{% endif %}
 {% if view.canonical_url %}<link rel="canonical" href="{{ view.canonical_url }}">{% endif %}
-{% if preview_png %}<link rel="preload" as="image" href="{{ preview_png }}">{% endif %}
+{% if view.seo.primary_image %}<link rel="preload" as="image" href="{{ view.seo.primary_image }}" fetchpriority="high">{% endif %}
 <script type="application/ld+json">{{ json_ld|tojson }}</script>
 <style>
 {% include "report.css.j2" %}
 </style>
 </head>
 <body>
-  <div class="page-shell">
-    <article class="report">
-      <header class="hero">
-        <div class="hero-split">
-          <div class="hero-copy">
-            <p class="eyebrow">Market Lense report digest</p>
-            <h1>{{ view.report_title }}</h1>
-            {% if view.report_identity_items %}
-            <p class="report-identity">{{ view.report_identity_items|join(" · ") }}</p>
-            {% endif %}
-            <p class="hero-subtitle">
-              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Publisher:</span> {% if view.publisher %}{{ view.publisher }}{% else %}Not extracted{% endif %}</span>
-              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Time Period:</span> {% if view.focus_year %}{{ view.focus_year }}{% else %}Not specified{% endif %}</span>
-              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Geography:</span> {% if view.region %}{{ view.region }}{% else %}Not specified{% endif %}</span>
-            </p>
-            {% if view.hero_meta %}
-            <ul class="hero-meta">
-              {% for item in view.hero_meta %}
-              <li>{{ item }}</li>
-              {% endfor %}
-            </ul>
-            {% endif %}
-          </div>
-          {% if view.hero_image %}
-          <div class="hero-media">
-            <figure class="hero-card">
-              {{ macros.responsive_image(view.hero_image, loading="eager", fetchpriority="high") }}
-              <figcaption>{{ view.hero_image.caption }}</figcaption>
-            </figure>
-          </div>
-          {% endif %}
-        </div>
-      </header>
-
-      <div class="sticky-nav">
-        <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
-        <nav class="section-nav" aria-label="Digest sections">
-          <div class="nav-scroll">
-            <ul class="nav-list">
-              <li><a href="#section-summary" data-section-link>TL;DR</a></li>
-              {% if view.snapshot.facts or view.snapshot.categories or view.snapshot.tags %}<li><a href="#section-snapshot" data-section-link>Report snapshot</a></li>{% endif %}
-              {% if view.display.has_topics %}<li><a href="#section-topics" data-section-link>Covered topics</a></li>{% endif %}
-              {% if view.summary.executive_summary or view.statuses.summary.status == "abstained" %}<li><a href="#section-executive" data-section-link>Executive summary</a></li>{% endif %}
-              <li><a href="#section-insights" data-section-link>Key data insights</a></li>
-              {% if view.display.has_editorial or view.display.has_chapters %}<li><a href="#section-editorial" data-section-link>Editorial details</a></li>{% endif %}
-              {% if view.display.has_figures %}<li><a href="#section-figures" data-section-link>Figures</a></li>{% endif %}
-              <li><a href="#section-quotes" data-section-link>Key quotes</a></li>
-              <li><a href="#section-resources" data-section-link>Sources</a></li>
-              {% if view.display.has_appendix %}<li><a href="#section-appendix" data-section-link>Appendix</a></li>{% endif %}
-            </ul>
-          </div>
-        </nav>
-      </div>
-
-      <main class="content" id="digest-content">
-        {% if view.not_available %}
-        <section class="panel notice" id="section-notice" data-reveal aria-label="Source status">
-          Content not available from text{% if view.fallback_reason %}: {{ view.fallback_reason }}{% endif %}
-        </section>
-        {% endif %}
-
-        <section class="panel" id="section-summary" data-reveal data-section data-tone="summary" aria-label="TL;DR">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Lead takeaway</p>
-              <h2>TL;DR</h2>
-            </div>
-          </div>
-          {% if view.summary.tldr_text %}
-            {{ macros.bullet_list(view.summary.tldr_bullets if view.summary.tldr_bullets else [view.summary.tldr_text]) }}
-          {% elif view.statuses.summary.status == "abstained" %}
-            <p class="muted">TL;DR omitted because evidence support was too weak ({{ view.statuses.summary.reason if view.statuses.summary.reason else "insufficient_evidence_support" }}).</p>
-          {% else %}
-            <p class="muted">Not available from text.</p>
-          {% endif %}
-        </section>
-
-        {% if view.snapshot.facts or view.snapshot.categories or view.snapshot.tags %}
-        <section class="panel" id="section-snapshot" data-reveal data-section aria-label="Report snapshot">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Metadata below the lead</p>
-              <h2>Report snapshot</h2>
-            </div>
-          </div>
-          {% if view.snapshot.facts %}
-          <div class="fact-grid">
-            {% for fact in view.snapshot.facts %}
-            <article class="fact-card">
-              <span class="fact-label">{{ fact.label }}</span>
-              <p class="fact-value">{{ fact.value }}</p>
-            </article>
-            {% endfor %}
-          </div>
-          {% endif %}
-          <div class="meta-stack">
-            {% if view.snapshot.categories %}
-            <article class="meta-row">
-              <span class="meta-label">Categories</span>
-              {{ macros.chip_list(view.snapshot.categories, tag_acronym_map) }}
-            </article>
-            {% endif %}
-            {% if view.snapshot.tags %}
-            <article class="meta-row">
-              <span class="meta-label">Tags</span>
-              {{ macros.chip_list(view.snapshot.tags, tag_acronym_map) }}
-            </article>
-            {% endif %}
-          </div>
-        </section>
-        {% endif %}
-
-        {% if view.display.has_topics or view.not_available %}
-        <section class="panel" id="section-topics" data-reveal data-section aria-label="Covered topics">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Reading map</p>
-              <h2>Covered topics</h2>
-            </div>
-          </div>
-          {% if view.display.has_topics %}
-          {{ macros.chip_list(view.topics, tag_acronym_map) }}
-          {% if view.topic_briefs %}
-          <div class="topic-brief-grid" style="margin-top:18px">
-            {% for item in view.topic_briefs %}
-            <article class="topic-brief-card">
-              <h3>{{ macros.format_chip_label(item.title, tag_acronym_map) }}</h3>
-              {% if item.summary %}<p class="summary-copy">{{ item.summary }}</p>{% endif %}
-              {% if item.key_points %}{{ macros.bullet_list(item.key_points, class_name="topic-brief-points") }}{% endif %}
-            </article>
-            {% endfor %}
-          </div>
-          {% endif %}
-          {% else %}
-          <p class="muted">Not available from text.</p>
-          {% endif %}
-        </section>
-        {% endif %}
-
-        {% if view.summary.executive_summary or view.statuses.summary.status == "abstained" %}
-        <section class="panel" id="section-executive" data-reveal data-section data-tone="summary" aria-label="Executive summary">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Editorial compression</p>
-              <h2>Executive summary</h2>
-            </div>
-          </div>
-          {% if view.summary.executive_summary %}
-          {{ macros.bullet_list(view.summary.executive_bullets if view.summary.executive_bullets else [view.summary.executive_summary]) }}
-          {% elif view.statuses.summary.status == "abstained" %}
-          <p class="muted">Executive summary omitted because evidence support was too weak ({{ view.statuses.summary.reason if view.statuses.summary.reason else "insufficient_evidence_support" }}).</p>
-          {% endif %}
-          {% if view.summary.claim_map %}
-          <div style="margin-top:18px">
-            <span class="meta-label">Claim evidence map</span>
-            <ul class="claim-list" style="margin-top:10px">
-              {% for claim in view.summary.claim_map %}
-              <li>
-                <strong>{{ claim.claim }}</strong>{% if claim.evidence %}: {{ claim.evidence }}{% endif %}
-                {% if claim.citation_line %}<div class="citation-micro">{{ claim.citation_line }}</div>{% endif %}
-              </li>
-              {% endfor %}
-            </ul>
-          </div>
-          {% endif %}
-        </section>
-        {% endif %}
-
-        <section class="panel" id="section-insights" data-reveal data-section data-tone="insights" aria-label="Key data insights">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Signal inventory</p>
-              <h2>Key data insights</h2>
-            </div>
-          </div>
-          {% if view.display.has_insights %}
-          <ol class="insight-grid">
-            {% for insight in view.insights %}
-            <li class="insight-card">
-              <div class="insight-head">
-                <span class="insight-index">{{ loop.index }}</span>
-                <div>
-                  <p class="insight-text">{{ insight.text }}</p>
-                  {% if insight.citation_line %}<div class="citation-micro">{{ insight.citation_line }}</div>{% endif %}
-                </div>
-              </div>
-            </li>
-            {% endfor %}
-          </ol>
-          {% elif view.statuses.insights.status == "abstained" %}
-          <p class="muted">Key data insights omitted because evidence support was too weak ({{ view.statuses.insights.reason if view.statuses.insights.reason else "insufficient_evidence_support" }}).</p>
-          {% else %}
-          <p class="muted">Not available from text.</p>
-          {% endif %}
-        </section>
-
-        {% if view.display.has_editorial or view.display.has_chapters %}
-        <section class="panel" id="section-editorial" data-reveal data-section aria-label="Editorial details">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Provenance and scope</p>
-              <h2>Editorial details</h2>
-            </div>
-          </div>
-          <div class="editorial-grid">
-            {% for card in view.editorial_cards %}
-            <article class="editorial-card">
-              <h3>{{ card["label"] }}</h3>
-              {% if card["items"] %}
-              {{ macros.bullet_list(card["items"], class_name="editorial-list") }}
-              {% else %}
-              <p class="muted">{{ card["empty"] }}</p>
-              {% endif %}
-            </article>
-            {% endfor %}
-          </div>
-          {% if view.display.has_chapters %}
-          <div style="margin-top:22px">
-            <span class="meta-label">Ordered chapters</span>
-            <div class="chapter-grid" style="margin-top:12px">
-              {% for chapter in view.chapters %}
-              <article class="chapter-card">
-                <h3>{{ chapter.order }}. {{ chapter.title }}</h3>
-                {% if chapter.pages %}
-                <p class="chapter-meta">Pages: {{ chapter.pages|join(", ") }}</p>
-                {% endif %}
-                {% if chapter.summary %}
-                <p class="summary-copy">{{ chapter.summary }}</p>
-                {% else %}
-                <p class="muted">No chapter summary extracted.</p>
-                {% endif %}
-              </article>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-        </section>
-        {% endif %}
-
-        {% if view.display.has_figures %}
-        <section class="panel" id="section-figures" data-reveal data-section data-tone="figures" aria-label="Figure carousel">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Visual evidence</p>
-              <h2>Figures</h2>
-            </div>
-          </div>
-          <div class="figure-carousel" data-carousel>
-            <div class="carousel-shell">
-              <button type="button" class="carousel-btn prev" aria-label="Previous figure" data-carousel-prev>&lsaquo;</button>
-              <div class="carousel-slides" tabindex="0">
-                {% for slide in view.figures.slides %}
-                <figure class="carousel-slide{% if loop.first %} is-active{% endif %}" data-carousel-slide="{{ loop.index }}">
-                  {{ macros.responsive_image(slide, loading="eager" if loop.first else "lazy", fetchpriority="high" if loop.first else "auto") }}
-                  <figcaption class="carousel-caption">{{ slide.caption }}</figcaption>
-                </figure>
-                {% endfor %}
-              </div>
-              <button type="button" class="carousel-btn next" aria-label="Next figure" data-carousel-next>&rsaquo;</button>
-            </div>
-            <div class="carousel-toolbar">
-              <span class="carousel-count" data-carousel-count>1 / {{ view.figures.slides|length }}</span>
-              <button type="button" class="lightbox-open" data-lightbox-open>Open fullscreen</button>
-            </div>
-            {% if view.figures.slides|length > 1 %}
-            <div class="carousel-thumbs" role="tablist" aria-label="Figure thumbnails">
-              {% for slide in view.figures.slides %}
-              <button type="button" class="carousel-thumb{% if loop.first %} is-active{% endif %}" data-carousel-thumb="{{ loop.index }}" aria-label="Open figure {{ loop.index }}">
-                {{ macros.responsive_image(slide.thumb) }}
-              </button>
-              {% endfor %}
-            </div>
-            {% endif %}
-          </div>
-        </section>
-        {% endif %}
-
-        <section class="panel" id="section-quotes" data-reveal data-section data-tone="quotes" aria-label="Key quotes">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Verbatim signals</p>
-              <h2>Key quotes</h2>
-            </div>
-          </div>
-          {% if view.display.has_quotes %}
-          <ul class="quote-grid">
-            {% for quote in view.quotes %}
-            <li>
-              <figure class="quote-card">
-                <blockquote><p>"{{ quote.text }}"</p></blockquote>
-                <figcaption class="quote-byline">
-                  <span class="quote-author">{{ quote.author }}</span>
-                  {% if quote.citation %}<span class="quote-citation">{{ quote.citation }}</span>{% endif %}
-                </figcaption>
-                {% if quote.citation_line %}<div class="citation-micro">{{ quote.citation_line }}</div>{% endif %}
-              </figure>
-            </li>
-            {% endfor %}
-          </ul>
-          {% elif view.statuses.quotes.status == "abstained" %}
-          <p class="muted">Key quotes omitted because evidence support was too weak ({{ view.statuses.quotes.reason if view.statuses.quotes.reason else "insufficient_evidence_support" }}).</p>
-          {% else %}
-          <p class="muted">Not available from text.</p>
-          {% endif %}
-        </section>
-
-        {% if view.commentary and view.commentary != view.summary.executive_summary and not view.expert_comment %}
-        <section class="panel" id="section-commentary" data-reveal data-section aria-label="Commentary">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Additional commentary</p>
-              <h2>Commentary</h2>
-            </div>
-          </div>
-          <div class="prose-block" data-chunk-prose>{{ view.commentary }}</div>
-        </section>
-        {% endif %}
-
-        <section class="panel" id="section-resources" data-reveal data-section aria-label="Related resources">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Traceability</p>
-              <h2>Related resources</h2>
-            </div>
-          </div>
-          {% if not view.canonical_url and not view.source_url %}
-          <p class="muted">Source URL was not available in the extracted report metadata.</p>
-          {% endif %}
-          <ul class="resource-list">
-            {% if view.canonical_url %}<li><a href="{{ view.canonical_url }}" rel="noopener" target="_blank">Canonical/source URL</a></li>{% endif %}
-            {% if view.source_url and view.source_url != view.canonical_url %}<li><a href="{{ view.source_url }}" rel="noopener" target="_blank">Original source link</a></li>{% endif %}
-            <li><a href="#section-summary">Back to TL;DR</a></li>
-            <li><a href="#section-insights">Jump to key insights</a></li>
-          </ul>
-        </section>
-
-        {% if view.expert_comment or view.linkedin_post or view.statuses.expert.status == "abstained" or view.statuses.linkedin.status == "abstained" %}
-        <section class="panel" id="section-appendix" data-reveal data-section aria-label="Appendix">
-          <div class="panel-header">
-            <div>
-              <p class="panel-kicker">Generated extras</p>
-              <h2>Appendix</h2>
-            </div>
-          </div>
-          {% if view.expert_comment %}
-          <h3>Expert comment (generated)</h3>
-          <div class="prose-block" data-chunk-prose>{{ view.expert_comment }}</div>
-          {% elif view.statuses.expert.status == "abstained" %}
-          <p class="muted">Expert comment omitted because evidence support was too weak ({{ view.statuses.expert.reason if view.statuses.expert.reason else "insufficient_evidence_support" }}).</p>
-          {% endif %}
-          {% if view.linkedin_post %}
-          <h3 style="margin-top:18px">LinkedIn post</h3>
-          <div class="prose-block" data-chunk-prose>{{ view.linkedin_post }}</div>
-          {% elif view.statuses.linkedin.status == "abstained" %}
-          <p class="muted">LinkedIn post omitted because evidence support was too weak ({{ view.statuses.linkedin.reason if view.statuses.linkedin.reason else "insufficient_evidence_support" }}).</p>
-          {% endif %}
-        </section>
-        {% endif %}
-      </main>
-
-      <div class="lightbox" id="figure-lightbox" hidden aria-hidden="true">
-        <div class="lightbox-top">
-          <button type="button" class="lightbox-close" data-lightbox-close>Close</button>
-        </div>
-        <figure>
-          <img src="" alt="" id="lightbox-image" width="{{ view.figures.lightbox_width }}" height="{{ view.figures.lightbox_height }}">
-          <figcaption id="lightbox-caption"></figcaption>
-        </figure>
-      </div>
-
-      <footer class="footer">
-        Generated by Market Lense. File ID: <code>{{ file_id }}</code>.
-      </footer>
-    </article>
+<a class="skip-link" href="#content">Skip to report</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="#overview" aria-label="MarketBearing report home">
+      <span class="brand-mark">Market<span>Bearing</span></span>
+      <span class="brand-rule" aria-hidden="true"></span>
+    </a>
+    <nav class="top-nav" aria-label="Primary report sections">
+      <a aria-current="page" href="#overview">Overview</a>
+      <a href="#findings">Findings</a>
+      {% if view.display.has_figures %}<a href="#candidates">Visual evidence</a>{% endif %}
+      <a href="#signals">Signals</a>
+      <a href="#evidence">Evidence</a>
+      {% if view.display.has_appendix %}<a href="#expert">Expert view</a>{% endif %}
+      {% if view.display.has_metadata or view.display.has_topics %}<a href="#taxonomy">Taxonomy</a>{% endif %}
+      <a href="#source">Source</a>
+    </nav>
+    <div class="header-meta">{{ view.publisher if view.publisher else "Source report" }}{% if view.focus_year %} &middot; {{ view.focus_year }}{% endif %}</div>
   </div>
-  <script>
-  (function () {
-    var progressBar = document.getElementById("reading-progress-bar");
-    var navLinks = Array.prototype.slice.call(document.querySelectorAll("[data-section-link]"));
-    var sections = Array.prototype.slice.call(document.querySelectorAll("[data-section]"));
-    var revealPanels = Array.prototype.slice.call(document.querySelectorAll("[data-reveal]"));
-    var lightbox = document.getElementById("figure-lightbox");
-    var lightboxImage = document.getElementById("lightbox-image");
-    var lightboxCaption = document.getElementById("lightbox-caption");
-    var lightboxClose = document.querySelector("[data-lightbox-close]");
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+</header>
 
-    var updateProgress = function () {
-      if (!progressBar) {
-        return;
-      }
-      var top = window.scrollY || window.pageYOffset || 0;
-      var total = Math.max((document.documentElement.scrollHeight || 0) - window.innerHeight, 1);
-      var pct = Math.max(0, Math.min(100, (top / total) * 100));
-      progressBar.style.width = pct + "%";
-    };
+<main>
+  <section class="hero" aria-labelledby="report-title">
+    <div class="hero-inner">
+      <div class="hero-intro">
+        <p class="eyebrow">Executive intelligence brief</p>
+        <h1 id="report-title">{{ view.report_title }}</h1>
+        <p class="hero-thesis">
+          {% if view.summary.tldr_text %}
+          {{ view.summary.tldr_text }}
+          {% elif view.statuses.summary.status == "abstained" %}
+          TLDR omitted because evidence support was too weak.
+          {% else %}
+          {{ view.summary.executive_summary }}
+          {% endif %}
+        </p>
+      </div>
 
-    var activateLink = function (id) {
-      navLinks.forEach(function (link) {
-        var active = link.getAttribute("href") === "#" + id;
-        link.classList.toggle("is-active", active);
-      });
-    };
+      <div class="hero-meta-block">
+        {% if view.report_identity_items %}
+        <ul class="meta-row" aria-label="Report metadata">
+          {% for item in view.report_identity_items %}
+          <li class="meta-pill">{{ item }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
 
-    var openLightbox = function (slide) {
-      if (!slide || !lightbox || !lightboxImage || !lightboxCaption) {
-        return;
-      }
-      var img = slide.querySelector("img");
-      var caption = slide.querySelector("figcaption");
-      if (!img) {
-        return;
-      }
-      lightboxImage.src = img.currentSrc || img.src || "";
-      lightboxImage.alt = img.alt || "Figure";
-      lightboxCaption.textContent = caption ? caption.textContent : "";
-      lightbox.hidden = false;
-      lightbox.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-    };
+      <aside class="signal-panel" aria-label="Core report signal and score">
+        <div class="signal-top">
+          <p class="eyebrow">Core signal</p>
+          <h2>{{ view.core_signal.heading }}</h2>
+          <p>{{ view.core_signal.body }}</p>
+        </div>
+        <div class="signal-stat-grid">
+          <div class="signal-stat"><strong>{{ view.insights|length }}</strong><span>source-backed findings</span></div>
+          <div class="signal-stat"><strong>{{ view.quotes|length }}</strong><span>verbatim report signals</span></div>
+          <div class="signal-stat"><strong>{{ view.topics|length if view.topics else view.snapshot.tags|length }}</strong><span>taxonomy themes</span></div>
+        </div>
+        <div class="hero-score" aria-label="Downloaded report quality score">
+          <div class="hero-score-main">
+            <span class="score-eyebrow">Report quality</span>
+            <strong>{{ view.quality_score.overall_label }}</strong>
+            <span>{% if view.quality_score.available %}{{ view.quality_score.value_band|capitalize }} source value{% else %}Source quality score unavailable for this report.{% endif %}</span>
+            <span class="score-pin" aria-hidden="true"></span>
+          </div>
+          <div class="score-dimensions" role="list" aria-label="Score dimensions">
+            {% for component in view.quality_score.components %}
+            <span class="score-dimension" role="listitem" data-dimension="{{ component.dimension }}">
+              <span>{{ component.label }}</span>
+              <b>{{ component.score_label }}</b>
+              <i aria-hidden="true" style="--fill:{{ component.fill }}%"></i>
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
 
-    var closeLightbox = function () {
-      if (!lightbox) {
-        return;
-      }
-      lightbox.hidden = true;
-      lightbox.setAttribute("aria-hidden", "true");
-      if (lightboxImage) {
-        lightboxImage.src = "";
-      }
-      document.body.style.overflow = "";
-    };
+  <div class="page-grid" id="content">
+    <aside class="toc" aria-label="Report sections">
+      <p class="toc-title">Navigate</p>
+      <nav>
+        <a href="#overview" data-section-link>Overview</a>
+        <a href="#findings" data-section-link>Findings</a>
+      {% if view.display.has_figures %}<a href="#candidates" data-section-link>Visual evidence</a>{% endif %}
+        <a href="#signals" data-section-link>Signals</a>
+        <a href="#evidence" data-section-link>Evidence</a>
+        {% if view.display.has_appendix %}<a href="#expert" data-section-link>Expert view</a>{% endif %}
+        {% if view.display.has_metadata or view.display.has_topics %}<a href="#taxonomy" data-section-link>Taxonomy</a>{% endif %}
+        <a href="#source" data-section-link>Source</a>
+      </nav>
+    </aside>
 
-    if (lightboxClose) {
-      lightboxClose.addEventListener("click", closeLightbox);
-    }
-    if (lightbox) {
-      lightbox.addEventListener("click", function (event) {
-        if (event.target === lightbox) {
-          closeLightbox();
-        }
-      });
-    }
+    <div class="content">
+      {% if view.not_available %}
+      <section class="section notice" id="notice" data-section aria-label="Source status">
+        Content not available from text{% if view.fallback_reason %}: {{ view.fallback_reason }}{% endif %}
+      </section>
+      {% endif %}
 
-    var chunkTextBlock = function (element) {
-      var text = (element.textContent || "").trim();
-      if (!text || text.length < 320) {
-        return;
-      }
-      var parts = [];
-      var lines = text.split(/\n+/).map(function (line) { return line.trim(); }).filter(Boolean);
-      if (lines.length > 1) {
-        parts = lines;
-      } else {
-        var sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
-        var bucket = "";
-        sentences.forEach(function (sentence) {
-          if ((bucket + " " + sentence).trim().length > 260 && bucket) {
-            parts.push(bucket.trim());
-            bucket = sentence;
-          } else {
-            bucket = (bucket ? bucket + " " : "") + sentence;
-          }
-        });
-        if (bucket.trim()) {
-          parts.push(bucket.trim());
-        }
-      }
-      if (parts.length < 2) {
-        return;
-      }
-      element.innerHTML = "";
-      parts.forEach(function (part) {
-        var paragraph = document.createElement("p");
-        paragraph.className = "prose-paragraph";
-        paragraph.textContent = part;
-        element.appendChild(paragraph);
-      });
-    };
+      <section class="section" id="overview" data-section>
+        <div class="section-head">
+          <p class="section-kicker">01. Overview</p>
+          <div>
+            <h2>{{ view.report_title }}</h2>
+            <p class="section-lede">Executive summary of the source report, shaped for fast review and downstream decision-making.</p>
+          </div>
+        </div>
+        <article class="summary-panel summary-panel-executive" aria-label="Report executive summary">
+          <div class="summary-body">
+            <h3>Executive summary</h3>
+            {% if view.summary.executive_summary %}
+            <p>{{ view.summary.executive_summary }}</p>
+            {% elif view.statuses.summary.status == "abstained" %}
+            <p class="muted">Executive summary omitted because evidence support was too weak ({{ view.statuses.summary.reason if view.statuses.summary.reason else "insufficient_evidence_support" }}).</p>
+            {% else %}
+            <p class="muted">Not available from text.</p>
+            {% endif %}
+          </div>
+        </article>
 
-    document.querySelectorAll("[data-chunk-prose]").forEach(chunkTextBlock);
+        {% if view.summary.claim_map %}
+        <div class="claim-strip" aria-label="Executive claim evidence map">
+          {% for claim in view.summary.claim_map[:3] %}
+          <article>
+            <span>{{ "%02d"|format(loop.index) }}</span>
+            <p><strong>{{ claim.claim }}</strong>{% if claim.citation_line %}<small>{{ claim.citation_line }}</small>{% endif %}</p>
+          </article>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </section>
 
-    if ("IntersectionObserver" in window) {
-      var sectionObserver = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            activateLink(entry.target.id);
-          }
-        });
-      }, { rootMargin: "-35% 0px -45% 0px", threshold: 0.01 });
-      sections.forEach(function (section) { sectionObserver.observe(section); });
+      <section class="section" id="findings" data-section>
+        <div class="section-head">
+          <p class="section-kicker">02. Findings</p>
+          <div>
+            <h2>What leaders should take from the report.</h2>
+            <p class="section-lede">The most decision-relevant points are presented as short, source-backed findings so the report can be evaluated quickly.</p>
+          </div>
+        </div>
+        {% if view.display.has_insights %}
+        <div class="finding-list">
+          {% for insight in view.insights %}
+          <article class="finding-card">
+            <div class="card-meta"><span class="badge green">Report-supported</span>{% if insight.citation_line %}<span class="badge">{{ insight.citation_line }}</span>{% endif %}</div>
+            <h3>{{ insight.text }}</h3>
+          </article>
+          {% endfor %}
+        </div>
+        {% elif view.statuses.insights.status == "abstained" %}
+        <p class="muted">Key findings omitted because evidence support was too weak ({{ view.statuses.insights.reason if view.statuses.insights.reason else "insufficient_evidence_support" }}).</p>
+        {% else %}
+        <p class="muted">Not available from text.</p>
+        {% endif %}
+      </section>
 
-      var revealObserver = new IntersectionObserver(function (entries, observer) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-            observer.unobserve(entry.target);
-          }
-        });
-      }, { rootMargin: "0px 0px -10% 0px", threshold: 0.1 });
-      revealPanels.forEach(function (panel) { revealObserver.observe(panel); });
+      {% if view.display.has_figures %}
+      <section class="section visual-candidate-section" id="candidates" data-section>
+        <div class="section-head">
+          <p class="section-kicker">03. Visual evidence</p>
+          <div>
+            <h2>Charts and tables worth reviewing first.</h2>
+            <p class="section-lede">These visuals give the fastest route into the report's quantitative evidence, frameworks and supporting exhibits.</p>
+          </div>
+        </div>
+        <div class="candidate-toolbar">
+          <p class="section-lede">Showing {{ view.figures.visual_candidates|length }} high-value visual{{ "s" if view.figures.visual_candidates|length != 1 else "" }} from this report.</p>
+          {% if view.figures.visual_candidates|length > 1 %}
+          <div class="carousel-controls" aria-label="Visual candidate carousel controls">
+            <button class="carousel-button" type="button" data-carousel-prev aria-label="Previous visual candidate">&lsaquo;</button>
+            <button class="carousel-button" type="button" data-carousel-next aria-label="Next visual candidate">&rsaquo;</button>
+          </div>
+          {% endif %}
+        </div>
+        <div class="visual-candidate-carousel" data-visual-candidate-carousel tabindex="0" aria-label="Top extracted visual candidates">
+          {% for slide in view.figures.visual_candidates %}
+          <article class="visual-candidate-slide">
+            <figure class="visual-candidate-card">
+              {{ macros.responsive_image(slide, loading=("eager" if loop.index == 1 else "lazy"), fetchpriority=("high" if loop.index == 1 else "auto")) }}
+              <figcaption class="visual-candidate-copy">
+                <span class="candidate-score">{{ slide.kind|capitalize if slide.kind else "Figure" }}{% if slide.page >= 0 %} &middot; page {{ slide.page + 1 }}{% endif %}</span>
+                <h3>{{ slide.caption }}</h3>
+              </figcaption>
+            </figure>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="section" id="signals" data-section>
+        <div class="section-head">
+          <p class="section-kicker">{% if view.display.has_figures %}04{% else %}03{% endif %}. Signals</p>
+          <div>
+            <h2>Signals to watch after reading this report.</h2>
+            <p class="section-lede">Use these themes as a concise market read from this source: where attention is shifting, what may matter next, and which assumptions deserve follow-up.</p>
+          </div>
+        </div>
+        {% if view.signal_cards %}
+        <div class="tag-grid">
+          {% for card in view.signal_cards %}
+          <article class="tag-card">
+            <h3>{{ macros.format_chip_label(card.title, tag_acronym_map) }}</h3>
+            <p>{{ card.summary }}</p>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted">No report signals were extracted.</p>
+        {% endif %}
+      </section>
+
+      <section class="section" id="evidence" data-section>
+        <div class="section-head">
+          <p class="section-kicker">{% if view.display.has_figures %}05{% else %}04{% endif %}. Evidence</p>
+          <div>
+            <h2>Source language behind the read.</h2>
+            <p class="section-lede">Selected verbatim excerpts preserve the report's own wording so readers can check tone, emphasis and evidence quality.</p>
+          </div>
+        </div>
+        {% if view.display.has_quotes %}
+        <div class="quote-board">
+          {% set lead_quote = view.quotes[0] %}
+          <figure class="quote-feature">
+            <blockquote>&ldquo;{{ lead_quote.text }}&rdquo;</blockquote>
+            <figcaption>{{ lead_quote.author }}{% if lead_quote.citation_line %}<br>{{ lead_quote.citation_line }}{% endif %}</figcaption>
+          </figure>
+          <div class="quote-stack">
+            {% for quote in view.quotes[1:6] %}
+            <figure class="quote-card">
+              <blockquote>&ldquo;{{ quote.text }}&rdquo;</blockquote>
+              <figcaption>{{ quote.author }}{% if quote.citation_line %}<br>{{ quote.citation_line }}{% endif %}</figcaption>
+            </figure>
+            {% endfor %}
+          </div>
+        </div>
+        {% elif view.statuses.quotes.status == "abstained" %}
+        <p class="muted">Key quotes omitted because evidence support was too weak ({{ view.statuses.quotes.reason if view.statuses.quotes.reason else "insufficient_evidence_support" }}).</p>
+        {% else %}
+        <p class="muted">Not available from text.</p>
+        {% endif %}
+      </section>
+
+      {% if view.expert_comment or view.linkedin_post or view.statuses.expert.status == "abstained" or view.statuses.linkedin.status == "abstained" %}
+      <section class="section" id="expert" data-section>
+        <div class="section-head">
+          <p class="section-kicker">{% if view.display.has_figures %}06{% else %}05{% endif %}. Expert view</p>
+          <div>
+            <h2>MarketBearing expert view.</h2>
+            <p class="section-lede">Our team's perspective translates the report into practical implications for business, brand and digital leaders.</p>
+          </div>
+        </div>
+        <article class="expert-panel">
+          <aside class="expert-aside">
+            <div class="expert-avatar" aria-hidden="true">MB</div>
+            <div>
+              <h3>Expert perspective from our intelligence team</h3>
+              <p>Focused on trust, operating model and commercial execution.</p>
+            </div>
+          </aside>
+          <div class="expert-copy">
+            {% if view.expert_comment %}
+            <div data-chunk-prose>{{ view.expert_comment }}</div>
+            {% elif view.statuses.expert.status == "abstained" %}
+            <p class="muted">Expert comment omitted because evidence support was too weak ({{ view.statuses.expert.reason if view.statuses.expert.reason else "insufficient_evidence_support" }}).</p>
+            {% endif %}
+          </div>
+        </article>
+        {% if view.linkedin_post %}
+        <details class="linkedin-details">
+          <summary class="linkedin-summary">
+            <span class="linkedin-label"><span class="linkedin-logo" aria-hidden="true">in</span> LinkedIn-ready post</span>
+          </summary>
+          <div class="linkedin-post">{{ view.linkedin_post }}</div>
+        </details>
+        {% elif view.statuses.linkedin.status == "abstained" %}
+        <p class="muted">LinkedIn post omitted because evidence support was too weak ({{ view.statuses.linkedin.reason if view.statuses.linkedin.reason else "insufficient_evidence_support" }}).</p>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      {% if view.display.has_metadata or view.display.has_topics %}
+      <section class="section" id="taxonomy" data-section>
+        <div class="section-head">
+          <p class="section-kicker">{% if view.display.has_figures %}07{% else %}06{% endif %}. Taxonomy</p>
+          <div>
+            <h2>Where this report fits in the knowledge base.</h2>
+            <p class="section-lede">Categories, tags and chapters make the report easier to compare, retrieve and connect with adjacent market intelligence.</p>
+          </div>
+        </div>
+        <div class="topic-map">
+          {% if view.snapshot.categories %}
+          <details open>
+            <summary>Categories</summary>
+            <div class="topic-body">{{ macros.chip_list(view.snapshot.categories, tag_acronym_map) }}</div>
+          </details>
+          {% endif %}
+          {% if view.snapshot.tags %}
+          <details>
+            <summary>Tags</summary>
+            <div class="topic-body">{{ macros.chip_list(view.snapshot.tags, tag_acronym_map) }}</div>
+          </details>
+          {% endif %}
+          {% if view.chapters %}
+          <details>
+            <summary>Ordered chapters</summary>
+            <div class="topic-body">
+              {% for chapter in view.chapters %}
+              <p><strong>{{ chapter.order }}. {{ chapter.title }}</strong>{% if chapter.pages %}<br><span class="muted">Pages: {{ chapter.pages|join(", ") }}</span>{% endif %}{% if chapter.summary %}<br>{{ chapter.summary }}{% endif %}</p>
+              {% endfor %}
+            </div>
+          </details>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="section" id="source" data-section>
+        <div class="section-head">
+          <p class="section-kicker">{% if view.display.has_figures %}08{% else %}07{% endif %}. Source</p>
+          <div>
+            <h2>Read the source and check provenance.</h2>
+            <p class="section-lede">Use this area to open the original material and understand how MarketBearing turned the report into a structured briefing.</p>
+          </div>
+        </div>
+        <div class="source-layout">
+          {% if view.hero_image %}
+          <figure class="source-frame">
+            {{ macros.responsive_image(view.hero_image, loading="lazy") }}
+            <figcaption>{{ view.hero_image.caption }}</figcaption>
+          </figure>
+          {% endif %}
+          <div>
+            <div class="download-card">
+              <h3>Full report</h3>
+              <p>Open the source material used for this MarketBearing analysis.</p>
+              <div class="download-actions">
+                {% if view.source_download_href %}<a class="download-link" href="{{ view.source_download_href }}" download>Download full report</a>{% endif %}
+                {% if view.canonical_url %}<a class="download-link secondary" href="{{ view.canonical_url }}" rel="noopener" target="_blank">Open source URL</a>{% elif view.source_url %}<a class="download-link secondary" href="{{ view.source_url }}" rel="noopener" target="_blank">Open original source</a>{% endif %}
+              </div>
+              {% if not view.source_download_href and not view.canonical_url and not view.source_url %}
+              <p class="muted">Source URL was not available in the extracted report metadata.</p>
+              {% endif %}
+            </div>
+            <div class="method-list">
+              {% for card in view.editorial_cards if card["items"] %}
+              <div class="method-item">
+                <span class="method-num">{{ "%02d"|format(loop.index) }}</span>
+                <p><strong>{{ card["label"] }}.</strong> {{ card["items"][:2]|join(" ") }}</p>
+              </div>
+              {% endfor %}
+              <div class="method-item">
+                <span class="method-num">{{ "%02d"|format((view.editorial_cards|selectattr("items")|list|length) + 1) }}</span>
+                <p><strong>Rendering.</strong> Generated from report artifacts, normalized metadata, persisted figures and source scoring where available.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <span>MarketBearing executive report page</span>
+    <span>Source: {{ view.publisher if view.publisher else "Unknown publisher" }} &middot; {{ view.report_title }}</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var progress = document.getElementById("progress-bar");
+  var links = Array.prototype.slice.call(document.querySelectorAll("[data-section-link]"));
+  var sections = Array.prototype.slice.call(document.querySelectorAll("[data-section]"));
+  var candidateCarousel = document.querySelector("[data-visual-candidate-carousel]");
+
+  function scrollCandidates(direction) {
+    if (!candidateCarousel) return;
+    var firstSlide = candidateCarousel.querySelector(".visual-candidate-slide");
+    var distance = firstSlide ? firstSlide.getBoundingClientRect().width + 16 : candidateCarousel.clientWidth * 0.86;
+    candidateCarousel.scrollBy({ left: direction * distance, behavior: "smooth" });
+  }
+
+  var prev = document.querySelector("[data-carousel-prev]");
+  var next = document.querySelector("[data-carousel-next]");
+  if (prev) prev.addEventListener("click", function () { scrollCandidates(-1); });
+  if (next) next.addEventListener("click", function () { scrollCandidates(1); });
+
+  function chunkTextBlock(element) {
+    var text = (element.textContent || "").trim();
+    if (!text || text.length < 320) return;
+    var parts = [];
+    var lines = text.split(/\n+/).map(function (line) { return line.trim(); }).filter(Boolean);
+    if (lines.length > 1) {
+      parts = lines;
     } else {
-      revealPanels.forEach(function (panel) { panel.classList.add("is-visible"); });
+      var sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+      var bucket = "";
+      sentences.forEach(function (sentence) {
+        if ((bucket + " " + sentence).trim().length > 260 && bucket) {
+          parts.push(bucket.trim());
+          bucket = sentence;
+        } else {
+          bucket = (bucket ? bucket + " " : "") + sentence;
+        }
+      });
+      if (bucket.trim()) parts.push(bucket.trim());
     }
-
-    var initCarousel = function (carousel) {
-      var slides = Array.prototype.slice.call(carousel.querySelectorAll("[data-carousel-slide]"));
-      var thumbs = Array.prototype.slice.call(carousel.querySelectorAll("[data-carousel-thumb]"));
-      var prev = carousel.querySelector("[data-carousel-prev]");
-      var next = carousel.querySelector("[data-carousel-next]");
-      var count = carousel.querySelector("[data-carousel-count]");
-      var open = carousel.querySelector("[data-lightbox-open]");
-      var stage = carousel.querySelector(".carousel-slides");
-      var index = 0;
-
-      var setSlide = function (target) {
-        if (!slides.length) {
-          return;
-        }
-        index = ((target % slides.length) + slides.length) % slides.length;
-        slides.forEach(function (slide, i) {
-          slide.classList.toggle("is-active", i === index);
-        });
-        thumbs.forEach(function (thumb, i) {
-          thumb.classList.toggle("is-active", i === index);
-        });
-        if (count) {
-          count.textContent = (index + 1) + " / " + slides.length;
-        }
-        if (prev) {
-          prev.disabled = slides.length <= 1;
-        }
-        if (next) {
-          next.disabled = slides.length <= 1;
-        }
-      };
-
-      if (prev) {
-        prev.addEventListener("click", function () { setSlide(index - 1); });
-      }
-      if (next) {
-        next.addEventListener("click", function () { setSlide(index + 1); });
-      }
-      thumbs.forEach(function (thumb, i) {
-        thumb.addEventListener("click", function () { setSlide(i); });
-      });
-      slides.forEach(function (slide, i) {
-        slide.addEventListener("click", function () { setSlide(i); openLightbox(slides[index]); });
-      });
-      if (open) {
-        open.addEventListener("click", function () { openLightbox(slides[index]); });
-      }
-      if (stage) {
-        stage.addEventListener("keydown", function (event) {
-          if (event.key === "ArrowLeft") {
-            event.preventDefault();
-            setSlide(index - 1);
-          } else if (event.key === "ArrowRight") {
-            event.preventDefault();
-            setSlide(index + 1);
-          }
-        });
-        var touchStartX = null;
-        stage.addEventListener("touchstart", function (event) {
-          touchStartX = event.changedTouches[0].clientX;
-        }, { passive: true });
-        stage.addEventListener("touchend", function (event) {
-          if (touchStartX === null) {
-            return;
-          }
-          var delta = event.changedTouches[0].clientX - touchStartX;
-          if (Math.abs(delta) > 45) {
-            setSlide(index + (delta < 0 ? 1 : -1));
-          }
-          touchStartX = null;
-        }, { passive: true });
-      }
-
-      setSlide(0);
-    };
-
-    document.querySelectorAll("[data-carousel]").forEach(initCarousel);
-
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape") {
-        closeLightbox();
-      }
+    if (parts.length < 2) return;
+    element.innerHTML = "";
+    parts.forEach(function (part) {
+      var paragraph = document.createElement("p");
+      paragraph.className = "prose-paragraph";
+      paragraph.textContent = part;
+      element.appendChild(paragraph);
     });
-    window.addEventListener("scroll", updateProgress, { passive: true });
-    updateProgress();
-    if (sections.length > 0) {
-      activateLink(sections[0].id);
-    }
-  })();
-  </script>
+  }
+  document.querySelectorAll("[data-chunk-prose]").forEach(chunkTextBlock);
+
+  function updateProgress() {
+    if (!progress) return;
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    var pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+    progress.style.inlineSize = Math.min(100, Math.max(0, pct)) + "%";
+  }
+  window.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  if ("IntersectionObserver" in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      var visible = entries
+        .filter(function (entry) { return entry.isIntersecting; })
+        .sort(function (a, b) { return b.intersectionRatio - a.intersectionRatio; })[0];
+      if (!visible) return;
+      links.forEach(function (link) {
+        link.classList.toggle("is-active", link.getAttribute("href") === "#" + visible.target.id);
+      });
+    }, { rootMargin: "-20% 0px -60% 0px", threshold: [0.08, 0.18, 0.32] });
+    sections.forEach(function (section) { observer.observe(section); });
+  }
+})();
+</script>
 </body>
 </html>

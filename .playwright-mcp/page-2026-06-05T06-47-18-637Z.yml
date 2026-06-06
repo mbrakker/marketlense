@@ -1,0 +1,218 @@
+- generic [active] [ref=e1]:
+  - link "Skip to report" [ref=e2] [cursor=pointer]:
+    - /url: "#content"
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "MarketBearing" [ref=e5] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e6]: MarketBearing
+      - navigation "Primary" [ref=e8]:
+        - link "Reports" [ref=e9] [cursor=pointer]:
+          - /url: "#"
+        - link "Signals" [ref=e10] [cursor=pointer]:
+          - /url: "#"
+        - link "Publishers" [ref=e11] [cursor=pointer]:
+          - /url: "#"
+        - link "Methodology" [ref=e12] [cursor=pointer]:
+          - /url: "#"
+      - link "Original render" [ref=e13] [cursor=pointer]:
+        - /url: allegro-2026-trends-macrotrends-es-acig-pdf.html
+  - main [ref=e15]:
+    - region "Macrotrends are becoming an operating system for brand trust." [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - paragraph [ref=e19]: Executive intelligence brief
+          - heading "Macrotrends are becoming an operating system for brand trust." [level=1] [ref=e20]
+          - paragraph [ref=e21]: Allegro 234's 2026 outlook points to a market where personalization, transparency, sustainability, omnichannel orchestration and AI governance are no longer separate workstreams. They are converging into the core operating model for consumer brands.
+          - generic "Report metadata" [ref=e22]:
+            - generic [ref=e23]: Allegro 234
+            - generic [ref=e24]: 2026 outlook
+            - generic [ref=e25]: Global urban markets with European emphasis
+            - generic [ref=e26]: Consumer behavior and omnichannel commerce
+        - complementary "Report signal summary" [ref=e27]:
+          - generic [ref=e28]:
+            - paragraph [ref=e29]: Lead signal
+            - paragraph [ref=e30]: Trust velocity
+            - paragraph [ref=e31]: Brands need faster relevance without losing evidence, transparency or human judgment.
+          - generic "Artifact summary" [ref=e32]:
+            - generic [ref=e33]:
+              - strong [ref=e34]: "9"
+              - generic [ref=e35]: high-confidence findings
+            - generic [ref=e36]:
+              - strong [ref=e37]: "7"
+              - generic [ref=e38]: source quotes
+            - generic [ref=e39]:
+              - strong [ref=e40]: "6"
+              - generic [ref=e41]: taxonomy signals
+    - generic [ref=e42]:
+      - complementary "Report sections" [ref=e43]:
+        - paragraph [ref=e44]: Navigate
+        - navigation [ref=e45]:
+          - link "At a glance" [ref=e46] [cursor=pointer]:
+            - /url: "#glance"
+          - link "Findings" [ref=e47] [cursor=pointer]:
+            - /url: "#findings"
+          - link "Implications" [ref=e48] [cursor=pointer]:
+            - /url: "#implications"
+          - link "Evidence" [ref=e49] [cursor=pointer]:
+            - /url: "#evidence"
+          - link "Topic map" [ref=e50] [cursor=pointer]:
+            - /url: "#map"
+          - link "Source" [ref=e51] [cursor=pointer]:
+            - /url: "#source"
+          - link "Appendix" [ref=e52] [cursor=pointer]:
+            - /url: "#appendix"
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - paragraph [ref=e56]: 01. At a glance
+            - heading "The report's executive message in five moves." [level=2] [ref=e58]
+          - generic [ref=e59]:
+            - article [ref=e60]:
+              - paragraph [ref=e61]: "01"
+              - heading "Radical transparency becomes a commercial requirement." [level=3] [ref=e62]
+              - paragraph [ref=e63]: Consumers expect evidence of supply origins, sustainability performance and labor conditions rather than campaign-level claims.
+            - article [ref=e64]:
+              - paragraph [ref=e65]: "02"
+              - heading "AI is connective tissue, not a standalone capability." [level=3] [ref=e66]
+              - paragraph [ref=e67]: The report links AI and data to forecasting, personalization, supply-chain optimization, customer service and content creation.
+            - article [ref=e68]:
+              - paragraph [ref=e69]: "03"
+              - heading "Omnichannel shifts from channel mix to ecosystem control." [level=3] [ref=e70]
+              - paragraph [ref=e71]: Brands need consistent content, pricing and experiences across ecommerce, physical retail, social commerce, D2C and platforms.
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - paragraph [ref=e74]: 02. Findings
+            - generic [ref=e75]:
+              - heading "What the analysis says." [level=2] [ref=e76]
+              - paragraph [ref=e77]: The current generated report contains useful evidence. The prototype brings the strongest findings forward and turns the rest into supporting material.
+          - generic [ref=e78]:
+            - article [ref=e79]:
+              - generic [ref=e80]: "1"
+              - generic [ref=e81]:
+                - heading "Consumers expect demonstrable action, not brand claims." [level=3] [ref=e82]
+                - paragraph [ref=e83]: Brands face pressure for radical transparency and authentic behavior, including proof around origins, sustainability and labor conditions.
+                - paragraph [ref=e84]: "Evidence: finding F1, page 12"
+            - article [ref=e85]:
+              - generic [ref=e86]: "2"
+              - generic [ref=e87]:
+                - heading "Value alignment increasingly shapes purchase decisions." [level=3] [ref=e88]
+                - paragraph [ref=e89]: Sustainability, ethical sourcing, social impact and corporate practices are framed as drivers of consumer choice across FMCG, durables and services.
+                - paragraph [ref=e90]: "Evidence: finding F2, pages 17 and 7"
+            - article [ref=e91]:
+              - generic [ref=e92]: "3"
+              - generic [ref=e93]:
+                - heading "Sustainability moves from CSR to operating strategy." [level=3] [ref=e94]
+                - paragraph [ref=e95]: Circularity, refill systems and regenerative sourcing are positioned as routes to economic value as well as environmental outcomes.
+                - paragraph [ref=e96]: "Evidence: finding F3, pages 10 and 21"
+            - article [ref=e97]:
+              - generic [ref=e98]: "4"
+              - generic [ref=e99]:
+                - heading "Competition shifts to omnichannel ecosystems." [level=3] [ref=e100]
+                - paragraph [ref=e101]: Winning brands must orchestrate content, pricing and experience across ecommerce, physical retail, social commerce, D2C and platform partners.
+                - paragraph [ref=e102]: "Evidence: finding F4, pages 23 and 9"
+            - article [ref=e103]:
+              - generic [ref=e104]: "5"
+              - generic [ref=e105]:
+                - heading "AI and data create power and accountability." [level=3] [ref=e106]
+                - paragraph [ref=e107]: AI enables forecasting, personalization, supply-chain optimization, service automation and content creation while raising transparency and ethics requirements.
+                - paragraph [ref=e108]: "Evidence: finding F5, pages 25 and 26"
+        - generic [ref=e109]:
+          - generic [ref=e110]:
+            - paragraph [ref=e111]: 03. Strategic implications
+            - heading "What leadership teams should do with it." [level=2] [ref=e113]
+          - generic [ref=e114]:
+            - article [ref=e115]:
+              - heading "Build a transparency evidence layer." [level=3] [ref=e116]
+              - paragraph [ref=e117]: Map proof points for origins, labor, sustainability and corporate practices. Treat the evidence layer as product infrastructure, not campaign copy.
+              - generic [ref=e118]:
+                - generic [ref=e119]: Trust
+                - generic [ref=e120]: Governance
+            - article [ref=e121]:
+              - heading "Connect AI use cases to explicit ethics controls." [level=3] [ref=e122]
+              - paragraph [ref=e123]: Pair personalization, forecasting and automation investments with explainability, review and escalation mechanisms so speed does not erode trust.
+              - generic [ref=e124]:
+                - generic [ref=e125]: AI
+                - generic [ref=e126]: Data
+            - article [ref=e127]:
+              - heading "Design omnichannel from the operating center." [level=3] [ref=e128]
+              - paragraph [ref=e129]: Unify content, price, availability and service rules across marketplaces, retail, D2C and social commerce while preserving local channel flexibility.
+              - generic [ref=e130]:
+                - generic [ref=e131]: Omnichannel
+                - generic [ref=e132]: Retail logistics
+            - article [ref=e133]:
+              - heading "Move sustainability into product economics." [level=3] [ref=e134]
+              - paragraph [ref=e135]: Evaluate circular models, refill systems and regenerative sourcing as growth and resilience decisions, not just reputational initiatives.
+              - generic [ref=e136]:
+                - generic [ref=e137]: Sustainability
+                - generic [ref=e138]: Assortment
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - paragraph [ref=e141]: 04. Evidence
+            - heading "Verbatim signals worth keeping close." [level=2] [ref=e143]
+          - generic [ref=e144]:
+            - figure "Allegro 234, report page 3" [ref=e145]:
+              - blockquote [ref=e146]: "\"La gente espera que las marcas, plataformas y servicios se adapten continuamente a sus comportamientos y contextos. La personalización estática ya no es suficiente; La relevancia en tiempo real ahora impulsa la confianza, el compromiso y la lealtad.\""
+              - generic [ref=e147]: Allegro 234, report page 3
+            - figure "Allegro 234, report page 12" [ref=e148]:
+              - blockquote [ref=e149]: "\"La transparencia no es opcional; Es un diferenciador competitivo. Las marcas que adoptan la honestidad visible ganan lealtad, especialmente cuando los consumidores alinean las compras con la identidad y los valores.\""
+              - generic [ref=e150]: Allegro 234, report page 12
+            - figure "Allegro 234, report page 9" [ref=e151]:
+              - blockquote [ref=e152]: "\"El comercio electrónico ya no es complementario: ahora es una expectativa predeterminada.\""
+              - generic [ref=e153]: Allegro 234, report page 9
+        - generic [ref=e154]:
+          - generic [ref=e155]:
+            - paragraph [ref=e156]: 05. Topic map
+            - generic [ref=e157]:
+              - heading "Collapse the long inventory into decision areas." [level=2] [ref=e158]
+              - paragraph [ref=e159]: The original render exposed 34 topics and 34 cards. This prototype keeps the map navigable by grouping the source sections into five executive clusters.
+          - generic [ref=e160]:
+            - group [ref=e161]:
+              - generic "Consumer behavior and value alignment -" [ref=e162] [cursor=pointer]
+              - generic [ref=e163]:
+                - paragraph [ref=e164]: Covers personalization, ethical consumption, participation, co-creation and changing expectations inside consumer categories.
+                - list [ref=e165]:
+                  - listitem [ref=e166]: Personalization adaptativa y relevancia contextual
+                  - listitem [ref=e167]: Consumo impulsado por el valor y alineación ética
+                  - listitem [ref=e168]: Participación activa y concreción en la cultura del consumo
+            - group [ref=e169]:
+              - generic "Digital commerce and omnichannel systems +" [ref=e170] [cursor=pointer]
+            - group [ref=e171]:
+              - generic "Sustainability and product economics +" [ref=e172] [cursor=pointer]
+            - group [ref=e173]:
+              - generic "AI, data and technology integration +" [ref=e174] [cursor=pointer]
+            - group [ref=e175]:
+              - generic "Brand trust, dialogue and ecosystem collaboration +" [ref=e176] [cursor=pointer]
+        - generic [ref=e177]:
+          - generic [ref=e178]:
+            - paragraph [ref=e179]: 06. Source document
+            - heading "Keep the PDF visible, but no longer let it lead the page." [level=2] [ref=e181]
+          - generic [ref=e182]:
+            - figure "Source preview generated from the ingested PDF." [ref=e183]:
+              - img "Preview of the Allegro 234 2026 macrotrends report cover" [ref=e184]
+              - generic [ref=e185]: Source preview generated from the ingested PDF.
+            - generic [ref=e186]:
+              - paragraph [ref=e187]: "Source: \"Otro más hablando de tendencias de 2026 | Sobre macrotendencias\" by Allegro 234. The artifact set includes doc map, findings, limitations, methods, quotes, taxonomy, validation and signal extraction outputs."
+              - list [ref=e188]:
+                - listitem [ref=e189]:
+                  - strong [ref=e190]: "Method basis:"
+                  - text: curated expert synthesis and secondary research aggregation, including sector-level examples.
+                - listitem [ref=e191]:
+                  - strong [ref=e192]: "Coverage:"
+                  - text: people, economic sectors, brands, interaction models and strategic intersections.
+                - listitem [ref=e193]:
+                  - strong [ref=e194]: "Limitations:"
+                  - text: no explicit limitations were extracted in the current report artifacts.
+        - generic [ref=e195]:
+          - generic [ref=e196]:
+            - paragraph [ref=e197]: 07. Appendix
+            - heading "Generated extras belong behind the fold." [level=2] [ref=e199]
+          - generic [ref=e200]:
+            - group [ref=e201]:
+              - generic "Expert comment generated from the artifacts +" [ref=e202] [cursor=pointer]
+            - group [ref=e203]:
+              - generic "LinkedIn post generated from the artifacts +" [ref=e204] [cursor=pointer]
+  - contentinfo [ref=e205]:
+    - generic [ref=e206]:
+      - generic [ref=e207]: MarketBearing executive report prototype
+      - generic [ref=e208]: "Source artifact: 1Vb-rfGTlveFN3syYW_y1aO61GJJIw6mY"

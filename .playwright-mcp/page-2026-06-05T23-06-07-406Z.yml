@@ -1,0 +1,294 @@
+- generic [active] [ref=e1]:
+  - link "Skip to report" [ref=e2] [cursor=pointer]:
+    - /url: "#content"
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "MarketBearing report home" [ref=e5] [cursor=pointer]:
+        - /url: "#overview"
+        - generic [ref=e6]: MarketBearing
+      - navigation "Primary report sections" [ref=e8]:
+        - link "Overview" [ref=e9] [cursor=pointer]:
+          - /url: "#overview"
+        - link "Findings" [ref=e10] [cursor=pointer]:
+          - /url: "#findings"
+        - link "Signals" [ref=e11] [cursor=pointer]:
+          - /url: "#signals"
+        - link "Evidence" [ref=e12] [cursor=pointer]:
+          - /url: "#evidence"
+        - link "Expert view" [ref=e13] [cursor=pointer]:
+          - /url: "#expert"
+        - link "Taxonomy" [ref=e14] [cursor=pointer]:
+          - /url: "#taxonomy"
+        - link "Source" [ref=e15] [cursor=pointer]:
+          - /url: "#source"
+      - generic [ref=e16]: Internal Audit Foundation · 2026
+  - main [ref=e18]:
+    - region "Asia Pacific Risk in Focus" [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - paragraph [ref=e22]: Executive intelligence brief
+          - heading "Asia Pacific Risk in Focus" [level=1] [ref=e23]
+          - paragraph [ref=e24]: "Risk in Focus: Asia Pacific (865 survey responses across 22 countries, plus 3 roundtables and 3 in‑depth interviews) finds cybersecurity to be the top regional risk (~62%), followed by business resilience (~58%), human capital (~56%), and digital disruption (~39%). Subregion patterns vary: East Asia emphasizes human capital (60%) and market changes (58%); Southeast Asia ranks cybersecurity and business resilience above 60% but shows a gap for digital disruption (52% risk vs 32% audit priority); the Pacific ties business resilience and cybersecurity; South Asia reports especially high technology risk (cybersecurity 75%, digital disruption 56%). The report flags persistent risk–audit priority misalignments, with human capital and digital disruption receiving substantially less internal audit effort than their risk rankings warrant. Practical internal audit responses recommended across subregions include aligning audit plans to strategic risks, testing supply chain and business continuity plans, advising on AI adoption and controls, upskilling staff, and leveraging external/third‑party resources. The authors note limitations from Asia Pacific’s diverse landscape and varying subregion sample sizes, but present these findings as a regional benchmark to inform internal audit prioritization and capacity building."
+          - list "Report metadata" [ref=e25]:
+            - listitem [ref=e26]: "Title: Asia Pacific Risk in Focus"
+            - listitem [ref=e27]: "Publisher: Internal Audit Foundation"
+            - listitem [ref=e28]: "Year: 2026"
+            - listitem [ref=e29]: "Region: Asia Pacific"
+        - complementary "Core report signal and score" [ref=e30]:
+          - generic [ref=e31]:
+            - paragraph [ref=e32]: Core signal
+            - heading "Cybersecurity is the highest‑rated risk across Asia..." [level=2] [ref=e33]
+            - paragraph [ref=e34]: Cybersecurity, business resilience, human capital, and digital disruption are the leading risks across Asia Pacific (survey n=865, 22 countries), with notable gaps between risk rankings...
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - strong [ref=e37]: "5"
+              - generic [ref=e38]: source-backed findings
+            - generic [ref=e39]:
+              - strong [ref=e40]: "4"
+              - generic [ref=e41]: verbatim report signals
+            - generic [ref=e42]:
+              - strong [ref=e43]: "9"
+              - generic [ref=e44]: taxonomy themes
+          - generic "Downloaded report quality score" [ref=e45]:
+            - generic [ref=e46]:
+              - generic [ref=e47]: Report quality
+              - strong [ref=e48]: Pending
+              - generic [ref=e49]: Source quality score unavailable for this report.
+            - list "Score dimensions" [ref=e51]:
+              - listitem [ref=e52]:
+                - generic [ref=e53]: Market insight depth
+                - generic [ref=e54]: N/A
+              - listitem [ref=e56]:
+                - generic [ref=e57]: Evidence specificity
+                - generic [ref=e58]: N/A
+              - listitem [ref=e60]:
+                - generic [ref=e61]: Decision relevance
+                - generic [ref=e62]: N/A
+              - listitem [ref=e64]:
+                - generic [ref=e65]: Recency timeliness
+                - generic [ref=e66]: N/A
+              - listitem [ref=e68]:
+                - generic [ref=e69]: Source authority originality
+                - generic [ref=e70]: N/A
+    - generic [ref=e72]:
+      - complementary "Report sections" [ref=e73]:
+        - paragraph [ref=e74]: Navigate
+        - navigation [ref=e75]:
+          - link "Overview" [ref=e76] [cursor=pointer]:
+            - /url: "#overview"
+          - link "Findings" [ref=e77] [cursor=pointer]:
+            - /url: "#findings"
+          - link "Visual candidates" [ref=e78] [cursor=pointer]:
+            - /url: "#candidates"
+          - link "Signals" [ref=e79] [cursor=pointer]:
+            - /url: "#signals"
+          - link "Evidence" [ref=e80] [cursor=pointer]:
+            - /url: "#evidence"
+          - link "Expert view" [ref=e81] [cursor=pointer]:
+            - /url: "#expert"
+          - link "Taxonomy" [ref=e82] [cursor=pointer]:
+            - /url: "#taxonomy"
+          - link "Source" [ref=e83] [cursor=pointer]:
+            - /url: "#source"
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - generic [ref=e86]:
+            - paragraph [ref=e87]: 01. Overview
+            - generic [ref=e88]:
+              - heading "Asia Pacific Risk in Focus" [level=2] [ref=e89]
+              - paragraph [ref=e90]: MarketBearing synthesis of the source report for fast executive review, publishing and reuse.
+          - article "Report TLDR and executive summary" [ref=e91]:
+            - generic [ref=e92]:
+              - generic [ref=e93]: TLDR
+              - paragraph [ref=e94]: Cybersecurity, business resilience, human capital, and digital disruption are the leading risks across Asia Pacific (survey n=865, 22 countries), with notable gaps between risk rankings and internal audit priorities—especially for human capital and digital/AI.
+            - generic [ref=e96]:
+              - heading "Executive summary" [level=3] [ref=e97]
+              - paragraph [ref=e98]: "Risk in Focus: Asia Pacific (865 survey responses across 22 countries, plus 3 roundtables and 3 in‑depth interviews) finds cybersecurity to be the top regional risk (~62%), followed by business resilience (~58%), human capital (~56%), and digital disruption (~39%). Subregion patterns vary: East Asia emphasizes human capital (60%) and market changes (58%); Southeast Asia ranks cybersecurity and business resilience above 60% but shows a gap for digital disruption (52% risk vs 32% audit priority); the Pacific ties business resilience and cybersecurity; South Asia reports especially high technology risk (cybersecurity 75%, digital disruption 56%). The report flags persistent risk–audit priority misalignments, with human capital and digital disruption receiving substantially less internal audit effort than their risk rankings warrant. Practical internal audit responses recommended across subregions include aligning audit plans to strategic risks, testing supply chain and business continuity plans, advising on AI adoption and controls, upskilling staff, and leveraging external/third‑party resources. The authors note limitations from Asia Pacific’s diverse landscape and varying subregion sample sizes, but present these findings as a regional benchmark to inform internal audit prioritization and capacity building."
+          - generic "Executive claim evidence map" [ref=e99]:
+            - article [ref=e100]:
+              - text: "01"
+              - paragraph [ref=e101]:
+                - strong [ref=e102]: Cybersecurity is the top-rated risk across Asia Pacific (~62%) and leads in multiple subregions.
+                - generic [ref=e103]: F1_cybersecurity_top_risk · report pages 39, 32, 51
+            - article [ref=e104]:
+              - text: "02"
+              - paragraph [ref=e105]:
+                - strong [ref=e106]: Business resilience is a top regional risk (~58%) and aligns closely with audit priorities; in the Pacific it ties with cybersecurity.
+                - generic [ref=e107]: F2_business_resilience_priority · report pages 4, 19
+            - article [ref=e108]:
+              - text: "03"
+              - paragraph [ref=e109]:
+                - strong [ref=e110]: Human capital is highly ranked as a risk (≈56%; East Asia 60%) but typically receives substantially less internal audit effort, creating a notable risk–audit gap.
+                - generic [ref=e111]: F3_human_capital_gap · report pages 13, 11, 7
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - paragraph [ref=e114]: 02. Findings
+            - generic [ref=e115]:
+              - heading "High-confidence findings from the report analysis." [level=2] [ref=e116]
+              - paragraph [ref=e117]: Each finding is generated from the report artifacts and keeps available page evidence visible.
+          - generic [ref=e118]:
+            - article [ref=e119]:
+              - generic [ref=e120]:
+                - generic [ref=e121]: Report-supported
+                - generic [ref=e122]: F1_cybersecurity_top_risk · report pages 39, 32, 51
+              - heading "Cybersecurity is the highest‑rated risk across Asia Pacific (~62% regional average) and is even higher in some subregions (Southeast Asia 67%; South Asia 75%)." [level=3] [ref=e123]
+            - article [ref=e124]:
+              - generic [ref=e125]:
+                - generic [ref=e126]: Report-supported
+                - generic [ref=e127]: F2_business_resilience_priority · report pages 4, 19
+              - heading "Business resilience is a top regional risk (~58%) and is closely aligned with audit priorities; in the Pacific it ties with cybersecurity as the most‑cited Top‑5 risk." [level=3] [ref=e128]
+            - article [ref=e129]:
+              - generic [ref=e130]:
+                - generic [ref=e131]: Report-supported
+                - generic [ref=e132]: F3_human_capital_gap · report pages 13, 11, 7
+              - heading "Human capital is a high‑ranked risk (~56% region; East Asia 60%) but generally receives substantially less internal‑audit effort, indicating a notable risk–audit priority gap (reported gaps of 14–30 percentage points)." [level=3] [ref=e133]
+            - article [ref=e134]:
+              - generic [ref=e135]:
+                - generic [ref=e136]: Report-supported
+                - generic [ref=e137]: F4_digital_disruption_underprioritized · report pages 39, 32, 28
+              - 'heading "Digital disruption (including AI) is an emerging regional risk (~39% APAC; Southeast Asia 52%) but is under‑prioritized by internal audit (example: Southeast Asia — 52% risk vs 32% audit priority)." [level=3] [ref=e138]'
+            - article [ref=e139]:
+              - generic [ref=e140]:
+                - generic [ref=e141]: Report-supported
+                - generic [ref=e142]: F5_south_asia_tech_risks · report pages 25, 5
+              - 'heading "South Asia reports particularly elevated technology risks: 75% of respondents rated cybersecurity as a Top‑5 risk and 56% rated digital disruption as a Top‑5 risk." [level=3] [ref=e143]'
+        - generic [ref=e144]:
+          - generic [ref=e145]:
+            - paragraph [ref=e146]: 03. Visual candidates
+            - generic [ref=e147]:
+              - heading "Top extracted tables and charts." [level=2] [ref=e148]
+              - paragraph [ref=e149]: The carousel shows cropped visual candidates selected from report extraction. It is hidden when no cropped visual evidence exists.
+          - paragraph [ref=e151]: Showing 1 visual candidate from this analysis.
+          - generic "Top extracted visual candidates" [ref=e152]:
+            - article [ref=e153]:
+              - figure "Image · page 9 PAGE 9 OF 57" [ref=e154]:
+                - img "Selected figure from Asia Pacific Risk in Focus" [ref=e155]
+                - generic [ref=e156]:
+                  - generic [ref=e157]: Image · page 9
+                  - heading "PAGE 9 OF 57" [level=3] [ref=e158]
+        - generic [ref=e159]:
+          - generic [ref=e160]:
+            - paragraph [ref=e161]: 04. Signals
+            - generic [ref=e162]:
+              - heading "Report signals organized for decision review." [level=2] [ref=e163]
+              - paragraph [ref=e164]: These are directional signals extracted from this report and grounded in its claims, topics and findings. Single-report support should be read as source evidence, not cross-market consensus.
+          - generic [ref=e165]:
+            - article [ref=e166]:
+              - heading "Executive Summary" [level=3] [ref=e167]
+              - paragraph [ref=e168]: "Provides an overview of participation and regional differences in risks and audit priorities; summarizes top risks and subregion highlights, including East Asia, Pacific, South Asia, and Southeast Asia. Participation numbers and high-level findings are presented. Asia Pacific participation: 865 survey responses, 22 countries, 3 roundtables, 3 in-depth interviews. Regional concerns emphasize geopolitical uncertainty, cybersecurity, and rapid adoption of AI/digital technologies. Subregion summaries highlight differences (e.g., East Asia: human capital and market changes; Pacific: business resilience tied with cybersecurity)."
+            - article [ref=e169]:
+              - heading "Section 1. Asia Pacific’s Risk Environment" [level=3] [ref=e170]
+              - paragraph [ref=e171]: Presents region-level risk rankings and context for how diverse economies shape risk priorities; includes survey-based rankings of top risks across the Asia Pacific. Top region-level risks include Cybersecurity (62%), Business resilience (58%), Human capital (56%), and Digital disruption (39%). The section frames how differing national economies (e.g., manufacturing hubs, service-driven economies) lead to varied risk profiles.
+            - article [ref=e172]:
+              - heading "Section 2. East Asia" [level=3] [ref=e173]
+              - paragraph [ref=e174]: Details East Asia’s risk profile where human capital (60%) slightly edged out cybersecurity (59%), and market changes/competition are especially pronounced (58% — the highest globally). The section includes roundtable insights on controls, supply chain, and advising boards. Human capital (60%) edged out cybersecurity (59%) as the top-cited risk for East Asia (Section 2, Exhibit 1). Market changes/competition in East Asia are the highest globally at 58% (Section 2, Exhibit 1). Internal audit strategies include focusing on controls (governance, supply chain, digital disruption), testing supply chain reliability, and deepening business strategy knowledge.
+            - article [ref=e175]:
+              - heading "Section 3. Pacific" [level=3] [ref=e176]
+              - paragraph [ref=e177]: Highlights the Pacific subregion where business resilience and cybersecurity are tied as top risks; emphasizes understanding strategic risks, market changes, and fundamentals (controls, funding, people) to manage uncertainty. Business resilience tied with cybersecurity as the most cited Top 5 risk in the Pacific. Digital disruption (including AI) appears in the Pacific Top 5 risks; human capital ranked third. Advised internal audit actions include aligning audit plans to strategic risks, reviewing risk management fundamentals, and providing advisory services on recruitment and retention.
+            - article [ref=e178]:
+              - heading "Section 4. South Asia" [level=3] [ref=e179]
+              - paragraph [ref=e180]: "Presents South Asia survey findings showing high rankings for business resilience (49%) and geopolitical uncertainty (47%), with strong concern about technology risks (cybersecurity 75%, digital disruption 56%). The section lists audit strategies to address these risks. Risk rankings: business resilience (49%) and geopolitical uncertainty (47%) are prominent in South Asia. Technology risks are elevated: cybersecurity rated Top 5 by 75% and digital disruption by 56% of respondents. Internal audit strategies include testing supply chain and business continuity plans, advising on AI adoption and assurance over controls, and upskilling staff."
+            - article [ref=e181]:
+              - heading "Section 5. Southeast Asia" [level=3] [ref=e182]
+              - paragraph [ref=e183]: "Describes Southeast Asia where cybersecurity and business resilience top both risk rankings and audit priorities; digital disruption is recognized as a growing risk but is a lower audit priority, and human capital remains a significant concern. Cybersecurity and business resilience are the top-ranked risks and audit priorities in Southeast Asia (above 60%). Digital disruption was included as a Top 5 risk by 52% but as a Top 5 audit priority by only 32%, suggesting capability/resource gaps. Internal audit strategies: be transparent with governing bodies about capabilities, leverage third-party help, and use external resources to build staff skills."
+        - generic [ref=e184]:
+          - generic [ref=e185]:
+            - paragraph [ref=e186]: 05. Evidence
+            - generic [ref=e187]:
+              - heading "Verbatim signals from the report." [level=2] [ref=e188]
+              - paragraph [ref=e189]: Quoted evidence is kept close to its report citation when page references are available.
+          - generic [ref=e190]:
+            - figure "Internal Audit Foundation expert team q1 · report page 17 · Section 3. Pacific" [ref=e191]:
+              - blockquote [ref=e192]: “One of the first things that internal audit functions really can do quite easily is look at risk management, look at the controls, look at what’s actually happening, and use common sense.”
+              - generic [ref=e193]:
+                - text: Internal Audit Foundation expert team
+                - text: q1 · report page 17 · Section 3. Pacific
+            - generic [ref=e194]:
+              - figure "Internal Audit Foundation expert team q3 · report page 12 · Section 2. East Asia" [ref=e195]:
+                - blockquote [ref=e196]: “I think auditors actually need to become analytical and forward-looking because the world is changing so fast.”
+                - generic [ref=e197]:
+                  - text: Internal Audit Foundation expert team
+                  - text: q3 · report page 12 · Section 2. East Asia
+              - figure "Internal Audit Foundation expert team q4 · report page 22 · Section 4. South Asia" [ref=e198]:
+                - blockquote [ref=e199]: “Generally, we look at risk with a negative connotation. We miss the point to look at it from the opportunity-seizing perspective.”
+                - generic [ref=e200]:
+                  - text: Internal Audit Foundation expert team
+                  - text: q4 · report page 22 · Section 4. South Asia
+              - figure "Internal Audit Foundation expert team q6 · report page 29 · Section 5. Southeast Asia" [ref=e201]:
+                - blockquote [ref=e202]: “Information provided to the governing body must include that we have a strategy moving forward to ensure that whatever money that’s invested actually derives the returns that we want.”
+                - generic [ref=e203]:
+                  - text: Internal Audit Foundation expert team
+                  - text: q6 · report page 29 · Section 5. Southeast Asia
+        - generic [ref=e204]:
+          - generic [ref=e205]:
+            - paragraph [ref=e206]: 06. Expert view
+            - generic [ref=e207]:
+              - heading "MarketBearing analyst comment." [level=2] [ref=e208]
+              - paragraph [ref=e209]: Our team's reading of the report connects the extracted evidence to decisions facing business, brand and digital leaders.
+          - article [ref=e210]:
+            - complementary [ref=e211]:
+              - generic [ref=e212]: MB
+              - generic [ref=e213]:
+                - heading "Expert perspective from our intelligence team" [level=3] [ref=e214]
+                - paragraph [ref=e215]: Focused on trust, operating model and commercial execution.
+            - generic [ref=e217]:
+              - paragraph [ref=e218]: The report demonstrates a concentrated risk profile in Asia Pacific where cybersecurity and business resilience dominate the agenda. Cybersecurity is the highest‑rated regional risk (~62%) while business resilience is near 58%, and in the Pacific these two are cited with equal prominence. That alignment indicates internal audit is already prioritizing continuity and defensive controls at a subregional level.
+              - paragraph [ref=e219]: "A notable tension emerges between those prioritized areas and undercovered strategic risks: human capital and digital disruption. Human capital is rated at roughly 56% regionally (60% in East Asia) yet audit effort is substantially lower, with reported risk–audit gaps of 14–30 percentage points; digital disruption is an emerging risk (~39% APAC; 52% in Southeast Asia) but is under‑prioritized by internal audit in Southeast Asia (52% risk versus 32% audit priority). The report recommends concrete corrective actions: align audit plans to strategic risks, test supply‑chain and continuity plans, advise on AI adoption and controls, upskill staff, and leverage external resources."
+              - paragraph [ref=e220]: For senior leaders the practical implication is to rebalance operating models and audit capacity without eroding hard‑won resilience and cyber programs. Internal audit should be mobilized as both an assurance and advisory function to connect technology adoption and workforce vulnerabilities to board strategy. "Information provided to the governing body must include that we have a strategy moving forward to ensure that whatever money that’s invested actually derives the returns that we want." The report frames these findings as a regional benchmark to inform internal audit prioritization and capacity building.
+              - paragraph [ref=e221]: "- Cybersecurity: ~62% regional; Southeast Asia 67%; South Asia 75%"
+              - paragraph [ref=e222]: "- Business resilience: ~58% regional; ties with cybersecurity in the Pacific"
+              - paragraph [ref=e223]: "- Human capital: ~56% regional; East Asia 60%; risk–audit gaps reported at 14–30 percentage points"
+              - paragraph [ref=e224]: "- Digital disruption: ~39% APAC; Southeast Asia 52% Top‑5 risk vs 32% Top‑5 audit priority"
+              - paragraph [ref=e225]: "- South Asia: cybersecurity Top‑5 = 75%; digital disruption Top‑5 = 56%"
+          - group [ref=e226]:
+            - generic "LinkedIn-ready post" [ref=e227] [cursor=pointer]:
+              - generic [ref=e228]:
+                - generic [ref=e229]: in
+                - text: LinkedIn-ready post
+        - generic [ref=e230]:
+          - generic [ref=e231]:
+            - paragraph [ref=e232]: 07. Taxonomy
+            - generic [ref=e233]:
+              - heading "The report taxonomy and coverage map." [level=2] [ref=e234]
+              - paragraph [ref=e235]: Tags, categories and chapter structure are generated from the normalized report analysis.
+          - generic [ref=e236]:
+            - group [ref=e237]:
+              - generic "Categories" [ref=e238] [cursor=pointer]
+              - list [ref=e240]:
+                - listitem [ref=e241]:
+                  - generic [ref=e242]: Technology & Innovation
+            - group [ref=e243]:
+              - generic "Tags" [ref=e244] [cursor=pointer]
+            - group [ref=e245]:
+              - generic "Ordered chapters" [ref=e246] [cursor=pointer]
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - paragraph [ref=e249]: 08. Source
+            - generic [ref=e250]:
+              - heading "Source basis and method." [level=2] [ref=e251]
+              - paragraph [ref=e252]: The report page keeps the source PDF, original URL and extraction method visible for traceability.
+          - generic [ref=e253]:
+            - figure "Preview panel for the source report." [ref=e254]:
+              - img "Report preview visual for Asia Pacific Risk in Focus" [ref=e255]
+              - generic [ref=e256]: Preview panel for the source report.
+            - generic [ref=e257]:
+              - generic [ref=e258]:
+                - heading "Full report" [level=3] [ref=e259]
+                - paragraph [ref=e260]: Open the source material used for this MarketBearing analysis.
+                - link "Download full report" [ref=e262] [cursor=pointer]:
+                  - /url: ../cache/1o7jKT8DqvjihVnysLps71IqbPKEi6ZFH.pdf
+              - generic [ref=e263]:
+                - generic [ref=e264]:
+                  - generic [ref=e265]: "01"
+                  - paragraph [ref=e266]:
+                    - strong [ref=e267]: Coverage.
+                    - text: "Risk in Focus: Asia Pacific benchmarks the five highest regional risks and top internal audit priorities using survey results, roundtables, and interviews; it highlights rising geopolitical uncertainty, cybersecurity, and rapid AI-driven digital disruption across the region. Key participation metrics: 865 Asia Pacific survey responses, 22 countries, 3 roundtables, and 3 in-depth interviews."
+                - generic [ref=e268]:
+                  - generic [ref=e269]: "02"
+                  - paragraph [ref=e270]:
+                    - strong [ref=e271]: Rendering.
+                    - text: Generated from report artifacts, normalized metadata, persisted figures and source scoring where available.
+  - contentinfo [ref=e272]:
+    - generic [ref=e273]:
+      - generic [ref=e274]: MarketBearing executive report page
+      - generic [ref=e275]: "Source: Internal Audit Foundation · Asia Pacific Risk in Focus"

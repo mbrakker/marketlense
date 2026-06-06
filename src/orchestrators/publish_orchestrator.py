@@ -206,6 +206,21 @@ def _metadata_index(
     return html_file_id_map, metadata_by_file_id
 
 
+def _sort_auto_discovered_html_paths(
+    html_paths: list[str],
+    *,
+    html_file_id_map: dict[str, str],
+    metadata_by_file_id: dict[str, ReportMetadataGetResponse],
+) -> list[str]:
+    indexed_paths: list[tuple[int, int, int, str]] = []
+    for index, html_path in enumerate(html_paths):
+        file_id = html_file_id_map.get(canonicalize_html_path(html_path), "")
+        metadata = metadata_by_file_id.get(file_id)
+        updated_at = int(getattr(metadata, "updated_at", 0) or 0) if metadata else 0
+        indexed_paths.append((0 if updated_at > 0 else 1, -updated_at, index, html_path))
+    return [html_path for _, _, _, html_path in sorted(indexed_paths)]
+
+
 def _publish_settings_for_post_type(
     settings: PublishSettings,
     post_type: str,
@@ -318,6 +333,7 @@ def _resolve_publish_candidates(
     html_paths: list[str],
     html_file_id_map: dict[str, str],
     ctx: RunContext,
+    skip_unowned_nonpublish_html: bool = False,
 ) -> list[_PublishCandidate]:
     candidates: list[_PublishCandidate] = []
     for html_path in html_paths:
@@ -326,6 +342,21 @@ def _resolve_publish_candidates(
             ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
         ).content
         html_snapshot = build_publish_html_snapshot(html_text)
+        file_id = html_file_id_map.get(canonicalize_html_path(html_path), "")
+        file_id_source = "reports_db" if file_id else ""
+        if not file_id:
+            file_id = str(
+                html_snapshot.file_id
+                or (
+                    html_snapshot.entity_metadata.source_artifact_id
+                    if html_snapshot.entity_metadata
+                    else ""
+                )
+            ).strip()
+            if file_id:
+                file_id_source = (
+                    "html" if html_snapshot.file_id else "entity_metadata"
+                )
         entity_route: _PublishEntityRoute | None = None
         entity_error: AppError | None = None
         try:
@@ -350,6 +381,25 @@ def _resolve_publish_candidates(
                 )
             )
         except AppError as exc:
+            if (
+                skip_unowned_nonpublish_html
+                and exc.code == "publish_entity_metadata_missing"
+                and not file_id
+            ):
+                logger.info(
+                    log_event(
+                        file_ctx,
+                        role="orchestrator",
+                        event="publish_non_entity_html_skipped",
+                        module=logger.name,
+                        fields={
+                            "html_path": html_path,
+                            "code": exc.code,
+                            "reason": "missing_publish_metadata_and_source_artifact",
+                        },
+                    )
+                )
+                continue
             entity_error = exc
             logger.info(
                 log_event(
@@ -365,7 +415,6 @@ def _resolve_publish_candidates(
                     },
                 )
             )
-        file_id = html_file_id_map.get(canonicalize_html_path(html_path), "")
         if file_id:
             logger.info(
                 log_event(
@@ -376,35 +425,10 @@ def _resolve_publish_candidates(
                     fields={
                         "html_path": html_path,
                         "file_id": file_id,
-                        "source": "reports_db",
+                        "source": file_id_source,
                     },
                 )
             )
-        else:
-            file_id = str(
-                html_snapshot.file_id
-                or (
-                    html_snapshot.entity_metadata.source_artifact_id
-                    if html_snapshot.entity_metadata
-                    else ""
-                )
-            ).strip()
-            if file_id:
-                logger.info(
-                    log_event(
-                        file_ctx,
-                        role="orchestrator",
-                        event="publish_file_id_resolved",
-                        module=logger.name,
-                        fields={
-                            "html_path": html_path,
-                            "file_id": file_id,
-                            "source": "html"
-                            if html_snapshot.file_id
-                            else "entity_metadata",
-                        },
-                    )
-                )
         candidates.append(
             _PublishCandidate(
                 html_path=html_path,
@@ -1696,7 +1720,8 @@ def run_publish(
         )
     )
 
-    if html_paths is None:
+    auto_discovery = html_paths is None
+    if auto_discovery:
         list_resp = list_html(
             ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir),
             root_ctx,
@@ -1704,9 +1729,6 @@ def run_publish(
         discovered_html_paths = list_resp.html_paths
     else:
         discovered_html_paths = [str(path) for path in html_paths]
-    max_n = limit if limit is not None else len(discovered_html_paths)
-    selected_html_paths = discovered_html_paths[:max_n]
-
     outcomes: List[PublishOutcome] = []
     attempted = 0
     published = 0
@@ -1745,11 +1767,41 @@ def run_publish(
         html_file_id_map = {}
         metadata_by_file_id = {}
 
+    if auto_discovery:
+        selected_html_paths = _sort_auto_discovered_html_paths(
+            discovered_html_paths,
+            html_file_id_map=html_file_id_map,
+            metadata_by_file_id=metadata_by_file_id,
+        )
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="publish_auto_discovery_ordered",
+                module=logger.name,
+                fields={
+                    "count": len(selected_html_paths),
+                    "metadata_matched": sum(
+                        1
+                        for html_path in selected_html_paths
+                        if html_file_id_map.get(canonicalize_html_path(html_path), "")
+                        in metadata_by_file_id
+                    ),
+                },
+            )
+        )
+    else:
+        max_n = limit if limit is not None else len(discovered_html_paths)
+        selected_html_paths = discovered_html_paths[:max_n]
+
     candidates = _resolve_publish_candidates(
         html_paths=selected_html_paths,
         html_file_id_map=html_file_id_map,
         ctx=root_ctx,
+        skip_unowned_nonpublish_html=auto_discovery,
     )
+    if auto_discovery and limit is not None:
+        candidates = candidates[:limit]
     preflight_entries = _build_publish_preflight_entries(
         settings=settings,
         candidates=candidates,

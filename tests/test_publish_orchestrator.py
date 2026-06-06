@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from dataclasses import replace
 from pathlib import Path
 
@@ -286,6 +287,87 @@ def test_publish_uses_explicit_html_paths_over_output_listing(
     assert len(results) == 1
     assert results[0].status == "published"
     assert results[0].file_id == "target"
+
+
+def test_publish_auto_discovery_skips_unowned_html_before_limit(
+    publish_settings_factory, run_context, wordpress_http, caplog
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(
+        settings.output_dir,
+        "aaa-enterprise-prototype.html",
+        "<p>Design prototype only</p>",
+        include_entity_metadata=False,
+    )
+    _write_html(settings.output_dir, "zzz-report.html", "Drive fileId: file123")
+    _record_processed(settings.state_db, "file123", run_context)
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 10, "link": "https://example.com/post/10", "status": "publish"},
+    )
+
+    with caplog.at_level(logging.INFO, logger="market_lense.publish_orchestrator"):
+        results = orch.run_publish(settings, limit=1)
+
+    events = _json_events(caplog, "market_lense.publish_orchestrator")
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].file_id == "file123"
+    assert any(
+        event.get("event") == "publish_non_entity_html_skipped" for event in events
+    )
+
+
+def test_publish_auto_discovery_orders_reports_by_metadata_updated_at_before_limit(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    old_html = _write_html(
+        settings.output_dir,
+        "aaa-old-report.html",
+        "Drive fileId: old-file",
+        source_artifact_id="old-file",
+    )
+    new_html = _write_html(
+        settings.output_dir,
+        "zzz-new-report.html",
+        "Drive fileId: new-file",
+        source_artifact_id="new-file",
+    )
+    _record_processed(settings.state_db, "old-file", run_context)
+    _record_processed(settings.state_db, "new-file", run_context)
+    _seed_report_metadata(settings.reports_db, str(old_html), "old-file", run_context)
+    _seed_report_metadata(settings.reports_db, str(new_html), "new-file", run_context)
+    with sqlite3.connect(settings.reports_db) as conn:
+        conn.execute("UPDATE reports SET updated_at = 100 WHERE file_id = ?", ("old-file",))
+        conn.execute("UPDATE reports SET updated_at = 200 WHERE file_id = ?", ("new-file",))
+        conn.commit()
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 10, "link": "https://example.com/post/10", "status": "publish"},
+    )
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].file_id == "new-file"
 
 
 def test_publish_reuses_idempotent_outcome_without_second_post(

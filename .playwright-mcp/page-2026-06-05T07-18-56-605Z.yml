@@ -1,0 +1,236 @@
+- generic [active] [ref=e1]:
+  - link "Skip to report" [ref=e2] [cursor=pointer]:
+    - /url: "#content"
+  - banner [ref=e3]:
+    - link "MarketBearing home" [ref=e5] [cursor=pointer]:
+      - /url: "#"
+      - generic [ref=e6]: MarketBearing
+  - main [ref=e9]:
+    - region "Otro más hablando de tendencias de 2026." [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - paragraph [ref=e13]: Executive intelligence brief
+          - heading "Otro más hablando de tendencias de 2026." [level=1] [ref=e14]
+          - paragraph [ref=e15]: Análisis de macrotendencias sobre cómo evolucionan las personas, los sectores y las marcas a medida que se acerca 2026. El informe sitúa la personalización adaptativa, la sostenibilidad, el comercio digital, la transparencia y la IA como fuerzas conectadas para líderes de marca y negocio.
+          - generic "Report metadata" [ref=e16]:
+            - generic [ref=e17]: Allegro 234
+            - generic [ref=e18]: Global urban markets with European emphasis
+            - generic [ref=e19]: FMCG, durables and consumer services
+            - generic [ref=e20]: December 2025 outlook for 2026
+        - complementary "Report signal summary" [ref=e21]:
+          - generic [ref=e22]:
+            - paragraph [ref=e23]: Core signal
+            - heading "Relevance now depends on proof." [level=2] [ref=e24]
+            - paragraph [ref=e25]: Consumers expect brands to adapt in real time while showing visible evidence of ethics, sustainability and data responsibility.
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - strong [ref=e28]: "9"
+              - generic [ref=e29]: high-confidence findings
+            - generic [ref=e30]:
+              - strong [ref=e31]: "7"
+              - generic [ref=e32]: verbatim report signals
+            - generic [ref=e33]:
+              - strong [ref=e34]: "6"
+              - generic [ref=e35]: taxonomy themes
+    - generic [ref=e36]:
+      - complementary "Report sections" [ref=e37]:
+        - paragraph [ref=e38]: Navigate
+        - navigation [ref=e39]:
+          - link "Overview" [ref=e40] [cursor=pointer]:
+            - /url: "#overview"
+          - link "Findings" [ref=e41] [cursor=pointer]:
+            - /url: "#findings"
+          - link "Signals" [ref=e42] [cursor=pointer]:
+            - /url: "#signals"
+          - link "Evidence" [ref=e43] [cursor=pointer]:
+            - /url: "#evidence"
+          - link "Taxonomy" [ref=e44] [cursor=pointer]:
+            - /url: "#taxonomy"
+          - link "Source" [ref=e45] [cursor=pointer]:
+            - /url: "#source"
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - paragraph [ref=e49]: 01. Overview
+            - generic [ref=e50]:
+              - heading "The report frames 2026 as a convergence of people, sectors and brands." [level=2] [ref=e51]
+              - paragraph [ref=e52]: The scope covers macrotrends affecting people, economic sectors and brands, specifically FMCG, durable consumer goods and consumer services. The lens is urban and modern audiences, with sector-level and global examples.
+          - generic [ref=e53]:
+            - article [ref=e54]:
+              - generic [ref=e55]: "01"
+              - heading "Personalization becomes adaptive." [level=3] [ref=e56]
+              - paragraph [ref=e57]: Real-time contextual relevance is positioned as a dominant expectation across services, communications and product experiences.
+            - article [ref=e58]:
+              - generic [ref=e59]: "02"
+              - heading "Sustainability becomes a growth discipline." [level=3] [ref=e60]
+              - paragraph [ref=e61]: The report describes sustainability moving from reputational activity into product design, operations and capital allocation.
+            - article [ref=e62]:
+              - generic [ref=e63]: "03"
+              - heading "Digital-first becomes structural infrastructure." [level=3] [ref=e64]
+              - paragraph [ref=e65]: E-commerce, digital payments, logistics and platform ecosystems are treated as infrastructure for discovery, purchase and service.
+            - article [ref=e66]:
+              - generic [ref=e67]: "04"
+              - heading "Transparency becomes the basis of trust." [level=3] [ref=e68]
+              - paragraph [ref=e69]: Consumers expect visible evidence about origins, supply chains, sustainability performance, data use and corporate practices.
+            - article [ref=e70]:
+              - generic [ref=e71]: "05"
+              - heading "Experiences become hybrid and participatory." [level=3] [ref=e72]
+              - paragraph [ref=e73]: Packaging, AR/VR, co-creation loops and user-generated content expand the brand relationship beyond transactions.
+            - article [ref=e74]:
+              - generic [ref=e75]: "06"
+              - heading "AI and data connect the operating model." [level=3] [ref=e76]
+              - paragraph [ref=e77]: AI, IoT and automation support forecasting, personalization, operations, customer service and content creation.
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - paragraph [ref=e80]: 02. Findings
+            - generic [ref=e81]:
+              - heading "High-confidence findings from the report analysis." [level=2] [ref=e82]
+              - paragraph [ref=e83]: Each finding below is marked high confidence in the generated evidence pack and linked to source page references where available.
+          - generic [ref=e84]:
+            - article [ref=e85]:
+              - generic [ref=e86]:
+                - generic [ref=e87]: High confidence
+                - generic [ref=e88]: p. 12
+              - heading "Radical transparency and authenticity" [level=3] [ref=e89]
+              - paragraph [ref=e90]: Brands face strong pressure for radical transparency and authentic behavior; consumers expect demonstrable actions rather than marketing claims.
+            - article [ref=e91]:
+              - generic [ref=e92]:
+                - generic [ref=e93]: High confidence
+                - generic [ref=e94]: pp. 17, 7
+              - heading "Value alignment drives purchase" [level=3] [ref=e95]
+              - paragraph [ref=e96]: Purchase decisions increasingly depend on sustainability, ethical sourcing, social impact and corporate practices across FMCG, durables and services.
+            - article [ref=e97]:
+              - generic [ref=e98]:
+                - generic [ref=e99]: High confidence
+                - generic [ref=e100]: pp. 10, 21
+              - heading "Sustainability and profitability converge" [level=3] [ref=e101]
+              - paragraph [ref=e102]: Companies redesign products, packaging and models around circularity, refill systems and regenerative sourcing to create environmental and economic value.
+            - article [ref=e103]:
+              - generic [ref=e104]:
+                - generic [ref=e105]: High confidence
+                - generic [ref=e106]: pp. 23, 9
+              - heading "Competition shifts to omnichannel ecosystems" [level=3] [ref=e107]
+              - paragraph [ref=e108]: Brands must orchestrate content, pricing and experience across e-commerce, physical retail, social commerce, D2C and platform partners.
+            - article [ref=e109]:
+              - generic [ref=e110]:
+                - generic [ref=e111]: High confidence
+                - generic [ref=e112]: pp. 25, 26
+              - heading "AI and data act as connective tissue" [level=3] [ref=e113]
+              - paragraph [ref=e114]: AI enables forecasting, personalization, supply-chain optimization, customer service automation and large-scale content creation while raising ethics requirements.
+            - article [ref=e115]:
+              - generic [ref=e116]:
+                - generic [ref=e117]: High confidence
+                - generic [ref=e118]: pp. 6, 20, 13
+              - heading "Personalization and immersive experiences rise" [level=3] [ref=e119]
+              - paragraph [ref=e120]: Adaptive personalization and hybrid immersive experiences extend brand engagement beyond the transaction.
+            - article [ref=e121]:
+              - generic [ref=e122]:
+                - generic [ref=e123]: High confidence
+                - generic [ref=e124]: pp. 18, 5
+              - heading "Bidirectional communication becomes expected" [level=3] [ref=e125]
+              - paragraph [ref=e126]: Consumers expect real-time, empathetic responses across channels; slow or silent brands risk public backlash and erosion of loyalty.
+            - article [ref=e127]:
+              - generic [ref=e128]:
+                - generic [ref=e129]: High confidence
+                - generic [ref=e130]: p. 14
+              - heading "Ecosystem collaboration expands credibility" [level=3] [ref=e131]
+              - paragraph [ref=e132]: Co-creation, cross-sector partnerships, influencer alliances and NGO relationships become levers for innovation, credibility and reach.
+            - article [ref=e133]:
+              - generic [ref=e134]:
+                - generic [ref=e135]: High confidence
+                - generic [ref=e136]: pp. 19, 5
+              - heading "Loyalty shifts toward shared values" [level=3] [ref=e137]
+              - paragraph [ref=e138]: Loyalty moves from transactional rewards toward emotional loyalty grounded in values and demonstrable social impact.
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - paragraph [ref=e141]: 03. Signals
+            - generic [ref=e142]:
+              - heading "The extracted weak signals cluster around trust, relevance and connected commerce." [level=2] [ref=e143]
+              - paragraph [ref=e144]: The signal store accepted six single-report signals with confidence 0.8 and strength 4.0, all grounded in report claims and findings.
+          - generic [ref=e145]:
+            - article [ref=e146]:
+              - heading "AI" [level=3] [ref=e147]
+              - paragraph [ref=e148]: Consumers demand radical transparency and authentic behavior, including supply origins, sustainability performance and labor conditions.
+            - article [ref=e149]:
+              - heading "Consumer behavior & insights" [level=3] [ref=e150]
+              - paragraph [ref=e151]: The consumer lens centers on adaptive personalization, value-aligned decisions and expectations for visible evidence.
+            - article [ref=e152]:
+              - heading "Consumer trends" [level=3] [ref=e153]
+              - paragraph [ref=e154]: The report links changing urban consumer behavior to new standards for relevance, trust and participation.
+            - article [ref=e155]:
+              - heading "Ecommerce" [level=3] [ref=e156]
+              - paragraph [ref=e157]: Digital commerce shifts from a complementary channel into expected infrastructure for discovery, purchase and service.
+            - article [ref=e158]:
+              - heading "Omnichannel" [level=3] [ref=e159]
+              - paragraph [ref=e160]: Brand competition moves toward platform-based ecosystems connecting e-commerce, physical retail, social commerce and D2C.
+            - article [ref=e161]:
+              - heading "Omnichannel commerce" [level=3] [ref=e162]
+              - paragraph [ref=e163]: The same evidence base points to ecosystem orchestration as a commercial capability, not only a channel mix.
+        - generic [ref=e164]:
+          - generic [ref=e165]:
+            - paragraph [ref=e166]: 04. Evidence
+            - generic [ref=e167]:
+              - heading "Verbatim signals from the report." [level=2] [ref=e168]
+              - paragraph [ref=e169]: These excerpts are preserved in Spanish because the source report is Spanish-language and the phrasing carries the original emphasis.
+          - generic [ref=e170]:
+            - figure [ref=e171]:
+              - blockquote [ref=e172]: “La transparencia no es opcional; Es un diferenciador competitivo.”
+              - generic [ref=e173]: Report quote candidate · p. 12
+            - generic [ref=e174]:
+              - figure [ref=e175]:
+                - blockquote [ref=e176]: “La personalización estática ya no es suficiente; La relevancia en tiempo real ahora impulsa la confianza, el compromiso y la lealtad.”
+                - generic [ref=e177]: p. 3
+              - figure [ref=e178]:
+                - blockquote [ref=e179]: “La responsabilidad ambiental y social ya no son casillas regulatorias, sino imperativos estratégicos.”
+                - generic [ref=e180]: p. 3
+              - figure [ref=e181]:
+                - blockquote [ref=e182]: "“El comercio electrónico ya no es complementario: ahora es una expectativa predeterminada.”"
+                - generic [ref=e183]: p. 9
+              - figure [ref=e184]:
+                - blockquote [ref=e185]: “Los clientes esperan respuestas inmediatas, empáticas y una comunicación abierta.”
+                - generic [ref=e186]: p. 5
+              - figure [ref=e187]:
+                - blockquote [ref=e188]: “La sostenibilidad ya no puede quedarse en un silo separado de RSC.”
+                - generic [ref=e189]: p. 22
+        - generic [ref=e190]:
+          - generic [ref=e191]:
+            - paragraph [ref=e192]: 05. Taxonomy
+            - generic [ref=e193]:
+              - heading "The report maps primarily to consumer behavior and omnichannel commerce." [level=2] [ref=e194]
+              - paragraph [ref=e195]: The category fit assigns Consumer Behavior & Insights as primary and Omnichannel Commerce as secondary, with technology and AI treated as enablers rather than the central lens.
+          - generic [ref=e196]:
+            - group [ref=e197]:
+              - generic "Consumer Behavior & Insights · primary · fit 0.90 -" [ref=e198] [cursor=pointer]
+              - paragraph [ref=e200]: "The dominant frame is how people’s expectations and decisions are changing: personalization, value-aligned purchase decisions, transparency and participation."
+            - group [ref=e201]:
+              - generic "Omnichannel Commerce · secondary · fit 0.72 +" [ref=e202] [cursor=pointer]
+            - group [ref=e203]:
+              - generic "AI and Technology · enabling themes +" [ref=e204] [cursor=pointer]
+            - group [ref=e205]:
+              - generic "Primary and secondary tags +" [ref=e206] [cursor=pointer]
+        - generic [ref=e207]:
+          - generic [ref=e208]:
+            - paragraph [ref=e209]: 06. Source
+            - generic [ref=e210]:
+              - heading "Source basis and method." [level=2] [ref=e211]
+              - paragraph [ref=e212]: The report analysis is based on curated expert synthesis, secondary research, sectoral analysis and illustrative company examples.
+          - generic [ref=e213]:
+            - figure [ref=e214]:
+              - img "Preview of the Allegro 234 macrotrends report" [ref=e215]
+            - generic [ref=e216]:
+              - generic [ref=e217]:
+                - generic [ref=e218]: "01"
+                - paragraph [ref=e219]: Curated expert synthesis and consultancy authorship by Allegro 234.
+              - generic [ref=e220]:
+                - generic [ref=e221]: "02"
+                - paragraph [ref=e222]: Secondary research and literature aggregation cited under Fuentes, including Deloitte reports and Mintel Store/Press sources.
+              - generic [ref=e223]:
+                - generic [ref=e224]: "03"
+                - paragraph [ref=e225]: Sectoral analysis and review of industry research on sustainability, technology and consumer trends.
+              - generic [ref=e226]:
+                - generic [ref=e227]: "04"
+                - paragraph [ref=e228]: Illustrative company vignettes including Amazon, Starbucks, Ben & Jerry's, Netflix, Sephora, Nike × Apple, GoPro, Siemens, IKEA and TOMS.
+  - contentinfo [ref=e229]:
+    - generic [ref=e230]:
+      - generic [ref=e231]: MarketBearing executive report page
+      - generic [ref=e232]: "Source: Allegro 234 · Otro más hablando de tendencias de 2026"

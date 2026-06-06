@@ -96,6 +96,40 @@ def _split_summary_bullets(text: str, *, max_items: int = 5) -> list[str]:
     return bullets[:max_items]
 
 
+def _sentence_excerpt(text: str, *, max_chars: int) -> str:
+    normalized = _s(text)
+    if not normalized:
+        return ""
+    first_sentence = (_SENTENCE_SPLIT_PATTERN.split(normalized) or [normalized])[0]
+    candidate = first_sentence.strip()
+    if len(candidate) <= max_chars:
+        return candidate
+    words: list[str] = []
+    for word in candidate.split():
+        trial = " ".join([*words, word]).strip()
+        if len(trial) > max_chars:
+            break
+        words.append(word)
+    return (" ".join(words).rstrip(" ,;:") + "...") if words else candidate[:max_chars]
+
+
+def _build_core_signal(
+    *, tldr_text: str, executive_summary: str, insights: list[dict[str, str]]
+) -> dict[str, str]:
+    primary_text = _pick_first_text(
+        insights[0]["text"] if insights else "",
+        tldr_text,
+        executive_summary,
+    )
+    supporting_text = _pick_first_text(tldr_text, executive_summary, primary_text)
+    return {
+        "heading": _sentence_excerpt(primary_text, max_chars=58)
+        or "Executive signal pending",
+        "body": _sentence_excerpt(supporting_text, max_chars=185)
+        or "Source-supported signal unavailable for this report.",
+    }
+
+
 def _extract_focus_year(*values: object) -> str:
     for value in values:
         candidate = _s(value)
@@ -126,6 +160,52 @@ def _extract_fieldwork_dates(*values: object) -> str:
         if len(iso_dates) == 1:
             return iso_dates[0]
     return ""
+
+
+_REPORT_VALUE_DIMENSION_LABELS = {
+    "market_insight_depth": "Market insight depth",
+    "evidence_specificity": "Evidence specificity",
+    "decision_relevance": "Decision relevance",
+    "recency_timeliness": "Recency timeliness",
+    "source_authority_originality": "Source authority originality",
+}
+
+
+def _build_report_quality_score(data: dict[str, Any]) -> dict[str, Any]:
+    raw_score = _coerce_dict(data.get("_report_value_score"))
+    components: list[dict[str, Any]] = []
+    raw_components = _coerce_list(raw_score.get("components"))
+    for dimension, label in _REPORT_VALUE_DIMENSION_LABELS.items():
+        raw_component = next(
+            (
+                _coerce_dict(item)
+                for item in raw_components
+                if _s(_coerce_dict(item).get("dimension")) == dimension
+            ),
+            {},
+        )
+        score_value = raw_component.get("score")
+        score = float(score_value) if isinstance(score_value, (int, float)) else None
+        components.append(
+            {
+                "dimension": dimension,
+                "label": label,
+                "score": score,
+                "score_label": f"{score:.0f}" if score is not None else "N/A",
+                "fill": max(0.0, min(100.0, score or 0.0)),
+                "rationale": _s(raw_component.get("rationale")),
+            }
+        )
+    overall = raw_score.get("overall_score")
+    overall_score = float(overall) if isinstance(overall, (int, float)) else None
+    return {
+        "available": overall_score is not None,
+        "overall_score": overall_score,
+        "overall_label": f"{overall_score:.0f}" if overall_score is not None else "Pending",
+        "value_band": _s(raw_score.get("value_band")),
+        "rationale": _s(raw_score.get("rationale")),
+        "components": components,
+    }
 
 
 def _resolve_asset_path(out_dir: Path, relative_path: str) -> Path | None:
@@ -229,6 +309,8 @@ def _build_report_identity_items(
     report_title: str,
     publisher: str,
     focus_year: str,
+    fieldwork_dates: str,
+    region: str,
     report_author: str,
 ) -> list[str]:
     items: list[str] = []
@@ -238,6 +320,10 @@ def _build_report_identity_items(
         items.append(f"Publisher: {publisher}")
     if focus_year:
         items.append(f"Year: {focus_year}")
+    if fieldwork_dates:
+        items.append(f"Fieldwork: {fieldwork_dates}")
+    if region:
+        items.append(f"Region: {region}")
     if report_author:
         items.append(f"Author: {report_author}")
     return items
@@ -519,6 +605,42 @@ def _coerce_chapters(
     return chapters
 
 
+def _build_signal_cards(
+    *, topics: list[str], topic_briefs: list[dict[str, Any]], tags: list[Any]
+) -> list[dict[str, str]]:
+    cards: list[dict[str, str]] = []
+    briefs_by_title = {
+        _s(item.get("title")).casefold(): item for item in topic_briefs if _s(item.get("title"))
+    }
+    source_labels = topics or [_s(tag) for tag in tags if _s(tag)]
+    for label in source_labels[:6]:
+        brief = briefs_by_title.get(_s(label).casefold(), {})
+        summary = _s(brief.get("summary"))
+        points = [_s(point) for point in _coerce_list(brief.get("key_points")) if _s(point)]
+        if summary and points:
+            summary = f"{summary} {' '.join(points)}"
+        if not summary:
+            summary = points[0] if points else ""
+        cards.append(
+            {
+                "title": label,
+                "summary": summary
+                or "Report-linked theme extracted from the source analysis.",
+            }
+        )
+    return cards
+
+
+def _is_visual_candidate_slide(slide: dict[str, Any]) -> bool:
+    page = slide.get("page")
+    if not isinstance(page, int) or page < 0:
+        return False
+    kind = _s(slide.get("kind")).casefold()
+    if kind and kind not in {"chart", "table", "figure", "image", "graph"}:
+        return False
+    return bool(_s(slide.get("src")))
+
+
 def _coerce_methodology(
     doc_map: dict[str, Any], evidence_packs: dict[str, Any]
 ) -> list[str]:
@@ -692,6 +814,12 @@ def _build_figure_slides(
                         asset.get("display_caption"),
                         "Representative figure from the source report.",
                     ),
+                    "page": int(asset.get("page") or -1)
+                    if isinstance(asset.get("page"), int)
+                    else -1,
+                    "kind": _s(asset.get("kind")),
+                    "candidate_id": _s(asset.get("candidate_id")),
+                    "is_primary": is_primary,
                     "thumb": _build_media(
                         relative_path=image_path,
                         out_dir=out_dir,
@@ -746,6 +874,10 @@ def _build_figure_slides(
                     if index == 1 and fallback_caption
                     else f"Additional figure {index}"
                 ),
+                "page": -1,
+                "kind": "image",
+                "candidate_id": "",
+                "is_primary": index == 1,
                 "thumb": _build_media(
                     relative_path=image_path,
                     out_dir=out_dir,
@@ -820,12 +952,20 @@ def _build_render_view(
         publisher,
         report_title=report_title,
     )
+    topic_briefs = _coerce_topic_briefs(artifacts)
+    snapshot_categories = _coerce_list(data.get("categories_display")) or _coerce_list(
+        data.get("categories")
+    )
+    snapshot_tags = _coerce_list(data.get("taxonomy"))
     figure_section_enabled = bool(data.get("_figure_section_enabled", True))
     figure_slides = (
         _build_figure_slides(data, out_dir, report_title)
         if figure_section_enabled
         else []
     )
+    visual_candidate_slides = [
+        slide for slide in figure_slides if _is_visual_candidate_slide(slide)
+    ]
     hero_image = None
     hero_src = _pick_first_text(
         request.preview_png, figure_slides[0]["src"] if figure_slides else ""
@@ -845,6 +985,12 @@ def _build_render_view(
     quotes_status = _coerce_family_status(artifacts, "quotes")
     expert_status = _coerce_family_status(artifacts, "expert_comment")
     linkedin_status = _coerce_family_status(artifacts, "linkedin_post")
+    report_quality_score = _build_report_quality_score(data)
+    core_signal = _build_core_signal(
+        tldr_text=tldr_text,
+        executive_summary=executive_summary,
+        insights=insights,
+    )
     editorial_cards = [
         {
             "label": "Methodology",
@@ -881,12 +1027,17 @@ def _build_render_view(
         "fieldwork_dates": fieldwork_dates,
         "source_url": source_url,
         "canonical_url": canonical_url,
+        "source_download_href": _s(data.get("_source_download_href")),
         "fallback_reason": _s(source_status.get("reason")),
         "not_available": not_available,
+        "core_signal": core_signal,
+        "quality_score": report_quality_score,
         "report_identity_items": _build_report_identity_items(
             report_title=report_title,
             publisher=publisher,
             focus_year=focus_year,
+            fieldwork_dates=fieldwork_dates,
+            region=region,
             report_author=report_author,
         ),
         "hero_meta": [
@@ -928,12 +1079,14 @@ def _build_render_view(
                 )
                 if item
             ],
-            "categories": _coerce_list(data.get("categories_display"))
-            or _coerce_list(data.get("categories")),
-            "tags": _coerce_list(data.get("taxonomy")),
+            "categories": snapshot_categories,
+            "tags": snapshot_tags,
         },
         "topics": topics,
-        "topic_briefs": _coerce_topic_briefs(artifacts),
+        "topic_briefs": topic_briefs,
+        "signal_cards": _build_signal_cards(
+            topics=topics, topic_briefs=topic_briefs, tags=snapshot_tags
+        ),
         "editorial_cards": editorial_cards,
         "chapters": chapters,
         "insights": insights,
@@ -943,6 +1096,7 @@ def _build_render_view(
         "linkedin_post": _s(artifacts.get("linkedin_post")),
         "figures": {
             "slides": figure_slides,
+            "visual_candidates": visual_candidate_slides,
             "lightbox_width": figure_slides[0]["width"] if figure_slides else 1600,
             "lightbox_height": figure_slides[0]["height"] if figure_slides else 900,
         },
@@ -960,8 +1114,8 @@ def _build_render_view(
                 or _coerce_list(data.get("taxonomy"))
             ),
             "has_topics": bool(topics),
-            "has_topic_briefs": bool(_coerce_topic_briefs(artifacts)),
-            "has_figures": bool(figure_slides),
+            "has_topic_briefs": bool(topic_briefs),
+            "has_figures": bool(visual_candidate_slides),
             "has_insights": bool(insights),
             "has_quotes": bool(quotes),
             "has_appendix": bool(
@@ -972,6 +1126,12 @@ def _build_render_view(
             ),
             "has_editorial": any(card["items"] for card in editorial_cards),
             "has_chapters": bool(chapters),
+            "has_source_download": bool(_s(data.get("_source_download_href"))),
+            "has_signal_cards": bool(
+                _build_signal_cards(
+                    topics=topics, topic_briefs=topic_briefs, tags=snapshot_tags
+                )
+            ),
         },
         "seo": {
             "description": _pick_first_text(
@@ -1005,7 +1165,7 @@ def _build_seo_title(report_title: str, focus_year: str, publisher: str) -> str:
     if focus_year:
         base_title = f"{base_title} {focus_year}"
     publisher_short = publisher[:40] + ("..." if len(publisher) > 40 else "")
-    return f"{base_title}{' | ' + publisher_short if publisher_short else ''} | Market Lense"
+    return f"{base_title}{' | ' + publisher_short if publisher_short else ''} | MarketBearing"
 
 
 def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:

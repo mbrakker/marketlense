@@ -281,6 +281,7 @@ def _build_drive_client(
         "v3",
         http=_build_authorized_drive_http(resolution.credentials),
         cache_discovery=False,
+        static_discovery=True,
     )
 
 
@@ -361,18 +362,59 @@ def _get_drive_client(
                 )
             )
             return cached.client
-        client = _build_drive_client(
-            auth_mode=auth_mode,
-            service_account_path=service_account_path,
-            oauth_token_path=oauth_token_path,
-            ctx=ctx,
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_client_build_start",
+            module=logger.name,
+            fields={
+                "auth_mode": auth_mode,
+                "credential_path": credential_path,
+                "thread_id": thread_id,
+                "expired_evictions": expired,
+            },
         )
+    )
+    client = _build_drive_client(
+        auth_mode=auth_mode,
+        service_account_path=service_account_path,
+        oauth_token_path=oauth_token_path,
+        ctx=ctx,
+    )
+
+    with _DRIVE_CLIENTS_LOCK:
+        now = _now_monotonic_seconds()
+        expired_after_build = _prune_drive_client_cache(now)
+        cached = _DRIVE_CLIENTS.get(cache_key)
+        if cached is not None and cached.expires_at > now:
+            cached.last_access_at = now
+            cached.expires_at = now + DRIVE_CLIENT_CACHE_TTL_SECONDS
+            cache_size = len(_DRIVE_CLIENTS)
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="drive_client_reuse_after_build",
+                    module=logger.name,
+                    fields={
+                        "auth_mode": auth_mode,
+                        "credential_path": credential_path,
+                        "thread_id": thread_id,
+                        "expired_evictions": expired + expired_after_build,
+                        "cache_size": cache_size,
+                    },
+                )
+            )
+            return cached.client
         _DRIVE_CLIENTS[cache_key] = _DriveClientCacheEntry(
             client=client,
             expires_at=now + DRIVE_CLIENT_CACHE_TTL_SECONDS,
             last_access_at=now,
         )
         evicted = _evict_drive_client_cache(DRIVE_CLIENT_CACHE_MAX_ENTRIES)
+        cache_size = len(_DRIVE_CLIENTS)
     logger.info(
         log_event(
             ctx,
@@ -383,9 +425,9 @@ def _get_drive_client(
                 "auth_mode": auth_mode,
                 "credential_path": credential_path,
                 "thread_id": thread_id,
-                "expired_evictions": expired,
+                "expired_evictions": expired + expired_after_build,
                 "max_entry_evictions": evicted,
-                "cache_size": len(_DRIVE_CLIENTS),
+                "cache_size": cache_size,
             },
         )
     )
@@ -1131,6 +1173,7 @@ def preflight_drive_write_access(
             "v3",
             http=_build_authorized_drive_http(resolution.credentials),
             cache_discovery=False,
+            static_discovery=True,
         )
         folder = _load_drive_folder_write_metadata(
             drive=drive,

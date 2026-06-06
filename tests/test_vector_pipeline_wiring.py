@@ -1165,7 +1165,11 @@ def test_generate_report_adds_signal_artifact_pack_after_projection(tmp_path) ->
 def test_report_generation_scores_two_ingested_reports_for_same_publisher(
     tmp_path,
 ) -> None:
-    settings = replace(_ingest_settings(tmp_path), report_worker_limit=1)
+    settings = replace(
+        _ingest_settings(tmp_path),
+        ingest_worker_limit=1,
+        report_worker_limit=1,
+    )
     publisher_name = "Example Research"
     source_rows = [
         (
@@ -1350,6 +1354,164 @@ def test_report_generation_scores_two_ingested_reports_for_same_publisher(
             (publisher_name,),
         ).fetchone()[0]
     assert scored_rows == 2
+
+
+def test_report_generation_scores_drive_only_ingest_without_source_url(
+    tmp_path,
+) -> None:
+    settings = replace(
+        _ingest_settings(tmp_path),
+        ingest_worker_limit=1,
+        report_worker_limit=1,
+    )
+    title = "2026 Customer Market Outlook Benchmark Survey"
+    publisher_name = "Drive Only Research"
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="drive_only_score_file",
+        name=f"{title}.pdf",
+        modified_time=None,
+        md5_checksum="md5-drive-only",
+    )
+    rendered_scores: list[dict] = []
+
+    def _store_pack(request, ctx):
+        path = (
+            Path(request.output_dir)
+            / slugify(request.report_slug or request.report_id)
+            / "report_analysis"
+            / f"{request.pack_name}.json"
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(request.payload), encoding="utf-8")
+        return SimpleNamespace(output_path=str(path))
+
+    def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):
+        return ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            severity="pass",
+            issues=[],
+            source_path=str(
+                Path(settings.output_dir)
+                / slugify(kwargs.get("report_name") or req.report_id)
+                / "report_analysis"
+                / f"{pack_name}.json"
+            ),
+        )
+
+    def _evidence(report_id, vector_store_id, settings, ctx, **kwargs):
+        return {
+            "doc_map": {
+                "docMap": {
+                    "title": title,
+                    "publisher": publisher_name,
+                    "sections": [{"title": "Overview"}],
+                },
+                "doc_id": "d",
+            },
+            "scope": {},
+            "methods": {},
+            "findings": {},
+            "limitations": {},
+            "quote_candidates": {},
+        }
+
+    def _artifacts(
+        report_id,
+        doc_map,
+        evidence_packs,
+        settings,
+        vector_store_id=None,
+        source_status=None,
+        ctx=None,
+        report_name=None,
+        **kwargs,
+    ):
+        payload = _analysis_artifacts(source="")
+        _store_pack(
+            AnalysisStorePackRequest(
+                schema_version="1.0",
+                output_dir=settings.output_dir,
+                report_id=report_id,
+                pack_name="artifacts",
+                payload=payload,
+                report_slug=report_name,
+            ),
+            ctx,
+        )
+        return payload
+
+    def _render_report(req, ctx):
+        rendered_scores.append(req.data.get("_report_value_score", {}))
+        html_path = Path(settings.output_dir) / f"{req.file_id}.html"
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return RenderResponse(schema_version="1.0", html_path=str(html_path))
+
+    def _generate_report(current_file, cache_path, current_settings, md5, ctx):
+        deps = _base_vector_report_dependencies(
+            tmp_path,
+            generate_evidence_packs=_evidence,
+            generate_artifacts=_artifacts,
+            run_validation=_fake_validation,
+            analysis_store_pack=_store_pack,
+            render_report=_render_report,
+        )
+        return rgo.run_report_generation(
+            current_file,
+            cache_path,
+            current_settings,
+            md5=md5,
+            ctx=ctx,
+            dependencies=deps,
+            analytics_projection_fn=lambda req: None,
+        )
+
+    outcomes = orch.run_ingest(
+        settings,
+        limit=1,
+        dependencies=_batch_dependencies(
+            list_pdfs=lambda req, ctx: [file],
+            process_file=_make_ingest_process(generate_report=_generate_report),
+        ),
+    )
+
+    assert [outcome.status for outcome in outcomes] == ["processed"]
+    assert rendered_scores
+    assert {
+        component["dimension"] for component in rendered_scores[0]["components"]
+    } == {
+        "market_insight_depth",
+        "evidence_specificity",
+        "decision_relevance",
+        "recency_timeliness",
+        "source_authority_originality",
+    }
+
+    with sqlite3.connect(settings.reports_db) as conn:
+        row = conn.execute(
+            """
+            SELECT landing_page_url, source_domain, report_value_score_json
+            FROM report_sources
+            WHERE md5=?
+            """,
+            ("md5",),
+        ).fetchone()
+
+    assert row is not None
+    assert row[0] == "https://drive.google.com/file/d/drive_only_score_file/view"
+    assert row[1] == "drive.google.com"
+    score_payload = json.loads(row[2])
+    assert {
+        component["dimension"] for component in score_payload["components"]
+    } == {
+        "market_insight_depth",
+        "evidence_specificity",
+        "decision_relevance",
+        "recency_timeliness",
+        "source_authority_originality",
+    }
 
 
 def test_generate_report_doc_map_empty_halts(

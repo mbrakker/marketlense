@@ -51,35 +51,35 @@ def _report_source_url_from_store(
 ) -> Optional[str]:
     if not _table_exists(conn, "report_sources"):
         return None
-    clean_md5 = str(md5 or "").strip()
-    if clean_md5:
+    normalized_title = report_title.strip().casefold()
+    normalized_publisher = str(publisher or "").strip().casefold()
+    if normalized_title:
         row = conn.execute(
             """
             SELECT landing_page_url
             FROM report_sources
-            WHERE md5=? AND COALESCE(landing_page_url, '') <> ''
+            WHERE lower(report_name)=?
+              AND (?='' OR lower(COALESCE(publisher_name, ''))=?)
+              AND COALESCE(landing_page_url, '') <> ''
             ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
             LIMIT 1
             """,
-            (clean_md5,),
+            (normalized_title, normalized_publisher, normalized_publisher),
         ).fetchone()
         if row and str(row[0] or "").strip():
             return str(row[0]).strip()
-    normalized_title = report_title.strip().casefold()
-    normalized_publisher = str(publisher or "").strip().casefold()
-    if not normalized_title:
+    clean_md5 = str(md5 or "").strip()
+    if not clean_md5:
         return None
     row = conn.execute(
         """
         SELECT landing_page_url
         FROM report_sources
-        WHERE lower(report_name)=?
-          AND (?='' OR lower(COALESCE(publisher_name, ''))=?)
-          AND COALESCE(landing_page_url, '') <> ''
+        WHERE md5=? AND COALESCE(landing_page_url, '') <> ''
         ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
         LIMIT 1
         """,
-        (normalized_title, normalized_publisher, normalized_publisher),
+        (clean_md5,),
     ).fetchone()
     return str(row[0]).strip() if row and str(row[0] or "").strip() else None
 

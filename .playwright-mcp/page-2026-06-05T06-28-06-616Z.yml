@@ -1,0 +1,651 @@
+- article [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - paragraph [ref=e7]: Market Lense report digest
+      - heading "Otro más hablando de tendencias de 2026 | Sobre macrotendencias" [level=1] [ref=e8]
+      - paragraph [ref=e9]: "Title: Otro más hablando de tendencias de 2026 | Sobre macrotendencias · Publisher: Allegro 234 · Year: 2026"
+      - paragraph [ref=e10]:
+        - generic [ref=e11]:
+          - generic [ref=e12]: "Publisher:"
+          - text: Allegro 234
+        - generic [ref=e13]:
+          - generic [ref=e14]: "Time Period:"
+          - text: "2026"
+        - generic [ref=e15]:
+          - generic [ref=e16]: "Geography:"
+          - text: Global (urban markets) with European emphasis
+      - list [ref=e17]:
+        - listitem [ref=e18]: 5 insights
+        - listitem [ref=e19]: 4 quotes
+        - listitem [ref=e20]: 34 topics
+    - figure "Preview panel for the source report." [ref=e22]:
+      - img "Report preview visual for Otro más hablando de tendencias de 2026 | Sobre macrotendencias" [ref=e23]
+      - generic [ref=e24]: Preview panel for the source report.
+  - navigation "Digest sections" [ref=e27]:
+    - list [ref=e29]:
+      - listitem [ref=e30]:
+        - link "TL;DR" [ref=e31] [cursor=pointer]:
+          - /url: "#section-summary"
+      - listitem [ref=e32]:
+        - link "Report snapshot" [ref=e33] [cursor=pointer]:
+          - /url: "#section-snapshot"
+      - listitem [ref=e34]:
+        - link "Covered topics" [ref=e35] [cursor=pointer]:
+          - /url: "#section-topics"
+      - listitem [ref=e36]:
+        - link "Executive summary" [ref=e37] [cursor=pointer]:
+          - /url: "#section-executive"
+      - listitem [ref=e38]:
+        - link "Key data insights" [ref=e39] [cursor=pointer]:
+          - /url: "#section-insights"
+      - listitem [ref=e40]:
+        - link "Editorial details" [ref=e41] [cursor=pointer]:
+          - /url: "#section-editorial"
+      - listitem [ref=e42]:
+        - link "Figures" [ref=e43] [cursor=pointer]:
+          - /url: "#section-figures"
+      - listitem [ref=e44]:
+        - link "Key quotes" [ref=e45] [cursor=pointer]:
+          - /url: "#section-quotes"
+      - listitem [ref=e46]:
+        - link "Sources" [ref=e47] [cursor=pointer]:
+          - /url: "#section-resources"
+      - listitem [ref=e48]:
+        - link "Appendix" [ref=e49] [cursor=pointer]:
+          - /url: "#section-appendix"
+  - main [ref=e50]:
+    - region "TL;DR" [ref=e51]:
+      - generic [ref=e53]:
+        - paragraph [ref=e54]: Lead takeaway
+        - heading "TL;DR" [level=2] [ref=e55]
+      - list [ref=e56]:
+        - listitem [ref=e57]: Urban consumers approaching 2026 expect real‑time adaptive personalization, radical transparency and value alignment, while
+        - listitem [ref=e58]: AI/data, omnichannel ecosystems and sustainability reshape sector and brand strategy.
+    - region "Report snapshot" [ref=e59]:
+      - generic [ref=e61]:
+        - paragraph [ref=e62]: Metadata below the lead
+        - heading "Report snapshot" [level=2] [ref=e63]
+      - generic [ref=e64]:
+        - article [ref=e65]:
+          - text: Report focus year
+          - paragraph [ref=e66]: "2026"
+        - article [ref=e67]:
+          - text: Geography
+          - paragraph [ref=e68]: Global (urban markets) with European emphasis
+        - article [ref=e69]:
+          - text: Publisher
+          - paragraph [ref=e70]: Allegro 234
+      - generic [ref=e71]:
+        - article [ref=e72]:
+          - generic [ref=e73]: Categories
+          - list [ref=e74]:
+            - listitem [ref=e75]: Consumer Behavior & Insights
+            - listitem [ref=e76]: Omnichannel Commerce
+        - article [ref=e77]:
+          - generic [ref=e78]: Tags
+          - list [ref=e79]:
+            - listitem [ref=e80]: Ecommerce
+            - listitem [ref=e81]: Omnichannel
+            - listitem [ref=e82]: AI
+            - listitem [ref=e83]: Consumer Trends
+            - listitem [ref=e84]: Personalization
+            - listitem [ref=e85]: Retail Logistics
+    - region "Covered topics" [ref=e86]:
+      - generic [ref=e88]:
+        - paragraph [ref=e89]: Reading map
+        - heading "Covered topics" [level=2] [ref=e90]
+      - list [ref=e91]:
+        - listitem [ref=e92]: Agenda
+        - listitem [ref=e93]: Resumen Ejecutivo
+        - listitem [ref=e94]: Macrotendencias De Las Personas | Cómo Está Cambiando El Comportamiento
+        - listitem [ref=e95]: Macrotendencias Sectoriales | Cómo Están Evolucionando Los Bienes De Consumo FMCG , Los Bienes Duraderos Y Los Servicios
+        - listitem [ref=e96]: Macrotendencias De La Marca | Cómo Están Respondiendo Las Marcas
+        - listitem [ref=e97]: Macrotendencias Para Las Personas En Estos Sectores | Comportamiento Dentro De Las Categorías
+        - listitem [ref=e98]: Macrotendencias De Interacción | Cómo La Gente Interactúa Con Las Marcas
+        - listitem [ref=e99]: Macrotendencias Estratégicas | Configurando El Sector Y Sus Marcas
+        - listitem [ref=e100]: 1 | El Auge De La Personalización Adaptativa Y La Relevancia Contextual
+        - listitem [ref=e101]: 2 | Consumo Impulsado Por El Valor Y Alineación Ética
+        - listitem [ref=e102]: 3 | Participación Activa Y Concreción En La Cultura Del Consumo
+        - listitem [ref=e103]: Macrotendencias En Los Sectores Económicos
+        - listitem [ref=e104]: 4 | Ecosistemas Digital First Y La Aceleración Del Comercio Electrónico
+        - listitem [ref=e105]: 5 | Sostenibilidad Integrada En La Transformación Sectorial
+        - listitem [ref=e106]: 6 | Integración Tecnológica Entre Operaciones, Productos Y Servicios
+        - listitem [ref=e107]: Macrotendencias En Las Marcas
+        - listitem [ref=e108]: 7 | Transparencia Radical Y Comportamiento Auténtico De Marca
+        - listitem [ref=e109]: 8 | Innovación Orientada a La Experiencia E Inmersión En La Marca
+        - listitem [ref=e110]: 9 | Colaboraciones Estratégicas Y Marca Del Ecosistema
+        - listitem [ref=e111]: Macrotendencias Para Las Personas Y Su Relación Con Los Sectores Económicos
+        - listitem [ref=e112]: 10 | Expectativa De Viajes Digitales Sin Fricciones En Todas Las Categorías
+        - listitem [ref=e113]: 11 | Mayor Demanda De Agencia Personal E Influencia Colaborativa
+        - listitem [ref=e114]: 12 | La Prioridad De La Alineación De Valor En Las Decisiones De Compra
+        - listitem [ref=e115]: Macrotendencias Para Las Personas En Su Relación Con Las Marcas
+        - listitem [ref=e116]: 13 | Expectativa De Comunicación Bidireccional Y Diálogo En Tiempo Real
+        - listitem [ref=e117]: 14 | Lealtad Basada En Valores Compartidos Y Contribuciones Significativas
+        - listitem [ref=e118]: 15 | Deseo De Experiencias Digitales E Híbridas Inmersivas
+        - listitem [ref=e119]: Macrotendencias En La Intersección De Sectores Y Marcas
+        - listitem [ref=e120]: 16 | Convergencia De Sostenibilidad Y Rentabilidad En La Estrategia De Marca
+        - listitem [ref=e121]: 17 | Ecosistemas Omnicanal Y Competencia Basada En Plataformas
+        - listitem [ref=e122]: 18 | Ia Y Datos Como Tejido Conectivo Entre Sectores, Marcas Y Personas
+        - listitem [ref=e123]: Fuentes
+        - listitem [ref=e124]: Imagen
+        - listitem [ref=e125]: Acerca De Allegro 234
+      - generic [ref=e126]:
+        - article [ref=e127]:
+          - heading "Agenda" [level=3] [ref=e128]
+          - paragraph [ref=e129]: Índice de contenidos del informe con las secciones principales, tendencias numeradas (1–18) y materiales finales como fuentes, imágenes y información sobre Allegro 234.
+          - list [ref=e130]:
+            - listitem [ref=e131]: Lista ordenada de secciones y páginas del informe.
+            - listitem [ref=e132]: Incluye Resumen ejecutivo, bloques por personas, sectores, marcas e intersecciones estratégicas, además de Fuentes y 'Acerca de'.
+        - article [ref=e133]:
+          - heading "Resumen Ejecutivo" [level=3] [ref=e134]
+          - paragraph [ref=e135]: "Síntesis de las macrotendencias clave en personas, sectores y marcas: personalización adaptativa, sostenibilidad como motor de crecimiento, digital-first y la integración de IA y datos."
+          - list [ref=e136]:
+            - listitem [ref=e137]: Personalización en tiempo real y relevancia contextual son expectativas dominantes.
+            - listitem [ref=e138]: La sostenibilidad pasa de ser reputacional a ser un imperativo estratégico y de crecimiento.
+            - listitem [ref=e139]: La tecnología (IA, IoT, automatización) integra cadenas de valor y experiencias.
+        - article [ref=e140]:
+          - heading "Macrotendencias De Las Personas | Cómo Está Cambiando El Comportamiento" [level=3] [ref=e141]
+          - paragraph [ref=e142]: Marco sobre cómo cambian las expectativas y comportamientos de las personas y su impacto en marcas y sectores, incluyendo personalización, valores y participación.
+          - list [ref=e143]:
+            - listitem [ref=e144]: La personalización adaptativa se convierte en estándar.
+            - listitem [ref=e145]: La alineación ética y los valores influyen en decisiones de compra.
+            - listitem [ref=e146]: La gente quiere participar y co-crear en productos y narrativas.
+        - article [ref=e147]:
+          - heading "Macrotendencias Sectoriales | Cómo Están Evolucionando Los Bienes De Consumo FMCG , Los Bienes Duraderos Y Los Servicios" [level=3] [ref=e148]
+          - paragraph [ref=e149]: Visión de cómo el comercio digital, la sostenibilidad y la tecnología reconfiguran FMCG, bienes duraderos y servicios, y cómo estos sectores adaptan modelos operativos y de producto.
+          - list [ref=e150]:
+            - listitem [ref=e151]: Lo digital-first se consolida como infraestructura organizativa.
+            - listitem [ref=e152]: La sostenibilidad se integra en diseño de producto y operaciones.
+            - listitem [ref=e153]: La tecnología habilita previsión, personalización y optimización operativa.
+        - article [ref=e154]:
+          - heading "Macrotendencias De La Marca | Cómo Están Respondiendo Las Marcas" [level=3] [ref=e155]
+          - paragraph [ref=e156]: "Resumen de respuestas de marca: transparencia, innovación en experiencia y colaboraciones ecosistémicas como caminos para mantener relevancia."
+          - list [ref=e157]:
+            - listitem [ref=e158]: La transparencia actúa como base de la confianza.
+            - listitem [ref=e159]: La innovación se orienta a experiencias híbridas e inmersivas.
+            - listitem [ref=e160]: Las alianzas amplían capacidades y alcance de marca.
+        - article [ref=e161]:
+          - heading "Macrotendencias Para Las Personas En Estos Sectores | Comportamiento Dentro De Las Categorías" [level=3] [ref=e162]
+          - paragraph [ref=e163]: "Cómo las expectativas de los consumidores se manifiestan dentro de categorías concretas: demanda de viajes sin fricciones, mayor agencia y decisiones alineadas por valores."
+          - list [ref=e164]:
+            - listitem [ref=e165]: Demanda de viajes sin fricciones en compra, servicio y posventa.
+            - listitem [ref=e166]: Creciente deseo de influencia y co-creación por parte de los consumidores.
+            - listitem [ref=e167]: Decisiones de compra cada vez más condicionadas por la alineación de valores.
+        - article [ref=e168]:
+          - heading "Macrotendencias De Interacción | Cómo La Gente Interactúa Con Las Marcas" [level=3] [ref=e169]
+          - paragraph [ref=e170]: "Tendencias sobre formas de interacción: comunicación bidireccional en tiempo real, lealtad basada en significado y mundos de marca inmersivos que elevan expectativas de compromiso."
+          - list [ref=e171]:
+            - listitem [ref=e172]: Diálogo bidireccional y respuesta inmediata esperada por los clientes.
+            - listitem [ref=e173]: La lealtad se construye sobre propósito y significado, no solo mecánicas.
+            - listitem [ref=e174]: Experiencias híbridas y AR/VR aumentan la demanda de engagement continuo.
+        - article [ref=e175]:
+          - heading "Macrotendencias Estratégicas | Configurando El Sector Y Sus Marcas" [level=3] [ref=e176]
+          - paragraph [ref=e177]: "Resumen de palancas estratégicas: convergencia de sostenibilidad y rentabilidad, ecosistemas omnicanal y la integración de IA y datos como elemento conectivo del panorama."
+          - list [ref=e178]:
+            - listitem [ref=e179]: La sostenibilidad ahora impulsa eficiencia operativa e innovación.
+            - listitem [ref=e180]: Los ecosistemas omnicanal requieren pensamiento sistémico y coordinación basada en datos.
+            - listitem [ref=e181]: IA y datos unifican previsión, personalización y operaciones.
+        - article [ref=e182]:
+          - heading "1 | El Auge De La Personalización Adaptativa Y La Relevancia Contextual" [level=3] [ref=e183]
+          - paragraph [ref=e184]: La personalización evoluciona hacia una adaptación conductual continua y en tiempo real; los consumidores urbanos esperan ajustes contextuales constantes en servicios y comunicaciones.
+          - list [ref=e185]:
+            - listitem [ref=e186]: La personalización estática ya no es suficiente; se exige relevancia en tiempo real.
+            - listitem [ref=e187]: Sistemas de recomendación y análisis impulsados por IA son ejemplos formativos (p. ej. Netflix).
+        - article [ref=e188]:
+          - heading "2 | Consumo Impulsado Por El Valor Y Alineación Ética" [level=3] [ref=e189]
+          - paragraph [ref=e190]: Los valores y la autenticidad influyen fuertemente en decisiones de compra; consumidores premian la sostenibilidad, trabajo justo y abastecimiento responsable.
+          - list [ref=e191]:
+            - listitem [ref=e192]: La alineación ética de las marcas afecta retención y preferencia.
+            - listitem [ref=e193]: Los consumidores penalizan percepciones de greenwashing o falta de integridad.
+        - article [ref=e194]:
+          - heading "3 | Participación Activa Y Concreción En La Cultura Del Consumo" [level=3] [ref=e195]
+          - paragraph [ref=e196]: Creciente deseo de que los consumidores influyan en productos y narrativas mediante co-creación, bucles de feedback y contenido generado por usuarios.
+          - list [ref=e197]:
+            - listitem [ref=e198]: La participación sustituye al consumo pasivo como forma de compromiso.
+            - listitem [ref=e199]: Las marcas necesitan integrar mecanismos de co-creación y feedback.
+        - article [ref=e200]:
+          - heading "Macrotendencias En Los Sectores Económicos" [level=3] [ref=e201]
+          - paragraph [ref=e202]: Introducción a las tendencias sectoriales principales que afectan a FMCG, bienes duraderos y servicios, incluyendo digitalización, sostenibilidad y tecnología.
+          - list [ref=e203]:
+            - listitem [ref=e204]: Marco que agrupa las tendencias 4–6 centradas en transformaciones sectoriales.
+            - listitem [ref=e205]: Subraya implicaciones prácticas en operaciones y modelos de negocio.
+        - article [ref=e206]:
+          - heading "4 | Ecosistemas Digital First Y La Aceleración Del Comercio Electrónico" [level=3] [ref=e207]
+          - paragraph [ref=e208]: El comercio electrónico ha pasado de canal a infraestructura central; modelos como suscripción, reposición automática y entregas rápidas se normalizan, especialmente en entornos urbanos.
+          - list [ref=e209]:
+            - listitem [ref=e210]: El comercio digital define descubrimiento, compra y servicio en todas las categorías.
+            - listitem [ref=e211]: Pagos digitales, IA en inventario y logística predictiva posibilitan la transición.
+        - article [ref=e212]:
+          - heading "5 | Sostenibilidad Integrada En La Transformación Sectorial" [level=3] [ref=e213]
+          - paragraph [ref=e214]: "La sostenibilidad se convierte en requisito operativo: cambios en envases, cadenas de suministro y modelos de producto para reducir huella y responder a la demanda urbana."
+          - list [ref=e215]:
+            - listitem [ref=e216]: Foco en envases reciclables/recargables, formulaciones concentradas y reducción de residuos.
+            - listitem [ref=e217]: La sostenibilidad ya se liga a ventaja competitiva, confianza e inversión.
+        - article [ref=e218]:
+          - heading "6 | Integración Tecnológica Entre Operaciones, Productos Y Servicios" [level=3] [ref=e219]
+          - paragraph [ref=e220]: La IA, IoT y automatización se integran en previsión, desarrollo de producto, experiencia cliente y operaciones, transformando capacidades sectoriales.
+          - list [ref=e221]:
+            - listitem [ref=e222]: IA sustenta análisis, personalización, operaciones y atención al cliente.
+            - listitem [ref=e223]: La tecnología permite eficiencia, previsión y nuevas ofertas (servicios conectados, actualizaciones).
+        - article [ref=e224]:
+          - heading "Macrotendencias En Las Marcas" [level=3] [ref=e225]
+          - paragraph [ref=e226]: "Sección que agrupa las macrotendencias 7–9 sobre cómo las marcas están respondiendo: transparencia, experiencia e alianzas colaborativas."
+          - list [ref=e227]:
+            - listitem [ref=e228]: Agrupa tendencias de comportamiento de marca y ejemplos prácticos.
+            - listitem [ref=e229]: Conecta expectativas de consumidores con respuestas estratégicas de marca.
+        - article [ref=e230]:
+          - heading "7 | Transparencia Radical Y Comportamiento Auténtico De Marca" [level=3] [ref=e231]
+          - paragraph [ref=e232]: "Las audiencias urbanas esperan que las marcas 'muestren, no cuenten': revelar orígenes, cadena de suministro, uso de datos y rendimiento en sostenibilidad es esencial."
+          - list [ref=e233]:
+            - listitem [ref=e234]: La transparencia es un diferenciador competitivo frente al greenwashing.
+            - listitem [ref=e235]: En FMCG y durables la transparencia abarca etiquetado, reparabilidad y ciclo de vida.
+        - article [ref=e236]:
+          - heading "8 | Innovación Orientada a La Experiencia E Inmersión En La Marca" [level=3] [ref=e237]
+          - paragraph [ref=e238]: "Las marcas transitan de estrategias centradas en producto a estrategias centradas en experiencia: embalaje como interfaz, AR/VR y experiencias multisensoriales redefinen el valor percibido."
+          - list [ref=e239]:
+            - listitem [ref=e240]: El embalaje y los productos actúan como puertas de acceso a experiencias digitales.
+            - listitem [ref=e241]: La tecnología crea interacción inmersiva que prolonga la relación con la marca.
+        - article [ref=e242]:
+          - heading "9 | Colaboraciones Estratégicas Y Marca Del Ecosistema" [level=3] [ref=e243]
+          - paragraph [ref=e244]: La construcción de marca depende cada vez más de ecosistemas colaborativos (alianzas intersectoriales, creadores, tecnología) para ampliar capacidades y legitimidad.
+          - list [ref=e245]:
+            - listitem [ref=e246]: Alianzas con productores, plataformas y ONG refuerzan innovación y confianza.
+            - listitem [ref=e247]: El branding del ecosistema permite acceso a nuevos segmentos y capacidades tecnológicas.
+        - article [ref=e248]:
+          - heading "Macrotendencias Para Las Personas Y Su Relación Con Los Sectores Económicos" [level=3] [ref=e249]
+          - paragraph [ref=e250]: Sección que explora cómo las transformaciones sectoriales afectan la relación diaria de las personas con productos y servicios (tendencias 10–12).
+          - list [ref=e251]:
+            - listitem [ref=e252]: Examena expectativas prácticas de los consumidores dentro de cada sector.
+            - listitem [ref=e253]: Conecta tendencias de comportamiento con implicaciones operativas.
+        - article [ref=e254]:
+          - heading "10 | Expectativa De Viajes Digitales Sin Fricciones En Todas Las Categorías" [level=3] [ref=e255]
+          - paragraph [ref=e256]: Los consumidores esperan integración fluida online-offline en descubrimiento, compra y servicio; modelos como suscripción y reposición inteligente son ejemplos en FMCG.
+          - list [ref=e257]:
+            - listitem [ref=e258]: Fricciones en experiencias digitales son penalizadas por usuarios urbanos.
+            - listitem [ref=e259]: "Ejemplos: pruebas virtuales en belleza, portales integrados para durables y servicios."
+        - article [ref=e260]:
+          - heading "11 | Mayor Demanda De Agencia Personal E Influencia Colaborativa" [level=3] [ref=e261]
+          - paragraph [ref=e262]: Los consumidores quieren influir en productos y servicios; la co-creación y el feedback continuo son formas esperadas de participación.
+          - list [ref=e263]:
+            - listitem [ref=e264]: La participación activa se requiere para motivar engagement y lealtad.
+            - listitem [ref=e265]: Las marcas deben ofrecer canales efectivos para la influencia del usuario.
+        - article [ref=e266]:
+          - heading "12 | La Prioridad De La Alineación De Valor En Las Decisiones De Compra" [level=3] [ref=e267]
+          - paragraph [ref=e268]: La alineación entre los valores del consumidor y las acciones de la marca es un factor decisivo en la compra y la lealtad, con ejemplos prácticos en FMCG y durables.
+          - list [ref=e269]:
+            - listitem [ref=e270]: La lealtad emocional basada en valores supera a programas transaccionales.
+            - listitem [ref=e271]: Marcas que demuestran acciones coherentes (reparabilidad, abastecimiento ético) ganan preferencia.
+        - article [ref=e272]:
+          - heading "Macrotendencias Para Las Personas En Su Relación Con Las Marcas" [level=3] [ref=e273]
+          - paragraph [ref=e274]: Sección que agrupa las tendencias 13–15 sobre expectativas relacionales entre personas y marcas, incluyendo comunicación, lealtad y experiencias híbridas.
+          - list [ref=e275]:
+            - listitem [ref=e276]: Describe expectativas prácticas de interacción y fidelidad.
+            - listitem [ref=e277]: Conecta tendencias de comportamiento con tácticas de marca.
+        - article [ref=e278]:
+          - heading "13 | Expectativa De Comunicación Bidireccional Y Diálogo En Tiempo Real" [level=3] [ref=e279]
+          - paragraph [ref=e280]: Los clientes esperan respuestas inmediatas, empáticas y comunicación abierta; retrasos o silencios son percibidos negativamente y pueden provocar reacciones públicas.
+          - list [ref=e281]:
+            - listitem [ref=e282]: La comunicación en tiempo real es norma y el silencio es castigado socialmente.
+            - listitem [ref=e283]: La capacidad de respuesta de la marca influye en la percepción pública y la confianza.
+        - article [ref=e284]:
+          - heading "14 | Lealtad Basada En Valores Compartidos Y Contribuciones Significativas" [level=3] [ref=e285]
+          - paragraph [ref=e286]: La lealtad se construye sobre la demostración de valores compartidos y contribuciones sociales; los programas tradicionales de puntos son menos eficaces frente a la lealtad emocional.
+          - list [ref=e287]:
+            - listitem [ref=e288]: Las acciones tangibles y el impacto social generan defensores de marca.
+            - listitem [ref=e289]: Modelos como el de TOMS ejemplifican lealtad anclada en impacto social.
+        - article [ref=e290]:
+          - heading "15 | Deseo De Experiencias Digitales E Híbridas Inmersivas" [level=3] [ref=e291]
+          - paragraph [ref=e292]: Consumidores valoran experiencias multisensoriales y la mezcla físico-digital; la experiencia holística pasa a definir el valor de marca.
+          - list [ref=e293]:
+            - listitem [ref=e294]: AR/VR, embalajes interactivos y ecosistemas conectados aumentan la implicación del cliente.
+            - listitem [ref=e295]: La experiencia define la percepción de valor más que el producto aislado.
+        - article [ref=e296]:
+          - heading "Macrotendencias En La Intersección De Sectores Y Marcas" [level=3] [ref=e297]
+          - paragraph [ref=e298]: Síntesis final de cómo convergen sostenibilidad, ecosistemas omnicanal e IA/datos para redefinir estrategias de marca y sectoriales.
+          - list [ref=e299]:
+            - listitem [ref=e300]: Identifica tendencias transversales que requieren replanteamiento estratégico.
+            - listitem [ref=e301]: Subraya la necesidad de diseñar para sistemas, no solo para canales individuales.
+        - article [ref=e302]:
+          - heading "16 | Convergencia De Sostenibilidad Y Rentabilidad En La Estrategia De Marca" [level=3] [ref=e303]
+          - paragraph [ref=e304]: "La sostenibilidad y la rentabilidad se vuelven interdependientes: rediseño de productos, modelos circulares y prácticas regenerativas generan valor económico y reducen riesgos."
+          - list [ref=e305]:
+            - listitem [ref=e306]: Modelos circulares y prácticas de reutilización generan ingresos y reputación.
+            - listitem [ref=e307]: Las mejoras medioambientales pueden traducirse en ahorro de costes y resiliencia de suministro.
+        - article [ref=e308]:
+          - heading "17 | Ecosistemas Omnicanal Y Competencia Basada En Plataformas" [level=3] [ref=e309]
+          - paragraph [ref=e310]: La competencia se desplaza hacia ecosistemas y plataformas integradas (ej. Alibaba, Amazon), donde la coordinación entre retail, fabricantes y tecnología es clave para orquestar el recorrido del consumidor.
+          - list [ref=e311]:
+            - listitem [ref=e312]: Las marcas deben diseñar para sistemas y gestionar presencia en múltiples modos (marketplaces, D2C, social commerce).
+            - listitem [ref=e313]: Coherencia de contenido, precio y disponibilidad es crítica en ecosistemas fragmentados.
+        - article [ref=e314]:
+          - heading "18 | Ia Y Datos Como Tejido Conectivo Entre Sectores, Marcas Y Personas" [level=3] [ref=e315]
+          - paragraph [ref=e316]: La expansión de la IA (incluida la generativa) y los datos transforma previsión, personalización, operaciones y creación de contenido, pero también plantea responsabilidades en transparencia y equidad.
+          - list [ref=e317]:
+            - listitem [ref=e318]: IA soporta análisis, personalización, optimización de cadena y atención al cliente.
+            - listitem [ref=e319]: El despliegue responsable requiere transparencia, control de sesgos y estándares éticos.
+        - article [ref=e320]:
+          - heading "Fuentes" [level=3] [ref=e321]
+          - paragraph [ref=e322]: Listado de fuentes y referencias citadas por el informe, incluyendo agencias de consultoría y estudios sectoriales (p. ej. TrendWatching, Mintel, McKinsey, Deloitte) tal como aparece en la sección Fuentes.
+          - list [ref=e323]:
+            - listitem [ref=e324]: Comprende referencias a informes y artículos de consultoras y bancos de insights sectoriales.
+            - listitem [ref=e325]: La sección recoge URLs y títulos de trabajos utilizados para el análisis.
+        - article [ref=e326]:
+          - heading "Imagen" [level=3] [ref=e327]
+          - paragraph [ref=e328]: Créditos de imagen utilizados en el informe; el PDF incluye al menos una referencia a un recurso gráfico y su crédito.
+          - list [ref=e329]:
+            - listitem [ref=e330]: Incluye créditos de imágenes (ej. Andrea Piacquadio, Pexels).
+        - article [ref=e331]:
+          - heading "Acerca De Allegro 234" [level=3] [ref=e332]
+          - paragraph [ref=e333]: Información de contacto y descripción breve de Allegro 234 como consultora en negocios, marca y transformación, incluida la dirección y datos de registro que aparecen en la portada/contraportada.
+          - list [ref=e334]:
+            - listitem [ref=e335]: Datos de contacto y registro mercantil de Allegro 234.
+            - listitem [ref=e336]: "Declaración del objetivo del informe: ofrecer entendimiento accionable a líderes de marca y negocio."
+    - region "Executive summary" [ref=e337]:
+      - generic [ref=e339]:
+        - paragraph [ref=e340]: Editorial compression
+        - heading "Executive summary" [level=2] [ref=e341]
+      - list [ref=e342]:
+        - listitem [ref=e343]: "Allegro 234 synthesizes macrotendencias que convergen en torno a tres pilares: personalización adaptativa y experiencias inmersivas"
+        - listitem [ref=e344]: sostenibilidad integrada como motor estratégico
+        - listitem [ref=e345]: y la digitalización (IA y ecosistemas omnicanal) como tejido operativo. Los consumidores urbanos exigen relevancia en tiempo real, comunicación bidireccional y oportunidades de co‑creación, lo que eleva la expectativa sobre la capacidad de las marcas para responder con rapidez y empatía. La sostenibilidad ha trascendido la reputación para convertirse en palanca de rentabilidad—modelos circulares, envases recargables y prácticas regenerativas generan valor económico además de impacto ambiental. La competencia se reconfigura en ecosistemas omnicanal y plataformas, por lo que las marcas deben orquestar coherencia de contenido, precio y disponibilidad entre marketplaces, D2C, retail físico y social commerce. IA y datos actúan como el tejido conectivo que permite predicción, personalización y optimización de la cadena, aunque su despliegue requiere transparencia y gobernanza ética. En ese contexto, la transparencia radical, las alianzas ecosistémicas y la construcción de lealtad basada en valores compartidos son prioridades estratégicas para ganar confianza y diferenciación.
+      - generic [ref=e346]:
+        - text: Claim evidence map
+        - list [ref=e347]:
+          - listitem [ref=e348]:
+            - strong [ref=e349]: Consumers demand radical transparency and authentic brand behavior (e.g., supply origins, sustainability performance, labor conditions) rather than marketing claims.
+            - text: ": Brands face strong pressure for radical transparency and authentic behavior; consumers expect demonstrable actions (supply origins, sustainability performance, labor conditions) rather than marketing claims."
+            - generic [ref=e350]: F1_transparency_authenticity · report page 12
+          - listitem [ref=e351]:
+            - strong [ref=e352]: AI and data function as the connective tissue across forecasting, personalization, supply‑chain optimization and customer service, while creating responsibilities for transparency and fairness.
+            - text: ": AI and data are the connective tissue across sectors and brands — enabling forecasting, personalization, supply‑chain optimization, customer service automation and large‑scale content creation, while raising transparency and ethics requirements."
+            - generic [ref=e353]: F5_ai_data_as_connective_tissue · report pages 25, 26
+          - listitem [ref=e354]:
+            - strong [ref=e355]: Competition is shifting to omnichannel ecosystems and platform plays; brands must orchestrate consistent content, pricing and experience across e‑commerce, physical retail, social commerce, D2C and platform partners.
+            - text: ": Competition is shifting to omnichannel ecosystems and platform-based play: brands must orchestrate consistent content, pricing and experience across e‑commerce, physical retail, social commerce, D2C and platform partners."
+            - generic [ref=e356]: F4_omnichannel_ecosystems_platform_competition · report pages 23, 9
+          - listitem [ref=e357]:
+            - strong [ref=e358]: There is rising demand for adaptive personalization and hybrid immersive experiences (AR/VR, scannable packaging, digital‑physical showrooms) that extend brand engagement beyond transactions.
+            - text: ": There is rising demand for adaptive personalization and hybrid immersive experiences (AR/VR, digital-physical showrooms, scannable packaging) that extend brand engagement beyond transactions."
+            - generic [ref=e359]: F6_personalization_and_immersive_experiences · report pages 6, 20, 13
+    - region "Key data insights" [ref=e360]:
+      - generic [ref=e362]:
+        - paragraph [ref=e363]: Signal inventory
+        - heading "Key data insights" [level=2] [ref=e364]
+      - list [ref=e365]:
+        - listitem [ref=e366]:
+          - generic [ref=e367]:
+            - generic [ref=e368]: "1"
+            - generic [ref=e369]:
+              - paragraph [ref=e370]: Consumers demand radical transparency — demonstrable actions on origins, labor and sustainability, not marketing claims.
+              - generic [ref=e371]: F1_transparency_authenticity · report page 12
+        - listitem [ref=e372]:
+          - generic [ref=e373]:
+            - generic [ref=e374]: "2"
+            - generic [ref=e375]:
+              - paragraph [ref=e376]: "Purchase decisions are increasingly driven by value alignment: sustainability, ethical sourcing and social impact now shape consumer choice across categories."
+              - generic [ref=e377]: F2_value_alignment_drives_purchase · report pages 17, 7
+        - listitem [ref=e378]:
+          - generic [ref=e379]:
+            - generic [ref=e380]: "3"
+            - generic [ref=e381]:
+              - paragraph [ref=e382]: "Sustainability converges with profitability: circular models, refill systems and regenerative sourcing drive economic value and reduce risk."
+              - generic [ref=e383]: F3_sustainability_profitability_convergence · report pages 10, 21
+        - listitem [ref=e384]:
+          - generic [ref=e385]:
+            - generic [ref=e386]: "4"
+            - generic [ref=e387]:
+              - paragraph [ref=e388]: Competition is shifting to omnichannel ecosystems and platform plays — brands must orchestrate consistent content, pricing and experience across marketplaces, D2C and social commerce.
+              - generic [ref=e389]: F4_omnichannel_ecosystems_platform_competition · report pages 23, 9
+        - listitem [ref=e390]:
+          - generic [ref=e391]:
+            - generic [ref=e392]: "5"
+            - generic [ref=e393]:
+              - paragraph [ref=e394]: AI and data are the connective tissue across forecasting, personalization, supply‑chain optimization and large‑scale content creation — and create new transparency and ethics requirements.
+              - generic [ref=e395]: F5_ai_data_as_connective_tissue · report pages 25, 26
+    - region "Editorial details" [ref=e396]:
+      - generic [ref=e398]:
+        - paragraph [ref=e399]: Provenance and scope
+        - heading "Editorial details" [level=2] [ref=e400]
+      - generic [ref=e401]:
+        - article [ref=e402]:
+          - heading "Methodology" [level=3] [ref=e403]
+          - paragraph [ref=e404]: No methodology details were extracted.
+        - article [ref=e405]:
+          - heading "Coverage" [level=3] [ref=e406]
+          - list [ref=e407]:
+            - listitem [ref=e408]: Análisis de macrotendencias que ofrece una visión realista y orientada al futuro sobre cómo evolucionan las personas, sectores y marcas a medida que nos acercamos a 2026; dirigido a líderes de marca y negocio para identificar oportunidades y prioridades estratégicas.
+        - article [ref=e409]:
+          - heading "Findings" [level=3] [ref=e410]
+          - paragraph [ref=e411]: No structured findings were extracted.
+        - article [ref=e412]:
+          - heading "Limitations" [level=3] [ref=e413]
+          - paragraph [ref=e414]: No explicit limitations were extracted.
+        - article [ref=e415]:
+          - heading "Contacts" [level=3] [ref=e416]
+          - paragraph [ref=e417]: No contact details were extracted.
+      - generic [ref=e418]:
+        - text: Ordered chapters
+        - generic [ref=e419]:
+          - article [ref=e420]:
+            - heading "1. Agenda" [level=3] [ref=e421]
+            - paragraph [ref=e422]: "Pages: 2"
+            - paragraph [ref=e423]: Índice de contenidos del informe con las secciones principales, tendencias numeradas (1–18) y materiales finales como fuentes, imágenes y información sobre Allegro 234.
+          - article [ref=e424]:
+            - heading "2. Resumen ejecutivo" [level=3] [ref=e425]
+            - paragraph [ref=e426]: "Pages: 3"
+            - paragraph [ref=e427]: "Síntesis de las macrotendencias clave en personas, sectores y marcas: personalización adaptativa, sostenibilidad como motor de crecimiento, digital-first y la integración de IA y datos."
+          - article [ref=e428]:
+            - heading "3. Macrotendencias de las personas | Cómo está cambiando el comportamiento" [level=3] [ref=e429]
+            - paragraph [ref=e430]: "Pages: 3"
+            - paragraph [ref=e431]: Marco sobre cómo cambian las expectativas y comportamientos de las personas y su impacto en marcas y sectores, incluyendo personalización, valores y participación.
+          - article [ref=e432]:
+            - heading "4. Macrotendencias sectoriales | Cómo están evolucionando los bienes de consumo -FMCG-, los bienes duraderos y los servicios" [level=3] [ref=e433]
+            - paragraph [ref=e434]: "Pages: 3"
+            - paragraph [ref=e435]: Visión de cómo el comercio digital, la sostenibilidad y la tecnología reconfiguran FMCG, bienes duraderos y servicios, y cómo estos sectores adaptan modelos operativos y de producto.
+          - article [ref=e436]:
+            - heading "5. Macrotendencias de la marca | Cómo están respondiendo las marcas" [level=3] [ref=e437]
+            - paragraph [ref=e438]: "Pages: 4"
+            - paragraph [ref=e439]: "Resumen de respuestas de marca: transparencia, innovación en experiencia y colaboraciones ecosistémicas como caminos para mantener relevancia."
+          - article [ref=e440]:
+            - heading "6. Macrotendencias para las personas en estos sectores | Comportamiento dentro de las categorías" [level=3] [ref=e441]
+            - paragraph [ref=e442]: "Pages: 4"
+            - paragraph [ref=e443]: "Cómo las expectativas de los consumidores se manifiestan dentro de categorías concretas: demanda de viajes sin fricciones, mayor agencia y decisiones alineadas por valores."
+          - article [ref=e444]:
+            - heading "7. Macrotendencias de interacción | Cómo la gente interactúa con las marcas" [level=3] [ref=e445]
+            - paragraph [ref=e446]: "Pages: 5"
+            - paragraph [ref=e447]: "Tendencias sobre formas de interacción: comunicación bidireccional en tiempo real, lealtad basada en significado y mundos de marca inmersivos que elevan expectativas de compromiso."
+          - article [ref=e448]:
+            - heading "8. Macrotendencias estratégicas | Configurando el sector y sus marcas" [level=3] [ref=e449]
+            - paragraph [ref=e450]: "Pages: 5"
+            - paragraph [ref=e451]: "Resumen de palancas estratégicas: convergencia de sostenibilidad y rentabilidad, ecosistemas omnicanal y la integración de IA y datos como elemento conectivo del panorama."
+          - article [ref=e452]:
+            - heading "9. 1 | El auge de la personalización adaptativa y la relevancia contextual" [level=3] [ref=e453]
+            - paragraph [ref=e454]: "Pages: 6"
+            - paragraph [ref=e455]: La personalización evoluciona hacia una adaptación conductual continua y en tiempo real; los consumidores urbanos esperan ajustes contextuales constantes en servicios y comunicaciones.
+          - article [ref=e456]:
+            - heading "10. 2 | Consumo impulsado por el valor y alineación ética" [level=3] [ref=e457]
+            - paragraph [ref=e458]: "Pages: 7"
+            - paragraph [ref=e459]: Los valores y la autenticidad influyen fuertemente en decisiones de compra; consumidores premian la sostenibilidad, trabajo justo y abastecimiento responsable.
+          - article [ref=e460]:
+            - heading "11. 3 | Participación activa y concreción en la cultura del consumo" [level=3] [ref=e461]
+            - paragraph [ref=e462]: "Pages: 8"
+            - paragraph [ref=e463]: Creciente deseo de que los consumidores influyan en productos y narrativas mediante co-creación, bucles de feedback y contenido generado por usuarios.
+          - article [ref=e464]:
+            - heading "12. Macrotendencias en los sectores económicos" [level=3] [ref=e465]
+            - paragraph [ref=e466]: "Pages: 9"
+            - paragraph [ref=e467]: Introducción a las tendencias sectoriales principales que afectan a FMCG, bienes duraderos y servicios, incluyendo digitalización, sostenibilidad y tecnología.
+          - article [ref=e468]:
+            - heading "13. 4 | Ecosistemas digital-first y la aceleración del comercio electrónico" [level=3] [ref=e469]
+            - paragraph [ref=e470]: "Pages: 9"
+            - paragraph [ref=e471]: El comercio electrónico ha pasado de canal a infraestructura central; modelos como suscripción, reposición automática y entregas rápidas se normalizan, especialmente en entornos urbanos.
+          - article [ref=e472]:
+            - heading "14. 5 | Sostenibilidad integrada en la transformación sectorial" [level=3] [ref=e473]
+            - paragraph [ref=e474]: "Pages: 10"
+            - paragraph [ref=e475]: "La sostenibilidad se convierte en requisito operativo: cambios en envases, cadenas de suministro y modelos de producto para reducir huella y responder a la demanda urbana."
+          - article [ref=e476]:
+            - heading "15. 6 | Integración tecnológica entre operaciones, productos y servicios" [level=3] [ref=e477]
+            - paragraph [ref=e478]: "Pages: 11"
+            - paragraph [ref=e479]: La IA, IoT y automatización se integran en previsión, desarrollo de producto, experiencia cliente y operaciones, transformando capacidades sectoriales.
+          - article [ref=e480]:
+            - heading "16. Macrotendencias en las marcas" [level=3] [ref=e481]
+            - paragraph [ref=e482]: "Pages: 12"
+            - paragraph [ref=e483]: "Sección que agrupa las macrotendencias 7–9 sobre cómo las marcas están respondiendo: transparencia, experiencia e alianzas colaborativas."
+          - article [ref=e484]:
+            - heading "17. 7 | Transparencia radical y comportamiento auténtico de marca" [level=3] [ref=e485]
+            - paragraph [ref=e486]: "Pages: 12"
+            - paragraph [ref=e487]: "Las audiencias urbanas esperan que las marcas 'muestren, no cuenten': revelar orígenes, cadena de suministro, uso de datos y rendimiento en sostenibilidad es esencial."
+          - article [ref=e488]:
+            - heading "18. 8 | Innovación orientada a la experiencia e inmersión en la marca" [level=3] [ref=e489]
+            - paragraph [ref=e490]: "Pages: 13"
+            - paragraph [ref=e491]: "Las marcas transitan de estrategias centradas en producto a estrategias centradas en experiencia: embalaje como interfaz, AR/VR y experiencias multisensoriales redefinen el valor percibido."
+          - article [ref=e492]:
+            - heading "19. 9 | Colaboraciones estratégicas y marca del ecosistema" [level=3] [ref=e493]
+            - paragraph [ref=e494]: "Pages: 14"
+            - paragraph [ref=e495]: La construcción de marca depende cada vez más de ecosistemas colaborativos (alianzas intersectoriales, creadores, tecnología) para ampliar capacidades y legitimidad.
+          - article [ref=e496]:
+            - heading "20. Macrotendencias para las personas y su relación con los sectores económicos" [level=3] [ref=e497]
+            - paragraph [ref=e498]: "Pages: 15"
+            - paragraph [ref=e499]: Sección que explora cómo las transformaciones sectoriales afectan la relación diaria de las personas con productos y servicios (tendencias 10–12).
+          - article [ref=e500]:
+            - heading "21. 10 | Expectativa de viajes digitales sin fricciones en todas las categorías" [level=3] [ref=e501]
+            - paragraph [ref=e502]: "Pages: 15"
+            - paragraph [ref=e503]: Los consumidores esperan integración fluida online-offline en descubrimiento, compra y servicio; modelos como suscripción y reposición inteligente son ejemplos en FMCG.
+          - article [ref=e504]:
+            - heading "22. 11 | Mayor demanda de agencia personal e influencia colaborativa" [level=3] [ref=e505]
+            - paragraph [ref=e506]: "Pages: 16"
+            - paragraph [ref=e507]: Los consumidores quieren influir en productos y servicios; la co-creación y el feedback continuo son formas esperadas de participación.
+          - article [ref=e508]:
+            - heading "23. 12 | La prioridad de la alineación de valor en las decisiones de compra" [level=3] [ref=e509]
+            - paragraph [ref=e510]: "Pages: 17"
+            - paragraph [ref=e511]: La alineación entre los valores del consumidor y las acciones de la marca es un factor decisivo en la compra y la lealtad, con ejemplos prácticos en FMCG y durables.
+          - article [ref=e512]:
+            - heading "24. Macrotendencias para las personas en su relación con las marcas" [level=3] [ref=e513]
+            - paragraph [ref=e514]: "Pages: 18"
+            - paragraph [ref=e515]: Sección que agrupa las tendencias 13–15 sobre expectativas relacionales entre personas y marcas, incluyendo comunicación, lealtad y experiencias híbridas.
+          - article [ref=e516]:
+            - heading "25. 13 | Expectativa de comunicación bidireccional y diálogo en tiempo real" [level=3] [ref=e517]
+            - paragraph [ref=e518]: "Pages: 18"
+            - paragraph [ref=e519]: Los clientes esperan respuestas inmediatas, empáticas y comunicación abierta; retrasos o silencios son percibidos negativamente y pueden provocar reacciones públicas.
+          - article [ref=e520]:
+            - heading "26. 14 | Lealtad basada en valores compartidos y contribuciones significativas" [level=3] [ref=e521]
+            - paragraph [ref=e522]: "Pages: 19"
+            - paragraph [ref=e523]: La lealtad se construye sobre la demostración de valores compartidos y contribuciones sociales; los programas tradicionales de puntos son menos eficaces frente a la lealtad emocional.
+          - article [ref=e524]:
+            - heading "27. 15 | Deseo de experiencias digitales e híbridas inmersivas" [level=3] [ref=e525]
+            - paragraph [ref=e526]: "Pages: 20"
+            - paragraph [ref=e527]: Consumidores valoran experiencias multisensoriales y la mezcla físico-digital; la experiencia holística pasa a definir el valor de marca.
+          - article [ref=e528]:
+            - heading "28. Macrotendencias en la intersección de sectores y marcas" [level=3] [ref=e529]
+            - paragraph [ref=e530]: "Pages: 21"
+            - paragraph [ref=e531]: Síntesis final de cómo convergen sostenibilidad, ecosistemas omnicanal e IA/datos para redefinir estrategias de marca y sectoriales.
+          - article [ref=e532]:
+            - heading "29. 16 | Convergencia de sostenibilidad y rentabilidad en la estrategia de marca" [level=3] [ref=e533]
+            - paragraph [ref=e534]: "Pages: 21"
+            - paragraph [ref=e535]: "La sostenibilidad y la rentabilidad se vuelven interdependientes: rediseño de productos, modelos circulares y prácticas regenerativas generan valor económico y reducen riesgos."
+          - article [ref=e536]:
+            - heading "30. 17 | Ecosistemas omnicanal y competencia basada en plataformas" [level=3] [ref=e537]
+            - paragraph [ref=e538]: "Pages: 23"
+            - paragraph [ref=e539]: La competencia se desplaza hacia ecosistemas y plataformas integradas (ej. Alibaba, Amazon), donde la coordinación entre retail, fabricantes y tecnología es clave para orquestar el recorrido del consumidor.
+          - article [ref=e540]:
+            - heading "31. 18 | IA y datos como tejido conectivo entre sectores, marcas y personas" [level=3] [ref=e541]
+            - paragraph [ref=e542]: "Pages: 25"
+            - paragraph [ref=e543]: La expansión de la IA (incluida la generativa) y los datos transforma previsión, personalización, operaciones y creación de contenido, pero también plantea responsabilidades en transparencia y equidad.
+          - article [ref=e544]:
+            - heading "32. Fuentes" [level=3] [ref=e545]
+            - paragraph [ref=e546]: "Pages: 27"
+            - paragraph [ref=e547]: Listado de fuentes y referencias citadas por el informe, incluyendo agencias de consultoría y estudios sectoriales (p. ej. TrendWatching, Mintel, McKinsey, Deloitte) tal como aparece en la sección Fuentes.
+          - article [ref=e548]:
+            - heading "33. Imagen" [level=3] [ref=e549]
+            - paragraph [ref=e550]: "Pages: 28"
+            - paragraph [ref=e551]: Créditos de imagen utilizados en el informe; el PDF incluye al menos una referencia a un recurso gráfico y su crédito.
+          - article [ref=e552]:
+            - heading "34. Acerca de Allegro 234" [level=3] [ref=e553]
+            - paragraph [ref=e554]: "Pages: 29"
+            - paragraph [ref=e555]: Información de contacto y descripción breve de Allegro 234 como consultora en negocios, marca y transformación, incluida la dirección y datos de registro que aparecen en la portada/contraportada.
+    - region "Figure carousel" [ref=e556]:
+      - generic [ref=e558]:
+        - paragraph [ref=e559]: Visual evidence
+        - heading "Figures" [level=2] [ref=e560]
+      - generic [ref=e561]:
+        - generic [ref=e562]:
+          - button "Previous figure" [disabled] [ref=e563]: ‹
+          - figure "Este análisis de macrotendencias ofrece una visión realista y orientada al futuro sobre cómo" [ref=e565]:
+            - img "Selected figure from Otro más hablando de tendencias de 2026 | Sobre macrotendencias" [ref=e566]
+            - generic [ref=e567]: Este análisis de macrotendencias ofrece una visión realista y orientada al futuro sobre cómo
+          - button "Next figure" [disabled] [ref=e568]: ›
+        - generic [ref=e569]:
+          - generic [ref=e570]: 1 / 1
+          - button "Open fullscreen" [ref=e571] [cursor=pointer]
+    - region "Key quotes" [ref=e572]:
+      - generic [ref=e574]:
+        - paragraph [ref=e575]: Verbatim signals
+        - heading "Key quotes" [level=2] [ref=e576]
+      - list [ref=e577]:
+        - listitem [ref=e578]:
+          - figure "Allegro 234 expert team" [ref=e579]:
+            - blockquote [ref=e580]:
+              - paragraph [ref=e581]: "\"La gente espera que las marcas, plataformas y servicios se adapten continuamente a sus comportamientos y contextos. La personalización estática ya no es suficiente; La relevancia en tiempo real ahora impulsa la confianza, el compromiso y la lealtad.\""
+            - generic [ref=e583]: Allegro 234 expert team
+            - generic [ref=e584]: qc1 · report page 3 · Resumen ejecutivo
+        - listitem [ref=e585]:
+          - figure "Allegro 234 expert team" [ref=e586]:
+            - blockquote [ref=e587]:
+              - paragraph [ref=e588]: "\"La transparencia no es opcional; Es un diferenciador competitivo. Las marcas que adoptan la honestidad visible ganan lealtad, especialmente cuando los consumidores alinean las compras con la identidad y los valores.\""
+            - generic [ref=e590]: Allegro 234 expert team
+            - generic [ref=e591]: qc3 · report page 12 · 7 | Transparencia radical y comportamiento auténtico de marca
+        - listitem [ref=e592]:
+          - figure "Allegro 234 expert team" [ref=e593]:
+            - blockquote [ref=e594]:
+              - paragraph [ref=e595]: "\"El comercio electrónico ya no es complementario: ahora es una expectativa predeterminada.\""
+            - generic [ref=e597]: Allegro 234 expert team
+            - generic [ref=e598]: qc5 · report page 9 · 4 | Ecosistemas digital-first y la aceleración del comercio electrónico
+        - listitem [ref=e599]:
+          - figure "Allegro 234 expert team" [ref=e600]:
+            - blockquote [ref=e601]:
+              - paragraph [ref=e602]: "\"Diálogo bidireccional en tiempo real como norma Los clientes esperan respuestas inmediatas, empáticas y una comunicación abierta. El silencio o los retrasos se consideran una falta de respeto y corren el riesgo de una reacción pública.\""
+            - generic [ref=e604]: Allegro 234 expert team
+            - generic [ref=e605]: qc6 · report page 5
+    - region "Related resources" [ref=e606]:
+      - generic [ref=e608]:
+        - paragraph [ref=e609]: Traceability
+        - heading "Related resources" [level=2] [ref=e610]
+      - paragraph [ref=e611]: Source URL was not available in the extracted report metadata.
+      - list [ref=e612]:
+        - listitem [ref=e613]:
+          - link "Back to TL;DR" [ref=e614] [cursor=pointer]:
+            - /url: "#section-summary"
+        - listitem [ref=e615]:
+          - link "Jump to key insights" [ref=e616] [cursor=pointer]:
+            - /url: "#section-insights"
+    - region "Appendix" [ref=e617]:
+      - generic [ref=e619]:
+        - paragraph [ref=e620]: Generated extras
+        - heading "Appendix" [level=2] [ref=e621]
+      - heading "Expert comment (generated)" [level=3] [ref=e622]
+      - generic [ref=e623]:
+        - paragraph [ref=e624]: Urban consumers combine an expectation of continuous, real‑time relevance with uncompromising demands for demonstrable transparency and value alignment, creating a structural tension between personalization velocity and ethical governance of data and AI. For decision makers this means pairing investments in real‑time personalization capabilities with explicit transparency, explainability and accountability mechanisms so that speed does not undermine trust.
+        - paragraph [ref=e625]: "- \"La gente espera que las marcas, plataformas y servicios se adapten continuamente a sus comportamientos y contextos. La personalización estática ya no es suficiente; La relevancia en tiempo real ahora impulsa la confianza, el compromiso y la lealtad.\" (Resumen ejecutivo)"
+        - paragraph [ref=e626]: "- Consumers demand radical transparency — demonstrable actions on origins, labor and sustainability, not marketing claims. (IC1_transparency_radical)"
+        - paragraph [ref=e627]: "- AI and data are the connective tissue across forecasting, personalization, supply‑chain optimization and large‑scale content creation — and create new transparency and ethics requirements. (IC5_ai_data_connective)"
+        - paragraph [ref=e628]: Competition is reconfiguring around omnichannel ecosystems and platform plays, so brands that cannot orchestrate consistent content, pricing and availability across marketplaces, D2C, physical retail and social commerce will face strategic disadvantage. Operationally this requires centralized orchestration of catalog, pricing and creative assets, combined with channel‑level guardrails to preserve coherence while enabling partner flexibility.
+        - paragraph [ref=e629]: "- Competition is shifting to omnichannel ecosystems and platform plays — brands must orchestrate consistent content, pricing and experience across marketplaces, D2C and social commerce. (IC4_omnichannel_ecosystems)"
+        - paragraph [ref=e630]: "- \"El comercio electrónico ya no es complementario: ahora es una expectativa predeterminada.\" (4 | Ecosistemas digital-first y la aceleración del comercio electrónico)"
+        - paragraph [ref=e631]: Sustainability is no longer purely reputational; circular models, refill systems and regenerative sourcing are strategic levers that drive economic value and reduce risk, and they must be embedded into assortment, packaging and partner selection. Simultaneously, brands must normalize two‑way, immediate communication to steward public reactions and sustain loyalty when values are tested.
+        - paragraph [ref=e632]: "- Sustainability converges with profitability: circular models, refill systems and regenerative sourcing drive economic value and reduce risk. (IC3_sustainability_profitability)"
+        - paragraph [ref=e633]: "- \"Diálogo bidireccional en tiempo real como norma\\nLos clientes esperan respuestas inmediatas, empáticas y una comunicación abierta. El silencio o los retrasos se consideran una falta de respeto y corren el riesgo de una reacción pública.\" (Macrotendencias de interacción / 13)"
+      - heading "LinkedIn post" [level=3] [ref=e634]
+      - generic [ref=e635]:
+        - paragraph [ref=e636]: "Urban consumers approaching 2026 expect real-time adaptive personalization, radical transparency and value alignment. That changes the mandate for ecommerce and digital leaders: move from channel optimization to orchestrating values, data and experiences across ecosystems. What this means for decision-makers: - Operationalize radical transparency: provide demonstrable evidence of supply origins, sustainability performance and labor conditions rather than marketing claims."
+        - paragraph [ref=e637]: "- Treat sustainability as a strategic profit lever: prioritize circular models, refill systems and regenerative sourcing that create environmental outcomes and economic value."
+        - paragraph [ref=e638]: "- Make AI and data the connective tissue: deploy AI and data across forecasting, personalization, supply-chain optimization and customer service while embedding transparency and ethics governance."
+        - paragraph [ref=e639]: "- Orchestrate omnichannel ecosystems: ensure consistent content, pricing and experience across e-commerce, physical retail, social commerce, D2C and platform partners."
+        - paragraph [ref=e640]: "- Invest in adaptive personalization and hybrid immersive experiences (AR/VR, scannable packaging, digital-physical showrooms) to extend brand engagement beyond transactions. Evidence highlights from the report: - Consumers demand radical transparency — demonstrable actions on origins, labor and sustainability, not marketing claims."
+        - paragraph [ref=e641]: "- Purchase decisions are increasingly driven by value alignment: sustainability, ethical sourcing and social impact now shape consumer choice."
+        - paragraph [ref=e642]: "- Sustainability converges with profitability: circular models, refill systems and regenerative sourcing drive economic value and reduce risk."
+        - paragraph [ref=e643]: "- Competition is shifting to omnichannel ecosystems and platform plays — brands must orchestrate consistent content, pricing and experience across marketplaces, D2C and social commerce."
+        - paragraph [ref=e644]: "- AI and data are the connective tissue across forecasting, personalization, supply‑chain optimization and large‑scale content creation — and create new transparency and ethics requirements. Immediate priorities (two actions to start this quarter): - Close the transparency gap: map and publish demonstrable evidence for origins, labor and sustainability touchpoints across your value chain."
+        - paragraph [ref=e645]: "- Align ecosystem partners: define a single content, pricing and availability playbook across marketplaces, D2C and retail to protect margin and customer trust. #Omnichannel #AI #Sustainability"
+  - generic [ref=e646]:
+    - text: "Generated by Market Lense. File ID:"
+    - code [ref=e647]: 1Vb-rfGTlveFN3syYW_y1aO61GJJIw6mY
+    - text: .

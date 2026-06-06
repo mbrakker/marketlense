@@ -1,0 +1,232 @@
+- article [ref=e3] [box=10,14,355,33553]:
+  - generic [ref=e5] [box=35,47,305,979]:
+    - generic [ref=e6] [box=35,47,305,468]:
+      - paragraph [ref=e7] [box=35,47,305,20]: Market Lense report digest
+      - heading "Otro más hablando de tendencias de 2026 | Sobre macrotendencias" [level=1] [ref=e8] [box=35,77,305,134]
+      - paragraph [ref=e9] [box=35,225,305,75]: "Title: Otro más hablando de tendencias de 2026 | Sobre macrotendencias · Publisher: Allegro 234 · Year: 2026"
+      - paragraph [ref=e10] [box=35,314,305,149]:
+        - generic [ref=e11] [box=35,314,305,26]
+        - generic [ref=e13] [box=35,348,305,26]
+        - generic [ref=e15] [box=35,382,305,81]
+      - list [ref=e17] [box=35,483,305,32]:
+        - listitem [ref=e18] [box=35,483,83,32]: 5 insights
+        - listitem [ref=e19] [box=128,483,76,32]: 4 quotes
+        - listitem [ref=e20] [box=215,483,79,32]: 34 topics
+    - figure "Preview panel for the source report." [ref=e22] [box=35,543,305,482]:
+      - img "Report preview visual for Otro más hablando de tendencias de 2026 | Sobre macrotendencias" [ref=e23] [box=36,544,303,428]
+      - generic [ref=e24] [box=36,973,303,52]: Preview panel for the source report.
+  - navigation "Digest sections" [ref=e27] [box=11,1052,353,76]:
+    - list [ref=e29] [box=23,1062,329,41]:
+      - listitem [ref=e30] [box=23,1062,71,41]:
+        - link "TL;DR" [ref=e31] [cursor=pointer] [box=23,1062,71,41]:
+          - /url: "#section-summary"
+      - listitem [ref=e32] [box=104,1062,132,41]:
+        - link "Report snapshot" [ref=e33] [cursor=pointer] [box=104,1062,132,41]:
+          - /url: "#section-snapshot"
+      - listitem [ref=e34] [box=246,1062,124,41]:
+        - link "Covered topics" [ref=e35] [cursor=pointer] [box=246,1062,124,41]:
+          - /url: "#section-topics"
+      - listitem [ref=e36] [box=380,1062,154,41]:
+        - link "Executive summary" [ref=e37] [cursor=pointer] [box=380,1062,154,41]:
+          - /url: "#section-executive"
+      - listitem [ref=e38] [box=544,1062,138,41]:
+        - link "Key data insights" [ref=e39] [cursor=pointer] [box=544,1062,138,41]:
+          - /url: "#section-insights"
+      - listitem [ref=e40] [box=692,1062,129,41]:
+        - link "Editorial details" [ref=e41] [cursor=pointer] [box=692,1062,129,41]:
+          - /url: "#section-editorial"
+      - listitem [ref=e42] [box=831,1062,77,41]:
+        - link "Figures" [ref=e43] [cursor=pointer] [box=831,1062,77,41]:
+          - /url: "#section-figures"
+      - listitem [ref=e44] [box=917,1062,100,41]:
+        - link "Key quotes" [ref=e45] [cursor=pointer] [box=917,1062,100,41]:
+          - /url: "#section-quotes"
+      - listitem [ref=e46] [box=1027,1062,78,41]:
+        - link "Sources" [ref=e47] [cursor=pointer] [box=1027,1062,78,41]:
+          - /url: "#section-resources"
+      - listitem [ref=e48] [box=1115,1062,93,41]:
+        - link "Appendix" [ref=e49] [cursor=pointer] [box=1115,1062,93,41]:
+          - /url: "#section-appendix"
+  - main [ref=e50] [box=11,1128,353,32349]:
+    - region "TL;DR" [ref=e51] [box=25,1146,438,294]:
+      - generic [ref=e53] [box=44,1165,121,88]:
+        - paragraph [ref=e54] [box=44,1177,121,19]: Lead takeaway
+        - heading "TL;DR" [level=2] [ref=e55] [box=44,1209,121,27]
+      - list [ref=e56] [box=44,1272,400,140]:
+        - listitem [ref=e57] [box=62,1272,382,78]: Urban consumers approaching 2026 expect real‑time adaptive personalization, radical transparency and value alignment, while
+        - listitem [ref=e58] [box=62,1359,382,52]: AI/data, omnichannel ecosystems and sustainability reshape sector and brand strategy.
+    - region "Report snapshot" [ref=e59] [box=25,1460,438,640]:
+      - generic [ref=e61] [box=44,1479,211,88]:
+        - paragraph [ref=e62] [box=44,1491,211,19]: Metadata below the lead
+        - heading "Report snapshot" [level=2] [ref=e63] [box=44,1523,211,27]
+      - generic [ref=e64] [box=44,1586,400,313]:
+        - article [ref=e65] [box=44,1586,400,94]
+        - article [ref=e67] [box=44,1695,400,94]
+        - article [ref=e69] [box=44,1805,400,94]
+      - generic [ref=e71] [box=44,1917,400,164]:
+        - article [ref=e72] [box=44,1917,400,57]
+        - article [ref=e77] [box=44,1988,400,93]
+    - region "Covered topics" [ref=e86] [box=25,2120,438,13567]:
+      - generic [ref=e88] [box=44,2139,176,88]:
+        - paragraph [ref=e89] [box=44,2151,176,19]: Reading map
+        - heading "Covered topics" [level=2] [ref=e90] [box=44,2183,176,27]
+      - list [ref=e91] [box=44,2246,400,1699]:
+        - listitem [ref=e92] [box=44,2246,74,26]: Agenda
+        - listitem [ref=e93] [box=128,2246,141,26]: Resumen Ejecutivo
+        - listitem [ref=e94] [box=44,2282,400,52]: Macrotendencias De Las Personas | Cómo Está Cambiando El Comportamiento
+        - listitem [ref=e95] [box=44,2343,400,78]: Macrotendencias Sectoriales | Cómo Están Evolucionando Los Bienes De Consumo FMCG , Los Bienes Duraderos Y Los Servicios
+        - listitem [ref=e96] [box=44,2431,400,52]: Macrotendencias De La Marca | Cómo Están Respondiendo Las Marcas
+        - listitem [ref=e97] [box=44,2493,400,52]: Macrotendencias Para Las Personas En Estos Sectores | Comportamiento Dentro De Las Categorías
+        - listitem [ref=e98] [box=44,2555,400,52]: Macrotendencias De Interacción | Cómo La Gente Interactúa Con Las Marcas
+        - listitem [ref=e99] [box=44,2617,400,52]: Macrotendencias Estratégicas | Configurando El Sector Y Sus Marcas
+        - listitem [ref=e100] [box=44,2678,400,52]: 1 | El Auge De La Personalización Adaptativa Y La Relevancia Contextual
+        - listitem [ref=e101] [box=44,2740,363,26]: 2 | Consumo Impulsado Por El Valor Y Alineación Ética
+        - listitem [ref=e102] [box=44,2776,400,52]: 3 | Participación Activa Y Concreción En La Cultura Del Consumo
+        - listitem [ref=e103] [box=44,2838,301,26]: Macrotendencias En Los Sectores Económicos
+        - listitem [ref=e104] [box=44,2874,400,52]: 4 | Ecosistemas Digital First Y La Aceleración Del Comercio Electrónico
+        - listitem [ref=e105] [box=44,2936,386,26]: 5 | Sostenibilidad Integrada En La Transformación Sectorial
+        - listitem [ref=e106] [box=44,2971,400,52]: 6 | Integración Tecnológica Entre Operaciones, Productos Y Servicios
+        - listitem [ref=e107] [box=44,3033,220,26]: Macrotendencias En Las Marcas
+        - listitem [ref=e108] [box=44,3069,400,52]: 7 | Transparencia Radical Y Comportamiento Auténtico De Marca
+        - listitem [ref=e109] [box=44,3131,400,52]: 8 | Innovación Orientada a La Experiencia E Inmersión En La Marca
+        - listitem [ref=e110] [box=44,3193,363,26]: 9 | Colaboraciones Estratégicas Y Marca Del Ecosistema
+        - listitem [ref=e111] [box=44,3229,400,52]: Macrotendencias Para Las Personas Y Su Relación Con Los Sectores Económicos
+        - listitem [ref=e112] [box=44,3291,400,52]: 10 | Expectativa De Viajes Digitales Sin Fricciones En Todas Las Categorías
+        - listitem [ref=e113] [box=44,3352,400,52]: 11 | Mayor Demanda De Agencia Personal E Influencia Colaborativa
+        - listitem [ref=e114] [box=44,3414,400,52]: 12 | La Prioridad De La Alineación De Valor En Las Decisiones De Compra
+        - listitem [ref=e115] [box=44,3476,400,52]: Macrotendencias Para Las Personas En Su Relación Con Las Marcas
+        - listitem [ref=e116] [box=44,3538,400,52]: 13 | Expectativa De Comunicación Bidireccional Y Diálogo En Tiempo Real
+        - listitem [ref=e117] [box=44,3600,400,52]: 14 | Lealtad Basada En Valores Compartidos Y Contribuciones Significativas
+        - listitem [ref=e118] [box=44,3661,385,26]: 15 | Deseo De Experiencias Digitales E Híbridas Inmersivas
+        - listitem [ref=e119] [box=44,3697,375,26]: Macrotendencias En La Intersección De Sectores Y Marcas
+        - listitem [ref=e120] [box=44,3733,400,52]: 16 | Convergencia De Sostenibilidad Y Rentabilidad En La Estrategia De Marca
+        - listitem [ref=e121] [box=44,3795,400,52]: 17 | Ecosistemas Omnicanal Y Competencia Basada En Plataformas
+        - listitem [ref=e122] [box=44,3857,400,52]: 18 | Ia Y Datos Como Tejido Conectivo Entre Sectores, Marcas Y Personas
+        - listitem [ref=e123] [box=44,3919,73,26]: Fuentes
+        - listitem [ref=e124] [box=127,3919,71,26]: Imagen
+        - listitem [ref=e125] [box=208,3919,160,26]: Acerca De Allegro 234
+      - generic [ref=e126] [box=44,3963,400,11706]:
+        - article [ref=e127] [box=44,3963,400,316]
+        - article [ref=e133] [box=44,4295,400,352]
+        - article [ref=e140] [box=44,4663,400,372]
+        - article [ref=e147] [box=44,5051,400,410]
+        - article [ref=e154] [box=44,5477,400,372]
+        - article [ref=e161] [box=44,5865,400,391]
+        - article [ref=e168] [box=44,6272,400,398]
+        - article [ref=e175] [box=44,6685,400,398]
+        - article [ref=e182] [box=44,7099,400,362]
+        - article [ref=e188] [box=44,7477,400,310]
+        - article [ref=e194] [box=44,7803,400,310]
+        - article [ref=e200] [box=44,8128,400,310]
+        - article [ref=e206] [box=44,8454,400,310]
+        - article [ref=e212] [box=44,8780,400,336]
+        - article [ref=e218] [box=44,9132,400,336]
+        - article [ref=e224] [box=44,9484,400,265]
+        - article [ref=e230] [box=44,9764,400,310]
+        - article [ref=e236] [box=44,10090,400,310]
+        - article [ref=e242] [box=44,10416,400,310]
+        - article [ref=e248] [box=44,10742,400,310]
+        - article [ref=e254] [box=44,11068,400,310]
+        - article [ref=e260] [box=44,11393,400,284]
+        - article [ref=e266] [box=44,11693,400,336]
+        - article [ref=e272] [box=44,12045,400,310]
+        - article [ref=e278] [box=44,12371,400,310]
+        - article [ref=e284] [box=44,12697,400,329]
+        - article [ref=e290] [box=44,13042,400,310]
+        - article [ref=e296] [box=44,13368,400,284]
+        - article [ref=e302] [box=44,13668,400,336]
+        - article [ref=e308] [box=44,14019,400,388]
+        - article [ref=e314] [box=44,14423,400,362]
+        - article [ref=e320] [box=44,14801,400,316]
+        - article [ref=e326] [box=44,15133,400,203]
+        - article [ref=e331] [box=44,15352,400,316]
+    - region "Executive summary" [ref=e337] [box=25,15707,438,1972]:
+      - generic [ref=e339] [box=44,15726,235,88]:
+        - paragraph [ref=e340] [box=44,15738,235,19]: Editorial compression
+        - heading "Executive summary" [level=2] [ref=e341] [box=44,15770,235,27]
+      - list [ref=e342] [box=44,15833,400,694]:
+        - listitem [ref=e343] [box=62,15833,382,78]: "Allegro 234 synthesizes macrotendencias que convergen en torno a tres pilares: personalización adaptativa y experiencias inmersivas"
+        - listitem [ref=e344] [box=62,15920,382,26]: sostenibilidad integrada como motor estratégico
+        - listitem [ref=e345] [box=62,15956,382,570]: y la digitalización (IA y ecosistemas omnicanal) como tejido operativo. Los consumidores urbanos exigen relevancia en tiempo real, comunicación bidireccional y oportunidades de co‑creación, lo que eleva la expectativa sobre la capacidad de las marcas para responder con rapidez y empatía. La sostenibilidad ha trascendido la reputación para convertirse en palanca de rentabilidad—modelos circulares, envases recargables y prácticas regenerativas generan valor económico además de impacto ambiental. La competencia se reconfigura en ecosistemas omnicanal y plataformas, por lo que las marcas deben orquestar coherencia de contenido, precio y disponibilidad entre marketplaces, D2C, retail físico y social commerce. IA y datos actúan como el tejido conectivo que permite predicción, personalización y optimización de la cadena, aunque su despliegue requiere transparencia y gobernanza ética. En ese contexto, la transparencia radical, las alianzas ecosistémicas y la construcción de lealtad basada en valores compartidos son prioridades estratégicas para ganar confianza y diferenciación.
+      - generic [ref=e346] [box=44,16544,400,1106]:
+        - text: Claim evidence map
+        - list [ref=e347] [box=44,16580,400,1070]
+    - region "Key data insights" [ref=e360] [box=25,17700,438,1154]:
+      - generic [ref=e362] [box=44,17719,204,88]:
+        - paragraph [ref=e363] [box=44,17731,204,19]: Signal inventory
+        - heading "Key data insights" [level=2] [ref=e364] [box=44,17762,204,27]
+      - list [ref=e365] [box=44,17825,400,1009]:
+        - listitem [ref=e366] [box=44,17825,400,141]
+        - listitem [ref=e372] [box=44,17982,400,188]
+        - listitem [ref=e378] [box=44,18186,400,188]
+        - listitem [ref=e384] [box=44,18390,400,214]
+        - listitem [ref=e390] [box=44,18620,400,214]
+    - region "Editorial details" [ref=e396] [box=25,18873,438,8922]:
+      - generic [ref=e398] [box=44,18892,192,88]:
+        - paragraph [ref=e399] [box=44,18904,192,19]: Provenance and scope
+        - heading "Editorial details" [level=2] [ref=e400] [box=44,18936,192,27]
+      - generic [ref=e401] [box=44,18999,400,738]:
+        - article [ref=e402] [box=44,18999,400,111]
+        - article [ref=e405] [box=44,19126,400,229]
+        - article [ref=e409] [box=44,19370,400,111]
+        - article [ref=e412] [box=44,19498,400,111]
+        - article [ref=e415] [box=44,19625,400,111]
+      - generic [ref=e418] [box=44,19758,400,8018]:
+        - text: Ordered chapters
+        - generic [ref=e419] [box=44,19796,400,7980]
+    - region "Figure carousel" [ref=e556] [box=25,27815,438,846]:
+      - generic [ref=e558] [box=44,27834,133,88]:
+        - paragraph [ref=e559] [box=44,27846,133,19]: Visual evidence
+        - heading "Figures" [level=2] [ref=e560] [box=44,27877,133,27]
+      - generic [ref=e561] [box=44,27940,400,702]:
+        - figure "Este análisis de macrotendencias ofrece una visión realista y orientada al futuro sobre cómo" [ref=e565] [box=44,27940,400,640]
+        - generic [ref=e569] [box=44,28596,400,46]
+    - region "Key quotes" [ref=e572] [box=25,28681,438,1106]:
+      - generic [ref=e574] [box=44,28700,144,88]:
+        - paragraph [ref=e575] [box=44,28712,144,19]: Verbatim signals
+        - heading "Key quotes" [level=2] [ref=e576] [box=44,28744,144,27]
+      - list [ref=e577] [box=44,28807,400,961]:
+        - listitem [ref=e578] [box=44,28807,400,257]
+        - listitem [ref=e585] [box=44,29079,400,252]
+        - listitem [ref=e592] [box=44,29347,400,174]
+        - listitem [ref=e599] [box=44,29537,400,231]
+    - region "Related resources" [ref=e606] [box=25,29807,438,284]:
+      - generic [ref=e608] [box=44,29826,215,88]:
+        - paragraph [ref=e609] [box=44,29838,215,19]: Traceability
+        - heading "Related resources" [level=2] [ref=e610] [box=44,29869,215,27]
+      - paragraph [ref=e611] [box=44,29932,400,52]: Source URL was not available in the extracted report metadata.
+      - list [ref=e612] [box=44,30000,400,62]:
+        - listitem [ref=e613] [box=62,30000,382,26]
+        - listitem [ref=e615] [box=62,30036,382,26]
+    - region "Appendix" [ref=e617] [box=25,30111,438,3338]:
+      - generic [ref=e619] [box=44,30130,148,88]:
+        - paragraph [ref=e620] [box=44,30142,148,19]: Generated extras
+        - heading "Appendix" [level=2] [ref=e621] [box=44,30173,148,27]
+      - heading "Expert comment (generated)" [level=3] [ref=e622] [box=44,30236,400,19]
+      - generic [ref=e623] [box=44,30265,400,1688]:
+        - paragraph [ref=e624] [box=44,30265,400,259]: Urban consumers combine an expectation of continuous, real‑time relevance with uncompromising demands for demonstrable transparency and value alignment, creating a structural tension between personalization velocity and ethical governance of data and AI. For decision makers this means pairing investments in real‑time personalization capabilities with explicit transparency, explainability and accountability mechanisms so that speed does not undermine trust.
+        - paragraph [ref=e625] [box=44,30536,400,155]: "- \"La gente espera que las marcas, plataformas y servicios se adapten continuamente a sus comportamientos y contextos. La personalización estática ya no es suficiente; La relevancia en tiempo real ahora impulsa la confianza, el compromiso y la lealtad.\" (Resumen ejecutivo)"
+        - paragraph [ref=e626] [box=44,30704,400,104]: "- Consumers demand radical transparency — demonstrable actions on origins, labor and sustainability, not marketing claims. (IC1_transparency_radical)"
+        - paragraph [ref=e627] [box=44,30819,400,130]: "- AI and data are the connective tissue across forecasting, personalization, supply‑chain optimization and large‑scale content creation — and create new transparency and ethics requirements. (IC5_ai_data_connective)"
+        - paragraph [ref=e628] [box=44,30961,400,233]: Competition is reconfiguring around omnichannel ecosystems and platform plays, so brands that cannot orchestrate consistent content, pricing and availability across marketplaces, D2C, physical retail and social commerce will face strategic disadvantage. Operationally this requires centralized orchestration of catalog, pricing and creative assets, combined with channel‑level guardrails to preserve coherence while enabling partner flexibility.
+        - paragraph [ref=e629] [box=44,31206,400,130]: "- Competition is shifting to omnichannel ecosystems and platform plays — brands must orchestrate consistent content, pricing and experience across marketplaces, D2C and social commerce. (IC4_omnichannel_ecosystems)"
+        - paragraph [ref=e630] [box=44,31348,400,104]: "- \"El comercio electrónico ya no es complementario: ahora es una expectativa predeterminada.\" (4 | Ecosistemas digital-first y la aceleración del comercio electrónico)"
+        - paragraph [ref=e631] [box=44,31463,400,207]: Sustainability is no longer purely reputational; circular models, refill systems and regenerative sourcing are strategic levers that drive economic value and reduce risk, and they must be embedded into assortment, packaging and partner selection. Simultaneously, brands must normalize two‑way, immediate communication to steward public reactions and sustain loyalty when values are tested.
+        - paragraph [ref=e632] [box=44,31683,400,104]: "- Sustainability converges with profitability: circular models, refill systems and regenerative sourcing drive economic value and reduce risk. (IC3_sustainability_profitability)"
+        - paragraph [ref=e633] [box=44,31798,400,155]: "- \"Diálogo bidireccional en tiempo real como norma\\nLos clientes esperan respuestas inmediatas, empáticas y una comunicación abierta. El silencio o los retrasos se consideran una falta de respeto y corren el riesgo de una reacción pública.\" (Macrotendencias de interacción / 13)"
+      - heading "LinkedIn post" [level=3] [ref=e634] [box=44,31972,400,19]
+      - generic [ref=e635] [box=44,32001,400,1429]:
+        - paragraph [ref=e636] [box=44,32001,400,259]: "Urban consumers approaching 2026 expect real-time adaptive personalization, radical transparency and value alignment. That changes the mandate for ecommerce and digital leaders: move from channel optimization to orchestrating values, data and experiences across ecosystems. What this means for decision-makers: - Operationalize radical transparency: provide demonstrable evidence of supply origins, sustainability performance and labor conditions rather than marketing claims."
+        - paragraph [ref=e637] [box=44,32272,400,104]: "- Treat sustainability as a strategic profit lever: prioritize circular models, refill systems and regenerative sourcing that create environmental outcomes and economic value."
+        - paragraph [ref=e638] [box=44,32388,400,104]: "- Make AI and data the connective tissue: deploy AI and data across forecasting, personalization, supply-chain optimization and customer service while embedding transparency and ethics governance."
+        - paragraph [ref=e639] [box=44,32503,400,104]: "- Orchestrate omnichannel ecosystems: ensure consistent content, pricing and experience across e-commerce, physical retail, social commerce, D2C and platform partners."
+        - paragraph [ref=e640] [box=44,32619,400,181]: "- Invest in adaptive personalization and hybrid immersive experiences (AR/VR, scannable packaging, digital-physical showrooms) to extend brand engagement beyond transactions. Evidence highlights from the report: - Consumers demand radical transparency — demonstrable actions on origins, labor and sustainability, not marketing claims."
+        - paragraph [ref=e641] [box=44,32812,400,78]: "- Purchase decisions are increasingly driven by value alignment: sustainability, ethical sourcing and social impact now shape consumer choice."
+        - paragraph [ref=e642] [box=44,32902,400,78]: "- Sustainability converges with profitability: circular models, refill systems and regenerative sourcing drive economic value and reduce risk."
+        - paragraph [ref=e643] [box=44,32992,400,104]: "- Competition is shifting to omnichannel ecosystems and platform plays — brands must orchestrate consistent content, pricing and experience across marketplaces, D2C and social commerce."
+        - paragraph [ref=e644] [box=44,33107,400,207]: "- AI and data are the connective tissue across forecasting, personalization, supply‑chain optimization and large‑scale content creation — and create new transparency and ethics requirements. Immediate priorities (two actions to start this quarter): - Close the transparency gap: map and publish demonstrable evidence for origins, labor and sustainability touchpoints across your value chain."
+        - paragraph [ref=e645] [box=44,33326,400,104]: "- Align ecosystem partners: define a single content, pricing and availability playbook across marketplaces, D2C and retail to protect margin and customer trust. #Omnichannel #AI #Sustainability"
+  - generic [ref=e646] [box=11,33477,353,89]:
+    - text: "Generated by Market Lense. File ID:"
+    - code [ref=e647] [box=35,33499,274,43]: 1Vb-rfGTlveFN3syYW_y1aO61GJJIw6mY
+    - text: .

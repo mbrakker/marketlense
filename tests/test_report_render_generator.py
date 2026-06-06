@@ -36,6 +36,18 @@ from src.utils.cache_utils import sha256_json
 import hashlib
 
 
+def _template_bundle_sha(template_contents: dict[str, str]) -> str:
+    return sha256_json(
+        {
+            "schema_version": "1.0",
+            "templates": {
+                name: hashlib.sha256(content.encode("utf-8")).hexdigest()
+                for name, content in template_contents.items()
+            },
+        }
+    )
+
+
 def _runtime(tmp_path: Path, *, md5: str | None) -> ReportRuntimeState:
     file = DriveFile(
         schema_version="1.0",
@@ -329,6 +341,36 @@ def test_render_report_output_preserves_analysis_metadata_when_db_metadata_missi
     }
 
 
+def test_render_report_output_passes_relative_pdf_download_href(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    Path(runtime.local_pdf_path).write_bytes(b"%PDF-1.4\n")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    captured = {}
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del ctx
+        captured["download_href"] = req.data["_source_download_href"]
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(render_report=_render_report)
+
+    render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert captured["download_href"] == "../report.pdf"
+
+
 def test_render_report_citations_use_report_page_labels_without_internal_targets(
     tmp_path, run_context
 ):
@@ -423,9 +465,14 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
         "publisher": "DB Publisher",
         "time_period": "Q1 2026",
     }
+    template_contents = {
+        "report.html.j2": "template",
+        "report.css.j2": "css",
+        "_report_macros.j2": "macros",
+    }
     cache_key = html_cache_key(
         "md5",
-        hashlib.sha256("template".encode("utf-8")).hexdigest(),
+        _template_bundle_sha(template_contents),
         sha256_json(cached_data),
         "preview.png",
         runtime.file_name,
@@ -434,13 +481,18 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
     def _read_text(req, ctx):
         if req.path.endswith(f"{runtime.report_name}.html.cache.json"):
             return SimpleNamespace(content=json.dumps({"key": cache_key}))
-        if req.path.endswith("report.html.j2"):
-            return SimpleNamespace(content="template")
+        for name, content in template_contents.items():
+            if req.path.endswith(name):
+                return SimpleNamespace(content=content)
         raise AssertionError(f"Unexpected read: {req.path}")
+
+    def _file_stat(req, ctx):
+        del ctx
+        return SimpleNamespace(exists=Path(req.path) == expected_html)
 
     deps = _deps(
         read_text=_read_text,
-        file_stat=lambda req, ctx: SimpleNamespace(exists=True),
+        file_stat=_file_stat,
         render_report=lambda req, ctx: (_ for _ in ()).throw(
             AssertionError("render_report should be skipped on cache hit")
         ),
@@ -456,6 +508,81 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
     )
 
     assert outcome.html_path == str(expected_html)
+
+
+def test_render_report_output_invalidates_cache_when_css_template_changes(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    expected_html = Path(runtime.settings.output_dir) / f"{runtime.report_name}.html"
+    expected_html.parent.mkdir(parents=True, exist_ok=True)
+    expected_html.write_text("<html>stale</html>", encoding="utf-8")
+
+    preview_resp = SimpleNamespace(
+        schema_version="1.1", image_path="preview.png", page_number=0
+    )
+    cached_data = {
+        **analysis.data_dict,
+        "title": "DB Title",
+        "publisher": "DB Publisher",
+        "time_period": "Q1 2026",
+    }
+    stale_template_contents = {
+        "report.html.j2": "template",
+        "report.css.j2": "old-css",
+        "_report_macros.j2": "macros",
+    }
+    current_template_contents = {
+        "report.html.j2": "template",
+        "report.css.j2": "new-css",
+        "_report_macros.j2": "macros",
+    }
+    stale_cache_key = html_cache_key(
+        "md5",
+        _template_bundle_sha(stale_template_contents),
+        sha256_json(cached_data),
+        "preview.png",
+        runtime.file_name,
+    )
+    render_calls: list[str] = []
+
+    def _read_text(req, ctx):
+        if req.path.endswith(f"{runtime.report_name}.html.cache.json"):
+            return SimpleNamespace(content=json.dumps({"key": stale_cache_key}))
+        for name, content in current_template_contents.items():
+            if req.path.endswith(name):
+                return SimpleNamespace(content=content)
+        raise AssertionError(f"Unexpected read: {req.path}")
+
+    def _render_report(req, ctx):
+        del ctx
+        render_calls.append(req.data["title"])
+        expected_html.write_text("<html>fresh</html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(expected_html))
+
+    def _file_stat(req, ctx):
+        del ctx
+        return SimpleNamespace(exists=Path(req.path) == expected_html)
+
+    deps = _deps(
+        read_text=_read_text,
+        file_stat=_file_stat,
+        render_report=_render_report,
+    )
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=preview_resp,
+    )
+
+    assert outcome.html_path == str(expected_html)
+    assert render_calls == ["DB Title"]
+    assert expected_html.read_text(encoding="utf-8") == "<html>fresh</html>"
 
 
 def test_render_preview_asset_reuses_contents_preview_when_contents_is_first_page(
