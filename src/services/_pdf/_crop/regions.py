@@ -43,10 +43,11 @@ from src.services._pdf.fingerprint_cache import (
 from src.services._pdf.page_artifacts import create_page_artifact_cache
 from src.services._pdf.shared import crop_logger
 from src.utils.logging import log_event
-from src.utils.path_utils import safe_path_segment
+from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
 from src.utils.slugify import slugify
 
 CROP_FILENAME_ID_MAX_LEN = 96
+CROP_FILENAME_MAX_LEN = 96
 
 
 @dataclass(frozen=True)
@@ -64,7 +65,12 @@ def _crop_output_filename(report_name: str, item: CropItem, idx: int) -> str:
         item_slug = f"item-{idx}"
     if len(item_slug) > CROP_FILENAME_ID_MAX_LEN:
         item_slug = item_slug[:CROP_FILENAME_ID_MAX_LEN]
-    return f"{safe_report_name}-{item_slug}.png"
+    return bounded_artifact_filename(
+        f"{safe_report_name}-{item_slug}",
+        compact_stem=item_slug,
+        extension=".png",
+        max_length=CROP_FILENAME_MAX_LEN,
+    )
 
 
 def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
@@ -393,6 +399,7 @@ def _crop_regions(
 
 __all__ = [
     "CROP_FILENAME_ID_MAX_LEN",
+    "CROP_FILENAME_MAX_LEN",
     "_ResolvedCropRegion",
     "_crop_output_filename",
     "crop_regions",

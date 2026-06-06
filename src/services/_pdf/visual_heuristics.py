@@ -25,7 +25,7 @@ from PIL import Image
 from src.contracts.candidates import Candidate
 from src.utils.candidate_features import candidate_features
 from src.utils.errors import AppError
-from src.utils.path_utils import safe_path_segment
+from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
 
 PDF_FIGURE_EXCEPTIONS = (
     RuntimeError,
@@ -960,10 +960,12 @@ def _save_thumb(
         img = img.resize((max_w, new_h), Image.Resampling.LANCZOS)
 
     Path(out_dir).mkdir(parents=True, exist_ok=True)
-    if index == 0:
-        filename = f"{safe_report_name}.png"
-    else:
-        filename = f"{safe_report_name}{index}.png"
+    suffix = "" if index == 0 else str(index)
+    filename = bounded_artifact_filename(
+        f"{safe_report_name}{suffix}",
+        compact_stem=f"thumb-{index}",
+        extension=".png",
+    )
     p = Path(out_dir) / filename
     img.save(p.as_posix(), format="PNG")
     return p.as_posix()

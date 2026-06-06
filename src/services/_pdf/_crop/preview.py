@@ -23,7 +23,7 @@ from src.services._pdf.fingerprint_cache import (
 )
 from src.services._pdf.shared import preview_logger
 from src.utils.logging import log_event
-from src.utils.path_utils import safe_path_segment
+from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
 from src.utils.slugify import slugify
 
 
@@ -106,7 +106,12 @@ def _page_png(
 
     variant_slug = slugify(variant) if variant else ""
     suffix = f"-{variant_slug}" if variant_slug else ""
-    abs_png = img_dir / f"{safe_report_name}{suffix}.png"
+    filename = bounded_artifact_filename(
+        f"{safe_report_name}{suffix}",
+        compact_stem=f"preview{suffix}",
+        extension=".png",
+    )
+    abs_png = img_dir / filename
 
     local_doc = doc or fitz.open(pdf_path)
     try:

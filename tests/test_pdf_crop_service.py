@@ -459,6 +459,42 @@ def test_strict_crop_filenames_do_not_collide_across_table_and_chart_calls(tmp_p
     assert "report-chart-1-0.png" in files
 
 
+def test_crop_regions_compacts_filename_for_long_report_slug(tmp_path):
+    pdf_path = tmp_path / "sample.pdf"
+    _build_basic_pdf(pdf_path)
+    out_dir = tmp_path.parent / "lc"
+    report_name = (
+        "institute-for-canadian-citizenship-retention-trends-in-highly-skilled-"
+        "immigrants-and-in-demand-occupations-acig-pdf"
+    )
+    item = CropItem(
+        id="chart-4-1",
+        type="chart",
+        score=90.0,
+        page=0,
+        bbox=(60.0, 90.0, 360.0, 280.0),
+    )
+
+    response = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name=report_name,
+            items=[item],
+            subdir="slices",
+            mode="chart_strict",
+        ),
+        _ctx(),
+    )
+
+    assert len(response.paths) == 1
+    artifact_path = out_dir / response.paths[0]
+    assert artifact_path.is_file()
+    assert artifact_path.name.startswith("chart-4-1-")
+    assert len(artifact_path.name) <= 96
+
+
 def test_chart_strict_tightens_partial_bottom_text_spillover(tmp_path):
     pdf_path = tmp_path / "spillover.pdf"
     _build_pdf_with_bottom_body_text(pdf_path)
@@ -904,6 +940,35 @@ def test_render_preview_and_crop_refine_page_render_create_assets(tmp_path):
     assert page_render_response.scale_x > 0
     assert page_render_response.scale_y > 0
     assert (out_dir / page_render_response.image_path).exists()
+
+
+def test_render_preview_compacts_filename_for_long_report_slug(tmp_path):
+    pdf_path = tmp_path / "preview.pdf"
+    _build_basic_pdf(pdf_path)
+    out_dir = tmp_path.parent / "lp"
+    report_name = (
+        "institute-for-canadian-citizenship-retention-trends-in-highly-skilled-"
+        "immigrants-and-in-demand-occupations-acig-pdf"
+    )
+
+    response = render_preview(
+        PreviewRequest(
+            schema_version="1.1",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name=report_name,
+            page_number=0,
+            variant="contents",
+            dpi=96,
+        ),
+        _ctx(),
+    )
+
+    assert response.image_path is not None
+    artifact_path = out_dir / response.image_path
+    assert artifact_path.is_file()
+    assert artifact_path.name.startswith("preview-contents-")
+    assert len(artifact_path.name) <= 96
 
 
 def test_apply_crop_refine_bbox_clamps_to_page_bounds(tmp_path):

@@ -394,6 +394,32 @@ def test_extract_best_figure_writes_asset_and_logs(
     assert {"figure_extract_start", "figure_extract_complete"} <= event_names
 
 
+def test_extract_best_figure_compacts_filename_for_long_report_slug(tmp_path) -> None:
+    pdf_path = tmp_path / "figure.pdf"
+    out_dir = tmp_path.parent / "lf"
+    _build_candidates_pdf(pdf_path)
+    report_name = (
+        "institute-for-canadian-citizenship-retention-trends-in-highly-skilled-"
+        "immigrants-and-in-demand-occupations-acig-pdf"
+    )
+
+    response = extract_best_figure(
+        FigureExtractRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name=report_name,
+        ),
+        _ctx(),
+    )
+
+    assert response.image_path is not None
+    artifact_path = out_dir / response.image_path
+    assert artifact_path.is_file()
+    assert artifact_path.name.startswith("figure-")
+    assert len(artifact_path.name) <= 96
+
+
 def test_extract_best_figure_sanitizes_report_name_segment(tmp_path) -> None:
     pdf_path = tmp_path / "figure_escape.pdf"
     out_dir = tmp_path / "out"

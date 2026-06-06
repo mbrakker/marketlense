@@ -9,7 +9,7 @@ import pymupdf as fitz
 from src.contracts.report_assets import FigureExtractRequest, FigureExtractResponse
 from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
-from src.utils.path_utils import safe_path_segment
+from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
 
 from ..shared import figure_logger
 from ..visual_heuristics import PDF_FIGURE_EXCEPTIONS
@@ -208,7 +208,11 @@ def _extract_best_figure_png(
         if best[0] is None:
             return None, None, -1
 
-        out_path = img_dir / f"{safe_report_name}.png"
+        out_path = img_dir / bounded_artifact_filename(
+            safe_report_name,
+            compact_stem="figure",
+            extension=".png",
+        )
         best[0].save(out_path.as_posix())
         rel = Path(safe_report_name) / "assets" / out_path.name
         return rel.as_posix(), best[2], int(best[3])
