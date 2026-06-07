@@ -69,7 +69,12 @@ def _owned_symbols(path: Path) -> set[str]:
 def test_sqlite_migration_uses_database_family_owner_modules() -> None:
     facade_symbols = _owned_symbols(FACADE)
     for relative_path, expected in MODULE_SYMBOLS.items():
-        owned = _owned_symbols(PACKAGE / relative_path)
+        owner_path = PACKAGE / relative_path
+        owned = _owned_symbols(owner_path)
+        if relative_path == "reports.py":
+            owned |= set().union(
+                *(_owned_symbols(path) for path in (PACKAGE / "_reports").glob("*.py"))
+            )
         assert expected <= owned
         assert not expected & facade_symbols
 

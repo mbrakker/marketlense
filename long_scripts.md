@@ -42,6 +42,9 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - Publisher-inventory candidate quality has now been decomposed internally: `publisher_inventory_candidate_quality_generator.py` is a compatibility facade over `_publisher_inventory_candidate_quality/{classification,evaluation,workflow}.py`.
 - Browser-report CDP access has now been decomposed internally: `_browser_report_download/cdp.py` is a compatibility surface over `_cdp/{models,transport,session,dialogs,operations}.py`.
 - SQLite migrations have now been decomposed by schema ownership: `sqlite_migration_service.py` retains the canonical public entrypoints over `_sqlite_migration/{runner,reports,state,ui_runs}.py`; `reports.py` remains cohesive despite exceeding 1,000 lines because it owns one ordered reports-schema migration sequence.
+- Reports-database migrations have now been decomposed internally: `_sqlite_migration/reports.py` is the ordered compatibility registry over `_reports/{schema,core,routing,projections}.py`.
+- Analytics persistence has now been decomposed internally: `analytics_store_service.py` is the canonical facade over `_analytics_store/{common,projection_write,cross_report_read,signals}.py`.
+- Publication orchestration has now been decomposed internally: `publish_orchestrator.py` retains the three public workflow functions and external-boundary patch points over `_publish_orchestrator/{models,routing,preflight,idempotency,cross_report}.py`.
 - Publisher-inventory orchestration has now been decomposed internally: `src/orchestrators/publisher_inventory_orchestrator.py` is an `889`-line public coordinator and compatibility surface, while dependency wiring, idempotency, snapshot I/O, candidate-flow helpers, and runtime budget/retry helpers live in `src/orchestrators/_publisher_inventory_orchestrator/`.
 - Publisher-inventory candidate screening has now been decomposed internally: `src/generators/publisher_inventory_candidate_screening_generator.py` is a compatibility facade, with shared marker normalization in `_publisher_inventory_candidate_screening/shared.py` (`534`) and focused deterministic screening, response-policy, and LLM-batch owners in the same private family.
 - Cross-report analysis input preparation has now been decomposed internally: `src/generators/cross_report_analysis_input_generator.py` is a compatibility facade, with theme selection in `_cross_report_analysis_input/theme_selection.py` (`762`), evidence and signal preparation in `evidence_signals.py` (`703`), source selection in `source_selection.py`, and shared deterministic helpers in `shared.py`.
@@ -54,9 +57,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | Lines | Path | Assessment |
 | ---: | --- | --- |
 | 1,925 | `src/cli.py` | Review after workflow work |
-| 1,169 | `src/services/_sqlite_migration/reports.py` | Cohesive reports-schema migration authority |
-| 1,549 | `src/services/analytics_store_service.py` | Analytics store boundary |
-| 1,506 | `src/orchestrators/publish_orchestrator.py` | Publication workflow boundary |
 | 1,431 | `src/ui/app_pages/publisher_operations.py` | UI-only page family |
 | 1,329 | `src/services/_pdf/_visual_heuristics/chart_layout.py` | PDF heuristic family |
 | 1,328 | `src/generators/report_source_generator.py` | Report-source domain family |
