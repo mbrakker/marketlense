@@ -89,12 +89,15 @@ def _owned_symbols(path: Path) -> set[str]:
 def test_publisher_inventory_workflow_owner_modules_exist() -> None:
     assert (PACKAGE / "preflight.py").is_file()
     assert (PACKAGE / "browser_flow.py").is_file()
+    assert (PACKAGE / "_browser_flow").is_dir()
 
 
 def test_publisher_inventory_workflow_symbols_have_semantic_owners() -> None:
     workflow_symbols = _owned_symbols(PACKAGE / "workflow.py")
     preflight_symbols = _owned_symbols(PACKAGE / "preflight.py")
-    browser_flow_symbols = _owned_symbols(PACKAGE / "browser_flow.py")
+    browser_flow_symbols = set().union(
+        *(_owned_symbols(path) for path in (PACKAGE / "_browser_flow").glob("*.py"))
+    )
 
     assert PREFLIGHT_SYMBOLS <= preflight_symbols
     assert BROWSER_FLOW_SYMBOLS <= browser_flow_symbols
