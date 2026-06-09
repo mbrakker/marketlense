@@ -1,6 +1,6 @@
 <?php
 /**
- * Theme bootstrap for Market Lense block theme.
+ * Theme bootstrap for Market Bearing block theme.
  *
  * @package MarketLense
  */
@@ -41,7 +41,7 @@ function marketlense_require_core_plugin_notice(): void
     printf(
         '<div class="notice notice-error"><p>%s</p></div>',
         esc_html__(
-            'Market Lense theme requires the Market Lense Core plugin for report archives, homepage intelligence sections, and directory shortcodes.',
+            'Market Bearing theme requires the Market Bearing Core plugin for report archives, homepage intelligence sections, and directory shortcodes.',
             'marketlense'
         )
     );
@@ -88,7 +88,7 @@ function marketlense_enqueue_assets(): void
         true
     );
 
-    if (is_singular(['ml_report', 'post'])) {
+    if (is_singular(['ml_report', 'ml_briefing', 'post'])) {
         wp_enqueue_script(
             'marketlense-report-interactions',
             get_template_directory_uri() . '/assets/js/report-interactions.js',
@@ -107,17 +107,61 @@ function marketlense_register_pattern_categories(): void
 {
     register_block_pattern_category(
         'marketlense-home',
-        ['label' => __('Market Lense Home', 'marketlense')]
+        ['label' => __('Market Bearing Home', 'marketlense')]
     );
 
     register_block_pattern_category(
         'marketlense-reports',
-        ['label' => __('Market Lense Reports', 'marketlense')]
+        ['label' => __('Market Bearing Reports', 'marketlense')]
     );
 
     register_block_pattern_category(
         'marketlense-pages',
-        ['label' => __('Market Lense Pages', 'marketlense')]
+        ['label' => __('Market Bearing Pages', 'marketlense')]
     );
 }
 add_action('init', 'marketlense_register_pattern_categories');
+
+/**
+ * Removes the known legacy Site Editor header override so the theme file can render.
+ */
+function marketlense_refresh_legacy_header_override(): void
+{
+    $migration_version = '2026-06-06-market-bearing-header';
+    if ((string) get_option('marketlense_header_override_version', '') === $migration_version) {
+        return;
+    }
+
+    $headers = get_posts(
+        [
+            'post_type' => 'wp_template_part',
+            'post_status' => ['publish', 'draft'],
+            'name' => 'header',
+            'posts_per_page' => -1,
+            'no_found_rows' => true,
+            'tax_query' => [
+                [
+                    'taxonomy' => 'wp_theme',
+                    'field' => 'slug',
+                    'terms' => ['marketlense'],
+                ],
+            ],
+        ]
+    );
+
+    foreach ($headers as $header) {
+        if (! ($header instanceof \WP_Post)) {
+            continue;
+        }
+
+        $content = (string) $header->post_content;
+        $is_legacy = str_contains($content, 'wp:site-title')
+            || str_contains($content, 'Market Lense');
+        if ($is_legacy && ! str_contains($content, '[ml_brand_logo]')) {
+            wp_delete_post($header->ID, true);
+        }
+    }
+
+    update_option('marketlense_header_override_version', $migration_version, false);
+}
+add_action('init', 'marketlense_refresh_legacy_header_override', 30);

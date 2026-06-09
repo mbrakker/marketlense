@@ -1,29 +1,28 @@
 <!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"div"} /-->
-
-<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell ml-page-frame","layout":{"type":"constrained"}} -->
-<main id="main-content" class="wp-block-group ml-shell ml-page-frame">
-  <!-- wp:group {"className":"ml-taxonomy-header","layout":{"type":"constrained"}} -->
-  <div class="wp-block-group ml-taxonomy-header">
-    <!-- wp:paragraph {"className":"ml-section-kicker"} -->
-    <p class="ml-section-kicker">Signals</p>
-    <!-- /wp:paragraph -->
-
-    <!-- wp:heading {"level":1} -->
-    <h1 class="wp-block-heading">Approved Signals</h1>
-    <!-- /wp:heading -->
-
-    <!-- wp:paragraph {"className":"ml-page-lead"} -->
-    <p class="ml-page-lead">Durable, evidence-backed Signals published after validation.</p>
-    <!-- /wp:paragraph -->
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-directory-page","layout":{"type":"default"}} -->
+<main id="main-content" class="wp-block-group ml-directory-page">
+  <!-- wp:group {"className":"ml-directory-hero","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-directory-hero">
+    <!-- wp:group {"className":"ml-directory-hero-frame","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-directory-hero-frame">
+      <!-- wp:group {"className":"ml-directory-hero-copy","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-directory-hero-copy">
+        <!-- wp:paragraph {"className":"ml-section-kicker"} --><p class="ml-section-kicker">Intelligence signals</p><!-- /wp:paragraph -->
+        <!-- wp:heading {"level":1} --><h1 class="wp-block-heading">Signals that keep their source attached.</h1><!-- /wp:heading -->
+        <!-- wp:paragraph {"className":"ml-page-lead"} --><p class="ml-page-lead">Review standalone signals when published. Until then, this view reuses source-backed signals already present in governed report artifacts.</p><!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:group -->
+      <!-- wp:shortcode -->[ml_archive_metric entity="signals" label="Signal basis"]<!-- /wp:shortcode -->
+    </div>
+    <!-- /wp:group -->
   </div>
   <!-- /wp:group -->
-
-  <!-- wp:shortcode -->
-  [ml_signal_archive per_page="12"]
-  <!-- /wp:shortcode -->
-
-  <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
+  <!-- wp:group {"className":"ml-directory-content-frame","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-directory-content-frame">
+    <!-- wp:shortcode -->[ml_signals_index per_page="12"]<!-- /wp:shortcode -->
+    <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
+  </div>
+  <!-- /wp:group -->
 </main>
 <!-- /wp:group -->
-
 <!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"div"} /-->

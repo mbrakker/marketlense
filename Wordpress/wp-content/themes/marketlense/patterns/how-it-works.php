@@ -14,13 +14,13 @@
     <p class="ml-section-kicker ml-section-eyebrow">METHOD</p>
     <!-- /wp:paragraph -->
     <!-- wp:heading {"level":2,"className":"ml-section-title"} -->
-    <h2 class="wp-block-heading ml-section-title">How It Works</h2>
+    <h2 class="wp-block-heading ml-section-title">A visible path from source to decision.</h2>
     <!-- /wp:heading -->
     <!-- wp:html -->
     <span class="ml-section-rule" aria-hidden="true"></span>
     <!-- /wp:html -->
     <!-- wp:paragraph {"className":"ml-section-note ml-process-intro"} -->
-    <p class="ml-section-note ml-process-intro">A light-touch editorial workflow for converting source reports into executive-ready digests.</p>
+    <p class="ml-section-note ml-process-intro">Every published artifact stays connected to its source, evidence, and review context.</p>
     <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->
@@ -75,6 +75,24 @@
         <!-- /wp:heading -->
         <!-- wp:paragraph {"className":"ml-process-copy"} -->
         <p class="ml-process-copy">Claims are tied back to source context so readers can move from summary to evidence without friction.</p>
+        <!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:group -->
+    </div>
+    <!-- /wp:column -->
+
+    <!-- wp:column -->
+    <div class="wp-block-column">
+      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact ml-card","layout":{"type":"constrained"}} -->
+      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact ml-card">
+        <!-- wp:paragraph {"className":"ml-process-step ml-chip"} -->
+        <p class="ml-process-step ml-chip">04</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:heading {"level":3,"className":"ml-process-title"} -->
+        <h3 class="wp-block-heading ml-process-title">Publish</h3>
+        <!-- /wp:heading -->
+        <!-- wp:paragraph {"className":"ml-process-copy"} -->
+        <p class="ml-process-copy">Release validated reports, signals, and briefings through the right WordPress archive.</p>
         <!-- /wp:paragraph -->
       </div>
       <!-- /wp:group -->

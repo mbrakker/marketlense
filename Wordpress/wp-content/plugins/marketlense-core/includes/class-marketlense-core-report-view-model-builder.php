@@ -50,14 +50,14 @@ final class Report_View_Model_Builder
             wp_strip_all_tags((string) $post->post_excerpt),
             wp_strip_all_tags($content)
         );
-        $normalized_summary = $this->normalize_text($summary);
+        $normalized_summary = $this->normalize_brand_name($this->normalize_text($summary));
         $insight_texts = $this->extract_insight_texts($content);
         $counts = $this->extract_content_counts($content, $insight_texts);
         $full_key_metrics = $this->extract_full_key_metrics($insight_texts);
 
         $view_model = [
             'post_id' => $post_id,
-            'title' => $this->normalize_text(get_the_title($post)),
+            'title' => $this->normalize_brand_name($this->normalize_text(get_the_title($post))),
             'permalink' => (string) get_permalink($post),
             'date' => (string) get_the_date('F j, Y', $post),
             'timestamp' => get_post_timestamp($post, 'date'),
@@ -67,6 +67,7 @@ final class Report_View_Model_Builder
             'insights_count' => $counts['insights'],
             'quotes_count' => $counts['quotes'],
             'topics_count' => $counts['topics'],
+            'citations_count' => $counts['citations'],
             'full_excerpt' => $normalized_summary,
             'excerpt' => wp_trim_words($normalized_summary, self::FEATURED_EXCERPT_WORDS, '...'),
             'archive_excerpt' => wp_trim_words($normalized_summary, self::ARCHIVE_EXCERPT_WORDS, '...'),
@@ -83,36 +84,42 @@ final class Report_View_Model_Builder
     private function resolve_publisher(int $post_id, string $content): string
     {
         $publisher = $this->normalize_text((string) get_post_meta($post_id, Meta::META_PUBLISHER, true));
-        if ($publisher !== '') {
+        if (! $this->is_missing_metadata_value($publisher)) {
             return $publisher;
         }
 
         $terms = get_the_terms($post_id, Taxonomies::PUBLISHER_TAXONOMY);
         if (! is_array($terms) || $terms === []) {
-            return $this->normalize_text($this->parser->extract_metadata_value($content, 'Publisher'));
+            return $this->normalize_metadata_value(
+                $this->parser->extract_metadata_value($content, 'Publisher')
+            );
         }
 
         $first_term = $terms[0];
         if (! ($first_term instanceof \WP_Term)) {
-            return $this->normalize_text($this->parser->extract_metadata_value($content, 'Publisher'));
+            return $this->normalize_metadata_value(
+                $this->parser->extract_metadata_value($content, 'Publisher')
+            );
         }
 
-        return $this->normalize_text($first_term->name);
+        return $this->normalize_metadata_value($first_term->name);
     }
 
     private function resolve_metadata_value(int $post_id, string $meta_key, string $content, string $label): string
     {
-        $stored = $this->normalize_text((string) get_post_meta($post_id, $meta_key, true));
+        $stored = $this->normalize_metadata_value((string) get_post_meta($post_id, $meta_key, true));
         if ($stored !== '') {
             return $stored;
         }
 
-        return $this->normalize_text($this->parser->extract_metadata_value($content, $label));
+        return $this->normalize_metadata_value(
+            $this->parser->extract_metadata_value($content, $label)
+        );
     }
 
     /**
      * @param list<string> $insight_texts
-     * @return array{insights:int,quotes:int,topics:int}
+     * @return array{insights:int,quotes:int,topics:int,citations:int}
      */
     private function extract_content_counts(string $content, array $insight_texts): array
     {
@@ -123,6 +130,7 @@ final class Report_View_Model_Builder
                 $this->count_nodes_by_class($content, 'section-topics', 'topic-brief-card'),
                 $this->count_chip_items($content, 'section-topics')
             ),
+            'citations' => $this->extract_evidence_reference_count($content),
         ];
 
         $hero_counts = $this->extract_hero_counts($content);
@@ -133,6 +141,45 @@ final class Report_View_Model_Builder
         }
 
         return $counts;
+    }
+
+    private function extract_evidence_reference_count(string $content): int
+    {
+        if (preg_match_all('/(\d+)\s+evidence references/iu', $content, $matches) > 0) {
+            return max(array_map('intval', $matches[1]));
+        }
+
+        $xpath = $this->load_xpath($content);
+        if (! ($xpath instanceof \DOMXPath)) {
+            return 0;
+        }
+
+        $citation_nodes = $xpath->query(
+            "//*[contains(concat(' ', normalize-space(@class), ' '), ' citation-micro ')]"
+        );
+        $citation_count = 0;
+        if ($citation_nodes instanceof \DOMNodeList) {
+            foreach ($citation_nodes as $node) {
+                if (! ($node instanceof \DOMNode)) {
+                    continue;
+                }
+
+                $citation_text = preg_replace('/^\s*Evidence:\s*/iu', '', $node->textContent);
+                $references = array_filter(
+                    array_map('trim', explode(',', (string) $citation_text)),
+                    static fn (string $reference): bool => $reference !== ''
+                );
+                $citation_count += count($references);
+            }
+        }
+
+        if ($citation_count > 0) {
+            return $citation_count;
+        }
+
+        $figure_captions = $xpath->query('//figcaption');
+
+        return $figure_captions instanceof \DOMNodeList ? (int) $figure_captions->length : 0;
     }
 
     /**
@@ -321,6 +368,31 @@ final class Report_View_Model_Builder
         $single_spaced = preg_replace('/\s+/u', ' ', $plain);
 
         return trim((string) $single_spaced);
+    }
+
+    private function normalize_metadata_value(string $value): string
+    {
+        $normalized = $this->normalize_text($value);
+
+        return $this->is_missing_metadata_value($normalized) ? '' : $normalized;
+    }
+
+    private function normalize_brand_name(string $value): string
+    {
+        return str_replace(
+            ['Market Lense', 'MarketLense'],
+            ['Market Bearing', 'Market Bearing'],
+            $value
+        );
+    }
+
+    private function is_missing_metadata_value(string $value): bool
+    {
+        return in_array(
+            strtolower(trim($value)),
+            ['', '...', '…', 'not extracted', 'Not extracted', 'not specified', 'unknown', 'n/a', 'na', '-'],
+            true
+        );
     }
 
     private function load_xpath(string $content): ?\DOMXPath

@@ -46,17 +46,17 @@
         {
           "slug": "brand-navy",
           "name": "Brand Navy",
-          "color": "#10243e"
+          "color": "#082b54"
         },
         {
           "slug": "signal-blue",
           "name": "Signal Blue",
-          "color": "#2b6fe8"
+          "color": "#0867d7"
         },
         {
           "slug": "support-blue",
           "name": "Support Blue",
-          "color": "#90b6dc"
+          "color": "#082b54"
         },
         {
           "slug": "surface-white",
@@ -66,12 +66,12 @@
         {
           "slug": "background-cool",
           "name": "Background Cool",
-          "color": "#f4f7fb"
+          "color": "#f3f7fc"
         },
         {
           "slug": "canvas",
           "name": "Canvas",
-          "color": "#f4f7fb"
+          "color": "#f3f7fc"
         },
         {
           "slug": "surface",
@@ -96,17 +96,17 @@
         {
           "slug": "midnight",
           "name": "Midnight",
-          "color": "#10243e"
+          "color": "#082b54"
         },
         {
           "slug": "teal",
           "name": "Teal",
-          "color": "#2b6fe8"
+          "color": "#0867d7"
         },
         {
           "slug": "brass",
           "name": "Brass",
-          "color": "#90b6dc"
+          "color": "#082b54"
         },
         {
           "slug": "amber",

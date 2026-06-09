@@ -72,7 +72,12 @@ final class Media_Proxy
 
     public function rewrite_content_media_urls(string $content): string
     {
-        if ($content === '' || ! $this->should_proxy_frontend_urls() || ! str_contains($content, '/wp-content/uploads/')) {
+        if ($content === '' || ! $this->should_proxy_frontend_urls()) {
+            return $content;
+        }
+
+        $content = $this->remove_invalid_persisted_proxy_images($content);
+        if (! str_contains($content, '/wp-content/uploads/')) {
             return $content;
         }
 
@@ -92,6 +97,33 @@ final class Media_Proxy
         );
 
         return is_string($rewritten) ? $rewritten : $content;
+    }
+
+    private function remove_invalid_persisted_proxy_images(string $content): string
+    {
+        $cleaned = preg_replace_callback(
+            '#<img\b[^>]*(?:src|data-src)=["\'][^"\']*[?&]ml_media=(\d+)[^"\']*["\'][^>]*>#i',
+            static function (array $matches): string {
+                $attachment_id = absint((string) ($matches[1] ?? '0'));
+                if ($attachment_id < 1) {
+                    return '';
+                }
+
+                $attachment = get_post($attachment_id);
+                if (! ($attachment instanceof \WP_Post) || $attachment->post_type !== 'attachment') {
+                    return '';
+                }
+
+                $file_path = get_attached_file($attachment_id);
+
+                return is_string($file_path) && $file_path !== '' && is_readable($file_path)
+                    ? (string) ($matches[0] ?? '')
+                    : '';
+            },
+            $content
+        );
+
+        return is_string($cleaned) ? $cleaned : $content;
     }
 
     public function filter_attachment_url(string $url, int $attachment_id): string

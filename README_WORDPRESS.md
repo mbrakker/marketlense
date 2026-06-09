@@ -1,4 +1,4 @@
-# Market Lense WordPress Front End
+# Market Bearing WordPress Front End
 
 The WordPress subtree is the publication and rendering layer for successfully validated generated HTML artifacts and approved structured metadata/projections.
 
@@ -8,16 +8,31 @@ WordPress does not perform analysis, synthesis, metric extraction, or intelligen
 
 Reusable shortcode entrypoints are registered by `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-shortcodes.php`.
 
-- `[ml_report_browser]`: filtered and paginated report browser.
-- `[ml_featured_digest]`: homepage Featured Digest module.
+- `[ml_report_browser]`: filtered and paginated report browser with search, topic, publisher, period, and sort controls.
+- `[ml_featured_digest]`: homepage Featured Report Brief module backed by the latest published report.
 - `[ml_featured_briefing]`: homepage Featured Briefing module. Renders the latest published Briefing or an explicit institutional empty state.
 - `[ml_briefings_index]`: canonical Briefings landing surface for `/briefings/`. Renders published Briefings or an explicit institutional empty state.
-- `[ml_signals_index]`: canonical Signals landing surface for `/signals/`. Renders published Signals or an explicit institutional empty state.
+- `[ml_signals_index]`: canonical Signals landing surface for `/signals/`. Renders published Signals and otherwise reuses source-backed metrics from published report artifacts.
 - `[ml_signal_archive]`: compatibility alias for `[ml_signals_index]`; existing custom archive routes should prefer `[ml_signals_index]`.
 - `[ml_briefing_archive]`: compatibility alias for `[ml_briefings_index]`; existing custom archive routes should prefer `[ml_briefings_index]`.
-- `[ml_home_metrics]`, `[ml_hero_snapshot]`, `[ml_intelligence_signals]`, `[ml_strategic_themes]`, and `[ml_publisher_authority]`: homepage intelligence and discovery modules sourced from already published WordPress content and metadata. The homepage hero uses native WordPress search as the primary action and renders `[ml_home_metrics]` and `[ml_hero_snapshot]` without changing shortcode queries.
+- `[ml_home_metrics]`, `[ml_hero_snapshot]`, `[ml_hero_trust]`, `[ml_intelligence_signals]`, `[ml_strategic_themes]`, and `[ml_publisher_authority]`: homepage intelligence and discovery modules sourced from already published WordPress content and metadata. The hero places the latest governed brief below native WordPress search and renders live archive counters plus named top publishers in its trust panel.
+- `[ml_brand_logo]`: canonical reusable Market Bearing wordmark for theme template parts.
+- `[ml_archive_metric]`: dynamic archive, taxonomy, publisher, signal, and briefing coverage counters for theme-owned editorial heroes.
 - `[ml_topics_directory]`, `[ml_publishers_directory]`, and `[ml_publisher_profile]`: taxonomy and publisher discovery surfaces.
 - `[ml_button_link]`, `[ml_inline_link]`, `[ml_primary_nav]`, and `[ml_footer_nav]`: navigation and link helpers.
+
+## Dynamic Publishing Model
+
+- Reports publish to `ml_report` and automatically appear in `/reports/`, homepage report modules, topic counts, publisher counts, signals, and trust metrics.
+- Briefings publish to `ml_briefing` and automatically appear in `/briefings/` plus the homepage featured briefing.
+- Signals publish to `ml_signal` and automatically appear in `/signals/`. When no standalone signals exist, both homepage indicators and the Signals archive are derived from published report artifacts with source links.
+- Featured media, excerpts, publishers, periods, topics, findings, quotations, and citation counts are reused from the published WordPress records. No report or briefing title is hardcoded into the theme or plugin.
+- Topic and publisher directories aggregate only entities represented by published reports, briefings, or signals. Legacy sentinel metadata such as `...` and `Not extracted` is omitted from public presentation.
+- Topic archives fall back to published report briefs when no reports exist for the selected topic, without merging or rewriting taxonomy identities.
+- Public Briefing rendering removes internal evidence identifiers and folds source-map, uncertainty, and evidence appendices into accessible disclosures.
+- Public discovery enables native WordPress indexing and sitemaps; certificate trust remains a hosting responsibility.
+- Theme version upgrades remove only the known legacy Site Editor header override containing the old site-title block, allowing the canonical MarketBearing wordmark to render.
+- The desktop header is sticky and centers the primary navigation above a compact native WordPress search field. Hover, focus, and current-page states reuse the Market Bearing line-and-dot motif; mobile retains the disclosure navigation.
 
 ## Verification
 

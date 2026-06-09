@@ -1,78 +1,31 @@
 <!-- wp:group {"tagName":"header","className":"ml-site-header","layout":{"type":"default"}} -->
 <header class="wp-block-group ml-site-header">
-  <!-- wp:html -->
-  <style id="ml-report-card-spacing-fix">
-    .ml-latest-report-grid .ml-report-card-excerpt,
-    .ml-report-browser-grid .ml-report-card-excerpt {
-      -webkit-line-clamp: 5 !important;
-      min-height: calc(1.5em * 5) !important;
-      margin-bottom: 0 !important;
-    }
-
-    .ml-latest-report-grid .ml-report-card,
-    .ml-report-browser-grid .ml-report-card {
-      height: auto !important;
-      align-self: start !important;
-    }
-
-    .ml-latest-report-grid .ml-report-card-body,
-    .ml-report-browser-grid .ml-report-card-body {
-      flex: 0 0 auto !important;
-      height: auto !important;
-    }
-
-    .ml-latest-report-grid .ml-report-card-link,
-    .ml-report-browser-grid .ml-report-card-link {
-      margin-top: 26px !important;
-      padding-top: 0 !important;
-    }
-
-    .ml-latest-report-grid .ml-report-card-link a br,
-    .ml-report-browser-grid .ml-report-card-link a br {
-      display: none !important;
-    }
-
-    @media (max-width: 782px) {
-      .ml-latest-report-grid .ml-report-card-excerpt,
-      .ml-report-browser-grid .ml-report-card-excerpt {
-        -webkit-line-clamp: 3 !important;
-        min-height: calc(1.5em * 3) !important;
-      }
-    }
-  </style>
-  <!-- /wp:html -->
   <!-- wp:group {"className":"ml-header-frame","layout":{"type":"default"}} -->
   <div class="wp-block-group ml-header-frame">
     <!-- wp:group {"className":"ml-header-top","layout":{"type":"default"}} -->
     <div class="wp-block-group ml-header-top">
-      <!-- wp:group {"className":"ml-brand-block","layout":{"type":"default"}} -->
-      <div class="wp-block-group ml-brand-block">
-        <!-- wp:paragraph {"className":"ml-brand-kicker"} -->
-        <p class="ml-brand-kicker">Market Lense</p>
-        <!-- /wp:paragraph -->
-
-        <!-- wp:site-title {"level":0,"className":"ml-brand-title"} /-->
-      </div>
-      <!-- /wp:group -->
+      <!-- wp:shortcode -->
+      [ml_brand_logo]
+      <!-- /wp:shortcode -->
 
       <!-- wp:group {"className":"ml-header-actions","layout":{"type":"default"}} -->
       <div class="wp-block-group ml-header-actions">
-        <!-- wp:template-part {"slug":"nav","theme":"marketlense","tagName":"div"} /-->
+        <!-- wp:group {"className":"ml-header-navigation-stack","layout":{"type":"default"}} -->
+        <div class="wp-block-group ml-header-navigation-stack">
+          <!-- wp:template-part {"slug":"nav","theme":"marketlense","tagName":"div"} /-->
+          <!-- wp:search {"label":"Search reports","showLabel":false,"placeholder":"Report, publisher, topic or signal","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true,"className":"ml-header-search"} /-->
+        </div>
+        <!-- /wp:group -->
+
         <!-- wp:group {"className":"ml-header-cta","layout":{"type":"default"}} -->
         <div class="wp-block-group ml-header-cta">
           <!-- wp:shortcode -->
-          [ml_button_link target="contact" label="Request briefing" style="primary"]
+          [ml_button_link target="contact" label="Request a briefing" style="primary"]
           <!-- /wp:shortcode -->
         </div>
         <!-- /wp:group -->
       </div>
       <!-- /wp:group -->
-    </div>
-    <!-- /wp:group -->
-
-    <!-- wp:group {"className":"ml-header-bottom","layout":{"type":"default"}} -->
-    <div class="wp-block-group ml-header-bottom">
-      <!-- wp:search {"label":"Search reports","showLabel":false,"placeholder":"Search the archive","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true,"className":"ml-header-search"} /-->
     </div>
     <!-- /wp:group -->
   </div>

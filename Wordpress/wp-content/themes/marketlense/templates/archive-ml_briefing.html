@@ -1,26 +1,38 @@
 <!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"div"} /-->
 
-<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell","layout":{"type":"constrained"}} -->
-<main id="main-content" class="wp-block-group ml-shell">
-  <!-- wp:group {"className":"ml-taxonomy-header","layout":{"type":"constrained"}} -->
-  <div class="wp-block-group ml-taxonomy-header">
-    <!-- wp:paragraph {"className":"ml-section-kicker"} -->
-    <p class="ml-section-kicker">Briefings archive</p>
-    <!-- /wp:paragraph -->
-
-    <!-- wp:heading {"level":1} -->
-    <h1 class="wp-block-heading">Published Briefings</h1>
-    <!-- /wp:heading -->
-
-    <!-- wp:paragraph {"className":"ml-page-lead"} -->
-    <p class="ml-page-lead">Approved Briefings published for executive review.</p>
-    <!-- /wp:paragraph -->
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-directory-page","layout":{"type":"default"}} -->
+<main id="main-content" class="wp-block-group ml-directory-page">
+  <!-- wp:group {"className":"ml-directory-hero","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-directory-hero">
+    <!-- wp:group {"className":"ml-directory-hero-frame","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-directory-hero-frame">
+      <!-- wp:group {"className":"ml-directory-hero-copy","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-directory-hero-copy">
+        <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+        <p class="ml-section-kicker">Executive briefings</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:heading {"level":1} -->
+        <h1 class="wp-block-heading">Cross-report evidence, built for decisions.</h1>
+        <!-- /wp:heading -->
+        <!-- wp:paragraph {"className":"ml-page-lead"} -->
+        <p class="ml-page-lead">Published briefings connect multiple sources into a concise market view while keeping evidence references visible.</p>
+        <!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:group -->
+      <!-- wp:shortcode -->
+      [ml_archive_metric entity="briefings" label="Published synthesis"]
+      <!-- /wp:shortcode -->
+    </div>
+    <!-- /wp:group -->
   </div>
   <!-- /wp:group -->
-
-  <!-- wp:shortcode -->
-  [ml_briefing_archive per_page="12"]
-  <!-- /wp:shortcode -->
+  <!-- wp:group {"className":"ml-directory-content-frame","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-directory-content-frame">
+    <!-- wp:shortcode -->
+    [ml_briefings_index per_page="12"]
+    <!-- /wp:shortcode -->
+  </div>
+  <!-- /wp:group -->
 </main>
 <!-- /wp:group -->
 

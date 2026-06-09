@@ -63,5 +63,23 @@
     sections.forEach((section) => observer.observe(section));
   };
 
-  onReady(revealSections);
+  const configureReportFilters = () => {
+    const filterPanel = document.querySelector(".ml-report-filter-panel");
+    if (!(filterPanel instanceof HTMLDetailsElement)) {
+      return;
+    }
+
+    const compactViewport = window.matchMedia("(max-width: 900px)");
+    const syncPanelState = (event) => {
+      filterPanel.open = !event.matches;
+    };
+
+    syncPanelState(compactViewport);
+    compactViewport.addEventListener("change", syncPanelState);
+  };
+
+  onReady(() => {
+    revealSections();
+    configureReportFilters();
+  });
 })();

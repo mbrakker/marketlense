@@ -18,7 +18,7 @@
         <p class="ml-section-kicker ml-section-eyebrow">BRIEFING</p>
         <!-- /wp:paragraph -->
         <!-- wp:heading {"level":2,"className":"ml-section-title"} -->
-        <h2 class="wp-block-heading ml-section-title">Weekly Executive Intelligence Briefing</h2>
+        <h2 class="wp-block-heading ml-section-title">Stay close to shifting evidence.</h2>
         <!-- /wp:heading -->
         <!-- wp:html -->
         <span class="ml-section-rule" aria-hidden="true"></span>
@@ -27,9 +27,9 @@
       <!-- /wp:group -->
       <!-- wp:list {"className":"ml-briefing-list"} -->
       <ul class="ml-briefing-list">
-        <li>Newly published digests and the strongest claims worth leadership attention.</li>
-        <li>Fast reads on shifting themes, publisher momentum, and emerging evidence clusters.</li>
-        <li>Concise links back into the full digest archive for deeper review.</li>
+        <li>New reports, briefings, publisher movement, and evidence-backed signals.</li>
+        <li>Concise decision context with direct links back to published artifacts.</li>
+        <li>Clear provenance and taxonomy for deeper review.</li>
       </ul>
       <!-- /wp:list -->
     </div>
@@ -40,7 +40,7 @@
       <!-- wp:buttons {"className":"ml-briefing-actions","layout":{"type":"flex","justifyContent":"right"}} -->
       <div class="wp-block-buttons ml-briefing-actions">
         <!-- wp:button -->
-        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button ml-button" href="<?php echo esc_url(home_url('/contact/')); ?>">Request access</a></div>
+        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button ml-button" href="<?php echo esc_url(home_url('/contact/')); ?>">Request updates</a></div>
         <!-- /wp:button -->
       </div>
       <!-- /wp:buttons -->

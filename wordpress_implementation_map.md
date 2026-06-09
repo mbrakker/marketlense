@@ -15,17 +15,19 @@ The homepage is defined by `Wordpress/wp-content/themes/marketlense/templates/fr
 Render order:
 
 1. Header template part.
-2. `marketlense/hero-institutional`, which leads with native WordPress search and includes `[ml_home_metrics]` plus `[ml_hero_snapshot]`.
-3. Proof band:
+2. `marketlense/hero-institutional`, which leads with native WordPress search, `[ml_hero_snapshot]`, and the full-width `[ml_home_metrics]` trust band.
+3. Current evidence band:
    - `marketlense/featured-digest` -> `[ml_featured_digest]`
-   - `marketlense/this-week-intelligence` -> `[ml_intelligence_signals show_publishers="0"]`
-4. Discovery band:
+   - `marketlense/featured-briefing` -> `[ml_featured_briefing]`
+4. Signals band:
+   - `marketlense/this-week-intelligence` -> `[ml_intelligence_signals show_publishers="1"]`
+5. `marketlense/report-grid` -> `[ml_latest_reports limit="6"]`
+6. Discovery band:
    - `marketlense/strategic-themes` -> `[ml_strategic_themes limit="6"]`
    - `marketlense/publisher-authority` -> `[ml_publisher_authority limit="12"]`
-5. `marketlense/report-grid` -> `[ml_latest_reports limit="6"]`
-6. `marketlense/how-it-works`
-7. `marketlense/newsletter-cta`
-8. Footer template part.
+7. `marketlense/how-it-works`
+8. `marketlense/newsletter-cta`
+9. Footer template part.
 
 Additional homepage-capable patterns exist but are not rendered by `front-page.html`:
 
@@ -37,10 +39,10 @@ Additional homepage-capable patterns exist but are not rendered by `front-page.h
 
 The archive and discovery templates live under `Wordpress/wp-content/themes/marketlense/templates`.
 
-- `archive.html` and `archive-ml_report.html` render the same report archive shell and call `[ml_report_browser per_page="12" show_filters="1" show_pagination="1" context="auto"]`.
+- `archive.html` and `archive-ml_report.html` render the same editorial archive hero, dynamic `[ml_archive_metric]`, and `[ml_report_browser per_page="12" show_filters="1" show_pagination="1" context="auto"]`.
 - `search.html` renders a search header with the core search block, then calls the same `[ml_report_browser ... context="auto"]`.
-- `category.html` renders a strategic theme archive title and term description, then calls `[ml_report_browser ... context="auto"]`.
-- `taxonomy-ml_publisher.html` renders the publisher archive title, `[ml_publisher_profile]`, term description, then `[ml_report_browser ... context="auto"]`.
+- `category.html` renders a strategic theme hero, current-term coverage, and `[ml_report_browser ... context="auto"]`.
+- `taxonomy-ml_publisher.html` renders the publisher hero, `[ml_publisher_profile]`, current-term coverage, and `[ml_report_browser ... context="auto"]`.
 - `archive-ml_signal.html` calls `[ml_signals_index per_page="12"]`.
 - `archive-ml_briefing.html` calls `[ml_briefings_index per_page="12"]`.
 - `single.html`, `single-ml_report.html`, `single-ml_signal.html`, and `single-ml_briefing.html` all delegate to `parts/single-content.html`, which renders post content through the ingest report shell.
@@ -60,16 +62,16 @@ Page templates with shortcode-driven front-end surfaces:
 
 Shortcodes are registered in `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-shortcodes.php`.
 
-- `[ml_report_browser]`: filtered and paginated report browser for `ml_report` plus digest-like core posts, with search, category, publisher, and sort handling.
+- `[ml_report_browser]`: filtered and paginated report browser for `ml_report` plus digest-like core posts, with search, category, publisher, period, and sort handling.
 - `[ml_latest_reports]`: latest report card grid.
-- `[ml_home_metrics]`: homepage metric counters.
+- `[ml_home_metrics]`: report, publisher, topic, briefing, signal, and citation counters derived from published records.
 - `[ml_hero_snapshot]`: current portal snapshot used in the homepage hero panel.
 - `[ml_featured_digest]`: latest report feature card.
 - `[ml_featured_briefing]`: homepage Featured Briefing card. Uses published Briefing content only and renders an explicit institutional empty state when no validated Briefing is available.
 - `[ml_intelligence_signals]`: weekly topic and publisher signal columns.
 - `[ml_strategic_themes]`: top category or theme cards.
 - `[ml_publisher_authority]`: top publisher authority cards.
-- `[ml_signals_index]`: canonical Signals landing surface for published Signals, with institutional empty state fallback.
+- `[ml_signals_index]`: canonical Signals landing surface for published Signals, with source-backed report-signal fallback.
 - `[ml_briefings_index]`: canonical Briefings landing surface for published Briefings, with institutional empty state fallback.
 - `[ml_topics_directory]`: category directory cards.
 - `[ml_publishers_directory]`: publisher directory cards with archive, homepage, and insights links.
@@ -78,10 +80,12 @@ Shortcodes are registered in `Wordpress/wp-content/plugins/marketlense-core/incl
 - `[ml_briefing_archive]`: legacy compatibility alias for `[ml_briefings_index]`.
 - `[ml_button_link]`: internal CTA button helper.
 - `[ml_inline_link]`: internal inline link helper.
+- `[ml_brand_logo]`: canonical Market Bearing wordmark shared by the header and footer.
+- `[ml_archive_metric]`: dynamic global or current-term coverage metric used by archive heroes.
 - `[ml_primary_nav]`: static primary navigation renderer.
 - `[ml_footer_nav]`: static footer navigation renderer.
 
-The shortcode class also hooks `render_block` so unresolved Market Lense shortcodes in block template output are rendered before response output.
+The shortcode class also hooks `render_block` so unresolved Market Bearing shortcodes in block template output are rendered before response output.
 
 ## 4. CSS Systems And Reusable Card/Surface Classes
 
@@ -102,7 +106,7 @@ Reusable class families:
 
 Template parts also include local front-end behavior:
 
-- `parts/header.html` includes an inline report-card spacing fix.
+- `parts/header.html` uses the canonical wordmark and native shortcode navigation without local CSS.
 - `functions.php` enqueues `assets/css/theme.css`, `assets/js/reveal.js`, and `assets/js/report-interactions.js` for singular `ml_report` and core `post` pages.
 
 ## 5. Smoke And Verification Scripts Coupled To Template Changes

@@ -21,48 +21,50 @@
     <!-- wp:group {"className":"ml-hero-content","layout":{"type":"default"}} -->
     <div class="wp-block-group ml-hero-content">
       <!-- wp:paragraph {"className":"ml-hero-eyebrow"} -->
-      <p class="ml-hero-eyebrow">Market Lense intelligence portal</p>
+      <p class="ml-hero-eyebrow">Governed market intelligence</p>
       <!-- /wp:paragraph -->
 
       <!-- wp:group {"className":"ml-hero-stack","layout":{"type":"default"}} -->
       <div class="wp-block-group ml-hero-stack">
         <!-- wp:heading {"level":1,"fontSize":"4xl","className":"ml-hero-title"} -->
-        <h1 class="wp-block-heading ml-hero-title has-4-xl-font-size">Search validated market intelligence.</h1>
+        <h1 class="wp-block-heading ml-hero-title has-4-xl-font-size">Published research, <em>made decision-ready.</em></h1>
         <!-- /wp:heading -->
 
         <!-- wp:group {"className":"ml-hero-support","layout":{"type":"default"}} -->
         <div class="wp-block-group ml-hero-support">
           <!-- wp:paragraph {"className":"ml-hero-copy"} -->
-          <p class="ml-hero-copy">Find reports, Briefings, Signals, topics, and publishers.</p>
+          <p class="ml-hero-copy">Market Bearing is the governed intelligence layer for published market research, connecting source material, evidence, and decision context in one reviewable archive.</p>
           <!-- /wp:paragraph -->
         </div>
         <!-- /wp:group -->
       </div>
       <!-- /wp:group -->
 
-      <!-- wp:search {"label":"Search Market Lense","showLabel":false,"placeholder":"Search reports, Briefings, Signals, topics","buttonPosition":"button-inside","buttonUseIcon":true,"className":"ml-hero-search"} /-->
+      <!-- wp:search {"label":"Search published intelligence","showLabel":true,"placeholder":"Report, publisher, topic, or signal","buttonText":"Search archive","buttonPosition":"button-inside","className":"ml-hero-search"} /-->
 
-      <!-- wp:group {"className":"ml-hero-metrics","layout":{"type":"default"}} -->
-      <div class="wp-block-group ml-hero-metrics">
+      <!-- wp:group {"className":"ml-hero-latest-row","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-hero-latest-row">
         <!-- wp:shortcode -->
-        [ml_home_metrics]
+        [ml_hero_snapshot]
         <!-- /wp:shortcode -->
       </div>
       <!-- /wp:group -->
+
+      <!-- wp:list {"className":"ml-hero-trust-list"} -->
+      <ul class="ml-hero-trust-list"><li>Source-traceable</li><li>Evidence-governed</li><li>Built for leadership review</li></ul>
+      <!-- /wp:list -->
+
     </div>
     <!-- /wp:group -->
 
-    <!-- wp:group {"className":"ml-hero-proof ml-hero-panel","layout":{"type":"default"}} -->
-    <div class="wp-block-group ml-hero-proof ml-hero-panel">
+    <!-- wp:group {"className":"ml-hero-proof ml-hero-trust-panel","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-hero-proof ml-hero-trust-panel">
       <!-- wp:shortcode -->
-      [ml_hero_snapshot]
+      [ml_hero_trust]
       <!-- /wp:shortcode -->
     </div>
     <!-- /wp:group -->
 
-    <!-- wp:paragraph {"className":"ml-capability-strip"} -->
-    <p class="ml-capability-strip">Reports &middot; Briefings &middot; Signals &middot; Publishers</p>
-    <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->
 </div>

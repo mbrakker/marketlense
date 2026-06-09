@@ -21,7 +21,7 @@
     <!-- wp:group {"className":"ml-hero-content","layout":{"type":"default"}} -->
     <div class="wp-block-group ml-hero-content">
       <!-- wp:paragraph {"className":"ml-hero-eyebrow"} -->
-      <p class="ml-hero-eyebrow">Market Lense intelligence portal</p>
+      <p class="ml-hero-eyebrow">Market Bearing intelligence portal</p>
       <!-- /wp:paragraph -->
 
       <!-- wp:group {"className":"ml-hero-stack","layout":{"type":"default"}} -->
@@ -31,11 +31,11 @@
         <!-- /wp:heading -->
 
         <!-- wp:paragraph {"className":"ml-hero-copy"} -->
-        <p class="ml-hero-copy">Every digest compresses complexity without severing the link back to the evidence behind it.</p>
+        <p class="ml-hero-copy">Every report brief compresses complexity without severing the link back to the evidence behind it.</p>
         <!-- /wp:paragraph -->
 
         <!-- wp:paragraph {"className":"ml-hero-credibility"} -->
-        <p class="ml-hero-credibility">Validated digests from OECD, Deloitte, Morningstar, Kantar, IAS and leading research publishers.</p>
+        <p class="ml-hero-credibility">Validated reports from OECD, Deloitte, Morningstar, Kantar, IAS and leading research publishers.</p>
         <!-- /wp:paragraph -->
 
         <!-- wp:buttons {"className":"ml-hero-actions"} -->
@@ -54,7 +54,7 @@
     <!-- /wp:group -->
 
     <!-- wp:paragraph {"className":"ml-capability-strip"} -->
-    <p class="ml-capability-strip">Digest-first &middot; Source-traceable &middot; Claim-verified &middot; Executive-ready &middot; Figure-indexed</p>
+    <p class="ml-capability-strip">Report-led &middot; Source-traceable &middot; Claim-verified &middot; Executive-ready &middot; Figure-indexed</p>
     <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->

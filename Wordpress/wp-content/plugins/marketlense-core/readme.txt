@@ -1,18 +1,18 @@
-=== Market Lense Core ===
+=== Market Bearing Core ===
 Contributors: marketlense
 Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
-Tested up to: 6.6
+Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 1.2.10
+Stable tag: 1.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Core WordPress domain plugin for Market Lense.
+Core WordPress domain plugin for Market Bearing.
 
 == Description ==
 
-Market Lense Core provides the WordPress data model required by the Market Lense publishing pipeline and block theme:
+Market Bearing Core provides the WordPress data model required by the Market Bearing publishing pipeline and block theme:
 
 * Custom post types: `ml_report`, `ml_signal`, and `ml_briefing`
 * Taxonomies: native `category` support for report topics and `ml_publisher`
@@ -41,17 +41,36 @@ Market Lense Core provides the WordPress data model required by the Market Lense
   * `[ml_topics_directory]`
   * `[ml_publishers_directory]`
   * `[ml_publisher_profile]`
+  * `[ml_archive_metric]`
 
 This plugin is intended to be used together with the `marketlense` block theme.
 
 == Installation ==
 
 1. Upload the plugin ZIP in WordPress Admin: `Plugins -> Add New -> Upload Plugin`.
-2. Activate `Market Lense Core`.
+2. Activate `Market Bearing Core`.
 3. Ensure the `marketlense` theme is installed and activated.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.5.1 =
+* Reworked the homepage hero around a horizontal latest governed brief and a dynamic trust panel.
+* Added live archive counters and named top publishers to the hero trust panel.
+
+= 1.5.0 =
+* Added source-backed rotating report signals to homepage and Signals surfaces.
+* Added topic archive fallback to published report briefs when a topic has no reports.
+* Removed internal evidence identifiers from public Briefing output and collapsed technical appendices.
+* Enabled public indexing and native WordPress sitemaps through a guarded discovery migration.
+* Added native mobile navigation and compact report archive filter behavior.
+
+= 1.4.0 =
+* Added dynamic archive coverage metrics and editorial archive heroes for Reports, Topics, Publishers, Signals, and Briefings.
+* Added report search and period filtering to the native report archive.
+* Taxonomy directories now include only publishers and topics represented by published reports, briefings, or signals, with per-content-type counts.
+* Signals now reuse source-backed metrics from published report artifacts when no standalone Signal posts exist.
+* Added guarded migration from the legacy Market Lense site identity and filtered legacy metadata sentinels from public cards.
 
 = 1.2.10 =
 * Added reusable Briefings and Signals shortcode entrypoints for homepage and landing-page rendering: `[ml_featured_briefing]`, `[ml_briefings_index]`, and `[ml_signals_index]`.
@@ -69,7 +88,7 @@ This plugin is intended to be used together with the `marketlense` block theme.
 * Refined the custom Publishers manager layout in WP Admin so the editor form, long icon source values, and action links stay inside their panels and remain readable on narrower screens.
 
 = 1.2.5 =
-* Replaced the fragile native `edit-tags.php` publisher admin path with a dedicated Publishers manager under `Market Lense Reports`.
+* Replaced the fragile native `edit-tags.php` publisher admin path with a dedicated Publishers manager under `Market Bearing Reports`.
 * Redirects the old `edit-tags.php?taxonomy=ml_publisher&post_type=ml_report` URL into the custom manager so the Reports menu no longer dead-ends on hosts that block the native taxonomy screen.
 
 = 1.2.4 =

@@ -14,8 +14,12 @@ SHORTCODES_PATH = (
     / "includes"
     / "class-marketlense-core-shortcodes.php"
 )
-REST_PROVISION_PATH = REPO_ROOT / "Wordpress" / "scripts" / "provision-site-structure-rest.py"
-SHELL_PROVISION_PATH = REPO_ROOT / "Wordpress" / "scripts" / "provision-site-structure.sh"
+REST_PROVISION_PATH = (
+    REPO_ROOT / "Wordpress" / "scripts" / "provision-site-structure-rest.py"
+)
+SHELL_PROVISION_PATH = (
+    REPO_ROOT / "Wordpress" / "scripts" / "provision-site-structure.sh"
+)
 
 
 def test_wordpress_primary_navigation_matches_readme_entity_model() -> None:
@@ -30,13 +34,21 @@ def test_wordpress_primary_navigation_matches_readme_entity_model() -> None:
     labels = re.findall(r"\['label' => __\('([^']+)'", match.group("body"))
     targets = re.findall(r"'target' => '([^']+)'", match.group("body"))
 
-    assert labels == ["Reports", "Topics", "Signals", "Briefings", "Publishers"]
+    assert labels == [
+        "Reports",
+        "Topics",
+        "Publishers",
+        "Signals",
+        "Briefings",
+        "Methodology",
+    ]
     assert targets == [
         "reports",
         "topics-directory",
+        "publishers-directory",
         "signals",
         "briefings",
-        "publishers-directory",
+        "methodology",
     ]
 
 
@@ -46,6 +58,9 @@ def test_wordpress_navigation_targets_are_resolvable_and_provisioned() -> None:
     shell_source = SHELL_PROVISION_PATH.read_text(encoding="utf-8")
 
     for target, slug in (("signals", "signals"), ("briefings", "briefings")):
-        assert f"'{target}' => $this->post_type_archive_url(Post_Type::" in shortcodes_source
+        assert (
+            f"'{target}' => $this->post_type_archive_url(Post_Type::"
+            in shortcodes_source
+        )
         assert f'title="{target.title()}", slug="{slug}"' in rest_source
         assert f'"{target.title()}|{slug}"' in shell_source

@@ -1,10 +1,10 @@
 <?php
 /**
- * Plugin Name: Market Lense Core
+ * Plugin Name: Market Bearing Core
  * Plugin URI: https://marketlense.local
- * Description: Core WordPress domain layer for Market Lense reports (CPT, taxonomies, and metadata synchronization).
- * Version: 1.2.10
- * Author: Market Lense
+ * Description: Core WordPress domain layer for governed reports, signals, briefings, taxonomies, and evidence counters.
+ * Version: 1.5.1
+ * Author: Market Bearing
  * Author URI: https://marketlense.local
  * Requires at least: 6.6
  * Requires PHP: 8.2
@@ -21,7 +21,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('MARKETLENSE_CORE_VERSION', '1.2.10');
+define('MARKETLENSE_CORE_VERSION', '1.5.1');
 define('MARKETLENSE_CORE_PATH', plugin_dir_path(__FILE__));
 define('MARKETLENSE_CORE_URL', plugin_dir_url(__FILE__));
 

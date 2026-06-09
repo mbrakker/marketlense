@@ -1,26 +1,39 @@
 <!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"div"} /-->
 
-<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell","layout":{"type":"constrained"}} -->
-<main id="main-content" class="wp-block-group ml-shell">
-  <!-- wp:group {"className":"ml-taxonomy-header","layout":{"type":"constrained"}} -->
-  <div class="wp-block-group ml-taxonomy-header">
-    <!-- wp:paragraph {"className":"ml-section-kicker"} -->
-    <p class="ml-section-kicker">Reports archive</p>
-    <!-- /wp:paragraph -->
-
-    <!-- wp:heading {"level":1} -->
-    <h1 class="wp-block-heading">Executive intelligence archive</h1>
-    <!-- /wp:heading -->
-
-    <!-- wp:paragraph {"className":"ml-page-lead"} -->
-    <p class="ml-page-lead">Search, filter, and compare validated Market Lense digests across publishers, topics, and strategic themes.</p>
-    <!-- /wp:paragraph -->
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-directory-page","layout":{"type":"default"}} -->
+<main id="main-content" class="wp-block-group ml-directory-page">
+  <!-- wp:group {"className":"ml-directory-hero","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-directory-hero">
+    <!-- wp:group {"className":"ml-directory-hero-frame","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-directory-hero-frame">
+      <!-- wp:group {"className":"ml-directory-hero-copy","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-directory-hero-copy">
+        <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+        <p class="ml-section-kicker">Research archive</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:heading {"level":1} -->
+        <h1 class="wp-block-heading">Published research, structured for review.</h1>
+        <!-- /wp:heading -->
+        <!-- wp:paragraph {"className":"ml-page-lead"} -->
+        <p class="ml-page-lead">Search, filter, and compare governed research while keeping its publisher, taxonomy, evidence, and source visible.</p>
+        <!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:group -->
+      <!-- wp:shortcode -->
+      [ml_archive_metric entity="reports" label="Archive coverage"]
+      <!-- /wp:shortcode -->
+    </div>
+    <!-- /wp:group -->
   </div>
   <!-- /wp:group -->
 
-  <!-- wp:shortcode -->
-  [ml_report_browser per_page="12" show_filters="1" show_pagination="1" context="auto"]
-  <!-- /wp:shortcode -->
+  <!-- wp:group {"className":"ml-directory-content-frame","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-directory-content-frame">
+    <!-- wp:shortcode -->
+    [ml_report_browser per_page="12" show_filters="1" show_pagination="1" context="auto"]
+    <!-- /wp:shortcode -->
+  </div>
+  <!-- /wp:group -->
 </main>
 <!-- /wp:group -->
 

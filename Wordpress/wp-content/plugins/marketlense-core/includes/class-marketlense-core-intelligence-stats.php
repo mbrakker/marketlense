@@ -27,8 +27,15 @@ final class Intelligence_Stats
      */
     private array $term_cache = [];
 
+    private Report_View_Model_Builder $view_model_builder;
+
+    public function __construct(Report_View_Model_Builder $view_model_builder)
+    {
+        $this->view_model_builder = $view_model_builder;
+    }
+
     /**
-     * Returns the latest published Market Lense report.
+     * Returns the latest published Market Bearing report.
      */
     public function latest_report(): ?\WP_Post
     {
@@ -58,6 +65,7 @@ final class Intelligence_Stats
     public function homepage_metrics(): array
     {
         $latest = $this->latest_report();
+        $report_ids = $this->published_report_ids();
         $latest_label = __('No reports yet', 'marketlense-core');
 
         if ($latest instanceof \WP_Post) {
@@ -74,12 +82,164 @@ final class Intelligence_Stats
             }
         }
 
+        $citation_count = 0;
+        $derived_signal_count = 0;
+        foreach ($report_ids as $report_id) {
+            $post = get_post($report_id);
+            if (! ($post instanceof \WP_Post)) {
+                continue;
+            }
+
+            $report = $this->view_model_builder->build($post);
+            $citation_count += max(0, (int) ($report['citations_count'] ?? 0));
+            if (! empty($report['full_key_metrics'])) {
+                $derived_signal_count++;
+            }
+        }
+
+        $published_signal_count = $this->published_post_type_count(Post_Type::SIGNAL_POST_TYPE);
+
         return [
-            'report_count' => count($this->published_report_ids()),
-            'publisher_count' => count($this->scoped_terms(Taxonomies::PUBLISHER_TAXONOMY)),
-            'topic_count' => count($this->scoped_terms(Taxonomies::CATEGORY_TAXONOMY)),
+            'report_count' => count($report_ids),
+            'publisher_count' => count($this->content_backed_terms(Taxonomies::PUBLISHER_TAXONOMY)),
+            'topic_count' => count($this->content_backed_terms(Taxonomies::CATEGORY_TAXONOMY)),
+            'briefing_count' => $this->published_post_type_count(Post_Type::BRIEFING_POST_TYPE),
+            'signal_count' => $published_signal_count > 0 ? $published_signal_count : $derived_signal_count,
+            'signal_label' => $published_signal_count > 0
+                ? __('Published signals', 'marketlense-core')
+                : __('Report signals', 'marketlense-core'),
+            'citation_count' => $citation_count,
             'latest_label' => $latest_label,
         ];
+    }
+
+    /**
+     * Returns taxonomy entities represented by published intelligence.
+     *
+     * @return array<int,array{term:\WP_Term,reports:int,briefings:int,signals:int,total:int}>
+     */
+    public function content_backed_terms(string $taxonomy, int $limit = 300): array
+    {
+        $cache_key = 'content:' . $taxonomy . ':' . $limit;
+        if (isset($this->term_cache[$cache_key])) {
+            return $this->term_cache[$cache_key];
+        }
+
+        $sources = [
+            'reports' => $this->published_report_ids(),
+            'briefings' => $this->published_ids_for_post_type(Post_Type::BRIEFING_POST_TYPE),
+            'signals' => $this->published_ids_for_post_type(Post_Type::SIGNAL_POST_TYPE),
+        ];
+        $items = [];
+
+        foreach ($sources as $source => $post_ids) {
+            foreach ($this->count_terms_for_posts($post_ids, $taxonomy) as $row) {
+                $term = $row['term'];
+                if (! ($term instanceof \WP_Term)) {
+                    continue;
+                }
+                if ($this->is_placeholder_term($term->name)) {
+                    continue;
+                }
+
+                $term_id = (int) $term->term_id;
+                if (! isset($items[$term_id])) {
+                    $items[$term_id] = [
+                        'term' => clone $term,
+                        'reports' => 0,
+                        'briefings' => 0,
+                        'signals' => 0,
+                        'total' => 0,
+                    ];
+                }
+
+                $count = max(0, (int) $row['count']);
+                $items[$term_id][$source] = $count;
+                $items[$term_id]['total'] += $count;
+            }
+        }
+
+        $items = array_values(
+            array_filter(
+                $items,
+                static fn (array $item): bool => (int) $item['total'] > 0
+            )
+        );
+        usort(
+            $items,
+            static function (array $left, array $right): int {
+                $count_compare = (int) $right['total'] <=> (int) $left['total'];
+                if ($count_compare !== 0) {
+                    return $count_compare;
+                }
+
+                return strcasecmp((string) $left['term']->name, (string) $right['term']->name);
+            }
+        );
+
+        $result = array_slice($items, 0, $limit);
+        $this->term_cache[$cache_key] = $result;
+
+        return $result;
+    }
+
+    /**
+     * Returns non-empty report periods used by published report records.
+     *
+     * @return list<string>
+     */
+    public function report_periods(): array
+    {
+        $periods = [];
+        foreach ($this->published_report_ids() as $post_id) {
+            $period = trim((string) get_post_meta($post_id, Meta::META_TIME_PERIOD, true));
+            if (! $this->is_placeholder_term($period)) {
+                $periods[$period] = true;
+            }
+        }
+
+        $values = array_keys($periods);
+        natcasesort($values);
+
+        return array_values($values);
+    }
+
+    private function published_post_type_count(string $post_type): int
+    {
+        $counts = wp_count_posts($post_type);
+        if (! is_object($counts) || ! isset($counts->publish)) {
+            return 0;
+        }
+
+        return max(0, (int) $counts->publish);
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function published_ids_for_post_type(string $post_type): array
+    {
+        $post_ids = get_posts(
+            [
+                'post_type' => $post_type,
+                'post_status' => 'publish',
+                'fields' => 'ids',
+                'posts_per_page' => -1,
+                'no_found_rows' => true,
+                'update_post_meta_cache' => false,
+                'update_post_term_cache' => false,
+            ]
+        );
+        if (! is_array($post_ids)) {
+            return [];
+        }
+
+        return array_values(
+            array_filter(
+                array_map('intval', $post_ids),
+                static fn (int $post_id): bool => $post_id > 0
+            )
+        );
     }
 
     /**
@@ -530,5 +690,14 @@ final class Intelligence_Stats
         $link = get_term_link($term);
 
         return is_wp_error($link) ? '' : (string) $link;
+    }
+
+    private function is_placeholder_term(string $value): bool
+    {
+        return in_array(
+            strtolower(trim($value)),
+            ['', '...', '…', 'not extracted', 'not specified', 'unknown', 'n/a', 'na', '-'],
+            true
+        );
     }
 }

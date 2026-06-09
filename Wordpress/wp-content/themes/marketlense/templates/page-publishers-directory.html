@@ -1,51 +1,38 @@
 <!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"div"} /-->
 
-<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell ml-page-frame","layout":{"type":"constrained"}} -->
-<main id="main-content" class="wp-block-group ml-shell ml-page-frame">
-  <!-- wp:group {"className":"ml-taxonomy-header","layout":{"type":"constrained"}} -->
-  <div class="wp-block-group ml-taxonomy-header">
-    <!-- wp:paragraph {"className":"ml-eyebrow"} -->
-    <p class="ml-eyebrow">Publishers directory</p>
-    <!-- /wp:paragraph -->
-    <!-- wp:heading {"level":1} -->
-    <h1 class="wp-block-heading">Monitor output by publisher</h1>
-    <!-- /wp:heading -->
-    <!-- wp:paragraph {"className":"ml-page-lead"} -->
-    <p class="ml-page-lead">Compare viewpoints and evidence quality from institutions, consultancies, media groups, and independent analysts.</p>
-    <!-- /wp:paragraph -->
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-directory-page","layout":{"type":"default"}} -->
+<main id="main-content" class="wp-block-group ml-directory-page">
+  <!-- wp:group {"className":"ml-directory-hero","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-directory-hero">
+    <!-- wp:group {"className":"ml-directory-hero-frame","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-directory-hero-frame">
+      <!-- wp:group {"className":"ml-directory-hero-copy","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-directory-hero-copy">
+        <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+        <p class="ml-section-kicker">Publisher directory</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:heading {"level":1} -->
+        <h1 class="wp-block-heading">Know the source behind the signal.</h1>
+        <!-- /wp:heading -->
+        <!-- wp:paragraph {"className":"ml-page-lead"} -->
+        <p class="ml-page-lead">Explore publishers represented by published intelligence, with direct archive and research destinations where metadata provides them.</p>
+        <!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:group -->
+      <!-- wp:shortcode -->
+      [ml_archive_metric entity="publishers" label="Source coverage"]
+      <!-- /wp:shortcode -->
+    </div>
+    <!-- /wp:group -->
   </div>
   <!-- /wp:group -->
-
-  <!-- wp:columns {"className":"ml-page-grid ml-directory-overview"} -->
-  <div class="wp-block-columns ml-page-grid ml-directory-overview">
-    <!-- wp:column {"className":"ml-page-card"} -->
-    <div class="wp-block-column ml-page-card">
-      <!-- wp:heading {"level":3} -->
-      <h3 class="wp-block-heading">Track recurring voices</h3>
-      <!-- /wp:heading -->
-      <!-- wp:paragraph -->
-      <p>See which institutions and consultancies are shaping the conversation most often in the current archive.</p>
-      <!-- /wp:paragraph -->
-    </div>
-    <!-- /wp:column -->
-    <!-- wp:column {"className":"ml-page-card"} -->
-    <div class="wp-block-column ml-page-card">
-      <!-- wp:heading {"level":3} -->
-      <h3 class="wp-block-heading">Jump from archive to source</h3>
-      <!-- /wp:heading -->
-      <!-- wp:paragraph -->
-      <p>Open the publisher archive for Market Lense coverage or jump to the publisher’s own homepage when external context is needed.</p>
-      <!-- /wp:paragraph -->
-    </div>
-    <!-- /wp:column -->
+  <!-- wp:group {"className":"ml-directory-content-frame","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-directory-content-frame">
+    <!-- wp:shortcode -->
+    [ml_publishers_directory]
+    <!-- /wp:shortcode -->
   </div>
-  <!-- /wp:columns -->
-
-  <!-- wp:shortcode -->
-  [ml_publishers_directory]
-  <!-- /wp:shortcode -->
-
-  <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
+  <!-- /wp:group -->
 </main>
 <!-- /wp:group -->
 

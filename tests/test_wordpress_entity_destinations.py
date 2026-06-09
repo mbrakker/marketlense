@@ -6,7 +6,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ROOT = REPO_ROOT / "Wordpress" / "wp-content" / "plugins" / "marketlense-core"
-THEME_TEMPLATES = REPO_ROOT / "Wordpress" / "wp-content" / "themes" / "marketlense" / "templates"
+THEME_TEMPLATES = (
+    REPO_ROOT / "Wordpress" / "wp-content" / "themes" / "marketlense" / "templates"
+)
 POST_TYPE_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-post-type.php"
 SHORTCODES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-shortcodes.php"
 TAXONOMIES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-taxonomies.php"
@@ -28,12 +30,12 @@ def test_wordpress_registers_signal_and_briefing_destinations() -> None:
     assert re.search(r"'slug'\s*=>\s*'briefings'", source)
 
 
-def test_wordpress_templates_render_signal_and_briefing_archive_and_detail_surfaces() -> None:
+def test_wordpress_templates_render_canonical_signal_and_briefing_surfaces() -> None:
     expected_templates = {
-        "page-signals.html": "[ml_signal_archive",
-        "page-briefings.html": "[ml_briefing_archive",
-        "archive-ml_signal.html": "[ml_signal_archive",
-        "archive-ml_briefing.html": "[ml_briefing_archive",
+        "page-signals.html": "[ml_signals_index",
+        "page-briefings.html": "[ml_briefings_index",
+        "archive-ml_signal.html": "[ml_signals_index",
+        "archive-ml_briefing.html": "[ml_briefings_index",
         "single-ml_signal.html": "single-content",
         "single-ml_briefing.html": "single-content",
     }
