@@ -1,28 +1,29 @@
 schema_version: '1.0'
 playbook_id: learned-datareportal-com-browser-onsite-report
-version: 1.0.3
+version: 1.0.5
 status: active
-updated_at: '2026-06-03T06:16:22Z'
+updated_at: '2026-06-10T20:49:36Z'
 stale_after_days: 120
 publisher_pattern: datareportal.com
 host_patterns:
 - datareportal.com
 url_path_markers:
 - reports
-- digital-2024-uzbekistan
+- digital-2024-bangladesh
 route_family: browser_onsite_report
 route_kind: pdf_download
-summary: Clicked cookie/privacy 'Accept' to dismiss the banner, then saved the full
-  page as a PDF (full-page save).
+summary: Clicked cookie/privacy Accept to dismiss the overlay, then saved the full
+  page as a PDF (digital-2024-bangladesh.pdf) to a local path.
 steps:
 - schema_version: '1.0'
   action: click
-  target: Accept
-  verification: Clicked cookie 'Accept' to dismiss cookie/privacy overlay.
+  target: "\u0421\u041E\u0413\u041B\u0410\u0421\u0415\u041D"
+  verification: Cookie/privacy banner dismissed; article body accessible.
 - schema_version: '1.0'
   action: save_as_pdf
-  target: Save full page as PDF
-  verification: Saved full page as PDF artifact.
+  target: save_as_pdf
+  verification: 'Saved full page as PDF artifact: digital-2024-bangladesh.pdf (local
+    file path recorded).'
 traps: []
 evidence_notes:
 - Promoted only after verified route evidence with outcome downloaded.
@@ -47,5 +48,13 @@ history:
   summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.
 - schema_version: '1.0'
   changed_at: '2026-06-03T06:16:22Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-06-10T20:39:58Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-06-10T20:49:36Z'
   source: validated_route_promotion
   summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.

@@ -1,0 +1,57 @@
+schema_version: '1.0'
+playbook_id: learned-www-brightlocal-com-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-06-10T20:46:55Z'
+stale_after_days: 120
+publisher_pattern: www.brightlocal.com
+host_patterns:
+- www.brightlocal.com
+url_path_markers:
+- local-search-results-checker
+route_family: browser_onsite_report
+route_kind: email_delivery
+summary: Navigated to BrightLocal Local Search Results Checker, dismissed cookie banner,
+  entered Search Term='coffee shop' and Location='Vienna', clicked 'Check search results'
+  to generate localized results UI, then clicked 'Page 1' which opened the Google
+  search results in a new tab.
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: page
+  verification: Loaded BrightLocal Local Search Results Checker page
+- schema_version: '1.0'
+  action: click
+  target: Close banner
+  verification: Cookie consent banner closed
+- schema_version: '1.0'
+  action: input
+  target: coffee shop
+  verification: Search Term set to 'coffee shop'
+- schema_version: '1.0'
+  action: input
+  target: Vienna
+  verification: Location set to 'Vienna'
+- schema_version: '1.0'
+  action: click
+  target: Check search results
+  verification: Submitted form to generate localized results UI (results panel rendered)
+- schema_version: '1.0'
+  action: click
+  target: Page 1
+  verification: Opened Page 1 link which launched a new tab with Google Search results
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- network_submission_request
+- network_confirmation_request
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-06-10T20:46:55Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/email_delivery after email_requested evidence.

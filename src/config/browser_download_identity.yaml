@@ -378,6 +378,64 @@ fields:
   label: Country (name=country_dropdown)
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: first_name_name_firstname_required_text
+  label: First name (name=firstname) - required - text
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: last_name_name_lastname_required_text
+  label: Last name (name=lastname) - required - text
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: business_email_name_email_required_email
+  label: Business email (name=email) - required - email
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: company_name_name_company_required_text
+  label: Company name (name=company) - required - text
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: i_work_for_a_n_name_demo_selected_for_required_select_options_please_select_investor_company_consulting_data_company_government_academic_institution_news_media_press
+  label: 'I work for a(n) (name=demo_selected_for) - required - select (options: Please
+    select, Investor, Company, Consulting, Data Company, Government, Academic Institution,
+    News Media/Press)'
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: any_questions_or_specific_topics_you_d_like_to_see_name_subscribe_comments_optional_textarea
+  label: Any questions or specific topics you'd like to see? (name=subscribe_comments)
+    - optional - textarea
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: legal_consent_text_legal_consent
+  label: Legal / consent text - legal-consent
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: recaptcha_name_recaptcha_token_required_recaptcha
+  label: reCAPTCHA (name=recaptcha-token) - required - recaptcha
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: search_term
+  label: Search Term
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: language
+  label: Language
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: search_engine
+  label: Search Engine
+  value: null
+  aliases: []
 publisher_overrides:
 - schema_version: '1.0'
   host_pattern: centricsoftware.com

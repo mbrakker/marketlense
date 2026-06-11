@@ -4,6 +4,7 @@ import json
 import logging
 import sqlite3
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -12,6 +13,7 @@ import pytest
 from src.contracts.drive import (
     DriveDownloadResponse,
     DriveFile,
+    DriveFolderEnsureResponse,
     DriveFolderFileListResponse,
     DriveUploadBytesResponse,
 )
@@ -31,6 +33,7 @@ from src.contracts.publisher_inventory import (
     PublisherInventorySettings,
 )
 from src.contracts.report_store import (
+    PublisherGoogleFolderUpdateResponse,
     PublisherResourceRankingItem,
     PublisherResourceRankingResponse,
     PublisherInventoryStateResponse,
@@ -470,6 +473,28 @@ def _dependencies(**overrides) -> PublisherInventoryDependencies:
             ),
             size=len(req.content),
             md5="abc123",
+        ),
+        "ensure_folder": lambda req, ctx: DriveFolderEnsureResponse(
+            schema_version="1.0",
+            folder=DriveFile(
+                schema_version="1.0",
+                file_id="created-publisher-folder",
+                name=req.folder_name,
+                modified_time=None,
+                md5_checksum=None,
+                mime_type="application/vnd.google-apps.folder",
+            ),
+            parent_folder_id=req.parent_folder_id,
+            created=True,
+        ),
+        "update_publisher_google_folder": lambda req, ctx: (
+            PublisherGoogleFolderUpdateResponse(
+                schema_version="1.0",
+                publisher_name=req.publisher_name,
+                google_folder=req.google_folder,
+                updated_count=1,
+                resolution_source="publisher_insights_url",
+            )
         ),
     }
     defaults.update(overrides)
@@ -1477,7 +1502,57 @@ def test_run_publisher_inventory_discovery_does_not_commit_raw_only_snapshot_dri
     assert state_records[0].route_kind == "browser_render"
 
 
-def test_run_publisher_inventory_discovery_requires_google_folder(
+def test_run_publisher_inventory_discovery_creates_missing_google_folder(
+    run_context,
+):
+    settings = replace(_settings(), drive_parent_folder_id="parent-folder")
+    ensured = []
+    folder_updates = []
+    deps = _dependencies(
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=False, with_snapshot=False, with_folder=False
+        ),
+        ensure_folder=lambda req, ctx: (
+            ensured.append(req)
+            or DriveFolderEnsureResponse(
+                schema_version="1.0",
+                folder=DriveFile(
+                    schema_version="1.0",
+                    file_id="created-publisher-folder",
+                    name=req.folder_name,
+                    modified_time=None,
+                    md5_checksum=None,
+                    mime_type="application/vnd.google-apps.folder",
+                ),
+                parent_folder_id=req.parent_folder_id,
+                created=True,
+            )
+        ),
+        update_publisher_google_folder=lambda req, ctx: (
+            folder_updates.append(req)
+            or PublisherGoogleFolderUpdateResponse(
+                schema_version="1.0",
+                publisher_name=req.publisher_name,
+                google_folder=req.google_folder,
+                updated_count=1,
+                resolution_source="publisher_insights_url",
+            )
+        ),
+    )
+
+    result = run_publisher_inventory_discovery(
+        _request(settings),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert result.publisher_name == "Activate Consulting"
+    assert ensured[0].parent_folder_id == "parent-folder"
+    assert ensured[0].folder_name == "Activate Consulting"
+    assert folder_updates[0].google_folder.endswith("/created-publisher-folder")
+
+
+def test_run_publisher_inventory_discovery_requires_parent_for_missing_google_folder(
     run_context,
     assert_app_error,
 ):
@@ -1500,7 +1575,9 @@ def test_run_publisher_inventory_discovery_requires_google_folder(
             dependencies=deps,
         )
     assert_app_error(
-        err.value, code="publisher_inventory_google_folder_missing", retryable=False
+        err.value,
+        code="publisher_inventory_google_folder_parent_missing",
+        retryable=False,
     )
 
 

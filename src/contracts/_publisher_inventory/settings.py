@@ -52,6 +52,12 @@ class PublisherInventorySettings:
     http_timeout_seconds: float = field(
         metadata={"doc": "HTTP timeout in seconds for direct HTML fetch discovery."}
     )
+    drive_parent_folder_id: str = field(
+        default="",
+        metadata={
+            "doc": "Drive parent folder ID where publisher discovery should create missing publisher artifact folders."
+        },
+    )
     command_time_budget_seconds: float = field(
         default=570.0,
         metadata={

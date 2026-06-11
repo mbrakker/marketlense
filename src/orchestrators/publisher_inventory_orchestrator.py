@@ -31,7 +31,9 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryServiceResponse,
     PublisherInventorySnapshot,
 )
+from src.contracts.drive import DriveFolderEnsureRequest
 from src.contracts.report_store import (
+    PublisherGoogleFolderUpdateRequest,
     PublisherInventoryTestStatusRecordRequest,
     PublisherInventoryStateGetRequest,
     PublisherInventoryRunQualityRecordRequest,
@@ -150,23 +152,12 @@ def run_publisher_inventory_discovery(
         )
     folder_id = extract_drive_folder_id(publisher_state.google_folder or "")
     if not folder_id:
-        _record_discovery_test_status_on_failure(
+        folder_id = _ensure_missing_publisher_drive_folder(
             request=request,
             normalized_url=normalized_url,
-            publisher_state=publisher_state,
-            code="publisher_inventory_google_folder_missing",
+            publisher_name=publisher_state.publisher_name,
             ctx=ctx,
             dependencies=deps,
-        )
-        raise AppError(
-            code="publisher_inventory_google_folder_missing",
-            message="Publisher discovery requires an existing publisher Drive folder",
-            retryable=False,
-            severity="error",
-            context={
-                "publisher_name": publisher_state.publisher_name,
-                "normalized_url": normalized_url,
-            },
         )
     try:
         (
@@ -715,6 +706,106 @@ def run_publisher_inventory_discovery(
             dependencies=deps,
         )
         raise
+
+
+def _ensure_missing_publisher_drive_folder(
+    *,
+    request: PublisherInventoryDiscoveryRequest,
+    normalized_url: str,
+    publisher_name: str,
+    ctx: RunContext,
+    dependencies: PublisherInventoryDependencies,
+) -> str:
+    parent_folder_id = extract_drive_folder_id(request.settings.drive_parent_folder_id)
+    clean_publisher_name = str(publisher_name or "").strip()
+    if not parent_folder_id:
+        _record_test_status_if_needed(
+            request=PublisherInventoryTestStatusRecordRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                normalized_url=normalized_url,
+                status="failed:publisher_inventory_google_folder_parent_missing",
+            ),
+            ctx=ctx,
+            dependencies=dependencies,
+        )
+        raise AppError(
+            code="publisher_inventory_google_folder_parent_missing",
+            message="Publisher discovery cannot create a missing Drive folder without a parent folder",
+            retryable=False,
+            severity="error",
+            context={
+                "publisher_name": clean_publisher_name,
+                "normalized_url": normalized_url,
+            },
+        )
+    if not clean_publisher_name:
+        raise AppError(
+            code="publisher_inventory_publisher_name_missing",
+            message="Publisher discovery cannot create a Drive folder without a publisher name",
+            retryable=False,
+            severity="error",
+            context={"normalized_url": normalized_url},
+        )
+    policy = RetryPolicy(
+        retries=request.settings.retry_retries,
+        base_delay_seconds=request.settings.retry_base_delay_seconds,
+        backoff_step_seconds=request.settings.retry_backoff_step_seconds,
+        jitter_seconds=request.settings.retry_jitter_seconds,
+    )
+    ensure_response = run_with_retry(
+        step_name="publisher_inventory_drive_folder_ensure",
+        operation=lambda: dependencies.ensure_folder(
+            DriveFolderEnsureRequest(
+                schema_version="1.0",
+                parent_folder_id=parent_folder_id,
+                folder_name=clean_publisher_name,
+                service_account_path=request.settings.google_sa_path,
+                supports_all_drives=True,
+                include_items_from_all_drives=True,
+                drive_id=None,
+                auth_mode=request.settings.drive_auth_mode,
+                oauth_client_path=request.settings.google_oauth_client_path,
+                oauth_token_path=request.settings.google_oauth_token_path,
+            ),
+            ctx,
+        ),
+        ctx=ctx,
+        logger=logger,
+        module_name=logger.name,
+        policy=policy,
+        retry_event="publisher_inventory_drive_folder_ensure_retry",
+        failure_event="publisher_inventory_drive_folder_ensure_failed",
+    )
+    folder_id = ensure_response.folder.file_id.strip()
+    google_folder = f"https://drive.google.com/drive/folders/{folder_id}"
+    dependencies.update_publisher_google_folder(
+        PublisherGoogleFolderUpdateRequest(
+            schema_version="1.0",
+            db_path=request.reports_db,
+            publisher_name=clean_publisher_name,
+            publisher_insights_url=normalized_url,
+            google_folder=google_folder,
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="publisher_inventory_drive_folder_created",
+            module=logger.name,
+            fields={
+                "publisher_name": clean_publisher_name,
+                "normalized_url": normalized_url,
+                "parent_folder_id": parent_folder_id,
+                "folder_id": folder_id,
+                "google_folder": google_folder,
+                "created": ensure_response.created,
+            },
+        )
+    )
+    return folder_id
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]

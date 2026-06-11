@@ -315,6 +315,7 @@ def bind_artifact_evidence_spans(
     )
     bound_count = 0
     unbound_count = 0
+    pruned_claim_count = 0
 
     def _bind_item(item: Any, *, page_keys: tuple[str, ...]) -> None:
         nonlocal bound_count, unbound_count
@@ -364,12 +365,15 @@ def bind_artifact_evidence_spans(
 
     claim_map = summary.get("claim_evidence_map")
     if isinstance(claim_map, list):
+        bound_claims: List[Dict[str, Any]] = []
         for claim in claim_map:
             if not isinstance(claim, dict):
                 continue
             evidence_id = _s(claim.get("evidence_id")).strip()
             claim["evidence_spans"] = []
             if not evidence_id:
+                unbound_count += 1
+                pruned_claim_count += 1
                 continue
             existing = _normalize_evidence_spans(
                 claim.get("evidence_spans"), evidence_id=evidence_id
@@ -399,8 +403,11 @@ def bind_artifact_evidence_spans(
             claim["evidence_spans"] = spans
             if spans:
                 bound_count += 1
+                bound_claims.append(claim)
             else:
                 unbound_count += 1
+                pruned_claim_count += 1
+        summary["claim_evidence_map"] = bound_claims
 
     for item in insights_candidates:
         _bind_item(item, page_keys=("pages",))
@@ -412,6 +419,7 @@ def bind_artifact_evidence_spans(
     return {
         "bound_count": bound_count,
         "unbound_count": unbound_count,
+        "pruned_claim_count": pruned_claim_count,
         "indexed_reference_count": len(span_index),
     }
 

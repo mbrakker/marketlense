@@ -28,6 +28,7 @@ def load_publisher_inventory_settings(
     drive_cfg = ingest.get("drive", {}) or {}
     llm_cfg = ingest.get("llm", {}) or {}
     browser_download = data.get("browser_download", {}) or {}
+    drive_upload_cfg = browser_download.get("drive_upload", {}) or {}
     browser_retry_cfg = browser_download.get("retry", {}) or {}
     publisher_discovery = data.get("publisher_discovery", {}) or {}
     candidate_screening_cfg = publisher_discovery.get("candidate_screening", {}) or {}
@@ -40,6 +41,16 @@ def load_publisher_inventory_settings(
         runtime_base_path=runtime_base_path,
     )
     retry_cfg = publisher_discovery.get("retry", {}) or browser_retry_cfg
+    drive_parent_folder_id = str(
+        publisher_discovery.get("drive_parent_folder_id")
+        if not _is_missing(publisher_discovery.get("drive_parent_folder_id"))
+        else (
+            _env_value("PUBLISHER_DISCOVERY_DRIVE_PARENT_FOLDER_ID")
+            or drive_upload_cfg.get("parent_folder_id")
+            or _env_value("BROWSER_DOWNLOAD_DRIVE_PARENT_FOLDER_ID")
+            or ""
+        )
+    ).strip()
 
     browser_output_root = (
         browser_download.get("output_dir")
@@ -194,6 +205,7 @@ def load_publisher_inventory_settings(
         output_dir=output_dir,
         reports_db=reports_db,
         google_sa_path=drive_auth_settings["google_sa_path"],
+        drive_parent_folder_id=drive_parent_folder_id,
         prompt_namespace=str(
             publisher_discovery.get("prompt_namespace")
             or _env_value("PUBLISHER_DISCOVERY_PROMPT_NAMESPACE")
@@ -680,6 +692,7 @@ def load_publisher_inventory_settings(
                 "output_dir": settings.output_dir,
                 "reports_db": settings.reports_db,
                 "google_sa_path": settings.google_sa_path,
+                "has_drive_parent_folder": bool(settings.drive_parent_folder_id),
                 "drive_auth_mode": settings.drive_auth_mode,
                 "google_oauth_client_path": settings.google_oauth_client_path or "",
                 "google_oauth_token_path": settings.google_oauth_token_path or "",

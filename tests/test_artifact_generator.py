@@ -499,6 +499,103 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     assert analysis_store.stored and analysis_store.stored[0][2] == "artifacts"
 
 
+def test_generate_artifacts_prunes_unbound_summary_claims(tmp_path):
+    responses = {
+        "toc": {"toc_topics": ["Topic"]},
+        "summary": {
+            "summary": {
+                "tldr": "TLDR",
+                "executive_summary": "Exec",
+                "claim_evidence_map": [
+                    {
+                        "claim": f"Grounded claim {index}",
+                        "evidence_id": f"f{index}",
+                        "evidence": f"Evidence {index}",
+                        "pages": [index + 1],
+                    }
+                    for index in range(1, 5)
+                ]
+                + [
+                    {
+                        "claim": "Unsupported claim",
+                        "evidence_id": "missing-source",
+                        "evidence": "Model text without a known source",
+                        "pages": [],
+                    }
+                ],
+            }
+        },
+        "insights_candidates": {
+            "insights_candidates": [
+                {
+                    "id": f"c{index}",
+                    "text": f"Candidate {index}",
+                    "evidence_id": f"f{index}",
+                    "evidence": f"Evidence {index}",
+                    "metric": {},
+                    "pages": [index + 1],
+                }
+                for index in range(1, 6)
+            ]
+        },
+        "insights_final": {
+            "insights_final": [
+                {
+                    "id": f"f{index}",
+                    "text": f"Final {index}",
+                    "evidence_id": f"f{index}",
+                    "evidence": f"Evidence {index}",
+                    "metric": {},
+                    "pages": [index + 1],
+                }
+                for index in range(1, 6)
+            ]
+        },
+        "quotes": {
+            "quotes_final": [
+                {
+                    "text": "We are expanding rapidly",
+                    "speaker": "CEO",
+                    "citation": "Earnings call",
+                    "page": 3,
+                    "evidence_id": "q1",
+                }
+            ]
+        },
+        "expert_comment": {"expert_comment": "Grounded comment"},
+        "linkedin_post": {"linkedin_post": "Post summary"},
+    }
+
+    payload = generate_artifacts(
+        report_id="r_prune_unbound_claims",
+        report_name="report",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        vector_store_id="vs_1",
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    claims = payload["summary"]["claim_evidence_map"]
+    assert [claim["claim"] for claim in claims] == [
+        "Grounded claim 1",
+        "Grounded claim 2",
+        "Grounded claim 3",
+        "Grounded claim 4",
+    ]
+    assert all(claim["evidence_spans"] for claim in claims)
+    assert payload["family_status"]["summary"]["status"] == "generated"
+    validate_schema(
+        SchemaValidateRequest(
+            schema_version="1.0", payload=payload, schema_name="artifacts"
+        ),
+        _ctx(),
+    )
+
+
 def test_generate_artifacts_abstains_low_confidence_families_and_marks_regeneration(
     tmp_path,
 ):

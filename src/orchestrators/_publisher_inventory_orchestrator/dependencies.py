@@ -12,6 +12,8 @@ from typing import Callable, Optional
 from src.contracts.drive import (
     DriveDownloadRequest,
     DriveDownloadResponse,
+    DriveFolderEnsureRequest,
+    DriveFolderEnsureResponse,
     DriveFolderFileListRequest,
     DriveFolderFileListResponse,
     DriveUploadBytesRequest,
@@ -41,6 +43,8 @@ from src.contracts.report_store import (
     PublisherInventoryStateRecordRequest,
     PublisherInventoryStateResponse,
     PublisherInventoryTestStatusRecordRequest,
+    PublisherGoogleFolderUpdateRequest,
+    PublisherGoogleFolderUpdateResponse,
     PublisherResourceRankingRequest,
     PublisherResourceRankingResponse,
     ReportSourceDiscoveryRecordRequest,
@@ -66,7 +70,12 @@ from src.generators.publisher_inventory_run_quality_generator import (
     evaluate_publisher_inventory_run_quality,
 )
 from src.generators.report_value_generator import rank_publisher_resources
-from src.services.drive_service import download_pdf, list_files_in_folder, upload_bytes
+from src.services.drive_service import (
+    download_pdf,
+    ensure_folder,
+    list_files_in_folder,
+    upload_bytes,
+)
 from src.services.publisher_inventory_service import discover_publisher_inventory
 from src.services.report_store_service import (
     get_publisher_inventory_recovery_cache_record,
@@ -77,6 +86,7 @@ from src.services.report_store_service import (
     record_publisher_inventory_run_quality,
     record_publisher_inventory_state,
     record_publisher_inventory_test_status,
+    update_publisher_google_folder,
 )
 
 
@@ -154,6 +164,13 @@ class PublisherInventoryDependencies:
     upload_bytes: Callable[
         [DriveUploadBytesRequest, RunContext], DriveUploadBytesResponse
     ]
+    ensure_folder: Callable[
+        [DriveFolderEnsureRequest, RunContext], DriveFolderEnsureResponse
+    ]
+    update_publisher_google_folder: Callable[
+        [PublisherGoogleFolderUpdateRequest, RunContext],
+        PublisherGoogleFolderUpdateResponse,
+    ]
 
     @classmethod
     def default(cls) -> "PublisherInventoryDependencies":
@@ -181,6 +198,8 @@ class PublisherInventoryDependencies:
             list_files_in_folder=list_files_in_folder,
             download_pdf=download_pdf,
             upload_bytes=upload_bytes,
+            ensure_folder=ensure_folder,
+            update_publisher_google_folder=update_publisher_google_folder,
         )
 
 
