@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-# ruff: noqa: F401,F403
+# ruff: noqa: E402,F401,F403,F405,F821
 
 import re
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, TypeAlias

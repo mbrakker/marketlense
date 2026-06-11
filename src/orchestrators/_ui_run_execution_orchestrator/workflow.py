@@ -1,0 +1,669 @@
+from __future__ import annotations
+
+# ruff: noqa: F401,F403,F405,F821
+
+from .shared import *  # noqa: F401,F403
+from .validation import _validate_ui_run_payload
+from .responses import _execution_response, _invalid_payload_config_snapshot
+from .requests import (
+    _cross_report_analysis_request,
+    _signal_candidate_request,
+    _signal_post_request,
+)
+
+
+def resolve_ui_run_config_snapshot(
+    worker_request: UiRunWorkerRequest, ctx: RunContext
+) -> dict[str, Any]:
+    payload = worker_request.request_payload
+    run_type = worker_request.run_type
+    try:
+        _validate_ui_run_payload(run_type=run_type, payload=payload)
+    except AppError as exc:
+        if exc.code.startswith("ui_run_payload_"):
+            return _invalid_payload_config_snapshot(
+                worker_request=worker_request,
+                error=exc,
+            )
+        raise
+    if run_type in {"ingest", "candidate_extraction"}:
+        app_settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), ctx
+        )
+        ingest_settings = build_ingest_settings(
+            IngestSettingsBuildRequest(schema_version="1.0", app_settings=app_settings),
+            ctx,
+        )
+        return {"run_type": run_type, "settings": _sanitize_snapshot(ingest_settings)}
+    if run_type == "cover_images":
+        app_settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), ctx
+        )
+        return {"run_type": run_type, "settings": _sanitize_snapshot(app_settings)}
+    if run_type == "publish":
+        publish_settings = load_publish_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), ctx
+        )
+        return {"run_type": run_type, "settings": _sanitize_snapshot(publish_settings)}
+    if run_type == "publisher_discovery":
+        inventory_settings = load_publisher_inventory_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""),
+            ctx,
+        )
+        return {
+            "run_type": run_type,
+            "settings": _sanitize_snapshot(inventory_settings),
+        }
+    if run_type == "report_download":
+        browser_settings = load_browser_download_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""),
+            ctx,
+        )
+        return {"run_type": run_type, "settings": _sanitize_snapshot(browser_settings)}
+    if run_type == "acquisition_audit":
+        app_settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), ctx
+        )
+        inventory_settings = load_publisher_inventory_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""),
+            ctx,
+        )
+        browser_settings = load_browser_download_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""),
+            ctx,
+        )
+        return {
+            "run_type": run_type,
+            "app_settings": _sanitize_snapshot(app_settings),
+            "inventory_settings": _sanitize_snapshot(inventory_settings),
+            "browser_settings": _sanitize_snapshot(browser_settings),
+        }
+    if run_type in {
+        "cross_report_analysis",
+        "signal_candidate_extraction",
+        "signal_post",
+    }:
+        app_settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), ctx
+        )
+        return {"run_type": run_type, "settings": _sanitize_snapshot(app_settings)}
+    if run_type == "ui_run_replay":
+        app_settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), ctx
+        )
+        replay_payload = _validate_ui_run_payload(run_type=run_type, payload=payload)
+        assert isinstance(replay_payload, UiRunReplayUiRunPayload)
+        return {
+            "run_type": run_type,
+            "registry_path": replay_payload.registry_path
+            or default_ui_run_registry_path(app_settings.state_db),
+            "run_id": replay_payload.run_id,
+        }
+    raise AppError(
+        code="ui_run_type_unknown",
+        message=f"Unknown UI run type: {run_type}",
+        retryable=False,
+        context={"run_type": run_type, "payload_keys": sorted(payload.keys())},
+    )
+
+
+def execute_ui_run(
+    worker_request: UiRunWorkerRequest, ctx: RunContext
+) -> UiRunExecutionResponse:
+    payload = worker_request.request_payload
+    run_type = worker_request.run_type
+    config_snapshot: dict[str, Any] = {
+        "run_type": run_type,
+        "request_payload_keys": sorted(payload.keys()),
+        "source_tree_root": str(SOURCE_TREE_ROOT),
+        "prompt_tree_root": str(PROMPT_TREE_ROOT),
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="ui_run_execute_start",
+            module=logger.name,
+            fields={
+                "run_id": worker_request.run_id,
+                "run_type": run_type,
+                "payload_keys": sorted(payload.keys()),
+            },
+        )
+    )
+    try:
+        validated_payload = _validate_ui_run_payload(run_type=run_type, payload=payload)
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="ui_run_payload_validated",
+                module=logger.name,
+                fields={
+                    "run_id": worker_request.run_id,
+                    "run_type": run_type,
+                    "payload": _sanitize_snapshot(validated_payload),
+                },
+            )
+        )
+        if run_type == "ingest":
+            assert isinstance(validated_payload, IngestUiRunPayload)
+            app_settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
+            ingest_settings = build_ingest_settings(
+                IngestSettingsBuildRequest(
+                    schema_version="1.0", app_settings=app_settings
+                ),
+                ctx,
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "settings": _sanitize_snapshot(ingest_settings),
+            }
+            ingest_outcomes = run_ingest(
+                ingest_settings,
+                folder_id=validated_payload.folder_id,
+                limit=validated_payload.limit,
+                ctx=ctx,
+            )
+            processed_count = len(
+                [item for item in ingest_outcomes if item.status == "processed"]
+            )
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "processed_count": processed_count,
+                    "total_count": len(ingest_outcomes),
+                },
+                artifact_paths=[
+                    item.html_path for item in ingest_outcomes if item.html_path
+                ],
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "candidate_extraction":
+            assert isinstance(validated_payload, CandidateExtractionUiRunPayload)
+            app_settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
+            candidate_settings = build_ingest_settings(
+                IngestSettingsBuildRequest(
+                    schema_version="1.0", app_settings=app_settings
+                ),
+                ctx,
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "settings": _sanitize_snapshot(candidate_settings),
+            }
+            candidate_outcomes = run_candidate_extraction(
+                candidate_settings,
+                folder_id=validated_payload.folder_id,
+                limit=validated_payload.limit,
+                file_id=validated_payload.file_id,
+                pdf_path=validated_payload.pdf_path,
+                report_id=validated_payload.report_id,
+                ctx=ctx,
+            )
+            artifact_paths: list[str] = []
+            for outcome in candidate_outcomes:
+                if outcome.candidates_path:
+                    artifact_paths.append(outcome.candidates_path)
+                artifact_paths.extend(outcome.crop_paths[:5])
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "total_count": len(candidate_outcomes),
+                    "candidate_count": sum(
+                        item.candidate_count for item in candidate_outcomes
+                    ),
+                    "chart_count": sum(item.chart_count for item in candidate_outcomes),
+                    "table_count": sum(item.table_count for item in candidate_outcomes),
+                },
+                artifact_paths=artifact_paths,
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "cover_images":
+            assert isinstance(validated_payload, CoverImagesUiRunPayload)
+            cover_settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "settings": _sanitize_snapshot(cover_settings),
+            }
+            cover_outcomes = run_cover_image_generation(
+                CoverImageOrchestratorRequest(
+                    schema_version="1.0",
+                    reports_db=cover_settings.reports_db,
+                    output_dir=cover_settings.output_dir,
+                    style_config_path=validated_payload.style_config_path,
+                    limit=validated_payload.limit,
+                    file_id=validated_payload.file_id,
+                ),
+                ctx=ctx,
+            )
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "total_count": len(cover_outcomes),
+                    "generated_count": len(
+                        [item for item in cover_outcomes if item.status == "generated"]
+                    ),
+                },
+                artifact_paths=[
+                    item.output_path for item in cover_outcomes if item.output_path
+                ],
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "publish":
+            assert isinstance(validated_payload, PublishUiRunPayload)
+            publish_settings = load_publish_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "settings": _sanitize_snapshot(publish_settings),
+            }
+            publish_outcomes = run_publish(
+                publish_settings,
+                limit=validated_payload.limit,
+                ctx=ctx,
+            )
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "total_count": len(publish_outcomes),
+                    "published_count": len(
+                        [
+                            item
+                            for item in publish_outcomes
+                            if item.status == "published"
+                        ]
+                    ),
+                },
+                artifact_paths=[
+                    item.html_path for item in publish_outcomes if item.html_path
+                ],
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "publisher_discovery":
+            assert isinstance(validated_payload, PublisherDiscoveryUiRunPayload)
+            inventory_settings = load_publisher_inventory_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""),
+                ctx,
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "settings": _sanitize_snapshot(inventory_settings),
+            }
+            discovery_result = run_publisher_inventory_discovery(
+                PublisherInventoryDiscoveryRequest(
+                    schema_version="1.0",
+                    insights_url=validated_payload.insights_url,
+                    reports_db=inventory_settings.reports_db,
+                    settings=inventory_settings,
+                ),
+                ctx=ctx,
+            )
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "publisher_name": discovery_result.publisher_name,
+                    "current_report_count": discovery_result.current_report_count,
+                    "previous_report_count": discovery_result.previous_report_count,
+                    "new_report_count": len(discovery_result.new_report_urls),
+                    "quality_band": discovery_result.run_quality_summary.quality_band,
+                    "recommended_route_kind": discovery_result.run_quality_summary.recommended_route_kind,
+                },
+                artifact_paths=[],
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "report_download":
+            assert isinstance(validated_payload, ReportDownloadUiRunPayload)
+            browser_settings = load_browser_download_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""),
+                ctx,
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "settings": _sanitize_snapshot(browser_settings),
+            }
+            download_result = run_report_download(
+                ReportDownloadOrchestratorRequest(
+                    schema_version="1.0",
+                    url=validated_payload.url,
+                    settings=browser_settings,
+                    state_db=browser_settings.state_db,
+                    reports_db=browser_settings.reports_db,
+                    delivery_email=validated_payload.delivery_email,
+                    publisher_insights_url=validated_payload.publisher_insights_url,
+                    publisher_google_folder=validated_payload.publisher_google_folder,
+                ),
+                ctx=ctx,
+            )
+            artifact_paths = [
+                path
+                for path in [
+                    download_result.downloaded_file_path,
+                    download_result.onsite_capture_path,
+                ]
+                if path
+            ]
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "route_kind": download_result.route_kind,
+                    "route_family": download_result.route_family,
+                    "outcome": download_result.outcome,
+                    "final_page_url": download_result.final_page_url,
+                    "downloaded_file_name": download_result.downloaded_file_name or "",
+                },
+                artifact_paths=artifact_paths,
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "acquisition_audit":
+            assert isinstance(validated_payload, AcquisitionAuditUiRunPayload)
+            app_settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
+            inventory_settings = load_publisher_inventory_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""),
+                ctx,
+            )
+            browser_settings = load_browser_download_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""),
+                ctx,
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "app_settings": _sanitize_snapshot(app_settings),
+                "inventory_settings": _sanitize_snapshot(inventory_settings),
+                "browser_settings": _sanitize_snapshot(browser_settings),
+            }
+            audit_result = run_acquisition_audit(
+                AcquisitionAuditBatchRequest(
+                    schema_version="1.0",
+                    reports_db=app_settings.reports_db,
+                    publisher_inventory_settings=inventory_settings,
+                    browser_download_settings=browser_settings,
+                    output_dir=app_settings.output_dir,
+                    delivery_email=validated_payload.delivery_email,
+                    publisher_limit=validated_payload.publisher_limit,
+                    candidate_limit_per_publisher=validated_payload.candidate_limit_per_publisher,
+                ),
+                ctx=ctx,
+            )
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "publisher_count": audit_result.publisher_count,
+                    "candidate_count": audit_result.candidate_count,
+                    "output_path": audit_result.output_path,
+                },
+                artifact_paths=[audit_result.output_path],
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "cross_report_analysis":
+            assert isinstance(validated_payload, CrossReportAnalysisUiRunPayload)
+            app_settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
+            cross_report_request = _cross_report_analysis_request(
+                validated_payload,
+                app_settings,
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "settings": _sanitize_snapshot(app_settings),
+                "request": _sanitize_snapshot(cross_report_request),
+            }
+            publish_settings = None
+            if validated_payload.publication_mode == "publish_live":
+                publish_settings = load_publish_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=""),
+                    ctx,
+                )
+            outcome = run_cross_report_analysis(
+                cross_report_request,
+                app_settings,
+                ctx,
+                publish_settings=publish_settings,
+            )
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "status": outcome.status,
+                    "request_id": outcome.request.request_id,
+                    "selected_theme": outcome.generated_result.selected_theme.label,
+                    "selected_report_count": len(
+                        outcome.generated_result.selected_sources
+                    ),
+                    "validation_status": outcome.validation_result.status,
+                    "publication_mode": outcome.publish_result.publication_mode,
+                    "publish_status": outcome.publish_result.status,
+                    "post_url": outcome.publish_result.post_url or "",
+                    "idempotency_reused": outcome.idempotency_reused,
+                },
+                artifact_paths=[
+                    path
+                    for path in [
+                        outcome.artifact_path,
+                        getattr(outcome.publish_package, "html_path", ""),
+                    ]
+                    if path
+                ],
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "signal_candidate_extraction":
+            assert isinstance(
+                validated_payload,
+                SignalCandidateExtractionUiRunPayload,
+            )
+            app_settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
+            candidate_request = _signal_candidate_request(
+                validated_payload,
+                app_settings,
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "settings": _sanitize_snapshot(app_settings),
+                "request": _sanitize_snapshot(candidate_request),
+            }
+            outcome = run_signal_candidate_extraction(candidate_request, ctx)
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "status": outcome.status,
+                    "extraction_request_id": outcome.extraction_request_id,
+                    "candidate_count": outcome.candidate_count,
+                    "group_count": outcome.group_count,
+                    "stored_candidate_count": outcome.stored_response.candidate_count,
+                    "stored_group_count": outcome.stored_response.group_count,
+                },
+                artifact_paths=[],
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "signal_post":
+            assert isinstance(validated_payload, SignalPostUiRunPayload)
+            app_settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
+            signal_request = _signal_post_request(validated_payload, app_settings)
+            config_snapshot = {
+                "run_type": run_type,
+                "settings": _sanitize_snapshot(app_settings),
+                "request": _sanitize_snapshot(signal_request),
+            }
+            publish_settings = None
+            if validated_payload.publication_mode == "publish_live":
+                publish_settings = load_publish_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=""),
+                    ctx,
+                )
+            result = run_signal_post_workflow(
+                signal_request,
+                ctx,
+                publish_settings=publish_settings,
+            )
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded",
+                result_summary={
+                    "request_id": result.request_id,
+                    "title": result.projection.title,
+                    "slug": result.projection.slug,
+                    "confidence": result.projection.confidence,
+                    "validation_status": result.projection.validation_status,
+                    "publish_status": result.publish_result.status,
+                    "target_route": result.publish_result.target_route,
+                    "post_url": result.publish_result.post_url or "",
+                },
+                artifact_paths=[],
+                config_snapshot=config_snapshot,
+            )
+        elif run_type == "ui_run_replay":
+            assert isinstance(validated_payload, UiRunReplayUiRunPayload)
+            from src.orchestrators.ui_run_replay_orchestrator import replay_ui_run
+
+            app_settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), ctx
+            )
+            registry_path = (
+                validated_payload.registry_path
+                or default_ui_run_registry_path(app_settings.state_db)
+            )
+            config_snapshot = {
+                "run_type": run_type,
+                "registry_path": registry_path,
+                "run_id": validated_payload.run_id,
+            }
+            result = replay_ui_run(
+                request=UiRunReplayRequest(
+                    schema_version="1.0",
+                    registry_path=registry_path,
+                    run_id=RunId(validated_payload.run_id),
+                ),
+                ctx=ctx,
+            )
+            response = _execution_response(
+                worker_request=worker_request,
+                status="succeeded" if result.report.matched else "failed",
+                result_summary={
+                    "original_run_id": str(result.original_record.run_id),
+                    "original_run_type": result.original_record.run_type,
+                    "replay_status": result.report.replay_status,
+                    "matched": result.report.matched,
+                    "delta_count": len(result.report.deltas),
+                    "manifest_path": result.manifest_path,
+                    "report_path": result.report_path,
+                },
+                artifact_paths=[result.manifest_path, result.report_path],
+                config_snapshot=config_snapshot,
+                error_code="" if result.report.matched else "ui_run_replay_mismatch",
+                error_message=""
+                if result.report.matched
+                else "UI run replay completed with deltas.",
+                error_retryable=False,
+                error_severity="error",
+            )
+        else:
+            raise AppError(
+                code="ui_run_type_unknown",
+                message=f"Unknown UI run type: {run_type}",
+                retryable=False,
+                context={"run_type": run_type},
+            )
+    except AppError as exc:
+        if exc.code.startswith("ui_run_payload_"):
+            config_snapshot = _invalid_payload_config_snapshot(
+                worker_request=worker_request,
+                error=exc,
+            )
+        response = _execution_response(
+            worker_request=worker_request,
+            status="failed",
+            result_summary={},
+            artifact_paths=[],
+            config_snapshot=config_snapshot,
+            error_code=exc.code,
+            error_message=exc.message,
+            error_retryable=exc.retryable,
+            error_severity=exc.severity,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="ui_run_execute_failed",
+                module=logger.name,
+                fields={
+                    "run_id": worker_request.run_id,
+                    "run_type": run_type,
+                    "error_code": exc.code,
+                    "error_message": exc.message,
+                },
+            )
+        )
+        return response
+    except Exception as exc:
+        response = _execution_response(
+            worker_request=worker_request,
+            status="failed",
+            result_summary={},
+            artifact_paths=[],
+            config_snapshot=config_snapshot,
+            error_code="ui_run_worker_failed",
+            error_message=str(exc),
+            error_retryable=False,
+            error_severity="error",
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="ui_run_execute_failed",
+                module=logger.name,
+                fields={
+                    "run_id": worker_request.run_id,
+                    "run_type": run_type,
+                    "error_code": "ui_run_worker_failed",
+                    "error_message": str(exc),
+                },
+            )
+        )
+        return response
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="ui_run_execute_complete",
+            module=logger.name,
+            fields={
+                "run_id": worker_request.run_id,
+                "run_type": run_type,
+                "status": response.status,
+                "artifact_count": len(response.artifact_paths),
+                "result_summary": response.result_summary,
+            },
+        )
+    )
+    return response
+
+
+__all__ = [
+    name
+    for name in globals()
+    if not name.startswith("__") and name not in {"annotations"}
+]
