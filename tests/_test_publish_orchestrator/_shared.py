@@ -1,0 +1,149 @@
+# ruff: noqa: F401,F403,F405
+from __future__ import annotations
+
+from pathlib import Path as _SplitPath
+__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_publish_orchestrator.py")
+
+import json
+
+import logging
+
+import sqlite3
+
+from dataclasses import replace
+
+from pathlib import Path
+
+from src.contracts.report_store import ReportMetadataUpsertRequest
+
+from src.contracts.state import (
+    StatePublishCheckRequest,
+    StatePublishRecordRequest,
+    StateRecordRequest,
+)
+
+from src.orchestrators import publish_orchestrator as orch
+
+from src.orchestrators import retry_orchestrator
+
+from src.services.report_store_service import upsert_metadata
+
+from src.services.state_service import get_publish, record, record_publish
+
+from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
+
+def _publish_entity_metadata_script(
+    *,
+    entity_type: str = "report",
+    source_artifact_id: str = "file123",
+    canonical_route_intent: str = "wordpress:ml_report",
+    publish_eligible: bool = True,
+) -> str:
+    return (
+        '<script type="application/json" '
+        'data-market-lense-publish-entity="true">'
+        + json.dumps(
+            {
+                "schema_version": "1.0",
+                "entity_type": entity_type,
+                "source_artifact_id": source_artifact_id,
+                "canonical_route_intent": canonical_route_intent,
+                "publish_eligible": publish_eligible,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "</script>"
+    )
+
+def _write_html(
+    output_dir: str,
+    name: str,
+    body: str,
+    *,
+    entity_type: str = "report",
+    canonical_route_intent: str = "wordpress:ml_report",
+    source_artifact_id: str = "file123",
+    include_entity_metadata: bool = True,
+) -> Path:
+    html_path = Path(output_dir) / name
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata = (
+        _publish_entity_metadata_script(
+            entity_type=entity_type,
+            source_artifact_id=source_artifact_id,
+            canonical_route_intent=canonical_route_intent,
+        )
+        if include_entity_metadata
+        else ""
+    )
+    html_path.write_text(
+        f"<html><head><title>Report</title>{metadata}</head><body>{body}</body></html>",
+        encoding="utf-8",
+    )
+    return html_path
+
+def _record_processed(state_db: str, file_id: str, run_context) -> None:
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            file_id=file_id,
+            md5="md5",
+        ),
+        run_context,
+    )
+
+def _seed_report_metadata(
+    reports_db: str, html_path: str, file_id: str, run_context
+) -> None:
+    upsert_metadata(
+        ReportMetadataUpsertRequest(
+            schema_version="1.1",
+            db_path=reports_db,
+            file_id=file_id,
+            title="Report",
+            file_name="report.pdf",
+            publisher=None,
+            taxonomy=[],
+            categories=[],
+            region=None,
+            time_period=None,
+            source_url=None,
+            html_path=html_path,
+            md5="md5",
+            page_count=None,
+            contents_page_number=0,
+            pdf_metadata={},
+            analysis_mode="vector_store",
+            vector_store_id=None,
+            evidence_pack_paths={},
+        ),
+        run_context,
+    )
+
+def _json_events(caplog, logger_name: str) -> list[dict[str, object]]:
+    events: list[dict[str, object]] = []
+    for log_record in caplog.records:
+        if log_record.name != logger_name:
+            continue
+        try:
+            payload = json.loads(log_record.getMessage())
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            events.append(payload)
+    return events
+
+
+
+__all__ = [
+    name
+    for name in globals()
+    if name
+    not in {
+        '__name__', '__annotations__', '__doc__', '__spec__',
+        '__file__', '__package__', '__loader__', '__cached__',
+        '__builtins__', '_SplitPath',
+    }
+]
