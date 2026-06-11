@@ -14,7 +14,9 @@ SHORTCODES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-shortcodes.
 TAXONOMIES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-taxonomies.php"
 README_PATH = REPO_ROOT / "README.md"
 GENERATOR_PATH = REPO_ROOT / "src" / "generators" / "cross_report_analysis_generator.py"
-CONTRACT_PATH = REPO_ROOT / "src" / "contracts" / "cross_report_analysis.py"
+CROSS_REPORT_REQUEST_CONTRACT_PATH = (
+    REPO_ROOT / "src" / "contracts" / "_cross_report_analysis" / "requests.py"
+)
 
 
 def test_wordpress_registers_signal_and_briefing_destinations() -> None:
@@ -68,7 +70,7 @@ def test_publisher_taxonomy_assigns_to_signal_and_briefing_destinations() -> Non
 
 def test_cross_report_publish_defaults_to_briefing_route() -> None:
     generator_source = GENERATOR_PATH.read_text(encoding="utf-8")
-    contract_source = CONTRACT_PATH.read_text(encoding="utf-8")
+    contract_source = CROSS_REPORT_REQUEST_CONTRACT_PATH.read_text(encoding="utf-8")
     readme_source = README_PATH.read_text(encoding="utf-8")
 
     assert 'target_route: str = "wordpress:ml_briefing"' in generator_source

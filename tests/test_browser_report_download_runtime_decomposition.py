@@ -27,10 +27,15 @@ CAPABILITY_MODULE_FUNCTIONS = {
         "_run_browser_report_download_agent_subprocess",
         "_deserialize_browser_agent_run_result",
     },
-    "session_lifecycle.py": {
+    "_session_lifecycle/history.py": {
         "_run_agent_history_with_timeout",
+    },
+    "_session_lifecycle/shutdown.py": {
         "_prepare_browser_for_shutdown",
         "_kill_browser",
+    },
+    "_session_lifecycle/cleanup.py": {
+        "_cleanup_stale_browser_use_temp_dirs",
     },
 }
 

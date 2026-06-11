@@ -26,13 +26,19 @@ MODULE_SYMBOLS = {
         "_extract_text_in_bbox",
         "_text_stats",
     },
-    "_table_heuristics/regions.py": {
+    "_table_heuristics/regions.py": set(),
+    "_table_heuristics/_regions/ranked.py": {
         "_detect_ranked_table_candidates",
+    },
+    "_table_heuristics/_regions/compose.py": {
         "_compose_table_bbox",
         "_expand_table_bbox",
     },
-    "_table_heuristics/screening.py": {
+    "_table_heuristics/screening.py": set(),
+    "_table_heuristics/_screening/rejections.py": {
         "_validate_table_candidate",
+    },
+    "_table_heuristics/_screening/deduplication.py": {
         "_dedupe_table_candidates",
         "_table_quality",
     },
