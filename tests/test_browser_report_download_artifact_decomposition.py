@@ -10,7 +10,8 @@ CAPABILITY_MODULE_FUNCTIONS = {
         "_ensure_onsite_capture_artifact",
         "_infer_onsite_completeness_status",
     },
-    "classification.py": {"_classify_route_result", "_resolve_blocked_reason"},
+    "_classification/evidence.py": {"_resolve_blocked_reason"},
+    "_classification/workflow.py": {"_classify_route_result"},
     "evidence.py": {"_build_terminal_evidence", "_verify_post_action_route_steps"},
     "recovery.py": {
         "_salvage_without_structured_result",

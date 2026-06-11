@@ -10,9 +10,13 @@ CAPABILITY_MODULE_FUNCTIONS = {
         "_stabilize_terminal_snapshot",
         "_assess_terminal_snapshot_quorum",
     },
-    "terminal_assets.py": {
+    "_terminal_assets/artifacts.py": {
         "_materialize_external_artifacts",
+    },
+    "_terminal_assets/capture.py": {
         "_capture_terminal_assets",
+    },
+    "_terminal_assets/network.py": {
         "_collect_network_events",
     },
     "timeout_recovery.py": {

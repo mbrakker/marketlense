@@ -13,6 +13,13 @@ TARGET_FACADES = (
     "src/orchestrators/ui_run_execution_orchestrator.py",
     "src/services/_pdf/_visual_heuristics/chart_layout.py",
     "src/generators/report_source_generator.py",
+    "src/services/_browser_report_download/_browser_runtime/terminal_assets.py",
+    "src/orchestrators/_report_download_orchestrator/route_planner.py",
+    "src/orchestrators/report_generation_orchestrator.py",
+    "src/services/wordpress_service.py",
+    "src/services/render_service.py",
+    "src/services/_pdf/_visual_candidates/extraction.py",
+    "src/services/_browser_report_download/_artifact/classification.py",
 )
 
 EXPECTED_OWNER_MODULES = (
@@ -31,6 +38,28 @@ EXPECTED_OWNER_MODULES = (
     "src/generators/_report_source_generator/source_loading.py",
     "src/generators/_report_source_generator/text_validation.py",
     "src/generators/_report_source_generator/workflow.py",
+    "src/services/_browser_report_download/_browser_runtime/_terminal_assets/artifacts.py",
+    "src/services/_browser_report_download/_browser_runtime/_terminal_assets/capture.py",
+    "src/services/_browser_report_download/_browser_runtime/_terminal_assets/network.py",
+    "src/services/_browser_report_download/_browser_runtime/_terminal_assets/page_state.py",
+    "src/orchestrators/_report_download_orchestrator/_route_planner/planning.py",
+    "src/orchestrators/_report_download_orchestrator/_route_planner/policy.py",
+    "src/orchestrators/_report_download_orchestrator/_route_planner/recovery.py",
+    "src/orchestrators/_report_generation_orchestrator/checkpoints.py",
+    "src/orchestrators/_report_generation_orchestrator/resume.py",
+    "src/orchestrators/_report_generation_orchestrator/workflow.py",
+    "src/services/_wordpress_service/transport.py",
+    "src/services/_wordpress_service/posts.py",
+    "src/services/_wordpress_service/taxonomy.py",
+    "src/services/_render_service/normalization.py",
+    "src/services/_render_service/view.py",
+    "src/services/_render_service/workflow.py",
+    "src/services/_pdf/_visual_candidates/_extraction/context.py",
+    "src/services/_pdf/_visual_candidates/_extraction/sequential.py",
+    "src/services/_pdf/_visual_candidates/_extraction/workflow.py",
+    "src/services/_browser_report_download/_artifact/_classification/evidence.py",
+    "src/services/_browser_report_download/_artifact/_classification/routes.py",
+    "src/services/_browser_report_download/_artifact/_classification/workflow.py",
 )
 
 

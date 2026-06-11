@@ -1,6 +1,6 @@
 # Long-File Audit and Refactor Targets
 
-Generated: 2026-06-11
+Generated: 2026-06-12
 
 ## Purpose
 
@@ -18,23 +18,23 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 118 | 17 |
+| First-party `src` | 118 | 10 |
 | First-party `tests` | 80 | 0 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `966`.
+- Total first-party source-like files scanned: `996`.
 - Skipped paths/files: `21` (`13` top-level runtime/temp directories, `7` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Long first-party test files have now been decomposed behind their original pytest entrypoint facades. `tests/test_long_test_file_ownership.py` enforces the 1,000-line first-party test-file threshold; the current canonical scan reports no first-party test files above 1,000 lines.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is now `703` lines, while the extracted `src/services/_browser_report_download/_artifact/classification.py` is `1,153` lines.
-- Browser runtime execution has now been decomposed internally: `src/services/_browser_report_download/browser.py` is `671` lines, with remaining focused hotspots in `_browser_runtime/terminal_assets.py` (`1,319`) and `_browser_runtime/session_lifecycle.py` (`1,102`).
-- Report-download orchestration has now been decomposed internally: `src/orchestrators/_report_download_orchestrator/workflow.py` is `528` physical lines and focused idempotent persistence lives in `persistence.py` (`646`); `route_planner.py` (`1,301`) remains the family's only `>=1,000`-line hotspot.
+- Browser runtime execution has now been decomposed internally: `src/services/_browser_report_download/browser.py` is `671` lines, and terminal asset capture is split behind `_browser_runtime/terminal_assets.py` into `_terminal_assets/{artifacts,capture,network,page_state}.py`; `_browser_runtime/session_lifecycle.py` (`1,102`) remains the family's only `>=1,000`-line hotspot.
+- Report-download orchestration has now been decomposed internally: `src/orchestrators/_report_download_orchestrator/workflow.py` is `536` physical lines and focused idempotent persistence lives in `persistence.py` (`646`); route planning is split behind `route_planner.py` into `_route_planner/{planning,policy,recovery,url_rules}.py`.
 - Browser-report HTTP acquisition has now been decomposed internally: `src/services/_browser_report_download/http.py` is a `47`-line compatibility surface; focused remaining `>500` owners are `_http/gate_probe.py` (`607`), `_http/onsite_capture.py` (`573`), and `_http/pdf_transfer.py` (`522`).
 - Browser-report helper inspection has now been decomposed internally: `src/services/_browser_report_download/helpers.py` is a compatibility facade, with page state/real-tab diagnostics in `_helpers/state.py` (`555`), JavaScript and bounded HTTP inspection in `_helpers/inspection.py` (`550`), and screenshot/coordinate/autocomplete interaction in `_helpers/interaction.py` (`895`).
 - PDF table interpretation has now been decomposed internally: `src/services/_pdf/table_heuristics.py` is a `407`-line compatibility surface; focused remaining `>500` owners are `_table_heuristics/regions.py` (`1,085`), `_table_heuristics/screening.py` (`1,038`), and `_table_heuristics/layout.py` (`774`).
 - PDF panel interpretation has now been decomposed internally: `src/services/_pdf/_visual_heuristics/panel_detection.py` is a `1,054`-line detector coordinator, with focused text interpretation in `panel_text.py` (`952`) and geometry construction in `panel_geometry.py` (`988`); `src/services/_pdf/visual_heuristics.py` is a `773`-line compatibility facade.
-- PDF visual-candidate extraction has now been decomposed internally: `src/services/_pdf/visual_candidates.py` is a `164`-line compatibility surface; focused owners are `_visual_candidates/extraction.py` (`1,176`), `_visual_candidates/screening.py` (`684`), and `_visual_candidates/raster.py` (`558`).
+- PDF visual-candidate extraction has now been decomposed internally: `src/services/_pdf/visual_candidates.py` is a compatibility surface; focused owners include `_visual_candidates/extraction.py` over `_extraction/{context,sequential,workflow}.py`, `_visual_candidates/screening.py` (`684`), and `_visual_candidates/raster.py` (`579`).
 - PDF figure extraction has now been decomposed internally: `src/services/_pdf/figures.py` is a `700`-line compatibility surface; focused owners are `_figures/triage.py` (`346`), `_figures/pruning.py` (`372`), `_figures/candidates.py` (`458`), and `_figures/best_figure.py` (`216`).
 - PDF crop rendering has now been decomposed internally: `src/services/_pdf/crop.py` is a compatibility facade, with crop geometry in `_crop/geometry.py` (`550`), image operations, table-continuation stitching, crop-region artifact writing, crop-refine rendering, and preview rendering in focused `_crop/` owner modules.
 - Publisher-inventory workflow coordination has now been decomposed internally: `src/services/_publisher_inventory_service/workflow.py` is a `563`-line coordinator and compatibility surface, with deterministic browser traversal behind the `browser_flow.py` compatibility surface and preflight scenario classification in `preflight.py`.
@@ -50,7 +50,8 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - Publisher-inventory candidate screening has now been decomposed internally: `src/generators/publisher_inventory_candidate_screening_generator.py` is a compatibility facade, with shared marker normalization in `_publisher_inventory_candidate_screening/shared.py` (`534`) and focused deterministic screening, response-policy, and LLM-batch owners in the same private family.
 - Cross-report analysis input preparation has now been decomposed internally: `src/generators/cross_report_analysis_input_generator.py` is a compatibility facade, with theme selection in `_cross_report_analysis_input/theme_selection.py` (`762`), evidence and signal preparation in `evidence_signals.py` (`703`), source selection in `source_selection.py`, and shared deterministic helpers in `shared.py`.
 - Report-analysis orchestration has now been decomposed internally: `src/orchestrators/report_analysis_orchestrator.py` is a `588`-line public coordinator and compatibility surface, while artifact scheduling, vector-store readiness polling, payload checks, validation/regeneration execution, and regeneration-plan mapping live in `src/orchestrators/_report_analysis_orchestrator/`.
-- The requested runtime long-file set has now been decomposed behind existing public boundaries: `src/services/drive_service.py`, `src/ui/app_pages/publisher_operations.py`, `src/services/_pdf/visual_heuristics.py`, `src/orchestrators/ui_run_execution_orchestrator.py`, `src/services/_pdf/_visual_heuristics/chart_layout.py`, and `src/generators/report_source_generator.py` are compatibility facades over focused private owner modules.
+- The requested Drive/UI/PDF-heuristic/report-source runtime long-file set has now been decomposed behind existing public boundaries: `src/services/drive_service.py`, `src/ui/app_pages/publisher_operations.py`, `src/services/_pdf/visual_heuristics.py`, `src/orchestrators/ui_run_execution_orchestrator.py`, `src/services/_pdf/_visual_heuristics/chart_layout.py`, and `src/generators/report_source_generator.py` are compatibility facades over focused private owner modules.
+- The requested browser-download/report-generation/publishing/rendering/PDF-candidate runtime long-file set has now been decomposed behind existing boundaries: `_browser_runtime/terminal_assets.py`, `_report_download_orchestrator/route_planner.py`, `report_generation_orchestrator.py`, `wordpress_service.py`, `render_service.py`, `_visual_candidates/extraction.py`, and `_artifact/classification.py` are compatibility facades over focused private owner modules. The AST movement audit recorded `229` moved top-level symbols, `229` unchanged moved symbols, `0` changed moved symbols, `0` facade-owned definitions, and `0` missing symbols across those seven files.
 
 ## Largest Runtime Files
 
@@ -59,13 +60,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | Lines | Path | Assessment |
 | ---: | --- | --- |
 | 1,979 | `src/cli.py` | Review after workflow work |
-| 1,319 | `src/services/_browser_report_download/_browser_runtime/terminal_assets.py` | Focused browser terminal-evidence capability |
-| 1,301 | `src/orchestrators/_report_download_orchestrator/route_planner.py` | Route-planning family |
-| 1,282 | `src/orchestrators/report_generation_orchestrator.py` | Report-generation orchestration |
-| 1,273 | `src/services/wordpress_service.py` | External-system boundary |
-| 1,259 | `src/services/render_service.py` | Rendering boundary |
-| 1,198 | `src/services/_pdf/_visual_candidates/extraction.py` | Focused visual extraction coordinator |
-| 1,153 | `src/services/_browser_report_download/_artifact/classification.py` | Extracted artifact-classification capability |
 | 1,121 | `src/contracts/cross_report_analysis.py` | Contract surface; do not split mechanically |
 | 1,116 | `src/services/_pdf/_table_heuristics/screening.py` | Focused table screening capability |
 | 1,102 | `src/services/_browser_report_download/_browser_runtime/session_lifecycle.py` | Focused browser lifecycle capability |
@@ -101,6 +95,13 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 - `src/orchestrators/ui_run_execution_orchestrator.py` over `src/orchestrators/_ui_run_execution_orchestrator/*`.
 - `src/generators/report_source_generator.py` over `src/generators/_report_source_generator/*`.
 - `src/services/_pdf/visual_heuristics.py` over shared and focused `_visual_heuristics/*` owners, including `chart_layout.py` over `_visual_heuristics/_chart_layout/*`.
+- `src/services/_browser_report_download/_browser_runtime/terminal_assets.py` over `_browser_runtime/_terminal_assets/*`.
+- `src/orchestrators/_report_download_orchestrator/route_planner.py` over `_report_download_orchestrator/_route_planner/*`.
+- `src/orchestrators/report_generation_orchestrator.py` over `src/orchestrators/_report_generation_orchestrator/*`.
+- `src/services/wordpress_service.py` over `src/services/_wordpress_service/*`, preserving one canonical WordPress service boundary.
+- `src/services/render_service.py` over `src/services/_render_service/*`, preserving one canonical rendering service boundary.
+- `src/services/_pdf/_visual_candidates/extraction.py` over `_visual_candidates/_extraction/*`.
+- `src/services/_browser_report_download/_artifact/classification.py` over `_artifact/_classification/*`.
 - `src/ui/streamlit_pages.py` over `src/ui/app_pages/*` and `src/ui/_streamlit_pages/*`.
 - Long first-party behavior tests over adjacent private test packages while preserving original pytest entrypoints, documented in `docs/architecture/test-long-file-decomposition-review.md`.
 
@@ -112,10 +113,10 @@ Any additional work must reduce responsibility or algorithmic complexity inside 
 
 Primary evidence:
 
-- `src/orchestrators/_report_download_orchestrator/route_planner.py`: `1,301` lines.
+- `src/orchestrators/_report_download_orchestrator/_route_planner/planning.py`: `691` lines.
 - `src/services/_browser_report_download/_cdp/operations.py`: focused CDP operation owner behind the `cdp.py` compatibility surface.
-- `src/services/_browser_report_download/_browser_runtime/terminal_assets.py`: `1,319` lines.
-- `src/services/_browser_report_download/_artifact/classification.py`: `1,153` lines.
+- `src/services/_browser_report_download/_browser_runtime/_terminal_assets/*`: focused terminal-artifact, capture, network, and page-state owners behind the `terminal_assets.py` compatibility surface.
+- `src/services/_browser_report_download/_artifact/_classification/evidence.py`: `792` lines.
 - `src/services/_browser_report_download/_browser_runtime/session_lifecycle.py`: `1,102` lines.
 
 Direction:
@@ -124,7 +125,7 @@ Direction:
 - Retain the new `_artifact/*` internal capability family; `artifact.py` is now a smaller coordination module rather than the top hotspot.
 - Retain the new `_browser_runtime/*` internal capability family; `browser.py` is now a smaller runtime coordinator rather than the top hotspot.
 - Retain the new `_http/*` internal capability family; `http.py` is now a stable compatibility surface for focused HTTP acquisition implementations.
-- Retain the new `_report_download_orchestrator/*` capability split; `workflow.py` is now a smaller sequencing coordinator and `route_planner.py` is the remaining orchestrator-family long-file review target.
+- Retain the new `_report_download_orchestrator/*` capability split; `workflow.py` is now a smaller sequencing coordinator and route-planning internals live behind the `route_planner.py` compatibility surface.
 - Continue extracting only coherent internal capabilities where responsibility or measured complexity remains high, such as deterministic HTTP acquisition/classification and route-history persistence.
 - Keep route ordering, retry/backoff, idempotency, and state transitions in the orchestrator family.
 - Keep prompt selection/rendering in the prompt service boundary; do not place prompt text in extracted modules.
@@ -146,8 +147,8 @@ Primary evidence:
 - `src/services/_pdf/_visual_heuristics/panel_detection.py`: `1,054` lines; detector-level decisions and candidate coordination.
 - `src/services/_pdf/_visual_heuristics/panel_geometry.py`: `988` lines; deterministic panel geometry construction and adjustment.
 - `src/services/_pdf/_visual_heuristics/panel_text.py`: `952` lines; deterministic title, caption, metric, and component-text interpretation.
-- `src/services/_pdf/visual_candidates.py`: `164` lines; stable compatibility surface.
-- `src/services/_pdf/_visual_candidates/extraction.py`: `1,176` lines; candidate construction, ordering, overlap handling, and worker coordination.
+- `src/services/_pdf/visual_candidates.py`: stable compatibility surface.
+- `src/services/_pdf/_visual_candidates/_extraction/sequential.py`: `975` lines; candidate construction, ordering, overlap handling, and worker coordination.
 - `src/services/_pdf/_visual_candidates/screening.py`: `684` lines; deterministic textual and false-positive screening.
 - `src/services/_pdf/_visual_candidates/raster.py`: `558` lines; raster qualification and probe caching.
 - `src/services/_pdf/crop.py`: compatibility facade for focused `_crop/*` owners; `_crop/geometry.py` is now the largest crop-family owner at `550` lines.
@@ -158,7 +159,7 @@ Direction:
 - Prioritize measured algorithm changes already recorded in `CONSOLIDATED_TODO.md`: indexed table deduplication and precomputed per-page visual candidate relationships.
 - Retain the `_table_heuristics/*` capability split; `regions.py` and `screening.py` are the remaining table-family `>=1,000`-line review targets, and further extraction requires a semantic boundary rather than line-count slicing.
 - Retain the `_visual_heuristics/{panel_text,panel_geometry,panel_detection}.py` semantic split behind `visual_heuristics.py`; optimization of precomputed visual relationships remains separate from the decomposition evidence.
-- Retain the `_visual_candidates/{raster,screening,extraction}.py` semantic split behind `visual_candidates.py`; `extraction.py` is the remaining visual-candidate `>=1,000`-line coordinator and the deferred relationship-scan optimization is still a separate change.
+- Retain the `_visual_candidates/{raster,screening,extraction}.py` semantic split behind `visual_candidates.py`; `extraction.py` is now a compatibility surface over `_extraction/{context,sequential,workflow}.py`, and the deferred relationship-scan optimization is still a separate change.
 - Retain the `_crop/*` semantic split behind `crop.py`; future crop-family work should target measured geometry or artifact-cache behavior, not additional facade layers.
 
 Verification required:

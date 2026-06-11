@@ -46,14 +46,18 @@ MODULE_SYMBOLS = {
         "_next_figure_caption_below",
         "_visual_text_dense_recovery_allowed",
     },
-    "extraction.py": {
+    "_extraction/context.py": {
         "_VisualPageContext",
         "_VisualPageCandidateEntry",
         "_initial_visual_stats",
         "_build_visual_page_context",
         "_append_visual_page_candidate",
         "_emit_visual_page_candidates",
+    },
+    "_extraction/sequential.py": {
         "_extract_visuals_sequential",
+    },
+    "_extraction/workflow.py": {
         "extract_visual_candidates",
     },
 }
