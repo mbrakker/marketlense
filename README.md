@@ -682,7 +682,7 @@ The `marketlense` theme uses an explicit reading frame and a wider discovery fra
 - `settings.layout.contentSize`: `48rem`
 - `settings.layout.wideSize`: `82rem`
 
-The homepage hero uses a two-column search-first composition, native WordPress search is the primary action, `[ml_home_metrics]` and `[ml_hero_snapshot]` render above the first proof band, homepage sections are grouped into proof and discovery bands, and the header/footer use the same home frame width as the hero and homepage section bands.
+The homepage hero uses a two-column search-first composition, native WordPress search is the primary action, `[ml_home_metrics]` and `[ml_hero_snapshot]` render above the first proof band, and homepage sections use a tighter editorial rhythm with their line-and-dot signal directly below the title. Strategic Themes and Publisher Authority share a responsive elevated Editorial Ledger panel with numbered theme cards and authority rows. On desktop the wordmark, primary navigation, compact search, and briefing CTA are vertically aligned on one row; navigation states use the transparent signal-blue line-and-dot underline. Featured report metrics count current finding cards, evidence quote figures, assigned public WordPress categories, and rendered evidence references while retaining legacy report-markup support. The header/footer use the same home frame width as the hero and homepage section bands.
 
 ### `ml_report` Ingest Rendering
 

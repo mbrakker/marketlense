@@ -31,16 +31,17 @@ TOPICS_PAGE = THEME / "templates" / "page-topics-directory.html"
 PUBLISHERS_PAGE = THEME / "templates" / "page-publishers-directory.html"
 
 
-def _last_css_rule(css: str, selector: str) -> str:
-    matches = list(
-        re.finditer(
-            rf"{re.escape(selector)}\s*\{{(?P<body>[^}}]*)\}}",
-            css,
-            flags=re.DOTALL,
-        )
+def _editorial_ledger_css_rule(css: str, selector: str) -> str:
+    marker = "/* Homepage Editorial Ledger refresh: approved 2026-06-12. */"
+    assert marker in css
+    scoped_css = css[css.index(marker) :]
+    match = re.search(
+        rf"{re.escape(selector)}\s*\{{(?P<body>[^}}]*)\}}",
+        scoped_css,
+        flags=re.DOTALL,
     )
-    assert matches, f"Missing CSS rule for {selector}"
-    return matches[-1].group("body")
+    assert match, f"Missing CSS rule for {selector}"
+    return match.group("body")
 
 
 def test_market_bearing_brand_is_reused_in_header_and_footer() -> None:
@@ -359,40 +360,86 @@ def test_desktop_header_uses_centered_sticky_navigation_with_brand_indicator() -
 
 def test_homepage_uses_tighter_editorial_spacing_and_close_section_signals() -> None:
     css = THEME_CSS.read_text(encoding="utf-8")
-    home_shell = _last_css_rule(css, ".ml-home-shell")
-    section_rule = _last_css_rule(css, ".ml-home-shell .ml-section-rule")
+    home_shell = _editorial_ledger_css_rule(css, ".ml-home-shell")
+    section_heading = _editorial_ledger_css_rule(
+        css, ".ml-home-shell .ml-section-heading"
+    )
+    section_title = _editorial_ledger_css_rule(
+        css, ".ml-home-shell .ml-section-title"
+    )
+    section_rule = _editorial_ledger_css_rule(css, ".ml-home-shell .ml-section-rule")
 
     assert "--ml-home-section-gap: clamp(3.5rem, 5vw, 4.5rem);" in home_shell
     assert "--ml-home-band-padding: clamp(3rem, 4.5vw, 4rem);" in home_shell
+    assert "row-gap: 0;" in section_heading
+    assert "margin-bottom: 0;" in section_title
     assert "margin: 0.375rem 0 1rem;" in section_rule
 
 
 def test_discovery_band_uses_the_approved_editorial_ledger_surface() -> None:
     css = THEME_CSS.read_text(encoding="utf-8")
-    discovery = _last_css_rule(css, ".ml-home-band-frame-discovery")
-    themes = _last_css_rule(css, ".ml-home-band-discovery .ml-theme-list")
+    discovery = _editorial_ledger_css_rule(css, ".ml-home-band-frame-discovery")
+    heading_row = _editorial_ledger_css_rule(
+        css, ".ml-home-band-discovery .ml-section-heading-row"
+    )
+    themes = _editorial_ledger_css_rule(css, ".ml-home-band-discovery .ml-theme-list")
 
     assert "border: 1px solid var(--ml-border-subtle);" in discovery
     assert "border-radius: 0.875rem;" in discovery
     assert (
         "box-shadow: 0 1.25rem 3.75rem rgba(8, 43, 84, 0.12);" in discovery
     )
+    assert "grid-template-columns: minmax(0, 1fr) auto;" in heading_row
     assert "counter-reset: ml-theme;" in themes
     assert ".ml-home-band-discovery .ml-authority-item" in css
 
 
+def test_discovery_heading_stacks_cleanly_on_mobile() -> None:
+    css = THEME_CSS.read_text(encoding="utf-8")
+    ledger_css = css.split(
+        "/* Homepage Editorial Ledger refresh: approved 2026-06-12. */", 1
+    )[1]
+
+    assert re.search(
+        r"@media \(max-width: 640px\).*?"
+        r"\.ml-home-band-discovery \.ml-section-heading-row\s*\{[^}]*"
+        r"grid-template-columns: 1fr;",
+        ledger_css,
+        re.DOTALL,
+    )
+    assert re.search(
+        r"@media \(max-width: 640px\).*?"
+        r"\.ml-home-band-discovery \.ml-inline-link\s*\{[^}]*"
+        r"justify-self: start;",
+        ledger_css,
+        re.DOTALL,
+    )
+
+
 def test_desktop_header_aligns_controls_and_uses_signal_blue_nav_indicator() -> None:
     css = THEME_CSS.read_text(encoding="utf-8")
-    nav_stack = _last_css_rule(css, ".ml-header-navigation-stack")
-    header_search = _last_css_rule(css, ".ml-header-search")
-    nav_line = _last_css_rule(
+    header_top = _editorial_ledger_css_rule(css, ".ml-header-top")
+    header_actions = _editorial_ledger_css_rule(css, ".ml-header-actions")
+    nav_stack = _editorial_ledger_css_rule(css, ".ml-header-navigation-stack")
+    nav_container = _editorial_ledger_css_rule(
+        css, ".ml-primary-nav .wp-block-navigation__container"
+    )
+    header_search = _editorial_ledger_css_rule(css, ".ml-header-search")
+    nav_line = _editorial_ledger_css_rule(
         css, ".ml-primary-nav .wp-block-navigation-item__content::before"
     )
 
+    assert "grid-template-columns: max-content minmax(0, 1fr);" in header_top
     assert (
-        "grid-template-columns: minmax(0, 1fr) minmax(14rem, 22rem);"
+        "grid-template-columns: minmax(0, 1fr) minmax(12rem, 14rem) max-content;"
+        in header_actions
+    )
+    assert "margin: 0;" in header_actions
+    assert (
+        "grid-template-columns: minmax(0, 1fr) minmax(12rem, 14rem);"
         in nav_stack
     )
+    assert "flex-wrap: nowrap;" in nav_container
     assert "margin: 0;" in header_search
     assert "background: var(--ml-signal-blue);" in nav_line
     assert "background: transparent !important;" in css
