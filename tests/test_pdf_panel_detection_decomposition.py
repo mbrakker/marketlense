@@ -7,6 +7,7 @@ from pathlib import Path
 
 PACKAGE = Path("src/services/_pdf/_visual_heuristics")
 COORDINATOR = PACKAGE / "panel_detection.py"
+DETECTION_PACKAGE = PACKAGE / "_panel_detection"
 FACADE_MODULE = "src.services._pdf.visual_heuristics"
 MODULE_SYMBOLS = {
     "panel_text.py": {
@@ -40,8 +41,20 @@ MODULE_SYMBOLS = {
         "_clamp_panel_rect_to_dominant_fill_rect",
         "_extend_panel_with_adjacent_text_blocks",
     },
+    "_panel_detection/shadowing.py": {
+        "_panel_should_clamp_to_internal_caption",
+        "_panel_candidate_shadowed_by_heading_candidate",
+        "_panel_candidate_shadowed_by_larger_panel",
+        "_panel_stacked_bottom_clip_y",
+        "_panel_neighbor_x_bounds",
+    },
+    "_panel_detection/candidates.py": {
+        "_page_looks_like_contents_layout",
+        "_panel_chart_rects",
+        "_merge_panel_title_band_candidates",
+    },
 }
-COORDINATOR_SYMBOLS = {
+COMPATIBILITY_FACADE_SYMBOLS = {
     "_panel_should_clamp_to_internal_caption",
     "_panel_candidate_shadowed_by_heading_candidate",
     "_panel_candidate_shadowed_by_larger_panel",
@@ -51,7 +64,7 @@ COORDINATOR_SYMBOLS = {
     "_panel_chart_rects",
     "_merge_panel_title_band_candidates",
 }
-COMPATIBILITY_SYMBOLS = set().union(*MODULE_SYMBOLS.values()) | COORDINATOR_SYMBOLS
+COMPATIBILITY_SYMBOLS = set().union(*MODULE_SYMBOLS.values())
 
 
 def _owned_symbols(path: Path) -> set[str]:
@@ -73,7 +86,7 @@ def _owned_symbols(path: Path) -> set[str]:
 
 def test_pdf_panel_detection_uses_focused_private_capability_modules() -> None:
     coordinator_symbols = _owned_symbols(COORDINATOR)
-    assert COORDINATOR_SYMBOLS <= coordinator_symbols
+    assert not COMPATIBILITY_FACADE_SYMBOLS & coordinator_symbols
 
     for relative_path, expected in MODULE_SYMBOLS.items():
         owned = _owned_symbols(PACKAGE / relative_path)

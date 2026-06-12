@@ -18,12 +18,12 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 115 | 5 |
+| First-party `src` | 113 | 1 |
 | First-party `tests` | 80 | 0 |
 | First-party `scripts` | 1 | 0 |
-| WordPress integration | 4 | 2 |
+| WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `1022`.
+- Total first-party source-like files scanned: `1041`.
 - Skipped paths/files: `21` (`13` top-level runtime/temp directories, `7` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Long first-party test files have now been decomposed behind their original pytest entrypoint facades. `tests/test_long_test_file_ownership.py` enforces the 1,000-line first-party test-file threshold; the current canonical scan reports no first-party test files above 1,000 lines.
@@ -33,7 +33,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - Browser-report HTTP acquisition has now been decomposed internally: `src/services/_browser_report_download/http.py` is a `47`-line compatibility surface; focused remaining `>500` owners are `_http/gate_probe.py` (`607`), `_http/onsite_capture.py` (`573`), and `_http/pdf_transfer.py` (`522`).
 - Browser-report helper inspection has now been decomposed internally: `src/services/_browser_report_download/helpers.py` is a compatibility facade, with page state/real-tab diagnostics in `_helpers/state.py` (`555`), JavaScript and bounded HTTP inspection in `_helpers/inspection.py` (`550`), and screenshot/coordinate/autocomplete interaction in `_helpers/interaction.py` (`895`).
 - PDF table interpretation has now been decomposed internally: `src/services/_pdf/table_heuristics.py` is a compatibility surface; `_table_heuristics/regions.py` and `_table_heuristics/screening.py` are now compatibility surfaces over `_regions/{ranked,context,compose}.py` and `_screening/{metrics,rejections,deduplication}.py`. The largest remaining table-family owner is `_table_heuristics/layout.py` (`775`), with rejection policy in `_screening/rejections.py` (`748`).
-- PDF panel interpretation has now been decomposed internally: `src/services/_pdf/_visual_heuristics/panel_detection.py` is a `1,054`-line detector coordinator, with focused text interpretation in `panel_text.py` (`952`) and geometry construction in `panel_geometry.py` (`988`); `src/services/_pdf/visual_heuristics.py` is a `773`-line compatibility facade.
+- PDF panel interpretation has now been decomposed internally: `src/services/_pdf/_visual_heuristics/panel_detection.py` is a compatibility surface over `_panel_detection/{shadowing,candidates}.py`, with focused text interpretation in `panel_text.py` (`952`) and geometry construction in `panel_geometry.py` (`988`); `src/services/_pdf/visual_heuristics.py` is a `773`-line compatibility facade.
 - PDF visual-candidate extraction has now been decomposed internally: `src/services/_pdf/visual_candidates.py` is a compatibility surface; focused owners include `_visual_candidates/extraction.py` over `_extraction/{context,sequential,workflow}.py`, `_visual_candidates/screening.py` (`684`), and `_visual_candidates/raster.py` (`579`).
 - PDF figure extraction has now been decomposed internally: `src/services/_pdf/figures.py` is a `700`-line compatibility surface; focused owners are `_figures/triage.py` (`346`), `_figures/pruning.py` (`372`), `_figures/candidates.py` (`458`), and `_figures/best_figure.py` (`216`).
 - PDF crop rendering has now been decomposed internally: `src/services/_pdf/crop.py` is a compatibility facade, with crop geometry in `_crop/geometry.py` (`550`), image operations, table-continuation stitching, crop-region artifact writing, crop-refine rendering, and preview rendering in focused `_crop/` owner modules.
@@ -53,6 +53,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - The requested Drive/UI/PDF-heuristic/report-source runtime long-file set has now been decomposed behind existing public boundaries: `src/services/drive_service.py`, `src/ui/app_pages/publisher_operations.py`, `src/services/_pdf/visual_heuristics.py`, `src/orchestrators/ui_run_execution_orchestrator.py`, `src/services/_pdf/_visual_heuristics/chart_layout.py`, and `src/generators/report_source_generator.py` are compatibility facades over focused private owner modules.
 - The requested browser-download/report-generation/publishing/rendering/PDF-candidate runtime long-file set has now been decomposed behind existing boundaries: `_browser_runtime/terminal_assets.py`, `_report_download_orchestrator/route_planner.py`, `report_generation_orchestrator.py`, `wordpress_service.py`, `render_service.py`, `_visual_candidates/extraction.py`, and `_artifact/classification.py` are compatibility facades over focused private owner modules. The AST movement audit recorded `229` moved top-level symbols, `229` unchanged moved symbols, `0` changed moved symbols, `0` facade-owned definitions, and `0` missing symbols across those seven files.
 - The requested cross-report/table/browser-session/report-route runtime long-file set has now been decomposed behind existing boundaries: `cross_report_analysis.py`, `_table_heuristics/{regions,screening}.py`, `_browser_runtime/session_lifecycle.py`, and `_report_store_service/download_routes.py` are compatibility facades over focused private owner modules. The AST movement audit recorded `143` moved top-level symbols, `142` unchanged moved symbols, `1` changed moved symbol, `0` facade-owned definitions, and `0` missing symbols; the changed symbol is the cross-report contract validator accepting the new private contract module namespace.
+- The requested analytics-projection/crop-refine/PDF-panel/publisher-discovery runtime long-file set has now been decomposed behind existing boundaries: `analytics_projection_generator.py`, `_report_selection_generator/crop_refine.py`, `_visual_heuristics/panel_detection.py`, and `_publisher_inventory_service/discovery_activity.py` are compatibility facades over focused private owner modules. The AST movement audit recorded `102` moved top-level symbols, `102` unchanged moved symbols, `0` changed moved symbols, `0` facade-owned definitions, and `0` missing symbols.
 
 ## Largest Runtime Files
 
@@ -61,10 +62,6 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 | Lines | Path | Assessment |
 | ---: | --- | --- |
 | 1,979 | `src/cli.py` | Review after workflow work |
-| 1,077 | `src/services/_publisher_inventory_service/discovery_activity.py` | Discovery parsing/activity family |
-| 1,054 | `src/services/_pdf/_visual_heuristics/panel_detection.py` | Focused panel detector coordinator |
-| 1,025 | `src/generators/_report_selection_generator/crop_refine.py` | Local performance candidate |
-| 1,010 | `src/generators/analytics_projection_generator.py` | Analytics projection family |
 
 ### Large Test Concentration >=1,000 Lines
 
@@ -98,6 +95,10 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 - `src/services/render_service.py` over `src/services/_render_service/*`, preserving one canonical rendering service boundary.
 - `src/services/_pdf/_visual_candidates/extraction.py` over `_visual_candidates/_extraction/*`.
 - `src/services/_browser_report_download/_artifact/classification.py` over `_artifact/_classification/*`.
+- `src/generators/analytics_projection_generator.py` over `src/generators/_analytics_projection/*`.
+- `src/generators/_report_selection_generator/crop_refine.py` over `src/generators/_report_selection_generator/_crop_refine/*`.
+- `src/services/_pdf/_visual_heuristics/panel_detection.py` over `_visual_heuristics/_panel_detection/*`.
+- `src/services/_publisher_inventory_service/discovery_activity.py` over `_publisher_inventory_service/_discovery_activity/*`.
 - `src/ui/streamlit_pages.py` over `src/ui/app_pages/*` and `src/ui/_streamlit_pages/*`.
 - Long first-party behavior tests over adjacent private test packages while preserving original pytest entrypoints, documented in `docs/architecture/test-long-file-decomposition-review.md`.
 
@@ -136,11 +137,10 @@ Verification required:
 
 Primary evidence:
 
-- `src/services/_pdf/_table_heuristics/regions.py`: `1,085` lines; focused region formation and bbox adjustment owner.
-- `src/services/_pdf/_table_heuristics/screening.py`: `1,038` lines; focused rejection, scoring, and deduplication owner.
 - `src/services/_pdf/_table_heuristics/layout.py`: `774` lines; focused page-layout and text interpretation owner.
 - `src/services/_pdf/table_heuristics.py`: `407` lines; stable compatibility surface.
-- `src/services/_pdf/_visual_heuristics/panel_detection.py`: `1,054` lines; detector-level decisions and candidate coordination.
+- `src/services/_pdf/_table_heuristics/_screening/rejections.py`: `744` lines; focused rejection-policy owner behind the screening compatibility surface.
+- `src/services/_pdf/_visual_heuristics/_panel_detection/candidates.py`: `722` lines; detector candidate assembly owner behind the panel-detection compatibility surface.
 - `src/services/_pdf/_visual_heuristics/panel_geometry.py`: `988` lines; deterministic panel geometry construction and adjustment.
 - `src/services/_pdf/_visual_heuristics/panel_text.py`: `952` lines; deterministic title, caption, metric, and component-text interpretation.
 - `src/services/_pdf/visual_candidates.py`: stable compatibility surface.
@@ -153,8 +153,8 @@ Direction:
 
 - Retain `src/services/pdf_service.py` as the canonical PDF boundary.
 - Prioritize measured algorithm changes already recorded in `CONSOLIDATED_TODO.md`: indexed table deduplication and precomputed per-page visual candidate relationships.
-- Retain the `_table_heuristics/*` capability split; `regions.py` and `screening.py` are the remaining table-family `>=1,000`-line review targets, and further extraction requires a semantic boundary rather than line-count slicing.
-- Retain the `_visual_heuristics/{panel_text,panel_geometry,panel_detection}.py` semantic split behind `visual_heuristics.py`; optimization of precomputed visual relationships remains separate from the decomposition evidence.
+- Retain the `_table_heuristics/*` capability split; `regions.py` and `screening.py` are compatibility surfaces, and further extraction requires a semantic boundary rather than line-count slicing.
+- Retain the `_visual_heuristics/{panel_text,panel_geometry,panel_detection}.py` semantic split behind `visual_heuristics.py`; `panel_detection.py` is now a compatibility surface over `_panel_detection/*`, and optimization of precomputed visual relationships remains separate from the decomposition evidence.
 - Retain the `_visual_candidates/{raster,screening,extraction}.py` semantic split behind `visual_candidates.py`; `extraction.py` is now a compatibility surface over `_extraction/{context,sequential,workflow}.py`, and the deferred relationship-scan optimization is still a separate change.
 - Retain the `_crop/*` semantic split behind `crop.py`; future crop-family work should target measured geometry or artifact-cache behavior, not additional facade layers.
 
