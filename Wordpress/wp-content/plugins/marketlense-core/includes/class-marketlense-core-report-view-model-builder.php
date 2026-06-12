@@ -52,7 +52,7 @@ final class Report_View_Model_Builder
         );
         $normalized_summary = $this->normalize_brand_name($this->normalize_text($summary));
         $insight_texts = $this->extract_insight_texts($content);
-        $counts = $this->extract_content_counts($content, $insight_texts);
+        $counts = $this->extract_content_counts($post_id, $content, $insight_texts);
         $full_key_metrics = $this->extract_full_key_metrics($insight_texts);
 
         $view_model = [
@@ -121,15 +121,16 @@ final class Report_View_Model_Builder
      * @param list<string> $insight_texts
      * @return array{insights:int,quotes:int,topics:int,citations:int}
      */
-    private function extract_content_counts(string $content, array $insight_texts): array
+    private function extract_content_counts(int $post_id, string $content, array $insight_texts): array
     {
         $counts = [
             'insights' => count($insight_texts),
-            'quotes' => $this->count_nodes_by_class($content, 'section-quotes', 'quote-card'),
-            'topics' => max(
-                $this->count_nodes_by_class($content, 'section-topics', 'topic-brief-card'),
-                $this->count_chip_items($content, 'section-topics')
+            'quotes' => max(
+                $this->count_nodes_by_class($content, 'section-quotes', 'quote-card'),
+                $this->count_nodes_by_class($content, 'evidence', 'quote-feature')
+                    + $this->count_nodes_by_class($content, 'evidence', 'quote-card')
             ),
+            'topics' => $this->count_public_topic_terms($post_id),
             'citations' => $this->extract_evidence_reference_count($content),
         ];
 
@@ -192,15 +193,21 @@ final class Report_View_Model_Builder
             return [];
         }
 
+        $queries = [
+            $this->section_class_query('findings', 'finding-card'),
+            $this->section_class_query('section-insights', 'insight-text'),
+        ];
         $items = [];
-        foreach ($xpath->query($this->section_class_query('section-insights', 'insight-text')) ?: [] as $node) {
-            if (! ($node instanceof \DOMNode)) {
-                continue;
-            }
+        foreach ($queries as $query) {
+            foreach ($xpath->query($query) ?: [] as $node) {
+                if (! ($node instanceof \DOMNode)) {
+                    continue;
+                }
 
-            $text = $this->normalize_text($node->textContent);
-            if ($text !== '') {
-                $items[] = $text;
+                $text = $this->normalize_text($node->textContent);
+                if ($text !== '') {
+                    $items[] = $text;
+                }
             }
         }
 
@@ -310,21 +317,21 @@ final class Report_View_Model_Builder
         return $nodes instanceof \DOMNodeList ? (int) $nodes->length : 0;
     }
 
-    private function count_chip_items(string $content, string $section_id): int
+    private function count_public_topic_terms(int $post_id): int
     {
-        $xpath = $this->load_xpath($content);
-        if (! ($xpath instanceof \DOMXPath)) {
+        $terms = get_the_terms($post_id, Taxonomies::CATEGORY_TAXONOMY);
+        if (! is_array($terms)) {
             return 0;
         }
 
-        $nodes = $xpath->query(
-            sprintf(
-                "//*[@id='%s']//ul[contains(concat(' ', normalize-space(@class), ' '), ' chip-list ')]/li",
-                $section_id
-            )
-        );
+        $term_ids = [];
+        foreach ($terms as $term) {
+            if ($term instanceof \WP_Term) {
+                $term_ids[(int) $term->term_id] = true;
+            }
+        }
 
-        return $nodes instanceof \DOMNodeList ? (int) $nodes->length : 0;
+        return count($term_ids);
     }
 
     private function section_class_query(string $section_id, string $class_name): string
