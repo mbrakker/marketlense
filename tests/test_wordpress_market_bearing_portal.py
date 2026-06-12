@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
@@ -28,6 +29,18 @@ SIGNAL_ARCHIVE = THEME / "templates" / "archive-ml_signal.html"
 BRIEFING_ARCHIVE = THEME / "templates" / "archive-ml_briefing.html"
 TOPICS_PAGE = THEME / "templates" / "page-topics-directory.html"
 PUBLISHERS_PAGE = THEME / "templates" / "page-publishers-directory.html"
+
+
+def _last_css_rule(css: str, selector: str) -> str:
+    matches = list(
+        re.finditer(
+            rf"{re.escape(selector)}\s*\{{(?P<body>[^}}]*)\}}",
+            css,
+            flags=re.DOTALL,
+        )
+    )
+    assert matches, f"Missing CSS rule for {selector}"
+    return matches[-1].group("body")
 
 
 def test_market_bearing_brand_is_reused_in_header_and_footer() -> None:
@@ -342,3 +355,45 @@ def test_desktop_header_uses_centered_sticky_navigation_with_brand_indicator() -
     assert ".ml-primary-nav .wp-block-navigation-item__content::before" in css
     assert ".ml-primary-nav .wp-block-navigation-item__content::after" in css
     assert "border-radius: 50%;" in css
+
+
+def test_homepage_uses_tighter_editorial_spacing_and_close_section_signals() -> None:
+    css = THEME_CSS.read_text(encoding="utf-8")
+    home_shell = _last_css_rule(css, ".ml-home-shell")
+    section_rule = _last_css_rule(css, ".ml-home-shell .ml-section-rule")
+
+    assert "--ml-home-section-gap: clamp(3.5rem, 5vw, 4.5rem);" in home_shell
+    assert "--ml-home-band-padding: clamp(3rem, 4.5vw, 4rem);" in home_shell
+    assert "margin: 0.375rem 0 1rem;" in section_rule
+
+
+def test_discovery_band_uses_the_approved_editorial_ledger_surface() -> None:
+    css = THEME_CSS.read_text(encoding="utf-8")
+    discovery = _last_css_rule(css, ".ml-home-band-frame-discovery")
+    themes = _last_css_rule(css, ".ml-home-band-discovery .ml-theme-list")
+
+    assert "border: 1px solid var(--ml-border-subtle);" in discovery
+    assert "border-radius: 0.875rem;" in discovery
+    assert (
+        "box-shadow: 0 1.25rem 3.75rem rgba(8, 43, 84, 0.12);" in discovery
+    )
+    assert "counter-reset: ml-theme;" in themes
+    assert ".ml-home-band-discovery .ml-authority-item" in css
+
+
+def test_desktop_header_aligns_controls_and_uses_signal_blue_nav_indicator() -> None:
+    css = THEME_CSS.read_text(encoding="utf-8")
+    nav_stack = _last_css_rule(css, ".ml-header-navigation-stack")
+    header_search = _last_css_rule(css, ".ml-header-search")
+    nav_line = _last_css_rule(
+        css, ".ml-primary-nav .wp-block-navigation-item__content::before"
+    )
+
+    assert (
+        "grid-template-columns: minmax(0, 1fr) minmax(14rem, 22rem);"
+        in nav_stack
+    )
+    assert "margin: 0;" in header_search
+    assert "background: var(--ml-signal-blue);" in nav_line
+    assert "background: transparent !important;" in css
+    assert "@media (prefers-reduced-motion: reduce)" in css
