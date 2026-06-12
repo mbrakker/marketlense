@@ -18,12 +18,12 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 | Section | Files >500 lines | Files >=1,000 lines |
 | --- | ---: | ---: |
-| First-party `src` | 113 | 1 |
+| First-party `src` | 113 | 0 |
 | First-party `tests` | 80 | 0 |
 | First-party `scripts` | 1 | 0 |
 | WordPress integration | 5 | 3 |
 
-- Total first-party source-like files scanned: `1041`.
+- Total first-party source-like files scanned: `1054`.
 - Skipped paths/files: `21` (`13` top-level runtime/temp directories, `7` outside first-party analysis roots, `1` vendored dependency tree).
 - The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Long first-party test files have now been decomposed behind their original pytest entrypoint facades. `tests/test_long_test_file_ownership.py` enforces the 1,000-line first-party test-file threshold; the current canonical scan reports no first-party test files above 1,000 lines.
@@ -54,14 +54,13 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 - The requested browser-download/report-generation/publishing/rendering/PDF-candidate runtime long-file set has now been decomposed behind existing boundaries: `_browser_runtime/terminal_assets.py`, `_report_download_orchestrator/route_planner.py`, `report_generation_orchestrator.py`, `wordpress_service.py`, `render_service.py`, `_visual_candidates/extraction.py`, and `_artifact/classification.py` are compatibility facades over focused private owner modules. The AST movement audit recorded `229` moved top-level symbols, `229` unchanged moved symbols, `0` changed moved symbols, `0` facade-owned definitions, and `0` missing symbols across those seven files.
 - The requested cross-report/table/browser-session/report-route runtime long-file set has now been decomposed behind existing boundaries: `cross_report_analysis.py`, `_table_heuristics/{regions,screening}.py`, `_browser_runtime/session_lifecycle.py`, and `_report_store_service/download_routes.py` are compatibility facades over focused private owner modules. The AST movement audit recorded `143` moved top-level symbols, `142` unchanged moved symbols, `1` changed moved symbol, `0` facade-owned definitions, and `0` missing symbols; the changed symbol is the cross-report contract validator accepting the new private contract module namespace.
 - The requested analytics-projection/crop-refine/PDF-panel/publisher-discovery runtime long-file set has now been decomposed behind existing boundaries: `analytics_projection_generator.py`, `_report_selection_generator/crop_refine.py`, `_visual_heuristics/panel_detection.py`, and `_publisher_inventory_service/discovery_activity.py` are compatibility facades over focused private owner modules. The AST movement audit recorded `102` moved top-level symbols, `102` unchanged moved symbols, `0` changed moved symbols, `0` facade-owned definitions, and `0` missing symbols.
+- `src/cli.py` has now been decomposed behind the existing canonical CLI boundary: `src.cli` remains the `python -m src.cli` facade and private command-family owners live under `src/_cli/`. The AST movement audit recorded `40` moved top-level symbols, `18` unchanged moved symbols, `22` changed moved symbols, `0` facade-owned definitions, and `0` missing symbols; changed symbols gained runtime patch-point synchronization for existing `src.cli` compatibility or a lazy default-callback lookup to avoid an import cycle.
 
 ## Largest Runtime Files
 
 ### `src` Files >=1,000 Lines
 
-| Lines | Path | Assessment |
-| ---: | --- | --- |
-| 1,979 | `src/cli.py` | Review after workflow work |
+None. The current canonical scan reports no first-party `src` files at or above 1,000 lines.
 
 ### Large Test Concentration >=1,000 Lines
 
@@ -99,6 +98,7 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 - `src/generators/_report_selection_generator/crop_refine.py` over `src/generators/_report_selection_generator/_crop_refine/*`.
 - `src/services/_pdf/_visual_heuristics/panel_detection.py` over `_visual_heuristics/_panel_detection/*`.
 - `src/services/_publisher_inventory_service/discovery_activity.py` over `_publisher_inventory_service/_discovery_activity/*`.
+- `src/cli.py` over `src/_cli/*`, preserving one canonical CLI boundary for command registration and imports.
 - `src/ui/streamlit_pages.py` over `src/ui/app_pages/*` and `src/ui/_streamlit_pages/*`.
 - Long first-party behavior tests over adjacent private test packages while preserving original pytest entrypoints, documented in `docs/architecture/test-long-file-decomposition-review.md`.
 
@@ -193,7 +193,6 @@ Verification required:
 These files need responsibility review or performance evidence before any decomposition proposal:
 
 - Cross-report analysis synthesis, publishing, orchestrator, and contract files are active feature surfaces. The input generator now uses a private semantic split; any further work must preserve output contracts, publication flow, and regression coverage rather than splitting by line count.
-- `src/cli.py` is large because it owns command registration and argument wiring; split only if command families can remain discoverable through one CLI boundary without duplicated routing.
 - Contract modules may be large without role-mixing. Split `src/contracts/cross_report_analysis.py` only along independently versioned semantic contracts, never for cosmetics.
 - External boundary modules such as Drive and WordPress services must retain one canonical namespace; Drive now uses internal capability modules behind `src/services/drive_service.py`.
 
