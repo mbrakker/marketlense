@@ -10,9 +10,71 @@ from typing import Any, List, Optional, Tuple
 
 import pymupdf as fitz
 
-from ...visual_heuristics import *
-from .geometry import *  # noqa: F401,F403
-from .text_blocks import *  # noqa: F401,F403
+from ...visual_heuristics import (
+    CHART_CAPTION_HINTS,
+    CHART_CAPTION_MERGE_MAX_GAP_FRAC,
+    CHART_CAPTION_TOP_BLOCK_H_OVERLAP,
+    CHART_CAPTION_TOP_GUARD_FRAC,
+    CHART_CAPTION_TOP_PAD_FRAC,
+    CHART_CAPTION_TOP_PAD_PX,
+    CHART_CAPTION_TOP_SEARCH_FRAC,
+    CHART_CROP_PAD_COMPENSATION,
+    CHART_EDGE_TEXT_MAX_PAD_FRAC,
+    CHART_EDGE_TEXT_MAX_PAD_X_FRAC,
+    CHART_EDGE_TEXT_MIN_GAP_FRAC,
+    CHART_EDGE_TEXT_MIN_GAP_X_FRAC,
+    CHART_HEADING_MERGE_MAX_GAP_FRAC,
+    CHART_HEADING_TOP_BLOCK_H_OVERLAP,
+    CHART_HEADING_TOP_GUARD_FRAC,
+    CHART_HEADING_TOP_MAX_PAD_FRAC,
+    CHART_HEADING_TOP_SEARCH_FRAC,
+    CHART_LABEL_MAX_AVG_LINE_LEN,
+    CHART_LABEL_MAX_GAP_FRAC,
+    CHART_LABEL_MAX_HEIGHT_FRAC,
+    CHART_LABEL_MAX_LINES,
+    CHART_LABEL_MAX_V_GAP_FRAC,
+    CHART_LABEL_MIN_H_OVERLAP,
+    CHART_LABEL_MIN_V_OVERLAP,
+    CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN,
+    CHART_LABEL_PARAGRAPH_MIN_LINES,
+    CHART_NEXT_BLOCKER_GUARD_PX,
+    CHART_NEXT_BLOCKER_MIN_GAP_FRAC,
+    CHART_NEXT_BLOCKER_MIN_GAP_PX,
+    CHART_NEXT_BLOCKER_MIN_H_OVERLAP,
+    CHART_NOTE_BELOW_GUARD_PX,
+    CHART_NOTE_BELOW_MIN_H_OVERLAP,
+    CHART_NOTE_MAX_DIST,
+    CHART_NOTE_MAX_GAP_X_FRAC,
+    CHART_NOTE_PAD_EXTRA,
+    CHART_WHITESPACE_GUARD_GAP_FRAC,
+    CHART_WHITESPACE_GUARD_GAP_X_FRAC,
+    CHART_WHITESPACE_MAX_PAD_FRAC,
+    CHART_WHITESPACE_MAX_PAD_X_FRAC,
+    CHART_WHITESPACE_MIN_OVERLAP,
+    NOTE_LABEL_PREFIXES,
+    PDF_FIGURE_EXCEPTIONS,
+)
+from ..shared import (
+    _horizontal_overlap_ratio,
+    _is_page_number_text,
+    _rect_intersection_area,
+    _rect_iou,
+    _table_normalize_text,
+    _text_stats,
+    _vertical_overlap_ratio,
+)
+from .geometry import (
+    _chart_axis_label_band_like,
+    _drawing_rects,
+    _image_block_rects,
+    _numeric_token_hits,
+)
+from .text_blocks import (
+    _caption_blocks,
+    _compact_top_chart_title_like,
+    _has_intervening_paragraph,
+    _heading_lines,
+)
 
 
 def _nearest_caption_block(

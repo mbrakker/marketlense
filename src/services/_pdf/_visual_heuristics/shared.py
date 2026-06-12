@@ -2,7 +2,43 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
+import io
+import math
+import os
+import re
+import statistics
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+import pymupdf as fitz
+from PIL import Image
+
 from .. import visual_heuristics as _boundary
+from ..visual_heuristics import (
+    _PAGE_NUMBER_RX,
+    CHART_DEDUP_IOU,
+    CHART_LABEL_DENSE_LONG_LINE_LEN,
+    CHART_LABEL_DENSE_MAX_AVG_LINE_LEN,
+    CHART_LABEL_DENSE_MAX_LONG_LINE_RATIO,
+    CHART_LABEL_DENSE_MAX_MEDIAN_LINE_LEN,
+    CHART_LABEL_DENSE_MIN_LINES,
+    CHART_LABEL_DENSE_MIN_SHORT_LINE_RATIO,
+    CHART_LABEL_DENSE_SHORT_LINE_LEN,
+    CHART_OVERLAP_CONTAINMENT,
+    CHART_OVERLAP_IOU,
+    CHART_PAD_X_FRAC,
+    CHART_PAD_Y_FRAC,
+    CHART_TEXT_MAX_LINES,
+    CHART_TEXT_MIN_CHARS,
+    CHART_TEXT_RATIO_THRESHOLD,
+    INFOGRAPHIC_LABEL_DENSE_MAX_AVG_LINE_LEN,
+    INFOGRAPHIC_LABEL_DENSE_MAX_LONG_LINE_RATIO,
+    INFOGRAPHIC_LABEL_DENSE_MAX_MEDIAN_LINE_LEN,
+    INFOGRAPHIC_LABEL_DENSE_MIN_SHORT_LINE_RATIO,
+    PDF_FIGURE_EXCEPTIONS,
+)
+from src.utils.path_utils import bounded_artifact_filename, safe_path_segment
 
 globals().update(
     {

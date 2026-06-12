@@ -2,7 +2,20 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
+from src.contracts.pdf_context import PdfContext
+from src.contracts.pdf_ocr import PdfOcrFallbackResponse
+from src.contracts.pdf_text import (
+    PdfTextExtractResponse,
+    PdfTextSampleRequest,
+)
+from src.contracts.report_generation import ReportRuntimeState
+from src.generators.report_generation_dependencies import ReportSourceDependencies
+from src.generators.report_generation_shared import logger
+from src.utils.errors import AppError
+from src.utils.logging import child_context, log_event
+
 from .shared import *  # noqa: F401,F403
+from .shared import TextStatus, _NativeTextValidationResult
 from .source_loading import _build_text_status, _load_text, _select_sample_pages
 
 

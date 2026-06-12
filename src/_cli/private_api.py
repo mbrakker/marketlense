@@ -60,7 +60,6 @@ def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
 
 
-
 def _string_list_payload(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []

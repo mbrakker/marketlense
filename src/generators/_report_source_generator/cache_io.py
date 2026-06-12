@@ -2,6 +2,10 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
+from src.contracts.pdf_contents import PdfContentsDetectionResponse
+from src.contracts.pdf_text import PdfTextExtractResponse
+from src.contracts.pdf_utils import PdfInfoResponse
+
 from .shared import *  # noqa: F401,F403
 
 

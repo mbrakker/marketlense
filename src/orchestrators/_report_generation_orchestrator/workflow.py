@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import asdict
+from dataclasses import replace
 import logging
 from typing import Callable, Optional
 from src.contracts.analytics_projection import (
@@ -10,6 +11,7 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.run_context import RunContext
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
+from src.generators.report_generation_dependencies import ReportSignalDependencies
 from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
@@ -17,6 +19,9 @@ from src.generators.report_render_generator import (
 from src.generators.report_selection_generator import select_report_figures
 from src.generators.report_source_generator import prepare_report_source
 from src.orchestrators.report_analysis_orchestrator import run_report_analysis
+from src.orchestrators.signal_candidate_orchestrator import (
+    run_signal_candidate_extraction,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -50,6 +55,25 @@ STAGE_ANALYSIS_COMPLETE = "analysis_complete"
 STAGE_RENDER_COMPLETE = "render_complete"
 
 
+def _default_report_generation_dependencies() -> ReportGenerationDependencies:
+    return _with_signal_candidate_orchestrator(ReportGenerationDependencies.default())
+
+
+def _with_signal_candidate_orchestrator(
+    deps: ReportGenerationDependencies,
+) -> ReportGenerationDependencies:
+    default_signal = ReportSignalDependencies.default().run_signal_candidate_extraction
+    if deps.signal.run_signal_candidate_extraction is not default_signal:
+        return deps
+    return replace(
+        deps,
+        signal=replace(
+            deps.signal,
+            run_signal_candidate_extraction=run_signal_candidate_extraction,
+        ),
+    )
+
+
 def run_report_generation(
     file: DriveFile,
     local_pdf_path: str,
@@ -65,7 +89,11 @@ def run_report_generation(
     ] = None,
     resume_from_stage: Optional[str] = None,
 ) -> IngestOutcome:
-    deps = dependencies or ReportGenerationDependencies.default()
+    deps = (
+        _with_signal_candidate_orchestrator(dependencies)
+        if dependencies is not None
+        else _default_report_generation_dependencies()
+    )
     runtime = _build_runtime_state(file, local_pdf_path, settings, md5, ctx)
     requested_resume_stage = str(resume_from_stage or "").strip()
     if requested_resume_stage:

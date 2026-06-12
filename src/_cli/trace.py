@@ -61,7 +61,6 @@ def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
 
 
-
 def _load_structured_log_events(log_path: str, ctx) -> list[dict]:
     _sync_cli_patch_points()
     read_ctx = child_context(ctx, task_id=f"{ctx.task_id}:read_trace_log")

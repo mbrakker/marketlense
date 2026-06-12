@@ -59,7 +59,6 @@ def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
 
 
-
 @cli_app.command("drive-oauth-login")
 def drive_oauth_login(
     client_json: str = typer.Option(

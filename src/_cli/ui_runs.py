@@ -81,7 +81,6 @@ def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
 
 
-
 def _load_ui_run_worker_request(path: str) -> UiRunWorkerRequest:
     request_path = str(path or "").strip()
     if not request_path:

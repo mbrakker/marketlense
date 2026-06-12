@@ -68,7 +68,6 @@ def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
 
 
-
 @cli_app.command("ingest")
 def ingest(
     folder: str = typer.Option(None, help="Override Drive folder ID"),

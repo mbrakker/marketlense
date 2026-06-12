@@ -9,7 +9,7 @@ from .auth import _build_drive_client, _resolve_drive_credentials
 
 
 def _invalidate_drive_client_cache(*, auth_mode: str, credential_path: str) -> int:
-    with boundary.boundary._DRIVE_CLIENTS_LOCK:
+    with boundary._DRIVE_CLIENTS_LOCK:
         removed = 0
         for cache_key in list(boundary._DRIVE_CLIENTS.keys()):
             if cache_key[0] != auth_mode or cache_key[1] != credential_path:
@@ -55,7 +55,7 @@ def _get_drive_client(
         oauth_token_path=oauth_token_path,
     )
     cache_key = (auth_mode, credential_path, thread_id)
-    with boundary.boundary._DRIVE_CLIENTS_LOCK:
+    with boundary._DRIVE_CLIENTS_LOCK:
         now = _now_monotonic_seconds()
         expired = _prune_drive_client_cache(now)
         cached = boundary._DRIVE_CLIENTS.get(cache_key)
@@ -100,7 +100,7 @@ def _get_drive_client(
         ctx=ctx,
     )
 
-    with boundary.boundary._DRIVE_CLIENTS_LOCK:
+    with boundary._DRIVE_CLIENTS_LOCK:
         now = _now_monotonic_seconds()
         expired_after_build = _prune_drive_client_cache(now)
         cached = boundary._DRIVE_CLIENTS.get(cache_key)

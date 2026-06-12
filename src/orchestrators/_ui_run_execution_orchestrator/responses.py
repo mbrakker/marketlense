@@ -2,7 +2,15 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
+from typing import Any
+
+from src.contracts.ui_run_control import UiRunWorkerRequest
+from src.contracts.ui_run_replay import UiRunExecutionResponse
+from src.utils.cache_utils import sha256_json
+from src.utils.errors import AppError
+
 from .shared import *  # noqa: F401,F403
+from .shared import PROMPT_TREE_ROOT, SOURCE_TREE_ROOT
 
 
 def _invalid_payload_config_snapshot(

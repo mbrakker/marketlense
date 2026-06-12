@@ -2,6 +2,32 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
+import hashlib
+import json
+from typing import Any, cast
+
+from src.contracts.cross_report_analysis import (
+    CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportAnalysisOrchestratorRequest,
+    CrossReportAnalysisRequest,
+    CrossReportProjectedDataReadRequest,
+    PublicationMode,
+)
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidateExtractionRequest,
+)
+from src.contracts.ui_run_payloads import (
+    CrossReportAnalysisUiRunPayload,
+    SignalCandidateExtractionUiRunPayload,
+    SignalPostUiRunPayload,
+)
+from src.contracts.wordpress_entities import (
+    WORDPRESS_ENTITY_SCHEMA_VERSION,
+    SignalPostGenerationRequest,
+    SignalPostWorkflowRequest,
+)
+
 from .shared import *  # noqa: F401,F403
 from .validation import _validate_ui_run_payload
 

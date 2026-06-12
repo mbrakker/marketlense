@@ -2,7 +2,25 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict
+from typing import cast
+
+from src.contracts.pdf_ocr import PdfOcrFallbackResponse
+from src.contracts.report_generation import ReportRuntimeState, ReportSourceState
+from src.contracts.report_models import ReportPayload
+from src.generators.pdf_text_ocr_generator import recover_pdf_text_with_ocr
+from src.generators.report_generation_dependencies import ReportSourceDependencies
+from src.generators.report_generation_shared import (
+    base_payload,
+    logger,
+    resolve_publisher,
+)
+from src.utils.errors import AppError
+from src.utils.logging import log_event
+
 from .shared import *  # noqa: F401,F403
+from .shared import TextStatus, _NativeTextValidationResult
 from .source_loading import (
     _build_pdf_context,
     _load_contents,

@@ -10,7 +10,18 @@ from typing import Any, List, Optional, Tuple
 
 import pymupdf as fitz
 
-from ...visual_heuristics import *
+from ...visual_heuristics import (
+    CHART_AXIS_LABEL_BAND_MAX_AVG_LINE_LEN,
+    CHART_AXIS_LABEL_BAND_MAX_LINES,
+    CHART_AXIS_LABEL_BAND_MIN_ALPHA_RATIO,
+    CHART_AXIS_LABEL_BAND_MIN_TOKEN_HITS,
+    DRAWING_BACKGROUND_MAX_STROKE,
+    DRAWING_BACKGROUND_MIN_AREA_FRAC,
+    DRAWING_MIN_RECT_AREA,
+    DRAWING_MIN_RECT_DIM,
+    PDF_FIGURE_EXCEPTIONS,
+)
+from ..shared import _alpha_ratio, _table_normalize_text
 
 
 def _image_block_rects(

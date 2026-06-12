@@ -2,8 +2,60 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
+from typing import Any
+
+from src.contracts.acquisition_audit import AcquisitionAuditBatchRequest
+from src.contracts.browser_download import ReportDownloadOrchestratorRequest
+from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.cover_images import CoverImageOrchestratorRequest
+from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
+from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId
+from src.contracts.ui_run_control import UiRunWorkerRequest
+from src.contracts.ui_run_payloads import (
+    AcquisitionAuditUiRunPayload,
+    CandidateExtractionUiRunPayload,
+    CoverImagesUiRunPayload,
+    CrossReportAnalysisUiRunPayload,
+    IngestUiRunPayload,
+    PublishUiRunPayload,
+    PublisherDiscoveryUiRunPayload,
+    ReportDownloadUiRunPayload,
+    SignalCandidateExtractionUiRunPayload,
+    SignalPostUiRunPayload,
+    UiRunReplayUiRunPayload,
+)
+from src.contracts.ui_run_replay import UiRunExecutionResponse, UiRunReplayRequest
+from src.orchestrators.acquisition_audit_orchestrator import run_acquisition_audit
+from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
+from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
+from src.orchestrators.cross_report_analysis_orchestrator import (
+    run_cross_report_analysis,
+)
+from src.orchestrators.ingest_orchestrator import run_ingest
+from src.orchestrators.publish_orchestrator import run_publish
+from src.orchestrators.publisher_inventory_orchestrator import (
+    run_publisher_inventory_discovery,
+)
+from src.orchestrators.report_download_orchestrator import run_report_download
+from src.orchestrators.signal_candidate_orchestrator import (
+    run_signal_candidate_extraction,
+)
+from src.orchestrators.signal_post_orchestrator import run_signal_post_workflow
+from src.services.config_service import (
+    build_ingest_settings,
+    load_browser_download_settings,
+    load_publisher_inventory_settings,
+    load_publish_settings,
+    load_settings,
+)
+from src.services.run_registry_service import default_ui_run_registry_path
+from src.utils.errors import AppError
+from src.utils.logging import log_event
+
 from .shared import *  # noqa: F401,F403
-from .validation import _validate_ui_run_payload
+from .shared import PROMPT_TREE_ROOT, SOURCE_TREE_ROOT, logger
+from .validation import _sanitize_snapshot, _validate_ui_run_payload
 from .responses import _execution_response, _invalid_payload_config_snapshot
 from .requests import (
     _cross_report_analysis_request,
@@ -431,7 +483,7 @@ def execute_ui_run(
                     ConfigLoadRequest(schema_version="1.0", path=""),
                     ctx,
                 )
-            outcome = run_cross_report_analysis(
+            cross_report_outcome = run_cross_report_analysis(
                 cross_report_request,
                 app_settings,
                 ctx,
@@ -441,25 +493,20 @@ def execute_ui_run(
                 worker_request=worker_request,
                 status="succeeded",
                 result_summary={
-                    "status": outcome.status,
-                    "request_id": outcome.request.request_id,
-                    "selected_theme": outcome.generated_result.selected_theme.label,
+                    "status": cross_report_outcome.status,
+                    "request_id": cross_report_outcome.request.request_id,
+                    "selected_theme": cross_report_outcome.generated_result.selected_theme.label,
                     "selected_report_count": len(
-                        outcome.generated_result.selected_sources
+                        cross_report_outcome.generated_result.selected_sources
                     ),
-                    "validation_status": outcome.validation_result.status,
-                    "publication_mode": outcome.publish_result.publication_mode,
-                    "publish_status": outcome.publish_result.status,
-                    "post_url": outcome.publish_result.post_url or "",
-                    "idempotency_reused": outcome.idempotency_reused,
+                    "validation_status": cross_report_outcome.validation_result.status,
+                    "publication_mode": cross_report_outcome.publish_result.publication_mode,
+                    "publish_status": cross_report_outcome.publish_result.status,
+                    "post_url": cross_report_outcome.publish_result.post_url or "",
+                    "idempotency_reused": cross_report_outcome.idempotency_reused,
                 },
                 artifact_paths=[
-                    path
-                    for path in [
-                        outcome.artifact_path,
-                        getattr(outcome.publish_package, "html_path", ""),
-                    ]
-                    if path
+                    path for path in [cross_report_outcome.artifact_path] if path
                 ],
                 config_snapshot=config_snapshot,
             )
@@ -480,17 +527,19 @@ def execute_ui_run(
                 "settings": _sanitize_snapshot(app_settings),
                 "request": _sanitize_snapshot(candidate_request),
             }
-            outcome = run_signal_candidate_extraction(candidate_request, ctx)
+            signal_candidate_outcome = run_signal_candidate_extraction(
+                candidate_request, ctx
+            )
             response = _execution_response(
                 worker_request=worker_request,
                 status="succeeded",
                 result_summary={
-                    "status": outcome.status,
-                    "extraction_request_id": outcome.extraction_request_id,
-                    "candidate_count": outcome.candidate_count,
-                    "group_count": outcome.group_count,
-                    "stored_candidate_count": outcome.stored_response.candidate_count,
-                    "stored_group_count": outcome.stored_response.group_count,
+                    "status": signal_candidate_outcome.status,
+                    "extraction_request_id": signal_candidate_outcome.extraction_request_id,
+                    "candidate_count": signal_candidate_outcome.candidate_count,
+                    "group_count": signal_candidate_outcome.group_count,
+                    "stored_candidate_count": signal_candidate_outcome.stored_response.candidate_count,
+                    "stored_group_count": signal_candidate_outcome.stored_response.group_count,
                 },
                 artifact_paths=[],
                 config_snapshot=config_snapshot,
@@ -512,7 +561,7 @@ def execute_ui_run(
                     ConfigLoadRequest(schema_version="1.0", path=""),
                     ctx,
                 )
-            result = run_signal_post_workflow(
+            signal_post_result = run_signal_post_workflow(
                 signal_request,
                 ctx,
                 publish_settings=publish_settings,
@@ -521,14 +570,14 @@ def execute_ui_run(
                 worker_request=worker_request,
                 status="succeeded",
                 result_summary={
-                    "request_id": result.request_id,
-                    "title": result.projection.title,
-                    "slug": result.projection.slug,
-                    "confidence": result.projection.confidence,
-                    "validation_status": result.projection.validation_status,
-                    "publish_status": result.publish_result.status,
-                    "target_route": result.publish_result.target_route,
-                    "post_url": result.publish_result.post_url or "",
+                    "request_id": signal_post_result.request_id,
+                    "title": signal_post_result.projection.title,
+                    "slug": signal_post_result.projection.slug,
+                    "confidence": signal_post_result.projection.confidence,
+                    "validation_status": signal_post_result.projection.validation_status,
+                    "publish_status": signal_post_result.publish_result.status,
+                    "target_route": signal_post_result.publish_result.target_route,
+                    "post_url": signal_post_result.publish_result.post_url or "",
                 },
                 artifact_paths=[],
                 config_snapshot=config_snapshot,
@@ -549,7 +598,7 @@ def execute_ui_run(
                 "registry_path": registry_path,
                 "run_id": validated_payload.run_id,
             }
-            result = replay_ui_run(
+            replay_result = replay_ui_run(
                 request=UiRunReplayRequest(
                     schema_version="1.0",
                     registry_path=registry_path,
@@ -559,21 +608,23 @@ def execute_ui_run(
             )
             response = _execution_response(
                 worker_request=worker_request,
-                status="succeeded" if result.report.matched else "failed",
+                status="succeeded" if replay_result.report.matched else "failed",
                 result_summary={
-                    "original_run_id": str(result.original_record.run_id),
-                    "original_run_type": result.original_record.run_type,
-                    "replay_status": result.report.replay_status,
-                    "matched": result.report.matched,
-                    "delta_count": len(result.report.deltas),
-                    "manifest_path": result.manifest_path,
-                    "report_path": result.report_path,
+                    "original_run_id": str(replay_result.original_record.run_id),
+                    "original_run_type": replay_result.original_record.run_type,
+                    "replay_status": replay_result.report.replay_status,
+                    "matched": replay_result.report.matched,
+                    "delta_count": len(replay_result.report.deltas),
+                    "manifest_path": replay_result.manifest_path,
+                    "report_path": replay_result.report_path,
                 },
-                artifact_paths=[result.manifest_path, result.report_path],
+                artifact_paths=[replay_result.manifest_path, replay_result.report_path],
                 config_snapshot=config_snapshot,
-                error_code="" if result.report.matched else "ui_run_replay_mismatch",
+                error_code=""
+                if replay_result.report.matched
+                else "ui_run_replay_mismatch",
                 error_message=""
-                if result.report.matched
+                if replay_result.report.matched
                 else "UI run replay completed with deltas.",
                 error_retryable=False,
                 error_severity="error",

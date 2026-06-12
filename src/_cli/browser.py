@@ -64,7 +64,6 @@ def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
 
 
-
 @cli_app.command("download-report")
 def download_report(
     url: str = typer.Argument(..., help="Absolute report landing-page URL"),

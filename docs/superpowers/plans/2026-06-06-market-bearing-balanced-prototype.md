@@ -1,6 +1,6 @@
 # Market Bearing Balanced Prototype Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use Planned markers for archival sequencing.
 
 **Goal:** Build the approved balanced editorial prototype from local snapshots of published WordPress artifacts.
 
@@ -19,10 +19,10 @@
 - Create: `out/market-bearing-prototype/content-model.mjs`
 - Create: `out/market-bearing-prototype/tests/content-model.test.mjs`
 
-- [ ] Write tests asserting report normalization, represented-only taxonomies, computed citation counters, filtering, and pagination.
-- [ ] Run `node --test out/market-bearing-prototype/tests/content-model.test.mjs` and confirm failure because the content model does not exist.
-- [ ] Implement pure content-model functions and generate the local snapshots from published REST artifacts.
-- [ ] Run the content-model tests and confirm they pass.
+- Planned: Write tests asserting report normalization, represented-only taxonomies, computed citation counters, filtering, and pagination.
+- Planned: Run `node --test out/market-bearing-prototype/tests/content-model.test.mjs` and confirm failure because the content model does not exist.
+- Planned: Implement pure content-model functions and generate the local snapshots from published REST artifacts.
+- Planned: Run the content-model tests and confirm they pass.
 
 ### Task 2: Data-Driven Page Shell
 
@@ -32,11 +32,11 @@
 - Replace: `out/market-bearing-prototype/app.js` with `out/market-bearing-prototype/app.mjs`
 - Create: `out/market-bearing-prototype/tests/prototype-contract.test.mjs`
 
-- [ ] Write contract tests asserting empty mount points, required routes, shared navigation, and absence of hard-coded report cards.
-- [ ] Run the contract test and confirm failure against the existing static page.
-- [ ] Replace record markup with semantic mount points and implement view renderers for Home, Reports, Topics, Publishers, Signals, Briefings, Report, and Methodology.
-- [ ] Implement routing, search, filters, sort, pagination, mobile navigation, and focus updates.
-- [ ] Run both test files and confirm they pass.
+- Planned: Write contract tests asserting empty mount points, required routes, shared navigation, and absence of hard-coded report cards.
+- Planned: Run the contract test and confirm failure against the existing static page.
+- Planned: Replace record markup with semantic mount points and implement view renderers for Home, Reports, Topics, Publishers, Signals, Briefings, Report, and Methodology.
+- Planned: Implement routing, search, filters, sort, pagination, mobile navigation, and focus updates.
+- Planned: Run both test files and confirm they pass.
 
 ### Task 3: Complete Visual System
 
@@ -45,20 +45,20 @@
 - Modify: `out/market-bearing-prototype/brand-spec.md`
 - Modify: `out/market-bearing-prototype/README.md`
 
-- [ ] Apply the approved Market Bearing tokens to all new modules.
-- [ ] Add responsive layouts, visible focus, disclosure, result, empty, and loading states.
-- [ ] Document snapshot provenance, regeneration inputs, WordPress ownership mapping, and review commands.
-- [ ] Run tests after styling and documentation changes.
+- Planned: Apply the approved Market Bearing tokens to all new modules.
+- Planned: Add responsive layouts, visible focus, disclosure, result, empty, and loading states.
+- Planned: Document snapshot provenance, regeneration inputs, WordPress ownership mapping, and review commands.
+- Planned: Run tests after styling and documentation changes.
 
 ### Task 4: Browser Verification
 
 **Files:**
 - Update generated screenshots under `out/market-bearing-prototype/`
 
-- [ ] Start a local server at `http://127.0.0.1:4173/`.
-- [ ] Verify Home, Reports, Topics, Publishers, Signals, Briefings, and Report at desktop width.
-- [ ] Verify navigation, global search, filtering, sorting, pagination, and report deep links.
-- [ ] Verify Home and Report at mobile width.
-- [ ] Confirm the browser console contains no errors or warnings.
-- [ ] Capture updated desktop and mobile screenshots.
-- [ ] Run the complete prototype test command one final time.
+- Planned: Start a local server at `http://127.0.0.1:4173/`.
+- Planned: Verify Home, Reports, Topics, Publishers, Signals, Briefings, and Report at desktop width.
+- Planned: Verify navigation, global search, filtering, sorting, pagination, and report deep links.
+- Planned: Verify Home and Report at mobile width.
+- Planned: Confirm the browser console contains no errors or warnings.
+- Planned: Capture updated desktop and mobile screenshots.
+- Planned: Run the complete prototype test command one final time.

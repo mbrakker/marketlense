@@ -1,6 +1,6 @@
 # Runtime Long Module Decomposition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use Planned markers for archival sequencing.
 
 **Goal:** Split the requested long runtime modules into semantic private owner modules while preserving public imports, behavior, costs, call ordering, and external side effects.
 
@@ -15,8 +15,8 @@
 **Files:**
 - Modify: `tests/test_long_script_decomposition.py`
 
-- [ ] Add the seven requested runtime files to the long-script decomposition guard with expected semantic owner modules.
-- [ ] Run `pytest -q tests/test_long_script_decomposition.py` and confirm it fails because the requested files still exceed the facade threshold or expected owner modules do not exist.
+- Planned: Add the seven requested runtime files to the long-script decomposition guard with expected semantic owner modules.
+- Planned: Run `pytest -q tests/test_long_script_decomposition.py` and confirm it fails because the requested files still exceed the facade threshold or expected owner modules do not exist.
 
 ### Task 2: Movement-Only Splits
 
@@ -31,28 +31,28 @@
   - `src/services/_browser_report_download/_artifact/classification.py`
 - Create private owner modules under existing capability families only.
 
-- [ ] Move contiguous top-level functions/classes into semantically named private modules.
-- [ ] Preserve original module import paths as compatibility facades.
-- [ ] Do not change thresholds, ordering, retry behavior, prompt/model usage, logging event names, cache keys, artifact paths, or external call counts.
+- Planned: Move contiguous top-level functions/classes into semantically named private modules.
+- Planned: Preserve original module import paths as compatibility facades.
+- Planned: Do not change thresholds, ordering, retry behavior, prompt/model usage, logging event names, cache keys, artifact paths, or external call counts.
 
 ### Task 3: Synthetic Verification
 
 **Files:**
 - No production behavior edits unless tests expose a movement error.
 
-- [ ] Run targeted tests for WordPress, render, report-generation, route planner, browser download runtime/artifact classification, and PDF visual candidates.
-- [ ] Run changed-file Ruff checks and formatting checks.
-- [ ] Run full `pytest -q`.
-- [ ] Run repository split/import guard scripts that cover changed files.
+- Planned: Run targeted tests for WordPress, render, report-generation, route planner, browser download runtime/artifact classification, and PDF visual candidates.
+- Planned: Run changed-file Ruff checks and formatting checks.
+- Planned: Run full `pytest -q`.
+- Planned: Run repository split/import guard scripts that cover changed files.
 
 ### Task 4: Live Verification
 
 **Files:**
 - No code edits expected.
 
-- [ ] Load local `.env` into the process without printing secrets.
-- [ ] Run available live/integration checks for affected external boundaries and real local fixtures.
-- [ ] Record any unavailable live path explicitly rather than substituting dummy tests.
+- Planned: Load local `.env` into the process without printing secrets.
+- Planned: Run available live/integration checks for affected external boundaries and real local fixtures.
+- Planned: Record any unavailable live path explicitly rather than substituting dummy tests.
 
 ### Task 5: Audit, Docs, Commit
 
@@ -60,7 +60,7 @@
 - Modify: `long_scripts.md`
 - Modify: `README.md`
 
-- [ ] Refresh the long-file audit from `python scripts/count_long_files.py --min-lines 500`.
-- [ ] Record AST movement audit counts against `HEAD`.
-- [ ] Update README architecture notes for the new internal splits.
-- [ ] Commit the verified movement-only decomposition.
+- Planned: Refresh the long-file audit from `python scripts/count_long_files.py --min-lines 500`.
+- Planned: Record AST movement audit counts against `HEAD`.
+- Planned: Update README architecture notes for the new internal splits.
+- Planned: Commit the verified movement-only decomposition.

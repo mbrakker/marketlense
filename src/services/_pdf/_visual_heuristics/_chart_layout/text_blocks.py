@@ -10,8 +10,51 @@ from typing import Any, List, Optional, Tuple
 
 import pymupdf as fitz
 
-from ...visual_heuristics import *
-from .geometry import *  # noqa: F401,F403
+from ...visual_heuristics import (
+    CHART_CAPTION_HINTS,
+    CHART_CAPTION_INTERNAL_TOP_TOL_FRAC,
+    CHART_CAPTION_INTERNAL_TOP_TOL_PX,
+    CHART_HEADING_TOP_BLOCK_H_OVERLAP,
+    CHART_LABEL_COMPACT_TITLE_MAX_AVG_LINE_LEN,
+    CHART_LABEL_COMPACT_TITLE_MAX_CHARS,
+    CHART_LABEL_COMPACT_TITLE_MAX_LINES,
+    CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN,
+    CHART_LABEL_PARAGRAPH_MIN_LINES,
+    CHART_NEXT_BLOCKER_GUARD_PX,
+    INFO_CHART_BAND_FRAC,
+    INFO_CHART_CLUSTER_GAP_FRAC,
+    INFO_CHART_MAX_GAP_FRAC,
+    INFO_CHART_MIN_AREA_FRAC,
+    INFO_CHART_MIN_DRAWINGS,
+    INFO_HEADING_MAX_CHARS,
+    INFO_HEADING_MAX_SENTENCES,
+    INFO_HEADING_MAX_WORDS,
+    INFO_HEADING_MERGE_GAP_FRAC,
+    INFO_HEADING_MERGE_H_OVERLAP,
+    INFO_HEADING_MERGE_SIZE_DELTA,
+    INFO_HEADING_MIN_ALPHA_RATIO,
+    INFO_HEADING_MIN_SIZE,
+    INFO_HEADING_MIN_WORDS,
+    INFO_HEADING_SIZE_DELTA,
+    PANEL_CHART_INTERNAL_CAPTION_MAX_AVG_LINE_LEN,
+    PANEL_CHART_INTERNAL_CAPTION_MAX_CHARS,
+    PANEL_CHART_INTERNAL_CAPTION_MAX_LINES,
+    PANEL_CHART_INTERNAL_CAPTION_MIN_WIDTH_RATIO,
+    PANEL_CHART_INTERNAL_CAPTION_TOP_GAP_MAX,
+    PDF_FIGURE_EXCEPTIONS,
+    TABLE_CAPTION_HINTS,
+)
+from ..shared import (
+    _alpha_ratio,
+    _horizontal_overlap_ratio,
+    _line_starts_with_caption_hint,
+    _pad_rect,
+    _rect_seen,
+    _table_normalize_text,
+    _text_stats,
+    _vertical_overlap_ratio,
+)
+from .geometry import _drawing_rects
 
 
 def _compact_top_chart_title_like(
@@ -394,7 +437,6 @@ def _heading_chart_rects(
 
 
 __all__ = [
-    "_numeric_token_hits",
     "_compact_top_chart_title_like",
     "_panel_caption_looks_top_band",
     "_drawing_caption_rects",

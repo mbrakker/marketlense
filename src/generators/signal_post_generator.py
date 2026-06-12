@@ -167,8 +167,9 @@ def _page_refs_from_metadata(metadata: dict) -> list[int]:
         if page > 0 and page not in pages:
             pages.append(page)
     for key in ("page",):
+        raw_page = metadata.get(key)
         try:
-            page = int(metadata.get(key))
+            page = int(raw_page) if raw_page is not None else 0
         except (TypeError, ValueError):
             page = 0
         if page > 0 and page not in pages:
@@ -282,7 +283,9 @@ def _stored_source_ref_citation(
     if evidence is not None:
         return _evidence_citation(evidence)
     pages = list(ref.page_refs) or _page_refs_from_metadata(ref.source_metadata)
-    return _citation_label(source_title_by_report_id.get(ref.report_id, "Source report"), pages)
+    return _citation_label(
+        source_title_by_report_id.get(ref.report_id, "Source report"), pages
+    )
 
 
 def _approved_candidates(
@@ -360,12 +363,16 @@ def _projection_from_candidates(
         request=request,
         selected_sources=selected_sources,
         selected_evidence=[
-            item for item in projected_data.evidence if item.evidence_id in set(evidence_ids)
+            item
+            for item in projected_data.evidence
+            if item.evidence_id in set(evidence_ids)
         ],
         topic_ids=topic_ids,
     )
     selected_evidence = [
-        item for item in projected_data.evidence if item.evidence_id in set(evidence_ids)
+        item
+        for item in projected_data.evidence
+        if item.evidence_id in set(evidence_ids)
     ]
     title_topic = (
         " ".join(str(request.topic or "").strip().split()) or candidates[0].title

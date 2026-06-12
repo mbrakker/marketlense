@@ -2,7 +2,32 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
+import hashlib
+import random
+from typing import Optional
+
+from src.contracts.pdf_contents import PdfContentsDetectionRequest
+from src.contracts.pdf_context import PdfContext, PdfContextBuildRequest
+from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextExtractResponse
+from src.contracts.pdf_utils import PdfInfoRequest, PdfInfoResponse
+from src.contracts.report_assets import PreviewRequest
+from src.contracts.report_generation import ReportRuntimeState
+from src.generators.report_generation_dependencies import ReportSourceDependencies
+from src.generators.report_generation_shared import (
+    contents_cache_key,
+    logger,
+    pdf_info_cache_key,
+    text_cache_key,
+)
+from src.generators.report_source_cache import (
+    bind_report_source_cache,
+    load_report_source_cache,
+    write_report_source_cache,
+)
+from src.utils.logging import child_context, log_event
+
 from .shared import *  # noqa: F401,F403
+from .shared import TextStatus
 from .cache_io import _adapt_cached_contents, _adapt_cached_pdf_info, _adapt_cached_text
 
 

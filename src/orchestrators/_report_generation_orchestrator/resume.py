@@ -17,6 +17,7 @@ from src.contracts.report_generation import (
     ReportAnalysisState,
     ReportRuntimeState,
 )
+from src.contracts.semantic_ids import ReportId
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
@@ -317,7 +318,7 @@ def _run_signal_artifact_generation(
         AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=runtime.settings.output_dir,
-            report_id=runtime.file.file_id,
+            report_id=ReportId(runtime.file.file_id),
             pack_name=SIGNAL_ARTIFACT_PACK_NAME,
             payload=payload,
             report_slug=runtime.report_name,

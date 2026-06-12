@@ -10,7 +10,12 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, TypeAlias
 import pymupdf as fitz
 
 from ..visual_heuristics import *
-from .chart_layout import *
+from .chart_layout import (
+    _caption_blocks,
+    _chart_axis_label_band_like,
+    _compact_top_chart_title_like,
+    _drawing_rects,
+)
 
 if TYPE_CHECKING:
     from ..visual_heuristics import (

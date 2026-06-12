@@ -69,7 +69,6 @@ def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
 
 
-
 _CROSS_REPORT_PUBLICATION_MODES = {
     "generate_only",
     "validate_only",

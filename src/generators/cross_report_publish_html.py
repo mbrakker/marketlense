@@ -431,8 +431,9 @@ def _coerce_pages(metadata: dict[str, Any]) -> list[int]:
             continue
         if page > 0 and page not in pages:
             pages.append(page)
+    raw_page = metadata.get("page")
     try:
-        page = int(metadata.get("page"))
+        page = int(raw_page) if raw_page is not None else 0
     except (TypeError, ValueError):
         page = 0
     if page > 0 and page not in pages:

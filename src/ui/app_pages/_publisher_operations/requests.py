@@ -2,6 +2,10 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
+import os
+from urllib.parse import urlsplit
+
+from .shared import _AUDIT_PRESETS
 from .shared import *  # noqa: F401,F403
 
 

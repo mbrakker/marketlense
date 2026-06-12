@@ -6,7 +6,6 @@ import typer
 from rich.console import Console
 
 
-
 cli_app = typer.Typer(
     add_completion=False,
     help="PDF -> Structured HTML digests",
@@ -16,6 +15,7 @@ cli_app = typer.Typer(
 console = Console()
 
 logger = logging.getLogger("market_lense.cli")
+
 
 @cli_app.callback(invoke_without_command=True)
 def cli(
@@ -27,6 +27,7 @@ def cli(
         from src import cli as cli_facade
 
         cli_facade.ingest(folder=folder, limit=limit)
+
 
 def main() -> None:
     cli_app()

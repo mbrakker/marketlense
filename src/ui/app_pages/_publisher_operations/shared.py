@@ -44,7 +44,8 @@ def _selected_run_payload(
 ) -> UiRunPollResponse | None:
     from src.ui.app_pages import publisher_operations as boundary
 
-    polled = boundary.poll_selected_run(settings, max_bytes=64000)
+    poller = getattr(boundary, "poll_selected_run")
+    polled = poller(settings, max_bytes=64000)
     if polled is None or polled.record.run_type != run_type:
         return None
     return polled

@@ -371,16 +371,26 @@ def _targets() -> Iterable[MutationTarget]:
             report_module="src/services/openai_service.py",
         ),
         MutationTarget(
-            module_path=ROOT / "src" / "services" / "drive_service.py",
+            module_path=ROOT
+            / "src"
+            / "services"
+            / "_drive_service"
+            / "client_cache.py",
             test_paths=("tests/test_drive_service_threading.py",),
             max_mutants=3,
             min_score=60.0,
+            report_module="src/services/drive_service.py",
         ),
         MutationTarget(
-            module_path=ROOT / "src" / "services" / "wordpress_service.py",
+            module_path=ROOT
+            / "src"
+            / "services"
+            / "_wordpress_service"
+            / "transport.py",
             test_paths=("tests/test_wordpress_service.py",),
             max_mutants=3,
             min_score=60.0,
+            report_module="src/services/wordpress_service.py",
         ),
         MutationTarget(
             module_path=ROOT

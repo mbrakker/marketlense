@@ -63,7 +63,6 @@ def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
 
 
-
 @cli_app.command("discover-publisher-inventory")
 def discover_publisher_inventory(
     insights_url: str = typer.Argument(..., help="Publisher insights URL to crawl"),

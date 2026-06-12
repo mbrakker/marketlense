@@ -7,5 +7,6 @@ from ._report_source_generator.cache_io import *
 from ._report_source_generator.source_loading import *
 from ._report_source_generator.text_validation import *
 from ._report_source_generator.workflow import *
+from ._report_source_generator.workflow import prepare_report_source
 
 __all__ = [name for name in globals() if not name.startswith("__")]
