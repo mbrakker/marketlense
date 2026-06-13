@@ -5,8 +5,6 @@
  * Run with: wp eval-file Wordpress/scripts/audit-report-card-contracts.php
  */
 
-declare(strict_types=1);
-
 if (! defined('ABSPATH')) {
     fwrite(STDERR, "WordPress must be loaded before running this audit.\n");
     exit(1);
