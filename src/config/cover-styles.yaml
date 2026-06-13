@@ -1,49 +1,53 @@
-schema_version: "1.0"
+schema_version: "2.0"
 
-layout:
-  width: 1600
-  height: 900
-  accent_width: 96
-  margin_x: 120
-  margin_y: 90
-  label_font_size: 34
-  title_font_max: 88
-  title_font_min: 36
-  publisher_font_size: 32
-  time_font_size: 26
-  title_line_spacing: 0.35
-  label_gap: 24
-  footer_gap: 28
-  pill_padding_x: 20
-  pill_padding_y: 10
-  pill_radius: 18
-  pill_border_width: 2
-  pill_fill_color: "#FFFFFF"
-  pill_text_color: "#0F172A"
-  pill_border_color: "#FFFFFF"
+palette:
+  background: "#061A31"
+  background_elevated: "#082B54"
+  geometry: "#6F94B5"
+  geometry_highlight: "#D8E8F3"
+  text: "#F8FAFC"
 
-defaults:
-  background_color: "#0F172A"
-  accent_color: "#38BDF8"
-  text_color: "#F8FAFC"
-  category_label: "Industry Report"
-  font_regular_path: "./templates/GOTHICB.TTF"
-  font_bold_path: "./templates/GOTHICB.TTF"
-  background_image_path: ""
+fonts:
+  regular_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
+  bold_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
 
-categories:
-  technology:
-    accent_color: "#6366F1"
-    category_label: "Technology"
-  healthcare:
-    accent_color: "#22C55E"
-    category_label: "Healthcare"
-  energy:
-    accent_color: "#F97316"
-    category_label: "Energy"
-  finance:
-    accent_color: "#0EA5E9"
-    category_label: "Finance"
-  consumer:
-    accent_color: "#EC4899"
-    category_label: "Consumer"
+layouts:
+  small:
+    width: 1600
+    height: 900
+    publisher_rect: [120, 92, 920, 64]
+    title_rect: [120, 220, 920, 390]
+    period_rect: [120, 744, 920, 54]
+    publisher_font_max: 34
+    publisher_font_min: 22
+    title_font_max: 72
+    title_font_min: 30
+    period_font_max: 28
+    period_font_min: 20
+    title_line_spacing: 0.28
+  medium:
+    width: 1200
+    height: 1500
+    publisher_rect: [96, 112, 1008, 72]
+    title_rect: [96, 330, 1008, 650]
+    period_rect: [96, 1324, 1008, 60]
+    publisher_font_max: 34
+    publisher_font_min: 22
+    title_font_max: 74
+    title_font_min: 32
+    period_font_max: 28
+    period_font_min: 20
+    title_line_spacing: 0.30
+  large:
+    width: 1200
+    height: 1600
+    publisher_rect: [96, 112, 1008, 72]
+    title_rect: [96, 350, 1008, 720]
+    period_rect: [96, 1418, 1008, 60]
+    publisher_font_max: 34
+    publisher_font_min: 22
+    title_font_max: 78
+    title_font_min: 34
+    period_font_max: 28
+    period_font_min: 20
+    title_line_spacing: 0.30

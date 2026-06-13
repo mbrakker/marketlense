@@ -72,11 +72,15 @@ def _relative_href(from_dir: str, target_path: str) -> str:
     return quote(relative.replace(os.sep, "/"), safe="/#?=&:%")
 
 
-def _report_template_bundle_sha(runtime: ReportRuntimeState, dependencies) -> str | None:
+def _report_template_bundle_sha(
+    runtime: ReportRuntimeState, dependencies
+) -> str | None:
     template_dir = Path(__file__).resolve().parents[2] / "templates"
     hashes: dict[str, str] = {}
     for template_name in ("report.html.j2", "report.css.j2", "_report_macros.j2"):
-        digest = template_sha256(template_dir / template_name, runtime.ctx, dependencies)
+        digest = template_sha256(
+            template_dir / template_name, runtime.ctx, dependencies
+        )
         if not digest:
             return None
         hashes[template_name] = digest
@@ -382,6 +386,7 @@ def render_report_output(
             cover_ctx,
         )
         cover_outcome = cover_outcomes[0] if cover_outcomes else None
+        cover_assets = getattr(cover_outcome, "assets", None)
         logger.info(
             log_event(
                 cover_ctx,
@@ -391,7 +396,15 @@ def render_report_output(
                 fields={
                     "file_id": runtime.file.file_id,
                     "status": cover_outcome.status if cover_outcome else "skipped",
-                    "output_path": cover_outcome.output_path if cover_outcome else "",
+                    "small_output_path": (
+                        cover_assets.small.output_path if cover_assets else ""
+                    ),
+                    "medium_output_path": (
+                        cover_assets.medium.output_path if cover_assets else ""
+                    ),
+                    "large_output_path": (
+                        cover_assets.large.output_path if cover_assets else ""
+                    ),
                     "error": cover_outcome.error if cover_outcome else "",
                 },
             )

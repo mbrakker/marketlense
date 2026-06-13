@@ -12,47 +12,26 @@ class CoverImageLayout:
     schema_version: str = field(metadata={"doc": "Cover image layout schema version."})
     width: int = field(metadata={"doc": "Output image width in pixels."})
     height: int = field(metadata={"doc": "Output image height in pixels."})
-    accent_width: int = field(
-        metadata={"doc": "Width of the left accent band in pixels."}
-    )
-    margin_x: int = field(metadata={"doc": "Horizontal margin for text layout."})
-    margin_y: int = field(metadata={"doc": "Vertical margin for text layout."})
-    label_font_size: int = field(
-        metadata={"doc": "Base font size for the category label."}
-    )
+    publisher_x: int = field(metadata={"doc": "Publisher rectangle left edge."})
+    publisher_y: int = field(metadata={"doc": "Publisher rectangle top edge."})
+    publisher_width: int = field(metadata={"doc": "Publisher rectangle width."})
+    publisher_height: int = field(metadata={"doc": "Publisher rectangle height."})
+    title_x: int = field(metadata={"doc": "Title rectangle left edge."})
+    title_y: int = field(metadata={"doc": "Title rectangle top edge."})
+    title_width: int = field(metadata={"doc": "Title rectangle width."})
+    title_height: int = field(metadata={"doc": "Title rectangle height."})
+    period_x: int = field(metadata={"doc": "Covered-period rectangle left edge."})
+    period_y: int = field(metadata={"doc": "Covered-period rectangle top edge."})
+    period_width: int = field(metadata={"doc": "Covered-period rectangle width."})
+    period_height: int = field(metadata={"doc": "Covered-period rectangle height."})
     title_font_max: int = field(metadata={"doc": "Max font size for the report title."})
     title_font_min: int = field(metadata={"doc": "Min font size for the report title."})
-    publisher_font_size: int = field(
-        metadata={"doc": "Base font size for the publisher name."}
-    )
-    time_font_size: int = field(
-        metadata={"doc": "Base font size for the time period pill text."}
-    )
+    publisher_font_max: int = field(metadata={"doc": "Max publisher font size."})
+    publisher_font_min: int = field(metadata={"doc": "Min publisher font size."})
+    period_font_max: int = field(metadata={"doc": "Max covered-period font size."})
+    period_font_min: int = field(metadata={"doc": "Min covered-period font size."})
     title_line_spacing: float = field(
         metadata={"doc": "Line spacing multiplier for wrapped title text."}
-    )
-    label_gap: int = field(metadata={"doc": "Gap below the category label in pixels."})
-    footer_gap: int = field(metadata={"doc": "Gap above the footer text in pixels."})
-    pill_padding_x: int = field(
-        metadata={"doc": "Horizontal padding for the time period pill."}
-    )
-    pill_padding_y: int = field(
-        metadata={"doc": "Vertical padding for the time period pill."}
-    )
-    pill_radius: int = field(
-        metadata={"doc": "Corner radius for the time period pill."}
-    )
-    pill_border_width: int = field(
-        metadata={"doc": "Border width for the time period pill."}
-    )
-    pill_fill_color: str = field(
-        metadata={"doc": "Fill color for the time period pill."}
-    )
-    pill_text_color: str = field(
-        metadata={"doc": "Text color for the time period pill."}
-    )
-    pill_border_color: str = field(
-        metadata={"doc": "Border color for the time period pill."}
     )
 
 
@@ -62,44 +41,18 @@ class CoverImageStyle:
     background_color: str = field(
         metadata={"doc": "Hex background color for the cover."}
     )
-    accent_color: str = field(metadata={"doc": "Hex accent color for the left band."})
+    background_elevated_color: str = field(
+        metadata={"doc": "Hex color for elevated background planes."}
+    )
+    geometry_color: str = field(metadata={"doc": "Hex base geometry color."})
+    geometry_highlight_color: str = field(
+        metadata={"doc": "Hex geometry highlight color."}
+    )
     text_color: str = field(metadata={"doc": "Hex text color for labels and title."})
-    category_label: str = field(metadata={"doc": "Category label text (optional)."})
     font_regular_path: str = field(
         metadata={"doc": "Filesystem path to the regular font."}
     )
     font_bold_path: str = field(metadata={"doc": "Filesystem path to the bold font."})
-    background_image_path: Optional[str] = field(
-        default=None, metadata={"doc": "Optional background image path."}
-    )
-
-
-@dataclass(frozen=True)
-class CoverImageStyleOverrides:
-    schema_version: str = field(
-        metadata={"doc": "Cover image style overrides schema version."}
-    )
-    background_color: Optional[str] = field(
-        default=None, metadata={"doc": "Override for background color."}
-    )
-    accent_color: Optional[str] = field(
-        default=None, metadata={"doc": "Override for accent color."}
-    )
-    text_color: Optional[str] = field(
-        default=None, metadata={"doc": "Override for text color."}
-    )
-    category_label: Optional[str] = field(
-        default=None, metadata={"doc": "Override for category label."}
-    )
-    font_regular_path: Optional[str] = field(
-        default=None, metadata={"doc": "Override for regular font path."}
-    )
-    font_bold_path: Optional[str] = field(
-        default=None, metadata={"doc": "Override for bold font path."}
-    )
-    background_image_path: Optional[str] = field(
-        default=None, metadata={"doc": "Override for background image path."}
-    )
 
 
 @dataclass(frozen=True)
@@ -108,11 +61,8 @@ class CoverImageStyleConfig:
         metadata={"doc": "Cover image style config schema version."}
     )
     defaults: CoverImageStyle = field(metadata={"doc": "Default cover image style."})
-    categories: Dict[str, CoverImageStyleOverrides] = field(
-        metadata={"doc": "Per-category style overrides."}
-    )
-    layout: CoverImageLayout = field(
-        metadata={"doc": "Layout configuration shared across categories."}
+    layouts: Dict[str, CoverImageLayout] = field(
+        metadata={"doc": "Canonical small, medium, and large cover layouts."}
     )
 
 
@@ -218,12 +168,6 @@ class CoverImageGenerationOutcome:
     file_id: str = field(metadata={"doc": "Report file identifier."})
     title: str = field(metadata={"doc": "Report title."})
     status: str = field(metadata={"doc": "Outcome status: generated|error|skipped."})
-    output_path: Optional[str] = field(
-        default=None,
-        metadata={
-            "doc": "Legacy schema 1.0 single-cover path retained until caller migration."
-        },
-    )
     assets: Optional[CardCoverAssetSet] = field(
         default=None,
         metadata={
@@ -262,12 +206,15 @@ class CoverImageRenderRequest:
         metadata={"doc": "Cover image render request schema version."}
     )
     output_path: str = field(metadata={"doc": "Filesystem path for the rendered PNG."})
+    size: str = field(metadata={"doc": "Canonical cover size being rendered."})
     title: str = field(metadata={"doc": "Report title."})
     publisher: Optional[str] = field(metadata={"doc": "Report publisher (optional)."})
-    category_label: str = field(metadata={"doc": "Category label text."})
     style: CoverImageStyle = field(metadata={"doc": "Resolved style for the report."})
     layout: CoverImageLayout = field(
         metadata={"doc": "Layout configuration for rendering."}
+    )
+    fingerprint: CoverFingerprint = field(
+        metadata={"doc": "Deterministic semantic geometry fingerprint."}
     )
     time_period: Optional[str] = field(
         default=None, metadata={"doc": "Optional time period label."}
@@ -284,3 +231,6 @@ class CoverImageRenderResponse:
     )
     width: int = field(metadata={"doc": "Rendered image width in pixels."})
     height: int = field(metadata={"doc": "Rendered image height in pixels."})
+    title_font_size: int = field(
+        metadata={"doc": "Measured title font size used by the renderer."}
+    )

@@ -369,8 +369,11 @@ def render_cover_images() -> None:
             st.subheader("Style Summary")
             st.json(
                 {
-                    "layout": asdict(style_config.config.layout),
-                    "categories": sorted(list(style_config.config.categories.keys())),
+                    "palette_and_fonts": asdict(style_config.config.defaults),
+                    "layouts": {
+                        size: asdict(layout)
+                        for size, layout in style_config.config.layouts.items()
+                    },
                 }
             )
         except UI_SURFACE_EXCEPTIONS as exc:

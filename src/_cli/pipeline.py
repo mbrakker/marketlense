@@ -309,7 +309,7 @@ def generate_covers(
     console.print("[cyan]Generating cover images...[/cyan]")
     outcomes = run_cover_image_generation(
         CoverImageOrchestratorRequest(
-            schema_version="1.0",
+            schema_version="2.0",
             reports_db=settings.reports_db,
             output_dir=settings.output_dir,
             style_config_path=style_config,
@@ -323,13 +323,20 @@ def generate_covers(
     table.add_column("Report")
     table.add_column("File ID")
     table.add_column("Status")
-    table.add_column("Output")
+    table.add_column("Small")
+    table.add_column("Medium")
+    table.add_column("Large")
+    table.add_column("Error")
     for outcome in outcomes:
+        assets = outcome.assets
         table.add_row(
             outcome.title,
             outcome.file_id,
             outcome.status,
-            outcome.output_path or outcome.error or "",
+            assets.small.output_path if assets else "",
+            assets.medium.output_path if assets else "",
+            assets.large.output_path if assets else "",
+            outcome.error or "",
         )
     console.print(table)
     console.print(f"[green]Done: {len(outcomes)} report(s).[/green]")

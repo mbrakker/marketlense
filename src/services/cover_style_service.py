@@ -10,7 +10,6 @@ from src.contracts.cover_images import (
     CoverImageLayout,
     CoverImageStyle,
     CoverImageStyleConfig,
-    CoverImageStyleOverrides,
     CoverStyleLoadRequest,
     CoverStyleLoadResponse,
 )
@@ -41,13 +40,6 @@ def _require_str(value: Any, label: str) -> str:
             retryable=False,
         )
     return value
-
-
-def _optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    value_str = str(value).strip()
-    return value_str if value_str else None
 
 
 def _require_int(value: Any, label: str) -> int:
@@ -114,85 +106,82 @@ def _load_yaml(path: str) -> Dict[str, Any]:
     return payload
 
 
-def _parse_layout(payload: Dict[str, Any]) -> CoverImageLayout:
+def _parse_rect(payload: Any, label: str) -> tuple[int, int, int, int]:
+    if not isinstance(payload, list) or len(payload) != 4:
+        raise AppError(
+            code="cover_style_invalid",
+            message=f"{label} must contain four integers",
+            retryable=False,
+        )
+    values = tuple(_require_int(item, label) for item in payload)
+    return values[0], values[1], values[2], values[3]
+
+
+def _parse_layout(payload: Dict[str, Any], size: str) -> CoverImageLayout:
+    publisher_x, publisher_y, publisher_width, publisher_height = _parse_rect(
+        payload.get("publisher_rect"), f"layouts.{size}.publisher_rect"
+    )
+    title_x, title_y, title_width, title_height = _parse_rect(
+        payload.get("title_rect"), f"layouts.{size}.title_rect"
+    )
+    period_x, period_y, period_width, period_height = _parse_rect(
+        payload.get("period_rect"), f"layouts.{size}.period_rect"
+    )
     return CoverImageLayout(
-        schema_version="1.0",
-        width=_require_int(payload.get("width"), "layout.width"),
-        height=_require_int(payload.get("height"), "layout.height"),
-        accent_width=_require_int(payload.get("accent_width"), "layout.accent_width"),
-        margin_x=_require_int(payload.get("margin_x"), "layout.margin_x"),
-        margin_y=_require_int(payload.get("margin_y"), "layout.margin_y"),
-        label_font_size=_require_int(
-            payload.get("label_font_size"), "layout.label_font_size"
-        ),
+        schema_version="2.0",
+        width=_require_int(payload.get("width"), f"layouts.{size}.width"),
+        height=_require_int(payload.get("height"), f"layouts.{size}.height"),
+        publisher_x=publisher_x,
+        publisher_y=publisher_y,
+        publisher_width=publisher_width,
+        publisher_height=publisher_height,
+        title_x=title_x,
+        title_y=title_y,
+        title_width=title_width,
+        title_height=title_height,
+        period_x=period_x,
+        period_y=period_y,
+        period_width=period_width,
+        period_height=period_height,
         title_font_max=_require_int(
-            payload.get("title_font_max"), "layout.title_font_max"
+            payload.get("title_font_max"), f"layouts.{size}.title_font_max"
         ),
         title_font_min=_require_int(
-            payload.get("title_font_min"), "layout.title_font_min"
+            payload.get("title_font_min"), f"layouts.{size}.title_font_min"
         ),
-        publisher_font_size=_require_int(
-            payload.get("publisher_font_size"), "layout.publisher_font_size"
+        publisher_font_max=_require_int(
+            payload.get("publisher_font_max"), f"layouts.{size}.publisher_font_max"
         ),
-        time_font_size=_require_int(
-            payload.get("time_font_size"), "layout.time_font_size"
+        publisher_font_min=_require_int(
+            payload.get("publisher_font_min"), f"layouts.{size}.publisher_font_min"
+        ),
+        period_font_max=_require_int(
+            payload.get("period_font_max"), f"layouts.{size}.period_font_max"
+        ),
+        period_font_min=_require_int(
+            payload.get("period_font_min"), f"layouts.{size}.period_font_min"
         ),
         title_line_spacing=_require_float(
-            payload.get("title_line_spacing"), "layout.title_line_spacing"
-        ),
-        label_gap=_require_int(payload.get("label_gap"), "layout.label_gap"),
-        footer_gap=_require_int(payload.get("footer_gap"), "layout.footer_gap"),
-        pill_padding_x=_require_int(
-            payload.get("pill_padding_x"), "layout.pill_padding_x"
-        ),
-        pill_padding_y=_require_int(
-            payload.get("pill_padding_y"), "layout.pill_padding_y"
-        ),
-        pill_radius=_require_int(payload.get("pill_radius"), "layout.pill_radius"),
-        pill_border_width=_require_int(
-            payload.get("pill_border_width"), "layout.pill_border_width"
-        ),
-        pill_fill_color=_require_str(
-            payload.get("pill_fill_color"), "layout.pill_fill_color"
-        ),
-        pill_text_color=_require_str(
-            payload.get("pill_text_color"), "layout.pill_text_color"
-        ),
-        pill_border_color=_require_str(
-            payload.get("pill_border_color"), "layout.pill_border_color"
+            payload.get("title_line_spacing"),
+            f"layouts.{size}.title_line_spacing",
         ),
     )
 
 
-def _parse_style(payload: Dict[str, Any]) -> CoverImageStyle:
+def _parse_style(palette: Dict[str, Any], fonts: Dict[str, Any]) -> CoverImageStyle:
     return CoverImageStyle(
-        schema_version="1.0",
-        background_color=_require_str(
-            payload.get("background_color"), "defaults.background_color"
+        schema_version="2.0",
+        background_color=_require_str(palette.get("background"), "palette.background"),
+        background_elevated_color=_require_str(
+            palette.get("background_elevated"), "palette.background_elevated"
         ),
-        accent_color=_require_str(payload.get("accent_color"), "defaults.accent_color"),
-        text_color=_require_str(payload.get("text_color"), "defaults.text_color"),
-        category_label=_optional_str(payload.get("category_label")) or "",
-        font_regular_path=_require_str(
-            payload.get("font_regular_path"), "defaults.font_regular_path"
+        geometry_color=_require_str(palette.get("geometry"), "palette.geometry"),
+        geometry_highlight_color=_require_str(
+            palette.get("geometry_highlight"), "palette.geometry_highlight"
         ),
-        font_bold_path=_require_str(
-            payload.get("font_bold_path"), "defaults.font_bold_path"
-        ),
-        background_image_path=_optional_str(payload.get("background_image_path")),
-    )
-
-
-def _parse_overrides(payload: Dict[str, Any]) -> CoverImageStyleOverrides:
-    return CoverImageStyleOverrides(
-        schema_version="1.0",
-        background_color=_optional_str(payload.get("background_color")),
-        accent_color=_optional_str(payload.get("accent_color")),
-        text_color=_optional_str(payload.get("text_color")),
-        category_label=_optional_str(payload.get("category_label")),
-        font_regular_path=_optional_str(payload.get("font_regular_path")),
-        font_bold_path=_optional_str(payload.get("font_bold_path")),
-        background_image_path=_optional_str(payload.get("background_image_path")),
+        text_color=_require_str(palette.get("text"), "palette.text"),
+        font_regular_path=_require_str(fonts.get("regular_path"), "fonts.regular_path"),
+        font_bold_path=_require_str(fonts.get("bold_path"), "fonts.bold_path"),
     )
 
 
@@ -210,31 +199,33 @@ def load_cover_styles(
         )
     )
     data = _load_yaml(config_path)
-    layout_raw = data.get("layout") or {}
-    defaults_raw = data.get("defaults") or {}
-    categories_raw = data.get("categories") or {}
-
-    layout = _parse_layout(layout_raw)
-    defaults = _parse_style(defaults_raw)
-    categories: Dict[str, CoverImageStyleOverrides] = {}
-    if isinstance(categories_raw, dict):
-        for key, value in categories_raw.items():
-            key_str = str(key).strip().lower()
-            if not key_str:
-                continue
-            if not isinstance(value, dict):
-                raise AppError(
-                    code="cover_style_invalid",
-                    message=f"Category style must be a mapping: {key_str}",
-                    retryable=False,
-                )
-            categories[key_str] = _parse_overrides(value)
+    if str(data.get("schema_version") or "").strip() != "2.0":
+        raise AppError(
+            code="cover_style_invalid",
+            message="Cover style config must use schema version 2.0",
+            retryable=False,
+        )
+    palette_raw = data.get("palette") or {}
+    fonts_raw = data.get("fonts") or {}
+    layouts_raw = data.get("layouts") or {}
+    if not all(
+        isinstance(item, dict) for item in (palette_raw, fonts_raw, layouts_raw)
+    ):
+        raise AppError(
+            code="cover_style_invalid",
+            message="Cover palette, fonts, and layouts must be mappings",
+            retryable=False,
+        )
+    defaults = _parse_style(palette_raw, fonts_raw)
+    layouts = {
+        size: _parse_layout(layouts_raw.get(size) or {}, size)
+        for size in ("small", "medium", "large")
+    }
 
     config = CoverImageStyleConfig(
-        schema_version=str(data.get("schema_version", "1.0")),
+        schema_version="2.0",
         defaults=defaults,
-        categories=categories,
-        layout=layout,
+        layouts=layouts,
     )
     logger.info(
         log_event(
@@ -244,9 +235,10 @@ def load_cover_styles(
             module=logger.name,
             fields={
                 "path": config_path,
-                "category_count": len(categories),
-                "width": layout.width,
-                "height": layout.height,
+                "layouts": {
+                    size: [layout.width, layout.height]
+                    for size, layout in layouts.items()
+                },
             },
         )
     )

@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import pytest
+from PIL import Image
+
+from src.contracts.cover_images import (
+    CoverImageGenerationRequest,
+    CoverImageRenderRequest,
+    CoverImageReport,
+    CoverStyleLoadRequest,
+)
+from src.contracts.report_cards import CoverFingerprint
+from src.contracts.run_context import RunContext
+from src.generators.cover_image_generator import generate_cover_images
+from src.services.cover_image_service import render_cover_image
+from src.services.cover_style_service import load_cover_styles
+from src.utils.errors import AppError
+
+pytestmark = pytest.mark.integration
+
+STYLE_PATH = (
+    Path(__file__).resolve().parents[2] / "src" / "config" / "cover-styles.yaml"
+)
+LIVE_TITLE = (
+    "Global Economic Conditions and Investment Outlook Across Major Markets "
+    "Through the Second Half 2026."
+)
+
+
+def _ctx() -> RunContext:
+    return RunContext(
+        schema_version="1.0",
+        run_id="cover-integration",
+        task_id="render-assets",
+        span_id="span-cover",
+    )
+
+
+def _fingerprint() -> CoverFingerprint:
+    return CoverFingerprint(
+        schema_version="1.0",
+        geometry_family="forecast_horizon",
+        evidence_shape="trend",
+        direction="neutral",
+        geography_scope="global",
+        evidence_density="metric_rich",
+        domain_layer="forecast",
+        seed=1344902748,
+        selection_reason="Forward projections dominate the report evidence.",
+    )
+
+
+def test_real_cover_renderer_writes_three_exact_assets_with_complete_title(
+    tmp_path, caplog, assert_logs_have_required_fields
+) -> None:
+    assert len(LIVE_TITLE) == 100
+    caplog.set_level(logging.INFO, logger="market_lense.cover_image_service")
+
+    outcomes = generate_cover_images(
+        CoverImageGenerationRequest(
+            schema_version="2.0",
+            output_dir=str(tmp_path / "out"),
+            style_config_path=str(STYLE_PATH),
+            reports=[
+                CoverImageReport(
+                    schema_version="2.0",
+                    file_id="drive-123",
+                    title=LIVE_TITLE,
+                    publisher="Market Lense Research",
+                    report_slug="global-economic-conditions",
+                    time_period="Q2 2026",
+                    region="Global",
+                    fingerprint=_fingerprint(),
+                )
+            ],
+        ),
+        _ctx(),
+    )
+
+    assert len(outcomes) == 1
+    assert outcomes[0].status == "generated"
+    assets = outcomes[0].assets
+    assert assets is not None
+    assert Image.open(assets.small.output_path).size == (1600, 900)
+    assert Image.open(assets.medium.output_path).size == (1200, 1500)
+    assert Image.open(assets.large.output_path).size == (1200, 1600)
+    complete_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.cover_image_service"
+        and json.loads(record.message).get("event") == "cover_render_complete"
+    ]
+    assert len(complete_events) == 3
+    assert_logs_have_required_fields(complete_events)
+    assert {event["fields"]["size"] for event in complete_events} == {
+        "small",
+        "medium",
+        "large",
+    }
+    assert all(event["fields"]["title"] == LIVE_TITLE for event in complete_events)
+
+
+def test_real_cover_renderer_rejects_impossible_unbroken_title(
+    tmp_path, assert_app_error
+) -> None:
+    config = load_cover_styles(
+        CoverStyleLoadRequest(schema_version="2.0", path=str(STYLE_PATH)),
+        _ctx(),
+    ).config
+
+    with pytest.raises(AppError) as captured:
+        render_cover_image(
+            CoverImageRenderRequest(
+                schema_version="2.0",
+                output_path=str(tmp_path / "impossible.png"),
+                size="small",
+                title="X" * 80,
+                publisher="Market Lense Research",
+                time_period="Global | Q2 2026",
+                style=config.defaults,
+                layout=config.layouts["small"],
+                fingerprint=_fingerprint(),
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        captured.value,
+        code="cover_title_overflow",
+        retryable=False,
+    )

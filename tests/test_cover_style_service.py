@@ -14,6 +14,29 @@ def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
+def test_default_cover_style_exposes_three_canonical_layouts() -> None:
+    response = load_cover_styles(
+        CoverStyleLoadRequest(schema_version="1.0", path=""),
+        _ctx(),
+    )
+
+    config = response.config
+    assert config.schema_version == "2.0"
+    assert (config.layouts["small"].width, config.layouts["small"].height) == (
+        1600,
+        900,
+    )
+    assert (config.layouts["medium"].width, config.layouts["medium"].height) == (
+        1200,
+        1500,
+    )
+    assert (config.layouts["large"].width, config.layouts["large"].height) == (
+        1200,
+        1600,
+    )
+    assert not hasattr(config, "categories")
+
+
 def test_cover_style_service_rejects_non_mapping_root(
     tmp_path: Path,
     assert_app_error,

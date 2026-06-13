@@ -11888,16 +11888,6 @@
         "file_id": {
           "type": "string"
         },
-        "output_path": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "schema_version": {
           "type": "string"
         },
@@ -11946,56 +11936,47 @@
     "src.contracts.cover_images.CoverImageLayout": {
       "additionalProperties": false,
       "properties": {
-        "accent_width": {
-          "type": "integer"
-        },
-        "footer_gap": {
-          "type": "integer"
-        },
         "height": {
           "type": "integer"
         },
-        "label_font_size": {
+        "period_font_max": {
           "type": "integer"
         },
-        "label_gap": {
+        "period_font_min": {
           "type": "integer"
         },
-        "margin_x": {
+        "period_height": {
           "type": "integer"
         },
-        "margin_y": {
+        "period_width": {
           "type": "integer"
         },
-        "pill_border_color": {
-          "type": "string"
-        },
-        "pill_border_width": {
+        "period_x": {
           "type": "integer"
         },
-        "pill_fill_color": {
-          "type": "string"
-        },
-        "pill_padding_x": {
+        "period_y": {
           "type": "integer"
         },
-        "pill_padding_y": {
+        "publisher_font_max": {
           "type": "integer"
         },
-        "pill_radius": {
+        "publisher_font_min": {
           "type": "integer"
         },
-        "pill_text_color": {
-          "type": "string"
+        "publisher_height": {
+          "type": "integer"
         },
-        "publisher_font_size": {
+        "publisher_width": {
+          "type": "integer"
+        },
+        "publisher_x": {
+          "type": "integer"
+        },
+        "publisher_y": {
           "type": "integer"
         },
         "schema_version": {
           "type": "string"
-        },
-        "time_font_size": {
-          "type": "integer"
         },
         "title_font_max": {
           "type": "integer"
@@ -12003,8 +11984,20 @@
         "title_font_min": {
           "type": "integer"
         },
+        "title_height": {
+          "type": "integer"
+        },
         "title_line_spacing": {
           "type": "number"
+        },
+        "title_width": {
+          "type": "integer"
+        },
+        "title_x": {
+          "type": "integer"
+        },
+        "title_y": {
+          "type": "integer"
         },
         "width": {
           "type": "integer"
@@ -12014,24 +12007,25 @@
         "schema_version",
         "width",
         "height",
-        "accent_width",
-        "margin_x",
-        "margin_y",
-        "label_font_size",
+        "publisher_x",
+        "publisher_y",
+        "publisher_width",
+        "publisher_height",
+        "title_x",
+        "title_y",
+        "title_width",
+        "title_height",
+        "period_x",
+        "period_y",
+        "period_width",
+        "period_height",
         "title_font_max",
         "title_font_min",
-        "publisher_font_size",
-        "time_font_size",
-        "title_line_spacing",
-        "label_gap",
-        "footer_gap",
-        "pill_padding_x",
-        "pill_padding_y",
-        "pill_radius",
-        "pill_border_width",
-        "pill_fill_color",
-        "pill_text_color",
-        "pill_border_color"
+        "publisher_font_max",
+        "publisher_font_min",
+        "period_font_max",
+        "period_font_min",
+        "title_line_spacing"
       ],
       "type": "object"
     },
@@ -12082,8 +12076,8 @@
     "src.contracts.cover_images.CoverImageRenderRequest": {
       "additionalProperties": false,
       "properties": {
-        "category_label": {
-          "type": "string"
+        "fingerprint": {
+          "$ref": "#/$defs/src.contracts.report_cards.CoverFingerprint"
         },
         "layout": {
           "$ref": "#/$defs/src.contracts.cover_images.CoverImageLayout"
@@ -12102,6 +12096,9 @@
           ]
         },
         "schema_version": {
+          "type": "string"
+        },
+        "size": {
           "type": "string"
         },
         "style": {
@@ -12124,11 +12121,12 @@
       "required": [
         "schema_version",
         "output_path",
+        "size",
         "title",
         "publisher",
-        "category_label",
         "style",
-        "layout"
+        "layout",
+        "fingerprint"
       ],
       "type": "object"
     },
@@ -12144,6 +12142,9 @@
         "schema_version": {
           "type": "string"
         },
+        "title_font_size": {
+          "type": "integer"
+        },
         "width": {
           "type": "integer"
         }
@@ -12152,7 +12153,8 @@
         "schema_version",
         "output_path",
         "width",
-        "height"
+        "height",
+        "title_font_size"
       ],
       "type": "object"
     },
@@ -12236,29 +12238,22 @@
     "src.contracts.cover_images.CoverImageStyle": {
       "additionalProperties": false,
       "properties": {
-        "accent_color": {
-          "type": "string"
-        },
         "background_color": {
           "type": "string"
         },
-        "background_image_path": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "category_label": {
+        "background_elevated_color": {
           "type": "string"
         },
         "font_bold_path": {
           "type": "string"
         },
         "font_regular_path": {
+          "type": "string"
+        },
+        "geometry_color": {
+          "type": "string"
+        },
+        "geometry_highlight_color": {
           "type": "string"
         },
         "schema_version": {
@@ -12271,9 +12266,10 @@
       "required": [
         "schema_version",
         "background_color",
-        "accent_color",
+        "background_elevated_color",
+        "geometry_color",
+        "geometry_highlight_color",
         "text_color",
-        "category_label",
         "font_regular_path",
         "font_bold_path"
       ],
@@ -12282,17 +12278,14 @@
     "src.contracts.cover_images.CoverImageStyleConfig": {
       "additionalProperties": false,
       "properties": {
-        "categories": {
-          "additionalProperties": {
-            "$ref": "#/$defs/src.contracts.cover_images.CoverImageStyleOverrides"
-          },
-          "type": "object"
-        },
         "defaults": {
           "$ref": "#/$defs/src.contracts.cover_images.CoverImageStyle"
         },
-        "layout": {
-          "$ref": "#/$defs/src.contracts.cover_images.CoverImageLayout"
+        "layouts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/src.contracts.cover_images.CoverImageLayout"
+          },
+          "type": "object"
         },
         "schema_version": {
           "type": "string"
@@ -12301,90 +12294,7 @@
       "required": [
         "schema_version",
         "defaults",
-        "categories",
-        "layout"
-      ],
-      "type": "object"
-    },
-    "src.contracts.cover_images.CoverImageStyleOverrides": {
-      "additionalProperties": false,
-      "properties": {
-        "accent_color": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "background_color": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "background_image_path": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "category_label": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "font_bold_path": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "font_regular_path": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "text_color": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "schema_version"
+        "layouts"
       ],
       "type": "object"
     },

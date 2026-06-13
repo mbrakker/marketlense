@@ -40,3 +40,24 @@ def build_cover_asset_path(
     )
 
     return Path(output_dir) / report_slug_final / "assets" / f"{filename_slug}.png"
+
+
+def build_report_card_asset_path(
+    output_dir: str,
+    file_id: str,
+    title: str,
+    report_slug: str | None,
+    size: str,
+) -> Path:
+    normalized_report_slug = slugify(report_slug) if report_slug else ""
+    if not normalized_report_slug:
+        file_slug = _bounded_slug(file_id, _FILE_ID_MAX)
+        report_base = _bounded_slug(f"{title}.pdf", _REPORT_SLUG_MAX)
+        normalized_report_slug = (
+            f"{report_base}-{file_slug}"
+            if not report_base.endswith(file_slug)
+            else report_base
+        )
+    return (
+        Path(output_dir) / normalized_report_slug / "assets" / f"report-card-{size}.png"
+    )

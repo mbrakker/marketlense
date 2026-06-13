@@ -307,7 +307,14 @@ def execute_ui_run(
                     ),
                 },
                 artifact_paths=[
-                    item.output_path for item in cover_outcomes if item.output_path
+                    asset.output_path
+                    for item in cover_outcomes
+                    if item.assets is not None
+                    for asset in (
+                        item.assets.small,
+                        item.assets.medium,
+                        item.assets.large,
+                    )
                 ],
                 config_snapshot=config_snapshot,
             )
