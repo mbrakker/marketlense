@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 1.5.1
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,12 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.6.0 =
+* Added canonical small, medium, and large report cards across all report placements.
+* Added deterministic semantic cover families with separate landscape and vertical assets.
+* Added complete TLDR, geography, period, key-insight, freshness, and cover-fingerprint metadata.
+* Added fail-closed manifest backfill and published-contract audit support.
 
 = 1.5.1 =
 * Reworked the homepage hero around a horizontal latest governed brief and a dynamic trust panel.

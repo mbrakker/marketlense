@@ -138,7 +138,7 @@ def publish_html(
         )
     base_url = settings.wp.site_url.rstrip("/")
     card_manifest = None
-    if not file_id.startswith("cross-report:"):
+    if settings.wp.post_type == "ml_report" and not file_id.startswith("cross-report:"):
         card_manifest = _load_report_card_manifest(
             request.html_path,
             settings.output_dir,

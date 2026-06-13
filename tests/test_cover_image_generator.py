@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -86,6 +87,9 @@ def test_generate_cover_images_renders_complete_asset_set(
         "report-card-medium.png",
         "report-card-large.png",
     ]
+    assert {Path(request.output_path).parents[1].name for request in requests} == {
+        "retail-trends"
+    }
     assert outcome.assets.small.output_path == requests[0].output_path
     assert outcome.assets.medium.output_path == requests[1].output_path
     assert outcome.assets.large.output_path == requests[2].output_path
@@ -115,3 +119,56 @@ def test_generate_cover_images_propagates_retryable_render_error(
         retryable=True,
         severity="error",
     )
+
+
+def test_generate_cover_images_rejects_blank_output_directory(
+    tmp_path, assert_app_error
+):
+    request = replace(_request(tmp_path), output_dir="  ")
+
+    with pytest.raises(AppError) as err:
+        generate_cover_images(request, _ctx())
+
+    assert_app_error(
+        err.value,
+        code="cover_output_missing",
+        retryable=False,
+        severity="error",
+    )
+
+
+def test_generate_cover_images_normalizes_slug_and_single_covered_period(
+    tmp_path, external_boundary_mocks_only
+):
+    source = _request(tmp_path)
+    report = replace(
+        source.reports[0],
+        report_slug="  ",
+        region=None,
+        time_period="  2026  ",
+    )
+    request = replace(source, reports=[report])
+    captured = []
+
+    def _capture(render_request, ctx):
+        del ctx
+        captured.append(render_request)
+        return CoverImageRenderResponse(
+            schema_version="2.0",
+            output_path=render_request.output_path,
+            width=render_request.layout.width,
+            height=render_request.layout.height,
+            title_font_size=render_request.layout.title_font_max,
+        )
+
+    external_boundary_mocks_only.setattr(
+        cover_image_service, "render_cover_image", _capture
+    )
+
+    outcome = generate_cover_images(request, _ctx())[0]
+
+    assert outcome.status == "generated"
+    assert {item.time_period for item in captured} == {"2026"}
+    assert {Path(item.output_path).parents[1].name for item in captured} == {
+        "retail-trends-pdf-file-1"
+    }

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_start_vector_store_indexing_creates_without_wait_loop(tmp_path):
     settings = _ingest_settings(tmp_path)
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
@@ -49,6 +50,7 @@ def test_start_vector_store_indexing_creates_without_wait_loop(tmp_path):
     assert state.vector_store_status == "indexing"
     assert state.indexed_at_utc is None
     assert state.last_error is None
+
 
 def test_ingest_orchestrator_records_vector_events(
     caplog,
@@ -109,6 +111,7 @@ def test_ingest_orchestrator_records_vector_events(
     assert rec.indexed_at_utc == "2024-01-01T00:00:00Z"
     assert rec.openai_file_id == "file_upload_1"
 
+
 def test_ingest_orchestrator_records_doc_map_summary(tmp_path) -> None:
     settings = _ingest_settings(tmp_path)
     file = DriveFile(
@@ -157,6 +160,7 @@ def test_ingest_orchestrator_records_doc_map_summary(tmp_path) -> None:
     )
     assert rec is not None
     assert rec.doc_map_summary == summary
+
 
 def test_generate_report_vector_store_with_validation(
     tmp_path,
@@ -487,9 +491,10 @@ def test_generate_report_vector_store_with_validation(
         payload for pack_name, payload in analysis_store if pack_name == "artifacts"
     ]
     assert len(artifacts_entries) == 1
-    assert artifacts_entries[0]["summary"]["tldr"] == "tldr"
+    assert artifacts_entries[0]["summary"]["tldr"] == "Complete standard TLDR."
     assert len(artifacts_entries[0]["insights_final"]) == 5
     assert artifacts_entries[0]["quotes_final"][0]["text"] == "Quote"
+
 
 def test_generate_report_adds_signal_artifact_pack_after_projection(tmp_path) -> None:
     settings = _ingest_settings(tmp_path)
@@ -655,6 +660,7 @@ def test_generate_report_adds_signal_artifact_pack_after_projection(tmp_path) ->
     assert payload["source_report_id"] == "file_signal"
     assert payload["signal_store_db"] == settings.signal_store_db
     assert payload["candidate_count"] == 0
+
 
 __all__ = [
     "test_start_vector_store_indexing_creates_without_wait_loop",

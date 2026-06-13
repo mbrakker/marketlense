@@ -4,7 +4,20 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+README = ROOT / "README.md"
+README_WORDPRESS = ROOT / "README_WORDPRESS.md"
 AUDIT_SCRIPT = ROOT / "Wordpress" / "scripts" / "audit-report-card-contracts.php"
+PLUGIN_BOOTSTRAP = (
+    ROOT
+    / "Wordpress"
+    / "wp-content"
+    / "plugins"
+    / "marketlense-core"
+    / "marketlense-core.php"
+)
+PLUGIN_README = (
+    ROOT / "Wordpress" / "wp-content" / "plugins" / "marketlense-core" / "readme.txt"
+)
 PLUGIN = (
     ROOT
     / "Wordpress"
@@ -25,7 +38,9 @@ SHORTCODES = (
 )
 THEME = ROOT / "Wordpress" / "wp-content" / "themes" / "marketlense"
 THEME_CSS = THEME / "assets" / "css" / "theme.css"
+THEME_STYLE = THEME / "style.css"
 REPORT_GRID = THEME / "patterns" / "report-grid.php"
+MUTATION_GATE = ROOT / "scripts" / "ci" / "run_mutation_gate.py"
 
 
 def test_report_card_audit_script_checks_complete_published_contract() -> None:
@@ -161,3 +176,51 @@ def test_canonical_card_css_preserves_all_semantic_text() -> None:
     assert "text-wrap: pretty" in canonical
     assert ":focus-visible" in canonical
     assert "prefers-reduced-motion: reduce" in canonical
+
+
+def test_report_card_release_metadata_and_documentation_are_complete() -> None:
+    plugin = PLUGIN_BOOTSTRAP.read_text(encoding="utf-8")
+    plugin_readme = PLUGIN_README.read_text(encoding="utf-8")
+    theme = THEME_STYLE.read_text(encoding="utf-8")
+    docs = README.read_text(encoding="utf-8") + README_WORDPRESS.read_text(
+        encoding="utf-8"
+    )
+
+    assert "Version: 1.6.0" in plugin
+    assert "MARKETLENSE_CORE_VERSION', '1.6.0'" in plugin
+    assert "Stable tag: 1.6.0" in plugin_readme
+    assert "= 1.6.0 =" in plugin_readme
+    assert "Version: 1.5.0" in theme
+
+    for required_text in (
+        "small",
+        "medium",
+        "large",
+        "18 words",
+        "45 words",
+        "16 geometry families",
+        "1600x900",
+        "1200x1500",
+        "1200x1600",
+        "geometry_family",
+        "seed",
+        "less than 7 days",
+        "globe",
+        "locator",
+        "audit-report-card-contracts.php",
+        "build-plugin-zip.ps1",
+        "build-theme-zip.sh",
+    ):
+        assert required_text in docs
+
+
+def test_report_card_decision_logic_is_covered_by_mutation_gate() -> None:
+    source = MUTATION_GATE.read_text(encoding="utf-8")
+
+    for module_name in (
+        "report_card_projection.py",
+        "cover_image_generator.py",
+        "report_render_generator.py",
+        "publish_generator.py",
+    ):
+        assert f'/ "{module_name}"' in source

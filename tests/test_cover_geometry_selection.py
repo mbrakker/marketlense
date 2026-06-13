@@ -12,6 +12,7 @@ CASES = (
     ("trend", "volatile", "volatility_corridor"),
     ("comparison", "converging", "convergence_funnel"),
     ("comparison", "diverging", "divergence_fan"),
+    ("comparison", "volatile", "parallel_bands"),
     ("comparison", "neutral", "parallel_bands"),
     ("hierarchy", "neutral", "ranked_strata"),
     ("distribution", "neutral", "distribution_field"),
@@ -56,7 +57,7 @@ def test_geometry_table_cannot_collapse_to_one_constant_family() -> None:
     ]
 
     assert len(set(selected)) == 16
-    assert sum(item != selected[0] for item in selected) >= 15
+    assert sum(item != selected[0] for item in selected) >= 16
 
 
 def test_select_geometry_family_rejects_unknown_shape(assert_app_error) -> None:

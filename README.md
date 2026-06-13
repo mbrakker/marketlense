@@ -475,6 +475,12 @@ The block theme is organized as an editorial intelligence portal:
 
 Current theme highlights:
 
+- one canonical reusable report-card system across the portal: `small` cards for report listings and latest-report grids, `medium` cards for hero/snapshot placements, and `large` cards for the featured report
+- complete aligned card copy with no visual truncation: compact TLDRs are limited to 18 words, standard TLDRs are limited to 45 words, and large cards include exactly two key insights
+- deterministic premium covers selected from 16 geometry families using report-content semantics; the persisted fingerprint records `geometry_family`, `primary_signal`, `secondary_signal`, and `seed`
+- one visual identity per report rendered at `1600x900` for small cards, `1200x1500` for medium cards, and `1200x1600` for large cards, with the complete report name, publisher, and covered period in fixed layout zones
+- report facts use pictograms for publication date, geography, and covered period; global reports use a globe while regional and country-specific reports use a locator
+- a `New` badge appears only when the report was published less than 7 days before the current request
 - shortcode-driven header/footer navigation resolution
 - a search-first homepage hero and dynamic homepage intelligence surfaces
 - a semantic enterprise-blue token foundation in `theme.json` plus `assets/css/theme.css` (`text-primary`, `text-secondary`, `text-muted`, `brand-navy`, `signal-blue`, `support-blue`, `surface-white`, `background-cool`, `border-subtle`, `shadow-premium`) while keeping legacy slugs as compatibility aliases

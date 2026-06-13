@@ -55,6 +55,12 @@ from src.contracts.report_analysis import AnalysisStorePackRequest
 
 from src.contracts.report_assets import RenderResponse
 
+from src.contracts.report_cards import (
+    CardCoverAsset,
+    CardCoverAssetSet,
+    ReportCardManifestWriteResponse,
+)
+
 from src.contracts.report_store import ReportMetadataGetResponse
 
 from src.contracts.report_store import ReportSourceDiscoveryRecordRequest
@@ -154,11 +160,21 @@ def _pdf_bytes() -> bytes:
 def _analysis_artifacts(**overrides) -> dict:
     payload = {
         "schema_version": "1.0",
+        "publication_date": "2026-06-09",
         "toc_topics": ["Topic"],
         "summary": {
-            "tldr": "tldr",
+            "tldr": "Complete standard TLDR.",
+            "card_tldr_compact": "Complete compact TLDR.",
             "executive_summary": "exec",
             "claim_evidence_map": [],
+        },
+        "cover_semantics": {
+            "evidence_shape": "trend",
+            "direction": "rising",
+            "geography_scope": "country",
+            "evidence_density": "balanced",
+            "domain_layer": "grid",
+            "selection_reason": "The report is organized around a rising trend.",
         },
         "insights_candidates": [
             {
@@ -174,7 +190,7 @@ def _analysis_artifacts(**overrides) -> dict:
         "insights_final": [
             {
                 "id": "insight-1",
-                "text": "Insight 1",
+                "text": "Insight 1.",
                 "evidence_id": "f1",
                 "evidence": "Evidence 1",
                 "metric": {},
@@ -182,7 +198,7 @@ def _analysis_artifacts(**overrides) -> dict:
             },
             {
                 "id": "insight-2",
-                "text": "Insight 2",
+                "text": "Insight 2.",
                 "evidence_id": "f2",
                 "evidence": "Evidence 2",
                 "metric": {},
@@ -190,7 +206,7 @@ def _analysis_artifacts(**overrides) -> dict:
             },
             {
                 "id": "insight-3",
-                "text": "Insight 3",
+                "text": "Insight 3.",
                 "evidence_id": "f3",
                 "evidence": "Evidence 3",
                 "metric": {},
@@ -198,7 +214,7 @@ def _analysis_artifacts(**overrides) -> dict:
             },
             {
                 "id": "insight-4",
-                "text": "Insight 4",
+                "text": "Insight 4.",
                 "evidence_id": "f4",
                 "evidence": "Evidence 4",
                 "metric": {},
@@ -206,7 +222,7 @@ def _analysis_artifacts(**overrides) -> dict:
             },
             {
                 "id": "insight-5",
-                "text": "Insight 5",
+                "text": "Insight 5.",
                 "evidence_id": "f5",
                 "evidence": "Evidence 5",
                 "metric": {},
@@ -383,6 +399,52 @@ def _decode_log_events(caplog, logger_name: str) -> list[dict]:
 def _base_vector_report_dependencies(
     tmp_path: Path, **overrides
 ) -> ReportGenerationDependencies:
+    def _generate_cover_images(req, ctx):
+        del ctx
+        report = req.reports[0]
+        asset_dir = Path(req.output_dir) / report.report_slug / "assets"
+        return [
+            SimpleNamespace(
+                schema_version="2.0",
+                file_id=report.file_id,
+                title=report.title,
+                status="generated",
+                assets=CardCoverAssetSet(
+                    schema_version="1.0",
+                    small=CardCoverAsset(
+                        schema_version="1.0",
+                        size="small",
+                        output_path=str(asset_dir / "report-card-small.png"),
+                        width=1600,
+                        height=900,
+                    ),
+                    medium=CardCoverAsset(
+                        schema_version="1.0",
+                        size="medium",
+                        output_path=str(asset_dir / "report-card-medium.png"),
+                        width=1200,
+                        height=1500,
+                    ),
+                    large=CardCoverAsset(
+                        schema_version="1.0",
+                        size="large",
+                        output_path=str(asset_dir / "report-card-large.png"),
+                        width=1200,
+                        height=1600,
+                    ),
+                ),
+                error=None,
+            )
+        ]
+
+    def _write_report_card_manifest(req, ctx):
+        del ctx
+        return ReportCardManifestWriteResponse(
+            schema_version="1.0",
+            manifest_path=str(Path(req.output_dir) / "report-card-manifest.json"),
+            bytes_written=1024,
+        )
+
     base = {
         "state_get": lambda req, ctx: None,
         "vector_store_get_status": lambda req, ctx: SimpleNamespace(
@@ -479,6 +541,8 @@ def _base_vector_report_dependencies(
             image_path=str(tmp_path / "preview.png"),
             page_number=0,
         ),
+        "generate_cover_images": _generate_cover_images,
+        "write_report_card_manifest": _write_report_card_manifest,
         "extract_taxonomy": lambda req, ctx: TaxonomyExtractResponse(
             schema_version="1.0",
             taxonomy=["tag"],

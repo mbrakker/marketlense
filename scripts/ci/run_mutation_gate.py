@@ -360,6 +360,33 @@ def _targets() -> Iterable[MutationTarget]:
             min_score=60.0,
         ),
         MutationTarget(
+            module_path=ROOT / "src" / "generators" / "report_card_projection.py",
+            test_paths=(
+                "tests/test_report_card_projection.py",
+                "tests/test_cover_geometry_selection.py",
+            ),
+            max_mutants=6,
+            min_score=80.0,
+        ),
+        MutationTarget(
+            module_path=ROOT / "src" / "generators" / "cover_image_generator.py",
+            test_paths=("tests/test_cover_image_generator.py",),
+            max_mutants=4,
+            min_score=75.0,
+        ),
+        MutationTarget(
+            module_path=ROOT / "src" / "generators" / "report_render_generator.py",
+            test_paths=("tests/test_report_render_generator.py",),
+            max_mutants=4,
+            min_score=75.0,
+        ),
+        MutationTarget(
+            module_path=ROOT / "src" / "generators" / "publish_generator.py",
+            test_paths=("tests/test_publish_generator.py",),
+            max_mutants=4,
+            min_score=75.0,
+        ),
+        MutationTarget(
             module_path=ROOT
             / "src"
             / "services"

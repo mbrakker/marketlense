@@ -35,6 +35,20 @@ Reusable shortcode entrypoints are registered by `Wordpress/wp-content/plugins/m
 - The desktop header is sticky and vertically aligns the wordmark, primary navigation, compact native WordPress search, and briefing CTA on one row. Navigation hover, focus, and current-page states remain transparent and reuse the Market Bearing signal-blue line-and-dot motif; mobile retains the disclosure navigation.
 - Homepage sections use a tighter editorial rhythm with the line-and-dot signal directly below each title. Strategic Themes and Publisher Authority share the responsive Editorial Ledger surface: numbered theme cards and authority rows are presented inside one elevated, bordered discovery panel.
 
+## Canonical Report Cards
+
+All report placements use one renderer with three reusable variants:
+
+- `small`: report browser, archive, taxonomy, publisher, search, and latest-report grids; minimal metadata plus the complete compact TLDR.
+- `medium`: homepage hero/snapshot placements; additional report facts plus the complete standard TLDR.
+- `large`: featured report placement; vertical hero cover, complete standard TLDR, and exactly two key insights.
+
+Card grids reserve consistent content zones so cards stay aligned when report names occupy two or three lines and TLDR lengths vary. Copy is never visually truncated. Compact TLDRs are limited to 18 words and standard TLDRs to 45 words.
+
+Every report has one deterministic cover identity selected from 16 geometry families using report-content differentiators. The persisted fingerprint records `geometry_family`, `primary_signal`, `secondary_signal`, and `seed`. The same identity is rendered at `1600x900` for small cards, `1200x1500` for medium cards, and `1200x1600` for large cards. Covers use the restrained project palette and fixed zones for the complete report name, publisher, and covered period.
+
+Report facts use pictograms for publication date, geography, and covered period. Global reports use a globe; regional and country-specific reports use a locator. The `New` badge appears only when a report was published less than 7 days before the current request.
+
 ## Verification
 
 ### Report Card Backfill Gate
@@ -49,6 +63,8 @@ wp eval-file Wordpress/scripts/audit-report-card-contracts.php
 
 Do not activate the card renderers until the final command prints `0 invalid published reports`. Invalid rows are emitted as JSON lines containing the WordPress post ID, title, and failing card keys.
 
+Browser verification covers the homepage, report archive, topic archive, publisher archive, and search at desktop, tablet, and mobile widths. Check horizontal overflow, title/TLDR completeness, aligned card actions, keyboard focus, 200% zoom/text spacing, and reduced-motion behavior.
+
 Run the WordPress subproject checks after shortcode or template changes:
 
 ```bash
@@ -59,4 +75,11 @@ The smoke test remains optional and requires `RUN_WORDPRESS_SMOKE=1` plus a conf
 
 ```bash
 RUN_WORDPRESS_SMOKE=1 python scripts/ci/check_wordpress_subproject.py
+```
+
+Build the release archives only after verification:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\build-plugin-zip.ps1
+bash Wordpress/scripts/build-theme-zip.sh
 ```

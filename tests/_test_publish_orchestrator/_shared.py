@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_publish_orchestrator.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent / "test_publish_orchestrator.py"
+)
 
 import json
 
@@ -13,6 +16,8 @@ import sqlite3
 from dataclasses import replace
 
 from pathlib import Path
+
+import pytest
 
 from src.contracts.report_store import ReportMetadataUpsertRequest
 
@@ -31,6 +36,38 @@ from src.services.report_store_service import upsert_metadata
 from src.services.state_service import get_publish, record, record_publish
 
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
+
+
+@pytest.fixture(autouse=True)
+def _report_card_media_routes(wordpress_http) -> None:
+    def upload(call: RecordedHttpRequest) -> FakeHttpResponse:
+        filename = call.files["file"][0]
+        media_id = {
+            "report-card-small.png": 301,
+            "report-card-medium.png": 302,
+            "report-card-large.png": 303,
+        }[filename]
+        return FakeHttpResponse.from_payload(
+            status_code=201,
+            payload={
+                "id": media_id,
+                "source_url": f"https://example.com/uploads/{filename}",
+            },
+        )
+
+    wordpress_http.add(
+        "POST",
+        "https://example.com/wp-json/wp/v2/media",
+        upload,
+    )
+    for media_id in (301, 302, 303):
+        wordpress_http.add_json(
+            "POST",
+            f"https://example.com/wp-json/wp/v2/media/{media_id}",
+            status_code=200,
+            payload={"id": media_id},
+        )
+
 
 def _publish_entity_metadata_script(
     *,
@@ -55,6 +92,7 @@ def _publish_entity_metadata_script(
         )
         + "</script>"
     )
+
 
 def _write_html(
     output_dir: str,
@@ -81,7 +119,61 @@ def _write_html(
         f"<html><head><title>Report</title>{metadata}</head><body>{body}</body></html>",
         encoding="utf-8",
     )
+    if entity_type == "report":
+        _write_report_card_manifest(html_path)
     return html_path
+
+
+def _write_report_card_manifest(html_path: Path) -> None:
+    report_dir = html_path.with_suffix("")
+    assets_dir = report_dir / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    dimensions = {
+        "small": (1600, 900),
+        "medium": (1200, 1500),
+        "large": (1200, 1600),
+    }
+    covers: dict[str, object] = {"schema_version": "1.0"}
+    for size, (width, height) in dimensions.items():
+        filename = f"report-card-{size}.png"
+        (assets_dir / filename).write_bytes(f"image:{filename}".encode("utf-8"))
+        covers[size] = {
+            "schema_version": "1.0",
+            "size": size,
+            "output_path": f"assets/{filename}",
+            "width": width,
+            "height": height,
+        }
+    manifest = {
+        "schema_version": "1.0",
+        "title": "Report",
+        "title_scale": "short",
+        "publisher": "Publisher",
+        "published_date": "2026-06-09",
+        "geography_label": "Global",
+        "geography_scope": "global",
+        "covered_period": "Q2 2026",
+        "tldr_compact": "Complete compact TLDR.",
+        "tldr_standard": "Complete standard TLDR with grounded context.",
+        "key_insights": ["First insight.", "Second insight."],
+        "fingerprint": {
+            "schema_version": "1.0",
+            "geometry_family": "ascending_trajectory",
+            "evidence_shape": "trend",
+            "direction": "rising",
+            "geography_scope": "global",
+            "evidence_density": "balanced",
+            "domain_layer": "grid",
+            "seed": 184221,
+            "selection_reason": "A rising trend dominates the report.",
+        },
+        "covers": covers,
+    }
+    (report_dir / "report-card-manifest.json").write_text(
+        json.dumps(manifest, sort_keys=True),
+        encoding="utf-8",
+    )
+
 
 def _record_processed(state_db: str, file_id: str, run_context) -> None:
     record(
@@ -93,6 +185,7 @@ def _record_processed(state_db: str, file_id: str, run_context) -> None:
         ),
         run_context,
     )
+
 
 def _seed_report_metadata(
     reports_db: str, html_path: str, file_id: str, run_context
@@ -122,6 +215,7 @@ def _seed_report_metadata(
         run_context,
     )
 
+
 def _json_events(caplog, logger_name: str) -> list[dict[str, object]]:
     events: list[dict[str, object]] = []
     for log_record in caplog.records:
@@ -136,14 +230,20 @@ def _json_events(caplog, logger_name: str) -> list[dict[str, object]]:
     return events
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]
