@@ -33,6 +33,8 @@ final class Plugin
 
     private Intelligence_Stats $stats;
 
+    private Report_Card_Renderer $report_card_renderer;
+
     private Shortcodes $shortcodes;
 
     private function __construct()
@@ -45,7 +47,12 @@ final class Plugin
         $this->content_formatting = new Content_Formatting();
         $this->view_model_builder = new Report_View_Model_Builder($parser);
         $this->stats = new Intelligence_Stats($this->view_model_builder);
-        $this->shortcodes = new Shortcodes($this->view_model_builder, $this->stats);
+        $this->report_card_renderer = new Report_Card_Renderer();
+        $this->shortcodes = new Shortcodes(
+            $this->view_model_builder,
+            $this->stats,
+            $this->report_card_renderer
+        );
     }
 
     public static function instance(): Plugin

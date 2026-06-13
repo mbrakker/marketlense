@@ -92,6 +92,9 @@ def test_report_artifact_counts_drive_trust_and_card_citations() -> None:
     stats = STATS.read_text(encoding="utf-8")
     shortcodes = SHORTCODES.read_text(encoding="utf-8")
     bootstrap = PLUGIN_BOOTSTRAP.read_text(encoding="utf-8")
+    renderer = (
+        PLUGIN / "includes" / "class-marketlense-core-report-card-renderer.php"
+    ).read_text(encoding="utf-8")
 
     assert "'citations_count' => $counts['citations']" in view_model
     assert "'citations' =>" in view_model
@@ -99,8 +102,11 @@ def test_report_artifact_counts_drive_trust_and_card_citations() -> None:
     assert "'briefing_count' =>" in stats
     assert "'signal_count' =>" in stats
     assert "new Intelligence_Stats($this->view_model_builder)" in bootstrap
-    assert "citations & evidence links" in shortcodes
-    assert "Review evidence" in shortcodes
+    assert "Citations & evidence links" in shortcodes
+    assert "citations_count" not in renderer
+    assert "quotes_count" not in renderer
+    assert "topics_count" not in renderer
+    assert "Read report" in renderer
 
 
 def test_dynamic_posting_routes_remain_native_wordpress_archives() -> None:
@@ -364,9 +370,7 @@ def test_homepage_uses_tighter_editorial_spacing_and_close_section_signals() -> 
     section_heading = _editorial_ledger_css_rule(
         css, ".ml-home-shell .ml-section-heading"
     )
-    section_title = _editorial_ledger_css_rule(
-        css, ".ml-home-shell .ml-section-title"
-    )
+    section_title = _editorial_ledger_css_rule(css, ".ml-home-shell .ml-section-title")
     section_rule = _editorial_ledger_css_rule(css, ".ml-home-shell .ml-section-rule")
 
     assert "--ml-home-section-gap: clamp(3.5rem, 5vw, 4.5rem);" in home_shell
@@ -386,9 +390,7 @@ def test_discovery_band_uses_the_approved_editorial_ledger_surface() -> None:
 
     assert "border: 1px solid var(--ml-border-subtle);" in discovery
     assert "border-radius: 0.875rem;" in discovery
-    assert (
-        "box-shadow: 0 1.25rem 3.75rem rgba(8, 43, 84, 0.12);" in discovery
-    )
+    assert "box-shadow: 0 1.25rem 3.75rem rgba(8, 43, 84, 0.12);" in discovery
     assert "grid-template-columns: minmax(0, 1fr) auto;" in heading_row
     assert "counter-reset: ml-theme;" in themes
     assert ".ml-home-band-discovery .ml-authority-item" in css
@@ -435,10 +437,7 @@ def test_desktop_header_aligns_controls_and_uses_signal_blue_nav_indicator() -> 
         in header_actions
     )
     assert "margin: 0;" in header_actions
-    assert (
-        "grid-template-columns: minmax(0, 1fr) minmax(12rem, 14rem);"
-        in nav_stack
-    )
+    assert "grid-template-columns: minmax(0, 1fr) minmax(12rem, 14rem);" in nav_stack
     assert "flex-wrap: nowrap;" in nav_container
     assert "margin: 0;" in header_search
     assert "background: var(--ml-signal-blue);" in nav_line
