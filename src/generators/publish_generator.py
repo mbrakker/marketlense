@@ -27,6 +27,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
     WordPressMediaUploadRequest,
     WordPressPostCreateRequest,
+    WordPressReportCardUpdateRequest,
     WordPressTagEnsureRequest,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
@@ -42,6 +43,7 @@ from src.services.wordpress_service import (
     ensure_taxonomy_terms,
     ensure_tags,
     upload_media,
+    update_report_card,
 )
 from src.utils.errors import AppError
 from src.utils.html_utils import (
@@ -144,6 +146,46 @@ def publish_html(
             settings.output_dir,
             ctx,
         )
+    if request.existing_post_id is not None:
+        if card_manifest is None:
+            raise AppError(
+                code="report_card_manifest_required",
+                message="An existing report-card update requires a valid manifest",
+                retryable=False,
+            )
+        backfill_media_ids = _upload_report_card_covers(
+            manifest=card_manifest,
+            html_path=request.html_path,
+            output_dir=settings.output_dir,
+            base_url=base_url,
+            auth_header=auth_header,
+            ssl_verify=settings.wp.ssl_verify,
+            ca_bundle_path=settings.wp.ca_bundle_path,
+            ctx=ctx,
+            sequential=True,
+        )
+        update_resp = update_report_card(
+            WordPressReportCardUpdateRequest(
+                schema_version="1.0",
+                base_url=base_url,
+                auth_header=auth_header,
+                post_id=request.existing_post_id,
+                featured_media=backfill_media_ids["large"],
+                meta=_report_card_post_meta(card_manifest, backfill_media_ids),
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+                post_type=settings.wp.post_type,
+            ),
+            ctx,
+        )
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=request.html_path,
+            file_id=file_id,
+            status="published",
+            post_id=update_resp.post_id,
+            post_url=str(update_resp.link or ""),
+        )
 
     metadata = None
     if request.resolved_terms is None:
@@ -229,7 +271,12 @@ def publish_html(
     )
     slug = str(request.slug or "").strip() or slugify(title)
 
-    post_resp = create_post(
+    post_meta = (
+        _report_card_post_meta(card_manifest, card_media_ids)
+        if card_manifest is not None
+        else None
+    )
+    create_resp = create_post(
         WordPressPostCreateRequest(
             schema_version="1.0",
             base_url=base_url,
@@ -244,15 +291,13 @@ def publish_html(
             categories=category_ids_for_wp if category_ids_for_wp else None,
             tags=tag_ids_for_wp if tag_ids_for_wp else None,
             taxonomy_terms=resolved_terms.taxonomy_terms or None,
-            meta=(
-                _report_card_post_meta(card_manifest, card_media_ids)
-                if card_manifest is not None
-                else None
-            ),
+            meta=post_meta,
             post_type=settings.wp.post_type,
         ),
         ctx,
     )
+    post_id = create_resp.post_id
+    post_url = create_resp.link
 
     logger.info(
         log_event(
@@ -262,8 +307,8 @@ def publish_html(
             module=logger.name,
             fields={
                 "file_id": file_id,
-                "post_id": post_resp.post_id,
-                "post_url": post_resp.link,
+                "post_id": post_id,
+                "post_url": post_url,
             },
         )
     )
@@ -273,8 +318,8 @@ def publish_html(
         html_path=request.html_path,
         file_id=file_id,
         status="published",
-        post_id=post_resp.post_id,
-        post_url=post_resp.link,
+        post_id=post_id,
+        post_url=post_url,
     )
 
 
@@ -329,15 +374,23 @@ def _upload_report_card_covers(
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
     ctx: RunContext,
+    sequential: bool = False,
 ) -> dict[str, int]:
     source = Path(html_path)
     if not source.is_absolute():
         source = Path(output_dir) / source.name
     report_dir = source.with_suffix("").resolve()
+    output_root = Path(output_dir).resolve()
     jobs: dict[str, _MediaUploadJob] = {}
     for size in ("small", "medium", "large"):
         asset = getattr(manifest.covers, size)
-        local_path = (report_dir / asset.output_path).resolve()
+        asset_path = Path(asset.output_path)
+        if asset_path.is_absolute():
+            local_path = asset_path.resolve()
+        elif asset_path.parts and asset_path.parts[0] == output_root.name:
+            local_path = (output_root.parent / asset_path).resolve()
+        else:
+            local_path = (report_dir / asset_path).resolve()
         try:
             local_path.relative_to(report_dir)
         except ValueError as exc:
@@ -363,21 +416,32 @@ def _upload_report_card_covers(
             is_preview=size == "large",
         )
     ids: dict[str, int] = {}
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        future_to_size = {
-            executor.submit(
-                _upload_single_media,
+    if sequential:
+        for size, job in jobs.items():
+            ids[size] = _upload_single_media(
                 job=job,
                 base_url=base_url,
                 auth_header=auth_header,
                 ssl_verify=ssl_verify,
                 ca_bundle_path=ca_bundle_path,
                 ctx=ctx,
-            ): size
-            for size, job in jobs.items()
-        }
-        for future in as_completed(future_to_size):
-            ids[future_to_size[future]] = future.result().media_id
+            ).media_id
+    else:
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_size = {
+                executor.submit(
+                    _upload_single_media,
+                    job=job,
+                    base_url=base_url,
+                    auth_header=auth_header,
+                    ssl_verify=ssl_verify,
+                    ca_bundle_path=ca_bundle_path,
+                    ctx=ctx,
+                ): size
+                for size, job in jobs.items()
+            }
+            for future in as_completed(future_to_size):
+                ids[future_to_size[future]] = future.result().media_id
     logger.info(
         log_event(
             ctx,

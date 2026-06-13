@@ -14,6 +14,7 @@ from src.contracts.wordpress import (
     WordPressPostLookupBatchRequest,
     WordPressPostCreateRequest,
     WordPressPostLookupRequest,
+    WordPressReportCardUpdateRequest,
     WordPressPostUpdateRequest,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
@@ -57,6 +58,36 @@ def test_create_post_success(wordpress_http) -> None:
     assert call.json_data["tags"] == [3]
     assert call.json_data["ml_publisher"] == [4]
     assert call.verify is True
+
+
+def test_update_report_card_sends_only_card_payload(wordpress_http) -> None:
+    wordpress_http.add_json(
+        "POST",
+        "https://site/wp-json/wp/v2/ml_report/12",
+        status_code=200,
+        payload={"id": 12, "link": "https://site/reports/report/", "status": "publish"},
+    )
+    request = WordPressReportCardUpdateRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        post_id=12,
+        featured_media=303,
+        meta={"ml_card_schema_version": "1.0"},
+        post_type="ml_report",
+    )
+
+    response = svc.update_report_card(request, _ctx())
+
+    call = wordpress_http.calls_for(
+        "POST", "https://site/wp-json/wp/v2/ml_report/12"
+    )[0]
+    assert response.post_id == 12
+    assert response.link == "https://site/reports/report/"
+    assert call.json_data == {
+        "featured_media": 303,
+        "meta": {"ml_card_schema_version": "1.0"},
+    }
 
 
 def test_create_post_custom_post_type_endpoint(wordpress_http) -> None:

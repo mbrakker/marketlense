@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Callable, List, Optional, TypedDict, cast
 from urllib.parse import urlparse
-from src.contracts.files import ListHtmlRequest, ReadTextRequest
+from src.contracts.files import FileExistsRequest, ListHtmlRequest, ReadTextRequest
 from src.contracts.categories import CategoryMappingLoadRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -61,7 +61,7 @@ from src.contracts.wordpress_entities import (
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
 )
-from src.services.file_service import list_html, read_text
+from src.services.file_service import file_exists, list_html, read_text
 from src.services.report_store_service import list_metadata
 from src.services.state_service import already_published as state_already_published
 from src.services.state_service import get as state_get
@@ -496,6 +496,7 @@ def run_publish(
     limit: Optional[int] = None,
     html_paths: Optional[List[str]] = None,
     ctx: Optional[RunContext] = None,
+    force_report_cards: bool = False,
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
     logger.info(
@@ -507,6 +508,7 @@ def run_publish(
             fields={
                 "limit": limit,
                 "explicit_html_paths": len(html_paths) if html_paths is not None else 0,
+                "force_report_cards": force_report_cards,
             },
         )
     )
@@ -591,6 +593,21 @@ def run_publish(
         ctx=root_ctx,
         skip_unowned_nonpublish_html=auto_discovery,
     )
+    if force_report_cards:
+        candidates = [
+            candidate
+            for candidate in candidates
+            if file_exists(
+                FileExistsRequest(
+                    schema_version="1.0",
+                    path=str(
+                        Path(candidate.html_path).with_suffix("")
+                        / "report-card-manifest.json"
+                    ),
+                ),
+                root_ctx,
+            ).exists
+        ]
     if auto_discovery and limit is not None:
         candidates = candidates[:limit]
     preflight_entries = _build_publish_preflight_entries(
@@ -708,12 +725,16 @@ def run_publish(
             validation_status=validation_status,
             validation_issues=validation_issues,
         )
-        reused_outcome = _lookup_publish_idempotency(
-            settings=settings,
-            file_id=file_id,
-            post_type=entity_route.post_type,
-            checksum=publish_checksum,
-            ctx=file_ctx,
+        reused_outcome = (
+            None
+            if force_report_cards
+            else _lookup_publish_idempotency(
+                settings=settings,
+                file_id=file_id,
+                post_type=entity_route.post_type,
+                checksum=publish_checksum,
+                ctx=file_ctx,
+            )
         )
         if reused_outcome is not None:
             logger.info(
@@ -734,7 +755,7 @@ def run_publish(
             if reused_outcome.status == "published":
                 published += 1
             continue
-        if state_already_published(
+        if not force_report_cards and state_already_published(
             StatePublishCheckRequest(
                 schema_version="1.0",
                 state_db=settings.state_db,
@@ -829,6 +850,46 @@ def run_publish(
                     file_ctx,
                 )
             if lookup_resp.found and lookup_resp.post_id and lookup_resp.link:
+                if force_report_cards:
+                    outcome = publish_html(
+                        PublishRequest(
+                            schema_version="1.0",
+                            html_path=html_path,
+                            auth_header=auth_header,
+                            file_id=file_id,
+                            html_snapshot=html_snapshot,
+                            resolved_terms=resolved_terms,
+                            existing_post_id=lookup_resp.post_id,
+                        ),
+                        route_settings,
+                        file_ctx,
+                    )
+                    outcome = _with_validation(
+                        outcome,
+                        validation_status,
+                        validation_issues,
+                    )
+                    if outcome.status == "published" and outcome.post_url:
+                        state_record_publish(
+                            StatePublishRecordRequest(
+                                schema_version="1.0",
+                                state_db=settings.state_db,
+                                file_id=file_id,
+                                md5=state_row.md5,
+                                wp_post_id=lookup_resp.post_id,
+                                wp_post_url=outcome.post_url,
+                                post_type=entity_route.post_type,
+                            ),
+                            file_ctx,
+                        )
+                        _record_publish_idempotency(
+                            settings=settings,
+                            outcome=outcome,
+                            post_type=entity_route.post_type,
+                            checksum=publish_checksum,
+                            ctx=file_ctx,
+                        )
+                    return outcome
                 logger.info(
                     log_event(
                         file_ctx,
@@ -860,6 +921,17 @@ def run_publish(
                     error="already_exists",
                 )
                 return _with_validation(outcome, validation_status, validation_issues)
+
+            if force_report_cards:
+                return PublishOutcome(
+                    schema_version="1.0",
+                    html_path=html_path,
+                    file_id=file_id,
+                    status="error",
+                    error="report_card_backfill_post_missing",
+                    validation_status=validation_status,
+                    validation_issues=validation_issues,
+                )
 
             outcome = publish_html(
                 PublishRequest(

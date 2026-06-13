@@ -14,6 +14,8 @@ from src.contracts.wordpress import (
     WordPressPostCreateResponse,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
+    WordPressReportCardUpdateRequest,
+    WordPressPostUpdateResponse,
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -288,6 +290,109 @@ def create_post(
         post_id=int(post_id),
         link=str(link),
         status=str(status or request.status),
+    )
+
+
+def update_report_card(
+    request: WordPressReportCardUpdateRequest, ctx: RunContext
+) -> WordPressPostUpdateResponse:
+    post_type_endpoint = _post_type_endpoint(request.post_type)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="wp_report_card_update_start",
+            module=logger.name,
+            fields={
+                "post_id": request.post_id,
+                "post_type": post_type_endpoint,
+                "featured_media": request.featured_media,
+                "meta_count": len(request.meta),
+                "ssl_verify": request.ssl_verify,
+                "ca_bundle_path": request.ca_bundle_path or "",
+            },
+        )
+    )
+    url = (
+        f"{request.base_url.rstrip('/')}/wp-json/wp/v2/"
+        f"{post_type_endpoint}/{request.post_id}"
+    )
+    headers = {
+        "Authorization": request.auth_header,
+        "Content-Type": "application/json",
+    }
+    payload: dict[str, Any] = {
+        "featured_media": request.featured_media,
+        "meta": dict(request.meta),
+    }
+
+    request_result = _execute_request(
+        method="POST",
+        url=url,
+        headers=headers,
+        data=json.dumps(payload),
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wp_report_card_update_request_error",
+        request_error_code="wp_report_card_update_failed",
+        request_error_message="Failed to update WordPress report-card metadata",
+        request_error_fields={
+            "post_id": request.post_id,
+            "post_type": post_type_endpoint,
+        },
+    )
+    resp = request_result.response
+    if resp.status_code >= 500:
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wp_report_card_update_http_error",
+            code="wp_report_card_update_server_error",
+            message_prefix="Report-card update server error",
+            resp=resp,
+            fields={
+                "url": url,
+                "post_id": request.post_id,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
+        )
+    if resp.status_code >= 400:
+        raise AppError(
+            code="wp_report_card_update_client_error",
+            message=f"Report-card update client error: {resp.status_code}",
+            retryable=False,
+        )
+
+    data = _safe_json(resp.text)
+    post_id = data.get("id")
+    link = data.get("link")
+    if int(post_id or 0) != request.post_id or not link:
+        raise AppError(
+            code="wp_report_card_update_invalid_response",
+            message="Report-card update returned invalid response",
+            retryable=False,
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="wp_report_card_update_complete",
+            module=logger.name,
+            fields={
+                "post_id": request.post_id,
+                "link": link,
+                "used_pooled_session": request_result.used_pooled_session,
+                "pool_key": request_result.pool_key,
+                "pool_reused": request_result.pool_reused,
+            },
+        )
+    )
+    return WordPressPostUpdateResponse(
+        schema_version="1.0",
+        post_id=request.post_id,
+        link=str(link),
     )
 
 

@@ -39,24 +39,19 @@ final class Intelligence_Stats
      */
     public function latest_report(): ?\WP_Post
     {
-        $posts = get_posts(
-            Meta::apply_digest_query_constraints(
-                [
-                    'post_status' => 'publish',
-                    'posts_per_page' => 1,
-                    'orderby' => 'date',
-                    'order' => 'DESC',
-                ]
-            )
-        );
+        foreach ($this->published_report_ids() as $post_id) {
+            $post = get_post($post_id);
+            if (! ($post instanceof \WP_Post)) {
+                continue;
+            }
 
-        if (! is_array($posts) || $posts === []) {
-            return null;
+            $report = $this->view_model_builder->build($post);
+            if (($report['card_contract_valid'] ?? false) === true) {
+                return $post;
+            }
         }
 
-        $post = $posts[0];
-
-        return $post instanceof \WP_Post ? $post : null;
+        return null;
     }
 
     /**

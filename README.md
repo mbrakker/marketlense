@@ -482,6 +482,7 @@ Current theme highlights:
 - covered-period text wraps within its configured fixed-height zone instead of truncating, and missing report publishers are recovered from the matched `report_sources` title/MD5 record before card projection
 - report facts use pictograms for publication date, geography, and covered period; global reports use a globe while regional and country-specific reports use a locator
 - a `New` badge appears only when the report was published less than 7 days before the current request
+- incomplete legacy card contracts are omitted without taking down WordPress during migration, and hero placements select the newest report with a valid canonical card contract
 - shortcode-driven header/footer navigation resolution
 - a search-first homepage hero and dynamic homepage intelligence surfaces
 - a semantic enterprise-blue token foundation in `theme.json` plus `assets/css/theme.css` (`text-primary`, `text-secondary`, `text-muted`, `brand-navy`, `signal-blue`, `support-blue`, `surface-white`, `background-cool`, `border-subtle`, `shadow-premium`) while keeping legacy slugs as compatibility aliases
@@ -713,6 +714,10 @@ Publishing remains controlled by Python orchestration in `src/`:
 python -m src.cli publish-wp
 python -m src.cli update-wp-categories
 ```
+
+Use `python -m src.cli publish-wp --force-report-cards` only for canonical
+report-card migrations. It uploads the three generated cover assets and updates
+the matched existing WordPress report post in place.
 
 WordPress credentials and publish controls come from root `.env` / `app.yaml`:
 

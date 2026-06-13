@@ -416,6 +416,9 @@ final class Shortcodes
                                     $this->render_entity_card($post, __('Read report brief', 'marketlense-core'));
                                 } else {
                                     $report = $this->view_model_builder->build($post);
+                                    if (($report['card_contract_valid'] ?? false) !== true) {
+                                        continue;
+                                    }
                                     echo $this->report_card_renderer->render($report, 'small'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                                 }
                                 ?>
@@ -489,6 +492,9 @@ final class Shortcodes
                         continue;
                     }
                     $report = $this->view_model_builder->build($post);
+                    if (($report['card_contract_valid'] ?? false) !== true) {
+                        continue;
+                    }
                     echo $this->report_card_renderer->render($report, $variant); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                     ?>
                 <?php endwhile; ?>
@@ -555,7 +561,10 @@ final class Shortcodes
         $latest = $latest_post instanceof \WP_Post
             ? $this->view_model_builder->build($latest_post)
             : null;
-        if (! is_array($latest)) {
+        if (
+            ! is_array($latest)
+            || ($latest['card_contract_valid'] ?? false) !== true
+        ) {
             return '';
         }
 
@@ -717,6 +726,9 @@ final class Shortcodes
         }
 
         $report = $this->view_model_builder->build($post);
+        if (($report['card_contract_valid'] ?? false) !== true) {
+            return '';
+        }
 
         ob_start();
         ?>

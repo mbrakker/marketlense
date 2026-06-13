@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Market Bearing report card directions</title>
+  <style>
+    :root {
+      --navy-950: #061a31;
+      --navy-900: #082b54;
+      --navy-800: #0b3a6d;
+      --navy-700: #15518d;
+      --ink: #10243e;
+      --muted: #637086;
+      --line: #d8e0ea;
+      --paper: #ffffff;
+      --cool: #f3f6fa;
+      --signal: #0867d7;
+      --new: #b64b36;
+      --shadow: 0 18px 48px rgba(6, 26, 49, .13);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #edf2f7;
+      font: 15px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button { font: inherit; }
+    .page { width: min(1500px, calc(100% - 40px)); margin: 0 auto; padding: 40px 0 64px; }
+    .intro { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; margin-bottom: 28px; }
+    .eyebrow { margin: 0 0 8px; color: var(--signal); font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 0; max-width: 880px; color: var(--navy-950); font: 650 clamp(28px, 4vw, 48px)/1.05 Georgia, "Times New Roman", serif; }
+    .intro-copy { max-width: 720px; margin: 14px 0 0; color: var(--muted); font-size: 16px; }
+    .instruction { max-width: 280px; margin: 0; padding: 12px 16px; border-left: 2px solid var(--signal); color: var(--muted); background: rgba(255,255,255,.65); }
+    .directions { display: grid; gap: 22px; }
+    .direction {
+      width: 100%;
+      padding: 0;
+      overflow: hidden;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(6, 26, 49, .07);
+      cursor: pointer;
+      transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+    .direction:hover { transform: translateY(-2px); border-color: #9fb1c7; box-shadow: var(--shadow); }
+    .direction.selected { border-color: var(--signal); box-shadow: 0 0 0 3px rgba(8, 103, 215, .13), var(--shadow); }
+    .direction-head { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+    .letter { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: #fff; background: var(--navy-900); font-weight: 800; }
+    .direction h2 { margin: 0; color: var(--navy-950); font-size: 20px; }
+    .direction-head p { margin: 3px 0 0; color: var(--muted); }
+    .recommend { padding: 6px 10px; border-radius: 999px; color: var(--navy-900); background: #e8f0f8; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .stage { display: grid; grid-template-columns: .78fr 1fr 1.55fr; gap: 18px; align-items: stretch; padding: 22px; background: var(--cool); }
+    .report-card { overflow: hidden; border: 1px solid #d5dde7; border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(6, 26, 49, .08); }
+    .cover { position: relative; isolation: isolate; overflow: hidden; color: #fff; background: var(--navy-900); }
+    .cover::before, .cover::after { content: ""; position: absolute; pointer-events: none; z-index: -1; }
+    .cover-copy { position: relative; z-index: 2; display: flex; height: 100%; flex-direction: column; justify-content: space-between; padding: 18px; }
+    .cover-publisher { font-size: 11px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; opacity: .82; }
+    .cover-title { max-width: 18ch; margin: 18px 0; font: 650 22px/1.08 Georgia, "Times New Roman", serif; }
+    .cover-period { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; }
+    .cover-period::before { content: ""; width: 18px; height: 1px; background: currentColor; opacity: .75; }
+    .new { position: absolute; z-index: 3; top: 12px; right: 12px; padding: 5px 8px; border-radius: 3px; color: #fff; background: var(--new); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .small .cover { aspect-ratio: 4 / 3; }
+    .small .cover-copy { padding: 15px; }
+    .small .cover-title { margin: 12px 0; font-size: 18px; }
+    .medium .cover { aspect-ratio: 16 / 9; }
+    .large { display: grid; grid-template-columns: minmax(190px, .72fr) minmax(0, 1.35fr); }
+    .large .cover { min-height: 390px; }
+    .large .cover-title { font-size: 28px; }
+    .body { padding: 16px; }
+    .body h3 { margin: 0; color: var(--navy-950); font: 700 17px/1.2 Georgia, "Times New Roman", serif; }
+    .publisher { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 7px 12px; margin: 13px 0 0; color: #526176; font-size: 11px; }
+    .summary { margin: 12px 0 0; color: #43536a; font-size: 12px; }
+    .small .summary { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+    .tldr-label { display: block; margin-bottom: 3px; color: var(--signal); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .insights { display: grid; gap: 7px; margin: 14px 0 0; padding: 0; list-style: none; color: #263b55; font-size: 12px; }
+    .insights li { display: grid; grid-template-columns: 8px 1fr; gap: 8px; }
+    .insights li::before { content: ""; width: 6px; height: 6px; margin-top: 6px; border-radius: 50%; background: var(--signal); }
+    .action { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 12px; border-top: 1px solid #e1e7ee; color: var(--signal); font-size: 12px; font-weight: 800; }
+    .action::after { content: "→"; }
+
+    .ledger .cover::before {
+      inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+      background-size: 28px 28px;
+      opacity: .45;
+    }
+    .ledger .cover::after {
+      width: 78%; height: 46%; right: -8%; bottom: 8%;
+      border-top: 2px solid rgba(92, 166, 220, .72);
+      border-right: 1px solid rgba(92, 166, 220, .45);
+      transform: skewY(-16deg);
+      box-shadow: -32px -22px 0 -31px rgba(255,255,255,.42), -64px -44px 0 -63px rgba(255,255,255,.28);
+    }
+
+    .orbital .cover { background: #071f3c; }
+    .orbital .cover::before {
+      width: 86%; aspect-ratio: 1; right: -34%; bottom: -46%; border: 1px solid rgba(119, 169, 207, .48); border-radius: 50%;
+      box-shadow: 0 0 0 25px rgba(119,169,207,.08), 0 0 0 50px rgba(119,169,207,.07), 0 0 0 75px rgba(119,169,207,.05);
+    }
+    .orbital .cover::after {
+      width: 58%; height: 34%; right: 5%; top: 14%; opacity: .7;
+      background-image: radial-gradient(circle, rgba(255,255,255,.55) 1px, transparent 1.5px);
+      background-size: 14px 14px;
+      transform: perspective(120px) rotateY(-14deg) rotateZ(-5deg);
+    }
+
+    .topography .cover { background: #0a3159; }
+    .topography .cover::before {
+      inset: 12% -8% -20% 30%;
+      border: 1px solid rgba(140, 184, 212, .34); border-radius: 48% 52% 42% 58%;
+      box-shadow: 0 0 0 18px rgba(140,184,212,.08), 0 0 0 36px rgba(140,184,212,.07), 0 0 0 54px rgba(140,184,212,.05), 0 0 0 72px rgba(140,184,212,.04);
+      transform: rotate(-18deg);
+    }
+    .topography .cover::after {
+      left: 10%; right: 8%; bottom: 16%; height: 35%;
+      border-bottom: 2px solid rgba(255,255,255,.5);
+      clip-path: polygon(0 80%, 14% 64%, 27% 73%, 42% 36%, 58% 52%, 74% 18%, 88% 31%, 100% 0, 100% 100%, 0 100%);
+      background: rgba(79, 137, 178, .18);
+    }
+    .note { padding: 13px 22px 17px; color: var(--muted); font-size: 12px; }
+    @media (max-width: 1050px) {
+      .stage { grid-template-columns: 1fr 1fr; }
+      .large { grid-column: 1 / -1; }
+    }
+    @media (max-width: 720px) {
+      .page { width: min(100% - 24px, 1500px); padding-top: 24px; }
+      .intro, .stage { grid-template-columns: 1fr; }
+      .direction-head { grid-template-columns: 44px 1fr; }
+      .recommend { grid-column: 2; justify-self: start; }
+      .large { display: block; }
+      .large .cover { min-height: 330px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .direction { transition: none; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="intro">
+      <div>
+        <p class="eyebrow">Report card system · cover direction</p>
+        <h1>Choose the shared visual language for every report cover.</h1>
+        <p class="intro-copy">Each direction uses the same three reusable card sizes, restrained Market Bearing navy, accessible HTML text, and one adaptable background family. The selected visual will later be generated as an optimized image asset.</p>
+      </div>
+      <p class="instruction">Click one direction. Evaluate authority, distinctiveness, and how well it scales from listing card to featured report.</p>
+    </header>
+
+    <section class="directions" aria-label="Cover design directions">
+      <button class="direction ledger" data-choice="a-editorial-data-ledger" onclick="toggleSelect(this)" type="button">
+        <div class="direction-head">
+          <span class="letter">A</span>
+          <div><h2>Editorial Data Ledger</h2><p>Measured grid, quiet chart trace, strongest alignment with the current portal.</p></div>
+          <span class="recommend">Recommended</span>
+        </div>
+        <div class="stage">
+          <article class="report-card small">
+            <div class="cover"><span class="new">New</span><div class="cover-copy"><span class="cover-publisher">Criteo</span><strong class="cover-title">Advertiser Guide to Emerging Channels</strong><span class="cover-period">2023 outlook</span></div></div>
+            <div class="body"><h3>Advertiser Guide to Emerging Channels</h3><p class="publisher">Criteo</p><p class="summary">Agency priorities are shifting toward retail media, CTV and closed-loop measurement.</p><div class="action">Review evidence</div></div>
+          </article>
+          <article class="report-card medium">
+            <div class="cover"><span class="new">New</span><div class="cover-copy"><span class="cover-publisher">Criteo</span><strong class="cover-title">Advertiser Guide to Emerging Channels</strong><span class="cover-period">2023 outlook</span></div></div>
+            <div class="body"><h3>Advertiser Guide to Emerging Channels</h3><p class="publisher">Criteo · Published June 10, 2026</p><div class="meta"><span>US, UK, France, Germany</span><span>2 topics</span><span>7 citations</span></div><p class="summary"><span class="tldr-label">TLDR</span>Agencies are prioritizing retail media and CTV while adopting incrementality and cost-per-order to prove channel value.</p><div class="action">Review evidence</div></div>
+          </article>
+          <article class="report-card large">
+            <div class="cover"><span class="new">New</span><div class="cover-copy"><span class="cover-publisher">Criteo</span><strong class="cover-title">Advertiser Guide to Emerging Channels</strong><span class="cover-period">2023 outlook</span></div></div>
+            <div class="body"><p class="eyebrow">Featured report</p><h3>Advertiser Guide to Emerging Channels</h3><p class="publisher">Criteo · Published June 10, 2026</p><div class="meta"><span>2023 outlook</span><span>Four markets</span><span>5 insights</span><span>4 quotes</span></div><p class="summary"><span class="tldr-label">TLDR</span>Agencies are prioritizing retail media and CTV while adopting incrementality and cost-per-order to prove channel value.</p><ul class="insights"><li>94% of US agency professionals say clients should explore new digital channels.</li><li>61% expect newer channels to outperform search or social on ROI.</li></ul><div class="action">Read full report</div></div>
+          </article>
+        </div>
+        <div class="note">Tone: analytical, institutional, structured. Best fit for a governed intelligence product.</div>
+      </button>
+
+      <button class="direction orbital" data-choice="b-orbital-market-map" onclick="toggleSelect(this)" type="button">
+        <div class="direction-head">
+          <span class="letter">B</span>
+          <div><h2>Orbital Market Map</h2><p>Global intelligence feel with restrained dot fields and circular data geometry.</p></div>
+        </div>
+        <div class="stage">
+          <article class="report-card small"><div class="cover"><span class="new">New</span><div class="cover-copy"><span class="cover-publisher">Criteo</span><strong class="cover-title">Advertiser Guide to Emerging Channels</strong><span class="cover-period">2023 outlook</span></div></div><div class="body"><h3>Advertiser Guide to Emerging Channels</h3><p class="publisher">Criteo</p><p class="summary">Agency priorities are shifting toward retail media, CTV and closed-loop measurement.</p><div class="action">Review evidence</div></div></article>
+          <article class="report-card medium"><div class="cover"><span class="new">New</span><div class="cover-copy"><span class="cover-publisher">Criteo</span><strong class="cover-title">Advertiser Guide to Emerging Channels</strong><span class="cover-period">2023 outlook</span></div></div><div class="body"><h3>Advertiser Guide to Emerging Channels</h3><p class="publisher">Criteo · Published June 10, 2026</p><div class="meta"><span>Four markets</span><span>2 topics</span><span>7 citations</span></div><p class="summary"><span class="tldr-label">TLDR</span>Agencies are prioritizing retail media and CTV while adopting incrementality and cost-per-order to prove channel value.</p><div class="action">Review evidence</div></div></article>
+          <article class="report-card large"><div class="cover"><span class="new">New</span><div class="cover-copy"><span class="cover-publisher">Criteo</span><strong class="cover-title">Advertiser Guide to Emerging Channels</strong><span class="cover-period">2023 outlook</span></div></div><div class="body"><p class="eyebrow">Featured report</p><h3>Advertiser Guide to Emerging Channels</h3><p class="publisher">Criteo · Published June 10, 2026</p><div class="meta"><span>2023 outlook</span><span>Four markets</span><span>5 insights</span><span>4 quotes</span></div><p class="summary"><span class="tldr-label">TLDR</span>Agencies are prioritizing retail media and CTV while adopting incrementality and cost-per-order to prove channel value.</p><ul class="insights"><li>94% of US agency professionals say clients should explore new digital channels.</li><li>61% expect newer channels to outperform search or social on ROI.</li></ul><div class="action">Read full report</div></div></article>
+        </div>
+        <div class="note">Tone: global, expansive, technology-forward. More expressive than the current editorial system.</div>
+      </button>
+
+      <button class="direction topography" data-choice="c-signal-topography" onclick="toggleSelect(this)" type="button">
+        <div class="direction-head">
+          <span class="letter">C</span>
+          <div><h2>Signal Topography</h2><p>Layered contours and a restrained growth trace for a research-led premium feel.</p></div>
+        </div>
+        <div class="stage">
+          <article class="report-card small"><div class="cover"><span class="new">New</span><div class="cover-copy"><span class="cover-publisher">Criteo</span><strong class="cover-title">Advertiser Guide to Emerging Channels</strong><span class="cover-period">2023 outlook</span></div></div><div class="body"><h3>Advertiser Guide to Emerging Channels</h3><p class="publisher">Criteo</p><p class="summary">Agency priorities are shifting toward retail media, CTV and closed-loop measurement.</p><div class="action">Review evidence</div></div></article>
+          <article class="report-card medium"><div class="cover"><span class="new">New</span><div class="cover-copy"><span class="cover-publisher">Criteo</span><strong class="cover-title">Advertiser Guide to Emerging Channels</strong><span class="cover-period">2023 outlook</span></div></div><div class="body"><h3>Advertiser Guide to Emerging Channels</h3><p class="publisher">Criteo · Published June 10, 2026</p><div class="meta"><span>Four markets</span><span>2 topics</span><span>7 citations</span></div><p class="summary"><span class="tldr-label">TLDR</span>Agencies are prioritizing retail media and CTV while adopting incrementality and cost-per-order to prove channel value.</p><div class="action">Review evidence</div></div></article>
+          <article class="report-card large"><div class="cover"><span class="new">New</span><div class="cover-copy"><span class="cover-publisher">Criteo</span><strong class="cover-title">Advertiser Guide to Emerging Channels</strong><span class="cover-period">2023 outlook</span></div></div><div class="body"><p class="eyebrow">Featured report</p><h3>Advertiser Guide to Emerging Channels</h3><p class="publisher">Criteo · Published June 10, 2026</p><div class="meta"><span>2023 outlook</span><span>Four markets</span><span>5 insights</span><span>4 quotes</span></div><p class="summary"><span class="tldr-label">TLDR</span>Agencies are prioritizing retail media and CTV while adopting incrementality and cost-per-order to prove channel value.</p><ul class="insights"><li>94% of US agency professionals say clients should explore new digital channels.</li><li>61% expect newer channels to outperform search or social on ROI.</li></ul><div class="action">Read full report</div></div></article>
+        </div>
+        <div class="note">Tone: research-led, distinctive, slightly more organic. Strong visual personality without vivid color.</div>
+      </button>
+    </section>
+  </main>
+</body>
+</html>

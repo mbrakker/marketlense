@@ -201,6 +201,11 @@ def extract_candidates(
 @cli_app.command("publish-wp")
 def publish_wp(
     limit: int = typer.Option(None, help="Max HTML reports to publish this run"),
+    force_report_cards: bool = typer.Option(
+        False,
+        "--force-report-cards",
+        help="Update existing report posts in place with canonical card metadata",
+    ),
 ):
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_publish")
@@ -220,7 +225,12 @@ def publish_wp(
     )
 
     console.print("[cyan]Publishing reports to WordPress...[/cyan]")
-    outcomes = run_publish(settings, limit=limit, ctx=ctx)
+    outcomes = run_publish(
+        settings,
+        limit=limit,
+        ctx=ctx,
+        force_report_cards=force_report_cards,
+    )
 
     table = Table(title="Published Reports", box=box.SIMPLE_HEAVY)
     table.add_column("HTML")

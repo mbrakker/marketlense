@@ -57,11 +57,11 @@ Before activating the reusable report-card renderers, regenerate only reports wi
 
 ```bash
 python -m src.cli ingest --force-report-cards
-python -m src.cli publish-wp
+python -m src.cli publish-wp --force-report-cards
 wp eval-file Wordpress/scripts/audit-report-card-contracts.php
 ```
 
-Do not activate the card renderers until the final command prints `0 invalid published reports`. Invalid rows are emitted as JSON lines containing the WordPress post ID, title, and failing card keys.
+Plugin `1.6.1` safely omits invalid legacy report cards during a partial migration and selects the newest valid report for hero placements. The forced publication command updates matched WordPress posts in place and does not create replacements. Run the backfill and forced publication commands before the audit so every published report becomes visible in canonical card placements. The final command must print `0 invalid published reports`; invalid rows are emitted as JSON lines containing the WordPress post ID, title, and failing card keys.
 
 Browser verification covers the homepage, report archive, topic archive, publisher archive, and search at desktop, tablet, and mobile widths. Check horizontal overflow, title/TLDR completeness, aligned card actions, keyboard focus, 200% zoom/text spacing, and reduced-motion behavior.
 

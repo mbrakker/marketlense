@@ -44,6 +44,62 @@ def test_publish_runs_when_processed(
     assert publish_row.wp_post_id == 10
     assert publish_row.wp_post_url == "https://example.com/post/10"
 
+
+def test_force_report_cards_updates_existing_post_in_place(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    _record_processed(settings.state_db, "file123", run_context)
+    record_publish(
+        StatePublishRecordRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="file123",
+            md5="md5",
+            wp_post_id=42,
+            wp_post_url="https://example.com/post/42",
+            post_type="ml_report",
+        ),
+        run_context,
+    )
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[
+            {
+                "id": 42,
+                "link": "https://example.com/post/42",
+                "content": {"rendered": "Drive fileId: file123"},
+            }
+        ],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report/42",
+        status_code=200,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    results = orch.run_publish(settings, force_report_cards=True)
+
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].post_id == 42
+    assert len(
+        wordpress_http.calls_for(
+            "POST", "https://example.com/wp-json/wp/v2/ml_report/42"
+        )
+    ) == 1
+    assert (
+        wordpress_http.calls_for(
+            "POST", "https://example.com/wp-json/wp/v2/ml_report"
+        )
+        == []
+    )
+
+
 def test_publish_routes_report_by_embedded_entity_metadata(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:

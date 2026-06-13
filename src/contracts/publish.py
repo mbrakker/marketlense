@@ -156,6 +156,12 @@ class PublishRequest:
             "doc": "Optional pre-resolved WordPress category/tag/custom-taxonomy IDs computed during batch publish preflight."
         },
     )
+    existing_post_id: Optional[int] = field(
+        default=None,
+        metadata={
+            "doc": "Existing WordPress post ID to update in place during an explicit migration."
+        },
+    )
 
 
 @dataclass(frozen=True)

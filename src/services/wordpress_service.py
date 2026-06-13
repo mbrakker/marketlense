@@ -28,6 +28,7 @@ from src.services._wordpress_service.transport import (
 from src.services._wordpress_service.posts import (
     upload_media,
     create_post,
+    update_report_card,
     find_post_by_file_id,
     find_posts_by_file_id_batch,
     _update_media_alt_text,
@@ -73,6 +74,7 @@ __all__ = [
     "_safe_json",
     "upload_media",
     "create_post",
+    "update_report_card",
     "find_post_by_file_id",
     "find_posts_by_file_id_batch",
     "_update_media_alt_text",
