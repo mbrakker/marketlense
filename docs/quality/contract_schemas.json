@@ -11865,6 +11865,16 @@
     "src.contracts.cover_images.CoverImageGenerationOutcome": {
       "additionalProperties": false,
       "properties": {
+        "assets": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.report_cards.CardCoverAssetSet"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "error": {
           "anyOf": [
             {
@@ -12157,6 +12167,16 @@
         },
         "file_id": {
           "type": "string"
+        },
+        "fingerprint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.report_cards.CoverFingerprint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "publisher": {
           "anyOf": [
@@ -20046,6 +20066,297 @@
       "required": [
         "schema_version",
         "html_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_cards.CardCoverAsset": {
+      "additionalProperties": false,
+      "properties": {
+        "height": {
+          "type": "integer"
+        },
+        "output_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "size",
+        "output_path",
+        "width",
+        "height"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_cards.CardCoverAssetSet": {
+      "additionalProperties": false,
+      "properties": {
+        "large": {
+          "$ref": "#/$defs/src.contracts.report_cards.CardCoverAsset"
+        },
+        "medium": {
+          "$ref": "#/$defs/src.contracts.report_cards.CardCoverAsset"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "small": {
+          "$ref": "#/$defs/src.contracts.report_cards.CardCoverAsset"
+        }
+      },
+      "required": [
+        "schema_version",
+        "small",
+        "medium",
+        "large"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_cards.CoverFingerprint": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "type": "string"
+        },
+        "domain_layer": {
+          "type": "string"
+        },
+        "evidence_density": {
+          "type": "string"
+        },
+        "evidence_shape": {
+          "type": "string"
+        },
+        "geography_scope": {
+          "type": "string"
+        },
+        "geometry_family": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "selection_reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "geometry_family",
+        "evidence_shape",
+        "direction",
+        "geography_scope",
+        "evidence_density",
+        "domain_layer",
+        "seed",
+        "selection_reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_cards.CoverFingerprintProjectionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_hash": {
+          "type": "string"
+        },
+        "cover_semantics": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "file_id",
+        "artifact_hash",
+        "region",
+        "cover_semantics"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_cards.ReportCardManifest": {
+      "additionalProperties": false,
+      "properties": {
+        "covered_period": {
+          "type": "string"
+        },
+        "covers": {
+          "$ref": "#/$defs/src.contracts.report_cards.CardCoverAssetSet"
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/src.contracts.report_cards.CoverFingerprint"
+        },
+        "geography_label": {
+          "type": "string"
+        },
+        "geography_scope": {
+          "type": "string"
+        },
+        "key_insights": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "type": "array"
+        },
+        "published_date": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "title_scale": {
+          "type": "string"
+        },
+        "tldr_compact": {
+          "type": "string"
+        },
+        "tldr_standard": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "title",
+        "title_scale",
+        "publisher",
+        "published_date",
+        "geography_label",
+        "geography_scope",
+        "covered_period",
+        "tldr_compact",
+        "tldr_standard",
+        "key_insights",
+        "fingerprint",
+        "covers"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_cards.ReportCardManifestRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "covered_period": {
+          "type": "string"
+        },
+        "covers": {
+          "$ref": "#/$defs/src.contracts.report_cards.CardCoverAssetSet"
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/src.contracts.report_cards.CoverFingerprint"
+        },
+        "insights_final": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "published_date": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "tldr_compact": {
+          "type": "string"
+        },
+        "tldr_standard": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "title",
+        "publisher",
+        "published_date",
+        "region",
+        "covered_period",
+        "tldr_compact",
+        "tldr_standard",
+        "insights_final",
+        "fingerprint",
+        "covers"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_cards.ReportCardManifestWriteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "manifest": {
+          "$ref": "#/$defs/src.contracts.report_cards.ReportCardManifest"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_dir",
+        "manifest"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_cards.ReportCardManifestWriteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes_written": {
+          "type": "integer"
+        },
+        "manifest_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "manifest_path",
+        "bytes_written"
       ],
       "type": "object"
     },

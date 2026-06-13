@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Mapping, Optional
+
+from src.contracts.report_cards import CardCoverAssetSet, CoverFingerprint
+from src.utils.errors import AppError
 
 
 @dataclass(frozen=True)
@@ -154,6 +157,43 @@ class CoverImageReport:
     region: Optional[str] = field(
         default=None, metadata={"doc": "Optional region label."}
     )
+    fingerprint: Optional[CoverFingerprint] = field(
+        default=None,
+        metadata={"doc": "Required semantic cover fingerprint for schema version 2.0."},
+    )
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> "CoverImageReport":
+        if payload.get("schema_version") != "2.0":
+            raise AppError(
+                code="cover_contract_migration_required",
+                message="Legacy single-cover requests must be regenerated",
+                retryable=False,
+            )
+        fingerprint_payload = payload.get("fingerprint")
+        if not isinstance(fingerprint_payload, Mapping):
+            raise AppError(
+                code="cover_fingerprint_invalid",
+                message="Cover image reports require a semantic fingerprint",
+                retryable=False,
+            )
+        raw_categories = payload.get("categories")
+        categories = (
+            [str(item) for item in raw_categories]
+            if isinstance(raw_categories, (list, tuple))
+            else []
+        )
+        return cls(
+            schema_version="2.0",
+            file_id=str(payload.get("file_id") or "").strip(),
+            title=str(payload.get("title") or "").strip(),
+            publisher=str(payload.get("publisher") or "").strip() or None,
+            report_slug=str(payload.get("report_slug") or "").strip() or None,
+            categories=categories,
+            time_period=str(payload.get("time_period") or "").strip() or None,
+            region=str(payload.get("region") or "").strip() or None,
+            fingerprint=CoverFingerprint.from_dict(fingerprint_payload),
+        )
 
 
 @dataclass(frozen=True)
@@ -179,7 +219,16 @@ class CoverImageGenerationOutcome:
     title: str = field(metadata={"doc": "Report title."})
     status: str = field(metadata={"doc": "Outcome status: generated|error|skipped."})
     output_path: Optional[str] = field(
-        default=None, metadata={"doc": "Filesystem path to the generated cover PNG."}
+        default=None,
+        metadata={
+            "doc": "Legacy schema 1.0 single-cover path retained until caller migration."
+        },
+    )
+    assets: Optional[CardCoverAssetSet] = field(
+        default=None,
+        metadata={
+            "doc": "Canonical three-size cover asset set for schema version 2.0."
+        },
     )
     error: Optional[str] = field(
         default=None, metadata={"doc": "Error message, if any."}
