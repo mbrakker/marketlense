@@ -111,7 +111,9 @@ def _wrap_text(
 
 def _fit_multiline_text(
     *,
-    title: str,
+    text: str,
+    label: str,
+    overflow_code: str,
     size_name: str,
     font_path: str,
     max_width: int,
@@ -122,8 +124,8 @@ def _fit_multiline_text(
     draw: ImageDraw.ImageDraw,
 ) -> tuple[ImageFont.FreeTypeFont, List[str], int, int]:
     for size in range(max_size, min_size - 1, -FONT_SIZE_STEP):
-        font = _load_font(font_path, size, "title")
-        lines = _wrap_text(title, max_width, draw, font)
+        font = _load_font(font_path, size, label)
+        lines = _wrap_text(text, max_width, draw, font)
         if not lines:
             continue
         line_height = _text_bbox(draw, "Ag", font)[1]
@@ -133,10 +135,10 @@ def _fit_multiline_text(
         if text_height <= max_height and max_line <= max_width:
             return font, lines, line_height, spacing
     raise AppError(
-        code="cover_title_overflow",
-        message=f"Complete cover title does not fit the {size_name} title zone",
+        code=overflow_code,
+        message=f"Complete {label} text does not fit the {size_name} zone",
         retryable=False,
-        context={"title": title, "size": size_name},
+        context={"field": label, "text": text, "size": size_name},
     )
 
 
@@ -550,7 +552,9 @@ def render_cover_image(
         label="publisher",
     )
     title_font, title_lines, line_height, spacing = _fit_multiline_text(
-        title=title,
+        text=title,
+        label="cover title",
+        overflow_code="cover_title_overflow",
         size_name=request.size,
         font_path=style.font_bold_path,
         max_width=layout.title_width,
@@ -560,15 +564,34 @@ def render_cover_image(
         line_spacing=layout.title_line_spacing,
         draw=draw,
     )
-    period_font = _fit_single_line(
-        text=period,
-        font_path=style.font_regular_path,
-        max_width=layout.period_width,
-        max_size=layout.period_font_max,
-        min_size=layout.period_font_min,
-        draw=draw,
-        label="covered period",
-    )
+    if period:
+        (
+            period_font,
+            period_lines,
+            period_line_height,
+            period_spacing,
+        ) = _fit_multiline_text(
+            text=period,
+            label="covered period",
+            overflow_code="cover_text_overflow",
+            size_name=request.size,
+            font_path=style.font_regular_path,
+            max_width=layout.period_width,
+            max_height=layout.period_height,
+            max_size=layout.period_font_max,
+            min_size=layout.period_font_min,
+            line_spacing=0.15,
+            draw=draw,
+        )
+    else:
+        period_font = _load_font(
+            style.font_regular_path,
+            layout.period_font_max,
+            "covered period",
+        )
+        period_lines = []
+        period_line_height = 0
+        period_spacing = 0
 
     if publisher:
         draw.text(
@@ -587,14 +610,20 @@ def render_cover_image(
         )
         if index < len(title_lines) - 1:
             current_y += line_height + spacing
-    if period:
+    period_y = layout.period_y
+    for index, line in enumerate(period_lines):
         draw.text(
-            (layout.period_x, layout.period_y),
-            period,
+            (layout.period_x, period_y),
+            line,
             font=period_font,
             fill=_rgba(text_color, 218),
         )
-        underline_y = layout.period_y + _text_bbox(draw, period, period_font)[1] + 12
+        if index < len(period_lines) - 1:
+            period_y += period_line_height + period_spacing
+    if period_lines:
+        period_height = period_line_height * len(period_lines)
+        period_height += period_spacing * (len(period_lines) - 1)
+        underline_y = layout.period_y + period_height + 12
         draw.line(
             [
                 (layout.period_x, underline_y),

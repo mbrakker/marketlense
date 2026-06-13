@@ -43,12 +43,7 @@ def _normalize_report(report: CoverImageReport) -> CoverImageReport:
 
 
 def _covered_period(report: CoverImageReport) -> str:
-    pieces = [
-        str(value).strip()
-        for value in (report.region, report.time_period)
-        if value and str(value).strip()
-    ]
-    return " | ".join(pieces)
+    return " ".join(str(report.time_period or "").split())
 
 
 def _error_outcome(

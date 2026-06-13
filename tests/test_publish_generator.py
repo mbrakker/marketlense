@@ -277,17 +277,16 @@ def test_publish_html_injects_hidden_file_id_marker_when_missing(
     assert "<p hidden>Drive fileId: file123</p>" in post_call.json_data["content"]
 
 
-def test_publish_html_uses_filename_when_document_title_is_missing(
+def test_publish_html_uses_filename_for_nonreport_when_document_title_is_missing(
     publish_settings_factory,
     run_context,
     wordpress_http,
 ) -> None:
     settings = publish_settings_factory(validation_policy="warn")
-    _write_report_card_fixture(settings, "out/report.html")
-    _add_card_media_responses(wordpress_http)
+    settings = replace(settings, wp=replace(settings.wp, post_type="ml_signal"))
     wordpress_http.add_json(
         "POST",
-        "https://example.com/wp-json/wp/v2/ml_report",
+        "https://example.com/wp-json/wp/v2/ml_signal",
         status_code=201,
         payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
     )
@@ -305,7 +304,7 @@ def test_publish_html_uses_filename_when_document_title_is_missing(
     )
 
     post_call = wordpress_http.calls_for(
-        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+        "POST", "https://example.com/wp-json/wp/v2/ml_signal"
     )[0]
     assert outcome.status == "published"
     assert post_call.json_data["title"] == "report"
@@ -794,6 +793,9 @@ def test_publish_html_uploads_three_card_covers_and_sends_registered_meta(
         ]
     )
     assert post_call.json_data["featured_media"] == 303
+    assert post_call.json_data["title"] == (
+        "Global Economic Conditions Quarterly Update"
+    )
     assert post_call.json_data["meta"] == {
         "ml_card_schema_version": "1.0",
         "ml_card_title_scale": "long",

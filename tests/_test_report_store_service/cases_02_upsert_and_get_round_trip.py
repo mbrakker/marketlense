@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
     def test_upsert_and_get_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -175,7 +176,7 @@ class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
                     db_path=db_path,
                     file_id="file-source-fallback",
                     title="Original Source Report",
-                    publisher="Publisher Inc",
+                    publisher=None,
                     source_url=None,
                     md5="source-md5",
                 ),
@@ -195,6 +196,7 @@ class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
                 "https://publisher.example/reports/original-source-report",
                 metadata.source_url,
             )
+            self.assertEqual("Publisher Inc", metadata.publisher)
 
     def test_missing_record_returns_none(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -653,5 +655,6 @@ class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
             )
             self.assertIn("idx_publishers_normalized_insights_url", index_names)
             self.assertIn("idx_publishers_normalized_insights_url", query_plan)
+
 
 __all__ = ["TestReportStoreService02UpsertAndGetRound"]

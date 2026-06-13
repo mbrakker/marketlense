@@ -144,7 +144,7 @@ def test_generate_cover_images_normalizes_slug_and_single_covered_period(
     report = replace(
         source.reports[0],
         report_slug="  ",
-        region=None,
+        region="North America and selected international markets",
         time_period="  2026  ",
     )
     request = replace(source, reports=[report])

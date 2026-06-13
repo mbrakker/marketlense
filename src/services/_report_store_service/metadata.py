@@ -84,6 +84,33 @@ def _report_source_url_from_store(
     return str(row[0]).strip() if row and str(row[0] or "").strip() else None
 
 
+def _report_source_publisher_from_store(
+    conn: sqlite3.Connection,
+    *,
+    report_title: str,
+    md5: Optional[str],
+) -> Optional[str]:
+    if not _table_exists(conn, "report_sources"):
+        return None
+    normalized_title = report_title.strip().casefold()
+    clean_md5 = str(md5 or "").strip()
+    row = conn.execute(
+        """
+        SELECT publisher_name
+        FROM report_sources
+        WHERE COALESCE(publisher_name, '') <> ''
+          AND (
+            (? <> '' AND lower(report_name)=?)
+            OR (? <> '' AND md5=?)
+          )
+        ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
+        LIMIT 1
+        """,
+        (normalized_title, normalized_title, clean_md5, clean_md5),
+    ).fetchone()
+    return str(row[0]).strip() if row and str(row[0] or "").strip() else None
+
+
 def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetResponse:
     file_id = row[0]
     taxonomy_json = row[4] or "[]"
@@ -439,10 +466,15 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
         )
     )
     with _metadata_conn(request.db_path, ctx) as conn:
+        resolved_publisher = publisher or _report_source_publisher_from_store(
+            conn,
+            report_title=title,
+            md5=md5,
+        )
         resolved_source_url = source_url or _report_source_url_from_store(
             conn,
             report_title=title,
-            publisher=publisher,
+            publisher=resolved_publisher,
             md5=md5,
         )
         conn.execute(
@@ -472,7 +504,7 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 request.file_id,
                 file_name,
                 title,
-                publisher,
+                resolved_publisher,
                 taxonomy_json,
                 categories_json,
                 region,
@@ -522,11 +554,18 @@ def get_metadata(
         )
         row = cur.fetchone()
         fallback_source_url = None
+        fallback_publisher = None
+        if row and not str(row[3] or "").strip():
+            fallback_publisher = _report_source_publisher_from_store(
+                conn,
+                report_title=str(row[2] or ""),
+                md5=str(row[10] or "") or None,
+            )
         if row and not str(row[8] or "").strip():
             fallback_source_url = _report_source_url_from_store(
                 conn,
                 report_title=str(row[2] or ""),
-                publisher=str(row[3] or "") or None,
+                publisher=str(row[3] or "") or fallback_publisher,
                 md5=str(row[10] or "") or None,
             )
 
@@ -543,8 +582,12 @@ def get_metadata(
         return None
 
     response = _row_to_metadata_response(row, ctx)
-    if fallback_source_url:
-        response = replace(response, source_url=fallback_source_url)
+    if fallback_source_url or fallback_publisher:
+        response = replace(
+            response,
+            source_url=fallback_source_url or response.source_url,
+            publisher=fallback_publisher or response.publisher,
+        )
     logger.info(
         log_event(
             ctx,

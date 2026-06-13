@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_report_generation_scores_two_ingested_reports_for_same_publisher(
     tmp_path,
 ) -> None:
@@ -196,6 +197,7 @@ def test_report_generation_scores_two_ingested_reports_for_same_publisher(
         ).fetchone()[0]
     assert scored_rows == 2
 
+
 def test_report_generation_scores_drive_only_ingest_without_source_url(
     tmp_path,
 ) -> None:
@@ -343,15 +345,14 @@ def test_report_generation_scores_drive_only_ingest_without_source_url(
     assert row[0] == "https://drive.google.com/file/d/drive_only_score_file/view"
     assert row[1] == "drive.google.com"
     score_payload = json.loads(row[2])
-    assert {
-        component["dimension"] for component in score_payload["components"]
-    } == {
+    assert {component["dimension"] for component in score_payload["components"]} == {
         "market_insight_depth",
         "evidence_specificity",
         "decision_relevance",
         "recency_timeliness",
         "source_authority_originality",
     }
+
 
 def test_generate_report_doc_map_empty_halts(
     tmp_path,
@@ -418,6 +419,7 @@ def test_generate_report_doc_map_empty_halts(
     assert outcome.doc_map_summary is not None
     assert outcome.doc_map_summary.get("sections_count") == 0
     assert outcome.doc_map_summary.get("not_found_reason") == "model_returned_no_json"
+
 
 def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun(
     tmp_path,
@@ -514,7 +516,6 @@ def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun
         render_report=_render_report,
         upsert_report_metadata=lambda req, ctx: None,
         get_report_metadata=lambda req, ctx: None,
-        generate_cover_images=lambda req, ctx: [],
     )
 
     full_outcome = rgo.run_report_generation(
@@ -543,7 +544,6 @@ def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun
         render_report=_render_report,
         upsert_report_metadata=lambda req, ctx: None,
         get_report_metadata=lambda req, ctx: None,
-        generate_cover_images=lambda req, ctx: [],
     )
 
     resumed_outcome = rgo.run_report_generation(
@@ -562,6 +562,7 @@ def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun
     assert full_render_payload == resumed_render_payload
     assert resumed_outcome.evidence_packs == full_outcome.evidence_packs
     assert upstream_calls == {"evidence": 1, "artifacts": 1, "validation": 1}
+
 
 def test_generate_report_deletes_vector_store_when_retention_disabled(
     tmp_path,
@@ -661,6 +662,7 @@ def test_generate_report_deletes_vector_store_when_retention_disabled(
     assert outcome.status == "processed"
     assert outcome.vector_store_id is None
     assert outcome.vector_store_status == "deleted"
+
 
 __all__ = [
     "test_report_generation_scores_two_ingested_reports_for_same_publisher",

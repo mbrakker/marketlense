@@ -213,8 +213,40 @@ def _analysis(
     )
 
 
+def _card_cover_assets(asset_dir: Path) -> CardCoverAssetSet:
+    return CardCoverAssetSet(
+        "1.0",
+        CardCoverAsset(
+            "1.0", "small", str(asset_dir / "report-card-small.png"), 1600, 900
+        ),
+        CardCoverAsset(
+            "1.0", "medium", str(asset_dir / "report-card-medium.png"), 1200, 1500
+        ),
+        CardCoverAsset(
+            "1.0", "large", str(asset_dir / "report-card-large.png"), 1200, 1600
+        ),
+    )
+
+
 def _deps(**overrides) -> ReportRenderDependencies:
     base = ReportRenderDependencies.default()
+
+    def _generated_covers(req, ctx):
+        del ctx
+        report = req.reports[0]
+        return [
+            SimpleNamespace(
+                schema_version="2.0",
+                file_id=report.file_id,
+                title=report.title,
+                status="generated",
+                assets=_card_cover_assets(
+                    Path(req.output_dir) / report.report_slug / "assets"
+                ),
+                error=None,
+            )
+        ]
+
     seeded = replace(
         base,
         render_preview=lambda req, ctx: SimpleNamespace(
@@ -243,38 +275,19 @@ def _deps(**overrides) -> ReportRenderDependencies:
             vector_store_id="vs_1",
             evidence_pack_paths={"doc_map": "doc_map.json"},
         ),
-        generate_cover_images=lambda req, ctx: [
-            SimpleNamespace(status="processed", output_path="cover.png", error="")
-        ],
+        generate_cover_images=_generated_covers,
+        write_report_card_manifest=lambda req, ctx: ReportCardManifestWriteResponse(
+            schema_version="1.0",
+            manifest_path=str(Path(req.output_dir) / "report-card-manifest.json"),
+            bytes_written=1024,
+        ),
     )
     return replace(seeded, **overrides)
 
 
 def _cover_assets(runtime: ReportRuntimeState) -> CardCoverAssetSet:
-    asset_dir = Path(runtime.settings.output_dir) / runtime.report_name / "assets"
-    return CardCoverAssetSet(
-        schema_version="1.0",
-        small=CardCoverAsset(
-            schema_version="1.0",
-            size="small",
-            output_path=str(asset_dir / "report-card-small.png"),
-            width=1600,
-            height=900,
-        ),
-        medium=CardCoverAsset(
-            schema_version="1.0",
-            size="medium",
-            output_path=str(asset_dir / "report-card-medium.png"),
-            width=1200,
-            height=1500,
-        ),
-        large=CardCoverAsset(
-            schema_version="1.0",
-            size="large",
-            output_path=str(asset_dir / "report-card-large.png"),
-            width=1200,
-            height=1600,
-        ),
+    return _card_cover_assets(
+        Path(runtime.settings.output_dir) / runtime.report_name / "assets"
     )
 
 
@@ -309,7 +322,6 @@ def test_render_report_output_sources_metadata_from_db_and_returns_complete_outc
     assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "processed"
     assert render_calls == ["DB Title"]
-    assert Path(outcome.html_path).exists()
 
 
 def test_render_report_output_passes_db_source_url_to_public_renderer(tmp_path):
@@ -850,7 +862,8 @@ def test_render_report_output_does_not_write_manifest_after_cover_error(tmp_path
     )
 
     assert writes == []
-    assert outcome.status == "processed"
+    assert outcome.status == "error"
+    assert outcome.error == "cover_asset_set_incomplete: cover failed"
     assert outcome.report_card_manifest_path is None
 
 

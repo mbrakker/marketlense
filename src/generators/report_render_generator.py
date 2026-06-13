@@ -5,6 +5,7 @@ from dataclasses import asdict
 from datetime import date
 import os
 from pathlib import Path
+import re
 from urllib.parse import quote
 
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
@@ -115,6 +116,20 @@ def _is_card_contract_error(exc: AppError) -> bool:
     }
 
 
+def _resolved_report_title(
+    runtime: ReportRuntimeState,
+    source: ReportSourceState,
+    analysis: ReportAnalysisState,
+) -> str:
+    candidate = str(analysis.payload.title or runtime.report_title).strip()
+    if not re.fullmatch(r"[0-9a-fA-F]{32,64}", candidate):
+        return candidate
+    metadata_title = str(source.info_response.metadata.get("Title") or "").strip()
+    if metadata_title and not re.fullmatch(r"[0-9a-fA-F]{32,64}", metadata_title):
+        return metadata_title
+    return candidate
+
+
 def _build_metadata_upsert_request(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
@@ -126,7 +141,7 @@ def _build_metadata_upsert_request(
         schema_version="1.1",
         db_path=runtime.settings.reports_db,
         file_id=runtime.file.file_id,
-        title=payload.title or runtime.report_title,
+        title=_resolved_report_title(runtime, source, analysis),
         file_name=runtime.file_name,
         publisher=payload.publisher or None,
         taxonomy=payload.taxonomy,
@@ -551,6 +566,24 @@ def render_report_output(
                 ),
             )
             report_card_manifest_path = manifest_response.manifest_path
+        else:
+            cover_error = str(
+                getattr(cover_outcome, "error", None)
+                or "All three canonical report-card covers are required"
+            )
+            report_card_error = f"cover_asset_set_incomplete: {cover_error}"
+            logger.info(
+                log_event(
+                    cover_ctx,
+                    role="generator",
+                    event="report_card_cover_asset_set_incomplete",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "error": cover_error,
+                    },
+                )
+            )
     except AppError as exc:
         if exc.retryable:
             logger.info(

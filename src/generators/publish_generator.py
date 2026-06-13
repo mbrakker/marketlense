@@ -167,9 +167,6 @@ def publish_html(
     )
     category_ids_for_wp = list(resolved_terms.category_ids)
     tag_ids_for_wp = list(resolved_terms.tag_ids)
-    publisher_term_ids_for_wp = list(
-        (resolved_terms.taxonomy_terms or {}).get("ml_publisher", [])
-    )
 
     image_map, featured_media_id = _upload_images(
         html_snapshot=html_snapshot,
@@ -225,7 +222,11 @@ def publish_html(
         )
     )
 
-    title = str(html_snapshot.title or "").strip() or Path(request.html_path).stem
+    title = (
+        card_manifest.title
+        if card_manifest is not None
+        else str(html_snapshot.title or "").strip() or Path(request.html_path).stem
+    )
     slug = str(request.slug or "").strip() or slugify(title)
 
     post_resp = create_post(

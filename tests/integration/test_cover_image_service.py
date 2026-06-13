@@ -142,6 +142,40 @@ def test_real_cover_renderer_preserves_breakable_hyphenated_title(
     assert all(event["fields"]["title"] == title for event in complete_events)
 
 
+def test_real_cover_renderer_wraps_complete_long_covered_period(tmp_path) -> None:
+    covered_period = (
+        "Primary focus: 2024-2028 with historical data points for 2019 and 2021 "
+        "and forecasts extending through 2028"
+    )
+
+    outcomes = generate_cover_images(
+        CoverImageGenerationRequest(
+            schema_version="2.0",
+            output_dir=str(tmp_path / "out"),
+            style_config_path=str(STYLE_PATH),
+            reports=[
+                CoverImageReport(
+                    schema_version="2.0",
+                    file_id="drive-long-period",
+                    title="Technology and Media Outlook 2025: Video Gaming",
+                    publisher="Activate Consulting",
+                    report_slug="technology-media-outlook-video-gaming",
+                    time_period=covered_period,
+                    region="Global",
+                    fingerprint=_fingerprint(),
+                )
+            ],
+        ),
+        _ctx(),
+    )
+
+    assert outcomes[0].status == "generated"
+    assert outcomes[0].assets is not None
+    assert Image.open(outcomes[0].assets.small.output_path).size == (1600, 900)
+    assert Image.open(outcomes[0].assets.medium.output_path).size == (1200, 1500)
+    assert Image.open(outcomes[0].assets.large.output_path).size == (1200, 1600)
+
+
 def test_real_cover_renderer_rejects_impossible_unbroken_title(
     tmp_path, assert_app_error
 ) -> None:
