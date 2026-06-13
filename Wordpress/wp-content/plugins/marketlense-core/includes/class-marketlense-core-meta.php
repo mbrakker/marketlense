@@ -29,6 +29,26 @@ final class Meta
 
     public const META_REGION = 'ml_region';
 
+    public const META_CARD_SCHEMA_VERSION = 'ml_card_schema_version';
+
+    public const META_CARD_TITLE_SCALE = 'ml_card_title_scale';
+
+    public const META_CARD_TLDR_COMPACT = 'ml_card_tldr_compact';
+
+    public const META_CARD_TLDR_STANDARD = 'ml_card_tldr_standard';
+
+    public const META_CARD_KEY_INSIGHTS = 'ml_card_key_insights';
+
+    public const META_CARD_GEOGRAPHY_SCOPE = 'ml_card_geography_scope';
+
+    public const META_CARD_COVER_FINGERPRINT = 'ml_card_cover_fingerprint';
+
+    public const META_CARD_COVER_SMALL_ID = 'ml_card_cover_small_id';
+
+    public const META_CARD_COVER_MEDIUM_ID = 'ml_card_cover_medium_id';
+
+    public const META_CARD_COVER_LARGE_ID = 'ml_card_cover_large_id';
+
     private Content_Parser $parser;
 
     public function __construct(Content_Parser $parser)
@@ -62,7 +82,174 @@ final class Meta
                     ]
                 );
             }
+
+            foreach (
+                [
+                    self::META_CARD_SCHEMA_VERSION,
+                    self::META_CARD_TITLE_SCALE,
+                    self::META_CARD_TLDR_COMPACT,
+                    self::META_CARD_TLDR_STANDARD,
+                    self::META_CARD_GEOGRAPHY_SCOPE,
+                ] as $key
+            ) {
+                register_post_meta(
+                    $post_type,
+                    $key,
+                    [
+                        'single' => true,
+                        'type' => 'string',
+                        'show_in_rest' => true,
+                        'sanitize_callback' => 'sanitize_text_field',
+                        'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+                    ]
+                );
+            }
+
+            register_post_meta(
+                $post_type,
+                self::META_CARD_KEY_INSIGHTS,
+                [
+                    'single' => true,
+                    'type' => 'array',
+                    'show_in_rest' => [
+                        'schema' => [
+                            'type' => 'array',
+                            'minItems' => 2,
+                            'maxItems' => 2,
+                            'items' => ['type' => 'string'],
+                        ],
+                    ],
+                    'sanitize_callback' => [self::class, 'sanitize_card_insights'],
+                    'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+                ]
+            );
+
+            register_post_meta(
+                $post_type,
+                self::META_CARD_COVER_FINGERPRINT,
+                [
+                    'single' => true,
+                    'type' => 'object',
+                    'show_in_rest' => [
+                        'schema' => [
+                            'type' => 'object',
+                            'required' => ['geometry_family', 'seed'],
+                            'properties' => [
+                                'geometry_family' => ['type' => 'string'],
+                                'seed' => ['type' => 'integer'],
+                            ],
+                            'additionalProperties' => true,
+                        ],
+                    ],
+                    'sanitize_callback' => [self::class, 'sanitize_cover_fingerprint'],
+                    'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+                ]
+            );
+
+            foreach (
+                [
+                    self::META_CARD_COVER_SMALL_ID,
+                    self::META_CARD_COVER_MEDIUM_ID,
+                    self::META_CARD_COVER_LARGE_ID,
+                ] as $key
+            ) {
+                register_post_meta(
+                    $post_type,
+                    $key,
+                    [
+                        'single' => true,
+                        'type' => 'integer',
+                        'show_in_rest' => [
+                            'schema' => [
+                                'type' => 'integer',
+                                'minimum' => 1,
+                            ],
+                        ],
+                        'sanitize_callback' => [self::class, 'sanitize_card_media_id'],
+                        'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+                    ]
+                );
+            }
         }
+    }
+
+    /**
+     * @param mixed $value Raw REST meta value.
+     * @return list<string>
+     */
+    public static function sanitize_card_insights(mixed $value): array
+    {
+        if (! is_array($value) || count($value) !== 2) {
+            return [];
+        }
+
+        $sanitized = [];
+        foreach (array_values($value) as $insight) {
+            if (! is_string($insight)) {
+                return [];
+            }
+            $text = sanitize_text_field($insight);
+            if ($text === '') {
+                return [];
+            }
+            $sanitized[] = $text;
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * @param mixed $value Raw REST meta value.
+     * @return array{geometry_family:string,seed:int}|array{}
+     */
+    public static function sanitize_cover_fingerprint(mixed $value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [];
+        }
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $geometry_family = sanitize_text_field((string) ($value['geometry_family'] ?? ''));
+        $allowed_families = [
+            'ascending_trajectory',
+            'descending_trajectory',
+            'volatility_corridor',
+            'convergence_funnel',
+            'divergence_fan',
+            'parallel_bands',
+            'ranked_strata',
+            'distribution_field',
+            'concentration_core',
+            'flow_channels',
+            'network_constellation',
+            'hierarchy_terraces',
+            'cycle_orbit',
+            'forecast_horizon',
+            'uncertainty_envelope',
+            'system_matrix',
+        ];
+        $seed = filter_var($value['seed'] ?? null, FILTER_VALIDATE_INT);
+        if (! in_array($geometry_family, $allowed_families, true) || $seed === false || $seed < 0) {
+            return [];
+        }
+
+        return [
+            'geometry_family' => $geometry_family,
+            'seed' => (int) $seed,
+        ];
+    }
+
+    /**
+     * @param mixed $value Raw REST meta value.
+     */
+    public static function sanitize_card_media_id(mixed $value): int
+    {
+        $media_id = filter_var($value, FILTER_VALIDATE_INT);
+
+        return $media_id !== false && $media_id > 0 ? (int) $media_id : 0;
     }
 
     /**
