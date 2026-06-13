@@ -1,0 +1,157 @@
+from __future__ import annotations
+
+import hashlib
+from dataclasses import asdict
+
+from src.contracts.report_cards import (
+    CoverFingerprint,
+    CoverFingerprintProjectionRequest,
+    ReportCardManifest,
+    ReportCardManifestRequest,
+)
+from src.utils.errors import AppError
+
+
+def select_geometry_family(semantics: dict[str, object]) -> str:
+    shape = str(semantics.get("evidence_shape") or "").strip()
+    direction = str(semantics.get("direction") or "neutral").strip()
+    domain = str(semantics.get("domain_layer") or "").strip()
+    if shape == "trend" and domain == "forecast":
+        return "forecast_horizon"
+    if shape == "trend" and direction == "rising":
+        return "ascending_trajectory"
+    if shape == "trend" and direction == "falling":
+        return "descending_trajectory"
+    if shape == "trend" and direction == "volatile":
+        return "volatility_corridor"
+    if shape == "comparison" and direction == "converging":
+        return "convergence_funnel"
+    if shape == "comparison" and direction == "diverging":
+        return "divergence_fan"
+    mapping = {
+        "comparison": "parallel_bands",
+        "distribution": "distribution_field",
+        "flow": "flow_channels",
+        "network": "network_constellation",
+        "concentration": "concentration_core",
+        "cycle": "cycle_orbit",
+        "uncertainty": "uncertainty_envelope",
+        "system": "system_matrix",
+    }
+    if shape == "hierarchy":
+        return "hierarchy_terraces" if direction == "stable" else "ranked_strata"
+    try:
+        return mapping[shape]
+    except KeyError as exc:
+        raise AppError(
+            code="cover_fingerprint_invalid",
+            message="Cover semantics do not map to an approved geometry family",
+            retryable=False,
+            context={
+                "evidence_shape": shape,
+                "direction": direction,
+                "domain_layer": domain,
+            },
+        ) from exc
+
+
+def classify_geography(region: str) -> tuple[str, str]:
+    normalized = " ".join(str(region or "").split())
+    folded = normalized.casefold()
+    if not normalized:
+        return "", "unknown"
+    if folded in {"global", "worldwide", "international", "multi-market"} or (
+        "," in normalized
+    ):
+        return normalized, "global"
+    if folded in {
+        "europe",
+        "asia pacific",
+        "latin america",
+        "middle east",
+        "africa",
+        "north america",
+    }:
+        return normalized, "regional"
+    return normalized, "country"
+
+
+def select_title_scale(title: str) -> str:
+    normalized = " ".join(str(title or "").split())
+    count = len(normalized)
+    longest_token = max((len(token) for token in normalized.split()), default=0)
+    if not normalized or count > 120 or longest_token > 32:
+        raise AppError(
+            code="card_title_overflow",
+            message="Complete report title does not fit the approved card title scale",
+            retryable=False,
+            context={
+                "character_count": count,
+                "longest_token": longest_token,
+            },
+        )
+    if count <= 42:
+        return "short"
+    if count <= 64:
+        return "medium"
+    if count <= 88:
+        return "long"
+    return "xlong"
+
+
+def stable_cover_seed(file_id: str, artifact_hash: str) -> int:
+    material = f"{file_id.strip()}:{artifact_hash.strip()}".encode("utf-8")
+    return int(hashlib.sha256(material).hexdigest()[:8], 16)
+
+
+def build_cover_fingerprint(
+    request: CoverFingerprintProjectionRequest,
+) -> CoverFingerprint:
+    _, geography_scope = classify_geography(request.region)
+    semantics = request.cover_semantics
+    return CoverFingerprint.from_dict(
+        {
+            "schema_version": "1.0",
+            "geometry_family": select_geometry_family(semantics),
+            "evidence_shape": semantics.get("evidence_shape"),
+            "direction": semantics.get("direction"),
+            "geography_scope": geography_scope,
+            "evidence_density": semantics.get("evidence_density"),
+            "domain_layer": semantics.get("domain_layer"),
+            "seed": stable_cover_seed(request.file_id, request.artifact_hash),
+            "selection_reason": semantics.get("selection_reason"),
+        }
+    )
+
+
+def build_report_card_manifest(
+    request: ReportCardManifestRequest,
+) -> ReportCardManifest:
+    insights = tuple(
+        " ".join(str(item.get("text") or "").split())
+        for item in request.insights_final[:2]
+    )
+    if len(insights) != 2 or any(not insight for insight in insights):
+        raise AppError(
+            code="card_key_insights_invalid",
+            message="Exactly two complete card insights are required",
+            retryable=False,
+        )
+    geography_label, geography_scope = classify_geography(request.region)
+    return ReportCardManifest.from_dict(
+        {
+            "schema_version": "1.0",
+            "title": " ".join(request.title.split()),
+            "title_scale": select_title_scale(request.title),
+            "publisher": " ".join(request.publisher.split()),
+            "published_date": request.published_date,
+            "geography_label": geography_label,
+            "geography_scope": geography_scope,
+            "covered_period": " ".join(request.covered_period.split()),
+            "tldr_compact": " ".join(request.tldr_compact.split()),
+            "tldr_standard": " ".join(request.tldr_standard.split()),
+            "key_insights": insights,
+            "fingerprint": asdict(request.fingerprint),
+            "covers": asdict(request.covers),
+        }
+    )
