@@ -23,6 +23,9 @@ SHORTCODES = (
     / "includes"
     / "class-marketlense-core-shortcodes.php"
 )
+THEME = ROOT / "Wordpress" / "wp-content" / "themes" / "marketlense"
+THEME_CSS = THEME / "assets" / "css" / "theme.css"
+REPORT_GRID = THEME / "patterns" / "report-grid.php"
 
 
 def test_report_card_audit_script_checks_complete_published_contract() -> None:
@@ -111,3 +114,50 @@ def test_latest_reports_rejects_noncanonical_explicit_variant() -> None:
     assert "sanitize_key((string) $atts['variant'])" in latest_reports
     assert "['small', 'medium', 'large']" in latest_reports
     assert "throw new \\InvalidArgumentException" in latest_reports
+
+
+def test_report_patterns_request_only_canonical_card_variants() -> None:
+    report_grid = REPORT_GRID.read_text(encoding="utf-8")
+    assert '[ml_latest_reports limit="6" variant="small"]' in report_grid
+
+    report_surfaces = [
+        THEME / "patterns" / "featured-digest.php",
+        THEME / "patterns" / "hero-institutional.php",
+        THEME / "templates" / "archive-ml_report.html",
+        THEME / "templates" / "category.html",
+        THEME / "templates" / "search.html",
+        THEME / "templates" / "taxonomy-ml_publisher.html",
+    ]
+    for path in report_surfaces:
+        source = path.read_text(encoding="utf-8")
+        assert "<!-- wp:query {" not in source
+        assert "ml-report-card" not in source
+
+
+def test_canonical_card_css_preserves_all_semantic_text() -> None:
+    css = THEME_CSS.read_text(encoding="utf-8")
+    start_marker = "/* BEGIN canonical report cards */"
+    end_marker = "/* END canonical report cards */"
+    assert start_marker in css
+    assert end_marker in css
+    canonical = css[css.index(start_marker) : css.index(end_marker)]
+
+    for selector in (
+        ".ml-card--small",
+        ".ml-card--medium",
+        ".ml-card--large",
+        ".ml-card__title",
+        ".ml-card__tldr",
+        ".ml-card__facts",
+        ".ml-card__insights",
+    ):
+        assert selector in canonical
+
+    assert "-webkit-line-clamp" not in canonical
+    assert "line-clamp" not in canonical
+    assert "text-overflow: ellipsis" not in canonical
+    assert "grid-template-rows:" in canonical
+    assert "text-wrap: balance" in canonical
+    assert "text-wrap: pretty" in canonical
+    assert ":focus-visible" in canonical
+    assert "prefers-reduced-motion: reduce" in canonical

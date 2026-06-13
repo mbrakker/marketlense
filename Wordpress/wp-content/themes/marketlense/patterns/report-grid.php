@@ -31,7 +31,7 @@
   <!-- /wp:group -->
 
   <!-- wp:shortcode -->
-  [ml_latest_reports limit="6"]
+  [ml_latest_reports limit="6" variant="small"]
   <!-- /wp:shortcode -->
 </div>
 <!-- /wp:group -->
