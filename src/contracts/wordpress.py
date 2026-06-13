@@ -143,6 +143,12 @@ class WordPressPostCreateRequest:
             "doc": "Optional mapping of taxonomy REST base to WordPress term IDs."
         },
     )
+    meta: Optional[Dict[str, object]] = field(
+        default=None,
+        metadata={
+            "doc": "Validated WordPress post meta keyed by registered REST field name."
+        },
+    )
     post_type: str = field(
         default="posts", metadata={"doc": "REST post type endpoint slug."}
     )

@@ -38,6 +38,7 @@ from src.contracts.vector_store import (
     VectorStoreStatusRequest,
 )
 from src.contracts.wordpress import (
+    WordPressPostCreateRequest,
     WordPressPostUpdateRequest,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
@@ -51,7 +52,11 @@ from src.services import (
     pdf_service,
     vector_store_service,
 )
-from src.services.wordpress_service import ensure_taxonomy_terms, update_post_categories
+from src.services.wordpress_service import (
+    create_post,
+    ensure_taxonomy_terms,
+    update_post_categories,
+)
 from tests.support.fakes import FakeOpenAIResult
 
 
@@ -180,6 +185,7 @@ class _WordPressStubHandler(BaseHTTPRequestHandler):
     categories: dict[str, int] = {}
     next_id: int = 1
     updated_posts: dict[int, list[int]] = {}
+    created_posts: list[dict[str, object]] = []
 
     def _send_json(self, payload: object, status: int = 200) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -219,6 +225,18 @@ class _WordPressStubHandler(BaseHTTPRequestHandler):
             self._send_json({"id": term_id, "slug": slug}, status=201)
             return
 
+        if self.path == "/wp-json/wp/v2/ml_report":
+            self.created_posts.append(payload)
+            self._send_json(
+                {
+                    "id": 84,
+                    "link": "https://example.local/reports/84",
+                    "status": payload.get("status", "draft"),
+                },
+                status=201,
+            )
+            return
+
         if self.path.startswith("/wp-json/wp/v2/posts/"):
             try:
                 post_id = int(self.path.rsplit("/", 1)[-1])
@@ -242,6 +260,7 @@ class _WordPressStubHandler(BaseHTTPRequestHandler):
 
 @pytest.mark.integration
 def test_wordpress_service_against_local_stub():
+    _WordPressStubHandler.created_posts = []
     server = HTTPServer(("127.0.0.1", 0), _WordPressStubHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -277,6 +296,28 @@ def test_wordpress_service_against_local_stub():
         )
         assert updated.post_id == 42
         assert updated.link is not None
+
+        created = create_post(
+            WordPressPostCreateRequest(
+                schema_version="1.0",
+                base_url=base_url,
+                auth_header="Bearer test-token",
+                title="Report",
+                content_html="<p>Report</p>",
+                status="publish",
+                post_type="ml_report",
+                meta={
+                    "ml_card_schema_version": "1.0",
+                    "ml_card_cover_large_id": 303,
+                },
+            ),
+            _ctx(),
+        )
+        assert created.post_id == 84
+        assert _WordPressStubHandler.created_posts[-1]["meta"] == {
+            "ml_card_schema_version": "1.0",
+            "ml_card_cover_large_id": 303,
+        }
     finally:
         server.shutdown()
         thread.join(timeout=2)

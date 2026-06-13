@@ -186,6 +186,7 @@ def create_post(
                 "categories_count": len(request.categories or []),
                 "tags_count": len(request.tags or []),
                 "taxonomy_count": len(request.taxonomy_terms or {}),
+                "meta_count": len(request.meta or {}),
                 "ssl_verify": request.ssl_verify,
                 "ca_bundle_path": request.ca_bundle_path or "",
             },
@@ -209,6 +210,8 @@ def create_post(
         payload["categories"] = request.categories
     if request.tags:
         payload["tags"] = request.tags
+    if request.meta:
+        payload["meta"] = dict(request.meta)
     if request.taxonomy_terms:
         for taxonomy_rest_base, term_ids in request.taxonomy_terms.items():
             key = str(taxonomy_rest_base).strip()

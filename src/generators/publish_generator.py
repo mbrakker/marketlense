@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 import html
 from io import BytesIO
+import json
 import logging
 import mimetypes
 from pathlib import Path
@@ -21,6 +22,7 @@ from src.contracts.publish import (
     PublishSettings,
 )
 from src.contracts.report_store import ReportMetadataGetRequest
+from src.contracts.report_cards import ReportCardManifest
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
     WordPressMediaUploadRequest,
@@ -135,6 +137,13 @@ def publish_html(
             retryable=False,
         )
     base_url = settings.wp.site_url.rstrip("/")
+    card_manifest = None
+    if not file_id.startswith("cross-report:"):
+        card_manifest = _load_report_card_manifest(
+            request.html_path,
+            settings.output_dir,
+            ctx,
+        )
 
     metadata = None
     if request.resolved_terms is None:
@@ -182,6 +191,19 @@ def publish_html(
             fields={"count": len(image_map), "featured_media": featured_media_id or 0},
         )
     )
+    card_media_ids: dict[str, int] = {}
+    if card_manifest is not None:
+        card_media_ids = _upload_report_card_covers(
+            manifest=card_manifest,
+            html_path=request.html_path,
+            output_dir=settings.output_dir,
+            base_url=base_url,
+            auth_header=auth_header,
+            ssl_verify=settings.wp.ssl_verify,
+            ca_bundle_path=settings.wp.ca_bundle_path,
+            ctx=ctx,
+        )
+        featured_media_id = card_media_ids["large"]
     rendered_body_html = replace_image_sources(html_snapshot.body_html, image_map)
     # Proxy-backed digest images stay more reliable on the WP frontend without
     # responsive srcset/sizes candidates that still point at synthetic query URLs.
@@ -221,6 +243,11 @@ def publish_html(
             categories=category_ids_for_wp if category_ids_for_wp else None,
             tags=tag_ids_for_wp if tag_ids_for_wp else None,
             taxonomy_terms=resolved_terms.taxonomy_terms or None,
+            meta=(
+                _report_card_post_meta(card_manifest, card_media_ids)
+                if card_manifest is not None
+                else None
+            ),
             post_type=settings.wp.post_type,
         ),
         ctx,
@@ -248,6 +275,143 @@ def publish_html(
         post_id=post_resp.post_id,
         post_url=post_resp.link,
     )
+
+
+def _load_report_card_manifest(
+    html_path: str,
+    output_dir: str,
+    ctx: RunContext,
+) -> ReportCardManifest:
+    source = Path(html_path)
+    if not source.is_absolute():
+        source = Path(output_dir) / source.name
+    manifest_path = source.with_suffix("") / "report-card-manifest.json"
+    if not file_exists(
+        FileExistsRequest(schema_version="1.0", path=str(manifest_path)), ctx
+    ).exists:
+        raise AppError(
+            code="cover_asset_set_incomplete",
+            message="Report-card manifest is required before WordPress publication",
+            retryable=False,
+            context={"expected_path": str(manifest_path)},
+        )
+    content = read_text(
+        ReadTextRequest(schema_version="1.0", path=str(manifest_path)), ctx
+    ).content
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise AppError(
+            code="cover_asset_set_incomplete",
+            message="Report-card manifest must contain valid JSON",
+            cause=exc,
+            retryable=False,
+            context={"manifest_path": str(manifest_path)},
+        ) from exc
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="cover_asset_set_incomplete",
+            message="Report-card manifest must contain a JSON object",
+            retryable=False,
+            context={"manifest_path": str(manifest_path)},
+        )
+    return ReportCardManifest.from_dict(payload)
+
+
+def _upload_report_card_covers(
+    *,
+    manifest: ReportCardManifest,
+    html_path: str,
+    output_dir: str,
+    base_url: str,
+    auth_header: str,
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
+    ctx: RunContext,
+) -> dict[str, int]:
+    source = Path(html_path)
+    if not source.is_absolute():
+        source = Path(output_dir) / source.name
+    report_dir = source.with_suffix("").resolve()
+    jobs: dict[str, _MediaUploadJob] = {}
+    for size in ("small", "medium", "large"):
+        asset = getattr(manifest.covers, size)
+        local_path = (report_dir / asset.output_path).resolve()
+        try:
+            local_path.relative_to(report_dir)
+        except ValueError as exc:
+            raise AppError(
+                code="cover_asset_set_incomplete",
+                message="Report-card cover path escapes the report directory",
+                cause=exc,
+                retryable=False,
+                context={"size": size, "output_path": asset.output_path},
+            ) from exc
+        if not file_exists(
+            FileExistsRequest(schema_version="1.0", path=str(local_path)), ctx
+        ).exists:
+            raise AppError(
+                code="cover_asset_set_incomplete",
+                message="Report-card cover file is missing",
+                retryable=False,
+                context={"size": size, "output_path": str(local_path)},
+            )
+        jobs[size] = _MediaUploadJob(
+            src=asset.output_path,
+            local_path=str(local_path),
+            is_preview=size == "large",
+        )
+    ids: dict[str, int] = {}
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        future_to_size = {
+            executor.submit(
+                _upload_single_media,
+                job=job,
+                base_url=base_url,
+                auth_header=auth_header,
+                ssl_verify=ssl_verify,
+                ca_bundle_path=ca_bundle_path,
+                ctx=ctx,
+            ): size
+            for size, job in jobs.items()
+        }
+        for future in as_completed(future_to_size):
+            ids[future_to_size[future]] = future.result().media_id
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_report_card_covers_uploaded",
+            module=logger.name,
+            fields={
+                "small_id": ids["small"],
+                "medium_id": ids["medium"],
+                "large_id": ids["large"],
+            },
+        )
+    )
+    return ids
+
+
+def _report_card_post_meta(
+    manifest: ReportCardManifest,
+    media_ids: dict[str, int],
+) -> dict[str, object]:
+    return {
+        "ml_card_schema_version": manifest.schema_version,
+        "ml_card_title_scale": manifest.title_scale,
+        "ml_card_tldr_compact": manifest.tldr_compact,
+        "ml_card_tldr_standard": manifest.tldr_standard,
+        "ml_card_key_insights": list(manifest.key_insights),
+        "ml_card_geography_scope": manifest.geography_scope,
+        "ml_card_cover_fingerprint": {
+            "geometry_family": manifest.fingerprint.geometry_family,
+            "seed": manifest.fingerprint.seed,
+        },
+        "ml_card_cover_small_id": media_ids["small"],
+        "ml_card_cover_medium_id": media_ids["medium"],
+        "ml_card_cover_large_id": media_ids["large"],
+    }
 
 
 def _resolve_html_snapshot(
@@ -372,6 +536,7 @@ def _resolve_term_assignments(
         tag_ids=tag_ids_for_wp,
         taxonomy_terms=taxonomy_terms,
     )
+
 
 def _upload_images(
     *,

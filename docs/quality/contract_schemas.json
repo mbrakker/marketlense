@@ -26371,6 +26371,17 @@
             }
           ]
         },
+        "meta": {
+          "anyOf": [
+            {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "post_type": {
           "type": "string"
         },
