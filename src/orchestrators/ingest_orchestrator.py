@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -16,12 +17,15 @@ from src.contracts.drive import (
     DriveFile,
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.files import FileExistsRequest, FileStatRequest, ReadTextRequest
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
+from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
     ReportMetadataDbAccessRequest,
     ReportMetadataGetRequest,
 )
 from src.contracts.run_context import RunContext
+from src.generators.report_generation_shared import report_slug
 from src.orchestrators.ingest_file_orchestrator import (
     FileProcessResult as _FileProcessResult,
     IngestFileDependencies,
@@ -46,8 +50,7 @@ from src.services.file_cache_service import (
     resolve_md5_sidecar,
     write_md5_sidecar,
 )
-from src.services.file_service import delete_file, file_stat
-from src.contracts.files import FileStatRequest
+from src.services.file_service import delete_file, file_exists, file_stat, read_text
 from src.services.lock_service import acquire_lock, release_lock
 from src.services.report_store_service import (
     check_report_db_access,
@@ -91,9 +94,16 @@ class IngestBatchDependencies:
         [list[DriveFile], str, RunContext], dict[tuple[str, str], bool]
     ]
     process_file: Callable[
-        [DriveFile, int, IngestSettings, RunContext], _FileProcessResult
+        [DriveFile, int, IngestSettings, RunContext, bool], _FileProcessResult
     ]
     thread_pool_executor_factory: Callable[[int], Any]
+    file_exists: Callable[[FileExistsRequest, RunContext], Any] = field(
+        default=file_exists
+    )
+    read_text: Callable[[ReadTextRequest, RunContext], Any] = field(default=read_text)
+    get_report_metadata: Callable[[ReportMetadataGetRequest, RunContext], Any] = field(
+        default=get_report_metadata
+    )
     vector_store_retention_cleanup: Callable[[IngestSettings, RunContext], Any] = field(
         default=run_vector_store_retention_cleanup
     )
@@ -354,6 +364,7 @@ def _process_file(
     index: int,
     settings: IngestSettings,
     root_ctx: RunContext,
+    force_report_cards: bool,
 ) -> _FileProcessResult:
     dependencies = IngestFileDependencies(
         should_skip=_should_skip,
@@ -380,6 +391,7 @@ def _process_file(
         ),
         state_record=state_record,
         eof_retry_limit=EOF_RETRY_LIMIT,
+        bypass_existing_report_html=force_report_cards,
     )
     return run_ingest_file(
         file=file,
@@ -526,8 +538,20 @@ def _resolve_modified_after(
     settings: IngestSettings,
     *,
     limit: Optional[int],
+    force_report_cards: bool,
     root_ctx: RunContext,
 ) -> Optional[str]:
+    if force_report_cards:
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_modified_after_ignored",
+                module=logger.name,
+                fields={"reason": "force_report_cards"},
+            )
+        )
+        return None
     if limit is not None:
         logger.info(
             log_event(
@@ -592,6 +616,7 @@ def _materialize_files_to_process(
     max_n: int,
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
+    force_report_cards: bool,
 ) -> list[DriveFile]:
     files_to_process: list[DriveFile] = []
     pending_md5_files: list[DriveFile] = []
@@ -603,7 +628,17 @@ def _materialize_files_to_process(
         lookup = deps.batch_should_skip(pending_md5_files, settings.state_db, root_ctx)
         for pending in pending_md5_files:
             drive_md5 = pending.md5_checksum.strip() if pending.md5_checksum else ""
-            if drive_md5 and lookup.get((pending.file_id, drive_md5), False):
+            should_skip = bool(
+                drive_md5 and lookup.get((pending.file_id, drive_md5), False)
+            )
+            if should_skip and force_report_cards:
+                should_skip = _report_card_backfill_should_skip(
+                    pending,
+                    settings=settings,
+                    deps=deps,
+                    root_ctx=root_ctx,
+                )
+            if should_skip:
                 logger.info(
                     log_event(
                         root_ctx,
@@ -646,6 +681,80 @@ def _materialize_files_to_process(
     return files_to_process
 
 
+def _report_card_backfill_should_skip(
+    file: DriveFile,
+    *,
+    settings: IngestSettings,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> bool:
+    metadata = deps.get_report_metadata(
+        ReportMetadataGetRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            file_id=file.file_id,
+        ),
+        root_ctx,
+    )
+    html_path = str(metadata.html_path or "").strip() if metadata else ""
+    if html_path:
+        manifest_path = Path(html_path).with_suffix("") / "report-card-manifest.json"
+        manifest_path_source = "report_metadata"
+    else:
+        manifest_path = (
+            Path(settings.output_dir)
+            / report_slug(file.name or file.file_id, file.file_id)
+            / "report-card-manifest.json"
+        )
+        manifest_path_source = "report_slug_fallback"
+    if not deps.file_exists(
+        FileExistsRequest(schema_version="1.0", path=str(manifest_path)), root_ctx
+    ).exists:
+        decision = "reprocess"
+        reason = "manifest_missing"
+    else:
+        try:
+            content = deps.read_text(
+                ReadTextRequest(schema_version="1.0", path=str(manifest_path)),
+                root_ctx,
+            ).content
+            payload = json.loads(content)
+            if not isinstance(payload, dict):
+                raise AppError(
+                    code="cover_asset_set_incomplete",
+                    message="Report-card manifest must contain a JSON object",
+                    retryable=False,
+                )
+            ReportCardManifest.from_dict(payload)
+        except json.JSONDecodeError:
+            decision = "reprocess"
+            reason = "manifest_invalid_json"
+        except AppError as exc:
+            if exc.retryable:
+                raise
+            decision = "reprocess"
+            reason = exc.code
+        else:
+            decision = "skip"
+            reason = "manifest_valid"
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="ingest_report_card_backfill_decision",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "decision": decision,
+                "reason": reason,
+                "manifest_path": str(manifest_path),
+                "manifest_path_source": manifest_path_source,
+            },
+        )
+    )
+    return decision == "skip"
+
+
 def _resolve_worker_limit(
     settings: IngestSettings,
     *,
@@ -680,6 +789,7 @@ def _process_ingest_batch(
     settings: IngestSettings,
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
+    force_report_cards: bool,
 ) -> list[_FileProcessResult]:
     worker_limit = _resolve_worker_limit(
         settings,
@@ -689,12 +799,27 @@ def _process_ingest_batch(
     results: list[_FileProcessResult] = []
     if worker_limit <= 1 or len(files_to_process) <= 1:
         for idx, file in enumerate(files_to_process):
-            results.append(deps.process_file(file, idx, settings, root_ctx))
+            results.append(
+                deps.process_file(
+                    file,
+                    idx,
+                    settings,
+                    root_ctx,
+                    force_report_cards,
+                )
+            )
         return results
 
     with deps.thread_pool_executor_factory(worker_limit) as executor:
         futures = {
-            executor.submit(deps.process_file, file, idx, settings, root_ctx): (
+            executor.submit(
+                deps.process_file,
+                file,
+                idx,
+                settings,
+                root_ctx,
+                force_report_cards,
+            ): (
                 idx,
                 file,
             )
@@ -853,6 +978,7 @@ def run_ingest(
     limit: Optional[int] = None,
     ctx: Optional[RunContext] = None,
     dependencies: Optional[IngestBatchDependencies] = None,
+    force_report_cards: bool = False,
 ) -> List[IngestOutcome]:
     deps = dependencies or IngestBatchDependencies.default()
     root_ctx = ctx or new_run_context()
@@ -871,6 +997,7 @@ def run_ingest(
                 fields={
                     "folder_id": folder_id or settings.gdrive_folder_id,
                     "limit": limit,
+                    "force_report_cards": force_report_cards,
                 },
             )
         )
@@ -878,6 +1005,7 @@ def run_ingest(
         modified_after = _resolve_modified_after(
             settings,
             limit=limit,
+            force_report_cards=force_report_cards,
             root_ctx=root_ctx,
         )
         max_n = limit if limit is not None else settings.batch_limit
@@ -896,6 +1024,7 @@ def run_ingest(
                 max_n=max_n,
                 deps=deps,
                 root_ctx=root_ctx,
+                force_report_cards=force_report_cards,
             ),
             2,
         )
@@ -904,6 +1033,7 @@ def run_ingest(
             settings=settings,
             deps=deps,
             root_ctx=root_ctx,
+            force_report_cards=force_report_cards,
         )
         results.sort(key=lambda r: r.index)
         outcomes = [result.outcome for result in results]

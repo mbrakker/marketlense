@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 from dataclasses import replace
+import json
 from pathlib import Path
 from threading import Barrier, Lock, get_ident
 from types import SimpleNamespace
@@ -55,8 +56,10 @@ def _make_real_process_file(
     download_pdf_to_path,
     run_report_pipeline,
     should_skip=None,
+    existing_report_html=None,
+    bypass_existing_report_html: bool = False,
 ):
-    def _process_file(file, index, settings, root_ctx):
+    def _process_file(file, index, settings, root_ctx, force_report_cards):
         file_dependencies = IngestFileDependencies(
             should_skip=should_skip or (lambda *_args: False),
             cache_pdf_path=lambda current_settings, current_file: str(
@@ -83,7 +86,7 @@ def _make_real_process_file(
                 written=False,
                 reason="skipped",
             ),
-            existing_report_html=lambda *_args: None,
+            existing_report_html=existing_report_html or (lambda *_args: None),
             run_step_with_retry=lambda _step, _ctx, operation, _retries: operation(),
             file_stat=file_stat,
             download_pdf_to_path=download_pdf_to_path,
@@ -92,6 +95,9 @@ def _make_real_process_file(
             run_report_pipeline=run_report_pipeline,
             state_record=state_record,
             eof_retry_limit=0,
+            bypass_existing_report_html=(
+                bypass_existing_report_html or force_report_cards
+            ),
         )
         return run_ingest_file(
             file=file,
@@ -103,6 +109,57 @@ def _make_real_process_file(
         )
 
     return _process_file
+
+
+def _valid_report_card_manifest_payload() -> dict[str, object]:
+    return {
+        "schema_version": "1.0",
+        "title": "Global Economic Conditions Quarterly Update",
+        "title_scale": "long",
+        "publisher": "McKinsey & Company",
+        "published_date": "2026-06-09",
+        "geography_label": "Global",
+        "geography_scope": "global",
+        "covered_period": "Q2 2026",
+        "tldr_compact": "Complete compact TLDR.",
+        "tldr_standard": "Complete standard TLDR with grounded context.",
+        "key_insights": ["First insight.", "Second insight."],
+        "fingerprint": {
+            "schema_version": "1.0",
+            "geometry_family": "ascending_trajectory",
+            "evidence_shape": "trend",
+            "direction": "rising",
+            "geography_scope": "global",
+            "evidence_density": "balanced",
+            "domain_layer": "grid",
+            "seed": 184221,
+            "selection_reason": "A rising trend dominates the report.",
+        },
+        "covers": {
+            "schema_version": "1.0",
+            "small": {
+                "schema_version": "1.0",
+                "size": "small",
+                "output_path": "assets/report-card-small.png",
+                "width": 1600,
+                "height": 900,
+            },
+            "medium": {
+                "schema_version": "1.0",
+                "size": "medium",
+                "output_path": "assets/report-card-medium.png",
+                "width": 1200,
+                "height": 1500,
+            },
+            "large": {
+                "schema_version": "1.0",
+                "size": "large",
+                "output_path": "assets/report-card-large.png",
+                "width": 1200,
+                "height": 1600,
+            },
+        },
+    }
 
 
 def test_parallel_executor_orders_results(ingest_settings) -> None:
@@ -144,7 +201,8 @@ def test_parallel_executor_orders_results(ingest_settings) -> None:
     captured: dict[str, int] = {}
     current_settings = settings
 
-    def _fake_process_file(file, index, settings, root_ctx):
+    def _fake_process_file(file, index, settings, root_ctx, force_report_cards):
+        del force_report_cards
         assert settings == current_settings
         assert root_ctx.run_id
         return orch._FileProcessResult(
@@ -277,7 +335,8 @@ def test_ingest_uses_batch_state_prefilter(ingest_settings) -> None:
             if file.md5_checksum
         }
 
-    def _fake_process_file(file, index, settings, root_ctx):
+    def _fake_process_file(file, index, settings, root_ctx, force_report_cards):
+        del force_report_cards
         assert settings == current_settings
         assert root_ctx.run_id
         return orch._FileProcessResult(
@@ -337,7 +396,8 @@ def test_ingest_retries_doc_map_empty_state_when_text_validation_passed(
         orch.new_run_context(),
     )
 
-    def _fake_process_file(file, index, settings, root_ctx):
+    def _fake_process_file(file, index, settings, root_ctx, force_report_cards):
+        del force_report_cards
         return orch._FileProcessResult(
             index=index,
             outcome=IngestOutcome(
@@ -391,7 +451,8 @@ def test_ingest_retries_progress_state_without_final_text_validation(
         orch.new_run_context(),
     )
 
-    def _fake_process_file(file, index, settings, root_ctx):
+    def _fake_process_file(file, index, settings, root_ctx, force_report_cards):
+        del force_report_cards
         return orch._FileProcessResult(
             index=index,
             outcome=IngestOutcome(
@@ -477,3 +538,215 @@ def test_ingest_does_not_repeat_drive_md5_single_state_check(ingest_settings) ->
 
     assert [row.status for row in results] == ["processed"]
     assert single_calls["count"] == 0
+
+
+def test_force_report_cards_bypasses_existing_html_cache(ingest_settings) -> None:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="file-card-cache",
+        name="Card Cache.pdf",
+        modified_time=None,
+        md5_checksum="card-cache-md5",
+    )
+    generated: list[str] = []
+
+    def _download(req, ctx):
+        del ctx
+        payload = _pdf_bytes()
+        out_path = Path(req.output_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(payload)
+        return DriveDownloadToPathResponse(
+            schema_version="1.0",
+            file=req.file,
+            output_path=req.output_path,
+            md5=req.file.md5_checksum,
+            size=len(payload),
+        )
+
+    def _generate_report(current_file, cache_path, current_settings, md5, ctx):
+        del cache_path, ctx
+        generated.append(current_file.file_id)
+        return IngestOutcome(
+            schema_version="1.1",
+            file_id=current_file.file_id,
+            name=current_file.name or current_file.file_id,
+            md5=md5,
+            html_path=str(Path(current_settings.output_dir) / "card-cache.html"),
+            report_card_manifest_path=str(
+                Path(current_settings.output_dir)
+                / "card-cache"
+                / "report-card-manifest.json"
+            ),
+            status="processed",
+        )
+
+    deps = _batch_dependencies(
+        list_pdfs=lambda req, ctx: [file],
+        batch_should_skip=lambda files, state_db, ctx: {
+            (file.file_id, file.md5_checksum or ""): False
+        },
+        process_file=_make_real_process_file(
+            download_pdf_to_path=_download,
+            run_report_pipeline=_generate_report,
+            existing_report_html=lambda *_args: "out/card-cache.html",
+            bypass_existing_report_html=True,
+        ),
+        vector_store_retention_cleanup=lambda settings, ctx: None,
+    )
+
+    results = orch.run_ingest(settings, limit=1, dependencies=deps)
+
+    assert [row.status for row in results] == ["processed"]
+    assert generated == [file.file_id]
+
+
+def _run_report_card_backfill_case(
+    ingest_settings,
+    *,
+    force_report_cards: bool,
+    manifest_exists: bool,
+    manifest_content: str,
+) -> list[tuple[str, bool]]:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="file-card",
+        name="Card Report.pdf",
+        modified_time="2026-06-10T00:00:00Z",
+        md5_checksum="card-md5",
+    )
+    processed: list[tuple[str, bool]] = []
+
+    def _process(
+        current_file,
+        index,
+        current_settings,
+        root_ctx,
+        force_current_report_cards,
+    ):
+        del current_settings, root_ctx
+        processed.append((current_file.file_id, force_current_report_cards))
+        return orch._FileProcessResult(
+            index=index,
+            outcome=IngestOutcome(
+                schema_version="1.1",
+                file_id=current_file.file_id,
+                name=current_file.name or current_file.file_id,
+                md5=current_file.md5_checksum,
+                html_path="out/card-report.html",
+                status="processed",
+            ),
+            processed=1,
+            had_error=False,
+        )
+
+    deps = _batch_dependencies(
+        list_pdfs=lambda req, ctx: [file],
+        batch_should_skip=lambda files, state_db, ctx: {
+            (file.file_id, file.md5_checksum or ""): True
+        },
+        process_file=_process,
+        file_exists=lambda req, ctx: SimpleNamespace(exists=manifest_exists),
+        read_text=lambda req, ctx: SimpleNamespace(content=manifest_content),
+        vector_store_retention_cleanup=lambda settings, ctx: None,
+    )
+
+    orch.run_ingest(
+        settings,
+        limit=1,
+        force_report_cards=force_report_cards,
+        dependencies=deps,
+    )
+    return processed
+
+
+def test_report_cards_normal_mode_keeps_processed_report_skipped(
+    ingest_settings,
+) -> None:
+    processed = _run_report_card_backfill_case(
+        ingest_settings,
+        force_report_cards=False,
+        manifest_exists=False,
+        manifest_content="",
+    )
+
+    assert processed == []
+
+
+def test_report_cards_force_mode_reprocesses_missing_manifest(
+    ingest_settings,
+) -> None:
+    processed = _run_report_card_backfill_case(
+        ingest_settings,
+        force_report_cards=True,
+        manifest_exists=False,
+        manifest_content="",
+    )
+
+    assert processed == [("file-card", True)]
+
+
+def test_report_cards_force_mode_reprocesses_invalid_manifest(
+    ingest_settings,
+) -> None:
+    processed = _run_report_card_backfill_case(
+        ingest_settings,
+        force_report_cards=True,
+        manifest_exists=True,
+        manifest_content='{"schema_version":"1.0"}',
+    )
+
+    assert processed == [("file-card", True)]
+
+
+def test_report_cards_force_mode_skips_valid_manifest(ingest_settings) -> None:
+    processed = _run_report_card_backfill_case(
+        ingest_settings,
+        force_report_cards=True,
+        manifest_exists=True,
+        manifest_content=json.dumps(_valid_report_card_manifest_payload()),
+    )
+
+    assert processed == []
+
+
+def test_report_card_backfill_uses_canonical_report_metadata_path(
+    ingest_settings,
+) -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="file-card",
+        name="file-card",
+        modified_time=None,
+        md5_checksum="card-md5",
+    )
+    checked_paths: list[str] = []
+
+    def _file_exists(request, ctx):
+        del ctx
+        checked_paths.append(request.path)
+        return SimpleNamespace(exists=True)
+
+    deps = _batch_dependencies(
+        get_report_metadata=lambda request, ctx: SimpleNamespace(
+            html_path="out/canonical-report.html"
+        ),
+        file_exists=_file_exists,
+        read_text=lambda request, ctx: SimpleNamespace(
+            content=json.dumps(_valid_report_card_manifest_payload())
+        ),
+    )
+
+    should_skip = orch._report_card_backfill_should_skip(
+        file,
+        settings=ingest_settings,
+        deps=deps,
+        root_ctx=orch.new_run_context(),
+    )
+
+    assert should_skip is True
+    assert checked_paths == [
+        str(Path("out/canonical-report") / "report-card-manifest.json")
+    ]

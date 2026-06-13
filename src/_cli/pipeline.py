@@ -72,6 +72,11 @@ def _sync_cli_patch_points() -> None:
 def ingest(
     folder: str = typer.Option(None, help="Override Drive folder ID"),
     limit: int = typer.Option(None, help="Max PDFs to process this run"),
+    force_report_cards: bool = typer.Option(
+        False,
+        "--force-report-cards",
+        help="Reprocess reports whose report-card manifest is missing or invalid",
+    ),
 ):
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_ingest")
@@ -94,7 +99,13 @@ def ingest(
 
     console.print("[cyan]Running ingest pipeline...[/cyan]")
     try:
-        outcomes = run_ingest(settings, folder_id=folder, limit=limit, ctx=ctx)
+        outcomes = run_ingest(
+            settings,
+            folder_id=folder,
+            limit=limit,
+            ctx=ctx,
+            force_report_cards=force_report_cards,
+        )
     except AppError as exc:
         if exc.code == "ingest_locked":
             console.print(

@@ -127,7 +127,8 @@ def test_retry_on_retryable_app_error(
             generate_report_fn=_generate_report,
         )
 
-    def _process_file(file, index, current_settings, root_ctx):
+    def _process_file(file, index, current_settings, root_ctx, force_report_cards):
+        del force_report_cards
         dependencies = IngestFileDependencies(
             should_skip=lambda *_args, **_kwargs: False,
             cache_pdf_path=lambda settings_obj, drive: str(
@@ -241,7 +242,8 @@ def test_retry_on_retryable_drive_list_error(
             raise retry_error
         return [drive_file]
 
-    def _process_file(file, index, _current_settings, _root_ctx):
+    def _process_file(file, index, _current_settings, _root_ctx, force_report_cards):
+        del force_report_cards
         return FileProcessResult(
             index=index,
             outcome=IngestOutcome(

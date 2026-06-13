@@ -162,6 +162,13 @@ def test_select_title_scale_uses_fixed_character_bands(
     assert select_title_scale(title) == expected
 
 
+def test_select_title_scale_accepts_breakable_hyphenated_title() -> None:
+    title = "Activate-Technology-and-Media-Outlook-2019"
+
+    assert len(title) == 42
+    assert select_title_scale(title) == "short"
+
+
 @pytest.mark.parametrize(
     "title",
     (

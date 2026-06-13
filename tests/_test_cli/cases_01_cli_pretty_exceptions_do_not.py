@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 class TestCli01CliPrettyExceptionsDo(unittest.TestCase):
     def test_cli_pretty_exceptions_do_not_render_locals(self) -> None:
         import src.cli as cli
@@ -338,13 +339,16 @@ class TestCli01CliPrettyExceptionsDo(unittest.TestCase):
         self.assertIn("publisher-a", output)
         self.assertIn("Post ID", output)
         self.assertIn("123", output)
-        self.assertIn("https://example.com/briefings/ai-commerce-across-reports/", output)
+        self.assertIn(
+            "https://example.com/briefings/ai-commerce-across-reports/", output
+        )
 
-    def test_ingest_wires_settings_and_orchestrator(self) -> None:
+    def test_ingest_report_cards_flag_wires_settings_and_orchestrator(self) -> None:
         # Avoid importing heavy dependencies during test import.
         dummy_fitz = types.ModuleType("fitz")
         with patch.dict(sys.modules, {"fitz": dummy_fitz}):
             import src.cli as cli
+            import src._cli.pipeline as pipeline
 
         settings = AppSettings(
             schema_version="1.0",
@@ -384,15 +388,24 @@ class TestCli01CliPrettyExceptionsDo(unittest.TestCase):
             with patch.object(
                 cli, "run_ingest", return_value=outcomes
             ) as run_ingest_mock:
-                cli.ingest(folder=None, limit=1)
+                cli.ingest(folder=None, limit=1, force_report_cards=False)
                 load_settings_mock.assert_called_once()
                 run_ingest_mock.assert_called_once()
                 passed_settings = run_ingest_mock.call_args.args[0]
                 passed_ctx = run_ingest_mock.call_args.kwargs.get("ctx")
+                self.assertFalse(
+                    run_ingest_mock.call_args.kwargs.get("force_report_cards")
+                )
                 self.assertIs(passed_ctx, load_settings_mock.call_args.args[1])
                 self.assertIsInstance(passed_settings, IngestSettings)
                 self.assertEqual("folder", passed_settings.gdrive_folder_id)
                 self.assertEqual("gpt-5", passed_settings.openai_model)
+
+                cli.ingest(folder=None, limit=1, force_report_cards=True)
+                self.assertEqual(2, run_ingest_mock.call_count)
+                self.assertTrue(
+                    run_ingest_mock.call_args.kwargs.get("force_report_cards")
+                )
 
     def test_publish_wires_settings_and_orchestrator(self) -> None:
         import src.cli as cli
@@ -688,5 +701,6 @@ class TestCli01CliPrettyExceptionsDo(unittest.TestCase):
             ),
             request.session_reuse_policy,
         )
+
 
 __all__ = ["TestCli01CliPrettyExceptionsDo"]

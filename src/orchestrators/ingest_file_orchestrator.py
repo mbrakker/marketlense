@@ -45,6 +45,7 @@ class IngestFileDependencies:
     ]
     state_record: Callable[[StateRecordRequest, RunContext], Any]
     eof_retry_limit: int
+    bypass_existing_report_html: bool = False
 
 
 @dataclass(frozen=True)
@@ -114,6 +115,21 @@ def _maybe_skip_existing_report_html(
     logger_name: str,
 ) -> FileProcessResult | None:
     if not runtime.md5:
+        return None
+    if dependencies.bypass_existing_report_html:
+        logging.getLogger(logger_name).info(
+            log_event(
+                file_ctx,
+                role="orchestrator",
+                event="report_html_cache_bypassed",
+                module=logger_name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "md5": runtime.md5,
+                    "reason": "force_report_cards",
+                },
+            )
+        )
         return None
     existing_html = dependencies.existing_report_html(
         runtime.file,

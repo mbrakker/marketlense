@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_vector_pipeline_wiring.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent / "test_vector_pipeline_wiring.py"
+)
 
 import json
 
@@ -103,6 +106,7 @@ from src.utils.errors import AppError
 
 from src.utils.slugify import slugify
 
+
 def _ingest_settings(tmp_path: Path) -> IngestSettings:
     cover_style_path = (
         Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"
@@ -142,8 +146,10 @@ def _ingest_settings(tmp_path: Path) -> IngestSettings:
         model_pricing={},
     )
 
+
 def _pdf_bytes() -> bytes:
     return b"%PDF-1.4\n1 0 obj <</Type/Catalog>> endobj\n%%EOF\n"
+
 
 def _analysis_artifacts(**overrides) -> dict:
     payload = {
@@ -227,8 +233,10 @@ def _analysis_artifacts(**overrides) -> dict:
     payload.update(overrides)
     return payload
 
+
 def _analysis_dependencies(**overrides) -> ReportAnalysisDependencies:
     return replace(ReportAnalysisDependencies.default(), **overrides)
+
 
 def _report_dependencies(**overrides) -> ReportGenerationDependencies:
     base = ReportGenerationDependencies.default()
@@ -291,8 +299,10 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
         source_scoring=replace(base.source_scoring, **source_scoring_updates),
     )
 
+
 def _batch_dependencies(**overrides) -> orch.IngestBatchDependencies:
     return replace(orch.IngestBatchDependencies.default(), **overrides)
+
 
 def _make_ingest_process(*, generate_report):
     def _download(req, ctx):
@@ -306,7 +316,8 @@ def _make_ingest_process(*, generate_report):
             size=len(payload),
         )
 
-    def _process_file(file, index, settings, root_ctx):
+    def _process_file(file, index, settings, root_ctx, force_report_cards):
+        del force_report_cards
         file_dependencies = IngestFileDependencies(
             should_skip=lambda *_args: False,
             cache_pdf_path=lambda current_settings, current_file: str(
@@ -354,6 +365,7 @@ def _make_ingest_process(*, generate_report):
 
     return _process_file
 
+
 def _decode_log_events(caplog, logger_name: str) -> list[dict]:
     events: list[dict] = []
     for record in caplog.records:
@@ -366,6 +378,7 @@ def _decode_log_events(caplog, logger_name: str) -> list[dict]:
         if isinstance(payload, dict):
             events.append(payload)
     return events
+
 
 def _base_vector_report_dependencies(
     tmp_path: Path, **overrides
@@ -503,6 +516,7 @@ def _base_vector_report_dependencies(
     base.update(overrides)
     return _report_dependencies(**base)
 
+
 def _runtime_state(
     file: DriveFile,
     settings: IngestSettings,
@@ -531,14 +545,20 @@ def _runtime_state(
     )
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

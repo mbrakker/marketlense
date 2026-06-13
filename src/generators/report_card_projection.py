@@ -79,7 +79,10 @@ def classify_geography(region: str) -> tuple[str, str]:
 def select_title_scale(title: str) -> str:
     normalized = " ".join(str(title or "").split())
     count = len(normalized)
-    longest_token = max((len(token) for token in normalized.split()), default=0)
+    longest_token = max(
+        (len(token) for token in normalized.replace("-", " ").split()),
+        default=0,
+    )
     if not normalized or count > 120 or longest_token > 32:
         raise AppError(
             code="card_title_overflow",

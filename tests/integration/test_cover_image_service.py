@@ -104,6 +104,44 @@ def test_real_cover_renderer_writes_three_exact_assets_with_complete_title(
     assert all(event["fields"]["title"] == LIVE_TITLE for event in complete_events)
 
 
+def test_real_cover_renderer_preserves_breakable_hyphenated_title(
+    tmp_path, caplog
+) -> None:
+    title = "Activate-Technology-and-Media-Outlook-2019"
+    caplog.set_level(logging.INFO, logger="market_lense.cover_image_service")
+
+    outcomes = generate_cover_images(
+        CoverImageGenerationRequest(
+            schema_version="2.0",
+            output_dir=str(tmp_path / "out"),
+            style_config_path=str(STYLE_PATH),
+            reports=[
+                CoverImageReport(
+                    schema_version="2.0",
+                    file_id="drive-hyphenated",
+                    title=title,
+                    publisher="Activate",
+                    report_slug="activate-technology-and-media-outlook-2019",
+                    time_period="2019",
+                    region="Global",
+                    fingerprint=_fingerprint(),
+                )
+            ],
+        ),
+        _ctx(),
+    )
+
+    assert outcomes[0].status == "generated"
+    complete_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.cover_image_service"
+        and json.loads(record.message).get("event") == "cover_render_complete"
+    ]
+    assert len(complete_events) == 3
+    assert all(event["fields"]["title"] == title for event in complete_events)
+
+
 def test_real_cover_renderer_rejects_impossible_unbroken_title(
     tmp_path, assert_app_error
 ) -> None:

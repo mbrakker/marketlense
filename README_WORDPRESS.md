@@ -37,6 +37,18 @@ Reusable shortcode entrypoints are registered by `Wordpress/wp-content/plugins/m
 
 ## Verification
 
+### Report Card Backfill Gate
+
+Before activating the reusable report-card renderers, regenerate only reports with missing or invalid card manifests, republish their WordPress metadata, and run the read-only contract audit:
+
+```bash
+python -m src.cli ingest --force-report-cards
+python -m src.cli publish-wp
+wp eval-file Wordpress/scripts/audit-report-card-contracts.php
+```
+
+Do not activate the card renderers until the final command prints `0 invalid published reports`. Invalid rows are emitted as JSON lines containing the WordPress post ID, title, and failing card keys.
+
 Run the WordPress subproject checks after shortcode or template changes:
 
 ```bash
