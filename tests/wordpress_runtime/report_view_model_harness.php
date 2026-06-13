@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace {
     define('ABSPATH', __DIR__ . '/');
+    define('DAY_IN_SECONDS', 86400);
 
     final class WP_Post
     {
@@ -37,6 +38,7 @@ namespace {
     $GLOBALS['ml_test_meta_registrations'] = [];
     $GLOBALS['ml_test_now'] = 1781308800;
     $GLOBALS['ml_test_post_timestamp'] = 1781222400;
+    $GLOBALS['ml_test_attachment_urls'] = [];
 
     function wp_strip_all_tags(string $value): string
     {
@@ -117,9 +119,7 @@ namespace {
     {
         unset($size);
 
-        return $attachment_id > 0
-            ? 'https://example.test/media/' . $attachment_id . '.png'
-            : false;
+        return $GLOBALS['ml_test_attachment_urls'][$attachment_id] ?? false;
     }
 }
 
@@ -158,6 +158,9 @@ namespace {
     $GLOBALS['ml_test_meta'] = is_array($payload['meta'] ?? null) ? $payload['meta'] : [];
     $GLOBALS['ml_test_now'] = (int) ($payload['now'] ?? $GLOBALS['ml_test_now']);
     $GLOBALS['ml_test_post_timestamp'] = (int) ($payload['timestamp'] ?? $GLOBALS['ml_test_post_timestamp']);
+    $GLOBALS['ml_test_attachment_urls'] = is_array($payload['attachment_urls'] ?? null)
+        ? $payload['attachment_urls']
+        : [];
 
     $meta = new MarketLense\Core\Meta(new MarketLense\Core\Content_Parser());
     $meta->register_meta_fields();
@@ -188,6 +191,10 @@ namespace {
         new MarketLense\Core\Content_Parser()
     );
     $view_model = $builder->build($post);
+    if (($payload['mode'] ?? '') === 'full') {
+        echo json_encode($view_model, JSON_THROW_ON_ERROR);
+        exit;
+    }
     echo json_encode(
         [
             'insights_count' => $view_model['insights_count'],

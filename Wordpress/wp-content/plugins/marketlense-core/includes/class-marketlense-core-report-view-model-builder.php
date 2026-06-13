@@ -54,15 +54,16 @@ final class Report_View_Model_Builder
         $insight_texts = $this->extract_insight_texts($content);
         $counts = $this->extract_content_counts($post_id, $content, $insight_texts);
         $full_key_metrics = $this->extract_full_key_metrics($insight_texts);
+        $timestamp = (int) get_post_timestamp($post, 'date');
+        $card_contract = $this->build_card_contract($post_id, $content, $timestamp);
 
-        $view_model = [
+        $view_model = array_merge([
             'post_id' => $post_id,
             'title' => $this->normalize_brand_name($this->normalize_text(get_the_title($post))),
             'permalink' => (string) get_permalink($post),
             'date' => (string) get_the_date('F j, Y', $post),
-            'timestamp' => get_post_timestamp($post, 'date'),
+            'timestamp' => $timestamp,
             'publisher' => $this->resolve_publisher($post_id, $content),
-            'geography' => $this->resolve_metadata_value($post_id, Meta::META_REGION, $content, 'Region'),
             'time_period' => $this->resolve_metadata_value($post_id, Meta::META_TIME_PERIOD, $content, 'Time period'),
             'insights_count' => $counts['insights'],
             'quotes_count' => $counts['quotes'],
@@ -74,11 +75,118 @@ final class Report_View_Model_Builder
             'why_it_matters' => $this->extract_first_sentence($normalized_summary),
             'key_metrics' => $this->summarize_key_metrics($full_key_metrics),
             'full_key_metrics' => $full_key_metrics,
-        ];
+        ], $card_contract);
 
         $this->cache[$post_id] = $view_model;
 
         return $view_model;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function build_card_contract(int $post_id, string $content, int $timestamp): array
+    {
+        $schema_version = $this->meta_text($post_id, Meta::META_CARD_SCHEMA_VERSION);
+        $title_scale = $this->meta_text($post_id, Meta::META_CARD_TITLE_SCALE);
+        $tldr_compact = $this->meta_text($post_id, Meta::META_CARD_TLDR_COMPACT);
+        $tldr_standard = $this->meta_text($post_id, Meta::META_CARD_TLDR_STANDARD);
+        $geography_scope = $this->meta_text($post_id, Meta::META_CARD_GEOGRAPHY_SCOPE);
+        $raw_insights = get_post_meta($post_id, Meta::META_CARD_KEY_INSIGHTS, true);
+        $key_insights = [];
+        if (is_array($raw_insights)) {
+            foreach ($raw_insights as $insight) {
+                if (! is_string($insight)) {
+                    continue;
+                }
+                $normalized = $this->normalize_text($insight);
+                if ($normalized !== '') {
+                    $key_insights[] = $normalized;
+                }
+            }
+        }
+        $raw_fingerprint = get_post_meta($post_id, Meta::META_CARD_COVER_FINGERPRINT, true);
+        $fingerprint = is_array($raw_fingerprint) ? $raw_fingerprint : [];
+        $cover_ids = [
+            'small' => (int) get_post_meta($post_id, Meta::META_CARD_COVER_SMALL_ID, true),
+            'medium' => (int) get_post_meta($post_id, Meta::META_CARD_COVER_MEDIUM_ID, true),
+            'large' => (int) get_post_meta($post_id, Meta::META_CARD_COVER_LARGE_ID, true),
+        ];
+        $covers = [];
+        foreach ($cover_ids as $size => $media_id) {
+            $url = $media_id > 0 ? wp_get_attachment_image_url($media_id, 'full') : false;
+            $covers[$size] = is_string($url) ? $url : '';
+        }
+
+        $errors = [];
+        if ($schema_version !== '1.0') {
+            $errors[] = 'schema_version';
+        }
+        if (! in_array($title_scale, ['short', 'medium', 'long', 'xlong'], true)) {
+            $errors[] = 'title_scale';
+        }
+        if ($tldr_compact === '') {
+            $errors[] = 'tldr_compact';
+        }
+        if ($tldr_standard === '') {
+            $errors[] = 'tldr_standard';
+        }
+        if (count($key_insights) !== 2) {
+            $errors[] = 'key_insights';
+        }
+        if (! in_array($geography_scope, ['global', 'regional', 'country', 'unknown'], true)) {
+            $errors[] = 'geography_scope';
+        }
+        if (! $this->valid_cover_fingerprint($fingerprint)) {
+            $errors[] = 'cover_fingerprint';
+        }
+        foreach ($covers as $size => $url) {
+            if ($url === '') {
+                $errors[] = 'cover_' . $size;
+            }
+        }
+
+        $geography = $geography_scope === 'unknown'
+            ? ''
+            : $this->resolve_metadata_value($post_id, Meta::META_REGION, $content, 'Region');
+        $geography_icon = match ($geography_scope) {
+            'global' => 'globe',
+            'regional', 'country' => 'locator',
+            default => '',
+        };
+        if ($geography_scope !== 'unknown' && $geography === '') {
+            $errors[] = 'geography_label';
+        }
+
+        $age = current_time('timestamp', true) - $timestamp;
+
+        return [
+            'card_contract_valid' => $errors === [],
+            'card_contract_errors' => array_values(array_unique($errors)),
+            'title_scale' => $title_scale,
+            'tldr_compact' => $tldr_compact,
+            'tldr_standard' => $tldr_standard,
+            'key_insights' => $key_insights,
+            'geography' => $geography,
+            'geography_scope' => $geography_scope,
+            'geography_icon' => $geography_icon,
+            'is_new' => $age >= 0 && $age < 7 * DAY_IN_SECONDS,
+            'covers' => $covers,
+            'cover_fingerprint' => $fingerprint,
+        ];
+    }
+
+    private function meta_text(int $post_id, string $key): string
+    {
+        return $this->normalize_text((string) get_post_meta($post_id, $key, true));
+    }
+
+    /**
+     * @param array<mixed> $fingerprint
+     */
+    private function valid_cover_fingerprint(array $fingerprint): bool
+    {
+        return Meta::sanitize_cover_fingerprint($fingerprint) !== [];
     }
 
     private function resolve_publisher(int $post_id, string $content): string
