@@ -333,6 +333,20 @@ fixtures:
     user_variables:
       doc_map_json: *doc_map_json
       evidence_json: *evidence_json
+  - namespace: "report_vs/artifacts/cover_semantics"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
+    system_variables: {}
+    user_variables:
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+      summary_json: *summary_json
+      insights_final_json: *insights_final_json
+      categories_json: '["Digital Payments","Fintech"]'
+      region: "Global"
+      covered_period: "2026"
   - namespace: "report_vs/context_category_fit"
     family: "report"
     model: "openai/gpt-5-mini"

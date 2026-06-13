@@ -166,6 +166,58 @@ def test_prompt_fixture_regression_allowlist_requires_unexpired_bound() -> None:
     }
 
 
+def test_prompt_fixture_regression_allowlists_bounded_namespace_addition() -> None:
+    family_metrics = {
+        "runtime_ms": 12.0,
+        "total_tokens": 200.0,
+        "expected_ocr_calls": 0.0,
+        "expected_browser_attempts": 0.0,
+        "estimated_cost_usd": 0.01,
+    }
+    totals = dict(family_metrics)
+    baseline = {
+        "families": {"report": {"namespace_count": 1, **family_metrics}},
+        "namespaces": {"alpha": {"family": "report"}},
+        "totals": totals,
+    }
+    current = {
+        "families": {"report": {"namespace_count": 2, **family_metrics}},
+        "namespaces": {
+            "alpha": {"family": "report"},
+            "beta": {"family": "report"},
+        },
+        "totals": totals,
+    }
+    allowlist = (
+        PromptRegressionAllowlistEntry(
+            pattern="namespaces.set",
+            owner="quality",
+            reason="approved prompt namespace",
+            expires_on=date(2026, 7, 31),
+            max_delta_absolute=1.0,
+            max_delta_percent=None,
+        ),
+        PromptRegressionAllowlistEntry(
+            pattern="families.report.namespace_count",
+            owner="quality",
+            reason="approved family namespace",
+            expires_on=date(2026, 7, 31),
+            max_delta_absolute=1.0,
+            max_delta_percent=None,
+        ),
+    )
+
+    assert (
+        compare_prompt_fixture_metrics(
+            baseline=baseline,
+            current=current,
+            allowlist=allowlist,
+            today=date(2026, 6, 13),
+        )
+        == ()
+    )
+
+
 def test_prompt_fixture_regression_uses_larger_total_runtime_tolerance() -> None:
     baseline = {
         "families": {

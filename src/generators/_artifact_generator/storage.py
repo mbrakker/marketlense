@@ -5,6 +5,13 @@ from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.prompts import PromptLoadRequest
+from src.contracts.report_cards import (
+    DIRECTIONS,
+    DOMAIN_LAYERS,
+    EVIDENCE_DENSITIES,
+    EVIDENCE_SHAPES,
+    GEOGRAPHY_SCOPES,
+)
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
@@ -59,6 +66,7 @@ def assemble_artifacts_payload(
     evidence_packs: Dict[str, Any],
     toc_bundle: Dict[str, Any],
     summary: Dict[str, Any],
+    cover_semantics: Dict[str, str],
     insights_candidates: List[Dict[str, Any]],
     insights_final: List[Dict[str, Any]],
     quotes_final: List[Dict[str, Any]],
@@ -141,11 +149,12 @@ def assemble_artifacts_payload(
             )
         )
     artifacts_payload: Dict[str, Any] = {
-        "schema_version": "2.0",
+        "schema_version": "3.0",
         "toc_entries": toc_entries,
         "toc_topics": toc_topics,
         "toc_topics_expanded": topic_briefs,
         "summary": summary,
+        "cover_semantics": _validate_cover_semantics(cover_semantics, ctx=ctx),
         "insights_candidates": insights_candidates,
         "insights_final": insights_final,
         "quotes_final": quotes_final,
@@ -304,6 +313,7 @@ def _artifact_cache_meta(
     prompt_meta: Dict[str, Any] = {}
     namespaces = [
         "report_vs/artifacts/summary",
+        "report_vs/artifacts/cover_semantics",
         "report_vs/artifacts/insights_candidates",
         "report_vs/artifacts/insights_final",
         "report_vs/artifacts/quotes",
@@ -396,6 +406,7 @@ def _adapt_cached_artifacts_payload(
     payload = _attach_cached_artifact_family_status(payload)
     try:
         payload = _adapt_cached_artifact_schema(payload)
+        _validate_cover_semantics(payload.get("cover_semantics"), ctx=ctx)
         raw_summary = payload.get("summary")
         _validate_card_tldrs(
             raw_summary if isinstance(raw_summary, dict) else {},
@@ -439,9 +450,9 @@ def _adapt_cached_artifacts_payload(
 
 def _adapt_cached_artifact_schema(payload: Dict[str, Any]) -> Dict[str, Any]:
     version = _s(payload.get("schema_version")).strip()
-    if version == "2.0":
+    if version == "3.0":
         return payload
-    if version != "1.0":
+    if version not in {"1.0", "2.0"}:
         raise AppError(
             code="artifact_schema_migration_required",
             message="Cached artifact schema version is unsupported",
@@ -449,21 +460,80 @@ def _adapt_cached_artifact_schema(payload: Dict[str, Any]) -> Dict[str, Any]:
             context={"schema_version": version},
         )
     adapted = dict(payload)
-    raw_summary = adapted.get("summary")
-    summary = dict(raw_summary) if isinstance(raw_summary, dict) else {}
-    if family_is_abstained(adapted, "summary"):
-        summary.setdefault("card_tldr_compact", "")
-    else:
-        standard = _validate_complete_tldr(
-            summary.get("tldr"),
-            limit=18,
-            code="card_tldr_compact_invalid",
-            field_name="summary.tldr",
+    if version == "1.0":
+        raw_summary = adapted.get("summary")
+        summary = dict(raw_summary) if isinstance(raw_summary, dict) else {}
+        if family_is_abstained(adapted, "summary"):
+            summary.setdefault("card_tldr_compact", "")
+        else:
+            standard = _validate_complete_tldr(
+                summary.get("tldr"),
+                limit=18,
+                code="card_tldr_compact_invalid",
+                field_name="summary.tldr",
+            )
+            summary["card_tldr_compact"] = standard
+        adapted["summary"] = summary
+    if not isinstance(adapted.get("cover_semantics"), dict):
+        raise AppError(
+            code="cover_fingerprint_invalid",
+            message="Cached artifacts do not contain grounded cover semantics",
+            retryable=False,
+            context={"schema_version": version},
         )
-        summary["card_tldr_compact"] = standard
-    adapted["summary"] = summary
-    adapted["schema_version"] = "2.0"
+    adapted["schema_version"] = "3.0"
     return adapted
+
+
+def _validate_cover_semantics(
+    value: Any,
+    *,
+    ctx: RunContext,
+) -> Dict[str, str]:
+    if not isinstance(value, dict):
+        raise AppError(
+            code="cover_fingerprint_invalid",
+            message="cover_semantics must be an object",
+            retryable=False,
+            context={"field": "cover_semantics"},
+        )
+    allowed_values = {
+        "evidence_shape": EVIDENCE_SHAPES,
+        "direction": DIRECTIONS,
+        "geography_scope": GEOGRAPHY_SCOPES,
+        "evidence_density": EVIDENCE_DENSITIES,
+        "domain_layer": DOMAIN_LAYERS,
+    }
+    normalized: Dict[str, str] = {}
+    for field_name, allowed in allowed_values.items():
+        field_value = _s(value.get(field_name)).strip()
+        if field_value not in allowed:
+            raise AppError(
+                code="cover_fingerprint_invalid",
+                message=f"cover_semantics.{field_name} is not approved",
+                retryable=False,
+                context={"field": field_name, "value": field_value},
+            )
+        normalized[field_name] = field_value
+    selection_reason = " ".join(_s(value.get("selection_reason")).split())
+    if not selection_reason:
+        raise AppError(
+            code="cover_fingerprint_invalid",
+            message="cover_semantics.selection_reason must be populated",
+            retryable=False,
+            context={"field": "selection_reason"},
+        )
+    normalized["selection_reason"] = selection_reason
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_cover_semantics_validated",
+            module=logger.name,
+            fields={key: normalized[key] for key in allowed_values},
+        )
+    )
+    return normalized
 
 
 def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, Any]:

@@ -29,6 +29,7 @@ def _assemble_summary_payload(summary, *, ctx=None):
         evidence_packs={},
         toc_bundle={"toc_entries": []},
         summary=summary,
+        cover_semantics=_cover_semantics(),
         insights_candidates=[],
         insights_final=[],
         quotes_final=[],
@@ -55,7 +56,7 @@ def test_assemble_artifacts_accepts_complete_card_tldrs():
         }
     )
 
-    assert payload["schema_version"] == "2.0"
+    assert payload["schema_version"] == "3.0"
     assert payload["summary"]["card_tldr_compact"].endswith(".")
 
 
@@ -299,7 +300,7 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     ]
     assert payload["family_status"]["summary"]["status"] == "generated"
     assert payload["family_status"]["quotes"]["status"] == "generated"
-    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 6
+    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 7
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 0
     assert payload["toc_entries"][0]["section_title"] == "Intro"
     assert payload["toc_topics"] == ["Intro"]

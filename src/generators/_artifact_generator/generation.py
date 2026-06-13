@@ -17,6 +17,7 @@ from src.generators._artifact_generator.storage import (
     _has_evidence_content,
     _load_cached_artifacts,
     _s,
+    _validate_cover_semantics,
     assemble_artifacts_payload,
     store_artifacts_payload,
 )
@@ -314,6 +315,33 @@ def generate_artifacts(
         ),
         insights_candidates,
     )
+    cover_semantics_result = render_artifact_json_model(
+        namespace="report_vs/artifacts/cover_semantics",
+        variables={
+            **base_vars,
+            "summary_json": _dump_json(summary),
+            "insights_final_json": _dump_json(insights_final),
+            "categories_json": _dump_json(categories or []),
+            "region": _s(
+                safe_doc_map.get("region") or safe_doc_map.get("geography")
+            ).strip(),
+            "covered_period": _s(
+                safe_doc_map.get("covered_period")
+                or safe_doc_map.get("time_period")
+                or safe_doc_map.get("period")
+            ).strip(),
+        },
+        settings=settings,
+        ctx=child_context(ctx, task_id=f"{ctx.task_id}:cover_semantics"),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+        allow_vector_store=artifact_use_vector_store,
+        vector_store_id=vector_store_id,
+    )
+    cover_semantics = _validate_cover_semantics(
+        cover_semantics_result.get("cover_semantics"),
+        ctx=ctx,
+    )
     evidence_id_stats = normalize_artifact_evidence_ids(
         summary=summary,
         insights_candidates=insights_candidates,
@@ -418,6 +446,7 @@ def generate_artifacts(
         evidence_packs=safe_evidence,
         toc_bundle=toc_bundle,
         summary=summary,
+        cover_semantics=cover_semantics,
         insights_candidates=insights_candidates,
         insights_final=insights_final,
         quotes_final=quotes_final,

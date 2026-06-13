@@ -79,8 +79,8 @@ def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
         prompt_client=FakePromptClient(),
         md5=md5,
     )
-    assert len(chat_openai.requests) == 6
-    assert len([req for req in chat_openai.requests if req[0] == "chat"]) == 6
+    assert len(chat_openai.requests) == 7
+    assert len([req for req in chat_openai.requests if req[0] == "chat"]) == 7
 
     vector_settings = _settings(tmp_path, artifacts_use_vector_store=True)
     vector_openai = FakeOpenAI(responses)
@@ -96,8 +96,8 @@ def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
         prompt_client=FakePromptClient(),
         md5=md5,
     )
-    assert len(vector_openai.requests) == 6
-    assert len([req for req in vector_openai.requests if req[0] == "vector"]) == 6
+    assert len(vector_openai.requests) == 7
+    assert len([req for req in vector_openai.requests if req[0] == "vector"]) == 7
 
 
 def test_load_cached_artifacts_rejects_schema_invalid_payload(tmp_path):
@@ -119,6 +119,44 @@ def test_load_cached_artifacts_rejects_schema_invalid_payload(tmp_path):
     )
 
     assert cached is None
+
+
+def test_load_cached_artifacts_rejects_v2_without_cover_semantics(
+    tmp_path, caplog, assert_logs_have_required_fields
+):
+    caplog.set_level(logging.INFO, logger="market_lense.artifact_generator")
+    report_name = "artifact cache v2 without cover semantics"
+    cache_path = tmp_path / slugify(report_name) / "report_analysis" / "artifacts.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "2.0",
+                "_cache": {"key": "cache-key"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cached = _load_cached_artifacts(
+        output_dir=str(tmp_path),
+        report_id="artifact-cache-v2-without-cover-semantics",
+        report_name=report_name,
+        cache_key="cache-key",
+        ctx=_ctx(),
+        analysis_store=None,
+    )
+
+    assert cached is None
+    invalid_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.artifact_generator"
+        and json.loads(record.message).get("event") == "artifact_cache_invalid"
+    ]
+    assert len(invalid_events) == 1
+    assert invalid_events[0]["fields"]["code"] == "cover_fingerprint_invalid"
+    assert_logs_have_required_fields(invalid_events)
 
 
 def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
@@ -143,6 +181,7 @@ def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
                 }
             ],
         },
+        "cover_semantics": _cover_semantics(),
         "insights_candidates": [],
         "insights_final": [],
         "quotes_final": [],
@@ -173,7 +212,7 @@ def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
     )
 
     assert cached is not None
-    assert cached["schema_version"] == "2.0"
+    assert cached["schema_version"] == "3.0"
     assert cached["summary"]["card_tldr_compact"] == "Grounded TLDR."
     assert cached["family_status"]["summary"]["status"] == "generated"
 
@@ -203,6 +242,7 @@ def test_load_cached_artifacts_rejects_legacy_tldr_that_cannot_be_compact(tmp_pa
                 }
             ],
         },
+        "cover_semantics": _cover_semantics(),
         "insights_candidates": [],
         "insights_final": [],
         "quotes_final": [],
@@ -242,6 +282,7 @@ def test_load_cached_artifacts_clears_doc_map_only_quotes_after_policy_refresh(
             "executive_summary": "",
             "claim_evidence_map": [],
         },
+        "cover_semantics": _cover_semantics(),
         "insights_candidates": [],
         "insights_final": [],
         "quotes_final": [
@@ -367,12 +408,13 @@ def test_generate_artifacts_with_auto_context_preserves_input_evidence(tmp_path)
     )
     assert payload["source_status"]["evidence_present"] is True
     assert payload["source_status"]["not_available"] is False
-    assert len(fake_openai.requests) == 6
+    assert len(fake_openai.requests) == 7
 
 
 __all__ = [
     "test_artifact_cache_isolated_by_retrieval_mode",
     "test_load_cached_artifacts_rejects_schema_invalid_payload",
+    "test_load_cached_artifacts_rejects_v2_without_cover_semantics",
     "test_load_cached_artifacts_refreshes_derived_family_status",
     "test_load_cached_artifacts_clears_doc_map_only_quotes_after_policy_refresh",
     "test_generate_artifacts_with_auto_context_preserves_input_evidence",

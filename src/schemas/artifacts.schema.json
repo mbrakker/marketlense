@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Artifacts",
   "type": "object",
-  "required": ["toc_topics", "summary", "insights_candidates", "insights_final", "quotes_final", "expert_comment", "linkedin_post"],
+  "required": ["toc_topics", "summary", "cover_semantics", "insights_candidates", "insights_final", "quotes_final", "expert_comment", "linkedin_post"],
   "properties": {
     "schema_version": { "type": "string" },
     "toc_entries": {
@@ -91,6 +91,19 @@
             }
           }
         }
+      }
+    },
+    "cover_semantics": {
+      "type": "object",
+      "required": ["evidence_shape", "direction", "geography_scope", "evidence_density", "domain_layer", "selection_reason"],
+      "additionalProperties": false,
+      "properties": {
+        "evidence_shape": { "type": "string", "enum": ["trend", "comparison", "distribution", "flow", "network", "concentration", "hierarchy", "cycle", "uncertainty", "system"] },
+        "direction": { "type": "string", "enum": ["rising", "falling", "stable", "volatile", "converging", "diverging", "cyclical", "neutral"] },
+        "geography_scope": { "type": "string", "enum": ["global", "regional", "country", "unknown"] },
+        "evidence_density": { "type": "string", "enum": ["metric_rich", "balanced", "qualitative"] },
+        "domain_layer": { "type": "string", "enum": ["grid", "forecast"] },
+        "selection_reason": { "type": "string", "minLength": 1 }
       }
     },
     "insights_candidates": {

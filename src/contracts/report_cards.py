@@ -31,6 +31,7 @@ DIRECTIONS = (
     "neutral",
 )
 EVIDENCE_DENSITIES = ("metric_rich", "balanced", "qualitative")
+DOMAIN_LAYERS = ("grid", "forecast")
 GEOMETRY_FAMILIES = (
     "ascending_trajectory",
     "descending_trajectory",
@@ -219,6 +220,7 @@ class CoverFingerprint:
             "direction": DIRECTIONS,
             "geography_scope": GEOGRAPHY_SCOPES,
             "evidence_density": EVIDENCE_DENSITIES,
+            "domain_layer": DOMAIN_LAYERS,
         }
         normalized: dict[str, str] = {}
         for field_name, allowed in values.items():
@@ -251,11 +253,7 @@ class CoverFingerprint:
             direction=normalized["direction"],
             geography_scope=normalized["geography_scope"],
             evidence_density=normalized["evidence_density"],
-            domain_layer=_text(
-                payload.get("domain_layer"),
-                code="cover_fingerprint_invalid",
-                field_name="domain_layer",
-            ),
+            domain_layer=normalized["domain_layer"],
             seed=seed,
             selection_reason=_text(
                 payload.get("selection_reason"),

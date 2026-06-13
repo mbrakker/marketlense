@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_artifact_generator.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent / "test_artifact_generator.py"
+)
 
 import json
 
@@ -47,6 +50,22 @@ from src.utils.errors import AppError
 
 from src.utils.slugify import slugify
 
+
+def _cover_semantics():
+    return {
+        "evidence_shape": "trend",
+        "direction": "rising",
+        "geography_scope": "global",
+        "evidence_density": "metric_rich",
+        "domain_layer": "grid",
+        "selection_reason": "Rising time-series evidence dominates the report.",
+    }
+
+
+def _cover_semantics_response():
+    return {"cover_semantics": _cover_semantics()}
+
+
 class FakePromptClient:
     def load_prompt_set(self, request, ctx):
         tmpl = PromptTemplate(
@@ -66,6 +85,7 @@ class FakePromptClient:
     def render_prompt(self, request, ctx):
         return SimpleNamespace(text=request.template.text)
 
+
 class CapturingPromptClient(FakePromptClient):
     def __init__(self):
         self.render_calls = []
@@ -81,6 +101,7 @@ class CapturingPromptClient(FakePromptClient):
             if call["path"] == f"{namespace}/system":
                 return call["variables"]
         return {}
+
 
 class FakeOpenAI:
     def __init__(self, responses, *, sleep_seconds=0.0, prerequisites=None):
@@ -99,6 +120,8 @@ class FakeOpenAI:
 
     def _next(self, step):
         if isinstance(self.responses, dict):
+            if step == "cover_semantics" and step not in self.responses:
+                return _cover_semantics_response()
             return self.responses.get(step, {})
         if not self.responses:
             return {}
@@ -166,6 +189,7 @@ class FakeOpenAI:
             model=req.model,
         )
 
+
 class FakeAnalysisStore:
     def __init__(self):
         self.stored = []
@@ -177,6 +201,7 @@ class FakeAnalysisStore:
         path = Path(output_dir) / slug / "report_analysis" / f"{pack_name}.json"
         self.stored.append((output_dir, report_id, pack_name, payload))
         return str(path)
+
 
 def _settings(
     tmp_path,
@@ -232,8 +257,10 @@ def _settings(
         },
     )
 
+
 def _ctx():
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
 
 def _doc_map():
     return {
@@ -241,6 +268,7 @@ def _doc_map():
         "title": "Report",
         "sections": [{"id": "s1", "title": "Intro"}],
     }
+
 
 def _evidence_packs():
     return {
@@ -290,10 +318,10 @@ def _evidence_packs():
         },
     }
 
+
 def _low_text_status():
     path = Path(__file__).parent / "fixtures" / "low_text_status.json"
     return json.loads(path.read_text(encoding="utf-8"))
-
 
 
 __all__ = [
@@ -301,8 +329,15 @@ __all__ = [
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

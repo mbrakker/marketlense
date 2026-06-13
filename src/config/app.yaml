@@ -99,6 +99,7 @@ ingest:
 openai_models:
   report_vs/artifacts: "gpt-5-mini"
   report_vs/artifacts/summary: "gpt-5-mini"
+  report_vs/artifacts/cover_semantics: "gpt-5-mini"
   report_vs/artifacts/insights_candidates: "gpt-5-mini"
   report_vs/artifacts/insights_final: "gpt-5-mini"
   report_vs/artifacts/quotes: "gpt-5-mini"

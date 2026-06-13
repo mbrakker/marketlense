@@ -123,7 +123,7 @@ def render_artifact_json_model(
         log_event(
             ctx,
             role="generator",
-            event="artifact_model_complete",
+            event="artifact_model_response",
             module=logger.name,
             fields={
                 "namespace": namespace,

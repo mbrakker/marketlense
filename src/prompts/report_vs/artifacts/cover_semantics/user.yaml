@@ -1,0 +1,27 @@
+text: |
+  Context:
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+  - Summary JSON: {{ summary_json }}
+  - Final insights JSON: {{ insights_final_json }}
+  - Categories JSON: {{ categories_json }}
+  - Region: {{ region }}
+  - Covered period: {{ covered_period }}
+
+  Return only this JSON shape:
+  {
+    "cover_semantics": {
+      "evidence_shape": "<trend|comparison|distribution|flow|network|concentration|hierarchy|cycle|uncertainty|system>",
+      "direction": "<rising|falling|stable|volatile|converging|diverging|cyclical|neutral>",
+      "geography_scope": "<global|regional|country|unknown>",
+      "evidence_density": "<metric_rich|balanced|qualitative>",
+      "domain_layer": "<grid|forecast>",
+      "selection_reason": "<one concise sentence naming the dominant evidence pattern>"
+    }
+  }
+
+  Classification rules:
+  - Select the dominant abstract structure of the evidence, not the report's literal subject.
+  - Use forecast only when forward projections, scenarios, or outlook ranges dominate; otherwise use grid.
+  - Infer geography_scope from explicit report scope. Use unknown when scope is not grounded.
+  - Keep selection_reason specific to the supplied evidence and do not introduce facts.

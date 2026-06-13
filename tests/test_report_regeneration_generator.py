@@ -119,10 +119,11 @@ class _FakeOpenAIClient:
         if "system::report_vs/artifacts/regenerate/summary" in req.system_prompt:
             return OpenAIResponseResult(
                 schema_version="1.0",
-                text='{"summary":{"tldr":"Repaired TLDR","executive_summary":"Repaired executive summary","claim_evidence_map":[{"claim":"Grounded claim","evidence_id":"f1","evidence":"Evidence text","pages":[1]}]}}',
+                text='{"summary":{"tldr":"Repaired TLDR.","card_tldr_compact":"Repaired TLDR.","executive_summary":"Repaired executive summary","claim_evidence_map":[{"claim":"Grounded claim","evidence_id":"f1","evidence":"Evidence text","pages":[1]}]}}',
                 parsed_json={
                     "summary": {
-                        "tldr": "Repaired TLDR",
+                        "tldr": "Repaired TLDR.",
+                        "card_tldr_compact": "Repaired TLDR.",
                         "executive_summary": "Repaired executive summary",
                         "claim_evidence_map": [
                             {
@@ -195,10 +196,11 @@ def _ctx() -> RunContext:
 
 def _current_artifacts() -> dict:
     return {
-        "schema_version": "1.0",
+        "schema_version": "3.0",
         "toc_topics": ["Topic"],
         "summary": {
-            "tldr": "Old TLDR",
+            "tldr": "Old TLDR.",
+            "card_tldr_compact": "Old TLDR.",
             "executive_summary": "Old summary",
             "claim_evidence_map": [
                 {
@@ -208,6 +210,14 @@ def _current_artifacts() -> dict:
                     "pages": [1],
                 }
             ],
+        },
+        "cover_semantics": {
+            "evidence_shape": "trend",
+            "direction": "rising",
+            "geography_scope": "global",
+            "evidence_density": "metric_rich",
+            "domain_layer": "grid",
+            "selection_reason": "Rising time-series evidence dominates the report.",
         },
         "insights_candidates": [
             {
@@ -483,7 +493,10 @@ def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_pa
     )
 
     assert response.regenerated_sections == ["summary"]
-    assert response.updated_artifacts["summary"]["tldr"] == "Repaired TLDR"
+    assert response.updated_artifacts["summary"]["tldr"] == "Repaired TLDR."
+    assert (
+        response.updated_artifacts["summary"]["card_tldr_compact"] == "Repaired TLDR."
+    )
     assert (
         response.updated_artifacts["insights_final"][0]["text"] == "Old final insight"
     )

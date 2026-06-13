@@ -75,6 +75,7 @@ def test_assemble_artifacts_logs_topic_brief_mapping_audit(
             "toc_topics": ["Demand outlook"],
         },
         summary=summary,
+        cover_semantics=_cover_semantics(),
         insights_candidates=[],
         insights_final=insights_final,
         quotes_final=quotes_final,
@@ -448,7 +449,10 @@ def test_generate_artifacts_fails_when_inputs_unavailable_without_vector_store(
     assert analysis_store.stored == []
 
 
-def test_generate_artifacts_runs_llm_steps_serially_without_executor(tmp_path):
+def test_generate_artifacts_runs_llm_steps_serially_without_executor(
+    tmp_path, caplog, assert_logs_have_required_fields
+):
+    caplog.set_level(logging.INFO, logger="market_lense.artifact_generator")
     responses = {
         "toc": {"toc_topics": ["Topic 1", "Topic 2"]},
         "summary": {
@@ -502,6 +506,18 @@ def test_generate_artifacts_runs_llm_steps_serially_without_executor(tmp_path):
                 }
             ]
         },
+        "cover_semantics": {
+            "cover_semantics": {
+                "evidence_shape": "trend",
+                "direction": "rising",
+                "geography_scope": "global",
+                "evidence_density": "metric_rich",
+                "domain_layer": "grid",
+                "selection_reason": (
+                    "Rising time-series evidence dominates the report."
+                ),
+            }
+        },
         "expert_comment": {"expert_comment": "Grounded comment"},
         "linkedin_post": {"linkedin_post": "Post summary"},
     }
@@ -540,16 +556,58 @@ def test_generate_artifacts_runs_llm_steps_serially_without_executor(tmp_path):
         expert_vars.get("expert_domain")
         == "Consumer Behavior & Insights, Beauty, Fashion"
     )
+    requested_namespaces = {
+        call["path"].removesuffix("/system").removesuffix("/user")
+        for call in prompt_client.render_calls
+    }
+    assert "report_vs/artifacts/cover_semantics" in requested_namespaces
+    cover_variables = prompt_client.variables_for_namespace(
+        "report_vs/artifacts/cover_semantics"
+    )
+    assert set(cover_variables) == {
+        "doc_map_json",
+        "evidence_json",
+        "summary_json",
+        "insights_final_json",
+        "categories_json",
+        "region",
+        "covered_period",
+    }
+    assert json.loads(cover_variables["categories_json"]) == [
+        " Consumer Behavior & Insights ",
+        "Beauty",
+        "Fashion",
+        "Retail",
+        "beauty",
+    ]
+    assert payload["schema_version"] == "3.0"
+    assert payload["cover_semantics"] == {
+        "evidence_shape": "trend",
+        "direction": "rising",
+        "geography_scope": "global",
+        "evidence_density": "metric_rich",
+        "domain_layer": "grid",
+        "selection_reason": "Rising time-series evidence dominates the report.",
+    }
     assert fake_openai.max_in_flight == 1
     assert [req[2] for req in fake_openai.requests if req[0] == "vector"] == [
         "summary",
         "insights_candidates",
         "quotes",
         "insights_final",
+        "cover_semantics",
         "expert_comment",
         "linkedin_post",
     ]
-    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 6
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
+    response_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.artifact_generator"
+        and json.loads(record.message).get("event") == "artifact_model_response"
+    ]
+    assert len(response_events) == 7
+    assert_logs_have_required_fields(response_events)
 
 
 def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin(
@@ -704,7 +762,7 @@ def test_generate_artifacts_uses_vector_path_when_flag_enabled(tmp_path):
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
-    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 6
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 0
 
 

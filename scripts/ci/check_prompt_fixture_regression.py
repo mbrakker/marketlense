@@ -116,16 +116,24 @@ def compare_prompt_fixture_metrics(
     if baseline_namespaces != current_namespaces:
         missing = sorted(baseline_namespaces - current_namespaces)
         added = sorted(current_namespaces - baseline_namespaces)
-        failures.append(
-            PromptRegressionFailure(
-                metric_path="namespaces.set",
-                baseline=float(len(baseline_namespaces)),
-                current=float(len(current_namespaces)),
-                delta=float(len(current_namespaces) - len(baseline_namespaces)),
-                delta_percent=None,
-                reason=f"namespace set mismatch; missing={missing} added={added}",
+        delta = float(len(current_namespaces) - len(baseline_namespaces))
+        if missing or not _is_allowlisted(
+            metric_path="namespaces.set",
+            delta=delta,
+            delta_percent=None,
+            allowlist=allowlist,
+            today=current_date,
+        ):
+            failures.append(
+                PromptRegressionFailure(
+                    metric_path="namespaces.set",
+                    baseline=float(len(baseline_namespaces)),
+                    current=float(len(current_namespaces)),
+                    delta=delta,
+                    delta_percent=None,
+                    reason=f"namespace set mismatch; missing={missing} added={added}",
+                )
             )
-        )
 
     baseline_families = set((baseline.get("families") or {}).keys())
     current_families = set((current.get("families") or {}).keys())
@@ -163,19 +171,30 @@ def compare_prompt_fixture_metrics(
         if int(baseline_family.get("namespace_count") or 0) != int(
             current_family.get("namespace_count") or 0
         ):
-            failures.append(
-                PromptRegressionFailure(
-                    metric_path=f"families.{family}.namespace_count",
-                    baseline=float(int(baseline_family.get("namespace_count") or 0)),
-                    current=float(int(current_family.get("namespace_count") or 0)),
-                    delta=float(
-                        int(current_family.get("namespace_count") or 0)
-                        - int(baseline_family.get("namespace_count") or 0)
-                    ),
-                    delta_percent=None,
-                    reason="family namespace count changed",
-                )
+            namespace_count_path = f"families.{family}.namespace_count"
+            namespace_count_delta = float(
+                int(current_family.get("namespace_count") or 0)
+                - int(baseline_family.get("namespace_count") or 0)
             )
+            if namespace_count_delta < 0 or not _is_allowlisted(
+                metric_path=namespace_count_path,
+                delta=namespace_count_delta,
+                delta_percent=None,
+                allowlist=allowlist,
+                today=current_date,
+            ):
+                failures.append(
+                    PromptRegressionFailure(
+                        metric_path=namespace_count_path,
+                        baseline=float(
+                            int(baseline_family.get("namespace_count") or 0)
+                        ),
+                        current=float(int(current_family.get("namespace_count") or 0)),
+                        delta=namespace_count_delta,
+                        delta_percent=None,
+                        reason="family namespace count changed",
+                    )
+                )
         for metric in REGRESSION_METRICS:
             failure = _compare_metric(
                 metric_path=f"families.{family}.{metric}",

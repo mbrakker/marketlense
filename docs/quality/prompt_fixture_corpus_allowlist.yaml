@@ -2,11 +2,21 @@ schema_version: "1.0"
 allowlist:
   - pattern: "totals.total_tokens"
     owner: "market-lense"
-    reason: "Summary prompts now require independently authored compact and standard report-card TLDRs."
+    reason: "Report-card prompts now include bounded TLDR projections and grounded cover-semantics classification."
     expires_on: "2026-07-31"
-    max_delta_absolute: 140
+    max_delta_absolute: 1488
   - pattern: "families.publishing.total_tokens"
     owner: "market-lense"
-    reason: "Summary and summary-regeneration prompts now carry explicit compact and standard TLDR contracts."
+    reason: "Publishing prompts now include bounded TLDR contracts and the grounded cover-semantics namespace."
     expires_on: "2026-07-31"
-    max_delta_absolute: 240
+    max_delta_absolute: 1586
+  - pattern: "namespaces.set"
+    owner: "market-lense"
+    reason: "Adds the approved report_vs/artifacts/cover_semantics prompt namespace."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 1
+  - pattern: "families.publishing.namespace_count"
+    owner: "market-lense"
+    reason: "Adds one publishing namespace for grounded cover-semantics classification."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 1

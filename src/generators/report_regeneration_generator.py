@@ -231,6 +231,10 @@ def regenerate_artifacts(
         expert_comment=state.expert_comment,
         linkedin_post=state.linkedin_post,
     )
+    raw_cover_semantics = safe_artifacts.get("cover_semantics")
+    cover_semantics = (
+        dict(raw_cover_semantics) if isinstance(raw_cover_semantics, dict) else {}
+    )
 
     updated_artifacts = assemble_artifacts_payload(
         report_id=request.report_id,
@@ -243,6 +247,7 @@ def regenerate_artifacts(
             "toc_topics_expanded": state.topic_briefs,
         },
         summary=summary,
+        cover_semantics=cover_semantics,
         insights_candidates=insights_candidates,
         insights_final=insights_final,
         quotes_final=quotes_final,
