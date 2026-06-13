@@ -8,6 +8,7 @@ import re
 import threading
 import time
 import uuid
+from dataclasses import asdict
 from pathlib import Path
 from typing import List
 
@@ -40,6 +41,11 @@ from src.contracts.files import (
     WriteBytesResponse,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.report_cards import (
+    ReportCardManifest,
+    ReportCardManifestWriteRequest,
+    ReportCardManifestWriteResponse,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -501,6 +507,60 @@ def write_pipeline_checkpoint(
     return PipelineCheckpointWriteResponse(
         schema_version="1.0",
         checkpoint_path=str(path),
+        bytes_written=len(content),
+    )
+
+
+def write_report_card_manifest(
+    request: ReportCardManifestWriteRequest,
+    ctx: RunContext,
+) -> ReportCardManifestWriteResponse:
+    output_dir = Path(request.output_dir).expanduser().resolve()
+    path = output_dir / "report-card-manifest.json"
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_card_manifest_write_start",
+            module=logger.name,
+            fields={"output_dir": str(output_dir), "manifest_path": str(path)},
+        )
+    )
+    if request.schema_version != "1.0":
+        raise AppError(
+            code="report_card_manifest_write_failed",
+            message="Report-card manifest write schema version is unsupported",
+            retryable=False,
+            context={"schema_version": request.schema_version},
+        )
+    manifest = ReportCardManifest.from_dict(asdict(request.manifest))
+    content = (
+        json.dumps(asdict(manifest), ensure_ascii=True, sort_keys=True, indent=2) + "\n"
+    ).encode("utf-8")
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        with _write_lock_for_path(path):
+            _atomic_write_bytes(path, content)
+    except OSError as exc:
+        raise AppError(
+            code="report_card_manifest_write_failed",
+            message=f"Failed to write report-card manifest: {path}",
+            cause=exc,
+            retryable=False,
+            context={"manifest_path": str(path)},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_card_manifest_write_complete",
+            module=logger.name,
+            fields={"manifest_path": str(path), "bytes_written": len(content)},
+        )
+    )
+    return ReportCardManifestWriteResponse(
+        schema_version="1.0",
+        manifest_path=str(path),
         bytes_written=len(content),
     )
 

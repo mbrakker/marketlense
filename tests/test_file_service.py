@@ -17,12 +17,20 @@ from src.contracts.files import (
     WriteBytesRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.report_cards import (
+    CardCoverAsset,
+    CardCoverAssetSet,
+    CoverFingerprint,
+    ReportCardManifest,
+    ReportCardManifestWriteRequest,
+)
 from src.services.file_service import (
     list_directory,
     read_pipeline_checkpoint,
     read_latest_pdf_cache_text,
     read_text,
     write_pipeline_checkpoint,
+    write_report_card_manifest,
     write_bytes,
 )
 from src.utils.errors import AppError
@@ -30,6 +38,51 @@ from src.utils.errors import AppError
 
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+
+def _report_card_manifest() -> ReportCardManifest:
+    covers = CardCoverAssetSet(
+        schema_version="1.0",
+        small=CardCoverAsset("1.0", "small", "assets/report-card-small.png", 1600, 900),
+        medium=CardCoverAsset(
+            "1.0", "medium", "assets/report-card-medium.png", 1200, 1500
+        ),
+        large=CardCoverAsset(
+            "1.0", "large", "assets/report-card-large.png", 1200, 1600
+        ),
+    )
+    fingerprint = CoverFingerprint(
+        schema_version="1.0",
+        geometry_family="ascending_trajectory",
+        evidence_shape="trend",
+        direction="rising",
+        geography_scope="global",
+        evidence_density="balanced",
+        domain_layer="grid",
+        seed=184221,
+        selection_reason="A sustained upward trend dominates the report evidence.",
+    )
+    return ReportCardManifest(
+        schema_version="1.0",
+        title="Global Economic Conditions Quarterly Update",
+        title_scale="long",
+        publisher="McKinsey & Company",
+        published_date="2026-06-09",
+        geography_label="Global",
+        geography_scope="global",
+        covered_period="Q2 2026",
+        tldr_compact="Growth remains uneven as rates reshape investment decisions.",
+        tldr_standard=(
+            "Growth remains uneven across markets as persistent rates reshape "
+            "investment decisions through the second quarter of 2026."
+        ),
+        key_insights=(
+            "Investment remains concentrated in resilient service sectors.",
+            "Trade pressure is widening the gap between regional outlooks.",
+        ),
+        fingerprint=fingerprint,
+        covers=covers,
+    )
 
 
 def test_list_directory_supports_recursive_and_filters(tmp_path: Path) -> None:
@@ -330,3 +383,78 @@ def test_pipeline_checkpoint_roundtrip_persists_artifact_refs_and_schema(
         "pipeline_checkpoint_read_complete",
     }
     assert_logs_have_required_fields(checkpoint_events)
+
+
+def test_write_report_card_manifest_persists_validated_payload_and_logs(
+    tmp_path: Path,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level("INFO", logger="market_lense.file_service")
+    output_dir = tmp_path / "out" / "report-slug"
+
+    response = write_report_card_manifest(
+        ReportCardManifestWriteRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            manifest=_report_card_manifest(),
+        ),
+        _ctx(),
+    )
+
+    manifest_path = output_dir / "report-card-manifest.json"
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert response.manifest_path == str(manifest_path.resolve())
+    assert response.bytes_written > 0
+    assert payload["tldr_compact"].endswith(".")
+    assert len(payload["key_insights"]) == 2
+    assert payload["covers"]["small"]["output_path"] == ("assets/report-card-small.png")
+    assert payload["covers"]["medium"]["output_path"] == (
+        "assets/report-card-medium.png"
+    )
+    assert payload["covers"]["large"]["output_path"] == ("assets/report-card-large.png")
+
+    events = []
+    for record in caplog.records:
+        try:
+            events.append(json.loads(record.message))
+        except json.JSONDecodeError:
+            continue
+    manifest_events = [
+        event
+        for event in events
+        if event.get("event")
+        in {
+            "report_card_manifest_write_start",
+            "report_card_manifest_write_complete",
+        }
+    ]
+    assert {event["event"] for event in manifest_events} == {
+        "report_card_manifest_write_start",
+        "report_card_manifest_write_complete",
+    }
+    assert_logs_have_required_fields(manifest_events)
+
+
+def test_write_report_card_manifest_wraps_real_output_directory_failure(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    output_dir = tmp_path / "blocked"
+    output_dir.write_text("not a directory", encoding="utf-8")
+
+    with pytest.raises(AppError) as exc_info:
+        write_report_card_manifest(
+            ReportCardManifestWriteRequest(
+                schema_version="1.0",
+                output_dir=str(output_dir),
+                manifest=_report_card_manifest(),
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="report_card_manifest_write_failed",
+        retryable=False,
+    )

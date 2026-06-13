@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 
 from src.contracts.drive import DriveFile
-from src.contracts.ingest import IngestSettings
+from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
 from src.contracts.pdf_utils import PdfInfoResponse
 from src.contracts.report_generation import (
@@ -220,3 +220,22 @@ def test_report_generation_contract_roundtrip(assert_no_defaulted_required_field
         last_error=None,
     )
     assert_no_defaulted_required_fields(analysis)
+
+
+def test_ingest_outcome_round_trip_includes_report_card_manifest_path(
+    assert_no_defaulted_required_fields,
+) -> None:
+    outcome = IngestOutcome(
+        schema_version="1.1",
+        file_id="file-1",
+        name="report.pdf",
+        md5="0123456789abcdef0123456789abcdef",
+        html_path="out/report.html",
+        status="processed",
+        report_card_manifest_path="out/report/report-card-manifest.json",
+    )
+
+    rebuilt = IngestOutcome(**asdict(outcome))
+
+    assert rebuilt == outcome
+    assert_no_defaulted_required_fields(rebuilt)

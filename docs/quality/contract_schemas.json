@@ -15056,6 +15056,16 @@
             }
           ]
         },
+        "report_card_manifest_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },

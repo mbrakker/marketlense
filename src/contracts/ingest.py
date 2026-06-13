@@ -543,3 +543,9 @@ class IngestOutcome:
             "doc": "Filesystem path to the OCR-generated PDF used for analysis, if any."
         },
     )
+    report_card_manifest_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Filesystem path to the validated report-card manifest, if produced."
+        },
+    )

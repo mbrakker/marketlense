@@ -18,6 +18,11 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_models import Figure, Quote, ReportPayload
+from src.contracts.report_cards import (
+    CardCoverAsset,
+    CardCoverAssetSet,
+    ReportCardManifestWriteResponse,
+)
 from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
@@ -53,7 +58,7 @@ def _runtime(tmp_path: Path, *, md5: str | None) -> ReportRuntimeState:
         schema_version="1.0",
         file_id="file-1",
         name="report.pdf",
-        modified_time=None,
+        modified_time="2026-06-10T08:30:00Z",
         md5_checksum=md5,
     )
     settings = IngestSettings(
@@ -174,7 +179,24 @@ def _analysis(
         },
         evidence_paths={"doc_map": "doc_map.json"},
         evidence_packs={"doc_map": {"title": source.payload.title}},
-        artifacts_payload={"summary": {"tldr": "TLDR"}},
+        artifacts_payload={
+            "summary": {
+                "tldr": "A complete standard summary explains the report's strategic finding.",
+                "card_tldr_compact": "Strategic demand is shifting toward more efficient channels.",
+            },
+            "cover_semantics": {
+                "evidence_shape": "trend",
+                "direction": "rising",
+                "evidence_density": "balanced",
+                "domain_layer": "grid",
+                "selection_reason": "The report presents a sustained upward market trend.",
+            },
+            "insights_final": [
+                {"text": "Channel efficiency improved across the measured period."},
+                {"text": "Investment shifted toward higher-return customer segments."},
+            ],
+            "publication_date": "2026-06-09",
+        },
         validation_report=ValidationReport(
             schema_version="1.1",
             status="pass",
@@ -226,6 +248,34 @@ def _deps(**overrides) -> ReportRenderDependencies:
         ],
     )
     return replace(seeded, **overrides)
+
+
+def _cover_assets(runtime: ReportRuntimeState) -> CardCoverAssetSet:
+    asset_dir = Path(runtime.settings.output_dir) / runtime.report_name / "assets"
+    return CardCoverAssetSet(
+        schema_version="1.0",
+        small=CardCoverAsset(
+            schema_version="1.0",
+            size="small",
+            output_path=str(asset_dir / "report-card-small.png"),
+            width=1600,
+            height=900,
+        ),
+        medium=CardCoverAsset(
+            schema_version="1.0",
+            size="medium",
+            output_path=str(asset_dir / "report-card-medium.png"),
+            width=1200,
+            height=1500,
+        ),
+        large=CardCoverAsset(
+            schema_version="1.0",
+            size="large",
+            output_path=str(asset_dir / "report-card-large.png"),
+            width=1200,
+            height=1600,
+        ),
+    )
 
 
 def test_render_report_output_sources_metadata_from_db_and_returns_complete_outcome(
@@ -384,10 +434,10 @@ def test_render_report_citations_use_report_page_labels_without_internal_targets
         "source": "https://forecast.example/report",
         "_figure_section_enabled": False,
         "artifacts": {
-                "summary": {
-                    "tldr": "Retail demand is changing.",
-                    "executive_summary": "Retail demand is changing across channels.",
-                    "claim_evidence_map": [
+            "summary": {
+                "tldr": "Retail demand is changing.",
+                "executive_summary": "Retail demand is changing across channels.",
+                "claim_evidence_map": [
                     {
                         "claim": "Retail demand is changing.",
                         "evidence_id": "local-evidence-123",
@@ -679,6 +729,236 @@ def test_render_report_output_propagates_retryable_cover_error(
     assert_app_error(
         err.value,
         code="cover_render_failed",
+        retryable=True,
+        severity="error",
+    )
+
+
+def test_render_report_output_writes_complete_report_card_manifest(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    captured = {}
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    def _generate_covers(req, ctx):
+        del ctx
+        captured["cover_request"] = req
+        return [
+            SimpleNamespace(
+                schema_version="2.0",
+                file_id=runtime.file.file_id,
+                title="DB Title",
+                status="generated",
+                assets=_cover_assets(runtime),
+                error=None,
+            )
+        ]
+
+    def _write_manifest(req, ctx):
+        del ctx
+        captured["manifest_request"] = req
+        return ReportCardManifestWriteResponse(
+            schema_version="1.0",
+            manifest_path=str(Path(req.output_dir) / "report-card-manifest.json"),
+            bytes_written=2048,
+        )
+
+    deps = _deps(
+        render_report=_render_report,
+        generate_cover_images=_generate_covers,
+        write_report_card_manifest=_write_manifest,
+    )
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    cover_report = captured["cover_request"].reports[0]
+    manifest_request = captured["manifest_request"]
+    manifest = manifest_request.manifest
+    assert cover_report.fingerprint == manifest.fingerprint
+    assert manifest_request.output_dir == str(
+        Path(runtime.settings.output_dir) / runtime.report_name
+    )
+    assert manifest.published_date == "2026-06-09"
+    assert manifest.tldr_compact.endswith(".")
+    assert manifest.tldr_standard.endswith(".")
+    assert manifest.key_insights == (
+        "Channel efficiency improved across the measured period.",
+        "Investment shifted toward higher-return customer segments.",
+    )
+    assert manifest.covers.small.output_path == "assets/report-card-small.png"
+    assert manifest.covers.medium.output_path == "assets/report-card-medium.png"
+    assert manifest.covers.large.output_path == "assets/report-card-large.png"
+    assert outcome.schema_version == "1.1"
+    assert outcome.report_card_manifest_path == str(
+        Path(runtime.settings.output_dir)
+        / runtime.report_name
+        / "report-card-manifest.json"
+    )
+
+
+def test_render_report_output_does_not_write_manifest_after_cover_error(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    writes = []
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(
+        render_report=_render_report,
+        generate_cover_images=lambda req, ctx: [
+            SimpleNamespace(
+                schema_version="2.0",
+                file_id=runtime.file.file_id,
+                title="DB Title",
+                status="error",
+                assets=None,
+                error="cover failed",
+            )
+        ],
+        write_report_card_manifest=lambda req, ctx: writes.append(req),
+    )
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert writes == []
+    assert outcome.status == "processed"
+    assert outcome.report_card_manifest_path is None
+
+
+def test_render_report_output_fails_closed_for_invalid_card_content(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        artifacts_payload={
+            **_analysis(runtime, source, selection).artifacts_payload,
+            "summary": {
+                "tldr": "A complete standard summary explains the report finding.",
+                "card_tldr_compact": "This summary is incomplete",
+            },
+        },
+    )
+    writes = []
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(
+        render_report=_render_report,
+        generate_cover_images=lambda req, ctx: [
+            SimpleNamespace(
+                schema_version="2.0",
+                file_id=runtime.file.file_id,
+                title="DB Title",
+                status="generated",
+                assets=_cover_assets(runtime),
+                error=None,
+            )
+        ],
+        write_report_card_manifest=lambda req, ctx: writes.append(req),
+    )
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert writes == []
+    assert outcome.status == "error"
+    assert outcome.error.startswith("card_tldr_compact_invalid:")
+    assert outcome.report_card_manifest_path is None
+
+
+def test_render_report_output_propagates_retryable_manifest_write_error(
+    tmp_path,
+    assert_app_error,
+):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    def _write_manifest(req, ctx):
+        del req, ctx
+        raise AppError(
+            code="report_card_manifest_write_failed",
+            message="temporary storage outage",
+            retryable=True,
+        )
+
+    deps = _deps(
+        render_report=_render_report,
+        generate_cover_images=lambda req, ctx: [
+            SimpleNamespace(
+                schema_version="2.0",
+                file_id=runtime.file.file_id,
+                title="DB Title",
+                status="generated",
+                assets=_cover_assets(runtime),
+                error=None,
+            )
+        ],
+        write_report_card_manifest=_write_manifest,
+    )
+
+    with pytest.raises(AppError) as err:
+        render_report_output(
+            runtime,
+            source,
+            selection,
+            analysis,
+            deps,
+            preview_resp=render_preview_asset(runtime, source, deps),
+        )
+
+    assert_app_error(
+        err.value,
+        code="report_card_manifest_write_failed",
         retryable=True,
         severity="error",
     )

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import asdict
+from datetime import date
 import os
 from pathlib import Path
 from urllib.parse import quote
@@ -9,6 +11,12 @@ from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageRe
 from src.contracts.files import FileStatRequest
 from src.contracts.ingest import IngestOutcome
 from src.contracts.report_assets import PreviewRequest, PreviewResponse, RenderRequest
+from src.contracts.report_cards import (
+    CardCoverAssetSet,
+    CoverFingerprintProjectionRequest,
+    ReportCardManifestRequest,
+    ReportCardManifestWriteRequest,
+)
 from src.contracts.report_generation import (
     ReportAnalysisState,
     ReportRuntimeState,
@@ -20,6 +28,10 @@ from src.contracts.report_store import (
     ReportMetadataUpsertRequest,
 )
 from src.generators.report_generation_dependencies import ReportRenderDependencies
+from src.generators.report_card_projection import (
+    build_cover_fingerprint,
+    build_report_card_manifest,
+)
 from src.generators.report_generation_shared import (
     html_cache_key,
     logger,
@@ -30,6 +42,77 @@ from src.generators.report_generation_shared import (
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+
+
+def _publication_date(runtime: ReportRuntimeState, artifacts: dict) -> str:
+    candidates = [
+        artifacts.get("publication_date"),
+        artifacts.get("published_date"),
+        artifacts.get("report_date"),
+        runtime.file.modified_time,
+    ]
+    for candidate in candidates:
+        value = str(candidate or "").strip()
+        if not value:
+            continue
+        normalized = value[:10]
+        try:
+            date.fromisoformat(normalized)
+        except ValueError:
+            continue
+        return normalized
+    raise AppError(
+        code="card_publication_date_invalid",
+        message="A valid report publication date is required for report cards",
+        retryable=False,
+    )
+
+
+def _relative_cover_assets(
+    assets: CardCoverAssetSet,
+    report_output_dir: Path,
+) -> CardCoverAssetSet:
+    root = report_output_dir.resolve()
+    payload = asdict(assets)
+    for size in ("small", "medium", "large"):
+        output_path = Path(str(payload[size]["output_path"]))
+        if output_path.is_absolute():
+            try:
+                relative = output_path.resolve().relative_to(root)
+            except ValueError as exc:
+                raise AppError(
+                    code="cover_asset_set_incomplete",
+                    message="Cover assets must be stored inside the report output directory",
+                    retryable=False,
+                    context={"size": size, "output_path": str(output_path)},
+                ) from exc
+        else:
+            relative = output_path
+        if relative.is_absolute() or ".." in relative.parts:
+            raise AppError(
+                code="cover_asset_set_incomplete",
+                message="Cover asset paths must be report-relative",
+                retryable=False,
+                context={"size": size, "output_path": str(output_path)},
+            )
+        payload[size]["output_path"] = relative.as_posix()
+    return CardCoverAssetSet.from_dict(payload)
+
+
+def _artifact_insights(artifacts: dict) -> tuple[dict[str, object], ...]:
+    value = artifacts.get("insights_final")
+    if isinstance(value, dict):
+        value = value.get("insights_final")
+    if not isinstance(value, list):
+        return ()
+    return tuple(item for item in value if isinstance(item, dict))
+
+
+def _is_card_contract_error(exc: AppError) -> bool:
+    return exc.code.startswith("card_") or exc.code in {
+        "cover_fingerprint_invalid",
+        "cover_asset_set_incomplete",
+    }
 
 
 def _build_metadata_upsert_request(
@@ -364,15 +447,34 @@ def render_report_output(
     )
 
     cover_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:cover_image")
+    report_card_manifest_path = None
+    report_card_error = None
     try:
+        artifacts_payload = analysis.artifacts_payload or {}
+        cover_semantics = artifacts_payload.get("cover_semantics")
+        if not isinstance(cover_semantics, dict):
+            raise AppError(
+                code="cover_fingerprint_invalid",
+                message="Grounded cover semantics are required for report cards",
+                retryable=False,
+            )
+        fingerprint = build_cover_fingerprint(
+            CoverFingerprintProjectionRequest(
+                schema_version="1.0",
+                file_id=runtime.file.file_id,
+                artifact_hash=sha256_json(artifacts_payload),
+                region=cover_region or "",
+                cover_semantics=cover_semantics,
+            )
+        )
         cover_outcomes = dependencies.generate_cover_images(
             CoverImageGenerationRequest(
-                schema_version="1.0",
+                schema_version="2.0",
                 output_dir=runtime.settings.output_dir,
                 style_config_path=runtime.settings.cover_style_path,
                 reports=[
                     CoverImageReport(
-                        schema_version="1.0",
+                        schema_version="2.0",
                         file_id=runtime.file.file_id,
                         title=cover_title,
                         publisher=cover_publisher,
@@ -380,6 +482,7 @@ def render_report_output(
                         categories=list(analysis.payload.categories),
                         time_period=cover_time_period,
                         region=cover_region,
+                        fingerprint=fingerprint,
                     )
                 ],
             ),
@@ -409,6 +512,45 @@ def render_report_output(
                 },
             )
         )
+        if (
+            cover_outcome is not None
+            and cover_outcome.status == "generated"
+            and cover_assets is not None
+        ):
+            report_output_dir = Path(runtime.settings.output_dir) / runtime.report_name
+            summary = artifacts_payload.get("summary")
+            if not isinstance(summary, dict):
+                summary = {}
+            manifest = build_report_card_manifest(
+                ReportCardManifestRequest(
+                    schema_version="1.0",
+                    title=cover_title,
+                    publisher=cover_publisher,
+                    published_date=_publication_date(runtime, artifacts_payload),
+                    region=cover_region or "",
+                    covered_period=cover_time_period or "",
+                    tldr_compact=str(summary.get("card_tldr_compact") or ""),
+                    tldr_standard=str(summary.get("tldr") or ""),
+                    insights_final=_artifact_insights(artifacts_payload),
+                    fingerprint=fingerprint,
+                    covers=_relative_cover_assets(
+                        cover_assets,
+                        report_output_dir,
+                    ),
+                )
+            )
+            manifest_response = dependencies.write_report_card_manifest(
+                ReportCardManifestWriteRequest(
+                    schema_version="1.0",
+                    output_dir=str(report_output_dir),
+                    manifest=manifest,
+                ),
+                child_context(
+                    runtime.ctx,
+                    task_id=f"{runtime.ctx.task_id}:report_card_manifest",
+                ),
+            )
+            report_card_manifest_path = manifest_response.manifest_path
     except AppError as exc:
         if exc.retryable:
             logger.info(
@@ -425,11 +567,19 @@ def render_report_output(
                 )
             )
             raise
+        if _is_card_contract_error(exc):
+            report_card_error = f"{exc.code}: {exc.message}"
+            event = "report_card_manifest_validation_failed"
+        elif exc.code == "report_card_manifest_write_failed":
+            report_card_error = f"{exc.code}: {exc.message}"
+            event = "report_card_manifest_write_failed"
+        else:
+            event = "cover_image_generation_failed"
         logger.info(
             log_event(
                 cover_ctx,
                 role="generator",
-                event="cover_image_generation_failed",
+                event=event,
                 module=logger.name,
                 fields={
                     "file_id": runtime.file.file_id,
@@ -468,12 +618,13 @@ def render_report_output(
     )
 
     return IngestOutcome(
-        schema_version="1.0",
+        schema_version="1.1",
         file_id=runtime.file.file_id,
         name=runtime.file_name,
         md5=runtime.md5,
         html_path=out_html,
-        status="processed",
+        status="error" if report_card_error else "processed",
+        error=report_card_error,
         vector_store_id=analysis.vector_store_id,
         vector_store_status=analysis.vector_store_status,
         indexed_at_utc=analysis.indexed_at_utc,
@@ -485,4 +636,5 @@ def render_report_output(
         text_validation_pages=source.text_validation_pages,
         ocr_fallback_used=source.ocr_fallback_used,
         ocr_pdf_path=source.ocr_pdf_path or None,
+        report_card_manifest_path=report_card_manifest_path,
     )

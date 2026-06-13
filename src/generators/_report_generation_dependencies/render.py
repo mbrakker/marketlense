@@ -6,13 +6,22 @@ from typing import Any, Callable
 from src.contracts.cover_images import CoverImageGenerationRequest
 from src.contracts.files import FileStatRequest, ReadTextRequest, WriteBytesRequest
 from src.contracts.report_assets import PreviewRequest, RenderRequest, RenderResponse
+from src.contracts.report_cards import (
+    ReportCardManifestWriteRequest,
+    ReportCardManifestWriteResponse,
+)
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
 )
 from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
-from src.services.file_service import file_stat, read_text, write_bytes
+from src.services.file_service import (
+    file_stat,
+    read_text,
+    write_bytes,
+    write_report_card_manifest,
+)
 from src.services.pdf_service import render_preview as render_preview_service
 from src.services.render_service import render_report as render_report_service
 from src.services.report_store_service import (
@@ -31,6 +40,9 @@ class ReportRenderDependencies:
     file_stat: Callable[[FileStatRequest, RunContext], Any]
     read_text: Callable[[ReadTextRequest, RunContext], Any]
     write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
+    write_report_card_manifest: Callable[
+        [ReportCardManifestWriteRequest, RunContext], ReportCardManifestWriteResponse
+    ]
 
     @classmethod
     def default(cls) -> "ReportRenderDependencies":
@@ -43,5 +55,5 @@ class ReportRenderDependencies:
             file_stat=file_stat,
             read_text=read_text,
             write_bytes=write_bytes,
+            write_report_card_manifest=write_report_card_manifest,
         )
-
