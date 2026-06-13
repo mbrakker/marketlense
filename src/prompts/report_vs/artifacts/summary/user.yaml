@@ -6,7 +6,8 @@ text: |
   Task: Return a JSON object with the `summary` field:
   {
     "summary": {
-      "tldr": "<one-sentence TLDR>",
+      "tldr": "<one complete sentence, maximum 45 words>",
+      "card_tldr_compact": "<one complete sentence, maximum 18 words>",
       "executive_summary": "<5-7 sentence executive summary grounded in evidence, include key conclusions and insights>",
       "claim_evidence_map": [
         {"claim": "<concise claim>", "evidence_id": "<single existing evidence id from findings/quotes/doc map>", "evidence": "<supporting excerpt or paraphrase>", "pages": [<page numbers if known>]}
@@ -14,5 +15,7 @@ text: |
     }
   }
   - Keep claims specific and tied to evidence identifiers present in the provided context.
+  - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
+  - End each TLDR with complete sentence punctuation. Never use an ellipsis.
   - evidence_id must be one ID only (no arrays or comma-separated values); if uncertain, use an empty string.
   - Keep the claim_evidence_map brief (3-5 items).

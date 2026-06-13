@@ -3,12 +3,14 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [
                     {
@@ -97,6 +99,7 @@ def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
     assert len(vector_openai.requests) == 6
     assert len([req for req in vector_openai.requests if req[0] == "vector"]) == 6
 
+
 def test_load_cached_artifacts_rejects_schema_invalid_payload(tmp_path):
     report_name = "artifact cache invalid"
     cache_path = tmp_path / slugify(report_name) / "report_analysis" / "artifacts.json"
@@ -116,6 +119,7 @@ def test_load_cached_artifacts_rejects_schema_invalid_payload(tmp_path):
     )
 
     assert cached is None
+
 
 def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
     report_name = "artifact cache status"
@@ -169,7 +173,57 @@ def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
     )
 
     assert cached is not None
+    assert cached["schema_version"] == "2.0"
+    assert cached["summary"]["card_tldr_compact"] == "Grounded TLDR."
     assert cached["family_status"]["summary"]["status"] == "generated"
+
+
+def test_load_cached_artifacts_rejects_legacy_tldr_that_cannot_be_compact(tmp_path):
+    report_name = "artifact cache long legacy tldr"
+    cache_path = tmp_path / slugify(report_name) / "report_analysis" / "artifacts.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": "1.0",
+        "_cache": {"key": "cache-key"},
+        "toc_entries": [],
+        "toc_topics": [],
+        "toc_topics_expanded": [],
+        "summary": {
+            "tldr": (
+                "One two three four five six seven eight nine ten eleven twelve "
+                "thirteen fourteen fifteen sixteen seventeen eighteen nineteen."
+            ),
+            "executive_summary": "Grounded executive summary.",
+            "claim_evidence_map": [
+                {
+                    "claim": "Engagement drove measurable practice changes.",
+                    "evidence_id": "sec-07",
+                    "evidence": "The report says engagement led to tangible changes.",
+                    "pages": [16],
+                }
+            ],
+        },
+        "insights_candidates": [],
+        "insights_final": [],
+        "quotes_final": [],
+        "expert_comment": "",
+        "linkedin_post": "",
+        "source_status": {"not_available": False, "reason": ""},
+        "family_status": {},
+    }
+    cache_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    cached = _load_cached_artifacts(
+        output_dir=str(tmp_path),
+        report_id="artifact-cache-long-tldr",
+        report_name=report_name,
+        cache_key="cache-key",
+        ctx=_ctx(),
+        analysis_store=None,
+    )
+
+    assert cached is None
+
 
 def test_load_cached_artifacts_clears_doc_map_only_quotes_after_policy_refresh(
     tmp_path,
@@ -240,12 +294,14 @@ def test_load_cached_artifacts_clears_doc_map_only_quotes_after_policy_refresh(
         cached["family_status"]["quotes"]["reason"] == "quotes_missing_verbatim_source"
     )
 
+
 def test_generate_artifacts_with_auto_context_preserves_input_evidence(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [
                     {
@@ -312,6 +368,7 @@ def test_generate_artifacts_with_auto_context_preserves_input_evidence(tmp_path)
     assert payload["source_status"]["evidence_present"] is True
     assert payload["source_status"]["not_available"] is False
     assert len(fake_openai.requests) == 6
+
 
 __all__ = [
     "test_artifact_cache_isolated_by_retrieval_mode",

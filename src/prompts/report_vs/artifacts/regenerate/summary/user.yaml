@@ -13,7 +13,8 @@ text: |
   Return a JSON object with:
   {
     "summary": {
-      "tldr": "<one-sentence TLDR>",
+      "tldr": "<one complete sentence, maximum 45 words>",
+      "card_tldr_compact": "<one complete sentence, maximum 18 words>",
       "executive_summary": "<grounded executive summary>",
       "claim_evidence_map": [
         {
@@ -30,4 +31,6 @@ text: |
   - Fix the listed failures directly.
   - Keep `evidence_id` to a single existing ID or an empty string.
   - Keep `claim_evidence_map` brief and fully grounded.
+  - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
+  - End each TLDR with complete sentence punctuation. Never use an ellipsis.
   - Do not introduce unsupported numbers, entities, quotes, or conclusions.

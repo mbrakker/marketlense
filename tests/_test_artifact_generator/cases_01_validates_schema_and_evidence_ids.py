@@ -3,12 +3,105 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
+def _assemble_summary_payload(summary, *, ctx=None):
+    family_status = build_artifact_family_status(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+    family_status["summary"] = {
+        "schema_version": "1.0",
+        "family": "summary",
+        "source": "artifact",
+        "status": "generated",
+        "confidence_score": 1.0,
+        "policy_action": "keep",
+        "reason": "",
+    }
+    return assemble_artifacts_payload(
+        report_id="report-card-summary",
+        report_name="Report Card Summary",
+        doc_map={"sections": []},
+        evidence_packs={},
+        toc_bundle={"toc_entries": []},
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+        source_status={"not_available": False, "reason": ""},
+        family_status=family_status,
+        ctx=ctx or _ctx(),
+    )
+
+
+def test_assemble_artifacts_accepts_complete_card_tldrs():
+    payload = _assemble_summary_payload(
+        {
+            "tldr": (
+                "Retail growth depends on trust, invisible AI, and experience-led "
+                "discovery through 2026."
+            ),
+            "card_tldr_compact": (
+                "Trust and invisible AI reshape retail discovery through 2026."
+            ),
+            "executive_summary": "The report describes evidence-backed retail shifts.",
+            "claim_evidence_map": [],
+        }
+    )
+
+    assert payload["schema_version"] == "2.0"
+    assert payload["summary"]["card_tldr_compact"].endswith(".")
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "error_code"),
+    (
+        (
+            "card_tldr_compact",
+            "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen.",
+            "card_tldr_compact_invalid",
+        ),
+        (
+            "card_tldr_compact",
+            "Clipped compact summary...",
+            "card_tldr_compact_invalid",
+        ),
+        ("tldr", "Incomplete standard summary", "card_tldr_standard_invalid"),
+    ),
+)
+def test_assemble_artifacts_rejects_invalid_card_tldrs(
+    field_name,
+    value,
+    error_code,
+    assert_app_error,
+):
+    summary = {
+        "tldr": "Retail conditions are changing across markets.",
+        "card_tldr_compact": "Retail conditions are changing.",
+        "executive_summary": "The report describes evidence-backed retail shifts.",
+        "claim_evidence_map": [],
+    }
+    summary[field_name] = value
+
+    with pytest.raises(AppError) as captured:
+        _assemble_summary_payload(summary)
+
+    assert_app_error(captured.value, code=error_code, retryable=False)
+
+
 def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic 1", "Topic 2"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [
                     {
@@ -218,12 +311,14 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     )
     assert analysis_store.stored and analysis_store.stored[0][2] == "artifacts"
 
+
 def test_generate_artifacts_prunes_unbound_summary_claims(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [
                     {
@@ -314,13 +409,15 @@ def test_generate_artifacts_prunes_unbound_summary_claims(tmp_path):
         _ctx(),
     )
 
+
 def test_generate_artifacts_abstains_low_confidence_families_and_marks_regeneration(
     tmp_path,
 ):
     responses = {
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [],
             }
@@ -359,10 +456,12 @@ def test_generate_artifacts_abstains_low_confidence_families_and_marks_regenerat
     assert payload["family_status"]["linkedin_post"]["status"] == "generated"
     assert payload["family_status"]["linkedin_post"]["policy_action"] == "keep"
 
+
 def test_summary_family_status_accepts_claim_evidence_ids_without_spans() -> None:
     status = build_artifact_family_status(
         summary={
             "tldr": "Grounded short summary.",
+            "card_tldr_compact": "Grounded short summary.",
             "executive_summary": "Grounded executive summary.",
             "claim_evidence_map": [
                 {
@@ -382,6 +481,7 @@ def test_summary_family_status_accepts_claim_evidence_ids_without_spans() -> Non
 
     assert status["summary"]["status"] == "generated"
     assert status["summary"]["policy_action"] == "keep"
+
 
 def test_quote_family_abstains_doc_map_only_nonverbatim_quotes() -> None:
     status = build_artifact_family_status(
@@ -419,6 +519,7 @@ def test_quote_family_abstains_doc_map_only_nonverbatim_quotes() -> None:
     assert status["quotes"]["policy_action"] == "regenerate"
     assert status["quotes"]["reason"] == "quotes_missing_verbatim_source"
 
+
 def test_normalize_artifact_quotes_preserves_paraphrase_marker() -> None:
     quotes = normalize_artifact_quotes(
         [
@@ -434,6 +535,7 @@ def test_normalize_artifact_quotes_preserves_paraphrase_marker() -> None:
 
     assert quotes[0]["is_paraphrase"] is True
 
+
 def test_generate_artifacts_expands_topic_briefs_from_doc_map(tmp_path):
     responses = {
         "toc": {
@@ -445,7 +547,8 @@ def test_generate_artifacts_expands_topic_briefs_from_doc_map(tmp_path):
         },
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [
                     {
@@ -567,6 +670,7 @@ def test_generate_artifacts_expands_topic_briefs_from_doc_map(tmp_path):
     assert topic_briefs[1]["section_id"] == "margin-resilience"
     assert payload["toc_topics"] == ["Demand outlook", "Margin resilience"]
 
+
 def test_build_topic_briefs_avoids_positional_section_swap():
     topic_briefs = build_topic_briefs(
         toc_topics=[
@@ -661,6 +765,7 @@ def test_build_topic_briefs_avoids_positional_section_swap():
         == "Sentiments on GenAI: How do APAC consumers perceive AI?"
     )
     assert topic_briefs[4]["section_title"] == "Implications for marketers"
+
 
 __all__ = [
     "test_generate_artifacts_validates_schema_and_evidence_ids",

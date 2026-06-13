@@ -57,6 +57,7 @@ def apply_artifact_family_policy(
     if family_is_abstained({"family_status": family_status}, "summary"):
         summary_payload = {
             "tldr": "",
+            "card_tldr_compact": "",
             "executive_summary": "",
             "claim_evidence_map": [],
         }

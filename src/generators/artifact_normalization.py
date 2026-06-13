@@ -78,6 +78,7 @@ def normalize_artifact_summary(value: Any) -> Dict[str, Any]:
     claim_map = data.get("claim_evidence_map")
     return {
         "tldr": _s(data.get("tldr")),
+        "card_tldr_compact": _s(data.get("card_tldr_compact")),
         "executive_summary": strip_artifact_inline_reference_ids(
             _s(data.get("executive_summary"))
         ),

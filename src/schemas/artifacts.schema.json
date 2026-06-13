@@ -54,9 +54,10 @@
     },
     "summary": {
       "type": "object",
-      "required": ["tldr", "executive_summary", "claim_evidence_map"],
+      "required": ["tldr", "card_tldr_compact", "executive_summary", "claim_evidence_map"],
       "properties": {
         "tldr": { "type": "string" },
+        "card_tldr_compact": { "type": "string" },
         "executive_summary": { "type": "string" },
         "claim_evidence_map": {
           "type": "array",

@@ -5,7 +5,7 @@ shared:
   evidence_json: &evidence_json >-
     {"scope":{"summary":"Global enterprise payments market in 2026."},"findings":[{"id":"f1","text":"Digital wallets continue to expand in B2B and consumer checkout flows."},{"id":"f2","text":"Merchants prioritize orchestration, fraud controls, and conversion."}],"methods":{"methods":["Executive interviews","Cross-market survey"]},"limitations":{"items":["Forward-looking findings depend on disclosed assumptions."]}}
   summary_json: &summary_json >-
-    {"tldr":"Digital wallets and payment orchestration are reshaping enterprise checkout.","executive_summary":"The report finds that wallet growth, fraud pressure, and orchestration complexity are changing merchant priorities."}
+    {"tldr":"Digital wallets and payment orchestration are reshaping enterprise checkout.","card_tldr_compact":"Wallets and orchestration reshape enterprise checkout.","executive_summary":"The report finds that wallet growth, fraud pressure, and orchestration complexity are changing merchant priorities."}
   quotes_json: &quotes_json >-
     {"quotes":[{"quote_id":"q1","speaker":"Lead Analyst","quote":"Wallet adoption now influences the entire enterprise payments stack.","section":"Market landscape"}]}
   quote_candidates_json: &quote_candidates_json >-

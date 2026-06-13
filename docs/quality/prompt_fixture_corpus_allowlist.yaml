@@ -1,2 +1,12 @@
 schema_version: "1.0"
-allowlist: []
+allowlist:
+  - pattern: "totals.total_tokens"
+    owner: "market-lense"
+    reason: "Summary prompts now require independently authored compact and standard report-card TLDRs."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 140
+  - pattern: "families.publishing.total_tokens"
+    owner: "market-lense"
+    reason: "Summary and summary-regeneration prompts now carry explicit compact and standard TLDR contracts."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 240

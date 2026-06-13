@@ -141,7 +141,7 @@ def assemble_artifacts_payload(
             )
         )
     artifacts_payload: Dict[str, Any] = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "toc_entries": toc_entries,
         "toc_topics": toc_topics,
         "toc_topics_expanded": topic_briefs,
@@ -162,6 +162,7 @@ def assemble_artifacts_payload(
         ctx=ctx,
     )
     try:
+        _validate_artifact_semantic_fields(artifacts_payload, ctx)
         validate_schema(
             SchemaValidateRequest(
                 schema_version="1.0",
@@ -171,7 +172,6 @@ def assemble_artifacts_payload(
             ctx,
         )
         validate_evidence_references(artifacts_payload, evidence_packs, ctx)
-        _validate_artifact_semantic_fields(artifacts_payload, ctx)
     except AppError as exc:
         logger.info(
             log_event(
@@ -395,6 +395,13 @@ def _adapt_cached_artifacts_payload(
 ) -> CachedPackAdaptResult[Dict[str, Any]]:
     payload = _attach_cached_artifact_family_status(payload)
     try:
+        payload = _adapt_cached_artifact_schema(payload)
+        raw_summary = payload.get("summary")
+        _validate_card_tldrs(
+            raw_summary if isinstance(raw_summary, dict) else {},
+            summary_abstained=family_is_abstained(payload, "summary"),
+            ctx=ctx,
+        )
         validate_schema(
             SchemaValidateRequest(
                 schema_version="1.0",
@@ -428,6 +435,35 @@ def _adapt_cached_artifacts_payload(
         status="hit",
         value=payload,
     )
+
+
+def _adapt_cached_artifact_schema(payload: Dict[str, Any]) -> Dict[str, Any]:
+    version = _s(payload.get("schema_version")).strip()
+    if version == "2.0":
+        return payload
+    if version != "1.0":
+        raise AppError(
+            code="artifact_schema_migration_required",
+            message="Cached artifact schema version is unsupported",
+            retryable=False,
+            context={"schema_version": version},
+        )
+    adapted = dict(payload)
+    raw_summary = adapted.get("summary")
+    summary = dict(raw_summary) if isinstance(raw_summary, dict) else {}
+    if family_is_abstained(adapted, "summary"):
+        summary.setdefault("card_tldr_compact", "")
+    else:
+        standard = _validate_complete_tldr(
+            summary.get("tldr"),
+            limit=18,
+            code="card_tldr_compact_invalid",
+            field_name="summary.tldr",
+        )
+        summary["card_tldr_compact"] = standard
+    adapted["summary"] = summary
+    adapted["schema_version"] = "2.0"
+    return adapted
 
 
 def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -557,8 +593,11 @@ def _validate_artifact_semantic_fields(
     expert_abstained = family_is_abstained(artifacts_payload, "expert_comment")
     linkedin_abstained = family_is_abstained(artifacts_payload, "linkedin_post")
 
-    if not summary_abstained and _missing_text(summary.get("tldr")):
-        missing_fields.append("summary.tldr")
+    _validate_card_tldrs(
+        summary,
+        summary_abstained=summary_abstained,
+        ctx=ctx,
+    )
     if not summary_abstained and _missing_text(summary.get("executive_summary")):
         missing_fields.append("summary.executive_summary")
     if not summary_abstained:
@@ -616,6 +655,68 @@ def _validate_artifact_semantic_fields(
         retryable=False,
         context={"missing_fields": missing_fields},
     )
+
+
+def _word_count(value: str) -> int:
+    return len(value.split())
+
+
+def _validate_card_tldrs(
+    summary: Dict[str, Any],
+    *,
+    summary_abstained: bool,
+    ctx: RunContext,
+) -> None:
+    if summary_abstained:
+        return
+    standard_tldr = _validate_complete_tldr(
+        summary.get("tldr"),
+        limit=45,
+        code="card_tldr_standard_invalid",
+        field_name="summary.tldr",
+    )
+    compact_tldr = _validate_complete_tldr(
+        summary.get("card_tldr_compact"),
+        limit=18,
+        code="card_tldr_compact_invalid",
+        field_name="summary.card_tldr_compact",
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_card_tldrs_validated",
+            module=logger.name,
+            fields={
+                "standard_word_count": _word_count(standard_tldr),
+                "compact_word_count": _word_count(compact_tldr),
+            },
+        )
+    )
+
+
+def _validate_complete_tldr(
+    value: Any,
+    *,
+    limit: int,
+    code: str,
+    field_name: str,
+) -> str:
+    text = " ".join(_s(value).split())
+    count = _word_count(text)
+    if (
+        count < 1
+        or count > limit
+        or text.endswith(("...", "\u2026"))
+        or text[-1] not in ".?!"
+    ):
+        raise AppError(
+            code=code,
+            message=f"{field_name} must be a complete sentence of 1 to {limit} words",
+            retryable=False,
+            context={"field": field_name, "word_count": count},
+        )
+    return text
 
 
 def _dump_json(data: Any) -> str:

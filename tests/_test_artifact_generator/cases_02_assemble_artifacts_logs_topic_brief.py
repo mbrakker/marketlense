@@ -3,12 +3,14 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_assemble_artifacts_logs_topic_brief_mapping_audit(
     caplog, assert_logs_have_required_fields
 ) -> None:
     caplog.set_level(logging.INFO, logger="market_lense.artifact_generator")
     summary = {
-        "tldr": "TLDR",
+        "tldr": "Grounded TLDR.",
+        "card_tldr_compact": "Grounded TLDR.",
         "executive_summary": "Executive summary",
         "claim_evidence_map": [],
     }
@@ -118,12 +120,14 @@ def test_assemble_artifacts_logs_topic_brief_mapping_audit(
         }
     ]
 
+
 def test_generate_artifacts_normalizes_malformed_evidence_ids(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic 1"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [
                     {
@@ -245,12 +249,14 @@ def test_generate_artifacts_normalizes_malformed_evidence_ids(tmp_path):
         _ctx(),
     )
 
+
 def test_generate_artifacts_backfills_missing_ids(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [{"claim": "Claim", "evidence": "Support"}],
             }
@@ -301,7 +307,10 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
     )
     assert payload["summary"]["claim_evidence_map"] == []
     assert payload["family_status"]["summary"]["status"] == "abstained"
-    assert payload["family_status"]["summary"]["reason"] == "summary_missing_claim_evidence"
+    assert (
+        payload["family_status"]["summary"]["reason"]
+        == "summary_missing_claim_evidence"
+    )
     assert payload["insights_candidates"] == []
     assert payload["insights_final"] == []
     assert payload["family_status"]["insights_bundle"]["status"] == "abstained"
@@ -317,13 +326,15 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
         _ctx(),
     )
 
+
 def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
     analysis_store = FakeAnalysisStore()
     responses = {
         "toc": {"toc_topics": ["Topic 1"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [
                     {
@@ -400,6 +411,7 @@ def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
     )
     assert analysis_store.stored
 
+
 def test_generate_artifacts_fails_when_inputs_unavailable_without_vector_store(
     tmp_path,
     assert_app_error,
@@ -435,12 +447,14 @@ def test_generate_artifacts_fails_when_inputs_unavailable_without_vector_store(
     assert exc_info.value.context["evidence_present"] is False
     assert analysis_store.stored == []
 
+
 def test_generate_artifacts_runs_llm_steps_serially_without_executor(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic 1", "Topic 2"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [
                     {
@@ -537,6 +551,7 @@ def test_generate_artifacts_runs_llm_steps_serially_without_executor(tmp_path):
     ]
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 6
 
+
 def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin(
     tmp_path,
 ):
@@ -544,7 +559,8 @@ def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_link
         "toc": {"toc_topics": ["Topic 1"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Growth accelerated (F-001 / IC-004), especially in Q4.",
                 "claim_evidence_map": [
                     {
@@ -617,12 +633,14 @@ def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_link
     )
     assert payload["linkedin_post"] == "Leader takeaway: invest in omnichannel."
 
+
 def test_generate_artifacts_uses_vector_path_when_flag_enabled(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic 1"]},
         "summary": {
             "summary": {
-                "tldr": "TLDR",
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
                 "executive_summary": "Exec",
                 "claim_evidence_map": [
                     {
@@ -688,6 +706,7 @@ def test_generate_artifacts_uses_vector_path_when_flag_enabled(tmp_path):
     )
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 6
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 0
+
 
 __all__ = [
     "test_assemble_artifacts_logs_topic_brief_mapping_audit",
