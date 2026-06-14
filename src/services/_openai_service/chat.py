@@ -80,12 +80,13 @@ def _modern_chat_completion_call(
     temperature: float,
     seed: int | None,
 ) -> _ChatCompletionRun:
-    if OpenAI is None:
+    client_factory = _openai_client_factory()
+    if client_factory is None:
         raise TypeError("OpenAI client not available")
     client_kwargs: dict = {"api_key": api_key}
     if timeout_seconds is not None:
         client_kwargs["timeout"] = timeout_seconds
-    client = OpenAI(**client_kwargs)
+    client = client_factory(**client_kwargs)
     payload_args = {
         "model": model,
         "messages": [

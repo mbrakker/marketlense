@@ -12,7 +12,7 @@ from src.contracts.openai import (
     OpenAIUsageAccountingResponse,
 )
 from src.contracts.run_context import RunContext
-from src.services import openai_service as svc
+from src.services import openai_accounting_service, openai_service as svc
 from src.utils.errors import AppError
 
 
@@ -75,7 +75,7 @@ def test_openai_chat_json_uses_modern_chat_completion(monkeypatch, tmp_path) -> 
             captured_client_kwargs.append(dict(kwargs))
             self.chat = SimpleNamespace(completions=_FakeChatCompletions())
 
-    monkeypatch.setattr(svc, "OpenAI", _FakeClient)
+    monkeypatch.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
 
     result = svc.openai_chat_json(_chat_request(tmp_path), _ctx())
 
@@ -120,9 +120,9 @@ def test_openai_chat_json_delegates_usage_accounting(
             daily_path=request.cost_daily_path,
         )
 
-    external_boundary_mocks_only.setattr(svc, "OpenAI", _FakeClient)
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
     external_boundary_mocks_only.setattr(
-        svc.openai_accounting_service, "record_usage", _record_usage
+        openai_accounting_service, "record_usage", _record_usage
     )
 
     result = svc.openai_chat_json(_chat_request(tmp_path), _ctx())
@@ -168,7 +168,7 @@ def test_openai_chat_json_semantic_response_cache_skips_repeated_provider_call(
         def __init__(self, **kwargs):
             self.chat = SimpleNamespace(completions=_FakeChatCompletions())
 
-    monkeypatch.setattr(svc, "OpenAI", _FakeClient)
+    monkeypatch.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
     request = OpenAIJSONPromptRequest(
         **{
             **_chat_request(tmp_path).__dict__,
@@ -242,7 +242,7 @@ def test_analyze_report_falls_back_to_legacy_chat_completion(
                 },
             }
 
-    monkeypatch.setattr(svc, "OpenAI", None)
+    monkeypatch.setattr(svc.openai_legacy, "OpenAI", None)
     monkeypatch.setattr(svc.openai_legacy, "ChatCompletion", _FakeLegacyChatCompletion)
 
     result = svc.analyze_report(_analyze_request(tmp_path), _ctx())
@@ -267,7 +267,7 @@ def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
         def __init__(self, **kwargs):
             self.chat = SimpleNamespace(completions=_FailingChatCompletions())
 
-    monkeypatch.setattr(svc, "OpenAI", _FailingClient)
+    monkeypatch.setattr(svc.openai_legacy, "OpenAI", _FailingClient)
 
     with pytest.raises(AppError) as exc_info:
         svc.openai_chat_json(_chat_request(tmp_path), _ctx())
@@ -286,7 +286,7 @@ def test_openai_chat_json_maps_content_filter_to_non_retryable_refusal(
         def __init__(self, **kwargs):
             self.chat = SimpleNamespace(completions=_RefusingChatCompletions())
 
-    monkeypatch.setattr(svc, "OpenAI", _RefusingClient)
+    monkeypatch.setattr(svc.openai_legacy, "OpenAI", _RefusingClient)
 
     with pytest.raises(AppError) as exc_info:
         svc.openai_chat_json(_chat_request(tmp_path), _ctx())
@@ -329,7 +329,7 @@ def test_legacy_chat_completion_timeout_does_not_leak_between_requests(
             model_pricing={},
         )
 
-    external_boundary_mocks_only.setattr(svc, "OpenAI", None)
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", None)
     external_boundary_mocks_only.setattr(
         svc.openai_legacy, "ChatCompletion", _FakeLegacyChatCompletion
     )

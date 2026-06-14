@@ -12,8 +12,15 @@ from src.contracts.ui_run_replay import (
     UiRunReplayReadRequest,
     UiRunWorkspaceFingerprintRequest,
 )
+from src.contracts.semantic_ids import RunId
+from src.contracts.ui_run_control import (
+    UiRunWorkerRequest,
+    UiRunWorkerRequestWriteRequest,
+)
 from src.services import ui_run_replay_service
+from src.utils.errors import AppError
 from src.utils.logging import new_run_context
+from src.utils.ui_run_paths import ui_run_state_dir
 
 
 def _ctx():
@@ -22,6 +29,80 @@ def _ctx():
 
 def _registry_path(tmp_path: Path) -> str:
     return str((tmp_path / "state" / "ui_runs.sqlite").resolve())
+
+
+def test_ui_run_worker_request_roundtrip_uses_shared_state_path(
+    tmp_path: Path,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO)
+    registry_path = _registry_path(tmp_path)
+    worker_request = UiRunWorkerRequest(
+        schema_version="1.0",
+        registry_path=registry_path,
+        run_id=RunId("run-worker"),
+        run_type="ingest",
+        request_payload={"limit": 2},
+    )
+
+    first = ui_run_replay_service.write_ui_run_worker_request(
+        UiRunWorkerRequestWriteRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            worker_request=worker_request,
+        ),
+        _ctx(),
+    )
+    second = ui_run_replay_service.write_ui_run_worker_request(
+        UiRunWorkerRequestWriteRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            worker_request=worker_request,
+        ),
+        _ctx(),
+    )
+
+    assert first == second
+    assert Path(first.request_path) == (
+        ui_run_state_dir(registry_path) / "run-worker" / "request.json"
+    )
+    assert json.loads(Path(first.request_path).read_text(encoding="utf-8")) == {
+        "schema_version": "1.0",
+        "registry_path": registry_path,
+        "run_id": "run-worker",
+        "run_type": "ingest",
+        "request_payload": {"limit": 2},
+    }
+    assert_logs_have_required_fields(caplog.records)
+
+
+def test_ui_run_worker_request_write_failure_is_typed(tmp_path: Path) -> None:
+    registry_path = _registry_path(tmp_path)
+    state_dir = ui_run_state_dir(registry_path)
+    state_dir.parent.mkdir(parents=True, exist_ok=True)
+    state_dir.write_text("not a directory", encoding="utf-8")
+    worker_request = UiRunWorkerRequest(
+        schema_version="1.0",
+        registry_path=registry_path,
+        run_id=RunId("run-worker"),
+        run_type="ingest",
+        request_payload={},
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        ui_run_replay_service.write_ui_run_worker_request(
+            UiRunWorkerRequestWriteRequest(
+                schema_version="1.0",
+                registry_path=registry_path,
+                worker_request=worker_request,
+            ),
+            _ctx(),
+        )
+
+    assert exc_info.value.code == "ui_run_worker_request_write_failed"
+    assert exc_info.value.retryable is True
+    assert exc_info.value.severity == "error"
 
 
 def test_ui_run_replay_manifest_roundtrip_and_fingerprints(

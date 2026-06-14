@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import json
 import logging
 import sys
-from dataclasses import asdict
-from datetime import datetime, timezone
-from pathlib import Path
 from uuid import uuid4
 
 from src.contracts.run_context import RunContext
@@ -36,6 +32,7 @@ from src.contracts.ui_run_control import (
     UiRunRecordWriteRequest,
     UiRunSummary,
     UiRunWorkerRequest,
+    UiRunWorkerRequestWriteRequest,
 )
 from src.services.process_service import (
     launch_process,
@@ -51,21 +48,15 @@ from src.services.run_registry_service import (
     record_ui_run_dead_letter_action,
     write_ui_run_record,
 )
+from src.services.ui_run_replay_service import write_ui_run_worker_request
+from src.utils.clock import utc_now_iso as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.ui_run_paths import ui_run_dir
 
 logger = logging.getLogger("market_lense.ui_run_control_orchestrator")
 
 FINAL_UI_RUN_STATUSES = {"succeeded", "failed", "canceled"}
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _run_state_dir(registry_path: str) -> Path:
-    registry = Path(registry_path).expanduser().resolve()
-    return registry.parent / "ui_runs"
 
 
 def _summary(record: UiRunRecord) -> UiRunSummary:
@@ -87,22 +78,9 @@ def _summary(record: UiRunRecord) -> UiRunSummary:
     )
 
 
-def _write_worker_request(
-    request_path: Path, worker_request: UiRunWorkerRequest
-) -> None:
-    request_path.parent.mkdir(parents=True, exist_ok=True)
-    request_path.write_text(
-        json.dumps(asdict(worker_request), ensure_ascii=True, indent=2),
-        encoding="utf-8",
-    )
-
-
 def launch_ui_run(request: UiRunLaunchRequest, ctx: RunContext) -> UiRunLaunchResponse:
     created_at = _utc_now()
     run_id = RunId(str(uuid4()))
-    run_dir = _run_state_dir(request.registry_path) / run_id
-    request_path = run_dir / "request.json"
-    output_path = run_dir / "output.log"
     worker_request = UiRunWorkerRequest(
         schema_version="1.0",
         registry_path=request.registry_path,
@@ -124,14 +102,23 @@ def launch_ui_run(request: UiRunLaunchRequest, ctx: RunContext) -> UiRunLaunchRe
             },
         )
     )
-    _write_worker_request(request_path, worker_request)
+    worker_write = write_ui_run_worker_request(
+        UiRunWorkerRequestWriteRequest(
+            schema_version="1.0",
+            registry_path=request.registry_path,
+            worker_request=worker_request,
+        ),
+        ctx,
+    )
+    request_path = worker_write.request_path
+    output_path = str(ui_run_dir(request.registry_path, run_id) / "output.log")
     command = [
         sys.executable,
         "-m",
         "src.cli",
         "ui-run-worker",
         "--request-json",
-        str(request_path),
+        request_path,
     ]
     record = UiRunRecord(
         schema_version="1.0",
@@ -143,8 +130,8 @@ def launch_ui_run(request: UiRunLaunchRequest, ctx: RunContext) -> UiRunLaunchRe
         command=command,
         created_at_utc=created_at,
         updated_at_utc=created_at,
-        output_path=str(output_path),
-        request_path=str(request_path),
+        output_path=output_path,
+        request_path=request_path,
     )
     write_ui_run_record(
         UiRunRecordWriteRequest(

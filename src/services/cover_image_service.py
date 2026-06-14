@@ -488,8 +488,16 @@ def _save_png(image: Image.Image, output_path: str) -> None:
     except OSError as exc:
         try:
             temporary_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        except OSError as cleanup_error:
+            # Cleanup is best-effort here so the original render failure remains primary.
+            logger.debug(
+                "Cover-render temp cleanup failed",
+                extra={
+                    "event": "cover_render_temp_cleanup_failed",
+                    "path": str(temporary_path),
+                    "error_type": type(cleanup_error).__name__,
+                },
+            )
         raise AppError(
             code="cover_render_failed",
             message=f"Unable to write cover image: {output_path}",

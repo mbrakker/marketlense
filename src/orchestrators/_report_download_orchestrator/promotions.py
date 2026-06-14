@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 
 from src.contracts.browser_download import (
     BrowserReportDownloadResult,
@@ -14,6 +13,7 @@ from src.contracts.report_store import (
     PublisherPrivateApiCandidatePromotedRequest,
 )
 from src.contracts.run_context import RunContext
+from src.utils.clock import utc_now_seconds_z as _utc_now_iso
 from src.orchestrators._report_download_orchestrator.dependencies import (
     ReportDownloadDependencies,
 )
@@ -348,13 +348,4 @@ def _log_private_api_promotion_event(
             module=logger.name,
             fields=fields,
         )
-    )
-
-
-def _utc_now_iso() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
     )

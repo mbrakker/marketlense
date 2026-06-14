@@ -191,7 +191,7 @@ BOUNDARY_EXPORT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "_image_block_rects",
     ),
     "src/services/_pdf/_visual_heuristics/panel_text.py": (
-        "_panel_caption_looks_metric_stub",
+        "_panel_caption_looks_like_compact_metric",
         "_panel_chart_has_data_signal",
         "_panel_caption_looks_top_band",
     ),

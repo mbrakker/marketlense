@@ -1231,6 +1231,8 @@ RUN_OPENAI_OCR_INTEGRATION=1 OPENAI_API_KEY=... pytest -m integration tests/inte
 
 CI gates (see `.github/workflows/ci.yml`):
 
+- `python scripts/ci/run_quality_gate.py` runs the complete local gate in CI order, preserving each underlying command's output. Use `--list` to inspect the command plan without executing it.
+- `python scripts/ci/run_refactor_audit.py` runs split-symbol, architecture-import, direct-I/O, and long-file checks for behavior-preserving refactors. Use `--list` to inspect the command plan.
 - `python scripts/ci/check_formatting.py` (format gate, `ruff format --check` over changed Python files under `src`, `tests`, `scripts`; skips when no Python files changed unless `FORMAT_PATHS` is set)
 - `python scripts/ci/check_risk_policy.py` (diff-aware risk classifier; exports stricter coverage/mutation thresholds for contract and critical-layer changes in GitHub Actions)
 - `python scripts/ci/check_split_symbol_links.py` (static split-boundary export/linking gate; run after facade/internal module splits such as `_config_service`, `_openai_service`, or `_pdf/_visual_heuristics` refactors and before mypy)
@@ -1248,6 +1250,8 @@ CI gates (see `.github/workflows/ci.yml`):
 - `python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden --candidate-root tests/fixtures/candidate_extraction/golden` (baseline non-regression gate)
 - `python scripts/quality/compare_candidate_goldens.py --golden-root "<golden-root-1>" --golden-root "<golden-root-2>" --output-root out/candidate_golden_compare_current` (exact candidate ID/bbox/crop-hash comparison against manually curated candidate goldens)
 - `python scripts/quality/run_health_scorecard.py <log_path> --run-id <run-id>` (local/live-run health summary for latency, retries, validation failures, and cost warnings)
+
+Dashboard filesystem reads are service-owned: JSON payloads use typed `file_service.read_json`, structured logs use bounded trailing byte/line reads, and directory count cards use one grouped walk per distinct root with deterministic per-pattern limits.
 
 PR governance:
 
@@ -1274,6 +1278,7 @@ PR governance:
 See:
 
 - `CONSOLIDATED_TODO.md` (canonical backlog, including the merged ineffective-choices audit intake)
+- `simplification.md` (simplification intake and completed/keep-rationale history; items become active only after promotion into `CONSOLIDATED_TODO.md` with owner, baseline, target, and review/expiry date)
 - `docs/quality/non-regression-policy.md`
 - `docs/docpacks/pack-specs.md`
 - `docs/docpacks/prompt-authoring.md`

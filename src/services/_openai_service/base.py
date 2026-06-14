@@ -46,14 +46,6 @@ from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import log_event
 
-OpenAI: Any | None = None
-try:
-    from openai import OpenAI as _OpenAI
-
-    OpenAI = _OpenAI
-except ImportError:  # pragma: no cover - compatibility fallback
-    OpenAI = None
-
 logger = logging.getLogger("market_lense.openai_service")
 SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION = "1.0"
 SEMANTIC_RESPONSE_CACHE_SUBDIR = "semantic_responses"
@@ -83,6 +75,12 @@ OPENAI_CLIENT_INIT_EXCEPTIONS: tuple[type[Exception], ...] = OPENAI_ERROR_TYPES 
     OSError,
     ValueError,
 )
+
+
+def _openai_client_factory() -> Any | None:
+    return getattr(openai_legacy, "OpenAI", None)
+
+
 REQUIRED_KEYS = (
     "tldr",
     "title",
@@ -851,7 +849,7 @@ __all__ = [
     "OPENAI_ERROR_TYPES",
     "OPENAI_OCR_RESPONSE_FORMAT",
     "OPENAI_REQUEST_EXCEPTIONS",
-    "OpenAI",
+    "_openai_client_factory",
     "OpenAIAnalyzeRequest",
     "OpenAIAnalyzeResponse",
     "OpenAIJSONImagePromptRequest",

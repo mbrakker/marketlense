@@ -305,6 +305,6 @@ def fake_openai(
 ) -> FakeOpenAIBoundary:
     boundary = FakeOpenAIBoundary()
     external_boundary_mocks_only.setattr(
-        openai_service, "OpenAI", boundary.client_factory
+        openai_service.openai_legacy, "OpenAI", boundary.client_factory
     )
     return boundary

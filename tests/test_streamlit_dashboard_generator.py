@@ -64,15 +64,24 @@ def test_discover_log_files_sorts_by_mtime_desc(
 def test_load_log_events_parses_structured_lines(
     external_boundary_mocks_only,
 ) -> None:
-    payload = (
-        "12:01:02 | INFO | market_lense.test | "
-        '{"run_id":"r1","task_id":"t1","span_id":"s1","event":"ingest_start","role":"orchestrator","module":"m","fields":{}}\n'
-        "plain text line\n"
-    )
     external_boundary_mocks_only.setattr(
         gen.file_service,
-        "read_text",
-        lambda req, ctx: SimpleNamespace(content=payload),
+        "load_structured_log_events",
+        lambda req, ctx: SimpleNamespace(
+            events=[
+                {
+                    "run_id": "r1",
+                    "task_id": "t1",
+                    "span_id": "s1",
+                    "event": "ingest_start",
+                    "role": "orchestrator",
+                    "module": "m",
+                    "fields": {},
+                    "log_path": req.path,
+                    "timestamp_utc": "2026-02-09T12:01:02",
+                }
+            ]
+        ),
     )
 
     response = gen.load_log_events(
@@ -150,19 +159,29 @@ def test_load_state_rows_invalid_kind_raises() -> None:
 def test_collect_directory_counts_captures_errors(
     external_boundary_mocks_only,
 ) -> None:
-    def _list_directory(req, ctx):
-        if req.glob_pattern == "broken":
-            raise AppError(
-                code="directory_not_found", message="missing", retryable=False
-            )
+    def _count_directory_patterns(req, ctx):
         return SimpleNamespace(
-            entries=[SimpleNamespace(path="a"), SimpleNamespace(path="b")]
+            rows=[
+                SimpleNamespace(
+                    name="ok",
+                    root_dir="out",
+                    count=2,
+                    error="",
+                ),
+                SimpleNamespace(
+                    name="bad",
+                    root_dir="out",
+                    count=0,
+                    error="missing",
+                ),
+            ],
+            root_walk_count=1,
         )
 
     external_boundary_mocks_only.setattr(
         gen.file_service,
-        "list_directory",
-        _list_directory,
+        "count_directory_patterns",
+        _count_directory_patterns,
     )
 
     response = gen.collect_directory_counts(

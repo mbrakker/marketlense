@@ -10,12 +10,16 @@ import time
 import uuid
 from dataclasses import asdict
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from src.contracts.files import (
     DeleteFileRequest,
     DeleteFileResponse,
     DirectoryEntry,
+    DirectoryPatternCountRequest,
+    DirectoryPatternCountResponse,
+    DirectoryPatternCountRow,
+    DirectoryPatternSpec,
     FileExistsRequest,
     FileExistsResponse,
     FileHashRequest,
@@ -35,8 +39,12 @@ from src.contracts.files import (
     PdfCacheTextReadResponse,
     ReadBytesRequest,
     ReadBytesResponse,
+    ReadJsonRequest,
+    ReadJsonResponse,
     ReadTextRequest,
     ReadTextResponse,
+    StructuredLogLoadRequest,
+    StructuredLogLoadResponse,
     WriteBytesRequest,
     WriteBytesResponse,
 )
@@ -47,6 +55,10 @@ from src.contracts.report_cards import (
     ReportCardManifestWriteResponse,
 )
 from src.utils.errors import AppError
+from src.utils.gui_utils import (
+    extract_log_date_from_filename,
+    parse_structured_log_line,
+)
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.file_service")
@@ -221,6 +233,120 @@ def read_text(request: ReadTextRequest, ctx: RunContext) -> ReadTextResponse:
     return ReadTextResponse(schema_version="1.0", path=request.path, content=content)
 
 
+def read_json(request: ReadJsonRequest, ctx: RunContext) -> ReadJsonResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="read_json_start",
+            module=logger.name,
+            fields={"path": request.path},
+        )
+    )
+    content = read_text(
+        ReadTextRequest(schema_version=request.schema_version, path=request.path),
+        ctx,
+    ).content
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise AppError(
+            code="file_json_invalid",
+            message=f"File is not valid JSON: {request.path}",
+            cause=exc,
+            retryable=False,
+            severity="error",
+            context={"path": request.path},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="read_json_complete",
+            module=logger.name,
+            fields={"path": request.path, "payload_type": type(payload).__name__},
+        )
+    )
+    return ReadJsonResponse(
+        schema_version="1.0",
+        path=request.path,
+        payload=payload,
+    )
+
+
+def load_structured_log_events(
+    request: StructuredLogLoadRequest,
+    ctx: RunContext,
+) -> StructuredLogLoadResponse:
+    max_lines = max(1, min(int(request.max_lines), 20_000))
+    max_bytes = max(1024, min(int(request.max_bytes), 20_000_000))
+    path = Path(request.path)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="structured_log_load_start",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "max_lines": max_lines,
+                "max_bytes": max_bytes,
+            },
+        )
+    )
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            start = max(0, size - max_bytes)
+            handle.seek(start)
+            content = handle.read().decode("utf-8", errors="replace")
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="file_not_found",
+            message=f"File not found: {request.path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    except OSError as exc:
+        raise AppError(
+            code="file_read_failed",
+            message=f"Failed to read log file: {request.path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    lines = content.splitlines()
+    if start > 0 and lines:
+        lines = lines[1:]
+    log_date = extract_log_date_from_filename(request.path)
+    events: List[Dict[str, Any]] = []
+    for line in lines[-max_lines:]:
+        event = parse_structured_log_line(line, log_date=log_date)
+        if event is None:
+            continue
+        event["log_path"] = request.path
+        events.append(event)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="structured_log_load_complete",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "event_count": len(events),
+                "truncated": start > 0,
+            },
+        )
+    )
+    return StructuredLogLoadResponse(
+        schema_version="1.0",
+        path=request.path,
+        events=events,
+        truncated=start > 0,
+    )
+
+
 def read_bytes(request: ReadBytesRequest, ctx: RunContext) -> ReadBytesResponse:
     logger.info(
         log_event(
@@ -357,6 +483,85 @@ def list_directory(
         schema_version="1.0",
         root_dir=request.root_dir,
         entries=entries,
+    )
+
+
+def count_directory_patterns(
+    request: DirectoryPatternCountRequest,
+    ctx: RunContext,
+) -> DirectoryPatternCountResponse:
+    limit = max(1, min(int(request.limit_per_pattern), 100_000))
+    grouped: dict[str, list[tuple[int, DirectoryPatternSpec]]] = {}
+    for index, spec in enumerate(request.patterns):
+        root_key = str(Path(spec.root_dir).expanduser().resolve())
+        grouped.setdefault(root_key, []).append((index, spec))
+    rows: list[DirectoryPatternCountRow | None] = [None] * len(request.patterns)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="directory_pattern_count_start",
+            module=logger.name,
+            fields={
+                "pattern_count": len(request.patterns),
+                "root_count": len(grouped),
+                "limit_per_pattern": limit,
+            },
+        )
+    )
+    for root_key, indexed_specs in grouped.items():
+        root = Path(root_key)
+        try:
+            if not root.exists() or not root.is_dir():
+                raise FileNotFoundError(f"Directory not found: {root}")
+            candidates = list(root.rglob("*"))
+        except OSError as exc:
+            for index, spec in indexed_specs:
+                rows[index] = DirectoryPatternCountRow(
+                    schema_version="1.0",
+                    name=spec.name,
+                    root_dir=spec.root_dir,
+                    count=0,
+                    error=str(exc),
+                )
+            continue
+        for index, spec in indexed_specs:
+            pattern = _normalize_glob_pattern(spec.glob_pattern)
+            count = 0
+            for candidate in candidates:
+                relative = candidate.relative_to(root)
+                if not spec.recursive and candidate.parent != root:
+                    continue
+                if candidate.is_dir() and not spec.include_dirs:
+                    continue
+                if relative.match(pattern):
+                    count += 1
+                    if count >= limit:
+                        break
+            rows[index] = DirectoryPatternCountRow(
+                schema_version="1.0",
+                name=spec.name,
+                root_dir=spec.root_dir,
+                count=count,
+            )
+    completed_rows = [row for row in rows if row is not None]
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="directory_pattern_count_complete",
+            module=logger.name,
+            fields={
+                "pattern_count": len(completed_rows),
+                "root_walk_count": len(grouped),
+                "error_count": sum(1 for row in completed_rows if row.error),
+            },
+        )
+    )
+    return DirectoryPatternCountResponse(
+        schema_version="1.0",
+        rows=completed_rows,
+        root_walk_count=len(grouped),
     )
 
 
@@ -654,8 +859,16 @@ def _atomic_write_bytes(path: Path, content: bytes) -> None:
     except Exception:
         try:
             temp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        except OSError as cleanup_error:
+            # Cleanup is best-effort here so the original write failure remains primary.
+            logger.debug(
+                "Atomic-write temp cleanup failed",
+                extra={
+                    "event": "atomic_write_temp_cleanup_failed",
+                    "path": str(temp_path),
+                    "error_type": type(cleanup_error).__name__,
+                },
+            )
         raise
 
 

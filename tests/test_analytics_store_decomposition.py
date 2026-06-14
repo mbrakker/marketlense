@@ -21,7 +21,6 @@ COMMON = {
     "_json",
     "_lineage_values",
     "_uid_set",
-    "_table_exists",
 }
 
 PROJECTION_WRITE = {

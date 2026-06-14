@@ -19,6 +19,7 @@ from src.utils.coercion import clean_string_list
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.time_period import normalize_time_period
+from src.services._sqlite_common import table_exists as _table_exists
 
 from .common import (
     ACCESS_TIMEOUT_SECONDS,
@@ -28,18 +29,6 @@ from .common import (
     _is_lock_error,
 )
 from .connection import _metadata_conn
-
-
-def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
-    row = conn.execute(
-        """
-        SELECT 1
-        FROM sqlite_master
-        WHERE type='table' AND name=?
-        """,
-        (table_name,),
-    ).fetchone()
-    return row is not None
 
 
 def _report_source_url_from_store(

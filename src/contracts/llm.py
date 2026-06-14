@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Callable, Optional
+
+from src.contracts.run_context import RunContext
 
 
 @dataclass(frozen=True)
@@ -47,4 +49,29 @@ class LLMClientPolicy:
     circuit_breaker_recovery_seconds: float = field(
         default=30.0,
         metadata={"doc": "Cooldown in seconds before allowing a half-open probe call."},
+    )
+
+
+@dataclass(frozen=True)
+class LLMProviderOperations:
+    schema_version: str = field(
+        metadata={"doc": "Provider operation bundle schema version."}
+    )
+    openai_chat_json: Optional[Callable[[Any, RunContext], Any]] = field(
+        default=None,
+        metadata={"doc": "Configured JSON chat provider operation."},
+    )
+    openai_chat_json_with_images: Optional[Callable[[Any, RunContext], Any]] = field(
+        default=None,
+        metadata={"doc": "Configured multimodal JSON provider operation."},
+    )
+    openai_ocr_pdf: Optional[Callable[[Any, RunContext], Any]] = field(
+        default=None,
+        metadata={"doc": "Configured PDF OCR provider operation."},
+    )
+    openai_respond_with_vector_store: Optional[Callable[[Any, RunContext], Any]] = (
+        field(
+            default=None,
+            metadata={"doc": "Configured vector-store response provider operation."},
+        )
     )

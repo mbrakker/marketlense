@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import pytest
 
-from src.contracts.llm import LLMClientPolicy
+from src.contracts.llm import LLMClientPolicy, LLMProviderOperations
 from src.contracts.run_context import RunContext
 from src.services import llm_service
 from src.utils.errors import AppError
@@ -247,3 +247,19 @@ def test_llm_service_does_not_retry_refusal_class_errors(
         == "non_retryable_error_code:openai_refusal"
     )
     assert_logs_have_required_fields(failed_events)
+
+
+def test_callable_builder_uses_explicit_provider_operations_contract() -> None:
+    operations = LLMProviderOperations(
+        schema_version="1.0",
+        openai_chat_json=lambda req, ctx: SimpleNamespace(parsed_json={"ok": True}),
+    )
+
+    client = llm_service.build_openai_client(
+        base_client=operations,
+        policy=LLMClientPolicy(schema_version="1.0", scope="operations-contract"),
+    )
+
+    result = client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
+
+    assert result.parsed_json == {"ok": True}

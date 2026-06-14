@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -12,6 +11,7 @@ from src.contracts.acquisition_audit import (
     AcquisitionAuditCandidateResult,
     AcquisitionAuditPublisherSummary,
 )
+from src.utils.clock import utc_now_seconds_z as _utc_now_iso
 from src.contracts.browser_download import (
     ReportDownloadOrchestratorRequest,
     ReportDownloadOrchestratorResult,
@@ -344,15 +344,3 @@ def _safe_task_token(value: str) -> str:
     )
     collapsed = "_".join(part for part in token.split("_") if part)
     return collapsed or "item"
-
-
-def _utc_now_iso() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace(
-            "+00:00",
-            "Z",
-        )
-    )

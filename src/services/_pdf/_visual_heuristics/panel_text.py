@@ -855,7 +855,7 @@ def _panel_chart_has_structured_card_signal(text: str) -> bool:
     return numbered_hits >= 3 and short_line_ratio >= 0.3 and avg_line_len <= 38.0
 
 
-def _panel_caption_looks_metric_stub(text: str) -> bool:
+def _panel_caption_looks_like_compact_metric(text: str) -> bool:
     normalized = str(text or "").strip()
     if not normalized:
         return False
@@ -951,7 +951,7 @@ __all__ = [
     "_panel_component_looks_like_independent_data_panel",
     "_panel_component_looks_like_guidance_card",
     "_panel_chart_has_structured_card_signal",
-    "_panel_caption_looks_metric_stub",
+    "_panel_caption_looks_like_compact_metric",
     "_panel_chart_has_compact_stat_card_signal",
     "_panel_caption_looks_top_band",
 ]

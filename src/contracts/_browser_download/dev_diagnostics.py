@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 
 from .session_reuse import BrowserDownloadSessionReusePolicy
 
+BROWSER_DEVELOPER_DIAGNOSTICS_SCHEMA_VERSION = "1.0"
+
 
 @dataclass(frozen=True)
 class BrowserDeveloperDiagnosticsRequest:
@@ -54,7 +56,7 @@ class BrowserDeveloperDiagnosticsRequest:
     )
     session_reuse_policy: BrowserDownloadSessionReusePolicy = field(
         default_factory=lambda: BrowserDownloadSessionReusePolicy(
-            schema_version="1.0"
+            schema_version=BROWSER_DEVELOPER_DIAGNOSTICS_SCHEMA_VERSION
         ),
         metadata={
             "doc": "Optional developer-canary profile reuse policy for this diagnostic run."

@@ -13,6 +13,24 @@ class ConfigLoadRequest:
 
 
 @dataclass(frozen=True)
+class OpenAICredentialResolveRequest:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI credential resolution request schema version."}
+    )
+
+
+@dataclass(frozen=True)
+class OpenAICredentialResolveResponse:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI credential resolution response schema version."}
+    )
+    api_key: str = field(metadata={"doc": "Resolved OpenAI API key secret."})
+    source: str = field(
+        metadata={"doc": "Sanitized configuration source used for resolution."}
+    )
+
+
+@dataclass(frozen=True)
 class AppSettings:
     schema_version: str = field(metadata={"doc": "Settings schema version."})
     google_sa_path: str = field(

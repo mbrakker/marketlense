@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 
 from src.contracts.run_context import RunContext
@@ -18,14 +17,11 @@ from src.contracts.ui_run_control import (
     ProcessTerminateRequest,
     ProcessTerminateResponse,
 )
+from src.utils.clock import utc_now_iso as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.process_service")
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _is_windows() -> bool:

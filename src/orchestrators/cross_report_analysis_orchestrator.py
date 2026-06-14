@@ -5,7 +5,6 @@ import json
 import logging
 import time
 from dataclasses import asdict, replace
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, cast
 
@@ -58,6 +57,7 @@ from src.services import (
     idempotency_service,
     prompt_service,
 )
+from src.utils.clock import utc_now_iso as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -75,10 +75,6 @@ def _hash_payload(payload: dict[str, Any]) -> str:
         default=str,
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _config_fingerprint(settings: Any) -> dict[str, Any]:

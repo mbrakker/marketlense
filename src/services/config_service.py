@@ -14,6 +14,8 @@ from src.contracts.config import (
     AppSettings,
     ConfigLoadRequest,
     IngestSettingsBuildRequest,
+    OpenAICredentialResolveRequest,
+    OpenAICredentialResolveResponse,
 )
 from src.contracts.browser_download import BrowserDownloadSettings
 from src.contracts.ingest import IngestSettings
@@ -88,6 +90,13 @@ def upsert_browser_download_identity_fields(
     return _identity_upsert.upsert_browser_download_identity_fields(request, ctx)
 
 
+def resolve_openai_credential(
+    request: OpenAICredentialResolveRequest,
+    ctx: RunContext,
+) -> OpenAICredentialResolveResponse:
+    return _common.resolve_openai_credential(request, ctx)
+
+
 __all__ = [
     "CONFIG_PATH",
     "CONFIG_PATH_ENV_KEY",
@@ -104,6 +113,7 @@ __all__ = [
     "load_model_pricing",
     "load_settings",
     "read_app_config",
+    "resolve_openai_credential",
     "upsert_browser_download_identity_fields",
     "write_app_config",
 ]

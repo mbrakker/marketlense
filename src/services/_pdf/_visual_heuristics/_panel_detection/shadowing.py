@@ -147,6 +147,7 @@ if TYPE_CHECKING:
         avg_line_len: float,
     ) -> bool: ...
 
+
 def _panel_should_clamp_to_internal_caption(
     rect_item: _ChartRect,
     candidates: List[_ChartRect],
@@ -188,6 +189,7 @@ def _panel_should_clamp_to_internal_caption(
         return True
     return False
 
+
 def _panel_candidate_shadowed_by_heading_candidate(
     rect_item: _ChartRect,
     candidates: List[_ChartRect],
@@ -197,7 +199,7 @@ def _panel_candidate_shadowed_by_heading_candidate(
     if rect_item.kind != "panel":
         return False
     caption = str(rect_item.caption or "").strip()
-    if not _panel_caption_looks_metric_stub(caption):
+    if not _panel_caption_looks_like_compact_metric(caption):
         return False
     rect = rect_item.rect
     related_candidates = (
@@ -213,7 +215,7 @@ def _panel_candidate_shadowed_by_heading_candidate(
         if other is rect_item or other.kind != "heading":
             continue
         other_caption = str(other.caption or "").strip()
-        if not other_caption or _panel_caption_looks_metric_stub(other_caption):
+        if not other_caption or _panel_caption_looks_like_compact_metric(other_caption):
             continue
         other_rect = other.rect
         if _rect_containment_ratio(rect, other_rect) < 0.92:
@@ -232,6 +234,7 @@ def _panel_candidate_shadowed_by_heading_candidate(
             continue
         return True
     return False
+
 
 def _panel_candidate_shadowed_by_larger_panel(
     rect_item: _ChartRect,
@@ -283,7 +286,7 @@ def _panel_candidate_shadowed_by_larger_panel(
         other_cap_rect = other.caption_rect
         if not other_caption or other_cap_rect is None:
             continue
-        if _panel_caption_looks_metric_stub(other_caption):
+        if _panel_caption_looks_like_compact_metric(other_caption):
             continue
         if not _panel_caption_looks_top_band(
             other_caption,
@@ -293,6 +296,7 @@ def _panel_candidate_shadowed_by_larger_panel(
             continue
         return True
     return False
+
 
 def _panel_stacked_bottom_clip_y(
     page: fitz.Page,
@@ -307,7 +311,7 @@ def _panel_stacked_bottom_clip_y(
     if not caption or _line_starts_with_caption_hint(caption, CHART_CAPTION_HINTS):
         return None
     rect = rect_item.rect
-    compact_stat_caption = _panel_caption_looks_metric_stub(caption)
+    compact_stat_caption = _panel_caption_looks_like_compact_metric(caption)
     candidate_y: Optional[float] = None
     related_candidates = (
         relationships.candidates_in_y_range(
@@ -327,7 +331,7 @@ def _panel_stacked_bottom_clip_y(
         ):
             continue
         if (
-            _panel_caption_looks_metric_stub(other_caption)
+            _panel_caption_looks_like_compact_metric(other_caption)
             or len(other_caption.split()) < 2
         ):
             continue
@@ -401,6 +405,7 @@ def _panel_stacked_bottom_clip_y(
                 continue
             return None
     return candidate_y
+
 
 def _panel_neighbor_x_bounds(
     rect_item: _ChartRect,

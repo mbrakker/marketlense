@@ -8,6 +8,7 @@ from src.utils.analysis_family import (
     family_is_abstained,
     serialize_family_status,
 )
+from src.utils.coercion import string_value as _s
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 logger = logging.getLogger("market_lense.artifact_generator")
@@ -362,9 +363,3 @@ def _soft_text_confidence_reason(*, text: str, supporting_artifacts_ready: bool)
     if not supporting_artifacts_ready:
         return "supporting_artifacts_weak"
     return ""
-
-
-def _s(value: Any) -> str:
-    if value is None:
-        return ""
-    return value if isinstance(value, str) else str(value)

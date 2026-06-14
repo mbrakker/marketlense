@@ -9,11 +9,14 @@ from typing import Optional
 
 from src.utils.coercion import clean_string_list
 from src.utils.url_utils import normalize_url
+from src.services._sqlite_common import (
+    configure_sqlite_connection as _configure_sqlite_connection,
+    is_sqlite_lock_error as _is_lock_error,
+)
 
 logger = logging.getLogger("market_lense.report_store_service")
 
 ACCESS_TIMEOUT_SECONDS = 0.0
-LOCK_ERROR_MARKERS = ("database is locked", "database is busy")
 DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _REPORT_CONN_LOCK = threading.Lock()
 
@@ -42,11 +45,6 @@ def _clean_metadata(metadata: dict[str, str]) -> dict[str, str]:
     return cleaned
 
 
-def _is_lock_error(exc: Exception) -> bool:
-    message = str(exc).lower()
-    return any(marker in message for marker in LOCK_ERROR_MARKERS)
-
-
 def _normalize_publisher_key(name: str) -> str:
     token = str(name).strip().lower()
     if not token:
@@ -61,13 +59,3 @@ def _normalize_optional_url_key(url: str) -> str:
     if not token:
         return ""
     return normalize_url(token)
-
-
-def _configure_sqlite_connection(
-    conn: sqlite3.Connection,
-    *,
-    busy_timeout_seconds: float,
-) -> None:
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute(f"PRAGMA busy_timeout={max(0, int(busy_timeout_seconds * 1000))}")
-    conn.execute("PRAGMA synchronous=NORMAL")

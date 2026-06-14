@@ -5,7 +5,8 @@ from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
-from src.utils.json_utils import safe_json_dumps
+from src.utils.coercion import stripped_string_value as _s
+from src.utils.json_utils import dump_json_object as _dump_json
 
 METRIC_FIELDS = (
     "value",
@@ -830,14 +831,6 @@ def _pick_first_non_empty_text(*values: Any) -> str:
         if text:
             return text
     return ""
-
-
-def _dump_json(data: Any) -> str:
-    return safe_json_dumps(data, ensure_ascii=False, fallback="{}")
-
-
-def _s(value: Any) -> str:
-    return str(value or "").strip()
 
 
 def _to_dict(value: Any) -> Dict[str, Any]:

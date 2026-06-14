@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict
-from datetime import datetime, timezone
 from typing import Any
 
 from src.contracts.run_context import RunContext
@@ -33,14 +32,11 @@ from src.services.ui_run_replay_service import (
     write_ui_run_replay_report,
 )
 from src.utils.cache_utils import sha256_json
+from src.utils.clock import utc_now_iso as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.ui_run_replay_orchestrator")
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _delta(field_name: str, original_value: Any, replay_value: Any) -> UiRunReplayDelta:

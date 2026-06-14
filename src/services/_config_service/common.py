@@ -18,6 +18,8 @@ from src.contracts.config import (
     AppSettings,
     ConfigLoadRequest,
     IngestSettingsBuildRequest,
+    OpenAICredentialResolveRequest,
+    OpenAICredentialResolveResponse,
 )
 from src.contracts.browser_download import (
     BrowserDownloadIdentityFieldUpsertRequest,
@@ -84,6 +86,47 @@ def _is_missing(value: object) -> bool:
 
 def _env_value(key: str) -> str:
     return os.getenv(key, "").strip()
+
+
+def resolve_openai_credential(
+    request: OpenAICredentialResolveRequest,
+    ctx: RunContext,
+) -> OpenAICredentialResolveResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_credential_resolve_start",
+            module=logger.name,
+            fields={"source": "env:OPENAI_API_KEY"},
+        )
+    )
+    dotenv_path = find_dotenv(usecwd=True)
+    if dotenv_path:
+        load_dotenv(dotenv_path)
+    api_key = _env_value("OPENAI_API_KEY")
+    if not api_key:
+        raise AppError(
+            code="openai_missing_api_key",
+            message="OpenAI credential is not configured",
+            retryable=False,
+            context={"source": "env:OPENAI_API_KEY"},
+        )
+    response = OpenAICredentialResolveResponse(
+        schema_version="1.0",
+        api_key=api_key,
+        source="env:OPENAI_API_KEY",
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_credential_resolve_complete",
+            module=logger.name,
+            fields={"source": response.source, "configured": True},
+        )
+    )
+    return response
 
 
 def _to_str(value: Any, default: str) -> str:

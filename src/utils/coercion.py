@@ -9,6 +9,20 @@ EXTENDED_TRUE_TOKENS = frozenset({"1", "true", "yes", "y", "on", "t"})
 EXTENDED_FALSE_TOKENS = frozenset({"0", "false", "no", "n", "off", "f"})
 
 
+def string_value(value: object) -> str:
+    if value is None:
+        return ""
+    return value if isinstance(value, str) else str(value)
+
+
+def stripped_string_value(value: object) -> str:
+    return str(value or "").strip()
+
+
+def ordered_unique_strings(values: Iterable[object]) -> list[str]:
+    return clean_string_list(values, dedupe_casefold=True)
+
+
 def coerce_int(value: object, default: int = 0, *, min_value: int | None = None) -> int:
     try:
         parsed = int(cast(Any, value))

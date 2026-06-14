@@ -14,6 +14,10 @@ from src.contracts.cross_report_analysis import (
 from src.contracts.run_context import RunContext
 from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.services.sqlite_migration_service import apply_reports_db_migrations
+from src.services._sqlite_common import (
+    configure_sqlite_connection,
+    table_exists as _table_exists,
+)
 from src.utils.errors import AppError
 
 DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
@@ -307,9 +311,10 @@ def _analytics_conn(path: str, ctx: RunContext):
 
 
 def _configure(conn: sqlite3.Connection) -> None:
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute(f"PRAGMA busy_timeout={int(DEFAULT_BUSY_TIMEOUT_SECONDS * 1000)}")
-    conn.execute("PRAGMA synchronous=NORMAL")
+    configure_sqlite_connection(
+        conn,
+        busy_timeout_seconds=DEFAULT_BUSY_TIMEOUT_SECONDS,
+    )
 
 
 def _ensure_reports_projection_columns(conn: sqlite3.Connection) -> None:
@@ -338,15 +343,3 @@ def _lineage_values(lineage) -> tuple[str, str, str, str, str, str]:
 
 def _uid_set(rows: Iterable[Any], attr_name: str) -> set[str]:
     return {str(getattr(row, attr_name)) for row in rows}
-
-
-def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
-    row = conn.execute(
-        """
-        SELECT 1
-        FROM sqlite_master
-        WHERE type='table' AND name=?
-        """,
-        (table_name,),
-    ).fetchone()
-    return row is not None

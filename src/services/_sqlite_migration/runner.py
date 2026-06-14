@@ -4,7 +4,6 @@ import logging
 import sqlite3
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Callable, Sequence
 
 from src.contracts.sqlite_migration import (
@@ -12,9 +11,11 @@ from src.contracts.sqlite_migration import (
     SqliteMigrationApplyRequest,
     SqliteMigrationApplyResponse,
 )
+from src.utils.clock import utc_now_seconds_iso as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
+from src.services._sqlite_common import table_exists as _table_exists
 
 logger = logging.getLogger("market_lense.sqlite_migration_service")
 
@@ -227,10 +228,6 @@ def _applied_migration_ids(conn: sqlite3.Connection, database_key: str) -> set[s
     return {str(row[0]) for row in rows}
 
 
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-
-
 def _normalize_url_key(url: object) -> str:
     token = str(url or "").strip()
     if not token:
@@ -245,18 +242,6 @@ def _fetch_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
         str(row[1])
         for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
     }
-
-
-def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
-    row = conn.execute(
-        """
-        SELECT 1
-        FROM sqlite_master
-        WHERE type='table' AND name=?
-        """,
-        (table_name,),
-    ).fetchone()
-    return row is not None
 
 
 def _add_column_if_missing(

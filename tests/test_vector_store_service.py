@@ -25,12 +25,56 @@ from src.contracts.vector_store import (
     VectorStoreUploadFileRequest,
     VectorStoreUploadFileResponse,
 )
+from src.contracts.config import OpenAICredentialResolveResponse
 from src.services import vector_store_service as svc
 from src.utils.errors import AppError
 
 
 def _install_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    def _resolve(request, ctx):
+        return OpenAICredentialResolveResponse(
+            schema_version="1.0",
+            api_key="test-key",
+            source="env:OPENAI_API_KEY",
+        )
+
+    monkeypatch.setattr(svc.config_service, "resolve_openai_credential", _resolve)
+
+
+def test_missing_openai_credential_is_typed_and_sanitized(
+    monkeypatch: pytest.MonkeyPatch,
+    assert_app_error,
+) -> None:
+    def _resolve(request, ctx):
+        raise AppError(
+            code="openai_missing_api_key",
+            message="OpenAI credential is not configured",
+            retryable=False,
+            context={"source": "env:OPENAI_API_KEY"},
+        )
+
+    monkeypatch.setattr(svc.config_service, "resolve_openai_credential", _resolve)
+
+    with pytest.raises(AppError) as exc_info:
+        svc.create_vector_store(
+            VectorStoreCreateRequest(
+                schema_version="1.0",
+                name="report",
+                metadata=VectorStoreMetadata(
+                    schema_version="1.0",
+                    report_id="report",
+                    report_name="Report",
+                ),
+            )
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="openai_missing_api_key",
+        retryable=False,
+        severity="error",
+    )
+    assert "test-key" not in str(exc_info.value)
 
 
 def test_create_vector_store(monkeypatch: pytest.MonkeyPatch):

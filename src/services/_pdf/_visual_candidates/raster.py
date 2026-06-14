@@ -6,13 +6,17 @@ candidate sequencing remains in the extraction coordinator.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from typing import List, Optional
 
 import pymupdf as fitz
 from PIL import Image, ImageFilter, ImageStat
 
+from ..candidate_metrics import (
+    bounded_quality as _bounded_quality,
+    candidate_ocr_density as _candidate_ocr_density,
+)
 from ..visual_heuristics import (
     _chart_is_label_dense_not_prose,
     _is_page_number_text,
@@ -338,18 +342,6 @@ def _embedded_visual_looks_chart_like(
     return (white_frac >= 0.28 and sat_mean <= 95.0 and edge_density >= 0.008) or (
         white_frac >= 0.62 and sat_mean <= 70.0
     )
-
-
-def _bounded_quality(value: float) -> float:
-    if not math.isfinite(value):
-        return 0.0
-    return min(1.0, max(0.0, value))
-
-
-def _candidate_ocr_density(text_chars: int, area_frac: float) -> float:
-    if text_chars <= 0 or area_frac <= 0.0:
-        return 0.0
-    return round(float(text_chars) / max(1.0, float(area_frac) * 100.0), 2)
 
 
 def _chart_confidence_score(

@@ -17,8 +17,6 @@ MODULE_SYMBOLS = {
         "_current_version",
         "_fetch_columns",
         "_normalize_url_key",
-        "_table_exists",
-        "_utc_now",
     },
     "reports.py": {
         "_REPORTS_DB_MIGRATIONS",

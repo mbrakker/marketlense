@@ -49,7 +49,7 @@ from src.services._pdf.visual_heuristics import (
     _panel_candidate_shadowed_by_heading_candidate,
     _panel_candidate_shadowed_by_larger_panel,
     _panel_chart_has_structured_card_signal,
-    _panel_caption_looks_metric_stub,
+    _panel_caption_looks_like_compact_metric,
     _panel_component_looks_like_guidance_card,
     _panel_component_looks_like_independent_data_panel,
     _panel_neighbor_x_bounds,
@@ -489,7 +489,7 @@ def _extract_visuals_sequential(
                     if rect_item.kind == "panel":
                         panel_min_x = None
                         panel_max_x = None
-                        compact_stat_caption = _panel_caption_looks_metric_stub(
+                        compact_stat_caption = _panel_caption_looks_like_compact_metric(
                             cap or ""
                         )
                         if (

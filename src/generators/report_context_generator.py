@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any, Dict, List
 
@@ -9,7 +8,7 @@ from src.contracts.context_category_fit import (
     ReportContextBuildRequest,
     ReportContextSection,
 )
-from src.contracts.files import ReadTextRequest
+from src.contracts.files import ReadJsonRequest
 from src.contracts.semantic_ids import ReportId
 from src.services import file_service
 from src.utils.errors import AppError
@@ -97,13 +96,14 @@ def _load_json_pack(
     if not path:
         return {}
     pack_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{pack_name}")
-    response = file_client.read_text(
-        ReadTextRequest(schema_version="1.0", path=path),
-        pack_ctx,
-    )
     try:
-        payload = json.loads(response.content)
-    except json.JSONDecodeError as exc:
+        payload = file_client.read_json(
+            ReadJsonRequest(schema_version="1.0", path=path),
+            pack_ctx,
+        ).payload
+    except AppError as exc:
+        if exc.code != "file_json_invalid":
+            raise
         raise AppError(
             code="report_context_pack_invalid_json",
             message=f"Evidence pack '{pack_name}' is not valid JSON",

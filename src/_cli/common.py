@@ -2,11 +2,7 @@ from __future__ import annotations
 
 import os
 
-
-def _utc_now() -> str:
-    from datetime import datetime, timezone
-
-    return datetime.now(timezone.utc).isoformat()
+from src.utils.clock import utc_now_iso as _utc_now
 
 
 def _default_log_path() -> str:

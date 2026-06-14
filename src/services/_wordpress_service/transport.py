@@ -10,6 +10,7 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 import requests
 import urllib3
 from src.contracts.run_context import RunContext
+from src.services._http_transport_common import session_pool_key as _session_pool_key
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -73,13 +74,6 @@ def _build_session() -> requests.Session:
     session.mount("http://", adapter)
     session.mount("https://", adapter)
     return session
-
-
-def _session_pool_key(url: str) -> str:
-    parsed = urlsplit(str(url or "").strip())
-    scheme = str(parsed.scheme or "").strip().casefold() or "https"
-    host = str(parsed.netloc or "").strip().casefold()
-    return f"{scheme}://{host}" if host else scheme
 
 
 def _rest_query_fallback_url(url: str) -> str | None:

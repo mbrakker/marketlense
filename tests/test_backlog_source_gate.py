@@ -48,3 +48,36 @@ def test_backlog_source_gate_rejects_active_backlog_markers_outside_canonical(
     )
 
     assert [item.path for item in violations] == ["docs/quality/new_backlog.md"]
+
+
+def test_backlog_source_gate_ignores_intake_and_execution_plan_documents(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "CONSOLIDATED_TODO.md").write_text(
+        "# Consolidated TODO\n", encoding="utf-8"
+    )
+    (tmp_path / "README.md").write_text("See CONSOLIDATED_TODO.md\n", encoding="utf-8")
+    archived = tmp_path / "docs" / "quality" / "deep-analysis-x10-plan-2026-04-15.md"
+    archived.parent.mkdir(parents=True, exist_ok=True)
+    archived.write_text(
+        "The active items were consolidated into `CONSOLIDATED_TODO.md`.\n",
+        encoding="utf-8",
+    )
+    simplification = tmp_path / "simplification.md"
+    simplification.write_text("- **Title:** Intake item\n", encoding="utf-8")
+    plan = tmp_path / "docs" / "superpowers" / "plans" / "implementation.md"
+    plan.parent.mkdir(parents=True, exist_ok=True)
+    plan.write_text("- [ ] Execute implementation step\n", encoding="utf-8")
+
+    violations = validate_backlog_sources(
+        (
+            "README.md",
+            "CONSOLIDATED_TODO.md",
+            "docs/quality/deep-analysis-x10-plan-2026-04-15.md",
+            "simplification.md",
+            "docs/superpowers/plans/implementation.md",
+        ),
+        root=tmp_path,
+    )
+
+    assert violations == ()

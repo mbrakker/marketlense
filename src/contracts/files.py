@@ -18,6 +18,49 @@ class ReadTextResponse:
 
 
 @dataclass(frozen=True)
+class ReadJsonRequest:
+    schema_version: str = field(metadata={"doc": "Read JSON request schema version."})
+    path: str = field(metadata={"doc": "Filesystem path to read and parse as JSON."})
+
+
+@dataclass(frozen=True)
+class ReadJsonResponse:
+    schema_version: str = field(metadata={"doc": "Read JSON response schema version."})
+    path: str = field(metadata={"doc": "Filesystem path read."})
+    payload: Any = field(metadata={"doc": "Parsed JSON payload."})
+
+
+@dataclass(frozen=True)
+class StructuredLogLoadRequest:
+    schema_version: str = field(
+        metadata={"doc": "Structured-log load request schema version."}
+    )
+    path: str = field(metadata={"doc": "Filesystem path of the log to inspect."})
+    max_lines: int = field(
+        default=5000,
+        metadata={"doc": "Maximum trailing lines to parse."},
+    )
+    max_bytes: int = field(
+        default=2_000_000,
+        metadata={"doc": "Maximum trailing bytes to read."},
+    )
+
+
+@dataclass(frozen=True)
+class StructuredLogLoadResponse:
+    schema_version: str = field(
+        metadata={"doc": "Structured-log load response schema version."}
+    )
+    path: str = field(metadata={"doc": "Filesystem path read."})
+    events: List[Dict[str, Any]] = field(
+        metadata={"doc": "Parsed structured events in source order."}
+    )
+    truncated: bool = field(
+        metadata={"doc": "True when the byte bound omitted leading content."}
+    )
+
+
+@dataclass(frozen=True)
 class ReadBytesRequest:
     schema_version: str = field(metadata={"doc": "Read bytes request schema version."})
     path: str = field(metadata={"doc": "Filesystem path to read."})
@@ -89,6 +132,61 @@ class ListDirectoryResponse:
     entries: List[DirectoryEntry] = field(
         metadata={"doc": "Matching directory entries."}
     )
+
+
+@dataclass(frozen=True)
+class DirectoryPatternSpec:
+    schema_version: str = field(
+        metadata={"doc": "Directory-pattern specification schema version."}
+    )
+    name: str = field(metadata={"doc": "Stable caller-facing pattern name."})
+    root_dir: str = field(metadata={"doc": "Root directory to scan."})
+    glob_pattern: str = field(metadata={"doc": "Relative glob pattern to count."})
+    recursive: bool = field(
+        metadata={"doc": "Whether descendants below root_dir are eligible."}
+    )
+    include_dirs: bool = field(
+        metadata={"doc": "Whether matching directories count alongside files."}
+    )
+
+
+@dataclass(frozen=True)
+class DirectoryPatternCountRequest:
+    schema_version: str = field(
+        metadata={"doc": "Grouped directory-pattern count request version."}
+    )
+    patterns: List[DirectoryPatternSpec] = field(
+        metadata={"doc": "Pattern specifications grouped by the service by root."}
+    )
+    limit_per_pattern: int = field(
+        default=500,
+        metadata={"doc": "Maximum count reported for each pattern."},
+    )
+
+
+@dataclass(frozen=True)
+class DirectoryPatternCountRow:
+    schema_version: str = field(
+        metadata={"doc": "Directory-pattern count row schema version."}
+    )
+    name: str = field(metadata={"doc": "Pattern name from the request."})
+    root_dir: str = field(metadata={"doc": "Root directory scanned."})
+    count: int = field(metadata={"doc": "Bounded matching entry count."})
+    error: str = field(
+        default="",
+        metadata={"doc": "Sanitized listing error, empty on success."},
+    )
+
+
+@dataclass(frozen=True)
+class DirectoryPatternCountResponse:
+    schema_version: str = field(
+        metadata={"doc": "Grouped directory-pattern count response version."}
+    )
+    rows: List[DirectoryPatternCountRow] = field(
+        metadata={"doc": "Count results in request order."}
+    )
+    root_walk_count: int = field(metadata={"doc": "Number of distinct roots walked."})
 
 
 @dataclass(frozen=True)

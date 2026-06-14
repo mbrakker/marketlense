@@ -28,7 +28,7 @@ MODULE_SYMBOLS = {
         "_panel_component_looks_like_independent_data_panel",
         "_panel_component_looks_like_guidance_card",
         "_panel_chart_has_structured_card_signal",
-        "_panel_caption_looks_metric_stub",
+        "_panel_caption_looks_like_compact_metric",
         "_panel_chart_has_compact_stat_card_signal",
         "_panel_caption_looks_top_band",
     },

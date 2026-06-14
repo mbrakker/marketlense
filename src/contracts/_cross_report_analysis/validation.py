@@ -1,13 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import MISSING, fields, is_dataclass
-from typing import Any, List, cast, get_origin, get_type_hints
+from dataclasses import fields, is_dataclass
+from typing import Any, cast, get_type_hints
 
+from src.contracts.schema_validation import (
+    empty_required_value as _empty_required_value,
+    field_is_list_typed as _field_is_list_typed,
+    field_is_required as _field_is_required,
+)
 from src.utils.errors import AppError
 
 from .common import CROSS_REPORT_ANALYSIS_SCHEMA_VERSION
 
 _CONTRACT_MODULE_PREFIX = "src.contracts._cross_report_analysis."
+
 
 def validate_cross_report_contract(contract: object) -> None:
     contract_type = type(contract)
@@ -33,26 +39,6 @@ def _raise_invalid(path: str, field_name: str, reason: str) -> None:
         severity="error",
         context={"path": path, "field": field_name, "reason": reason},
     )
-
-
-def _field_is_required(field_def: Any) -> bool:
-    if field_def.metadata.get("required") is False:
-        return False
-    return field_def.default is MISSING and field_def.default_factory is MISSING
-
-
-def _field_is_list_typed(annotation: Any) -> bool:
-    return annotation in {list, List} or get_origin(annotation) in {list, List}
-
-
-def _empty_required_value(value: object) -> bool:
-    if value is None:
-        return True
-    if isinstance(value, str):
-        return not value.strip()
-    if isinstance(value, (list, tuple, set, dict)):
-        return len(value) == 0
-    return False
 
 
 def _validate_contract_value(value: object, *, path: str) -> None:

@@ -7,7 +7,7 @@ from src.contracts.report_models import Figure, Quote, ReportFigureAsset, Report
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.utils.logging import log_event
-from src.utils.coercion import coerce_int
+from src.utils.coercion import coerce_int, string_value as _s
 from src.services.schema_validator_service import validate_schema
 
 logger = logging.getLogger("market_lense.normalize_generator")
@@ -44,12 +44,6 @@ def validate_with_schema(payload: dict, schema_name: str, ctx: RunContext) -> No
         ),
         ctx,
     )
-
-
-def _s(value: Any) -> str:
-    if value is None:
-        return ""
-    return value if isinstance(value, str) else str(value)
 
 
 def _first_text(*values: Any) -> str:

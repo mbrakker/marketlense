@@ -24,23 +24,11 @@ from src.contracts.signal_candidates import (
     SignalCandidateType,
     validate_signal_candidate_contract,
 )
+from src.utils.coercion import ordered_unique_strings as _unique_ordered
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.signal_candidate_generator")
-
-
-def _unique_ordered(values: list[str]) -> list[str]:
-    ordered: list[str] = []
-    seen: set[str] = set()
-    for raw_value in values:
-        value = str(raw_value or "").strip()
-        key = value.casefold()
-        if not value or key in seen:
-            continue
-        seen.add(key)
-        ordered.append(value)
-    return ordered
 
 
 def _page_refs(metadata: dict[str, Any]) -> list[int]:

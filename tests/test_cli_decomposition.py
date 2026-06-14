@@ -10,7 +10,7 @@ CLI_PACKAGE = Path("src/_cli")
 
 EXPECTED_OWNERS = {
     "app.py": {"cli_app", "cli", "main"},
-    "common.py": {"_utc_now", "_default_log_path"},
+    "common.py": {"_default_log_path"},
     "cross_report.py": {
         "_build_cross_report_cli_request",
         "generate_cross_report_analysis_cli",

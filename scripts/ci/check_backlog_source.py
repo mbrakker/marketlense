@@ -46,7 +46,12 @@ def list_tracked_markdown() -> tuple[str, ...]:
 
 
 def _is_ignored(path: str) -> bool:
-    return path == CANONICAL_BACKLOG or path.startswith("tools/")
+    return (
+        path in {CANONICAL_BACKLOG, "simplification.md"}
+        or path.startswith("tools/")
+        or path.startswith("docs/superpowers/plans/")
+        or path.startswith("docs/superpowers/specs/")
+    )
 
 
 def validate_backlog_sources(

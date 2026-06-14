@@ -24,6 +24,7 @@ from src.contracts.run_context import RunContext
 from src.generators.cross_report_publish_html import build_cross_report_html_document
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import llm_service, prompt_service
+from src.utils.coercion import ordered_unique_strings as _unique_ordered
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -44,18 +45,6 @@ def _hash_contract_payload(value: Any) -> str:
 
 def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=True, sort_keys=True, default=str)
-
-
-def _unique_ordered(values: list[str]) -> list[str]:
-    ordered: list[str] = []
-    seen: set[str] = set()
-    for raw_value in values:
-        value = str(raw_value or "").strip()
-        if not value or value.casefold() in seen:
-            continue
-        seen.add(value.casefold())
-        ordered.append(value)
-    return ordered
 
 
 def _source_metadata(

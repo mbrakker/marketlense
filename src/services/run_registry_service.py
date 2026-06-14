@@ -6,7 +6,6 @@ import os
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from pathlib import Path
 
 from src.contracts.run_context import RunContext
@@ -33,6 +32,7 @@ from src.contracts.ui_run_control import (
     UiRunRecordWriteResponse,
 )
 from src.services.sqlite_migration_service import apply_ui_run_registry_migrations
+from src.utils.clock import utc_now_iso as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.ui_run_dead_letter import (
@@ -45,10 +45,6 @@ logger = logging.getLogger("market_lense.run_registry_service")
 
 DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _RUN_REGISTRY_LOCK = threading.Lock()
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def default_ui_run_registry_path(state_db: str) -> str:
@@ -121,7 +117,9 @@ def _record_to_row(record: UiRunRecord) -> tuple[object, ...]:
         record.exit_code,
         record.error_code,
         record.error_message,
-        None if record.error_retryable is None else (1 if record.error_retryable else 0),
+        None
+        if record.error_retryable is None
+        else (1 if record.error_retryable else 0),
         record.error_severity,
     )
 
@@ -238,7 +236,9 @@ def _upsert_dead_letter_for_failed_record(
             existing_record.recovery_run_id if existing_record is not None else ""
         ),
         last_action=(
-            existing_record.last_action if existing_record is not None else "auto_triaged"
+            existing_record.last_action
+            if existing_record is not None
+            else "auto_triaged"
         ),
         last_action_note=(
             existing_record.last_action_note if existing_record is not None else ""
@@ -501,9 +501,7 @@ def list_ui_run_dead_letters(
     query = "SELECT * FROM ui_run_dead_letters"
     params: list[object] = []
     normalized_statuses = [
-        str(status).strip()
-        for status in request.triage_statuses
-        if str(status).strip()
+        str(status).strip() for status in request.triage_statuses if str(status).strip()
     ]
     if normalized_statuses:
         placeholders = ", ".join("?" for _ in normalized_statuses)

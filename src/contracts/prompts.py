@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
+PROMPT_SCHEMA_VERSION = "1.0"
+
 
 @dataclass(frozen=True)
 class PromptDryRunBenchmark:
@@ -133,7 +135,9 @@ class PromptDryRunFixture:
         metadata={"doc": "Variables used to render the user prompt template."}
     )
     benchmark: PromptDryRunBenchmark = field(
-        default_factory=lambda: PromptDryRunBenchmark(schema_version="1.0"),
+        default_factory=lambda: PromptDryRunBenchmark(
+            schema_version=PROMPT_SCHEMA_VERSION
+        ),
         metadata={
             "doc": "Benchmark metadata used for fixture-corpus regression budgets."
         },
@@ -192,7 +196,9 @@ class PromptDryRunResult:
         metadata={"doc": "Rendered user prompt text produced by the dry-run."}
     )
     benchmark: PromptDryRunBenchmark = field(
-        default_factory=lambda: PromptDryRunBenchmark(schema_version="1.0"),
+        default_factory=lambda: PromptDryRunBenchmark(
+            schema_version=PROMPT_SCHEMA_VERSION
+        ),
         metadata={"doc": "Benchmark metadata copied from the fixture registry."},
     )
     render_runtime_ms: float = field(

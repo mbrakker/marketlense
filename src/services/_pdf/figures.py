@@ -566,7 +566,7 @@ from .visual_heuristics import (
     _page_looks_like_contents_layout,
     _panel_candidate_shadowed_by_heading_candidate,
     _panel_candidate_shadowed_by_larger_panel,
-    _panel_caption_looks_metric_stub,
+    _panel_caption_looks_like_compact_metric,
     _panel_caption_looks_top_band,
     _panel_chart_has_compact_stat_card_signal,
     _panel_chart_has_data_signal,

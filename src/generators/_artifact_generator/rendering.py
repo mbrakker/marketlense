@@ -8,7 +8,8 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.run_context import RunContext
 from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.utils.json_utils import safe_json_dumps
+from src.utils.coercion import string_value as _s
+from src.utils.json_utils import dump_json_text as _dump_json
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.artifact_generator")
@@ -135,13 +136,3 @@ def render_artifact_json_model(
         )
     )
     return parsed
-
-
-def _dump_json(data: Any) -> str:
-    return safe_json_dumps(data, ensure_ascii=False, fallback="")
-
-
-def _s(value: Any) -> str:
-    if value is None:
-        return ""
-    return value if isinstance(value, str) else str(value)

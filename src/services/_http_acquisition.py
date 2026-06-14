@@ -11,7 +11,6 @@ import logging
 import threading
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import urlsplit
 
 import requests
 
@@ -21,6 +20,7 @@ from src.contracts.http_acquisition import (
     HttpAcquisitionResponsePolicy,
 )
 from src.contracts.run_context import RunContext
+from src.services._http_transport_common import session_pool_key as _session_pool_key
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -500,10 +500,3 @@ def _body_too_large_error(
             "url": url,
         },
     )
-
-
-def _session_pool_key(url: str) -> str:
-    parsed = urlsplit(str(url or "").strip())
-    scheme = str(parsed.scheme or "").strip().casefold() or "https"
-    host = str(parsed.netloc or "").strip().casefold()
-    return f"{scheme}://{host}" if host else scheme

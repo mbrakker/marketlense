@@ -51,7 +51,8 @@ from src.services.schema_validator_service import (
 from src.utils.analysis_family import family_is_abstained
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
-from src.utils.json_utils import safe_json_dumps
+from src.utils.coercion import string_value as _s
+from src.utils.json_utils import dump_json_text as _dump_json
 from src.utils.logging import log_event
 from src.utils.model_resolver import resolve_model
 
@@ -787,13 +788,3 @@ def _validate_complete_tldr(
             context={"field": field_name, "word_count": count},
         )
     return text
-
-
-def _dump_json(data: Any) -> str:
-    return safe_json_dumps(data, ensure_ascii=False, fallback="")
-
-
-def _s(value: Any) -> str:
-    if value is None:
-        return ""
-    return value if isinstance(value, str) else str(value)

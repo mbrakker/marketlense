@@ -4,7 +4,15 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Optional, Sequence
 
-from src.contracts.files import FileStatRequest, ListDirectoryRequest, ReadTextRequest
+from src.contracts.files import (
+    DirectoryPatternCountRequest,
+    DirectoryPatternSpec,
+    FileStatRequest,
+    ListDirectoryRequest,
+    ReadJsonRequest,
+    ReadTextRequest,
+    StructuredLogLoadRequest,
+)
 from src.contracts.lock import LockGetRequest
 from src.contracts.report_store import ReportMetadataListRequest
 from src.contracts.run_context import RunContext
@@ -37,13 +45,7 @@ from src.contracts.streamlit_dashboard import (
 )
 from src.services import file_service, lock_service, report_store_service, state_service
 from src.utils.errors import AppError
-from src.utils.gui_utils import (
-    extract_log_date_from_filename,
-    parse_structured_log_line,
-    row_dicts,
-    safe_json_loads,
-    status_chip_level,
-)
+from src.utils.gui_utils import row_dicts, safe_json_loads, status_chip_level
 from src.utils.logging import child_context, log_event, new_run_context
 
 logger = logging.getLogger("market_lense.streamlit_dashboard_generator")
@@ -147,10 +149,14 @@ def load_log_events(
     events: list[dict[str, Any]] = []
     for path in log_paths:
         try:
-            text = file_service.read_text(
-                ReadTextRequest(schema_version="1.0", path=path),
+            response = file_service.load_structured_log_events(
+                StructuredLogLoadRequest(
+                    schema_version="1.0",
+                    path=path,
+                    max_lines=max_lines,
+                ),
                 child_context(ctx, task_id="streamlit:read_log"),
-            ).content
+            )
         except AppError as exc:
             logger.info(
                 log_event(
@@ -162,13 +168,7 @@ def load_log_events(
                 )
             )
             continue
-        log_date = extract_log_date_from_filename(path)
-        for line in text.splitlines()[-max_lines:]:
-            event = parse_structured_log_line(line, log_date=log_date)
-            if not event:
-                continue
-            event["log_path"] = path
-            events.append(event)
+        events.extend(response.events)
     events.sort(
         key=lambda row: str(row.get("timestamp_utc") or row.get("timestamp_hms") or "")
     )
@@ -200,10 +200,10 @@ def read_json_payload(
         )
     )
     try:
-        payload_text = file_service.read_text(
-            ReadTextRequest(schema_version="1.0", path=path),
+        payload = file_service.read_json(
+            ReadJsonRequest(schema_version="1.0", path=path),
             child_context(ctx, task_id="streamlit:read_json_file"),
-        ).content
+        ).payload
     except AppError as exc:
         logger.info(
             log_event(
@@ -215,7 +215,6 @@ def read_json_payload(
             )
         )
         return JsonPayloadReadResponse(schema_version="1.0", path=path, payload=None)
-    payload = safe_json_loads(payload_text)
     logger.info(
         log_event(
             ctx,
@@ -571,47 +570,44 @@ def collect_directory_counts(
             fields={"check_count": len(request.checks), "limit": limit},
         )
     )
-    rows: list[DirectoryCountRow] = []
-    for check in request.checks:
-        try:
-            response = file_service.list_directory(
-                ListDirectoryRequest(
+    response = file_service.count_directory_patterns(
+        DirectoryPatternCountRequest(
+            schema_version="1.0",
+            patterns=[
+                DirectoryPatternSpec(
                     schema_version="1.0",
+                    name=check.name,
                     root_dir=check.root_dir,
                     glob_pattern=check.glob_pattern,
                     recursive=check.recursive,
-                    include_files=not check.include_dirs,
                     include_dirs=check.include_dirs,
-                    limit=limit,
-                ),
-                child_context(ctx, task_id=f"streamlit:dir_count:{check.name}"),
-            )
-            rows.append(
-                DirectoryCountRow(
-                    schema_version="1.0",
-                    name=check.name,
-                    root=check.root_dir,
-                    count=len(response.entries),
-                    error="",
                 )
-            )
-        except AppError as exc:
-            rows.append(
-                DirectoryCountRow(
-                    schema_version="1.0",
-                    name=check.name,
-                    root=check.root_dir,
-                    count=0,
-                    error=exc.message,
-                )
-            )
+                for check in request.checks
+            ],
+            limit_per_pattern=limit,
+        ),
+        child_context(ctx, task_id="streamlit:dir_counts"),
+    )
+    rows = [
+        DirectoryCountRow(
+            schema_version="1.0",
+            name=row.name,
+            root=row.root_dir,
+            count=row.count,
+            error=row.error,
+        )
+        for row in response.rows
+    ]
     logger.info(
         log_event(
             ctx,
             role="generator",
             event="streamlit_collect_directory_counts_complete",
             module=logger.name,
-            fields={"row_count": len(rows)},
+            fields={
+                "row_count": len(rows),
+                "root_walk_count": response.root_walk_count,
+            },
         )
     )
     return DirectoryCountsResponse(schema_version="1.0", rows=rows)

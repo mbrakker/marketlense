@@ -7,6 +7,8 @@ from src.contracts.candidates import Candidate, CandidateFeatures
 from src.contracts.pdf_context import PdfContext
 from src.contracts.report_models import CropItem, RankedCandidate
 
+REPORT_ASSETS_SCHEMA_VERSION = "1.0"
+
 
 @dataclass(frozen=True)
 class PdfDegradedPage:
@@ -130,9 +132,7 @@ class ExtractCandidatesRequest:
     )
     page_gate_min_recall_page_fraction: float = field(
         default=0.65,
-        metadata={
-            "doc": "Minimum fraction of requested pages kept for recall safety."
-        },
+        metadata={"doc": "Minimum fraction of requested pages kept for recall safety."},
     )
 
 
@@ -144,7 +144,7 @@ class ExtractCandidatesResponse:
     candidates: List[Candidate] = field(metadata={"doc": "Extracted candidates."})
     stats: PdfCandidateExtractionStats = field(
         default_factory=lambda: PdfCandidateExtractionStats(
-            schema_version="1.0",
+            schema_version=REPORT_ASSETS_SCHEMA_VERSION,
         ),
         metadata={"doc": "Typed candidate-extraction stats and degradation records."},
     )

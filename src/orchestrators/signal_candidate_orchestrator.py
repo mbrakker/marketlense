@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 from typing import Callable
 
 from src.contracts.cross_report_analysis import (
@@ -26,13 +25,10 @@ from src.generators.cross_report_analysis_input_generator import (
 )
 from src.generators.signal_candidate_generator import build_signal_candidate_batch
 from src.services import analytics_store_service
+from src.utils.clock import utc_now_iso as _utc_now
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.signal_candidate_orchestrator")
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _log_transition(

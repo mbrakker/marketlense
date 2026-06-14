@@ -196,7 +196,9 @@ class UiRunDeadLetterArtifactLinks:
     )
     manifest_path: str = field(
         default="",
-        metadata={"doc": "Replay manifest path captured for the failed run when known."},
+        metadata={
+            "doc": "Replay manifest path captured for the failed run when known."
+        },
     )
     artifact_paths: list[str] = field(
         default_factory=list,
@@ -296,6 +298,8 @@ class UiRunDeadLetterActionRecord:
             "doc": "Replacement run identifier when the action launched a recovery attempt."
         },
     )
+
+
 @dataclass(frozen=True)
 class UiRunLaunchRequest:
     schema_version: str = field(
@@ -418,6 +422,32 @@ class UiRunWorkerRequest(SemanticIdContract):
     )
     request_payload: dict[str, Any] = field(
         metadata={"doc": "Typed payload values that describe the workflow invocation."}
+    )
+
+
+@dataclass(frozen=True)
+class UiRunWorkerRequestWriteRequest:
+    schema_version: str = field(
+        metadata={"doc": "UI-run worker-request persistence schema version."}
+    )
+    registry_path: str = field(
+        metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
+    )
+    worker_request: UiRunWorkerRequest = field(
+        metadata={"doc": "Fully populated worker request to persist."}
+    )
+
+
+@dataclass(frozen=True)
+class UiRunWorkerRequestWriteResponse:
+    schema_version: str = field(
+        metadata={"doc": "UI-run worker-request persistence response version."}
+    )
+    request_path: str = field(
+        metadata={"doc": "Resolved filesystem path of the persisted request JSON."}
+    )
+    worker_request: UiRunWorkerRequest = field(
+        metadata={"doc": "Worker request persisted at request_path."}
     )
 
 
@@ -549,9 +579,7 @@ class UiRunDeadLetterActionRequest(SemanticIdContract):
     registry_path: str = field(
         metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
     )
-    run_id: RunId = field(
-        metadata={"doc": "Dead-letter run identifier to update."}
-    )
+    run_id: RunId = field(metadata={"doc": "Dead-letter run identifier to update."})
     action: str = field(
         metadata={"doc": "Dead-letter action to record: retry_requested or discarded."}
     )

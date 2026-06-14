@@ -648,7 +648,7 @@ _PANEL_TEXT_EXPORTS = [
     "_panel_component_looks_like_independent_data_panel",
     "_panel_component_looks_like_guidance_card",
     "_panel_chart_has_structured_card_signal",
-    "_panel_caption_looks_metric_stub",
+    "_panel_caption_looks_like_compact_metric",
     "_panel_chart_has_compact_stat_card_signal",
     "_panel_caption_looks_top_band",
 ]
@@ -715,7 +715,7 @@ if TYPE_CHECKING:
     _page_looks_like_contents_layout: Any
     _panel_candidate_shadowed_by_heading_candidate: Any
     _panel_candidate_shadowed_by_larger_panel: Any
-    _panel_caption_looks_metric_stub: Any
+    _panel_caption_looks_like_compact_metric: Any
     _panel_caption_looks_top_band: Any
     _panel_chart_has_compact_stat_card_signal: Any
     _panel_chart_has_data_signal: Any

@@ -12,12 +12,15 @@ from src.contracts.run_context import RunContext
 from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.contracts.state import StateBatchCheckItem
 from src.services.sqlite_migration_service import apply_state_db_migrations
+from src.services._sqlite_common import (
+    configure_sqlite_connection as _configure_sqlite_connection,
+    is_sqlite_lock_error as _is_lock_error,
+)
 from src.utils.errors import AppError
 
 logger = logging.getLogger("market_lense.state_service")
 
 ACCESS_TIMEOUT_SECONDS = 0.0
-LOCK_ERROR_MARKERS = ("database is locked", "database is busy")
 DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _STATE_CONN_LOCK = threading.Lock()
 BATCH_STATE_CHECK_MAX_PAIRS = 200
@@ -67,24 +70,9 @@ def _state_conn(path: str, ctx: RunContext):
         conn.close()
 
 
-def _configure_sqlite_connection(
-    conn: sqlite3.Connection,
-    *,
-    busy_timeout_seconds: float,
-) -> None:
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute(f"PRAGMA busy_timeout={max(0, int(busy_timeout_seconds * 1000))}")
-    conn.execute("PRAGMA synchronous=NORMAL")
-
-
 def _normalize_post_type(post_type: str) -> str:
     token = str(post_type).strip().strip("/")
     return token or "posts"
-
-
-def _is_lock_error(exc: Exception) -> bool:
-    message = str(exc).lower()
-    return any(marker in message for marker in LOCK_ERROR_MARKERS)
 
 
 def _parse_int_list(raw: Optional[str]) -> Optional[list[int]]:

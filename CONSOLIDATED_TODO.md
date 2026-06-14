@@ -174,18 +174,6 @@ Scoring:
     - Candidate output remains semantically equivalent unless a documented quality change is approved.
     - Tests cover near-duplicate/distinct tables, dense panels, multi-chart layouts, decorative images, wrappers, and crop boundaries.
 
-- **Title:** Bound Streamlit dashboard log and directory read-model work [Impact: 3/5, Effort: 2/5]
-  - Explanation: `src/generators/streamlit_dashboard_generator.py` reads full log files before slicing and runs repeated recursive directory walks for dashboard count cards. UI cache helps reruns but cache misses still scale with full log size and repeated walks.
-  - Pros: More predictable dashboard latency and memory use as logs and output directories grow.
-  - Cons: Requires service-boundary changes so generators do not add direct filesystem optimizations.
-  - Acceptance Criteria:
-    - `file_service` exposes a bounded tail-read contract for text logs and the Streamlit generator uses it.
-    - Directory counts use one grouped walk per root where possible, or a service-level multi-count operation with deterministic limits.
-    - Tests cover large-log tail behavior, malformed log lines, overlapping directory patterns, and directory listing errors.
-    - Dashboard read-model logs include bounded byte/line counts and grouped-walk metrics.
-
----
-
 ## 5. Architecture, Schema Compatibility, and Observability
 
 - **Title:** Extend CI gates into role-mixing and monolith-growth enforcement [Impact: 4/5, Effort: 3/5]
@@ -213,6 +201,7 @@ Scoring:
 - Vector-store delete/prune lifecycle and retention orchestration.
 - Durable Signal candidate extraction, clustering, storage, readback, and publish reuse.
 - Ingestion-time grounded Signal artifacts, separate Signal-store persistence, and publish workflow reuse from the Signal base.
+- Bounded Streamlit log reads and grouped directory-count walks through `file_service`.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
 

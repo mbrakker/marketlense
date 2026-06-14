@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, TypeVar
 
-from src.contracts.llm import LLMClientPolicy
+from src.contracts.llm import LLMClientPolicy, LLMProviderOperations
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -568,59 +568,6 @@ class LLMServiceClient:
         )
 
 
-class _CallableOpenAIAdapter:
-    def __init__(
-        self,
-        *,
-        openai_chat_json: Optional[Callable[[Any, RunContext], Any]] = None,
-        openai_chat_json_with_images: Optional[Callable[[Any, RunContext], Any]] = None,
-        openai_ocr_pdf: Optional[Callable[[Any, RunContext], Any]] = None,
-        openai_respond_with_vector_store: Optional[
-            Callable[[Any, RunContext], Any]
-        ] = None,
-    ) -> None:
-        self._openai_chat_json = openai_chat_json
-        self._openai_chat_json_with_images = openai_chat_json_with_images
-        self._openai_ocr_pdf = openai_ocr_pdf
-        self._openai_respond_with_vector_store = openai_respond_with_vector_store
-
-    def openai_chat_json(self, req: Any, ctx: RunContext) -> Any:
-        if self._openai_chat_json is None:
-            raise AppError(
-                code="llm_client_operation_unavailable",
-                message="openai_chat_json is not configured on this LLM client adapter",
-                retryable=False,
-            )
-        return self._openai_chat_json(req, ctx)
-
-    def openai_chat_json_with_images(self, req: Any, ctx: RunContext) -> Any:
-        if self._openai_chat_json_with_images is None:
-            raise AppError(
-                code="llm_client_operation_unavailable",
-                message="openai_chat_json_with_images is not configured on this LLM client adapter",
-                retryable=False,
-            )
-        return self._openai_chat_json_with_images(req, ctx)
-
-    def openai_ocr_pdf(self, req: Any, ctx: RunContext) -> Any:
-        if self._openai_ocr_pdf is None:
-            raise AppError(
-                code="llm_client_operation_unavailable",
-                message="openai_ocr_pdf is not configured on this LLM client adapter",
-                retryable=False,
-            )
-        return self._openai_ocr_pdf(req, ctx)
-
-    def openai_respond_with_vector_store(self, req: Any, ctx: RunContext) -> Any:
-        if self._openai_respond_with_vector_store is None:
-            raise AppError(
-                code="llm_client_operation_unavailable",
-                message="openai_respond_with_vector_store is not configured on this LLM client adapter",
-                retryable=False,
-            )
-        return self._openai_respond_with_vector_store(req, ctx)
-
-
 def build_openai_client(
     *,
     base_client: Any,
@@ -654,7 +601,8 @@ def build_openai_client_from_callables(
     monotonic_fn: Callable[[], float] = time.monotonic,
 ) -> LLMServiceClient:
     return build_openai_client(
-        base_client=_CallableOpenAIAdapter(
+        base_client=LLMProviderOperations(
+            schema_version="1.0",
             openai_chat_json=openai_chat_json,
             openai_chat_json_with_images=openai_chat_json_with_images,
             openai_ocr_pdf=openai_ocr_pdf,

@@ -9,13 +9,13 @@ status mapping, and timestamp generation used by the coordinator.
 import logging
 import time
 from dataclasses import replace
-from datetime import datetime, timezone
 
 from src.contracts.publisher_inventory import (
     PublisherInventoryDiscoveryRequest,
     PublisherInventoryServiceRequest,
     PublisherInventoryServiceResponse,
 )
+from src.utils.clock import utc_now_seconds_z as _utc_now_iso
 from src.contracts.report_store import (
     PublisherInventoryStateResponse,
     PublisherInventoryTestStatusRecordRequest,
@@ -189,15 +189,6 @@ def _settings_with_time_budget(
             1.0,
             min(settings.candidate_quality_check_timeout_seconds, remaining_seconds),
         ),
-    )
-
-
-def _utc_now_iso() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
     )
 
 

@@ -22,24 +22,12 @@ from src.contracts.wordpress_entities import (
     SignalPostGenerationRequest,
     SignalPublishProjection,
 )
+from src.utils.coercion import ordered_unique_strings as _unique_ordered
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.signal_post_generator")
-
-
-def _unique_ordered(values: list[str]) -> list[str]:
-    ordered: list[str] = []
-    seen: set[str] = set()
-    for raw_value in values:
-        value = str(raw_value or "").strip()
-        key = value.casefold()
-        if value == "" or key in seen:
-            continue
-        seen.add(key)
-        ordered.append(value)
-    return ordered
 
 
 def _normalized_filters(values: list[str]) -> set[str]:

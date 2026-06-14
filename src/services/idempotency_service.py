@@ -5,7 +5,6 @@ import logging
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
 
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
@@ -14,6 +13,7 @@ from src.contracts.idempotency import (
     OrchestratorIdempotencyRecordRequest,
 )
 from src.contracts.run_context import RunContext
+from src.utils.clock import utc_now_seconds_z as _utc_now_iso
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -31,15 +31,6 @@ CREATE TABLE IF NOT EXISTS orchestrator_idempotency (
   PRIMARY KEY(scope, idempotency_key)
 );
 """
-
-
-def _utc_now_iso() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
 
 
 @contextmanager

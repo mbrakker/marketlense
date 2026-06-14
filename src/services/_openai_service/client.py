@@ -24,9 +24,10 @@ def _build_openai_client(
     if timeout_seconds is not None:
         client_kwargs["timeout"] = timeout_seconds
     try:
-        if OpenAI is None:
+        client_factory = _openai_client_factory()
+        if client_factory is None:
             raise TypeError("OpenAI client not available")
-        return OpenAI(**client_kwargs)
+        return client_factory(**client_kwargs)
     except TypeError as exc:
         raise AppError(
             code="openai_client_unavailable",

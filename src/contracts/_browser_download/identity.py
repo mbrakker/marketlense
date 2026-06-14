@@ -5,6 +5,8 @@ from typing import Optional
 
 from .session_reuse import BrowserDownloadSessionReusePolicy
 
+BROWSER_DOWNLOAD_IDENTITY_SCHEMA_VERSION = "1.0"
+
 
 @dataclass(frozen=True)
 class BrowserDownloadIdentityField:
@@ -286,7 +288,9 @@ class BrowserDownloadSettings:
         },
     )
     session_reuse_policy: BrowserDownloadSessionReusePolicy = field(
-        default_factory=lambda: BrowserDownloadSessionReusePolicy(schema_version="1.0"),
+        default_factory=lambda: BrowserDownloadSessionReusePolicy(
+            schema_version=BROWSER_DOWNLOAD_IDENTITY_SCHEMA_VERSION
+        ),
         metadata={
             "doc": "Opt-in bounded browser profile reuse policy for developer canaries or same-publisher batches."
         },

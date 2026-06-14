@@ -9,6 +9,10 @@ from typing import Any
 
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId
+from src.contracts.ui_run_control import (
+    UiRunWorkerRequestWriteRequest,
+    UiRunWorkerRequestWriteResponse,
+)
 from src.contracts.ui_run_replay import (
     UiRunArtifactFingerprint,
     UiRunArtifactFingerprintRequest,
@@ -27,6 +31,7 @@ from src.contracts.ui_run_replay import (
 from src.utils.cache_utils import stable_json_dumps
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.ui_run_paths import ui_run_dir
 
 logger = logging.getLogger("market_lense.ui_run_replay_service")
 
@@ -34,13 +39,89 @@ REPLAY_MANIFEST_FILE_NAME = "replay_manifest.json"
 REPLAY_REPORT_DIR_NAME = "replays"
 
 
-def _run_state_dir(registry_path: str) -> Path:
-    registry = Path(registry_path).expanduser().resolve()
-    return registry.parent / "ui_runs"
-
-
 def _run_dir(registry_path: str, run_id: str) -> Path:
-    return _run_state_dir(registry_path) / str(run_id).strip()
+    return ui_run_dir(registry_path, run_id)
+
+
+def write_ui_run_worker_request(
+    request: UiRunWorkerRequestWriteRequest,
+    ctx: RunContext,
+) -> UiRunWorkerRequestWriteResponse:
+    request_path = (
+        _run_dir(
+            request.registry_path,
+            request.worker_request.run_id,
+        )
+        / "request.json"
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="ui_run_worker_request_write_start",
+            module=logger.name,
+            fields={
+                "registry_path": request.registry_path,
+                "run_id": request.worker_request.run_id,
+                "request_path": str(request_path),
+            },
+        )
+    )
+    try:
+        request_path.parent.mkdir(parents=True, exist_ok=True)
+        request_path.write_text(
+            json.dumps(
+                asdict(request.worker_request),
+                ensure_ascii=True,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        logger.error(
+            log_event(
+                ctx,
+                role="service",
+                event="ui_run_worker_request_write_failed",
+                module=logger.name,
+                fields={
+                    "registry_path": request.registry_path,
+                    "run_id": request.worker_request.run_id,
+                    "request_path": str(request_path),
+                    "error_type": type(exc).__name__,
+                },
+            )
+        )
+        raise AppError(
+            code="ui_run_worker_request_write_failed",
+            message="Failed to persist UI-run worker request",
+            cause=exc,
+            retryable=True,
+            severity="error",
+            context={
+                "registry_path": request.registry_path,
+                "run_id": request.worker_request.run_id,
+                "request_path": str(request_path),
+            },
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="ui_run_worker_request_write_complete",
+            module=logger.name,
+            fields={
+                "registry_path": request.registry_path,
+                "run_id": request.worker_request.run_id,
+                "request_path": str(request_path),
+            },
+        )
+    )
+    return UiRunWorkerRequestWriteResponse(
+        schema_version="1.0",
+        request_path=str(request_path),
+        worker_request=request.worker_request,
+    )
 
 
 def _manifest_path(registry_path: str, run_id: str) -> Path:

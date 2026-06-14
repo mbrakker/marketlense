@@ -6,6 +6,8 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image
 
+from src.utils.coercion import stripped_string_value as _s
+
 logger = logging.getLogger("market_lense.render_service")
 TEMPLATES_DIR = Path(__file__).resolve().parents[3] / "templates"
 JINJA_ENV = Environment(
@@ -31,10 +33,6 @@ def _build_tag_acronym_map(acronyms: list[str]) -> dict[str, str]:
             continue
         mapped[token.lower()] = token
     return mapped
-
-
-def _s(value: object) -> str:
-    return str(value or "").strip()
 
 
 def _coerce_dict(value: object) -> dict[str, Any]:

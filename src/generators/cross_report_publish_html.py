@@ -17,6 +17,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportGeneratedAnalysisResult,
 )
 from src.contracts.publish import PublishEntityMetadata
+from src.utils.coercion import ordered_unique_strings as _unique_ordered
 from src.utils.html_utils import publish_entity_metadata_script
 
 _CROSS_REPORT_DOCUMENT_CSS = """
@@ -508,18 +509,6 @@ def _citation_line(
         if metric_labels:
             parts.append("Raw metrics: " + "; ".join(metric_labels))
     return " | ".join(parts)
-
-
-def _unique_ordered(values: list[str]) -> list[str]:
-    ordered: list[str] = []
-    seen: set[str] = set()
-    for raw_value in values:
-        value = str(raw_value or "").strip()
-        if not value or value.casefold() in seen:
-            continue
-        seen.add(value.casefold())
-        ordered.append(value)
-    return ordered
 
 
 def _chip_list_html(values: list[str]) -> str:

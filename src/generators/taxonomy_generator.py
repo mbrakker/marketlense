@@ -37,6 +37,7 @@ from src.services import (
     prompt_service,
     report_analysis_store_service,
 )
+from src.utils.coercion import string_value as _s
 from src.utils.errors import AppError
 from src.utils.tag_utils import normalize_slug_tag
 from src.utils.logging import log_event
@@ -917,9 +918,3 @@ def _empty_payload(reason: str) -> Dict[str, Any]:
         "time_period": "",
         "not_found_reason": reason,
     }
-
-
-def _s(value: Any) -> str:
-    if value is None:
-        return ""
-    return value if isinstance(value, str) else str(value)

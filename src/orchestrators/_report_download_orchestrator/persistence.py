@@ -16,6 +16,7 @@ from src.contracts.browser_download import (
 )
 from src.contracts.drive import DriveFile
 from src.contracts.files import FileHashRequest
+from src.utils.clock import utc_now_seconds_z as _utc_now_iso
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
@@ -631,15 +632,6 @@ def _report_name_for_result(result: BrowserReportDownloadResult) -> str:
     else:
         base_name = "downloaded_report"
     return " ".join(base_name.replace("_", " ").replace("-", " ").split()).strip()
-
-
-def _utc_now_iso() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
 
 
 def _utc_now_year() -> int:

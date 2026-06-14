@@ -8,6 +8,7 @@ from src.contracts.analytics_projection import (
     AnalyticsProjectionRunRequest,
     PROJECTION_SCHEMA_VERSION,
 )
+from src.utils.clock import utc_now_iso as _utc_now_iso
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.files import (
     PipelineCheckpointReadRequest,
@@ -96,10 +97,6 @@ def _run_projection(
             )
         )
     return None
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _utc_now_year() -> int:

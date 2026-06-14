@@ -15,8 +15,6 @@ MODULE_SYMBOLS = {
         "_render_visual_probe_image",
         "_visual_probe_profile",
         "_embedded_visual_looks_chart_like",
-        "_bounded_quality",
-        "_candidate_ocr_density",
         "_chart_confidence_score",
         "_embedded_visual_looks_decorative",
         "_embedded_visual_looks_photo_like",
@@ -62,6 +60,7 @@ MODULE_SYMBOLS = {
     },
 }
 COMPATIBILITY_SYMBOLS = set().union(*MODULE_SYMBOLS.values())
+COMPATIBILITY_SYMBOLS.update({"_bounded_quality", "_candidate_ocr_density"})
 
 
 def _owned_symbols(path: Path) -> set[str]:

@@ -62,7 +62,6 @@ RUNTIME_SYMBOLS = {
     "_remaining_time_budget_seconds",
     "_assert_time_budget_remaining",
     "_settings_with_time_budget",
-    "_utc_now_iso",
 }
 
 SNAPSHOT_RECORD_SYMBOLS = {

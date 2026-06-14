@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from src.generators.artifact_normalization import (
     normalize_artifact_toc_entries,
 )
+from src.utils.coercion import string_value as _s
 
 logger = logging.getLogger("market_lense.artifact_generator")
 
@@ -790,9 +791,3 @@ def build_topic_briefs(
             }
         )
     return expanded
-
-
-def _s(value: Any) -> str:
-    if value is None:
-        return ""
-    return value if isinstance(value, str) else str(value)

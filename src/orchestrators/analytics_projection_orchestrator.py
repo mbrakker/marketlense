@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Callable
 
 from src.contracts.analytics_projection import (
@@ -22,19 +21,11 @@ from src.services.analytics_store_service import (
     record_projection_failure,
     upsert_projection,
 )
+from src.utils.clock import utc_now_seconds_z as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.analytics_projection_orchestrator")
-
-
-def _utc_now() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
 
 
 @dataclass(frozen=True)

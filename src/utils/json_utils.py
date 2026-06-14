@@ -14,3 +14,11 @@ def safe_json_dumps(
         return json.dumps(data, ensure_ascii=ensure_ascii)
     except Exception:
         return fallback
+
+
+def dump_json_text(data: Any) -> str:
+    return safe_json_dumps(data, ensure_ascii=False, fallback="")
+
+
+def dump_json_object(data: Any) -> str:
+    return safe_json_dumps(data, ensure_ascii=False, fallback="{}")

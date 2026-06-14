@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Callable, Dict, NoReturn, Optional, TypeVar
 
 from src.contracts.openai import (
@@ -14,6 +13,7 @@ from src.contracts.openai import (
     OpenAIVectorStoreUpdateMetadataRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.config import OpenAICredentialResolveRequest
 from src.contracts.vector_store import (
     VectorStoreAttachFileRequest,
     VectorStoreAttachFileResponse,
@@ -31,7 +31,7 @@ from src.contracts.vector_store import (
     VectorStoreUploadFileRequest,
     VectorStoreUploadFileResponse,
 )
-from src.services import llm_service
+from src.services import config_service, llm_service
 from src.utils.coercion import clean_string_list
 from src.utils.errors import AppError
 from src.utils.logging import log_event, new_run_context
@@ -45,15 +45,11 @@ def _ctx_or_new(ctx: Optional[RunContext]) -> RunContext:
     return ctx or new_run_context(task_id="vector_store")
 
 
-def _api_key_from_env() -> str:
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        raise AppError(
-            code="vector_store_missing_api_key",
-            message="OPENAI_API_KEY is required for vector store operations",
-            retryable=False,
-        )
-    return api_key
+def _resolve_api_key(ctx: RunContext) -> str:
+    return config_service.resolve_openai_credential(
+        OpenAICredentialResolveRequest(schema_version="1.0"),
+        ctx,
+    ).api_key
 
 
 def _raise_vector_store_error(exc: AppError, *, code: str, message: str) -> NoReturn:
@@ -125,7 +121,7 @@ def create_vector_store(
     ctx = _ctx_or_new(ctx)
     name = _require_non_empty(request.name, "name")
     metadata_payload = _serialize_metadata(request.metadata)
-    api_key = _api_key_from_env()
+    api_key = _resolve_api_key(ctx)
     logger.info(
         log_event(
             ctx,
@@ -178,7 +174,7 @@ def upload_file(
     ctx = _ctx_or_new(ctx)
     vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
     file_path = _require_non_empty(request.file_path, "file_path")
-    api_key = _api_key_from_env()
+    api_key = _resolve_api_key(ctx)
     logger.info(
         log_event(
             ctx,
@@ -242,7 +238,7 @@ def attach_file(
     ctx = _ctx_or_new(ctx)
     vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
     file_id = _require_non_empty(request.openai_file_id, "openai_file_id")
-    api_key = _api_key_from_env()
+    api_key = _resolve_api_key(ctx)
     logger.info(
         log_event(
             ctx,
@@ -289,7 +285,7 @@ def get_vector_store_status(
 ) -> VectorStoreStatusResponse:
     ctx = _ctx_or_new(ctx)
     vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
-    api_key = _api_key_from_env()
+    api_key = _resolve_api_key(ctx)
     logger.info(
         log_event(
             ctx,
@@ -337,7 +333,7 @@ def delete_vector_store(
 ) -> VectorStoreDeleteResponse:
     ctx = _ctx_or_new(ctx)
     vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
-    api_key = _api_key_from_env()
+    api_key = _resolve_api_key(ctx)
     logger.info(
         log_event(
             ctx,
@@ -469,7 +465,7 @@ def update_metadata(
     ctx = _ctx_or_new(ctx)
     vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
     metadata_payload = _serialize_metadata(request.metadata)
-    api_key = _api_key_from_env()
+    api_key = _resolve_api_key(ctx)
     logger.info(
         log_event(
             ctx,

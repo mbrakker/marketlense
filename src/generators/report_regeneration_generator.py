@@ -39,8 +39,9 @@ from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.services import llm_service, prompt_service, report_analysis_store_service
 from src.utils.analysis_family import family_is_abstained
+from src.utils.coercion import string_value as _s
 from src.utils.errors import AppError
-from src.utils.json_utils import safe_json_dumps
+from src.utils.json_utils import dump_json_text as _dump_json
 from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.report_regeneration_generator")
@@ -556,16 +557,6 @@ def _unique_ints(values) -> List[int]:
         seen.add(value)
         unique.append(value)
     return unique
-
-
-def _dump_json(data: Any) -> str:
-    return safe_json_dumps(data, ensure_ascii=False, fallback="")
-
-
-def _s(value: Any) -> str:
-    if value is None:
-        return ""
-    return value if isinstance(value, str) else str(value)
 
 
 def _build_regeneration_state(

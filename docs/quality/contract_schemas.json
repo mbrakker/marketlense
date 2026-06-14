@@ -11069,6 +11069,38 @@
       ],
       "type": "object"
     },
+    "src.contracts.config.OpenAICredentialResolveRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.config.OpenAICredentialResolveResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "api_key",
+        "source"
+      ],
+      "type": "object"
+    },
     "src.contracts.config_assets.ConfigAssetReadRequest": {
       "additionalProperties": false,
       "properties": {
@@ -13990,6 +14022,110 @@
       ],
       "type": "object"
     },
+    "src.contracts.files.DirectoryPatternCountRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "limit_per_pattern": {
+          "type": "integer"
+        },
+        "patterns": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.files.DirectoryPatternSpec"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "patterns"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.DirectoryPatternCountResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "root_walk_count": {
+          "type": "integer"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.files.DirectoryPatternCountRow"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "rows",
+        "root_walk_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.DirectoryPatternCountRow": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "error": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "root_dir": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "root_dir",
+        "count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.DirectoryPatternSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "glob_pattern": {
+          "type": "string"
+        },
+        "include_dirs": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "root_dir": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "root_dir",
+        "glob_pattern",
+        "recursive",
+        "include_dirs"
+      ],
+      "type": "object"
+    },
     "src.contracts.files.FileExistsRequest": {
       "additionalProperties": false,
       "properties": {
@@ -14456,6 +14592,40 @@
       ],
       "type": "object"
     },
+    "src.contracts.files.ReadJsonRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.ReadJsonResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "payload": {},
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "payload"
+      ],
+      "type": "object"
+    },
     "src.contracts.files.ReadTextRequest": {
       "additionalProperties": false,
       "properties": {
@@ -14489,6 +14659,56 @@
         "schema_version",
         "path",
         "content"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.StructuredLogLoadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "max_bytes": {
+          "type": "integer"
+        },
+        "max_lines": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.StructuredLogLoadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "events": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "events",
+        "truncated"
       ],
       "type": "object"
     },
@@ -15553,6 +15773,58 @@
       "required": [
         "schema_version",
         "scope"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.LLMProviderOperations": {
+      "additionalProperties": false,
+      "properties": {
+        "openai_chat_json": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "openai_chat_json_with_images": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "openai_ocr_pdf": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "openai_respond_with_vector_store": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
       ],
       "type": "object"
     },
@@ -18237,6 +18509,16 @@
       "properties": {
         "auth_header": {
           "type": "string"
+        },
+        "existing_post_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "file_id": {
           "anyOf": [
@@ -24555,6 +24837,46 @@
       ],
       "type": "object"
     },
+    "src.contracts.ui_run_control.UiRunWorkerRequestWriteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "registry_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "worker_request": {
+          "$ref": "#/$defs/src.contracts.ui_run_control.UiRunWorkerRequest"
+        }
+      },
+      "required": [
+        "schema_version",
+        "registry_path",
+        "worker_request"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_control.UiRunWorkerRequestWriteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "request_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "worker_request": {
+          "$ref": "#/$defs/src.contracts.ui_run_control.UiRunWorkerRequest"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request_path",
+        "worker_request"
+      ],
+      "type": "object"
+    },
     "src.contracts.ui_run_payloads.AcquisitionAuditUiRunPayload": {
       "additionalProperties": false,
       "properties": {
@@ -26799,6 +27121,55 @@
         "self_presentation",
         "insights_url",
         "icon_source"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress.WordPressReportCardUpdateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_header": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "ca_bundle_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "featured_media": {
+          "type": "integer"
+        },
+        "meta": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "post_id": {
+          "type": "integer"
+        },
+        "post_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "ssl_verify": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "base_url",
+        "auth_header",
+        "post_id",
+        "featured_media",
+        "meta"
       ],
       "type": "object"
     },

@@ -9,12 +9,16 @@ import pytest
 
 from src.contracts.files import (
     ListDirectoryRequest,
+    DirectoryPatternCountRequest,
+    DirectoryPatternSpec,
     PipelineCheckpointReadRequest,
     PipelineCheckpointWriteRequest,
     PipelineStageCheckpoint,
     PdfCacheTextReadRequest,
     ReadTextRequest,
     WriteBytesRequest,
+    ReadJsonRequest,
+    StructuredLogLoadRequest,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.report_cards import (
@@ -26,6 +30,9 @@ from src.contracts.report_cards import (
 )
 from src.services.file_service import (
     list_directory,
+    count_directory_patterns,
+    load_structured_log_events,
+    read_json,
     read_pipeline_checkpoint,
     read_latest_pdf_cache_text,
     read_text,
@@ -310,6 +317,134 @@ def test_write_bytes_preserves_existing_file_when_replace_fails(
     assert created_temp_paths
     assert all(not path.exists() for path in created_temp_paths)
     monkeypatch.setattr(os, "replace", original_replace)
+
+
+def test_write_bytes_cleanup_failure_does_not_mask_replace_error(
+    monkeypatch,
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    target = tmp_path / "atomic.bin"
+    target.write_bytes(b"original")
+
+    def _failing_replace(src, dst):
+        raise OSError("replace failed")
+
+    def _failing_unlink(self, *, missing_ok=False):
+        raise OSError("cleanup failed")
+
+    monkeypatch.setattr(os, "replace", _failing_replace)
+    monkeypatch.setattr(Path, "unlink", _failing_unlink)
+
+    with pytest.raises(AppError) as exc_info:
+        write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0",
+                path=str(target),
+                content=b"updated",
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(exc_info.value, code="file_write_failed", retryable=False)
+    assert isinstance(exc_info.value.cause, OSError)
+    assert str(exc_info.value.cause) == "replace failed"
+    assert target.read_bytes() == b"original"
+
+
+def test_read_json_returns_typed_payload_and_invalid_json_error(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    valid_path = tmp_path / "valid.json"
+    invalid_path = tmp_path / "invalid.json"
+    valid_path.write_text('{"value": 3}', encoding="utf-8")
+    invalid_path.write_text("{invalid", encoding="utf-8")
+
+    response = read_json(
+        ReadJsonRequest(schema_version="1.0", path=str(valid_path)),
+        _ctx(),
+    )
+    assert response.payload == {"value": 3}
+
+    with pytest.raises(AppError) as exc_info:
+        read_json(
+            ReadJsonRequest(schema_version="1.0", path=str(invalid_path)),
+            _ctx(),
+        )
+    assert_app_error(exc_info.value, code="file_json_invalid", retryable=False)
+
+
+def test_load_structured_log_events_applies_byte_and_line_bounds(
+    tmp_path: Path,
+) -> None:
+    log_path = tmp_path / "market_lense_2026-06-13.log"
+    log_path.write_text(
+        "\n".join(
+            [
+                '10:00:00 | INFO | test | {"event":"old"}',
+                "not-json",
+                '10:00:02 | INFO | test | {"event":"new"}',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    response = load_structured_log_events(
+        StructuredLogLoadRequest(
+            schema_version="1.0",
+            path=str(log_path),
+            max_lines=2,
+            max_bytes=4096,
+        ),
+        _ctx(),
+    )
+
+    assert [event["event"] for event in response.events] == ["new"]
+    assert response.events[0]["log_path"] == str(log_path)
+
+
+def test_count_directory_patterns_groups_overlapping_patterns_by_root(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "out"
+    (root / "a").mkdir(parents=True)
+    (root / "b").mkdir(parents=True)
+    (root / "a" / "validation.json").write_text("{}", encoding="utf-8")
+    (root / "b" / "validation_policy.json").write_text("{}", encoding="utf-8")
+    (root / "report.html").write_text("<html></html>", encoding="utf-8")
+
+    response = count_directory_patterns(
+        DirectoryPatternCountRequest(
+            schema_version="1.0",
+            patterns=[
+                DirectoryPatternSpec(
+                    schema_version="1.0",
+                    name="validation",
+                    root_dir=str(root),
+                    glob_pattern="**/validation*.json",
+                    recursive=True,
+                    include_dirs=False,
+                ),
+                DirectoryPatternSpec(
+                    schema_version="1.0",
+                    name="html",
+                    root_dir=str(root),
+                    glob_pattern="*.html",
+                    recursive=False,
+                    include_dirs=False,
+                ),
+            ],
+            limit_per_pattern=100,
+        ),
+        _ctx(),
+    )
+
+    assert [(row.name, row.count, row.error) for row in response.rows] == [
+        ("validation", 2, ""),
+        ("html", 1, ""),
+    ]
+    assert response.root_walk_count == 1
 
 
 def test_pipeline_checkpoint_roundtrip_persists_artifact_refs_and_schema(
