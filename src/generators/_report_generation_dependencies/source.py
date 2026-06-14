@@ -3,7 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from src.contracts.files import FileStatRequest, ReadTextRequest, WriteBytesRequest
+from src.contracts.files import (
+    FileStatRequest,
+    JsonObjectCacheReadRequest,
+    JsonObjectCacheWriteRequest,
+    ReadTextRequest,
+    WriteBytesRequest,
+)
 from src.contracts.openai import (
     OpenAIPdfOcrRequest,
     OpenAIPdfOcrResponse,
@@ -28,7 +34,13 @@ from src.contracts.pdf_utils import PdfInfoRequest, PdfInfoResponse
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
 from src.services import llm_service
-from src.services.file_service import file_stat, read_text, write_bytes
+from src.services.file_service import (
+    file_stat,
+    read_json_object_cache,
+    read_text,
+    write_json_object_cache,
+    write_bytes,
+)
 from src.services.pdf_service import (
     build_pdf_context,
     detect_contents_page as detect_contents_page_service,
@@ -62,6 +74,12 @@ class ReportSourceDependencies:
     file_stat: Callable[[FileStatRequest, RunContext], Any]
     read_text: Callable[[ReadTextRequest, RunContext], Any]
     write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
+    read_json_object_cache: Callable[[JsonObjectCacheReadRequest, RunContext], Any] = (
+        read_json_object_cache
+    )
+    write_json_object_cache: Callable[
+        [JsonObjectCacheWriteRequest, RunContext], Any
+    ] = write_json_object_cache
 
     @classmethod
     def default(cls) -> "ReportSourceDependencies":
@@ -80,5 +98,6 @@ class ReportSourceDependencies:
             file_stat=file_stat,
             read_text=read_text,
             write_bytes=write_bytes,
+            read_json_object_cache=read_json_object_cache,
+            write_json_object_cache=write_json_object_cache,
         )
-

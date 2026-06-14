@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -8,6 +9,9 @@ from pathlib import Path
 import pytest
 
 from src.contracts.files import (
+    FileBundleHashRequest,
+    JsonObjectCacheReadRequest,
+    JsonObjectCacheWriteRequest,
     ListDirectoryRequest,
     DirectoryPatternCountRequest,
     DirectoryPatternSpec,
@@ -29,6 +33,9 @@ from src.contracts.report_cards import (
     ReportCardManifestWriteRequest,
 )
 from src.services.file_service import (
+    hash_file_bundle,
+    read_json_object_cache,
+    write_json_object_cache,
     list_directory,
     count_directory_patterns,
     load_structured_log_events,
@@ -593,3 +600,73 @@ def test_write_report_card_manifest_wraps_real_output_directory_failure(
         code="report_card_manifest_write_failed",
         retryable=False,
     )
+
+
+def test_json_object_cache_round_trip_and_missing_state(tmp_path: Path) -> None:
+    cache_path = tmp_path / "cache" / "payload.json"
+    missing = read_json_object_cache(
+        JsonObjectCacheReadRequest(schema_version="1.0", path=str(cache_path)),
+        _ctx(),
+    )
+    assert missing.found is False
+    assert missing.payload is None
+    assert missing.reason == "missing"
+
+    written = write_json_object_cache(
+        JsonObjectCacheWriteRequest(
+            schema_version="1.0",
+            path=str(cache_path),
+            payload={"schema_version": "1.0", "value": 7},
+        ),
+        _ctx(),
+    )
+    loaded = read_json_object_cache(
+        JsonObjectCacheReadRequest(schema_version="1.0", path=str(cache_path)),
+        _ctx(),
+    )
+
+    assert written.path == str(cache_path)
+    assert written.bytes_written == len(cache_path.read_bytes())
+    assert loaded.found is True
+    assert loaded.reason == "loaded"
+    assert loaded.payload == {"schema_version": "1.0", "value": 7}
+
+
+def test_json_object_cache_returns_invalid_json_state(tmp_path: Path) -> None:
+    cache_path = tmp_path / "invalid.json"
+    cache_path.write_text("{broken", encoding="utf-8")
+
+    loaded = read_json_object_cache(
+        JsonObjectCacheReadRequest(schema_version="1.0", path=str(cache_path)),
+        _ctx(),
+    )
+
+    assert loaded.found is False
+    assert loaded.payload is None
+    assert loaded.reason == "invalid_json"
+
+
+def test_hash_file_bundle_is_deterministic_and_content_sensitive(
+    tmp_path: Path,
+) -> None:
+    first = tmp_path / "report.html.j2"
+    second = tmp_path / "report.css.j2"
+    first.write_text("template", encoding="utf-8")
+    second.write_text("css", encoding="utf-8")
+    request = FileBundleHashRequest(
+        schema_version="1.0",
+        paths=[str(first), str(second)],
+    )
+
+    initial = hash_file_bundle(request, _ctx())
+    repeated = hash_file_bundle(request, _ctx())
+    second.write_text("changed-css", encoding="utf-8")
+    changed = hash_file_bundle(request, _ctx())
+
+    expected_entries = {
+        str(first): hashlib.sha256(b"template").hexdigest(),
+        str(second): hashlib.sha256(b"css").hexdigest(),
+    }
+    assert initial.sha256 == repeated.sha256
+    assert initial.file_sha256 == expected_entries
+    assert changed.sha256 != initial.sha256

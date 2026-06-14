@@ -20,6 +20,8 @@ from src.contracts.files import (
     DirectoryPatternCountResponse,
     DirectoryPatternCountRow,
     DirectoryPatternSpec,
+    FileBundleHashRequest,
+    FileBundleHashResponse,
     FileExistsRequest,
     FileExistsResponse,
     FileHashRequest,
@@ -30,6 +32,10 @@ from src.contracts.files import (
     ListDirectoryResponse,
     ListHtmlRequest,
     ListHtmlResponse,
+    JsonObjectCacheReadRequest,
+    JsonObjectCacheReadResponse,
+    JsonObjectCacheWriteRequest,
+    JsonObjectCacheWriteResponse,
     PipelineCheckpointReadRequest,
     PipelineCheckpointReadResponse,
     PipelineCheckpointWriteRequest,
@@ -60,6 +66,7 @@ from src.utils.gui_utils import (
     parse_structured_log_line,
 )
 from src.utils.logging import log_event
+from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.file_service")
 _WINDOWS_ABSOLUTE_PATH_RX = re.compile(r"^[A-Za-z]:[\\/]")
@@ -271,6 +278,140 @@ def read_json(request: ReadJsonRequest, ctx: RunContext) -> ReadJsonResponse:
         schema_version="1.0",
         path=request.path,
         payload=payload,
+    )
+
+
+def read_json_object_cache(
+    request: JsonObjectCacheReadRequest,
+    ctx: RunContext,
+) -> JsonObjectCacheReadResponse:
+    try:
+        response = read_json(
+            ReadJsonRequest(schema_version=request.schema_version, path=request.path),
+            ctx,
+        )
+    except AppError as exc:
+        if exc.code == "file_not_found":
+            reason = "missing"
+        elif exc.code == "file_json_invalid":
+            reason = "invalid_json"
+        else:
+            raise
+        result = JsonObjectCacheReadResponse(
+            schema_version="1.0",
+            path=request.path,
+            found=False,
+            payload=None,
+            reason=reason,
+        )
+    else:
+        if isinstance(response.payload, dict):
+            result = JsonObjectCacheReadResponse(
+                schema_version="1.0",
+                path=request.path,
+                found=True,
+                payload=response.payload,
+                reason="loaded",
+            )
+        else:
+            result = JsonObjectCacheReadResponse(
+                schema_version="1.0",
+                path=request.path,
+                found=False,
+                payload=None,
+                reason="invalid_type",
+            )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="json_object_cache_read_complete",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "found": result.found,
+                "reason": result.reason,
+            },
+        )
+    )
+    return result
+
+
+def write_json_object_cache(
+    request: JsonObjectCacheWriteRequest,
+    ctx: RunContext,
+) -> JsonObjectCacheWriteResponse:
+    content = json.dumps(request.payload, ensure_ascii=True).encode("utf-8")
+    write_bytes(
+        WriteBytesRequest(
+            schema_version=request.schema_version,
+            path=request.path,
+            content=content,
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="json_object_cache_write_complete",
+            module=logger.name,
+            fields={"path": request.path, "bytes_written": len(content)},
+        )
+    )
+    return JsonObjectCacheWriteResponse(
+        schema_version="1.0",
+        path=request.path,
+        bytes_written=len(content),
+    )
+
+
+def hash_file_bundle(
+    request: FileBundleHashRequest,
+    ctx: RunContext,
+) -> FileBundleHashResponse:
+    file_sha256: dict[str, str] = {}
+    template_hashes: dict[str, str] = {}
+    for raw_path in request.paths:
+        path = Path(raw_path)
+        try:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        except FileNotFoundError as exc:
+            raise AppError(
+                code="file_not_found",
+                message=f"File not found: {raw_path}",
+                cause=exc,
+                retryable=False,
+                context={"path": raw_path},
+            ) from exc
+        except OSError as exc:
+            raise AppError(
+                code="file_read_failed",
+                message=f"Failed to read file: {raw_path}",
+                cause=exc,
+                retryable=True,
+                context={"path": raw_path},
+            ) from exc
+        file_sha256[raw_path] = digest
+        template_hashes[path.name] = digest
+    bundle_sha256 = sha256_json({"schema_version": "1.0", "templates": template_hashes})
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="file_bundle_hash_complete",
+            module=logger.name,
+            fields={
+                "file_count": len(file_sha256),
+                "sha256": bundle_sha256,
+                "paths": list(file_sha256),
+            },
+        )
+    )
+    return FileBundleHashResponse(
+        schema_version="1.0",
+        sha256=bundle_sha256,
+        file_sha256=file_sha256,
     )
 
 

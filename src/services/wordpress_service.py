@@ -34,6 +34,8 @@ from src.services._wordpress_service.posts import (
     _update_media_alt_text,
 )
 
+from src.services._wordpress_service.media import prepare_media_upload
+
 from src.services._wordpress_service.taxonomy import (
     _ensure_terms,
     ensure_taxonomy_terms,
@@ -73,6 +75,7 @@ __all__ = [
     "_raise_http_redirect_error",
     "_safe_json",
     "upload_media",
+    "prepare_media_upload",
     "create_post",
     "update_report_card",
     "find_post_by_file_id",

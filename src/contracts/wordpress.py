@@ -108,6 +108,34 @@ class WordPressMediaUploadResponse:
 
 
 @dataclass(frozen=True)
+class WordPressMediaPrepareRequest:
+    schema_version: str = field(
+        metadata={"doc": "WordPress media preparation request schema version."}
+    )
+    filename: str = field(metadata={"doc": "Original upload filename."})
+    mime_type: str = field(metadata={"doc": "Original upload MIME type."})
+    data: bytes = field(metadata={"doc": "Original media bytes."})
+
+
+@dataclass(frozen=True)
+class WordPressMediaPrepareResponse:
+    schema_version: str = field(
+        metadata={"doc": "WordPress media preparation response schema version."}
+    )
+    filename: str = field(metadata={"doc": "Prepared upload filename."})
+    mime_type: str = field(metadata={"doc": "Prepared upload MIME type."})
+    data: bytes = field(metadata={"doc": "Prepared upload bytes."})
+    optimized: bool = field(metadata={"doc": "True when image bytes were optimized."})
+    reason: str = field(metadata={"doc": "Stable preparation outcome reason."})
+    original_size_bytes: int = field(
+        metadata={"doc": "Original payload size in bytes."}
+    )
+    prepared_size_bytes: int = field(
+        metadata={"doc": "Prepared payload size in bytes."}
+    )
+
+
+@dataclass(frozen=True)
 class WordPressPostCreateRequest:
     schema_version: str = field(metadata={"doc": "Post create request schema version."})
     base_url: str = field(metadata={"doc": "WordPress site base URL."})
@@ -170,7 +198,9 @@ class WordPressReportCardUpdateRequest:
     base_url: str = field(metadata={"doc": "WordPress site base URL."})
     auth_header: str = field(metadata={"doc": "Authorization header value."})
     post_id: int = field(metadata={"doc": "Existing WordPress post ID to update."})
-    featured_media: int = field(metadata={"doc": "Canonical large card cover media ID."})
+    featured_media: int = field(
+        metadata={"doc": "Canonical large card cover media ID."}
+    )
     meta: Dict[str, object] = field(
         metadata={"doc": "Complete validated canonical report-card metadata."}
     )

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
-from src.contracts.files import ReadTextRequest, WriteBytesRequest
+from src.contracts.files import (
+    FileBundleHashRequest,
+    JsonObjectCacheReadRequest,
+    JsonObjectCacheWriteRequest,
+)
 from src.contracts.ingest import IngestSettings
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_models import Figure, Quote, ReportPayload
@@ -23,12 +25,22 @@ LOGGER_NAME = "market_lense.report_generator"
 logger = logging.getLogger(LOGGER_NAME)
 
 
-class SupportsReadText(Protocol):
-    def read_text(self, request: ReadTextRequest, ctx: RunContext) -> Any: ...
+class SupportsJsonObjectCacheRead(Protocol):
+    def read_json_object_cache(
+        self, request: JsonObjectCacheReadRequest, ctx: RunContext
+    ) -> Any: ...
 
 
-class SupportsWriteBytes(Protocol):
-    def write_bytes(self, request: WriteBytesRequest, ctx: RunContext) -> Any: ...
+class SupportsJsonObjectCacheWrite(Protocol):
+    def write_json_object_cache(
+        self, request: JsonObjectCacheWriteRequest, ctx: RunContext
+    ) -> Any: ...
+
+
+class SupportsFileBundleHash(Protocol):
+    def hash_file_bundle(
+        self, request: FileBundleHashRequest, ctx: RunContext
+    ) -> Any: ...
 
 
 class SupportsAnalysisPackPath(Protocol):
@@ -58,11 +70,11 @@ def cache_dir(settings: IngestSettings, md5: str) -> Path:
 def read_cache_json(
     path: Path,
     ctx: RunContext,
-    dependencies: SupportsReadText,
+    dependencies: SupportsJsonObjectCacheRead,
 ) -> Optional[dict]:
     try:
-        resp = dependencies.read_text(
-            ReadTextRequest(schema_version="1.0", path=str(path)),
+        resp = dependencies.read_json_object_cache(
+            JsonObjectCacheReadRequest(schema_version="1.0", path=str(path)),
             ctx,
         )
     except AppError as exc:
@@ -89,23 +101,20 @@ def read_cache_json(
             )
         )
         return None
-    try:
-        payload = json.loads(resp.content)
-    except json.JSONDecodeError:
-        return None
-    return payload if isinstance(payload, dict) else None
+    return resp.payload if resp.found else None
 
 
 def write_cache_json(
     path: Path,
     payload: dict,
     ctx: RunContext,
-    dependencies: SupportsWriteBytes,
+    dependencies: SupportsJsonObjectCacheWrite,
 ) -> None:
-    data = json.dumps(payload, ensure_ascii=True)
-    dependencies.write_bytes(
-        WriteBytesRequest(
-            schema_version="1.0", path=str(path), content=data.encode("utf-8")
+    dependencies.write_json_object_cache(
+        JsonObjectCacheWriteRequest(
+            schema_version="1.0",
+            path=str(path),
+            payload=payload,
         ),
         ctx,
     )
@@ -145,11 +154,11 @@ def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
 def template_sha256(
     path: Path,
     ctx: RunContext,
-    dependencies: SupportsReadText,
+    dependencies: SupportsFileBundleHash,
 ) -> Optional[str]:
     try:
-        resp = dependencies.read_text(
-            ReadTextRequest(schema_version="1.0", path=str(path)),
+        resp = dependencies.hash_file_bundle(
+            FileBundleHashRequest(schema_version="1.0", paths=[str(path)]),
             ctx,
         )
     except AppError as exc:
@@ -174,7 +183,7 @@ def template_sha256(
             )
         )
         return None
-    return hashlib.sha256(resp.content.encode("utf-8")).hexdigest()
+    return resp.file_sha256[str(path)]
 
 
 def html_cache_key(

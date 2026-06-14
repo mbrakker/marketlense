@@ -79,9 +79,9 @@ def test_update_report_card_sends_only_card_payload(wordpress_http) -> None:
 
     response = svc.update_report_card(request, _ctx())
 
-    call = wordpress_http.calls_for(
-        "POST", "https://site/wp-json/wp/v2/ml_report/12"
-    )[0]
+    call = wordpress_http.calls_for("POST", "https://site/wp-json/wp/v2/ml_report/12")[
+        0
+    ]
     assert response.post_id == 12
     assert response.link == "https://site/reports/report/"
     assert call.json_data == {
@@ -331,9 +331,7 @@ def test_find_posts_by_file_id_batch_collects_found_and_missing(wordpress_http) 
     assert response.items[1].file_id == "file-2"
     assert response.items[1].found is False
     assert response.items[1].post_id is None
-    assert (
-        len(wordpress_http.calls_for("GET", "https://site/wp-json/wp/v2/posts")) == 2
-    )
+    assert len(wordpress_http.calls_for("GET", "https://site/wp-json/wp/v2/posts")) == 2
 
 
 def test_find_posts_by_file_id_batch_captures_item_errors(
@@ -689,7 +687,9 @@ def test_create_post_session_request_exception_adapts_to_app_error(
                 f"boom {method} {url} {kwargs.get('timeout')}"
             )
 
-    external_boundary_mocks_only.setattr(svc.requests, "Session", lambda: _FakeSession())
+    external_boundary_mocks_only.setattr(
+        svc.requests, "Session", lambda: _FakeSession()
+    )
 
     request = WordPressPostCreateRequest(
         schema_version="1.0",

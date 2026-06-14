@@ -1732,3 +1732,17 @@ To extend the system:
 
 - Discovery/download quality review (2026-03-30): `docs/quality/report-discovery-download-review-2026-03-30.md`.
 - Download success playbook (2026-04-07): `docs/quality/report-download-success-playbook-2026-04-07.md`.
+### WordPress REST Administration
+
+Use the canonical WordPress administration CLI:
+
+```powershell
+python Wordpress/scripts/marketlense_admin.py provision
+python Wordpress/scripts/marketlense_admin.py seed-homepages
+python Wordpress/scripts/marketlense_admin.py sync-profiles
+```
+
+Add `--dry-run` to validate command selection without external mutations.
+The previous `*-rest.py` filenames remain compatibility launchers and forward
+all arguments to this CLI. Credentials continue to resolve from `WP_SITE_URL`
+plus `WP_BEARER_TOKEN`, or `WP_USERNAME` and `WP_APP_PASSWORD`.

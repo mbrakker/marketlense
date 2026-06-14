@@ -9,7 +9,7 @@ import re
 from urllib.parse import quote
 
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
-from src.contracts.files import FileStatRequest
+from src.contracts.files import FileBundleHashRequest, FileStatRequest
 from src.contracts.ingest import IngestOutcome
 from src.contracts.report_assets import PreviewRequest, PreviewResponse, RenderRequest
 from src.contracts.report_cards import (
@@ -37,7 +37,6 @@ from src.generators.report_generation_shared import (
     html_cache_key,
     logger,
     read_cache_json,
-    template_sha256,
     write_cache_json,
 )
 from src.utils.cache_utils import sha256_json
@@ -174,20 +173,32 @@ def _report_template_bundle_sha(
     runtime: ReportRuntimeState, dependencies
 ) -> str | None:
     template_dir = Path(__file__).resolve().parents[2] / "templates"
-    hashes: dict[str, str] = {}
-    for template_name in ("report.html.j2", "report.css.j2", "_report_macros.j2"):
-        digest = template_sha256(
-            template_dir / template_name, runtime.ctx, dependencies
+    paths = [
+        str(template_dir / template_name)
+        for template_name in (
+            "report.html.j2",
+            "report.css.j2",
+            "_report_macros.j2",
         )
-        if not digest:
-            return None
-        hashes[template_name] = digest
-    return sha256_json(
-        {
-            "schema_version": "1.0",
-            "templates": hashes,
-        }
-    )
+    ]
+    try:
+        return dependencies.hash_file_bundle(
+            FileBundleHashRequest(schema_version="1.0", paths=paths),
+            runtime.ctx,
+        ).sha256
+    except AppError as exc:
+        if exc.retryable:
+            raise
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="generator",
+                event="template_hash_failed",
+                module=logger.name,
+                fields={"paths": paths, "error": exc.message},
+            )
+        )
+        return None
 
 
 def _file_exists_via_service(

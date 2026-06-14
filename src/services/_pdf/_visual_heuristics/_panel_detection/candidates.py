@@ -3,7 +3,7 @@ from __future__ import annotations
 # ruff: noqa: E402,F401,F403,F405,F821
 
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, TypeAlias
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import pymupdf as fitz
 
@@ -100,54 +100,32 @@ if TYPE_CHECKING:
         PDF_FIGURE_EXCEPTIONS,
         _PANEL_TITLE_EXCLUDE_RX,
     )
-
-    _ChartRect: TypeAlias = Any
-    _PageTextLine: TypeAlias = Any
-    _VisualCandidateRelationships: TypeAlias = Any
-    _alpha_ratio: Any
-    _horizontal_overlap_ratio: Any
-    _is_page_number_text: Any
-    _line_starts_with_caption_hint: Any
-    _rect_containment_ratio: Any
-    _rect_iou: Any
-    _rect_overlap_area: Any
-    _rect_seen: Any
-    _s: Any
-    _starts_with_lower_alpha: Any
-    _table_normalize_text: Any
-    _table_page_text_lines: Any
-    _text_stats: Any
-    _vertical_overlap_ratio: Any
-
-    def _drawing_rects(page: fitz.Page) -> List[fitz.Rect]: ...
-
-    def _caption_blocks(
-        page: fitz.Page,
-        hints: Tuple[str, ...],
-        *,
-        blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
-    ) -> List[Tuple[fitz.Rect, str]]: ...
-
-    def _compact_top_chart_title_like(
-        text: str,
-        *,
-        block: fitz.Rect,
-        rect: fitz.Rect,
-        max_v_gap: float,
-        lines: int,
-        chars: int,
-        avg_line_len: float,
-    ) -> bool: ...
-
-    def _chart_axis_label_band_like(
-        text: str,
-        *,
-        lines: int,
-        chars: int,
-        avg_line_len: float,
-    ) -> bool: ...
+    from ..type_declarations import (
+        _ChartRect,
+        _PageTextLine,
+        _VisualCandidateRelationships,
+        _alpha_ratio,
+        _caption_blocks,
+        _chart_axis_label_band_like,
+        _compact_top_chart_title_like,
+        _drawing_rects,
+        _horizontal_overlap_ratio,
+        _is_page_number_text,
+        _line_starts_with_caption_hint,
+        _rect_containment_ratio,
+        _rect_iou,
+        _rect_overlap_area,
+        _rect_seen,
+        _s,
+        _starts_with_lower_alpha,
+        _table_normalize_text,
+        _table_page_text_lines,
+        _text_stats,
+        _vertical_overlap_ratio,
+    )
 
 from src.services._pdf._visual_heuristics._panel_detection.shadowing import *
+
 
 def _page_looks_like_contents_layout(
     page: fitz.Page,
@@ -180,6 +158,7 @@ def _page_looks_like_contents_layout(
     if top_text.startswith("contents") or "\ncontents" in top_text:
         return numeric_hits >= 4 and short_heading_hits >= 3
     return False
+
 
 def _panel_chart_rects(
     page: fitz.Page,
@@ -635,6 +614,7 @@ def _panel_chart_rects(
         if not _rect_seen(rect, [existing for existing, _, _ in deduped]):
             deduped.append((rect, text, title_rect))
     return deduped
+
 
 def _merge_panel_title_band_candidates(
     candidates: List[Tuple[fitz.Rect, str, fitz.Rect]],

@@ -548,12 +548,24 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
                 return SimpleNamespace(content=content)
         raise AssertionError(f"Unexpected read: {req.path}")
 
+    def _read_cache(req, ctx):
+        del ctx
+        assert req.path.endswith(f"{runtime.report_name}.html.cache.json")
+        return SimpleNamespace(found=True, payload={"key": cache_key})
+
+    def _hash_bundle(req, ctx):
+        del ctx
+        assert {Path(path).name for path in req.paths} == set(template_contents)
+        return SimpleNamespace(sha256=_template_bundle_sha(template_contents))
+
     def _file_stat(req, ctx):
         del ctx
         return SimpleNamespace(exists=Path(req.path) == expected_html)
 
     deps = _deps(
         read_text=_read_text,
+        read_json_object_cache=_read_cache,
+        hash_file_bundle=_hash_bundle,
         file_stat=_file_stat,
         render_report=lambda req, ctx: (_ for _ in ()).throw(
             AssertionError("render_report should be skipped on cache hit")
@@ -617,6 +629,16 @@ def test_render_report_output_invalidates_cache_when_css_template_changes(tmp_pa
                 return SimpleNamespace(content=content)
         raise AssertionError(f"Unexpected read: {req.path}")
 
+    def _read_cache(req, ctx):
+        del ctx
+        assert req.path.endswith(f"{runtime.report_name}.html.cache.json")
+        return SimpleNamespace(found=True, payload={"key": stale_cache_key})
+
+    def _hash_bundle(req, ctx):
+        del ctx
+        assert {Path(path).name for path in req.paths} == set(current_template_contents)
+        return SimpleNamespace(sha256=_template_bundle_sha(current_template_contents))
+
     def _render_report(req, ctx):
         del ctx
         render_calls.append(req.data["title"])
@@ -629,6 +651,8 @@ def test_render_report_output_invalidates_cache_when_css_template_changes(tmp_pa
 
     deps = _deps(
         read_text=_read_text,
+        read_json_object_cache=_read_cache,
+        hash_file_bundle=_hash_bundle,
         file_stat=_file_stat,
         render_report=_render_report,
     )

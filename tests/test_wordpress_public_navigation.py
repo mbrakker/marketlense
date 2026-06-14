@@ -14,9 +14,7 @@ SHORTCODES_PATH = (
     / "includes"
     / "class-marketlense-core-shortcodes.php"
 )
-REST_PROVISION_PATH = (
-    REPO_ROOT / "Wordpress" / "scripts" / "provision-site-structure-rest.py"
-)
+REST_PROVISION_PATH = REPO_ROOT / "Wordpress" / "scripts" / "admin" / "provision.py"
 SHELL_PROVISION_PATH = (
     REPO_ROOT / "Wordpress" / "scripts" / "provision-site-structure.sh"
 )

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_prepare_report_source_writes_caches_and_marks_low_density(
     ingest_settings, run_context, tmp_path
 ):
@@ -34,7 +35,7 @@ def test_prepare_report_source_writes_caches_and_marks_low_density(
             ],
             any_text=True,
         ),
-        write_bytes=lambda req, ctx: writes.append(req.path) or None,
+        write_json_object_cache=lambda req, ctx: writes.append(req.path) or None,
     )
 
     state = prepare_report_source(runtime, deps)
@@ -46,6 +47,7 @@ def test_prepare_report_source_writes_caches_and_marks_low_density(
     assert any("pdf_info_" in path for path in writes)
     assert any("contents_" in path for path in writes)
     assert any("text_" in path for path in writes)
+
 
 def test_prepare_report_source_uses_cached_source_phase_payloads(
     ingest_settings, run_context, tmp_path
@@ -98,9 +100,6 @@ def test_prepare_report_source_uses_cached_source_phase_payloads(
     )
 
     deps = _deps(
-        read_text=lambda req, ctx: SimpleNamespace(
-            content=Path(req.path).read_text(encoding="utf-8")
-        ),
         extract_pdf_info=lambda req, ctx: (_ for _ in ()).throw(
             AssertionError("extract_pdf_info should be skipped on cache hit")
         ),
@@ -110,8 +109,8 @@ def test_prepare_report_source_uses_cached_source_phase_payloads(
         extract_pdf_text=lambda req, ctx: (_ for _ in ()).throw(
             AssertionError("extract_pdf_text should be skipped on cache hit")
         ),
-        write_bytes=lambda req, ctx: (_ for _ in ()).throw(
-            AssertionError("write_bytes should be skipped on cache hit")
+        write_json_object_cache=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("cache write should be skipped on cache hit")
         ),
         sample_pdf_text=lambda req, ctx: PdfTextSampleResponse(
             schema_version="1.0",
@@ -135,6 +134,7 @@ def test_prepare_report_source_uses_cached_source_phase_payloads(
     assert state.text_response.text == "cached body"
     assert state.text_response.pages_extracted == 2
     assert state.text_response.char_count == 11
+
 
 def test_prepare_report_source_ignores_stale_source_cache_keys(
     ingest_settings, run_context, tmp_path
@@ -190,9 +190,6 @@ def test_prepare_report_source_ignores_stale_source_cache_keys(
     calls = {"info": 0, "contents": 0, "text": 0}
 
     deps = _deps(
-        read_text=lambda req, ctx: SimpleNamespace(
-            content=Path(req.path).read_text(encoding="utf-8")
-        ),
         extract_pdf_info=lambda req, ctx: (
             calls.__setitem__("info", calls["info"] + 1)
             or PdfInfoResponse(
@@ -236,7 +233,7 @@ def test_prepare_report_source_ignores_stale_source_cache_keys(
             ],
             any_text=True,
         ),
-        write_bytes=lambda req, ctx: writes.append(req.path) or None,
+        write_json_object_cache=lambda req, ctx: writes.append(req.path) or None,
     )
 
     state = prepare_report_source(runtime, deps)
@@ -248,6 +245,7 @@ def test_prepare_report_source_ignores_stale_source_cache_keys(
     assert any("pdf_info_" in path for path in writes)
     assert any("contents_" in path for path in writes)
     assert any("text_" in path for path in writes)
+
 
 def test_prepare_report_source_halts_when_no_pages_to_sample(
     ingest_settings, run_context, tmp_path, assert_app_error
@@ -279,6 +277,7 @@ def test_prepare_report_source_halts_when_no_pages_to_sample(
         severity="error",
     )
     assert exc_info.value.context["text_validation_reason"] == "no_pages_to_sample"
+
 
 def test_prepare_report_source_halts_when_sample_pages_have_no_text(
     ingest_settings, run_context, tmp_path, assert_app_error
@@ -331,11 +330,14 @@ def test_prepare_report_source_halts_when_sample_pages_have_no_text(
         exc_info.value.context["text_validation_reason"] == "no_text_in_sampled_pages"
     )
 
+
 def test_prepare_report_source_does_not_call_ocr_when_native_text_is_extractable(
     ingest_settings, run_context, tmp_path
 ):
     runtime = _runtime(
-        replace(ingest_settings, pdf_text_ocr_enabled=True, pdf_text_ocr_cache_enabled=False),
+        replace(
+            ingest_settings, pdf_text_ocr_enabled=True, pdf_text_ocr_cache_enabled=False
+        ),
         run_context,
         tmp_path,
     )
@@ -379,6 +381,7 @@ def test_prepare_report_source_does_not_call_ocr_when_native_text_is_extractable
     assert state.ocr_fallback_used is False
     assert state.analysis_pdf_path == runtime.local_pdf_path
     assert ocr_calls["count"] == 0
+
 
 def test_prepare_report_source_uses_ocr_for_weak_native_text_even_when_any_text_exists(
     ingest_settings, run_context, tmp_path
@@ -490,6 +493,7 @@ def test_prepare_report_source_uses_ocr_for_weak_native_text_even_when_any_text_
         runtime.settings.pdf_text_native_confidence_threshold
     )
     assert ocr_calls["count"] == 1
+
 
 def test_prepare_report_source_uses_ocr_fallback_and_keeps_original_preview_source(
     ingest_settings, run_context, tmp_path
@@ -611,6 +615,7 @@ def test_prepare_report_source_uses_ocr_fallback_and_keeps_original_preview_sour
     assert detect_paths == [ocr_pdf_path]
     assert extract_paths == [runtime.local_pdf_path, ocr_pdf_path]
     assert preview_paths == [runtime.local_pdf_path]
+
 
 __all__ = [
     "test_prepare_report_source_writes_caches_and_marks_low_density",

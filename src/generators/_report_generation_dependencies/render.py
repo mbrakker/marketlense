@@ -4,7 +4,14 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from src.contracts.cover_images import CoverImageGenerationRequest
-from src.contracts.files import FileStatRequest, ReadTextRequest, WriteBytesRequest
+from src.contracts.files import (
+    FileBundleHashRequest,
+    FileStatRequest,
+    JsonObjectCacheReadRequest,
+    JsonObjectCacheWriteRequest,
+    ReadTextRequest,
+    WriteBytesRequest,
+)
 from src.contracts.report_assets import PreviewRequest, RenderRequest, RenderResponse
 from src.contracts.report_cards import (
     ReportCardManifestWriteRequest,
@@ -18,7 +25,10 @@ from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
 from src.services.file_service import (
     file_stat,
+    hash_file_bundle,
+    read_json_object_cache,
     read_text,
+    write_json_object_cache,
     write_bytes,
     write_report_card_manifest,
 )
@@ -43,6 +53,15 @@ class ReportRenderDependencies:
     write_report_card_manifest: Callable[
         [ReportCardManifestWriteRequest, RunContext], ReportCardManifestWriteResponse
     ]
+    read_json_object_cache: Callable[[JsonObjectCacheReadRequest, RunContext], Any] = (
+        read_json_object_cache
+    )
+    write_json_object_cache: Callable[
+        [JsonObjectCacheWriteRequest, RunContext], Any
+    ] = write_json_object_cache
+    hash_file_bundle: Callable[[FileBundleHashRequest, RunContext], Any] = (
+        hash_file_bundle
+    )
 
     @classmethod
     def default(cls) -> "ReportRenderDependencies":
@@ -56,4 +75,7 @@ class ReportRenderDependencies:
             read_text=read_text,
             write_bytes=write_bytes,
             write_report_card_manifest=write_report_card_manifest,
+            read_json_object_cache=read_json_object_cache,
+            write_json_object_cache=write_json_object_cache,
+            hash_file_bundle=hash_file_bundle,
         )

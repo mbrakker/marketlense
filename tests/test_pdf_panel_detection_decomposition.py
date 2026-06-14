@@ -65,6 +65,36 @@ COMPATIBILITY_FACADE_SYMBOLS = {
     "_merge_panel_title_band_candidates",
 }
 COMPATIBILITY_SYMBOLS = set().union(*MODULE_SYMBOLS.values())
+TYPE_DECLARATION_OWNER = PACKAGE / "type_declarations.py"
+TYPE_DECLARATION_CONSUMERS = (
+    PACKAGE / "panel_text.py",
+    PACKAGE / "panel_geometry.py",
+    DETECTION_PACKAGE / "shadowing.py",
+    DETECTION_PACKAGE / "candidates.py",
+)
+SHARED_TYPE_HELPERS = {
+    "_ChartRect",
+    "_PageTextLine",
+    "_VisualCandidateRelationships",
+    "_alpha_ratio",
+    "_horizontal_overlap_ratio",
+    "_is_page_number_text",
+    "_line_starts_with_caption_hint",
+    "_rect_containment_ratio",
+    "_rect_iou",
+    "_rect_overlap_area",
+    "_rect_seen",
+    "_s",
+    "_starts_with_lower_alpha",
+    "_table_normalize_text",
+    "_table_page_text_lines",
+    "_text_stats",
+    "_vertical_overlap_ratio",
+    "_drawing_rects",
+    "_caption_blocks",
+    "_compact_top_chart_title_like",
+    "_chart_axis_label_band_like",
+}
 
 
 def _owned_symbols(path: Path) -> set[str]:
@@ -100,3 +130,11 @@ def test_pdf_panel_detection_preserves_visual_heuristic_compatibility_surface() 
     for symbol in COMPATIBILITY_SYMBOLS:
         assert hasattr(facade, symbol)
         assert symbol in facade.__all__
+
+
+def test_pdf_panel_type_helpers_have_one_private_declaration_owner() -> None:
+    owner_symbols = _owned_symbols(TYPE_DECLARATION_OWNER)
+    assert SHARED_TYPE_HELPERS <= owner_symbols
+
+    for consumer in TYPE_DECLARATION_CONSUMERS:
+        assert not SHARED_TYPE_HELPERS & _owned_symbols(consumer)

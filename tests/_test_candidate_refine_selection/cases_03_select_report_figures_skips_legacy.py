@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_exists(
     tmp_path,
 ):
@@ -97,6 +98,7 @@ def test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_e
     assert selection.payload._figure_top == "report/slices/chart_keep.png"
     assert selection.payload._figure_section_enabled is True
 
+
 def test_select_report_figures_reuses_existing_candidate_crops_for_fallback_gallery(
     tmp_path,
 ):
@@ -133,18 +135,17 @@ def test_select_report_figures_reuses_existing_candidate_crops_for_fallback_gall
             request_id="rank",
             raw_content="[]",
         ),
-        read_text=lambda req, ctx: SimpleNamespace(
-            content=json.dumps(
-                {
-                    "schema_version": "1.0",
-                    "candidates": [
-                        {
-                            "id": "chart_keep",
-                            "crop_path": "report/candidates/chart_keep.png",
-                        }
-                    ],
-                }
-            )
+        read_json_object_cache=lambda req, ctx: SimpleNamespace(
+            found=True,
+            payload={
+                "schema_version": "1.0",
+                "candidates": [
+                    {
+                        "id": "chart_keep",
+                        "crop_path": "report/candidates/chart_keep.png",
+                    }
+                ],
+            },
         ),
         crop_regions=lambda req, ctx: (_ for _ in ()).throw(
             AssertionError("fallback crop pass should be skipped when crop paths exist")
@@ -182,6 +183,7 @@ def test_select_report_figures_reuses_existing_candidate_crops_for_fallback_gall
     assert selection.payload._figure_gallery == ["report/candidates/chart_keep.png"]
     assert selection.payload._figure_top == "report/candidates/chart_keep.png"
     assert selection.payload._figure_section_enabled is True
+
 
 def test_select_report_figures_crops_only_missing_fallback_candidates_after_reuse(
     tmp_path,
@@ -222,18 +224,17 @@ def test_select_report_figures_crops_only_missing_fallback_candidates_after_reus
             request_id="rank",
             raw_content="[]",
         ),
-        read_text=lambda req, ctx: SimpleNamespace(
-            content=json.dumps(
-                {
-                    "schema_version": "1.0",
-                    "candidates": [
-                        {
-                            "id": "chart_keep",
-                            "crop_path": "report/candidates/chart_keep.png",
-                        }
-                    ],
-                }
-            )
+        read_json_object_cache=lambda req, ctx: SimpleNamespace(
+            found=True,
+            payload={
+                "schema_version": "1.0",
+                "candidates": [
+                    {
+                        "id": "chart_keep",
+                        "crop_path": "report/candidates/chart_keep.png",
+                    }
+                ],
+            },
         ),
         crop_regions=lambda req, ctx: (
             crop_calls.append(
@@ -281,6 +282,7 @@ def test_select_report_figures_crops_only_missing_fallback_candidates_after_reus
     ]
     assert selection.payload._figure_top == "report/candidates/table_keep.png"
     assert selection.payload._figure_section_enabled is True
+
 
 __all__ = [
     "test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_exists",

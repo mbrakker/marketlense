@@ -3,15 +3,12 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 import html
-from io import BytesIO
 import json
 import logging
 import mimetypes
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 from urllib.parse import unquote, urlparse
-
-from PIL import Image
 
 from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
 from src.contracts.publish import (
@@ -25,6 +22,7 @@ from src.contracts.report_store import ReportMetadataGetRequest
 from src.contracts.report_cards import ReportCardManifest
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
+    WordPressMediaPrepareRequest,
     WordPressMediaUploadRequest,
     WordPressPostCreateRequest,
     WordPressReportCardUpdateRequest,
@@ -42,6 +40,7 @@ from src.services.wordpress_service import (
     create_post,
     ensure_taxonomy_terms,
     ensure_tags,
+    prepare_media_upload,
     upload_media,
     update_report_card,
 )
@@ -57,10 +56,6 @@ from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.publish_generator")
 
-_MAX_MEDIA_UPLOAD_BYTES = 8_000_000
-_MAX_MEDIA_UPLOAD_DIMENSION_PX = 1800
-_MEDIA_JPEG_QUALITY = 85
-
 
 @dataclass(frozen=True)
 class _MediaUploadJob:
@@ -73,14 +68,6 @@ class _MediaUploadJob:
 class _MediaUploadResult:
     src: str
     media_id: int
-
-
-@dataclass(frozen=True)
-class _PreparedMediaPayload:
-    filename: str
-    mime_type: str
-    data: bytes
-    optimized: bool
 
 
 def publish_html(
@@ -769,11 +756,14 @@ def _media_upload_request(
 ) -> WordPressMediaUploadRequest:
     data_resp = read_bytes(ReadBytesRequest(schema_version="1.0", path=local_path), ctx)
     mime_type, _ = mimetypes.guess_type(local_path)
-    prepared = _prepare_media_upload_payload(
-        filename=Path(local_path).name,
-        mime_type=mime_type or "image/png",
-        data=data_resp.content,
-        ctx=ctx,
+    prepared = prepare_media_upload(
+        WordPressMediaPrepareRequest(
+            schema_version="1.0",
+            filename=Path(local_path).name,
+            mime_type=mime_type or "image/png",
+            data=data_resp.content,
+        ),
+        ctx,
     )
     alt_text = Path(src).stem.replace("-", " ")
     return WordPressMediaUploadRequest(
@@ -786,129 +776,6 @@ def _media_upload_request(
         ssl_verify=ssl_verify,
         ca_bundle_path=ca_bundle_path,
         alt_text=alt_text,
-    )
-
-
-def _prepare_media_upload_payload(
-    *,
-    filename: str,
-    mime_type: str,
-    data: bytes,
-    ctx: RunContext,
-) -> _PreparedMediaPayload:
-    original_size = len(data)
-    if not str(mime_type or "").startswith("image/"):
-        return _PreparedMediaPayload(
-            filename=filename,
-            mime_type=mime_type,
-            data=data,
-            optimized=False,
-        )
-    try:
-        image = Image.open(BytesIO(data))
-        image.load()
-    except (OSError, ValueError, TypeError) as exc:
-        logger.info(
-            log_event(
-                ctx,
-                role="generator",
-                event="publish_media_optimization_skipped",
-                module=logger.name,
-                fields={
-                    "filename": filename,
-                    "reason": "image_decode_failed",
-                    "error": str(exc),
-                    "size": original_size,
-                },
-            )
-        )
-        return _PreparedMediaPayload(
-            filename=filename,
-            mime_type=mime_type,
-            data=data,
-            optimized=False,
-        )
-
-    original_width, original_height = image.size
-    needs_optimization = (
-        original_size > _MAX_MEDIA_UPLOAD_BYTES
-        or max(original_width, original_height) > _MAX_MEDIA_UPLOAD_DIMENSION_PX
-    )
-    if not needs_optimization:
-        return _PreparedMediaPayload(
-            filename=filename,
-            mime_type=mime_type,
-            data=data,
-            optimized=False,
-        )
-
-    image.thumbnail(
-        (_MAX_MEDIA_UPLOAD_DIMENSION_PX, _MAX_MEDIA_UPLOAD_DIMENSION_PX),
-        Image.Resampling.LANCZOS,
-    )
-    if image.mode in {"RGBA", "LA"} or "transparency" in image.info:
-        background = Image.new("RGB", image.size, (255, 255, 255))
-        rgba = image.convert("RGBA")
-        background.paste(rgba, mask=rgba.getchannel("A"))
-        output_image = background
-    else:
-        output_image = image.convert("RGB")
-    output = BytesIO()
-    output_image.save(
-        output,
-        format="JPEG",
-        quality=_MEDIA_JPEG_QUALITY,
-        optimize=True,
-        progressive=True,
-    )
-    optimized_data = output.getvalue()
-    if len(optimized_data) >= original_size:
-        logger.info(
-            log_event(
-                ctx,
-                role="generator",
-                event="publish_media_optimization_skipped",
-                module=logger.name,
-                fields={
-                    "filename": filename,
-                    "reason": "optimized_not_smaller",
-                    "original_size": original_size,
-                    "optimized_size": len(optimized_data),
-                    "width": original_width,
-                    "height": original_height,
-                },
-            )
-        )
-        return _PreparedMediaPayload(
-            filename=filename,
-            mime_type=mime_type,
-            data=data,
-            optimized=False,
-        )
-    optimized_filename = f"{Path(filename).stem}.jpg"
-    logger.info(
-        log_event(
-            ctx,
-            role="generator",
-            event="publish_media_optimized",
-            module=logger.name,
-            fields={
-                "filename": filename,
-                "optimized_filename": optimized_filename,
-                "original_size": original_size,
-                "optimized_size": len(optimized_data),
-                "original_width": original_width,
-                "original_height": original_height,
-                "optimized_width": output_image.size[0],
-                "optimized_height": output_image.size[1],
-            },
-        )
-    )
-    return _PreparedMediaPayload(
-        filename=optimized_filename,
-        mime_type="image/jpeg",
-        data=optimized_data,
-        optimized=True,
     )
 
 

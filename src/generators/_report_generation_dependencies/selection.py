@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from src.contracts.files import ReadTextRequest
+from src.contracts.files import JsonObjectCacheReadRequest, ReadTextRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
@@ -20,7 +20,7 @@ from src.contracts.report_assets import (
 )
 from src.contracts.run_context import RunContext
 from src.services import report_analysis_store_service
-from src.services.file_service import read_text
+from src.services.file_service import read_json_object_cache, read_text
 from src.services.pdf_service import (
     apply_crop_refine_bbox as apply_crop_refine_bbox_service,
     collect_candidates as collect_candidates_service,
@@ -51,6 +51,9 @@ class ReportSelectionDependencies:
     analysis_pack_path: Callable[[AnalysisPackPathRequest, RunContext], Any]
     analysis_store_pack: Callable[[AnalysisStorePackRequest, RunContext], Any]
     read_text: Callable[[ReadTextRequest, RunContext], Any]
+    read_json_object_cache: Callable[[JsonObjectCacheReadRequest, RunContext], Any] = (
+        read_json_object_cache
+    )
 
     @classmethod
     def default(cls) -> "ReportSelectionDependencies":
@@ -67,5 +70,5 @@ class ReportSelectionDependencies:
             analysis_pack_path=report_analysis_store_service.pack_path,
             analysis_store_pack=report_analysis_store_service.store_pack,
             read_text=read_text,
+            read_json_object_cache=read_json_object_cache,
         )
-

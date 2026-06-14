@@ -31,6 +31,66 @@ class ReadJsonResponse:
 
 
 @dataclass(frozen=True)
+class JsonObjectCacheReadRequest:
+    schema_version: str = field(
+        metadata={"doc": "JSON object cache read request schema version."}
+    )
+    path: str = field(metadata={"doc": "Filesystem path of the JSON cache entry."})
+
+
+@dataclass(frozen=True)
+class JsonObjectCacheReadResponse:
+    schema_version: str = field(
+        metadata={"doc": "JSON object cache read response schema version."}
+    )
+    path: str = field(metadata={"doc": "Filesystem path inspected."})
+    found: bool = field(metadata={"doc": "True when a valid JSON object was loaded."})
+    payload: Optional[Dict[str, Any]] = field(
+        metadata={"doc": "Loaded JSON object, or null when unavailable."}
+    )
+    reason: str = field(
+        metadata={
+            "doc": "Stable load result: loaded, missing, invalid_json, or invalid_type."
+        }
+    )
+
+
+@dataclass(frozen=True)
+class JsonObjectCacheWriteRequest:
+    schema_version: str = field(
+        metadata={"doc": "JSON object cache write request schema version."}
+    )
+    path: str = field(metadata={"doc": "Filesystem path of the JSON cache entry."})
+    payload: Dict[str, Any] = field(metadata={"doc": "JSON object to persist."})
+
+
+@dataclass(frozen=True)
+class JsonObjectCacheWriteResponse:
+    schema_version: str = field(
+        metadata={"doc": "JSON object cache write response schema version."}
+    )
+    path: str = field(metadata={"doc": "Filesystem path written."})
+    bytes_written: int = field(metadata={"doc": "Serialized byte count written."})
+
+
+@dataclass(frozen=True)
+class FileBundleHashRequest:
+    schema_version: str = field(
+        metadata={"doc": "File bundle hash request schema version."}
+    )
+    paths: List[str] = field(metadata={"doc": "Ordered filesystem paths to hash."})
+
+
+@dataclass(frozen=True)
+class FileBundleHashResponse:
+    schema_version: str = field(
+        metadata={"doc": "File bundle hash response schema version."}
+    )
+    sha256: str = field(metadata={"doc": "Deterministic SHA-256 for the file bundle."})
+    file_sha256: Dict[str, str] = field(metadata={"doc": "Per-path SHA-256 digests."})
+
+
+@dataclass(frozen=True)
 class StructuredLogLoadRequest:
     schema_version: str = field(
         metadata={"doc": "Structured-log load request schema version."}

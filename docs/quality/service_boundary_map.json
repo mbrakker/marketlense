@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "systems": {
+    "openai": {
+      "import_prefixes": [
+        "openai"
+      ],
+      "canonical_entrypoint": "src/services/openai_service.py",
+      "private_roots": [
+        "src/services/_openai_service/"
+      ]
+    }
+  }
+}

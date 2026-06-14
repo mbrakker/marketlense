@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
     ingest_settings, run_context, tmp_path
 ):
@@ -57,12 +58,9 @@ def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
             "rendered_page_count": 1,
         },
     }
+    cached_json_path.parent.mkdir(parents=True, exist_ok=True)
+    cached_json_path.write_text(json.dumps(cached_payload), encoding="utf-8")
     ocr_calls = {"count": 0}
-
-    def _read_text(req, ctx):
-        if req.path == str(cached_json_path):
-            return SimpleNamespace(content=json.dumps(cached_payload))
-        raise AppError(code="file_not_found", message="missing", retryable=False)
 
     def _file_stat(req, ctx):
         if req.path == str(cached_pdf_path):
@@ -97,7 +95,6 @@ def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
                 any_text=True,
             )
         ),
-        read_text=_read_text,
         file_stat=_file_stat,
         openai_ocr_pdf=lambda req, ctx: ocr_calls.__setitem__(
             "count", ocr_calls["count"] + 1
@@ -116,6 +113,7 @@ def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
     assert state.ocr_fallback_used is True
     assert state.analysis_pdf_path == str(cached_pdf_path)
     assert ocr_calls["count"] == 0
+
 
 def test_prepare_report_source_runs_single_openai_ocr_model(
     ingest_settings, run_context, tmp_path
@@ -196,6 +194,7 @@ def test_prepare_report_source_runs_single_openai_ocr_model(
     assert attempted_models == ["gpt-5-mini"]
     assert state.ocr_fallback_used is True
     assert state.analysis_pdf_path == str(tmp_path / "fallback-ocr.pdf")
+
 
 def test_prepare_report_source_maps_chunk_local_ocr_pages_to_original_page_numbers(
     ingest_settings, run_context, tmp_path
@@ -312,6 +311,7 @@ def test_prepare_report_source_maps_chunk_local_ocr_pages_to_original_page_numbe
     ]
     assert rendered_pages == [(1, "page 1"), (2, "page 2"), (3, "page 3")]
     assert state.analysis_pdf_path == str(tmp_path / "chunked-ocr.pdf")
+
 
 def test_prepare_report_source_accepts_blank_trailing_ocr_chunk(
     ingest_settings, run_context, tmp_path
@@ -439,6 +439,7 @@ def test_prepare_report_source_accepts_blank_trailing_ocr_chunk(
     assert state.text_status["not_available"] is False
     assert "Source page 1" in state.text_response.text
 
+
 def test_prepare_report_source_surfaces_pdf_text_ocr_failed(
     ingest_settings, run_context, tmp_path, assert_app_error
 ):
@@ -492,6 +493,7 @@ def test_prepare_report_source_surfaces_pdf_text_ocr_failed(
     assert exc_info.value.context["attempted_models"] == [
         runtime.settings.pdf_text_ocr_model,
     ]
+
 
 __all__ = [
     "test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr",

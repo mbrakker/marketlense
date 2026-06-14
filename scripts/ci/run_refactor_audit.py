@@ -13,7 +13,9 @@ def refactor_audit_commands() -> tuple[tuple[str, ...], ...]:
     return (
         ("python", "scripts/ci/check_split_symbol_links.py"),
         ("python", "scripts/ci/check_architecture_imports.py"),
-        ("python", "-m", "pytest", "tests/test_io_boundaries.py", "-q"),
+        ("python", "scripts/ci/check_role_io_boundaries.py"),
+        ("python", "scripts/ci/check_service_boundary_map.py"),
+        ("python", "scripts/ci/check_refactor_movement_evidence.py"),
         ("python", "scripts/count_long_files.py", "--root", "."),
     )
 

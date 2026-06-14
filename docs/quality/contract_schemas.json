@@ -14126,6 +14126,48 @@
       ],
       "type": "object"
     },
+    "src.contracts.files.FileBundleHashRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "paths"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.FileBundleHashResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "file_sha256": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "sha256",
+        "file_sha256"
+      ],
+      "type": "object"
+    },
     "src.contracts.files.FileExistsRequest": {
       "additionalProperties": false,
       "properties": {
@@ -14266,6 +14308,99 @@
         "exists",
         "size_bytes",
         "mtime_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.JsonObjectCacheReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.JsonObjectCacheReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "found": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "found",
+        "payload",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.JsonObjectCacheWriteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "payload"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.JsonObjectCacheWriteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes_written": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "bytes_written"
       ],
       "type": "object"
     },
@@ -26569,6 +26704,72 @@
         "app_password",
         "bearer_token",
         "post_status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress.WordPressMediaPrepareRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "contentEncoding": "base64",
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "mime_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "filename",
+        "mime_type",
+        "data"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress.WordPressMediaPrepareResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "contentEncoding": "base64",
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "mime_type": {
+          "type": "string"
+        },
+        "optimized": {
+          "type": "boolean"
+        },
+        "original_size_bytes": {
+          "type": "integer"
+        },
+        "prepared_size_bytes": {
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "filename",
+        "mime_type",
+        "data",
+        "optimized",
+        "reason",
+        "original_size_bytes",
+        "prepared_size_bytes"
       ],
       "type": "object"
     },

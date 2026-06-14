@@ -14,7 +14,7 @@ def _ctx() -> RunContext:
 
 def test_read_cache_json_propagates_retryable_read_error(assert_app_error):
     dependencies = SimpleNamespace(
-        read_text=lambda request, ctx: (_ for _ in ()).throw(
+        read_json_object_cache=lambda request, ctx: (_ for _ in ()).throw(
             AppError(
                 code="file_read_failed",
                 message="temporary cache read failure",
@@ -36,7 +36,7 @@ def test_read_cache_json_propagates_retryable_read_error(assert_app_error):
 
 def test_template_sha256_propagates_retryable_read_error(assert_app_error):
     dependencies = SimpleNamespace(
-        read_text=lambda request, ctx: (_ for _ in ()).throw(
+        hash_file_bundle=lambda request, ctx: (_ for _ in ()).throw(
             AppError(
                 code="file_read_failed",
                 message="temporary template read failure",
