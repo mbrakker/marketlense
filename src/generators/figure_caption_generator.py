@@ -364,8 +364,8 @@ def generate_figure_captions(
         legacy_primary_caption = "Representative figure from the source report."
     results: list[dict[str, Any]] = []
     updated_assets: list[ReportFigureAsset] = []
-    llm_client = llm_service.build_openai_client_from_callables(
-        policy=llm_service.openai_client_policy_from_settings(
+    llm_client = llm_service.build_client_from_callables(
+        policy=llm_service.client_policy_from_settings(
             runtime.settings,
             scope="figure_caption",
         ),

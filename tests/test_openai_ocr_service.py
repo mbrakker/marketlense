@@ -8,7 +8,7 @@ import pytest
 
 from src.contracts.openai import OpenAIPdfOcrRequest
 from src.contracts.run_context import RunContext
-from src.services.openai_service import OPENAI_OCR_RESPONSE_FORMAT, openai_ocr_pdf
+from src.services.llm_service import OPENAI_OCR_RESPONSE_FORMAT, openai_ocr_pdf
 from src.utils.errors import AppError
 from tests.support.fakes import FakeOpenAIResult
 
@@ -25,7 +25,7 @@ def _ctx() -> RunContext:
 def _events(caplog) -> list[dict[str, object]]:
     events: list[dict[str, object]] = []
     for record in caplog.records:
-        if record.name != "market_lense.openai_service":
+        if record.name != "market_lense.llm_service.openai":
             continue
         payload = json.loads(record.message)
         if isinstance(payload, dict):
@@ -50,7 +50,7 @@ def test_openai_ocr_service_sends_pdf_payload_and_adapts_response(
             id="resp_ocr_1",
         ),
     )
-    caplog.set_level(logging.INFO, logger="market_lense.openai_service")
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service.openai")
 
     response = openai_ocr_pdf(
         OpenAIPdfOcrRequest(

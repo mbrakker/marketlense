@@ -116,7 +116,7 @@ def run_report_pipeline(
     configured_retries = max(0, int(retries))
     base_delay_seconds = 1.0
     jitter_seconds = 0.25
-    evidence_openai_client = llm_service.build_openai_client_for_settings(
+    evidence_openai_client = llm_service.build_client_for_settings(
         settings,
         scope="evidence_pack",
         rate_limit_max_in_flight=evidence_max_in_flight,
@@ -125,7 +125,7 @@ def run_report_pipeline(
         sleep_fn=time.sleep,
         monotonic_fn=time.monotonic,
     )
-    artifact_openai_client = llm_service.build_openai_client_for_settings(
+    artifact_openai_client = llm_service.build_client_for_settings(
         settings,
         scope="artifact",
         rate_limit_max_in_flight=artifact_max_in_flight,

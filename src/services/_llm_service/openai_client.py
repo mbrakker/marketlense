@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.services._openai_service.base import *
+from src.services._llm_service.openai_shared import *
 
 
 def _require_api_key(api_key: str, *, operation: str) -> str:

@@ -23,7 +23,7 @@ Scoring:
 
 ## Current-State Evidence
 
-- OpenAI/LLM/vector-store ownership remains the highest-leverage unresolved boundary decision.
+- `llm_service.py` is now the canonical OpenAI, OpenRouter, generic LLM-policy, and vector-store provider boundary; `openai_service.py` remains only as a compatibility facade.
 - Model-client construction still occurs in multiple generators and requires an effort-4 dependency migration.
 - Large orchestrators, publish workflow surfaces, PDF facade exports, and WordPress render-time intelligence remain broad behavior-preserving refactors.
 - Contract fragmentation remains an architecture-level bounded-context review.
@@ -38,10 +38,14 @@ Scoring:
 
 ## 2026-06-14 Verification Evidence
 
-- Affected regression suite: `241 passed`.
-- Full functional suite: `3103 passed, 23 deselected`; the pre-existing long-test ownership gate remains excluded because two untouched test modules exceed 1,000 lines.
-- Coverage: 83.09% global, 84.85% orchestrators, 87.27% generators, and 82.38% services.
-- Mutation gate passed; changed `report_render_generator.py` and `publish_generator.py` targets each killed all four sampled mutants.
+- Full functional suite: `3113 passed, 23 deselected`.
+- Coverage: 83.11% global, 84.85% orchestrators, 87.27% generators, and 82.41% services.
+- Mutation gate passed; the changed LLM vector-store target killed its sampled mutant.
+- Architecture imports, service-boundary mapping, refactor movement evidence, forbidden patching, formatting, typing, and split-symbol gates passed.
+- First-party test and script files contain no modules over 1,000 lines.
+- Live OpenAI strict-JSON and OCR calls succeeded through `llm_service`; the OCR run used an existing project PDF and returned provider request metadata.
+- A live persisted vector-store status call succeeded through `llm_service`.
+- A live OpenRouter completion succeeded through `llm_service`, and the affected browser-download route completed with a structured `email_required` outcome after using the route's normal execution budget.
 - Existing HTML cache loaded through the typed cache service; template-bundle hashing was deterministic.
 - Existing 18,900,061-byte generated image was prepared as a 298,814-byte upload payload, a 98.4% reduction.
 - Real PDF candidate extraction processed an existing 1,159,172-byte PDF, produced three candidates with zero degraded pages, and produced byte-identical JSON on consecutive warm runs.
@@ -53,16 +57,6 @@ Scoring:
 
 ## 1. Canonical Service-Boundary Simplification
 
-- **Title:** Consolidate OpenAI and LLM service boundaries [Impact: 5/5, Effort: 5/5]
-  - Explanation: `openai_service.py` and `llm_service.py` both act as OpenAI-adjacent service boundaries. The first delegates provider operations; the second owns policy execution and client wrapping.
-  - Pros: Restores one canonical provider boundary and reduces navigation across OpenAI, LLM, and private service modules.
-  - Cons: Broad migration across generators, services, tests, and integration fixtures.
-  - Acceptance Criteria:
-    - One public OpenAI/LLM boundary owns provider selection, policy, retries that are truly transport-level, and response adaptation.
-    - Callers no longer choose between `openai_service` and `llm_service` for OpenAI operations.
-    - Provider responses still adapt into the same typed contracts.
-    - Tests cover chat JSON, image JSON, OCR, vector-store response calls, retryable failure, non-retryable failure, and structured logs.
-
 - **Title:** Clarify and enforce retry ownership between services and orchestrators [Impact: 5/5, Effort: 4/5]
   - Explanation: LLM policy code owns retry decisions, delay, jitter, rate limiting, and circuit breaker behavior, while architecture rules reserve workflow retries for orchestrators.
   - Pros: Prevents double retries, unexpected attempt counts, and timeout stacking.
@@ -72,14 +66,15 @@ Scoring:
     - Workflow retry remains orchestrator-owned and observable through retry decision logs.
     - Tests assert attempt counts when service retry and orchestrator retry are both configured.
 
-- **Title:** Reconcile vector-store access with the canonical OpenAI boundary [Impact: 5/5, Effort: 4/5]
-  - Explanation: `vector_store_service.py` routes OpenAI vector-store operations through `llm_service` and aliases it as `openai_service`.
-  - Pros: Makes vector-store ownership discoverable and removes misleading aliasing.
-  - Cons: Requires deciding whether vector stores are an OpenAI capability or a domain-level service over OpenAI.
+- **Title:** Remove the legacy `openai_service.py` compatibility facade [Impact: 3/5, Effort: 2/5]
+  - Explanation: Production callers now use the canonical `llm_service.py` boundary, but `openai_service.py` temporarily preserves historical imports.
+  - Pros: Removes the final duplicate provider-facing module name and makes LLM ownership unambiguous.
+  - Cons: Deleting the facade can break external or downstream callers that are not visible in this repository.
   - Acceptance Criteria:
-    - Vector-store operations call the canonical provider boundary directly or become a documented capability inside it.
-    - No alias makes `llm_service` appear to be `openai_service`.
-    - Tests cover create, upload, attach, status, metadata update, delete, prune, and error adaptation through the chosen boundary.
+    - Repository and known downstream consumers contain no imports of `src.services.openai_service`.
+    - The compatibility window and removal are documented.
+    - `openai_service.py`, its compatibility-map entry, and facade-only tests are removed together.
+    - OpenAI, OpenRouter, OCR, and vector-store integration checks still pass through `llm_service.py`.
 
 - **Title:** Audit top-level service proliferation and demote internal capabilities [Impact: 4/5, Effort: 4/5]
   - Explanation: Many top-level service files appear to be internal capabilities rather than true external-system boundaries.
@@ -193,7 +188,7 @@ Scoring:
 
 ### Phase 1: Boundary Corrections
 
-- Consolidate OpenAI/LLM/vector-store service ownership.
+- Remove the legacy `openai_service.py` compatibility facade after downstream-import verification.
 - Centralize model-client construction outside generators.
 
 ### Phase 2: Larger Workflow Simplification

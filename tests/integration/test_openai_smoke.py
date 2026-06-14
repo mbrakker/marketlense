@@ -6,7 +6,7 @@ import pytest
 
 from src.contracts.openai import OpenAIJSONPromptRequest
 from src.contracts.run_context import RunContext
-from src.services import openai_service
+from src.services import llm_service
 
 
 pytestmark = pytest.mark.integration
@@ -21,7 +21,7 @@ def test_openai_responses_smoke() -> None:
         pytest.skip("OPENAI_API_KEY is required for live OpenAI smoke test.")
 
     model = os.getenv("OPENAI_SMOKE_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
-    response = openai_service.openai_chat_json(
+    response = llm_service.openai_chat_json(
         OpenAIJSONPromptRequest(
             schema_version="1.0",
             system_prompt="Return strict JSON only.",

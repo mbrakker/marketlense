@@ -12,7 +12,7 @@ from src.contracts.openai import (
     OpenAIUsageAccountingResponse,
 )
 from src.contracts.run_context import RunContext
-from src.services import openai_accounting_service, openai_service as svc
+from src.services import llm_service as svc, openai_accounting_service
 from src.utils.errors import AppError
 
 
@@ -147,7 +147,7 @@ def test_openai_chat_json_semantic_response_cache_skips_repeated_provider_call(
     caplog,
     assert_logs_have_required_fields,
 ) -> None:
-    caplog.set_level(logging.INFO, logger="market_lense.openai_service")
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service.openai")
     call_count = {"value": 0}
 
     class _FakeChatCompletions:
@@ -189,7 +189,7 @@ def test_openai_chat_json_semantic_response_cache_skips_repeated_provider_call(
     events = [
         json.loads(record.message)
         for record in caplog.records
-        if record.name == "market_lense.openai_service"
+        if record.name == "market_lense.llm_service.openai"
     ]
     cache_events = [
         event

@@ -176,7 +176,9 @@ def test_record_usage_returns_typed_failure_when_ledger_append_fails(
 
 
 def test_openai_service_has_no_direct_cost_ledger_persistence_imports() -> None:
-    source = Path("src/services/openai_service.py").read_text(encoding="utf-8")
+    source = Path("src/services/_llm_service/openai_shared.py").read_text(
+        encoding="utf-8"
+    )
 
     assert "cost_ledger_service" not in source
     assert "CostLedgerEntry" not in source

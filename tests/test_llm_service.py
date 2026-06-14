@@ -263,3 +263,132 @@ def test_callable_builder_uses_explicit_provider_operations_contract() -> None:
     result = client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
 
     assert result.parsed_json == {"ok": True}
+
+
+def test_generic_builder_names_preserve_provider_operations_contract() -> None:
+    operations = LLMProviderOperations(
+        schema_version="1.0",
+        openai_chat_json=lambda req, ctx: SimpleNamespace(parsed_json={"ok": True}),
+    )
+
+    client = llm_service.build_client(
+        base_client=operations,
+        policy=LLMClientPolicy(schema_version="1.0", scope="generic-builder"),
+    )
+
+    result = client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
+
+    assert result.parsed_json == {"ok": True}
+    assert llm_service.build_openai_client is llm_service.build_client
+    assert (
+        llm_service.build_openai_client_from_callables
+        is llm_service.build_client_from_callables
+    )
+    assert (
+        llm_service.build_openai_client_for_settings
+        is llm_service.build_client_for_settings
+    )
+    assert (
+        llm_service.openai_client_policy_from_settings
+        is llm_service.client_policy_from_settings
+    )
+
+
+def test_openrouter_client_construction_is_owned_by_llm_service(
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service")
+    captured: list[dict[str, object]] = []
+
+    def _factory(**kwargs: object) -> object:
+        captured.append(dict(kwargs))
+        return SimpleNamespace(provider="openrouter")
+
+    settings = SimpleNamespace(
+        openrouter_api_key="secret-key",
+        model="openai/gpt-5-mini",
+        openrouter_http_referer="https://marketlense.local",
+        temperature=0.0,
+        timeout_seconds=30.0,
+    )
+
+    result = llm_service.build_openrouter_client(
+        settings=settings,
+        ctx=_ctx(),
+        client_factory=_factory,
+    )
+
+    assert result.provider == "openrouter"
+    assert captured == [
+        {
+            "model": "openai/gpt-5-mini",
+            "api_key": "secret-key",
+            "http_referer": "https://marketlense.local",
+            "temperature": 0.0,
+            "timeout": 30.0,
+        }
+    ]
+    events = _events(caplog)
+    relevant = [
+        event
+        for event in events
+        if event.get("event")
+        in {"llm_openrouter_client_start", "llm_openrouter_client_complete"}
+    ]
+    assert len(relevant) == 2
+    assert "secret-key" not in json.dumps(relevant)
+    assert_logs_have_required_fields(relevant)
+
+
+def test_openrouter_client_missing_key_raises_typed_error(
+    assert_app_error,
+) -> None:
+    settings = SimpleNamespace(
+        openrouter_api_key="",
+        model="openai/gpt-5-mini",
+        openrouter_http_referer=None,
+        temperature=0.0,
+        timeout_seconds=30.0,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        llm_service.build_openrouter_client(
+            settings=settings,
+            ctx=_ctx(),
+            client_factory=lambda **kwargs: object(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="openrouter_missing_api_key",
+        retryable=False,
+    )
+
+
+def test_openrouter_client_provider_failure_is_typed(
+    assert_app_error,
+) -> None:
+    settings = SimpleNamespace(
+        openrouter_api_key="secret-key",
+        model="openai/gpt-5-mini",
+        openrouter_http_referer=None,
+        temperature=0.0,
+        timeout_seconds=30.0,
+    )
+
+    def _factory(**kwargs: object) -> object:
+        raise RuntimeError("provider init failed")
+
+    with pytest.raises(AppError) as exc_info:
+        llm_service.build_openrouter_client(
+            settings=settings,
+            ctx=_ctx(),
+            client_factory=_factory,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="openrouter_client_init_failed",
+        retryable=True,
+    )

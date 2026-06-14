@@ -44,7 +44,7 @@ def validate_report(
     md5: Optional[str] = None,
 ) -> ValidationReport:
     ctx = ctx or new_run_context(task_id=f"validation:{request.report_id}")
-    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+    openai_client = openai_client or llm_service.build_client_for_settings(
         settings,
         scope="validation",
     )

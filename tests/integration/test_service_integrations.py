@@ -48,7 +48,6 @@ from src.services import (
     file_cache_service,
     _http_acquisition as http_acquisition_service,
     llm_service,
-    openai_service,
     pdf_service,
     vector_store_service,
 )
@@ -398,7 +397,7 @@ def test_openai_service_live_smoke_guarded(tmp_path):
     if not api_key:
         pytest.skip("OPENAI_API_KEY is required.")
 
-    response = openai_service.openai_chat_json(
+    response = llm_service.openai_chat_json(
         request=OpenAIJSONPromptRequest(
             schema_version="1.0",
             system_prompt="Return JSON only",
@@ -432,7 +431,7 @@ def test_llm_service_wraps_openai_service_retry_and_backoff(
     )
     sleep_calls: list[float] = []
     client = llm_service.build_openai_client(
-        base_client=openai_service,
+        base_client=llm_service,
         policy=LLMClientPolicy(
             schema_version="1.0",
             scope="integration-openai-chat",
@@ -529,8 +528,8 @@ def test_openai_service_live_ocr_guarded(
     )
     assert extracted.text.strip() == ""
 
-    caplog.set_level(logging.INFO, logger="market_lense.openai_service")
-    response = openai_service.openai_ocr_pdf(
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service.openai")
+    response = llm_service.openai_ocr_pdf(
         OpenAIPdfOcrRequest(
             schema_version="1.0",
             api_key=api_key,
@@ -550,5 +549,5 @@ def test_openai_service_live_ocr_guarded(
 
     assert response.pages
     assert any(page.text.strip() for page in response.pages)
-    events = _service_events(caplog, "market_lense.openai_service")
+    events = _service_events(caplog, "market_lense.llm_service.openai")
     assert_logs_have_required_fields(events)

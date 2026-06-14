@@ -38,7 +38,6 @@ from src.utils.logging import log_event, new_run_context
 
 logger = logging.getLogger("market_lense.vector_store_service")
 _T = TypeVar("_T")
-openai_service = llm_service
 
 
 def _ctx_or_new(ctx: Optional[RunContext]) -> RunContext:

@@ -417,7 +417,7 @@ BOUNDARY_EXPORT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "group_cross_report_evidence_agreement",
         "_agreement_type_and_reasons",
     ),
-    "src/services/_openai_service/base.py": (
+    "src/services/_llm_service/openai_shared.py": (
         "AppError",
         "OpenAIAnalyzeRequest",
         "OpenAIResponseResult",
@@ -428,7 +428,7 @@ BOUNDARY_EXPORT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "_classify_openai_request_error",
         "_record_usage_accounting",
     ),
-    "src/services/_openai_service/client.py": (
+    "src/services/_llm_service/openai_client.py": (
         "_build_openai_client",
         "_log_vector_store_event",
         "_require_openai_id",
@@ -440,7 +440,7 @@ BOUNDARY_EXPORT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
 STAR_LINK_TARGETS = (
     "src/services/_config_service/*.py",
     "src/services/_pdf/_visual_heuristics/*.py",
-    "src/services/_openai_service/*.py",
+    "src/services/_llm_service/*.py",
 )
 
 ORDERED_SUBMODULE_EXPORTS: dict[str, dict[str, str]] = {

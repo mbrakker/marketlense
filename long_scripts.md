@@ -25,7 +25,7 @@ The command uses `scripts/repository_analysis_exclusions.py` to exclude generate
 
 - Total first-party source-like files scanned: `1067`.
 - Skipped paths/files: `21` (`13` top-level runtime/temp directories, `7` outside first-party analysis roots, `1` vendored dependency tree).
-- The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, `openai_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
+- The previous February inventory is obsolete: the large public `pdf_service`, `config_service`, canonical `llm_service`, `artifact_generator`, `report_store_service`, and Streamlit page boundaries have already been decomposed or converted into facades.
 - Long first-party test files have generally been decomposed behind their original pytest entrypoint facades. `tests/test_long_test_file_ownership.py` enforces the 1,000-line first-party test-file threshold, but the current canonical scan reports `tests/test_publish_generator.py` at `1,003` lines.
 - Since the previous scan, browser artifact finalization has been decomposed internally: `src/services/_browser_report_download/artifact.py` is `703` lines, while classification is a compatibility surface over `_artifact/_classification/*`; its largest reported owner is `_artifact/_classification/evidence.py` at `792` lines.
 - Browser runtime execution has now been decomposed internally: `src/services/_browser_report_download/browser.py` is `671` lines, terminal asset capture is split behind `_browser_runtime/terminal_assets.py` into `_terminal_assets/{artifacts,capture,network,page_state}.py`, and session lifecycle is split behind `_browser_runtime/session_lifecycle.py` into `_session_lifecycle/{history,partial_history,cleanup,shutdown}.py`.
@@ -75,7 +75,7 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 
 - `src/services/pdf_service.py` over `src/services/_pdf/*`.
 - `src/services/config_service.py` over `src/services/_config_service/*`.
-- `src/services/openai_service.py` over `src/services/_openai_service/*`.
+- `src/services/llm_service.py` over `src/services/_llm_service/*`; `openai_service.py` is compatibility-only.
 - `src/services/report_store_service.py` over `src/services/_report_store_service/*`.
 - `src/services/state_service.py` over `src/services/_state_service/*`.
 - `src/services/publisher_inventory_service.py` over `src/services/_publisher_inventory_service/*`.

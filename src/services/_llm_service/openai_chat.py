@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from src.services._openai_service.base import *
-from src.services._openai_service.client import *
+from src.services._llm_service.openai_shared import *
+from src.services._llm_service.openai_client import *
 
 
 @dataclass(frozen=True)

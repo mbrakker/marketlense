@@ -17,7 +17,7 @@ from src.contracts.openai import (
     OpenAIVectorStoreUpdateMetadataRequest,
 )
 from src.contracts.run_context import RunContext
-from src.services import openai_service as svc
+from src.services import llm_service as svc
 
 
 def _ctx() -> RunContext:
@@ -27,7 +27,7 @@ def _ctx() -> RunContext:
 def _events(caplog) -> list[dict[str, object]]:
     events: list[dict[str, object]] = []
     for record in caplog.records:
-        if record.name != "market_lense.openai_service":
+        if record.name != "market_lense.llm_service.openai":
             continue
         payload = json.loads(record.message)
         if isinstance(payload, dict):
@@ -496,7 +496,7 @@ def test_openai_vector_store_create_success(
     assert_no_defaulted_required_fields,
 ) -> None:
     fake_openai.add("vector_stores.create", {"id": "vs_123"})
-    caplog.set_level(logging.INFO, logger="market_lense.openai_service")
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service.openai")
 
     resp = svc.openai_vector_store_create(
         OpenAIVectorStoreCreateRequest(

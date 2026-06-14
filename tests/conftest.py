@@ -12,7 +12,7 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
-from src.services import openai_service, wordpress_service
+from src.services import llm_service, wordpress_service
 from src.utils.errors import AppError
 from tests.support.fakes import FakeOpenAIBoundary, RequestsRouter
 
@@ -305,6 +305,6 @@ def fake_openai(
 ) -> FakeOpenAIBoundary:
     boundary = FakeOpenAIBoundary()
     external_boundary_mocks_only.setattr(
-        openai_service.openai_legacy, "OpenAI", boundary.client_factory
+        llm_service.openai_legacy, "OpenAI", boundary.client_factory
     )
     return boundary

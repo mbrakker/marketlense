@@ -233,7 +233,7 @@ def generate_evidence_packs(
     analysis_store=report_analysis_store_service,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
-    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+    openai_client = openai_client or llm_service.build_client_for_settings(
         settings,
         scope="evidence_pack_generator",
     )

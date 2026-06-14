@@ -189,7 +189,7 @@ def screen_publisher_inventory_candidates(
             ctx=ctx,
         )
 
-    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+    openai_client = openai_client or llm_service.build_client_for_settings(
         request.settings,
         scope="publisher_inventory_candidate_screening",
     )

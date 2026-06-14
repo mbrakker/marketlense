@@ -387,15 +387,11 @@ def _targets() -> Iterable[MutationTarget]:
             min_score=75.0,
         ),
         MutationTarget(
-            module_path=ROOT
-            / "src"
-            / "services"
-            / "_openai_service"
-            / "vector_store.py",
+            module_path=ROOT / "src" / "services" / "_llm_service" / "vector_store.py",
             test_paths=("tests/test_openai_vector_store.py",),
             max_mutants=3,
             min_score=60.0,
-            report_module="src/services/openai_service.py",
+            report_module="src/services/llm_service.py",
         ),
         MutationTarget(
             module_path=ROOT

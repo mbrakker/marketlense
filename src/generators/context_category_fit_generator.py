@@ -34,7 +34,7 @@ def fit_report_categories_from_context(
     prompt_client=prompt_service,
     mapping_client=load_category_mappings,
 ) -> ContextCategoryFitResponse:
-    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+    openai_client = openai_client or llm_service.build_client_for_settings(
         request.settings,
         scope="context_category_fit",
     )

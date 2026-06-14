@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from src.services._openai_service.base import *
-from src.services._openai_service.client import *
+from src.services._llm_service.openai_shared import *
+from src.services._llm_service.openai_client import *
+
 
 def openai_vector_store_create(
     request: OpenAIVectorStoreCreateRequest, ctx: RunContext
@@ -191,9 +192,7 @@ def openai_vector_store_delete(
         timeout_seconds=request.timeout_seconds,
         spec=_VECTOR_STORE_DELETE_OPERATION,
         ctx=ctx,
-        request_fn=lambda client: client.vector_stores.delete(
-            request.vector_store_id
-        ),
+        request_fn=lambda client: client.vector_stores.delete(request.vector_store_id),
         error_context={"vector_store_id": request.vector_store_id},
     )
     deleted_id = _value_from_response(resp, "id") or request.vector_store_id
@@ -247,5 +246,6 @@ def openai_vector_store_update_metadata(
     return OpenAIVectorStoreUpdateMetadataResponse(
         schema_version="1.0", vector_store_id=updated_id
     )
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

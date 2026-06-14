@@ -46,7 +46,7 @@ from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import log_event
 
-logger = logging.getLogger("market_lense.openai_service")
+logger = logging.getLogger("market_lense.llm_service.openai")
 SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION = "1.0"
 SEMANTIC_RESPONSE_CACHE_SUBDIR = "semantic_responses"
 OPENAI_ERROR_TYPES: tuple[type[Exception], ...] = tuple(

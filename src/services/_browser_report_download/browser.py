@@ -59,6 +59,7 @@ from src.services._browser_report_download.session_reuse import (
     finalize_browser_session_reuse,
     resolve_browser_session_reuse,
 )
+from src.services import llm_service
 from src.utils.coercion import normalize_optional_bool_signal
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -312,12 +313,10 @@ def run_browser_report_download_agent(
             auto_download_pdfs=True,
             keep_alive=True,
         )
-        llm = browser_use.ChatOpenRouter(
-            model=request.settings.model,
-            api_key=request.settings.openrouter_api_key,
-            http_referer=request.settings.openrouter_http_referer,
-            temperature=request.settings.temperature,
-            timeout=request.settings.timeout_seconds,
+        llm = llm_service.build_openrouter_client(
+            settings=request.settings,
+            ctx=ctx,
+            client_factory=browser_use.ChatOpenRouter,
         )
         agent = browser_use.Agent(
             task=prompt_bundle.task_prompt,

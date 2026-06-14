@@ -64,8 +64,8 @@ def test_service_boundary_gate_rejects_new_peer_provider_entrypoint(tmp_path) ->
         "systems": {
             "openai": {
                 "import_prefixes": ["openai"],
-                "canonical_entrypoint": "src/services/openai_service.py",
-                "private_roots": ["src/services/_openai_service/"],
+                "canonical_entrypoint": "src/services/llm_service.py",
+                "private_roots": ["src/services/_llm_service/"],
             }
         }
     }

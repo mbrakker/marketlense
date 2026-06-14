@@ -180,8 +180,8 @@ def recover_pdf_text_with_ocr(
     models_used: list[str] = []
     request_ids: list[str] = []
     raw_chunks: list[dict[str, object]] = []
-    llm_client = llm_service.build_openai_client_from_callables(
-        policy=llm_service.openai_client_policy_from_settings(
+    llm_client = llm_service.build_client_from_callables(
+        policy=llm_service.client_policy_from_settings(
             runtime.settings,
             scope="pdf_text_ocr",
         ),

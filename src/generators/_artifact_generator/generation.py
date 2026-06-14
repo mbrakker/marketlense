@@ -90,7 +90,7 @@ def generate_artifacts(
     artifact_step_executor: Optional[ArtifactStepExecutor] = None,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
-    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+    openai_client = openai_client or llm_service.build_client_for_settings(
         settings,
         scope="artifact_generator",
     )

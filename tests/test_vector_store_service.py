@@ -85,7 +85,7 @@ def test_create_vector_store(monkeypatch: pytest.MonkeyPatch):
             schema_version="1.0", vector_store_id="vs_123"
         )
 
-    monkeypatch.setattr(svc.openai_service, "openai_vector_store_create", _create)
+    monkeypatch.setattr(svc.llm_service, "openai_vector_store_create", _create)
     resp = svc.create_vector_store(
         VectorStoreCreateRequest(
             schema_version="1.0",
@@ -113,7 +113,7 @@ def test_upload_file(monkeypatch: pytest.MonkeyPatch, tmp_path):
             schema_version="1.0", openai_file_id="file_123"
         )
 
-    monkeypatch.setattr(svc.openai_service, "openai_vector_store_upload_file", _upload)
+    monkeypatch.setattr(svc.llm_service, "openai_vector_store_upload_file", _upload)
     pdf = tmp_path / "f.pdf"
     pdf.write_bytes(b"hello")
     resp = svc.upload_file(
@@ -137,7 +137,7 @@ def test_attach_file(monkeypatch: pytest.MonkeyPatch):
             openai_file_id="file_123",
         )
 
-    monkeypatch.setattr(svc.openai_service, "openai_vector_store_attach_file", _attach)
+    monkeypatch.setattr(svc.llm_service, "openai_vector_store_attach_file", _attach)
     resp = svc.attach_file(
         VectorStoreAttachFileRequest(
             schema_version="1.0",
@@ -161,7 +161,7 @@ def test_get_vector_store_status(monkeypatch: pytest.MonkeyPatch):
             last_error=None,
         )
 
-    monkeypatch.setattr(svc.openai_service, "openai_vector_store_status", _status)
+    monkeypatch.setattr(svc.llm_service, "openai_vector_store_status", _status)
     resp = svc.get_vector_store_status(
         VectorStoreStatusRequest(
             schema_version="1.0",
@@ -184,7 +184,7 @@ def test_delete_vector_store_handles_missing_remote_asset(
             retryable=False,
         )
 
-    monkeypatch.setattr(svc.openai_service, "openai_vector_store_delete", _delete)
+    monkeypatch.setattr(svc.llm_service, "openai_vector_store_delete", _delete)
 
     resp = svc.delete_vector_store(
         VectorStoreDeleteRequest(
@@ -220,7 +220,7 @@ def test_prune_vector_stores_deduplicates_and_reports_deletions(
             deleted=True,
         )
 
-    monkeypatch.setattr(svc.openai_service, "openai_vector_store_delete", _delete)
+    monkeypatch.setattr(svc.llm_service, "openai_vector_store_delete", _delete)
 
     resp = svc.prune_vector_stores(
         VectorStorePruneRequest(

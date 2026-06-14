@@ -27,7 +27,7 @@ openai_chat_json_with_images = llm_service.openai_chat_json_with_images
 
 
 def _rank_llm_policy(scope: str) -> LLMClientPolicy:
-    return llm_service.default_openai_client_policy(scope=scope)
+    return llm_service.default_client_policy(scope=scope)
 
 
 def _to_bbox(
@@ -142,7 +142,7 @@ def rank_candidates(request: RankRequest, ctx: RunContext) -> RankResponse:
         )
     )
     try:
-        llm_client = llm_service.build_openai_client_from_callables(
+        llm_client = llm_service.build_client_from_callables(
             policy=_rank_llm_policy("rank_candidates"),
             openai_chat_json=openai_chat_json,
         )
@@ -238,7 +238,7 @@ def refine_candidate_crops(
             },
         )
     )
-    llm_client = llm_service.build_openai_client_from_callables(
+    llm_client = llm_service.build_client_from_callables(
         policy=_rank_llm_policy("crop_refine"),
         openai_chat_json_with_images=openai_chat_json_with_images,
     )

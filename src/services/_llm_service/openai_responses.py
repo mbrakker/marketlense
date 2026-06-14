@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from src.services._openai_service.base import *
-from src.services._openai_service.client import *
+from src.services._llm_service.openai_shared import *
+from src.services._llm_service.openai_client import *
+
 
 def openai_ocr_pdf(
     request: OpenAIPdfOcrRequest, ctx: RunContext
@@ -376,5 +377,6 @@ def openai_respond_with_vector_store(
         response_payload=asdict(result),
     )
     return result
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

@@ -1,4 +1,53 @@
 {
   "schema_version": "1.0",
-  "records": []
+  "records": [
+    {
+      "original_file": "src/services/_openai_service/base.py",
+      "baseline_ref": "HEAD:src/services/_openai_service/base.py",
+      "moved_symbol_count": 33,
+      "unchanged_moved_symbol_count": 33,
+      "changed_moved_symbol_count": 0,
+      "facade_owned_definitions": []
+    },
+    {
+      "original_file": "src/services/_openai_service/client.py",
+      "baseline_ref": "HEAD:src/services/_openai_service/client.py",
+      "moved_symbol_count": 6,
+      "unchanged_moved_symbol_count": 6,
+      "changed_moved_symbol_count": 0,
+      "facade_owned_definitions": []
+    },
+    {
+      "original_file": "src/services/_openai_service/chat.py",
+      "baseline_ref": "HEAD:src/services/_openai_service/chat.py",
+      "moved_symbol_count": 7,
+      "unchanged_moved_symbol_count": 7,
+      "changed_moved_symbol_count": 0,
+      "facade_owned_definitions": []
+    },
+    {
+      "original_file": "src/services/_openai_service/responses.py",
+      "baseline_ref": "HEAD:src/services/_openai_service/responses.py",
+      "moved_symbol_count": 2,
+      "unchanged_moved_symbol_count": 2,
+      "changed_moved_symbol_count": 0,
+      "facade_owned_definitions": []
+    },
+    {
+      "original_file": "src/services/_openai_service/vector_store.py",
+      "baseline_ref": "HEAD:src/services/_openai_service/vector_store.py",
+      "moved_symbol_count": 6,
+      "unchanged_moved_symbol_count": 6,
+      "changed_moved_symbol_count": 0,
+      "facade_owned_definitions": []
+    },
+    {
+      "original_file": "src/services/llm_service.py",
+      "baseline_ref": "HEAD:src/services/llm_service.py",
+      "moved_symbol_count": 33,
+      "unchanged_moved_symbol_count": 17,
+      "changed_moved_symbol_count": 16,
+      "facade_owned_definitions": []
+    }
+  ]
 }

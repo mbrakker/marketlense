@@ -711,7 +711,7 @@ def generate_cross_report_analysis(
                 ),
             },
         )
-    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+    openai_client = openai_client or llm_service.build_client_for_settings(
         settings,
         scope="cross_report_analysis",
     )
