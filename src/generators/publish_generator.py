@@ -463,6 +463,8 @@ def _report_card_post_meta(
     media_ids: dict[str, int],
 ) -> dict[str, object]:
     return {
+        "ml_time_period": manifest.covered_period,
+        "ml_region": manifest.geography_label,
         "ml_card_schema_version": manifest.schema_version,
         "ml_card_title_scale": manifest.title_scale,
         "ml_card_tldr_compact": manifest.tldr_compact,

@@ -10520,8 +10520,14 @@ body {
   border-radius: 1rem 0 0 1rem;
 }
 
+.ml-card--medium .ml-card__cover,
+.ml-card--large .ml-card__cover {
+  object-fit: contain;
+}
+
 .ml-card--medium .ml-card__media {
-  aspect-ratio: 4 / 5;
+  align-self: stretch;
+  aspect-ratio: auto;
 }
 
 .ml-card--medium .ml-card__body {
@@ -10541,7 +10547,8 @@ body {
 }
 
 .ml-card--large .ml-card__media {
-  aspect-ratio: 3 / 4;
+  align-self: stretch;
+  aspect-ratio: auto;
 }
 
 .ml-card--large .ml-card__body {
@@ -10569,6 +10576,7 @@ body {
 
   .ml-card--medium .ml-card__media,
   .ml-card--large .ml-card__media {
+    align-self: auto;
     aspect-ratio: 16 / 10;
     border-radius: 1rem 1rem 0 0;
   }

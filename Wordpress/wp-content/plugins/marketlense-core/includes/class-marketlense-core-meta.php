@@ -288,6 +288,30 @@ final class Meta
     }
 
     /**
+     * Limits report-card listings to posts migrated to the canonical card contract.
+     *
+     * @param array<string,mixed> $query_args
+     * @return array<string,mixed>
+     */
+    public static function apply_report_card_query_constraints(array $query_args): array
+    {
+        $query_args = self::apply_digest_query_constraints($query_args);
+        $card_contract_query = [
+            'key' => self::META_CARD_SCHEMA_VERSION,
+            'value' => '1.0',
+            'compare' => '=',
+        ];
+        $meta_query = $query_args['meta_query'] ?? [];
+        $query_args['meta_query'] = [
+            'relation' => 'AND',
+            $meta_query,
+            $card_contract_query,
+        ];
+
+        return $query_args;
+    }
+
+    /**
      * Backfills metadata and publisher term projections for legacy reports.
      */
     public function backfill_report_contracts(): void

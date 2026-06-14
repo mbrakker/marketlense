@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 1.6.1
+Stable tag: 1.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,10 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.6.2 =
+* Report and publisher archives now paginate only canonical report-card contracts instead of producing empty grids from skipped legacy posts.
+* Forced report-card publication now synchronizes covered-period and geography metadata from the card manifest.
 
 = 1.6.1 =
 * Prevented incomplete legacy report-card contracts from causing fatal errors during migration.

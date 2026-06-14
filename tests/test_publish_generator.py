@@ -797,6 +797,8 @@ def test_publish_html_uploads_three_card_covers_and_sends_registered_meta(
         "Global Economic Conditions Quarterly Update"
     )
     assert post_call.json_data["meta"] == {
+        "ml_time_period": "Q2 2026",
+        "ml_region": "Global",
         "ml_card_schema_version": "1.0",
         "ml_card_title_scale": "long",
         "ml_card_tldr_compact": "Complete compact TLDR.",
@@ -864,6 +866,8 @@ def test_publish_html_updates_existing_report_card_post_in_place(
     ]
     assert set(update_call.json_data) == {"featured_media", "meta"}
     assert update_call.json_data["featured_media"] == 303
+    assert update_call.json_data["meta"]["ml_time_period"] == "Q2 2026"
+    assert update_call.json_data["meta"]["ml_region"] == "Global"
     assert update_call.json_data["meta"]["ml_card_cover_small_id"] == 301
     assert (
         wordpress_http.calls_for(

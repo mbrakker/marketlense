@@ -197,7 +197,7 @@ final class Shortcodes
             $query_args['tax_query'] = $tax_query;
         }
 
-        $query_args = Meta::apply_digest_query_constraints($query_args);
+        $query_args = Meta::apply_report_card_query_constraints($query_args);
         $query = new \WP_Query($query_args);
         $is_topic_fallback = false;
         if (
@@ -469,7 +469,7 @@ final class Shortcodes
         }
 
         $query = new \WP_Query(
-            Meta::apply_digest_query_constraints(
+            Meta::apply_report_card_query_constraints(
                 [
                     'post_status' => 'publish',
                     'posts_per_page' => $limit,

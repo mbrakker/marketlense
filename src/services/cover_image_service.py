@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
+import re
 from pathlib import Path
 from typing import List, Tuple
 
@@ -103,7 +104,21 @@ def _wrap_text(
             continue
         if current:
             lines.append(current)
-        current = word
+            current = ""
+        if _text_bbox(draw, word, font)[0] <= max_width:
+            current = word
+            continue
+        fragments = re.findall(r"[^-]+-?", word)
+        if len(fragments) <= 1:
+            current = word
+            continue
+        for fragment in fragments:
+            candidate = f"{current}{fragment}"
+            if current and _text_bbox(draw, candidate, font)[0] > max_width:
+                lines.append(current)
+                current = fragment
+            else:
+                current = candidate
     if current:
         lines.append(current)
     return lines

@@ -34,6 +34,10 @@ def test_default_cover_style_exposes_three_canonical_layouts() -> None:
         1200,
         1600,
     )
+    medium = config.layouts["medium"]
+    assert medium.publisher_font_min >= 36
+    assert medium.title_font_min >= 52
+    assert medium.period_font_min >= 30
     assert not hasattr(config, "categories")
 
 

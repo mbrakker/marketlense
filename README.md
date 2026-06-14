@@ -719,6 +719,13 @@ Use `python -m src.cli publish-wp --force-report-cards` only for canonical
 report-card migrations. It uploads the three generated cover assets and updates
 the matched existing WordPress report post in place.
 
+Medium and large report cards stretch their cover panel to the full desktop card
+height. Their generated portrait covers use display-aware typography floors so
+publisher, complete report title, and covered period remain readable after the
+cover is scaled into the card column. These text-bearing covers use contained
+image fitting so the full title and period remain visible instead of being
+cropped when card content changes the panel aspect ratio.
+
 WordPress credentials and publish controls come from root `.env` / `app.yaml`:
 
 - `WP_SITE_URL`

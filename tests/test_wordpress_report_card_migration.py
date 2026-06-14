@@ -45,6 +45,15 @@ INTELLIGENCE_STATS = (
     / "includes"
     / "class-marketlense-core-intelligence-stats.php"
 )
+META = (
+    ROOT
+    / "Wordpress"
+    / "wp-content"
+    / "plugins"
+    / "marketlense-core"
+    / "includes"
+    / "class-marketlense-core-meta.php"
+)
 THEME = ROOT / "Wordpress" / "wp-content" / "themes" / "marketlense"
 THEME_CSS = THEME / "assets" / "css" / "theme.css"
 THEME_STYLE = THEME / "style.css"
@@ -162,6 +171,27 @@ def test_report_placements_reject_invalid_contracts_before_rendering() -> None:
         assert "return '';" in feature[validation:rendering]
 
 
+def test_report_list_queries_paginate_only_canonical_card_contracts() -> None:
+    shortcodes = SHORTCODES.read_text(encoding="utf-8")
+    meta = META.read_text(encoding="utf-8")
+    report_browser = _method_source(
+        shortcodes,
+        "render_report_browser",
+        "render_latest_reports",
+    )
+    latest_reports = _method_source(
+        shortcodes,
+        "render_latest_reports",
+        "render_home_metrics",
+    )
+
+    assert "public static function apply_report_card_query_constraints" in meta
+    assert "self::META_CARD_SCHEMA_VERSION" in meta
+    assert "'value' => '1.0'" in meta
+    assert "Meta::apply_report_card_query_constraints($query_args)" in report_browser
+    assert "Meta::apply_report_card_query_constraints(" in latest_reports
+
+
 def test_latest_report_selects_newest_valid_card_contract() -> None:
     source = INTELLIGENCE_STATS.read_text(encoding="utf-8")
     latest_report = _method_source(
@@ -236,6 +266,17 @@ def test_canonical_card_css_preserves_all_semantic_text() -> None:
     assert "text-wrap: pretty" in canonical
     assert ":focus-visible" in canonical
     assert "prefers-reduced-motion: reduce" in canonical
+    assert (
+        ".ml-card--medium .ml-card__media {\n"
+        "  align-self: stretch;\n"
+        "  aspect-ratio: auto;"
+    ) in canonical
+    assert (
+        ".ml-card--medium .ml-card__cover,\n"
+        ".ml-card--large .ml-card__cover {\n"
+        "  object-fit: contain;"
+    ) in canonical
+    assert "align-self: auto;\n    aspect-ratio: 16 / 10;" in canonical
 
 
 def test_report_card_release_metadata_and_documentation_are_complete() -> None:
@@ -246,11 +287,11 @@ def test_report_card_release_metadata_and_documentation_are_complete() -> None:
         encoding="utf-8"
     )
 
-    assert "Version: 1.6.1" in plugin
-    assert "MARKETLENSE_CORE_VERSION', '1.6.1'" in plugin
-    assert "Stable tag: 1.6.1" in plugin_readme
-    assert "= 1.6.1 =" in plugin_readme
-    assert "Version: 1.5.0" in theme
+    assert "Version: 1.6.2" in plugin
+    assert "MARKETLENSE_CORE_VERSION', '1.6.2'" in plugin
+    assert "Stable tag: 1.6.2" in plugin_readme
+    assert "= 1.6.2 =" in plugin_readme
+    assert "Version: 1.5.2" in theme
 
     for required_text in (
         "small",
