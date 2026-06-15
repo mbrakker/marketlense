@@ -73,6 +73,7 @@ def test_openai_response_with_vector_store_writes_ledger(tmp_path, fake_openai) 
     assert fake_openai.calls["responses.create"][0]["tools"][0]["vector_store_ids"] == [
         "vs_123"
     ]
+    assert fake_openai.client_kwargs[0]["max_retries"] == 0
 
 
 def test_openai_response_with_vector_store_requires_vector_store_id(
@@ -157,8 +158,9 @@ def test_openai_response_with_vector_store_parses_fenced_json(fake_openai) -> No
     assert result.parsed_json == {"result": "ok"}
 
 
-def test_openai_response_with_vector_store_retries_unsupported_temperature(
+def test_openai_response_with_vector_store_does_not_retry_unsupported_temperature(
     fake_openai,
+    assert_app_error,
 ) -> None:
     fake_openai.add(
         "responses.create",
@@ -166,24 +168,23 @@ def test_openai_response_with_vector_store_retries_unsupported_temperature(
             "Error code: 400 - {'error': {'message': \"Unsupported parameter: 'temperature' is not supported with this model.\", 'type': 'invalid_request_error', 'param': 'temperature', 'code': None}}"
         ),
     )
-    fake_openai.queue_response_text(json.dumps({"result": "ok"}))
     req = OpenAIResponseRequest(
         schema_version="1.0",
         system_prompt="system",
         user_prompt="user",
         vector_store_id="vs_123",
-        model="gpt-5-mini",
+        model="custom-vector-model",
         temperature=0.2,
         api_key="key",
         seed=None,
     )
 
-    result = svc.openai_respond_with_vector_store(req, _ctx())
+    with pytest.raises(Exception) as exc_info:
+        svc.openai_respond_with_vector_store(req, _ctx())
 
-    first_call, second_call = fake_openai.calls["responses.create"]
-    assert result.parsed_json == {"result": "ok"}
-    assert "temperature" in first_call
-    assert "temperature" not in second_call
+    assert_app_error(exc_info.value, code="openai_bad_request", retryable=False)
+    assert len(fake_openai.calls["responses.create"]) == 1
+    assert "temperature" in fake_openai.calls["responses.create"][0]
 
 
 def test_openai_response_with_vector_store_preserves_prompt_text(fake_openai) -> None:
@@ -234,8 +235,10 @@ def test_openai_chat_json_with_images_skips_known_unsupported_params(
     assert "seed" not in call
 
 
-def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
-    tmp_path, fake_openai
+def test_openai_chat_json_with_images_does_not_retry_unknown_unsupported_param(
+    tmp_path,
+    fake_openai,
+    assert_app_error,
 ) -> None:
     image_path = tmp_path / "test.png"
     image_path.write_bytes(b"fake-image")
@@ -245,7 +248,6 @@ def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
             "Error code: 400 - {'error': {'message': \"Unsupported parameter: 'temperature' is not supported with this model.\", 'type': 'invalid_request_error', 'param': 'temperature', 'code': None}}"
         ),
     )
-    fake_openai.queue_response_text(json.dumps({"results": []}))
     req = OpenAIJSONImagePromptRequest(
         schema_version="1.0",
         system_prompt="return json",
@@ -261,12 +263,12 @@ def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
         model_pricing={},
     )
 
-    result = svc.openai_chat_json_with_images(req, _ctx())
+    with pytest.raises(Exception) as exc_info:
+        svc.openai_chat_json_with_images(req, _ctx())
 
-    first_call, second_call = fake_openai.calls["responses.create"]
-    assert result.parsed_json == {"results": []}
-    assert "temperature" in first_call
-    assert "temperature" not in second_call
+    assert_app_error(exc_info.value, code="openai_bad_request", retryable=False)
+    assert len(fake_openai.calls["responses.create"]) == 1
+    assert "temperature" in fake_openai.calls["responses.create"][0]
 
 
 @pytest.mark.parametrize(
@@ -511,7 +513,9 @@ def test_openai_vector_store_create_success(
 
     assert resp.vector_store_id == "vs_123"
     assert_no_defaulted_required_fields(resp)
-    assert fake_openai.client_kwargs == [{"api_key": "key", "timeout": 12.0}]
+    assert fake_openai.client_kwargs == [
+        {"api_key": "key", "max_retries": 0, "timeout": 12.0}
+    ]
     assert fake_openai.calls["vector_stores.create"][0]["name"] == "report"
     assert_logs_have_required_fields(_events(caplog))
 

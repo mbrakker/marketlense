@@ -257,27 +257,27 @@ class PublisherInventorySettings:
         },
     )
     llm_retry_retries: int = field(
-        default=1,
+        default=0,
         metadata={
-            "doc": "Maximum retry count for individual candidate-screening LLM calls."
+            "doc": "Legacy compatibility value; candidate-screening service retries are disabled."
         },
     )
     llm_retry_base_delay_seconds: float = field(
-        default=1.0,
+        default=0.0,
         metadata={
-            "doc": "Base delay in seconds before the first candidate-screening LLM retry."
+            "doc": "Legacy compatibility value; candidate-screening service retry delay is disabled."
         },
     )
     llm_retry_backoff_step_seconds: float = field(
-        default=1.0,
+        default=0.0,
         metadata={
-            "doc": "Additional linear backoff delay added per candidate-screening LLM retry attempt."
+            "doc": "Legacy compatibility value; candidate-screening service backoff is disabled."
         },
     )
     llm_retry_jitter_seconds: float = field(
-        default=0.25,
+        default=0.0,
         metadata={
-            "doc": "Maximum jitter in seconds added to each candidate-screening LLM retry delay."
+            "doc": "Legacy compatibility value; candidate-screening service retry jitter is disabled."
         },
     )
     llm_circuit_breaker_failure_threshold: int = field(

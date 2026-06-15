@@ -31,6 +31,7 @@ def build_openrouter_client(
         ),
         "temperature": getattr(settings, "temperature", None),
         "timeout_seconds": getattr(settings, "timeout_seconds", None),
+        "max_retries": 0,
     }
     logger.info(
         log_event(
@@ -48,6 +49,7 @@ def build_openrouter_client(
             http_referer=getattr(settings, "openrouter_http_referer", None),
             temperature=getattr(settings, "temperature", None),
             timeout=getattr(settings, "timeout_seconds", None),
+            max_retries=0,
         )
     except (RuntimeError, OSError, TypeError, ValueError) as exc:
         logger.info(

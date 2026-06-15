@@ -15,20 +15,26 @@ class LLMClientPolicy:
         }
     )
     retries: int = field(
-        default=1,
-        metadata={"doc": "Maximum retry count after the initial LLM call attempt."},
+        default=0,
+        metadata={
+            "doc": "Legacy compatibility value; ignored because orchestrators own retries."
+        },
     )
     base_delay_seconds: float = field(
-        default=1.0,
-        metadata={"doc": "Base delay in seconds before the first retry."},
+        default=0.0,
+        metadata={
+            "doc": "Legacy compatibility value; service retry delay is disabled."
+        },
     )
     backoff_step_seconds: float = field(
-        default=1.0,
-        metadata={"doc": "Additional linear backoff delay added per retry attempt."},
+        default=0.0,
+        metadata={"doc": "Legacy compatibility value; service backoff is disabled."},
     )
     jitter_seconds: float = field(
-        default=0.25,
-        metadata={"doc": "Maximum random jitter in seconds added to retry delays."},
+        default=0.0,
+        metadata={
+            "doc": "Legacy compatibility value; service retry jitter is disabled."
+        },
     )
     rate_limit_max_in_flight: Optional[int] = field(
         default=None,

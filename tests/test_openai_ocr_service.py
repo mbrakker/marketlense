@@ -68,7 +68,9 @@ def test_openai_ocr_service_sends_pdf_payload_and_adapts_response(
         _ctx(),
     )
 
-    assert fake_openai.client_kwargs == [{"api_key": "openai-key", "timeout": 45.0}]
+    assert fake_openai.client_kwargs == [
+        {"api_key": "openai-key", "max_retries": 0, "timeout": 45.0}
+    ]
     call = fake_openai.calls["responses.create"][0]
     assert call["model"] == "gpt-5-mini"
     assert call["instructions"] == "system"

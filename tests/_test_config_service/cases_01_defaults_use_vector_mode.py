@@ -3,7 +3,35 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
+    def test_nonzero_llm_service_retry_configuration_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["llm"] = {
+                "retries": 0,
+                "base_delay_seconds": 1.0,
+                "backoff_step_seconds": 0.0,
+                "jitter_seconds": 0.0,
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                with self.assertRaises(AppError) as exc_info:
+                    load_settings(
+                        ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                        RunContext(
+                            schema_version="1.0",
+                            run_id="r",
+                            task_id="t",
+                            span_id="s",
+                        ),
+                    )
+
+        self.assertEqual("llm_service_retry_config_forbidden", exc_info.exception.code)
+        self.assertFalse(exc_info.exception.retryable)
+
     def test_defaults_use_vector_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)
@@ -679,5 +707,6 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
         self.assertEqual(0.31, settings.candidate_page_gate_min_score)
         self.assertEqual(7, settings.candidate_page_gate_min_recall_pages)
         self.assertEqual(0.42, settings.candidate_page_gate_min_recall_page_fraction)
+
 
 __all__ = ["TestConfigService01DefaultsUseVectorMode"]

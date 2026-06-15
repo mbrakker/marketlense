@@ -514,7 +514,9 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
     assert tracking_client.max_active["chat"] <= 2
 
 
-def test_run_report_pipeline_uses_shared_llm_retry_policy(monkeypatch) -> None:
+def test_run_report_pipeline_owns_retry_around_single_attempt_llm_service(
+    monkeypatch,
+) -> None:
     file = DriveFile(
         schema_version="1.0",
         file_id="f1",
@@ -524,9 +526,9 @@ def test_run_report_pipeline_uses_shared_llm_retry_policy(monkeypatch) -> None:
     )
     settings = replace(
         _settings(),
-        llm_retry_retries=1,
-        llm_retry_base_delay_seconds=1.0,
-        llm_retry_backoff_step_seconds=1.0,
+        llm_retry_retries=0,
+        llm_retry_base_delay_seconds=0.0,
+        llm_retry_backoff_step_seconds=0.0,
         llm_retry_jitter_seconds=0.0,
         evidence_pack_global_min_interval_ms=0,
         artifact_global_min_interval_ms=0,
@@ -535,6 +537,7 @@ def test_run_report_pipeline_uses_shared_llm_retry_policy(monkeypatch) -> None:
     monkeypatch.setattr(
         orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds))
     )
+    monkeypatch.setattr(retry_orch.random, "uniform", lambda _low, _high: 0.0)
 
     class _RetryThenSucceedClient:
         def __init__(self) -> None:
@@ -586,7 +589,7 @@ def test_run_report_pipeline_uses_shared_llm_retry_policy(monkeypatch) -> None:
         settings=settings,
         md5="md5",
         ctx=_ctx(),
-        retries=0,
+        retries=1,
         generate_report_fn=_gen,
         openai_client_override=base_client,
     )

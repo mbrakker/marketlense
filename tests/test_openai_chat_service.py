@@ -85,7 +85,9 @@ def test_openai_chat_json_uses_modern_chat_completion(monkeypatch, tmp_path) -> 
     assert result.output_tokens == 5
     assert result.tool_calls == 0
     assert result.total_tokens == 17
-    assert captured_client_kwargs == [{"api_key": "key", "timeout": 5.0}]
+    assert captured_client_kwargs == [
+        {"api_key": "key", "max_retries": 0, "timeout": 5.0}
+    ]
     assert captured_payloads[0]["response_format"] == {"type": "json_object"}
     assert captured_payloads[0]["seed"] == 7
 
@@ -295,15 +297,17 @@ def test_openai_chat_json_maps_content_filter_to_non_retryable_refusal(
     assert exc_info.value.context["provider_error_type"] == "RuntimeError"
 
 
-def test_legacy_chat_completion_timeout_does_not_leak_between_requests(
+def test_legacy_chat_completion_policy_does_not_leak_between_requests(
     external_boundary_mocks_only, tmp_path
 ) -> None:
     observed_timeouts: list[float | None] = []
+    observed_max_retries: list[int | None] = []
 
     class _FakeLegacyChatCompletion:
         @staticmethod
         def create(**kwargs):
             observed_timeouts.append(getattr(svc.openai_legacy, "timeout", None))
+            observed_max_retries.append(getattr(svc.openai_legacy, "max_retries", None))
             return {
                 "id": "legacy_chat_1",
                 "choices": [{"message": {"content": json.dumps({"ok": True})}}],
@@ -336,6 +340,8 @@ def test_legacy_chat_completion_timeout_does_not_leak_between_requests(
 
     had_timeout = hasattr(svc.openai_legacy, "timeout")
     original_timeout = getattr(svc.openai_legacy, "timeout", None)
+    had_max_retries = hasattr(svc.openai_legacy, "max_retries")
+    original_max_retries = getattr(svc.openai_legacy, "max_retries", None)
     try:
         if had_timeout:
             delattr(svc.openai_legacy, "timeout")
@@ -346,9 +352,15 @@ def test_legacy_chat_completion_timeout_does_not_leak_between_requests(
         svc.openai_chat_json(_request(None), _ctx())
 
         assert observed_timeouts == [1.5, None]
+        assert observed_max_retries == [0, 0]
         assert hasattr(svc.openai_legacy, "timeout") is False
+        assert getattr(svc.openai_legacy, "max_retries", None) == original_max_retries
     finally:
         if had_timeout:
             svc.openai_legacy.timeout = original_timeout
         elif hasattr(svc.openai_legacy, "timeout"):
             delattr(svc.openai_legacy, "timeout")
+        if had_max_retries:
+            svc.openai_legacy.max_retries = original_max_retries
+        elif hasattr(svc.openai_legacy, "max_retries"):
+            delattr(svc.openai_legacy, "max_retries")

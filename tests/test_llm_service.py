@@ -28,31 +28,30 @@ def _events(caplog) -> list[dict[str, object]]:
     return events
 
 
-def test_llm_service_retries_with_backoff(
+def test_llm_service_propagates_retryable_error_without_retrying(
     caplog,
+    assert_app_error,
     assert_logs_have_required_fields,
 ) -> None:
     caplog.set_level(logging.INFO, logger="market_lense.llm_service")
     calls = {"count": 0}
     sleeps: list[float] = []
 
-    class _FailThenSucceedClient:
+    class _RetryableFailureClient:
         def openai_chat_json(self, req, ctx):
             calls["count"] += 1
-            if calls["count"] == 1:
-                raise AppError(
-                    code="openai_chat_failed",
-                    message="retry me",
-                    retryable=True,
-                )
-            return SimpleNamespace(schema_version="1.0", parsed_json={"ok": True})
+            raise AppError(
+                code="openai_chat_failed",
+                message="retry at orchestrator",
+                retryable=True,
+            )
 
     client = llm_service.build_openai_client(
-        base_client=_FailThenSucceedClient(),
+        base_client=_RetryableFailureClient(),
         policy=LLMClientPolicy(
             schema_version="1.0",
-            scope="llm-service-retry",
-            retries=1,
+            scope="llm-service-single-attempt",
+            retries=3,
             base_delay_seconds=1.0,
             backoff_step_seconds=1.0,
             jitter_seconds=0.0,
@@ -63,24 +62,26 @@ def test_llm_service_retries_with_backoff(
         monotonic_fn=lambda: 100.0,
     )
 
-    response = client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
+    with pytest.raises(AppError) as exc_info:
+        client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
 
-    assert response.parsed_json == {"ok": True}
-    assert calls["count"] == 2
-    assert sleeps == [1.0]
+    assert_app_error(exc_info.value, code="openai_chat_failed", retryable=True)
+    assert calls["count"] == 1
+    assert sleeps == []
     events = _events(caplog)
     retry_events = [event for event in events if event.get("event") == "llm_call_retry"]
-    complete_events = [
-        event for event in events if event.get("event") == "llm_call_complete"
+    failed_events = [
+        event for event in events if event.get("event") == "llm_call_failed"
     ]
-    assert len(retry_events) == 1
-    assert len(complete_events) == 1
-    assert_logs_have_required_fields(retry_events + complete_events)
-    retry_fields = cast(dict[str, Any], retry_events[0]["fields"])
-    assert retry_fields["operation"] == "openai_chat_json"
-    assert retry_fields["attempt"] == 1
-    assert retry_fields["delay_seconds"] == 1.0
-    assert retry_fields["code"] == "openai_chat_failed"
+    assert retry_events == []
+    assert len(failed_events) == 1
+    assert_logs_have_required_fields(failed_events)
+    failed_fields = cast(dict[str, Any], failed_events[0]["fields"])
+    assert failed_fields["operation"] == "openai_chat_json"
+    assert failed_fields["attempt"] == 0
+    assert failed_fields["retry_owner"] == "orchestrator"
+    assert failed_fields["service_attempt_limit"] == 1
+    assert failed_fields["legacy_configured_retries"] == 3
 
 
 def test_llm_service_opens_circuit_after_repeated_failures(
@@ -327,6 +328,7 @@ def test_openrouter_client_construction_is_owned_by_llm_service(
             "http_referer": "https://marketlense.local",
             "temperature": 0.0,
             "timeout": 30.0,
+            "max_retries": 0,
         }
     ]
     events = _events(caplog)

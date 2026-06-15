@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import random
 import threading
 from dataclasses import dataclass
 from typing import Callable, TypeVar
@@ -67,15 +66,6 @@ def _llm_retry_decision(exc: Exception) -> _LLMRetryDecision:
 
 def _is_retryable_llm_error(exc: Exception) -> bool:
     return _llm_retry_decision(exc).retryable
-
-
-def _retry_delay_seconds(policy: LLMClientPolicy, attempt_index: int) -> float:
-    delay = float(policy.base_delay_seconds) + (
-        float(policy.backoff_step_seconds) * float(attempt_index)
-    )
-    if policy.jitter_seconds > 0:
-        delay += random.uniform(0.0, float(policy.jitter_seconds))
-    return max(0.0, delay)
 
 
 def _policy_scope(policy: LLMClientPolicy, operation_name: str) -> str:
@@ -358,10 +348,9 @@ def _execute_with_policy(
             fields={
                 "operation": operation_name,
                 "scope": policy.scope,
-                "retries": policy.retries,
-                "base_delay_seconds": policy.base_delay_seconds,
-                "backoff_step_seconds": policy.backoff_step_seconds,
-                "jitter_seconds": policy.jitter_seconds,
+                "retry_owner": "orchestrator",
+                "service_attempt_limit": 1,
+                "legacy_configured_retries": policy.retries,
                 "rate_limit_max_in_flight": policy.rate_limit_max_in_flight,
                 "rate_limit_min_interval_ms": policy.rate_limit_min_interval_ms,
                 "circuit_breaker_failure_threshold": policy.circuit_breaker_failure_threshold,
@@ -369,96 +358,74 @@ def _execute_with_policy(
             },
         )
     )
-    retries = max(0, int(policy.retries))
-    attempt = 0
-    while True:
-        state, half_open_probe = _before_circuit_call(
+    state, half_open_probe = _before_circuit_call(
+        ctx=ctx,
+        operation_name=operation_name,
+        policy=policy,
+        monotonic_fn=monotonic_fn,
+    )
+    try:
+        result = _with_rate_limit(
             ctx=ctx,
             operation_name=operation_name,
             policy=policy,
+            sleep_fn=sleep_fn,
             monotonic_fn=monotonic_fn,
+            call=call,
         )
-        try:
-            result = _with_rate_limit(
-                ctx=ctx,
-                operation_name=operation_name,
-                policy=policy,
-                sleep_fn=sleep_fn,
-                monotonic_fn=monotonic_fn,
-                call=call,
-            )
-        except Exception as exc:
-            _record_circuit_failure(
-                ctx=ctx,
-                operation_name=operation_name,
-                policy=policy,
-                state=state,
-                half_open_probe=half_open_probe,
-                monotonic_fn=monotonic_fn,
-                exc=exc,
-            )
-            retry_decision = _llm_retry_decision(exc)
-            retryable = retry_decision.retryable
-            if not retryable or attempt >= retries:
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="service",
-                        event="llm_call_failed",
-                        module=logger.name,
-                        fields={
-                            "operation": operation_name,
-                            "scope": policy.scope,
-                            "attempt": attempt,
-                            "retryable": retryable,
-                            "retry_decision_code": retry_decision.reason_code,
-                            "code": exc.code if isinstance(exc, AppError) else "",
-                            "error": exc.message
-                            if isinstance(exc, AppError)
-                            else str(exc),
-                        },
-                    )
-                )
-                raise
-            retry_delay = _retry_delay_seconds(policy, attempt)
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="llm_call_retry",
-                    module=logger.name,
-                    fields={
-                        "operation": operation_name,
-                        "scope": policy.scope,
-                        "attempt": attempt + 1,
-                        "delay_seconds": retry_delay,
-                        "retry_decision_code": retry_decision.reason_code,
-                        "code": exc.code if isinstance(exc, AppError) else "",
-                        "error": exc.message if isinstance(exc, AppError) else str(exc),
-                    },
-                )
-            )
-            sleep_fn(retry_delay)
-            attempt += 1
-            continue
-        _record_circuit_success(
+    except Exception as exc:
+        _record_circuit_failure(
             ctx=ctx,
             operation_name=operation_name,
             policy=policy,
             state=state,
             half_open_probe=half_open_probe,
+            monotonic_fn=monotonic_fn,
+            exc=exc,
         )
+        retry_decision = _llm_retry_decision(exc)
         logger.info(
             log_event(
                 ctx,
                 role="service",
-                event="llm_call_complete",
+                event="llm_call_failed",
                 module=logger.name,
                 fields={
                     "operation": operation_name,
                     "scope": policy.scope,
-                    "attempt": attempt,
+                    "attempt": 0,
+                    "retryable": retry_decision.retryable,
+                    "retry_decision_code": retry_decision.reason_code,
+                    "retry_owner": "orchestrator",
+                    "service_attempt_limit": 1,
+                    "legacy_configured_retries": policy.retries,
+                    "code": exc.code if isinstance(exc, AppError) else "",
+                    "error": exc.message if isinstance(exc, AppError) else str(exc),
                 },
             )
         )
-        return result
+        raise
+    _record_circuit_success(
+        ctx=ctx,
+        operation_name=operation_name,
+        policy=policy,
+        state=state,
+        half_open_probe=half_open_probe,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_call_complete",
+            module=logger.name,
+            fields={
+                "operation": operation_name,
+                "scope": policy.scope,
+                "attempt": 0,
+                "retry_owner": "orchestrator",
+                "service_attempt_limit": 1,
+                "legacy_configured_retries": policy.retries,
+            },
+        )
+    )
+    return result

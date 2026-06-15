@@ -19,7 +19,8 @@ def _build_openai_client(
     *, api_key: str, timeout_seconds: float | None, operation: str
 ) -> Any:
     client_kwargs: dict[str, Any] = {
-        "api_key": _require_api_key(api_key, operation=operation)
+        "api_key": _require_api_key(api_key, operation=operation),
+        "max_retries": 0,
     }
     if timeout_seconds is not None:
         client_kwargs["timeout"] = timeout_seconds

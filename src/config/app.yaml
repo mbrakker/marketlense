@@ -28,10 +28,10 @@ ingest:
   taxonomy_temperature: 1.0
   timeout_seconds: 600
   llm:
-    retries: 1
-    base_delay_seconds: 1.0
-    backoff_step_seconds: 1.0
-    jitter_seconds: 0.25
+    retries: 0
+    base_delay_seconds: 0.0
+    backoff_step_seconds: 0.0
+    jitter_seconds: 0.0
     circuit_breaker_failure_threshold: 3
     circuit_breaker_recovery_seconds: 30.0
   lock_ttl_seconds: 7200

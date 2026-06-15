@@ -95,8 +95,8 @@ REQUIRED_KEYS = (
     "time_period",
 )
 
-_RESPONSES_IMAGE_UNSUPPORTED_PARAM_PREFIXES: dict[str, tuple[str, ...]] = {
-    # GPT-5 image calls via Responses API reject temperature/seed.
+_RESPONSES_UNSUPPORTED_PARAM_PREFIXES: dict[str, tuple[str, ...]] = {
+    # GPT-5 calls via Responses API reject temperature/seed.
     "gpt-5": ("temperature", "seed"),
 }
 OPENAI_OCR_RESPONSE_FORMAT = {
@@ -516,24 +516,6 @@ def _validate_payload(data: dict) -> None:
         raise ValueError("`time_period` is required")
 
 
-def _extract_unsupported_parameter(exc: Exception) -> str | None:
-    message = str(exc)
-    match = re.search(r"Unsupported parameter:\s*'([^']+)'", message)
-    if match:
-        return str(match.group(1))
-    param = getattr(exc, "param", None)
-    if isinstance(param, str) and param.strip():
-        return param.strip()
-    body = getattr(exc, "body", None)
-    if isinstance(body, dict):
-        error_obj = body.get("error")
-        if isinstance(error_obj, dict):
-            body_param = error_obj.get("param")
-            if isinstance(body_param, str) and body_param.strip():
-                return body_param.strip()
-    return None
-
-
 def _openai_error_status_code(exc: Exception) -> int | None:
     status = getattr(exc, "status_code", None)
     if status is None:
@@ -585,6 +567,8 @@ def _classify_openai_request_error(
         )
     if "authentication" in error_type or "invalid_api_key" in combined:
         return ("openai_authentication_failed", "OpenAI authentication failed", False)
+    if "unsupported parameter" in combined or "invalid_request_error" in combined:
+        return ("openai_bad_request", "OpenAI request was rejected permanently", False)
     status_code = _openai_error_status_code(exc)
     if status_code in {400, 401, 403, 404} or "badrequest" in error_type:
         return ("openai_bad_request", "OpenAI request was rejected permanently", False)
@@ -600,47 +584,10 @@ def _strip_json_fence(text: str) -> str:
     return strip_json_fence(text)
 
 
-def _responses_create_with_unsupported_param_retry(
-    *,
-    client: Any,
-    payload_args: dict,
-    fallback_params: tuple[str, ...],
-    ctx: RunContext,
-    event_name: str,
-    model: str,
-) -> Any:
-    attempt_args = dict(payload_args)
-    while True:
-        try:
-            return client.responses.create(**attempt_args)
-        except OPENAI_REQUEST_EXCEPTIONS as exc:
-            unsupported_param = _extract_unsupported_parameter(exc)
-            if (
-                unsupported_param not in fallback_params
-                or unsupported_param not in attempt_args
-            ):
-                raise
-            attempt_args.pop(unsupported_param, None)
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event=event_name,
-                    module=logger.name,
-                    fields={
-                        "model": model,
-                        "dropped_param": unsupported_param,
-                        "error_type": type(exc).__name__,
-                        "error": str(exc),
-                    },
-                )
-            )
-
-
-def _known_unsupported_image_params(model: str) -> set[str]:
+def _known_unsupported_responses_params(model: str) -> set[str]:
     normalized = str(model or "").strip().lower()
     unsupported: set[str] = set()
-    for prefix, params in _RESPONSES_IMAGE_UNSUPPORTED_PARAM_PREFIXES.items():
+    for prefix, params in _RESPONSES_UNSUPPORTED_PARAM_PREFIXES.items():
         if normalized.startswith(prefix):
             unsupported.update(params)
     return unsupported
@@ -881,7 +828,7 @@ __all__ = [
     "SEMANTIC_RESPONSE_CACHE_SUBDIR",
     "WriteBytesRequest",
     "_OpenAIResponseMetadata",
-    "_RESPONSES_IMAGE_UNSUPPORTED_PARAM_PREFIXES",
+    "_RESPONSES_UNSUPPORTED_PARAM_PREFIXES",
     "_SemanticResponseCacheSpec",
     "_VECTOR_STORE_ATTACH_OPERATION",
     "_VECTOR_STORE_CREATE_OPERATION",
@@ -898,10 +845,9 @@ __all__ = [
     "_coerce_pdf_ocr_pages",
     "_extract_responses_output_text",
     "_extract_responses_usage",
-    "_extract_unsupported_parameter",
     "_file_fingerprint",
     "_image_path_to_data_url",
-    "_known_unsupported_image_params",
+    "_known_unsupported_responses_params",
     "_ocr_response_from_cache",
     "_openai_error_body_code",
     "_openai_error_status_code",
@@ -910,7 +856,6 @@ __all__ = [
     "_parse_response_json",
     "_read_semantic_response_cache",
     "_record_usage_accounting",
-    "_responses_create_with_unsupported_param_retry",
     "_semantic_response_cache_spec",
     "_sha256_payload",
     "_sha256_text",

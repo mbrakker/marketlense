@@ -29,8 +29,11 @@ def _legacy_chat_completion_call(
     # fails (e.g., unexpected kwargs like proxies in older dependencies).
     previous_timeout = getattr(openai_legacy, "timeout", None)
     had_timeout_attr = hasattr(openai_legacy, "timeout")
+    previous_max_retries = getattr(openai_legacy, "max_retries", None)
+    had_max_retries_attr = hasattr(openai_legacy, "max_retries")
     legacy_openai = cast(Any, openai_legacy)
     legacy_openai.api_key = api_key
+    legacy_openai.max_retries = 0
     try:
         if timeout_seconds is not None:
             legacy_openai.timeout = timeout_seconds
@@ -68,6 +71,13 @@ def _legacy_chat_completion_call(
                 delattr(legacy_openai, "timeout")
             except AttributeError:
                 had_timeout_attr = False
+        if had_max_retries_attr:
+            legacy_openai.max_retries = previous_max_retries
+        else:
+            try:
+                delattr(legacy_openai, "max_retries")
+            except AttributeError:
+                had_max_retries_attr = False
 
 
 def _modern_chat_completion_call(
@@ -83,7 +93,7 @@ def _modern_chat_completion_call(
     client_factory = _openai_client_factory()
     if client_factory is None:
         raise TypeError("OpenAI client not available")
-    client_kwargs: dict = {"api_key": api_key}
+    client_kwargs: dict = {"api_key": api_key, "max_retries": 0}
     if timeout_seconds is not None:
         client_kwargs["timeout"] = timeout_seconds
     client = client_factory(**client_kwargs)
@@ -501,7 +511,7 @@ def openai_chat_json_with_images(
                 {"role": "user", "content": user_content},
             ],
         }
-        known_unsupported = _known_unsupported_image_params(request.model)
+        known_unsupported = _known_unsupported_responses_params(request.model)
         if request.temperature is not None and "temperature" not in known_unsupported:
             payload_args["temperature"] = request.temperature
         if request.seed is not None and "seed" not in known_unsupported:
@@ -519,14 +529,7 @@ def openai_chat_json_with_images(
                     },
                 )
             )
-        resp = _responses_create_with_unsupported_param_retry(
-            client=client,
-            payload_args=payload_args,
-            fallback_params=("temperature", "seed"),
-            ctx=ctx,
-            event_name="openai_chat_json_with_images_retry_without_param",
-            model=request.model,
-        )
+        resp = client.responses.create(**payload_args)
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:

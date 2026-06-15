@@ -1,6 +1,6 @@
 # Simplification Backlog
 
-Last audited: 2026-06-14
+Last audited: 2026-06-15
 
 This file captures the top simplification, decomplexification, reuse, and removal opportunities found in the current repository state. It intentionally mirrors the concise backlog style of `CONSOLIDATED_TODO.md`: ordered by leverage, measurable before implementation, and constrained by the architectural rules in `AGENTS.md`.
 
@@ -54,18 +54,21 @@ Scoring:
 - Investigation-only items were closed with retained-path evidence in `docs/quality/simplification-audit-2026-06-14.md`.
 - The quality-regression gate's code coverage, mutation, and candidate metrics passed. Its unrelated docpack schema check remains red because existing golden artifacts predate required `cover_semantics` and `card_tldr_compact` fields; those fixtures and schemas were not changed or synthesized.
 
+## 2026-06-15 Retry-Ownership Verification Evidence
+
+- LLM services now perform exactly one provider attempt; OpenAI and OpenRouter SDK retries are explicitly disabled with `max_retries=0`.
+- Orchestrators are the sole retry/backoff owner. Focused tests prove a retryable service error propagates after one call and an orchestrator performs the bounded second attempt.
+- Nonzero `ingest.llm` retry, delay, backoff, or jitter settings fail configuration loading with typed `llm_service_retry_config_forbidden`.
+- Known GPT-5 Responses API parameter incompatibilities are omitted before the first request; unknown unsupported parameters fail once as typed non-retryable bad requests.
+- Full functional suite: `3113 passed, 23 deselected`; coverage passed at 83.13% global, 84.85% orchestrators, 87.27% generators, and 82.45% services.
+- Mutation, formatting, typing, architecture imports, forbidden patching, repository hygiene, contract schema, and prompt fixture regression gates passed.
+- Fresh live calls passed for OpenAI strict JSON, OCR on the existing Bain PDF, persisted vector-store status, vector-backed GPT-5 response, and OpenRouter completion.
+- The Consumer Edge browser-download feature completed through the real OpenRouter/browser path as `email_delivery / email_required` with typed `blocked_unknown_required_enum`; its OpenRouter construction log recorded `max_retries=0`.
+- The pre-existing quality-regression comparator remains red because its February baseline still names removed `openai_service.py` and committed golden artifact fixtures predate required `cover_semantics` and `card_tldr_compact` fields. No fixtures were synthesized or changed.
+
 ---
 
 ## 1. Canonical Service-Boundary Simplification
-
-- **Title:** Clarify and enforce retry ownership between services and orchestrators [Impact: 5/5, Effort: 4/5]
-  - Explanation: LLM policy code owns retry decisions, delay, jitter, rate limiting, and circuit breaker behavior, while architecture rules reserve workflow retries for orchestrators.
-  - Pros: Prevents double retries, unexpected attempt counts, and timeout stacking.
-  - Cons: Requires a precise split between transport resilience and workflow retry semantics.
-  - Acceptance Criteria:
-    - Transport-level retry, if retained, is documented as service-local and bounded below orchestration timeouts.
-    - Workflow retry remains orchestrator-owned and observable through retry decision logs.
-    - Tests assert attempt counts when service retry and orchestrator retry are both configured.
 
 - **Title:** Audit top-level service proliferation and demote internal capabilities [Impact: 4/5, Effort: 4/5]
   - Explanation: Many top-level service files appear to be internal capabilities rather than true external-system boundaries.

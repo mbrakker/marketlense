@@ -32,6 +32,7 @@ from src.contracts.openai import (
 from src.contracts.pdf_text import PdfTextExtractRequest
 from src.contracts.pdf_utils import PdfInfoRequest
 from src.contracts.run_context import RunContext
+from src.orchestrators import retry_orchestrator
 from src.contracts.vector_store import (
     VectorStoreCreateRequest,
     VectorStoreMetadata,
@@ -416,7 +417,7 @@ def test_llm_service_live_smoke_guarded(tmp_path):
 
 
 @pytest.mark.integration
-def test_llm_service_applies_retry_and_backoff(
+def test_orchestrator_owns_retry_around_single_attempt_llm_service(
     tmp_path: Path,
     fake_openai,
 ) -> None:
@@ -429,7 +430,8 @@ def test_llm_service_applies_retry_and_backoff(
             id="resp_retry_ok",
         ),
     )
-    sleep_calls: list[float] = []
+    service_sleep_calls: list[float] = []
+    orchestrator_sleep_calls: list[float] = []
     client = llm_service.build_openai_client(
         base_client=llm_service,
         policy=LLMClientPolicy(
@@ -442,28 +444,42 @@ def test_llm_service_applies_retry_and_backoff(
             circuit_breaker_failure_threshold=0,
             circuit_breaker_recovery_seconds=0.0,
         ),
-        sleep_fn=lambda seconds: sleep_calls.append(float(seconds)),
+        sleep_fn=lambda seconds: service_sleep_calls.append(float(seconds)),
     )
 
-    response = client.openai_respond_with_vector_store(
-        OpenAIResponseRequest(
-            schema_version="1.0",
-            system_prompt="Return JSON only",
-            user_prompt='{"ping":"pong"}',
-            vector_store_id="vs_123",
-            model="gpt-4.1-mini",
-            temperature=0.0,
-            api_key="openai-key",
-            timeout_seconds=30.0,
-            cost_ledger_path=str(tmp_path / "ledger.jsonl"),
-            cost_daily_path=str(tmp_path / "daily.json"),
-            model_pricing={},
+    request = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="Return JSON only",
+        user_prompt='{"ping":"pong"}',
+        vector_store_id="vs_123",
+        model="gpt-4.1-mini",
+        temperature=0.0,
+        api_key="openai-key",
+        timeout_seconds=30.0,
+        cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+        cost_daily_path=str(tmp_path / "daily.json"),
+        model_pricing={},
+    )
+    response = retry_orchestrator.run_with_retry(
+        step_name="integration_llm_call",
+        operation=lambda: client.openai_respond_with_vector_store(request, _ctx()),
+        ctx=_ctx(),
+        logger=logging.getLogger("market_lense.integration_retry_owner"),
+        module_name="market_lense.integration_retry_owner",
+        policy=retry_orchestrator.RetryPolicy(
+            retries=1,
+            base_delay_seconds=0.5,
+            backoff_step_seconds=0.0,
+            jitter_seconds=0.0,
         ),
-        _ctx(),
+        retry_event="integration_llm_retry",
+        sleep_fn=lambda seconds: orchestrator_sleep_calls.append(float(seconds)),
     )
 
     assert response.parsed_json == {"ok": True}
-    assert sleep_calls == [0.5]
+    assert len(fake_openai.calls["responses.create"]) == 2
+    assert service_sleep_calls == []
+    assert orchestrator_sleep_calls == [0.5]
 
 
 def _service_events(caplog, logger_name: str) -> list[dict[str, object]]:

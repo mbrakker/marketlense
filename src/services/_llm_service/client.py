@@ -197,16 +197,10 @@ def client_policy_from_settings(
     return LLMClientPolicy(
         schema_version="1.0",
         scope=scope,
-        retries=max(0, int(getattr(settings, "llm_retry_retries", 1))),
-        base_delay_seconds=max(
-            0.0, float(getattr(settings, "llm_retry_base_delay_seconds", 1.0))
-        ),
-        backoff_step_seconds=max(
-            0.0, float(getattr(settings, "llm_retry_backoff_step_seconds", 1.0))
-        ),
-        jitter_seconds=max(
-            0.0, float(getattr(settings, "llm_retry_jitter_seconds", 0.25))
-        ),
+        retries=0,
+        base_delay_seconds=0.0,
+        backoff_step_seconds=0.0,
+        jitter_seconds=0.0,
         rate_limit_max_in_flight=rate_limit_max_in_flight,
         rate_limit_min_interval_ms=max(0, int(rate_limit_min_interval_ms)),
         circuit_breaker_failure_threshold=max(

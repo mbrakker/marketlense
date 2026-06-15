@@ -243,31 +243,39 @@ def openai_respond_with_vector_store(
         cached_payload = _read_semantic_response_cache(cache_spec, ctx)
         if cached_payload is not None:
             return _openai_response_result_from_cache(cached_payload)
-    payload_args = {
+    payload_args: dict[str, Any] = {
         "model": request.model,
         "instructions": request.system_prompt,
         "input": [{"role": "user", "content": request.user_prompt}],
-        "temperature": request.temperature,
         "tools": [
             {"type": "file_search", "vector_store_ids": [request.vector_store_id]}
         ],
     }
-    if request.seed is not None:
+    known_unsupported = _known_unsupported_responses_params(request.model)
+    if request.temperature is not None and "temperature" not in known_unsupported:
+        payload_args["temperature"] = request.temperature
+    if request.seed is not None and "seed" not in known_unsupported:
         payload_args["seed"] = request.seed
+    if known_unsupported:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="openai_response_skip_known_unsupported_params",
+                module=logger.name,
+                fields={
+                    "model": request.model,
+                    "skipped_params": sorted(known_unsupported),
+                },
+            )
+        )
     try:
         client = _build_openai_client(
             api_key=request.api_key,
             timeout_seconds=request.timeout_seconds,
             operation="response_vector_store",
         )
-        resp = _responses_create_with_unsupported_param_retry(
-            client=client,
-            payload_args=payload_args,
-            fallback_params=("temperature", "seed"),
-            ctx=ctx,
-            event_name="openai_response_retry_without_param",
-            model=request.model,
-        )
+        resp = client.responses.create(**payload_args)
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:

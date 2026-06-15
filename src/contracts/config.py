@@ -310,22 +310,28 @@ class AppSettings:
         metadata={"doc": "Timeout in seconds for OpenAI report generation calls."},
     )
     llm_retry_retries: int = field(
-        default=1,
-        metadata={"doc": "Maximum retry count for individual LLM calls."},
+        default=0,
+        metadata={
+            "doc": "Legacy compatibility value; LLM service retries are disabled."
+        },
     )
     llm_retry_base_delay_seconds: float = field(
-        default=1.0,
-        metadata={"doc": "Base delay in seconds before the first LLM retry."},
+        default=0.0,
+        metadata={
+            "doc": "Legacy compatibility value; service retry delay is disabled."
+        },
     )
     llm_retry_backoff_step_seconds: float = field(
-        default=1.0,
+        default=0.0,
         metadata={
-            "doc": "Additional linear backoff delay added per LLM retry attempt."
+            "doc": "Legacy compatibility value; service retry backoff is disabled."
         },
     )
     llm_retry_jitter_seconds: float = field(
-        default=0.25,
-        metadata={"doc": "Maximum jitter in seconds added to each LLM retry delay."},
+        default=0.0,
+        metadata={
+            "doc": "Legacy compatibility value; service retry jitter is disabled."
+        },
     )
     llm_circuit_breaker_failure_threshold: int = field(
         default=3,
