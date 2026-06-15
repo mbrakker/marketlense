@@ -6,7 +6,6 @@
         "openai"
       ],
       "canonical_entrypoint": "src/services/llm_service.py",
-      "compatibility_entrypoint": "src/services/openai_service.py",
       "private_roots": [
         "src/services/_llm_service/"
       ]

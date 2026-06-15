@@ -4,7 +4,7 @@ from scripts.ci.check_risk_policy import build_report, classify_changed_files
 
 
 def test_risk_policy_marks_critical_layer_changes() -> None:
-    policy = classify_changed_files(["src/services/openai_service.py"])
+    policy = classify_changed_files(["src/services/llm_service.py"])
 
     assert policy.name == "critical"
     assert policy.coverage_services_min > 44.0

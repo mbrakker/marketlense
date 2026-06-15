@@ -387,7 +387,7 @@ def test_vector_store_service_live_guarded():
 
 
 @pytest.mark.integration
-def test_openai_service_live_smoke_guarded(tmp_path):
+def test_llm_service_live_smoke_guarded(tmp_path):
     if os.getenv("RUN_OPENAI_SERVICE_INTEGRATION") != "1":
         pytest.skip(
             "Set RUN_OPENAI_SERVICE_INTEGRATION=1 to run live OpenAI integration."
@@ -416,7 +416,7 @@ def test_openai_service_live_smoke_guarded(tmp_path):
 
 
 @pytest.mark.integration
-def test_llm_service_wraps_openai_service_retry_and_backoff(
+def test_llm_service_applies_retry_and_backoff(
     tmp_path: Path,
     fake_openai,
 ) -> None:
@@ -501,7 +501,7 @@ def _write_image_only_pdf(pdf_path: Path) -> None:
 
 
 @pytest.mark.integration
-def test_openai_service_live_ocr_guarded(
+def test_llm_service_live_ocr_guarded(
     tmp_path: Path,
     caplog,
     assert_logs_have_required_fields,

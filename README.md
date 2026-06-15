@@ -59,7 +59,7 @@ Key traits:
 - Sticky digest navigation: the report shell keeps `overflow: visible` so the sticky section navigation and reading-progress bar continue to pin during scroll instead of being disabled by container clipping.
 - Per-image figure captioning: after artifacts are generated, the pipeline can run a fail-open multimodal captioning pass for each final cropped figure asset using the image plus compact report context (`title/publisher/region/time period`, TL;DR + executive summary, nearest DocMap section, top findings/claim-evidence highlights, and figure-local signals). Captions are stored per slide, rendered in the carousel, and audited in `report_analysis/figure_captions.json`; on failure the pipeline keeps rendering with legacy/detected/placeholder fallback captions.
 - OpenAI image-call compatibility: crop-refine image requests to the Responses API now omit known unsupported params (e.g., `temperature`/`seed` on `gpt-5*`) preflight and still retain fallback retry-without-param handling for unknown model/param mismatches.
-- Unified LLM service: `src/services/llm_service.py` is the single public OpenAI, OpenRouter, generic model-call policy, and OpenAI vector-store provider boundary. Semantic implementations live under `src/services/_llm_service/`; `src/services/openai_service.py` is a legacy compatibility facade only. Cost ledger persistence remains owned by `src/services/openai_accounting_service.py`, which delegates ledger append/rollup writes to `src/services/cost_ledger_service.py`.
+- Unified LLM service: `src/services/llm_service.py` is the single public OpenAI, OpenRouter, generic model-call policy, and OpenAI vector-store provider boundary. Semantic implementations live under `src/services/_llm_service/`. Cost ledger persistence remains owned by `src/services/openai_accounting_service.py`, which delegates ledger append/rollup writes to `src/services/cost_ledger_service.py`.
 - Shared LLM orchestration: the private LLM client and policy capabilities provide one retry/backoff/circuit-breaker API plus optional scope-level rate limiting. Report-pipeline evidence/artifact clients and default generator LLM clients use generic builders from the canonical boundary instead of provider-named construction helpers.
 - Artifact LLM scheduling is owned by `src/orchestrators/report_analysis_orchestrator.py`: the artifact generator now emits deterministic render tasks and executes serially unless the orchestrator supplies a bounded executor. The orchestrator applies `artifact_parallel_workers` and `artifact_global_max_in_flight`, logs `artifact_step_batch_start` / `artifact_step_batch_complete` with the effective budget, and propagates step failures back to the artifact stage without creating generator-owned thread pools.
 - Canonical LLM call path: production generators, report-pipeline orchestration, ranking/crop-refine, OCR/image-call dependency wiring, vector-store provider adapters, and OpenRouter browser-model construction enter model/provider calls through `src/services/llm_service.py`. Browser lifecycle and agent execution remain in the browser-download service. The shared boundary logs provider/cache/budget-policy context together with retry, rate-limit, circuit-breaker, and sanitized OpenRouter client-construction events.
@@ -1233,7 +1233,7 @@ RUN_OPENAI_SMOKE_TEST=1 OPENAI_API_KEY=... pytest -m integration tests/integrati
 Run the live OpenAI OCR integration explicitly (opt-in):
 
 ```bash
-RUN_OPENAI_OCR_INTEGRATION=1 OPENAI_API_KEY=... pytest -m integration tests/integration/test_service_integrations.py -k openai_service_live_ocr_guarded
+RUN_OPENAI_OCR_INTEGRATION=1 OPENAI_API_KEY=... pytest -m integration tests/integration/test_service_integrations.py -k llm_service_live_ocr_guarded
 ```
 
 CI gates (see `.github/workflows/ci.yml`):
@@ -1242,7 +1242,7 @@ CI gates (see `.github/workflows/ci.yml`):
 - `python scripts/ci/run_refactor_audit.py` runs split-symbol, architecture-import, direct-I/O, and long-file checks for behavior-preserving refactors. Use `--list` to inspect the command plan.
 - `python scripts/ci/check_formatting.py` (format gate, `ruff format --check` over changed Python files under `src`, `tests`, `scripts`; skips when no Python files changed unless `FORMAT_PATHS` is set)
 - `python scripts/ci/check_risk_policy.py` (diff-aware risk classifier; exports stricter coverage/mutation thresholds for contract and critical-layer changes in GitHub Actions)
-- `python scripts/ci/check_split_symbol_links.py` (static split-boundary export/linking gate; run after facade/internal module splits such as `_config_service`, `_openai_service`, or `_pdf/_visual_heuristics` refactors and before mypy)
+- `python scripts/ci/check_split_symbol_links.py` (static split-boundary export/linking gate; run after facade/internal module splits such as `_config_service`, `_llm_service`, or `_pdf/_visual_heuristics` refactors and before mypy)
 - `python scripts/ci/run_type_check.py` (type gate, full-repo `mypy` over `src` by default with `docs/quality/mypy_baseline.json` tracking existing debt; set `TYPECHECK_CHANGED_ONLY=1` only for an explicit fast path, and use `--update-baseline` after triaging ownership/expiry for baseline changes)
 - `python scripts/ci/check_architecture_imports.py` (static cross-layer import gate for contracts/services/generators/orchestrators/utils)
 - `python scripts/ci/check_forbidden_patching.py` (fails on private-helper/dataclass-constructor patching patterns in tests)
@@ -1387,7 +1387,7 @@ Operational note:
 
 - Common codes: `openai_missing_api_key`, `vector_store_missing_api_key`, `openai_client_init_failed`, `openai_response_invalid_json`, `openai_response_validation_failed`.
 - Typical fix: confirm `OPENAI_API_KEY` is set in the shell that launched the process, verify the installed OpenAI client is usable in the current environment, and inspect the logged prompt/response metadata when a model returns invalid or schema-breaking JSON.
-- Where it shows up: general analysis, OCR fallback, crop refinement, and vector-store operations all route through `src/services/openai_service.py`.
+- Where it shows up: general analysis, OCR fallback, crop refinement, and vector-store operations all route through `src/services/llm_service.py`.
 
 ### Drive Auth Or Config Errors
 
@@ -1719,7 +1719,7 @@ To extend the system:
 
 ## Vector Store & Cost Tracking Highlights
 
-- LLM boundary: only canonical `src/services/llm_service.py` exposes provider operations; generic policy/client composition, OpenAI client/cache/metadata, chat/analyze, response/OCR, OpenRouter client construction, and vector-store provider operations live under `src/services/_llm_service/*`. Usage accounting is emitted as a typed `OpenAIUsageAccountingRequest` and persisted through `src/services/openai_accounting_service.py`, keeping cost-ledger side effects outside the provider client boundary. `src/services/openai_service.py` remains compatibility-only pending a separately verified removal.
+- LLM boundary: only canonical `src/services/llm_service.py` exposes provider operations; generic policy/client composition, OpenAI client/cache/metadata, chat/analyze, response/OCR, OpenRouter client construction, and vector-store provider operations live under `src/services/_llm_service/*`. Usage accounting is emitted as a typed `OpenAIUsageAccountingRequest` and persisted through `src/services/openai_accounting_service.py`, keeping cost-ledger side effects outside the provider client boundary.
 - Vector stores: `src/services/vector_store_service.py` handles create/upload/attach/status/delete/prune lifecycle operations and metadata shaping, delegating provider API calls directly to `llm_service`; used by vector-mode generators and retention cleanup.
 - Analysis uses vector_store only; `ANALYSIS_MODE`/`USE_VECTOR_STORE` toggles are no longer needed.
 - Evidence packs: `src/generators/evidence_pack_generator.py` is the entrypoint, and `src/generators/evidence_packs/*.py` contains the per-pack strategy modules used for pack metadata and normalization. Packs use `src/prompts/report_vs/**` and write JSON to `out/<report-slug>/report_analysis/*.json`; `doc_map` runs first and remaining packs run in parallel with process-wide rate limiting via `ingest.evidence_packs.*`. Validation uses strict per-pack schemas (`scope_pack`, `methods_pack`, `findings_pack`, `limitations_pack`, `quote_candidates_pack`) plus optional variety-pack schemas (`key_metrics_pack`, `risk_register_pack`, `recommendations_pack`, `contradictions_pack`).

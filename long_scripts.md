@@ -75,7 +75,7 @@ Do not recreate the obsolete February split plan. These public boundaries alread
 
 - `src/services/pdf_service.py` over `src/services/_pdf/*`.
 - `src/services/config_service.py` over `src/services/_config_service/*`.
-- `src/services/llm_service.py` over `src/services/_llm_service/*`; `openai_service.py` is compatibility-only.
+- `src/services/llm_service.py` over `src/services/_llm_service/*`.
 - `src/services/report_store_service.py` over `src/services/_report_store_service/*`.
 - `src/services/state_service.py` over `src/services/_state_service/*`.
 - `src/services/publisher_inventory_service.py` over `src/services/_publisher_inventory_service/*`.

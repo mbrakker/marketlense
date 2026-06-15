@@ -4,7 +4,7 @@ import ast
 import json
 from pathlib import Path
 
-from src.services import llm_service, openai_service
+from src.services import llm_service
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,10 +31,11 @@ def test_production_code_uses_only_canonical_llm_boundary() -> None:
     violations = [
         path.relative_to(ROOT).as_posix()
         for path in sorted((ROOT / "src").rglob("*.py"))
-        if path != SERVICES_ROOT / "openai_service.py" and _imports_openai_service(path)
+        if _imports_openai_service(path)
     ]
 
     assert violations == []
+    assert not (SERVICES_ROOT / "openai_service.py").exists()
     vector_store_source = (SERVICES_ROOT / "vector_store_service.py").read_text(
         encoding="utf-8"
     )
@@ -72,15 +73,12 @@ def test_service_boundary_map_names_llm_service_as_canonical() -> None:
 
     assert openai_boundary["canonical_entrypoint"] == "src/services/llm_service.py"
     assert "src/services/_llm_service/" in openai_boundary["private_roots"]
-    assert (
-        openai_boundary["compatibility_entrypoint"] == "src/services/openai_service.py"
-    )
+    assert "compatibility_entrypoint" not in openai_boundary
 
 
 def test_llm_service_family_files_remain_below_threshold() -> None:
     paths = [
         SERVICES_ROOT / "llm_service.py",
-        SERVICES_ROOT / "openai_service.py",
         *sorted((SERVICES_ROOT / "_llm_service").glob("*.py")),
     ]
     oversized = {
@@ -92,24 +90,3 @@ def test_llm_service_family_files_remain_below_threshold() -> None:
     }
 
     assert oversized == {}
-
-
-def test_legacy_openai_facade_delegates_to_canonical_llm_exports() -> None:
-    exported_names = [
-        "analyze_report",
-        "openai_chat_json",
-        "openai_chat_json_with_images",
-        "openai_ocr_pdf",
-        "openai_respond_with_vector_store",
-        "openai_vector_store_create",
-        "openai_vector_store_upload_file",
-        "openai_vector_store_attach_file",
-        "openai_vector_store_status",
-        "openai_vector_store_delete",
-        "openai_vector_store_update_metadata",
-    ]
-
-    assert all(
-        getattr(openai_service, name) is getattr(llm_service, name)
-        for name in exported_names
-    )

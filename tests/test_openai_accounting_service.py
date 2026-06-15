@@ -175,7 +175,7 @@ def test_record_usage_returns_typed_failure_when_ledger_append_fails(
     assert_logs_have_required_fields(records)
 
 
-def test_openai_service_has_no_direct_cost_ledger_persistence_imports() -> None:
+def test_llm_service_has_no_direct_cost_ledger_persistence_imports() -> None:
     source = Path("src/services/_llm_service/openai_shared.py").read_text(
         encoding="utf-8"
     )

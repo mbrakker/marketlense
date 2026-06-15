@@ -23,7 +23,7 @@ Scoring:
 
 ## Current-State Evidence
 
-- `llm_service.py` is now the canonical OpenAI, OpenRouter, generic LLM-policy, and vector-store provider boundary; `openai_service.py` remains only as a compatibility facade.
+- `llm_service.py` is the sole OpenAI, OpenRouter, generic LLM-policy, and vector-store provider boundary; the legacy `openai_service.py` facade has been removed.
 - Model-client construction still occurs in multiple generators and requires an effort-4 dependency migration.
 - Large orchestrators, publish workflow surfaces, PDF facade exports, and WordPress render-time intelligence remain broad behavior-preserving refactors.
 - Contract fragmentation remains an architecture-level bounded-context review.
@@ -46,6 +46,7 @@ Scoring:
 - Live OpenAI strict-JSON and OCR calls succeeded through `llm_service`; the OCR run used an existing project PDF and returned provider request metadata.
 - A live persisted vector-store status call succeeded through `llm_service`.
 - A live OpenRouter completion succeeded through `llm_service`, and the affected browser-download route completed with a structured `email_required` outcome after using the route's normal execution budget.
+- After removing the legacy facade, fresh live OpenAI strict-JSON, existing-PDF OCR, persisted vector-store status, OpenRouter completion, and Consumer Edge browser-download checks all succeeded through `llm_service`.
 - Existing HTML cache loaded through the typed cache service; template-bundle hashing was deterministic.
 - Existing 18,900,061-byte generated image was prepared as a 298,814-byte upload payload, a 98.4% reduction.
 - Real PDF candidate extraction processed an existing 1,159,172-byte PDF, produced three candidates with zero degraded pages, and produced byte-identical JSON on consecutive warm runs.
@@ -65,16 +66,6 @@ Scoring:
     - Transport-level retry, if retained, is documented as service-local and bounded below orchestration timeouts.
     - Workflow retry remains orchestrator-owned and observable through retry decision logs.
     - Tests assert attempt counts when service retry and orchestrator retry are both configured.
-
-- **Title:** Remove the legacy `openai_service.py` compatibility facade [Impact: 3/5, Effort: 2/5]
-  - Explanation: Production callers now use the canonical `llm_service.py` boundary, but `openai_service.py` temporarily preserves historical imports.
-  - Pros: Removes the final duplicate provider-facing module name and makes LLM ownership unambiguous.
-  - Cons: Deleting the facade can break external or downstream callers that are not visible in this repository.
-  - Acceptance Criteria:
-    - Repository and known downstream consumers contain no imports of `src.services.openai_service`.
-    - The compatibility window and removal are documented.
-    - `openai_service.py`, its compatibility-map entry, and facade-only tests are removed together.
-    - OpenAI, OpenRouter, OCR, and vector-store integration checks still pass through `llm_service.py`.
 
 - **Title:** Audit top-level service proliferation and demote internal capabilities [Impact: 4/5, Effort: 4/5]
   - Explanation: Many top-level service files appear to be internal capabilities rather than true external-system boundaries.
@@ -188,7 +179,6 @@ Scoring:
 
 ### Phase 1: Boundary Corrections
 
-- Remove the legacy `openai_service.py` compatibility facade after downstream-import verification.
 - Centralize model-client construction outside generators.
 
 ### Phase 2: Larger Workflow Simplification
