@@ -26,7 +26,7 @@ Scoring:
 - `llm_service.py` is the sole OpenAI, OpenRouter, generic LLM-policy, and vector-store provider boundary; the legacy `openai_service.py` facade has been removed.
 - Model-client construction still occurs in multiple generators and requires an effort-4 dependency migration.
 - Large orchestrators, publish workflow surfaces, PDF facade exports, and WordPress render-time intelligence remain broad behavior-preserving refactors.
-- Contract fragmentation remains an architecture-level bounded-context review.
+- Cross-report contract shared vocabulary now belongs to the `_cross_report_analysis` package owner, and `src/contracts/cross_report_analysis.py` remains the documented public contract surface.
 
 ## Priority Order
 
@@ -163,21 +163,6 @@ Scoring:
     - Missing projections fail closed with neutral UI or admin diagnostics.
     - Tests prove no intelligence claim is invented by WordPress runtime logic alone.
 
----
-
-## 7. Contract and Schema Simplification
-
-- **Title:** Reduce contract fragmentation inside bounded contexts [Impact: 3/5, Effort: 4/5]
-  - Explanation: The contracts tree has many top-level modules and private bounded-context subpackages, which may increase navigation cost for simple capabilities.
-  - Pros: Makes contract ownership easier to understand.
-  - Cons: Contract moves require compatibility imports and round-trip tests.
-  - Acceptance Criteria:
-    - Each bounded context has a documented public contract surface.
-    - Thin one-off contract files are merged only when semantic clarity improves.
-    - Public import compatibility is preserved or migration is approved.
-
----
-
 ## Near-Term Launch Plan
 
 ### Phase 1: Boundary Corrections
@@ -194,3 +179,4 @@ Scoring:
 ## Closed or Removed From Simplification Intake
 
 - Implemented items are removed from this file after verification and closure in the consolidated backlog.
+- Reduced cross-report contract fragmentation by deleting the private one-off `src/contracts/_cross_report_analysis/common.py` owner, moving shared vocabulary into `src/contracts/_cross_report_analysis/__init__.py`, preserving the public `src/contracts/cross_report_analysis.py` facade, and verifying with contract tests, schema/architecture gates, mutation gate, full regression suite, and a live model-backed cross-report generation run.

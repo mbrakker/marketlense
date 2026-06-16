@@ -4,7 +4,7 @@ from src.contracts._cross_report_analysis.artifact import (
     CrossReportAnalysisArtifact,
     CrossReportOrchestratorOutcome,
 )
-from src.contracts._cross_report_analysis.common import (
+from src.contracts._cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportContentClass,
     CrossReportEvidenceAgreementType,

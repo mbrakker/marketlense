@@ -10,7 +10,7 @@ from src.contracts.schema_validation import (
 )
 from src.utils.errors import AppError
 
-from .common import CROSS_REPORT_ANALYSIS_SCHEMA_VERSION
+from src.contracts._cross_report_analysis import CROSS_REPORT_ANALYSIS_SCHEMA_VERSION
 
 _CONTRACT_MODULE_PREFIX = "src.contracts._cross_report_analysis."
 

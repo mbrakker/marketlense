@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from .common import (
+from src.contracts._cross_report_analysis import (
     CrossReportPublishStatus,
     CrossReportValidationStatus,
     PublicationMode,
