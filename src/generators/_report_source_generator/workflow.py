@@ -34,6 +34,8 @@ from .text_validation import _load_validated_ocr_text, _validate_extractable_tex
 def prepare_report_source(
     runtime: ReportRuntimeState,
     dependencies: ReportSourceDependencies,
+    *,
+    ocr_openai_client=None,
 ) -> ReportSourceState:
     pdf_context = _build_pdf_context(runtime, dependencies)
     _, parallel_within_file = _report_worker_config(runtime)
@@ -116,6 +118,7 @@ def prepare_report_source(
             runtime,
             page_count=info_resp.page_count,
             dependencies=dependencies,
+            llm_client=ocr_openai_client,
         )
         analysis_pdf_path = ocr_result.render_response.output_path
         ocr_fallback_used = True
@@ -192,6 +195,7 @@ def prepare_report_source(
             runtime,
             page_count=info_resp.page_count,
             dependencies=dependencies,
+            llm_client=ocr_openai_client,
         )
         analysis_pdf_path = ocr_result.render_response.output_path
         ocr_fallback_used = True
@@ -266,6 +270,7 @@ def prepare_report_source(
             runtime,
             page_count=info_resp.page_count,
             dependencies=dependencies,
+            llm_client=ocr_openai_client,
         )
         analysis_pdf_path = ocr_result.render_response.output_path
         ocr_fallback_used = True

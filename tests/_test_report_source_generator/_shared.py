@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_report_source_generator.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent / "test_report_source_generator.py"
+)
 
 import json
 
@@ -50,6 +53,7 @@ from src.utils.cache_utils import sha256_json
 
 from src.utils.errors import AppError
 
+
 def _runtime(
     ingest_settings,
     run_context: RunContext,
@@ -78,6 +82,7 @@ def _runtime(
         report_worker_limit=1,
         parallel_within_file=False,
     )
+
 
 def _deps(**overrides) -> ReportSourceDependencies:
     base = ReportSourceDependencies.default()
@@ -128,14 +133,24 @@ def _deps(**overrides) -> ReportSourceDependencies:
     return replace(seeded, **overrides)
 
 
+def _ocr_client(deps: ReportSourceDependencies) -> SimpleNamespace:
+    return SimpleNamespace(openai_ocr_pdf=deps.openai_ocr_pdf)
+
 
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

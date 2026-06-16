@@ -126,8 +126,13 @@ def run_report_analysis(
     indexing_state: VectorStoreIndexingState,
     dependencies: ReportAnalysisDependencies,
     *,
+    taxonomy_openai_client=None,
+    category_fit_openai_client=None,
     evidence_pack_openai_client=None,
     artifact_openai_client=None,
+    validation_openai_client=None,
+    regeneration_openai_client=None,
+    figure_caption_openai_client=None,
 ) -> ReportAnalysisState:
     mode_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store")
     vector_state = _await_vector_store_indexing(
@@ -184,6 +189,7 @@ def run_report_analysis(
                 mode_ctx,
                 vector_state.vector_store_id,
                 dependencies,
+                openai_client=taxonomy_openai_client,
             )
             evidence_future = executor.submit(
                 dependencies.generate_evidence_packs,
@@ -219,6 +225,7 @@ def run_report_analysis(
             mode_ctx,
             vector_state.vector_store_id,
             dependencies,
+            openai_client=taxonomy_openai_client,
         )
 
     data.taxonomy = taxonomy_state.taxonomy
@@ -317,6 +324,7 @@ def run_report_analysis(
         evidence_pack_paths=mode_evidence_paths,
         mode_ctx=mode_ctx,
         dependencies=dependencies,
+        openai_client=category_fit_openai_client,
     )
     category_assignment = context_category_state.category_assignment
     data.categories = category_assignment.categories
@@ -476,6 +484,7 @@ def run_report_analysis(
         else {},
         artifacts_payload=artifacts_payload or {},
         dependencies=dependencies.figure_caption,
+        llm_client=figure_caption_openai_client,
     )
     if caption_result.pack_path:
         mode_evidence_paths["figure_captions"] = caption_result.pack_path
@@ -507,6 +516,7 @@ def run_report_analysis(
             vector_store_id=vector_state.vector_store_id,
         ),
         pack_name="validation",
+        openai_client=validation_openai_client,
     )
     if validation_report.source_path:
         mode_evidence_paths["validation"] = validation_report.source_path
@@ -549,6 +559,8 @@ def run_report_analysis(
             category_labels=category_assignment.category_labels,
             vector_store_id=vector_state.vector_store_id,
             dependencies=dependencies,
+            validation_openai_client=validation_openai_client,
+            regeneration_openai_client=regeneration_openai_client,
         )
         mode_evidence_paths.update(regeneration_paths)
         if validation_report.source_path:

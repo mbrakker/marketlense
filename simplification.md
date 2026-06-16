@@ -24,7 +24,7 @@ Scoring:
 ## Current-State Evidence
 
 - `llm_service.py` is the sole OpenAI, OpenRouter, generic LLM-policy, and vector-store provider boundary; the legacy `openai_service.py` facade has been removed.
-- Model-client construction still occurs in multiple generators and requires an effort-4 dependency migration.
+- Model-client construction is centralized at orchestrator/service-factory boundaries and injected into model-backed generators.
 - Large orchestrators, publish workflow surfaces, PDF facade exports, and WordPress render-time intelligence remain broad behavior-preserving refactors.
 - Cross-report contract shared vocabulary now belongs to the `_cross_report_analysis` package owner, and `src/contracts/cross_report_analysis.py` remains the documented public contract surface.
 
@@ -68,6 +68,15 @@ Scoring:
 
 ---
 
+## 2026-06-16 Model-Client Boundary Verification Evidence
+
+- Generators no longer import `llm_service` provider-policy construction helpers; `tests/test_model_client_injection_boundaries.py` enforces the boundary.
+- Orchestrators and service-factory paths now build scoped model clients for report generation, report pipeline execution, cross-report synthesis, recategorization, publisher inventory screening, OCR fallback, and figure captions, then inject those clients into generators.
+- Focused regression suite passed: `237 passed`.
+- Live verification used existing project PDFs and golden report-analysis artifacts: full report generation produced HTML, OCR fallback produced a one-page OCR PDF, and cross-report synthesis produced a validated artifact with 8 sections.
+
+---
+
 ## 1. Canonical Service-Boundary Simplification
 
 - **Title:** Audit top-level service proliferation and demote internal capabilities [Impact: 4/5, Effort: 4/5]
@@ -82,15 +91,6 @@ Scoring:
 ---
 
 ## 2. Generator and Orchestrator Role-Boundary Cleanup
-
-- **Title:** Centralize model-client construction outside generators [Impact: 5/5, Effort: 4/5]
-  - Explanation: Multiple generators build OpenAI/LLM clients from settings or callables.
-  - Pros: Keeps provider policy out of domain logic and simplifies model-backed generator tests.
-  - Cons: Requires orchestrator/dependency bundle updates.
-  - Acceptance Criteria:
-    - Orchestrators or a service factory pass configured model clients into generators.
-    - Generators no longer import provider-policy construction helpers.
-    - Tests assert model parameters and prompt metadata are logged without generator-owned client construction.
 
 - **Title:** Audit large orchestrators for domain-logic leakage [Impact: 4/5, Effort: 4/5]
   - Explanation: Several orchestrators approach 800-1,000 lines and may mix control flow with domain decisions.
@@ -167,7 +167,7 @@ Scoring:
 
 ### Phase 1: Boundary Corrections
 
-- Centralize model-client construction outside generators.
+- Audit top-level service proliferation and demote internal capabilities.
 
 ### Phase 2: Larger Workflow Simplification
 
@@ -179,4 +179,5 @@ Scoring:
 ## Closed or Removed From Simplification Intake
 
 - Implemented items are removed from this file after verification and closure in the consolidated backlog.
+- Centralized model-client construction outside generators by moving scoped client construction to orchestrators/service-factory boundaries, adding a generator-boundary test, and verifying with focused tests plus live report-generation, OCR, and cross-report runs.
 - Reduced cross-report contract fragmentation by deleting the private one-off `src/contracts/_cross_report_analysis/common.py` owner, moving shared vocabulary into `src/contracts/_cross_report_analysis/__init__.py`, preserving the public `src/contracts/cross_report_analysis.py` facade, and verifying with contract tests, schema/architecture gates, mutation gate, full regression suite, and a live model-backed cross-report generation run.

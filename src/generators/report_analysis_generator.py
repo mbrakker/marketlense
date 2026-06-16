@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import inspect
 from typing import Optional
 
 from src.contracts.categories import (
@@ -56,6 +57,17 @@ class _ContextCategoryState:
     category_assignment: CategoryAssignment
     report_context: ReportCategoryContext
     fit_response: ContextCategoryFitResponse
+
+
+def _accepts_keyword(callable_obj, keyword: str) -> bool:
+    try:
+        parameters = inspect.signature(callable_obj).parameters
+    except (TypeError, ValueError):
+        return False
+    return keyword in parameters or any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters.values()
+    )
 
 
 def _is_vector_store_ready(status: Optional[str]) -> bool:
@@ -221,8 +233,15 @@ def _resolve_taxonomy(
     mode_ctx,
     vector_store_id: Optional[str],
     dependencies: ReportAnalysisDependencies,
+    *,
+    openai_client=None,
 ) -> _TaxonomyState:
     taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
+    kwargs = {}
+    if openai_client is not None and _accepts_keyword(
+        dependencies.extract_taxonomy, "openai_client"
+    ):
+        kwargs["openai_client"] = openai_client
     taxonomy_resp = dependencies.extract_taxonomy(
         TaxonomyExtractRequest(
             schema_version="1.0",
@@ -234,6 +253,7 @@ def _resolve_taxonomy(
             report_slug=runtime.report_name,
         ),
         taxonomy_ctx,
+        **kwargs,
     )
     return _TaxonomyState(
         taxonomy=taxonomy_resp.taxonomy,
@@ -251,6 +271,7 @@ def _resolve_categories_from_report_context(
     evidence_pack_paths: dict[str, str],
     mode_ctx,
     dependencies: ReportAnalysisDependencies,
+    openai_client=None,
 ) -> _ContextCategoryState:
     category_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:categories")
     report_metadata = ReportMetadataGetResponse(
@@ -282,6 +303,11 @@ def _resolve_categories_from_report_context(
         ),
         category_ctx,
     )
+    kwargs = {}
+    if openai_client is not None and _accepts_keyword(
+        dependencies.fit_report_categories_from_context, "openai_client"
+    ):
+        kwargs["openai_client"] = openai_client
     fit_response = dependencies.fit_report_categories_from_context(
         ContextCategoryFitRequest(
             schema_version="1.0",
@@ -290,6 +316,7 @@ def _resolve_categories_from_report_context(
             category_mapping_path=runtime.settings.category_mapping_path,
         ),
         category_ctx,
+        **kwargs,
     )
     return _ContextCategoryState(
         category_assignment=CategoryAssignment(

@@ -23,10 +23,11 @@ from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
 from src.contracts.run_context import RunContext
 from src.generators.cross_report_publish_html import build_cross_report_html_document
 from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.services import llm_service, prompt_service
+from src.services import prompt_service
 from src.utils.coercion import ordered_unique_strings as _unique_ordered
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.model_client_contract import require_injected_model_client
 
 logger = logging.getLogger("market_lense.cross_report_analysis_generator")
 _METRIC_NORMALIZATION_PHRASES = (
@@ -711,8 +712,8 @@ def generate_cross_report_analysis(
                 ),
             },
         )
-    openai_client = openai_client or llm_service.build_client_for_settings(
-        settings,
+    openai_client = require_injected_model_client(
+        openai_client,
         scope="cross_report_analysis",
     )
     response: OpenAIResponseResult = openai_client.openai_chat_json(

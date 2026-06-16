@@ -24,10 +24,10 @@ from src.generators.report_generation_shared import (
     read_cache_json,
     write_cache_json,
 )
-from src.services import llm_service
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+from src.utils.model_client_contract import require_injected_model_client
 
 
 def recover_pdf_text_with_ocr(
@@ -35,6 +35,7 @@ def recover_pdf_text_with_ocr(
     *,
     page_count: int,
     dependencies: ReportSourceDependencies,
+    llm_client=None,
 ) -> PdfOcrFallbackResponse:
     logger = logging.getLogger("market_lense.pdf_text_ocr_generator")
     ocr_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:ocr_fallback")
@@ -180,13 +181,7 @@ def recover_pdf_text_with_ocr(
     models_used: list[str] = []
     request_ids: list[str] = []
     raw_chunks: list[dict[str, object]] = []
-    llm_client = llm_service.build_client_from_callables(
-        policy=llm_service.client_policy_from_settings(
-            runtime.settings,
-            scope="pdf_text_ocr",
-        ),
-        openai_ocr_pdf=dependencies.openai_ocr_pdf,
-    )
+    llm_client = require_injected_model_client(llm_client, scope="pdf_text_ocr")
     for chunk in split_response.chunks:
         chunk_ctx = child_context(
             ocr_ctx,

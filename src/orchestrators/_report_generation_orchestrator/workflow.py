@@ -22,6 +22,7 @@ from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
 )
+from src.services import llm_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -74,6 +75,25 @@ def _with_signal_candidate_orchestrator(
     )
 
 
+def _build_model_client(
+    settings: IngestSettings,
+    *,
+    scope: str,
+    provided_client=None,
+    openai_chat_json_with_images=None,
+    openai_ocr_pdf=None,
+):
+    if provided_client is not None:
+        return provided_client
+    if openai_chat_json_with_images is not None or openai_ocr_pdf is not None:
+        return llm_service.build_client_from_callables(
+            policy=llm_service.client_policy_from_settings(settings, scope=scope),
+            openai_chat_json_with_images=openai_chat_json_with_images,
+            openai_ocr_pdf=openai_ocr_pdf,
+        )
+    return llm_service.build_client_for_settings(settings, scope=scope)
+
+
 def run_report_generation(
     file: DriveFile,
     local_pdf_path: str,
@@ -81,8 +101,14 @@ def run_report_generation(
     md5: Optional[str],
     ctx: RunContext,
     *,
+    source_openai_client=None,
+    taxonomy_openai_client=None,
+    category_fit_openai_client=None,
     evidence_pack_openai_client=None,
     artifact_openai_client=None,
+    validation_openai_client=None,
+    regeneration_openai_client=None,
+    figure_caption_openai_client=None,
     dependencies: Optional[ReportGenerationDependencies] = None,
     analytics_projection_fn: Optional[
         Callable[[AnalyticsProjectionRunRequest], object]
@@ -93,6 +119,50 @@ def run_report_generation(
         _with_signal_candidate_orchestrator(dependencies)
         if dependencies is not None
         else _default_report_generation_dependencies()
+    )
+    source_openai_client = _build_model_client(
+        settings,
+        scope="pdf_text_ocr",
+        provided_client=source_openai_client,
+        openai_ocr_pdf=deps.source.openai_ocr_pdf,
+    )
+    taxonomy_openai_client = _build_model_client(
+        settings,
+        scope="taxonomy",
+        provided_client=taxonomy_openai_client,
+    )
+    category_fit_openai_client = _build_model_client(
+        settings,
+        scope="context_category_fit",
+        provided_client=category_fit_openai_client,
+    )
+    evidence_pack_openai_client = _build_model_client(
+        settings,
+        scope="evidence_pack_generator",
+        provided_client=evidence_pack_openai_client,
+    )
+    artifact_openai_client = _build_model_client(
+        settings,
+        scope="artifact_generator",
+        provided_client=artifact_openai_client,
+    )
+    validation_openai_client = _build_model_client(
+        settings,
+        scope="validation",
+        provided_client=validation_openai_client,
+    )
+    regeneration_openai_client = _build_model_client(
+        settings,
+        scope="artifact_regeneration",
+        provided_client=regeneration_openai_client,
+    )
+    figure_caption_openai_client = _build_model_client(
+        settings,
+        scope="figure_caption",
+        provided_client=figure_caption_openai_client,
+        openai_chat_json_with_images=(
+            deps.analysis.figure_caption.openai_chat_json_with_images
+        ),
     )
     runtime = _build_runtime_state(file, local_pdf_path, settings, md5, ctx)
     requested_resume_stage = str(resume_from_stage or "").strip()
@@ -142,7 +212,11 @@ def run_report_generation(
     source = None
     vector_state = None
     try:
-        source = prepare_report_source(runtime, deps.source)
+        source = prepare_report_source(
+            runtime,
+            deps.source,
+            ocr_openai_client=source_openai_client,
+        )
         _write_stage_checkpoint(
             runtime,
             stage_name=STAGE_SOURCE_PREPARED,
@@ -178,8 +252,13 @@ def run_report_generation(
             selection,
             vector_state,
             deps.analysis,
+            taxonomy_openai_client=taxonomy_openai_client,
+            category_fit_openai_client=category_fit_openai_client,
             evidence_pack_openai_client=evidence_pack_openai_client,
             artifact_openai_client=artifact_openai_client,
+            validation_openai_client=validation_openai_client,
+            regeneration_openai_client=regeneration_openai_client,
+            figure_caption_openai_client=figure_caption_openai_client,
         )
         _write_stage_checkpoint(
             runtime,

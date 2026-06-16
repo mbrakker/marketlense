@@ -6,6 +6,7 @@ and bounded artifact regeneration attempts.
 
 from __future__ import annotations
 
+import inspect
 from copy import deepcopy
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional
@@ -44,6 +45,17 @@ __all__ = [
 ]
 
 
+def _accepts_keyword(callable_obj, keyword: str) -> bool:
+    try:
+        parameters = inspect.signature(callable_obj).parameters
+    except (TypeError, ValueError):
+        return False
+    return keyword in parameters or any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters.values()
+    )
+
+
 def _run_validation_with_fallback(
     *,
     runtime: ReportRuntimeState,
@@ -51,7 +63,13 @@ def _run_validation_with_fallback(
     dependencies: ReportAnalysisDependencies,
     validation_req: ValidationRequest,
     pack_name: str,
+    openai_client=None,
 ) -> ValidationReport:
+    kwargs = {}
+    if openai_client is not None and _accepts_keyword(
+        dependencies.run_validation, "openai_client"
+    ):
+        kwargs["openai_client"] = openai_client
     try:
         return dependencies.run_validation(
             validation_req,
@@ -60,6 +78,7 @@ def _run_validation_with_fallback(
             pack_name=pack_name,
             report_name=runtime.report_name,
             md5=runtime.md5,
+            **kwargs,
         )
     except Exception as exc:
         logger.info(
@@ -141,6 +160,8 @@ def _run_validation_regeneration_loop(
     category_labels: List[str],
     vector_store_id: Optional[str],
     dependencies: ReportAnalysisDependencies,
+    validation_openai_client=None,
+    regeneration_openai_client=None,
 ) -> tuple[
     Dict[str, Any],
     ValidationReport,
@@ -243,6 +264,11 @@ def _run_validation_regeneration_loop(
         )
         validation_before_status = current_validation_report.status
         artifacts_before = deepcopy(current_artifacts)
+        regeneration_kwargs = {}
+        if regeneration_openai_client is not None and _accepts_keyword(
+            dependencies.regenerate_artifacts, "openai_client"
+        ):
+            regeneration_kwargs["openai_client"] = regeneration_openai_client
         regeneration_response = dependencies.regenerate_artifacts(
             ArtifactRegenerationRequest(
                 report_id=ReportId(runtime.file.file_id),
@@ -258,7 +284,8 @@ def _run_validation_regeneration_loop(
                 categories=category_labels,
                 vector_store_id=vector_store_id,
                 md5=runtime.md5,
-            )
+            ),
+            **regeneration_kwargs,
         )
         current_artifacts = regeneration_response.updated_artifacts
         artifact_diff = _artifact_diff_summary(artifacts_before, current_artifacts)
@@ -289,6 +316,7 @@ def _run_validation_regeneration_loop(
                 vector_store_id=vector_store_id,
             ),
             pack_name="validation",
+            openai_client=validation_openai_client,
         )
         validation_snapshot_path = _store_validation_snapshot(
             runtime=runtime,

@@ -64,6 +64,12 @@ def _invoke_report_fn(
     ctx: RunContext,
     evidence_pack_openai_client,
     artifact_openai_client,
+    source_openai_client=None,
+    taxonomy_openai_client=None,
+    category_fit_openai_client=None,
+    validation_openai_client=None,
+    regeneration_openai_client=None,
+    figure_caption_openai_client=None,
     resume_from_stage: Optional[str] = None,
 ) -> IngestOutcome:
     kwargs = {}
@@ -73,10 +79,22 @@ def _invoke_report_fn(
         ).parameters
     except (TypeError, ValueError):
         parameters = {}
+    if "source_openai_client" in parameters:
+        kwargs["source_openai_client"] = source_openai_client
+    if "taxonomy_openai_client" in parameters:
+        kwargs["taxonomy_openai_client"] = taxonomy_openai_client
+    if "category_fit_openai_client" in parameters:
+        kwargs["category_fit_openai_client"] = category_fit_openai_client
     if "evidence_pack_openai_client" in parameters:
         kwargs["evidence_pack_openai_client"] = evidence_pack_openai_client
     if "artifact_openai_client" in parameters:
         kwargs["artifact_openai_client"] = artifact_openai_client
+    if "validation_openai_client" in parameters:
+        kwargs["validation_openai_client"] = validation_openai_client
+    if "regeneration_openai_client" in parameters:
+        kwargs["regeneration_openai_client"] = regeneration_openai_client
+    if "figure_caption_openai_client" in parameters:
+        kwargs["figure_caption_openai_client"] = figure_caption_openai_client
     if "resume_from_stage" in parameters:
         kwargs["resume_from_stage"] = resume_from_stage
     return report_fn(file, local_pdf_path, settings, md5, ctx, **kwargs)
@@ -134,6 +152,36 @@ def run_report_pipeline(
         sleep_fn=time.sleep,
         monotonic_fn=time.monotonic,
     )
+    source_openai_client = llm_service.build_client_for_settings(
+        settings,
+        scope="pdf_text_ocr",
+        base_client=openai_client_override,
+    )
+    taxonomy_openai_client = llm_service.build_client_for_settings(
+        settings,
+        scope="taxonomy",
+        base_client=openai_client_override,
+    )
+    category_fit_openai_client = llm_service.build_client_for_settings(
+        settings,
+        scope="context_category_fit",
+        base_client=openai_client_override,
+    )
+    validation_openai_client = llm_service.build_client_for_settings(
+        settings,
+        scope="validation",
+        base_client=openai_client_override,
+    )
+    regeneration_openai_client = llm_service.build_client_for_settings(
+        settings,
+        scope="artifact_regeneration",
+        base_client=openai_client_override,
+    )
+    figure_caption_openai_client = llm_service.build_client_for_settings(
+        settings,
+        scope="figure_caption",
+        base_client=openai_client_override,
+    )
     logger.info(
         log_event(
             ctx,
@@ -172,6 +220,12 @@ def run_report_pipeline(
             ctx=ctx,
             evidence_pack_openai_client=evidence_openai_client,
             artifact_openai_client=artifact_openai_client,
+            source_openai_client=source_openai_client,
+            taxonomy_openai_client=taxonomy_openai_client,
+            category_fit_openai_client=category_fit_openai_client,
+            validation_openai_client=validation_openai_client,
+            regeneration_openai_client=regeneration_openai_client,
+            figure_caption_openai_client=figure_caption_openai_client,
             resume_from_stage=resume_from_stage,
         )
         doc_map_reason = _doc_map_reason(outcome)

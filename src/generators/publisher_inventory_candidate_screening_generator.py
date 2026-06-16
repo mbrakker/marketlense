@@ -76,8 +76,9 @@ from src.generators._publisher_inventory_candidate_screening.shared import (
     _publisher_reference_tokens,
     _truncate_prompt_text,
 )
-from src.services import llm_service, prompt_service
+from src.services import prompt_service
 from src.utils.logging import log_event
+from src.utils.model_client_contract import require_injected_model_client
 
 
 def screen_publisher_inventory_candidates(
@@ -189,8 +190,8 @@ def screen_publisher_inventory_candidates(
             ctx=ctx,
         )
 
-    openai_client = openai_client or llm_service.build_client_for_settings(
-        request.settings,
+    openai_client = require_injected_model_client(
+        openai_client,
         scope="publisher_inventory_candidate_screening",
     )
     batch_size = _resolve_candidate_screening_batch_size(

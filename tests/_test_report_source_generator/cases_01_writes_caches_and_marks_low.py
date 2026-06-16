@@ -38,7 +38,7 @@ def test_prepare_report_source_writes_caches_and_marks_low_density(
         write_json_object_cache=lambda req, ctx: writes.append(req.path) or None,
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert state.text_validation_status == "fail"
     assert state.text_validation_reason == "text_density_below_threshold"
@@ -126,7 +126,7 @@ def test_prepare_report_source_uses_cached_source_phase_payloads(
         ),
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert state.info_response.page_count == 7
     assert state.info_response.metadata == {"Author": "Cached"}
@@ -236,7 +236,7 @@ def test_prepare_report_source_ignores_stale_source_cache_keys(
         write_json_object_cache=lambda req, ctx: writes.append(req.path) or None,
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert calls == {"info": 1, "contents": 1, "text": 1}
     assert state.info_response.page_count == 3
@@ -268,7 +268,7 @@ def test_prepare_report_source_halts_when_no_pages_to_sample(
     )
 
     with pytest.raises(AppError) as exc_info:
-        prepare_report_source(runtime, deps)
+        prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert_app_error(
         exc_info.value,
@@ -318,7 +318,7 @@ def test_prepare_report_source_halts_when_sample_pages_have_no_text(
     )
 
     with pytest.raises(AppError) as exc_info:
-        prepare_report_source(runtime, deps)
+        prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert_app_error(
         exc_info.value,
@@ -376,7 +376,7 @@ def test_prepare_report_source_does_not_call_ocr_when_native_text_is_extractable
         ),
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert state.ocr_fallback_used is False
     assert state.analysis_pdf_path == runtime.local_pdf_path
@@ -481,7 +481,7 @@ def test_prepare_report_source_uses_ocr_for_weak_native_text_even_when_any_text_
         ),
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert state.ocr_fallback_used is True
     assert state.text_status["ocr_recommendation_reason"] in {
@@ -607,7 +607,7 @@ def test_prepare_report_source_uses_ocr_fallback_and_keeps_original_preview_sour
         ),
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert state.ocr_fallback_used is True
     assert state.analysis_pdf_path == ocr_pdf_path

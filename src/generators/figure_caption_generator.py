@@ -14,8 +14,8 @@ from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_models import ReportFigureAsset, ReportPayload
 from src.contracts.semantic_ids import ReportId
 from src.generators.report_generation_dependencies import FigureCaptionDependencies
-from src.services import llm_service
 from src.utils.logging import child_context, log_event
+from src.utils.model_client_contract import require_injected_model_client
 from src.utils.model_resolver import resolve_model
 
 if TYPE_CHECKING:
@@ -297,6 +297,7 @@ def generate_figure_captions(
     findings_pack: dict[str, Any],
     artifacts_payload: dict[str, Any],
     dependencies: FigureCaptionDependencies,
+    llm_client=None,
 ) -> FigureCaptionGenerationResult:
     assets = list(payload._figure_assets or [])
     if not runtime.settings.figure_caption_enabled or not assets:
@@ -364,13 +365,7 @@ def generate_figure_captions(
         legacy_primary_caption = "Representative figure from the source report."
     results: list[dict[str, Any]] = []
     updated_assets: list[ReportFigureAsset] = []
-    llm_client = llm_service.build_client_from_callables(
-        policy=llm_service.client_policy_from_settings(
-            runtime.settings,
-            scope="figure_caption",
-        ),
-        openai_chat_json_with_images=dependencies.openai_chat_json_with_images,
-    )
+    llm_client = require_injected_model_client(llm_client, scope="figure_caption")
     for index, asset in enumerate(assets, start=1):
         asset_ctx = child_context(caption_ctx, task_id=f"{caption_ctx.task_id}:{index}")
         context_bundle = _build_context_bundle(

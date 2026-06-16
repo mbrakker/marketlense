@@ -37,12 +37,13 @@ from src.generators.artifact_generator import (
 )
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
-from src.services import llm_service, prompt_service, report_analysis_store_service
+from src.services import prompt_service, report_analysis_store_service
 from src.utils.analysis_family import family_is_abstained
 from src.utils.coercion import string_value as _s
 from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_text as _dump_json
 from src.utils.logging import child_context, log_event
+from src.utils.model_client_contract import require_injected_model_client
 
 logger = logging.getLogger("market_lense.report_regeneration_generator")
 
@@ -103,8 +104,8 @@ def regenerate_artifacts(
     analysis_store=report_analysis_store_service,
 ) -> ArtifactRegenerationResponse:
     ctx = request.ctx
-    openai_client = openai_client or llm_service.build_client_for_settings(
-        request.settings,
+    openai_client = require_injected_model_client(
+        openai_client,
         scope="artifact_regeneration",
     )
     safe_artifacts = (

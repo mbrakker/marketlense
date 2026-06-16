@@ -33,7 +33,6 @@ from src.services.category_mapping_service import (
 )
 from src.services import (
     file_service,
-    llm_service,
     prompt_service,
     report_analysis_store_service,
 )
@@ -43,6 +42,7 @@ from src.utils.tag_utils import normalize_slug_tag
 from src.utils.logging import log_event
 from src.utils.cache_utils import sha256_json
 from src.services.schema_validator_service import validate_schema
+from src.utils.model_client_contract import require_injected_model_client
 
 logger = logging.getLogger("market_lense.taxonomy_generator")
 
@@ -56,10 +56,7 @@ def extract_taxonomy(
     analysis_store=report_analysis_store_service,
     file_client=file_service,
 ) -> TaxonomyExtractResponse:
-    openai_client = openai_client or llm_service.build_client_for_settings(
-        request.settings,
-        scope="taxonomy",
-    )
+    openai_client = require_injected_model_client(openai_client, scope="taxonomy")
     taxonomy_temperature = _resolve_taxonomy_temperature(request)
     logger.info(
         log_event(

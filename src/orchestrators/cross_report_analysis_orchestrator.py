@@ -55,6 +55,7 @@ from src.services import (
     analytics_store_service,
     file_service,
     idempotency_service,
+    llm_service,
     prompt_service,
 )
 from src.utils.clock import utc_now_iso as _utc_now
@@ -539,6 +540,11 @@ def run_cross_report_analysis(
     )
     _log_transition(ctx, transitions, "started")
     _enforce_cross_report_feature_policy(request, settings, ctx)
+    if openai_client is None:
+        openai_client = llm_service.build_client_for_settings(
+            settings,
+            scope="cross_report_analysis",
+        )
 
     projected_data = _run_step(
         step_name="read_projected_data",

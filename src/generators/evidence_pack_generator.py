@@ -39,7 +39,6 @@ from src.generators.evidence_packs.registry import (
     VARIETY_PACKS,
 )
 from src.services import file_service
-from src.services import llm_service
 from src.services import prompt_service
 from src.services import report_analysis_store_service
 from src.services.schema_validator_service import validate_schema
@@ -49,6 +48,7 @@ from src.utils.errors import AppError
 from src.utils.analysis_family import serialize_family_status
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import child_context, log_event, new_run_context
+from src.utils.model_client_contract import require_injected_model_client
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
@@ -233,8 +233,8 @@ def generate_evidence_packs(
     analysis_store=report_analysis_store_service,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
-    openai_client = openai_client or llm_service.build_client_for_settings(
-        settings,
+    openai_client = require_injected_model_client(
+        openai_client,
         scope="evidence_pack_generator",
     )
     logger.info(

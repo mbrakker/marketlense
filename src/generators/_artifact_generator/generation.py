@@ -37,10 +37,11 @@ from src.generators.artifact_normalization import (
     pad_artifact_insights,
     strip_artifact_inline_reference_ids,
 )
-from src.services import llm_service, prompt_service, report_analysis_store_service
+from src.services import prompt_service, report_analysis_store_service
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
+from src.utils.model_client_contract import require_injected_model_client
 
 logger = logging.getLogger("market_lense.artifact_generator")
 
@@ -90,8 +91,8 @@ def generate_artifacts(
     artifact_step_executor: Optional[ArtifactStepExecutor] = None,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
-    openai_client = openai_client or llm_service.build_client_for_settings(
-        settings,
+    openai_client = require_injected_model_client(
+        openai_client,
         scope="artifact_generator",
     )
     logger.info(

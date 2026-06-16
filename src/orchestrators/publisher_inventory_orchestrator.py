@@ -8,6 +8,7 @@ controls, and candidate post-processing.
 """
 
 import hashlib
+import inspect
 import logging
 import time
 from dataclasses import replace
@@ -101,12 +102,24 @@ from src.orchestrators.retry_orchestrator import (
     is_retryable_app_error,
     run_with_retry,
 )
+from src.services import llm_service
 from src.utils.drive_utils import extract_drive_folder_id
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
 
 logger = logging.getLogger("market_lense.publisher_inventory_orchestrator")
+
+
+def _accepts_keyword(callable_obj, keyword: str) -> bool:
+    try:
+        parameters = inspect.signature(callable_obj).parameters
+    except (TypeError, ValueError):
+        return False
+    return keyword in parameters or any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters.values()
+    )
 
 
 def run_publisher_inventory_discovery(
@@ -281,6 +294,10 @@ def run_publisher_inventory_discovery(
             ),
             ctx,
         )
+        screening_openai_client = llm_service.build_client_for_settings(
+            request.settings,
+            scope="publisher_inventory_candidate_screening",
+        )
         page_url_by_number = {
             page.page_number: page.page_url for page in build_response.snapshot.pages
         }
@@ -310,6 +327,13 @@ def run_publisher_inventory_discovery(
                 ),
             ),
             ctx,
+            **(
+                {"openai_client": screening_openai_client}
+                if _accepts_keyword(
+                    deps.screen_publisher_inventory_candidates, "openai_client"
+                )
+                else {}
+            ),
         )
         approved_item_urls = {
             candidate.canonical_url for candidate in screening_response.approved_items

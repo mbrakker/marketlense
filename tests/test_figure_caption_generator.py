@@ -241,6 +241,9 @@ def test_generate_figure_captions_builds_context_and_updates_assets(
         findings_pack=findings_pack,
         artifacts_payload=artifacts_payload,
         dependencies=dependencies,
+        llm_client=SimpleNamespace(
+            openai_chat_json_with_images=_openai_chat_json_with_images
+        ),
     )
 
     assert len(openai_requests) == 2
@@ -381,6 +384,9 @@ def test_generate_figure_captions_fail_open_uses_fallback_sources(
         findings_pack={"findings": []},
         artifacts_payload={"summary": {}},
         dependencies=dependencies,
+        llm_client=SimpleNamespace(
+            openai_chat_json_with_images=_openai_chat_json_with_images
+        ),
     )
 
     assert result.payload._figure_assets[0].caption_source == "legacy"

@@ -23,6 +23,7 @@ from src.services.report_store_service import (
     list_metadata as list_report_metadata,
     upsert_metadata,
 )
+from src.services import llm_service
 from src.utils.logging import child_context, log_event, new_run_context
 
 logger = logging.getLogger("market_lense.recategorize_orchestrator")
@@ -47,6 +48,10 @@ def run_recategorize(request: RecategorizeRequest) -> List[RecategorizeOutcome]:
         ReportMetadataListRequest(schema_version="1.1", db_path=request.db_path),
         ctx,
     )
+    openai_client = llm_service.build_client_for_settings(
+        request.settings,
+        scope="context_category_fit",
+    )
 
     outcomes: List[RecategorizeOutcome] = []
     for record in list_resp.records:
@@ -67,6 +72,7 @@ def run_recategorize(request: RecategorizeRequest) -> List[RecategorizeOutcome]:
                     category_mapping_path=request.category_mapping_path,
                 ),
                 record_ctx,
+                openai_client=openai_client,
             )
 
             upsert_metadata(

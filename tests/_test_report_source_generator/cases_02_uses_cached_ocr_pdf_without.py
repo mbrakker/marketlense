@@ -108,7 +108,7 @@ def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
         ),
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert state.ocr_fallback_used is True
     assert state.analysis_pdf_path == str(cached_pdf_path)
@@ -189,7 +189,7 @@ def test_prepare_report_source_runs_single_openai_ocr_model(
         ),
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert attempted_models == ["gpt-5-mini"]
     assert state.ocr_fallback_used is True
@@ -303,7 +303,7 @@ def test_prepare_report_source_maps_chunk_local_ocr_pages_to_original_page_numbe
         ),
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert chunk_paths == [
         str(tmp_path / "report.ocr-pages-0001-0002.pdf"),
@@ -430,7 +430,7 @@ def test_prepare_report_source_accepts_blank_trailing_ocr_chunk(
         ),
     )
 
-    state = prepare_report_source(runtime, deps)
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert rendered_pages == [(1, "ocr page one"), (2, "ocr page two"), (3, "")]
     assert state.ocr_fallback_used is True
@@ -483,7 +483,7 @@ def test_prepare_report_source_surfaces_pdf_text_ocr_failed(
     )
 
     with pytest.raises(AppError) as exc_info:
-        prepare_report_source(runtime, deps)
+        prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
 
     assert_app_error(
         exc_info.value,
