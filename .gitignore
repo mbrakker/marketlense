@@ -8,6 +8,7 @@ __pycache__/
 venv/
 ENV/
 .venv/
+.venv-*/
 
 # Distribution / packaging
 build/
@@ -81,6 +82,7 @@ agent-skills/
 
 # Logs & temporary files
 temp/
+backup/
 *.log
 *.bak
 *.tmp

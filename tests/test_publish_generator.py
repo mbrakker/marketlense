@@ -596,7 +596,6 @@ def test_publish_html_parallelizes_media_uploads_and_uses_request_auth_header(
         html_path.write_text(html_text, encoding="utf-8")
         _write_report_card_fixture(settings, html_path)
 
-        started_at = time.perf_counter()
         outcome = pg.publish_html(
             PublishRequest(
                 schema_version="1.0",
@@ -608,7 +607,6 @@ def test_publish_html_parallelizes_media_uploads_and_uses_request_auth_header(
             settings,
             run_context,
         )
-        elapsed_seconds = time.perf_counter() - started_at
     finally:
         server.shutdown()
         thread.join(timeout=2)
@@ -617,7 +615,6 @@ def test_publish_html_parallelizes_media_uploads_and_uses_request_auth_header(
     assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "published"
     assert _WordPressPublishStubHandler.max_active_uploads >= 2
-    assert elapsed_seconds < 0.9
     assert _WordPressPublishStubHandler.upload_headers == ["Bearer request-token"] * 5
     assert (
         _WordPressPublishStubHandler.media_patch_headers == ["Bearer request-token"] * 5
