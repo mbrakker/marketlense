@@ -31,9 +31,6 @@ from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
 )
-from src.orchestrators.report_generation_orchestrator import (
-    run_report_generation as generate_report,
-)
 from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.report_pipeline_orchestrator import (
     run_report_pipeline as run_report_pipeline_orchestrator,
@@ -386,7 +383,6 @@ def _process_file(
                 current_md5,
                 current_ctx,
                 retries=2,
-                generate_report_fn=generate_report,
             )
         ),
         state_record=state_record,

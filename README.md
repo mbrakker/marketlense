@@ -175,6 +175,15 @@ Current control-plane modules in `src/orchestrators/` include:
 - `ops_dashboard_orchestrator.py`: dashboard snapshot aggregation (reports/state/lock/storage).
 - `candidate_extraction_orchestrator.py`, `cover_image_orchestrator.py`, `recategorize_orchestrator.py`, `wp_category_update_orchestrator.py`: feature-specific workflows.
 
+Canonical report workflow entrypoint:
+
+- `src/orchestrators/ingest_orchestrator.py::run_ingest` is the batch entrypoint for Drive listing, ingest locking, worker fanout, cursor updates, and retention cleanup.
+- `src/orchestrators/ingest_file_orchestrator.py::run_ingest_file` is the single-file entrypoint for cache/download/EOF checks, existing-output skips, state recording, and invoking the canonical report pipeline.
+- `src/orchestrators/report_pipeline_orchestrator.py::run_report_pipeline` is the per-file report workflow entrypoint used by ingest. It owns report-generation retries, DocMap retry transitions, model-client construction/rate limiting, and semantic restart forwarding.
+- `src/orchestrators/report_generation_orchestrator.py::run_report_generation` is the stage-specific entrypoint for source -> selection -> analysis -> render sequencing of one report. Direct callers may use it only when ingest/download/state handling is deliberately out of scope.
+- `src/orchestrators/report_analysis_orchestrator.py::run_report_analysis` is the stage-specific analysis entrypoint for vector-store readiness, taxonomy/category resolution, evidence packs, artifacts, validation, validation-regeneration, and analysis snapshot persistence.
+- `resume_from_stage="analysis_complete"` is supported through `run_report_pipeline(...)` and `run_report_generation(...)`; upstream source, selection, vector indexing, evidence-pack, artifact, and validation work is not repeated for that restart boundary.
+
 ### Intelligence Entity and Navigation Model
 
 Market Lense is organized around intelligence objects, not implementation objects. The public product model is defined by the entities users navigate, cite, compare, and trust; the pipeline, projections, WordPress metadata, and persisted artifacts are implementation layers behind those entities.

@@ -110,15 +110,6 @@ Scoring:
     - Queue/readiness/batch variants call the canonical workflow or are explicitly read-only.
     - Tests cover validation block, successful publish, duplicate publish, partial WordPress failure, and retry behavior.
 
-- **Title:** Clarify report pipeline entrypoints across ingest, analysis, generation, and regeneration [Impact: 4/5, Effort: 4/5]
-  - Explanation: Multiple orchestrators own adjacent report workflow stages and may overlap in control-plane responsibility.
-  - Pros: Makes operational entrypoints and stage ownership clear.
-  - Cons: Requires documentation and possibly compatibility facades.
-  - Acceptance Criteria:
-    - README or architecture docs name the canonical report workflow entrypoint and stage-specific entrypoints.
-    - Each stage orchestrator has one clear responsibility and no duplicate sequencing path.
-    - Tests cover end-to-end pipeline routing and direct stage invocation where supported.
-
 ---
 
 ## 4. PDF and Visual-Heuristics Simplification
@@ -172,7 +163,6 @@ Scoring:
 ### Phase 2: Larger Workflow Simplification
 
 - Consolidate publish orchestration surfaces.
-- Clarify report pipeline entrypoints.
 - Reduce PDF visual heuristics compatibility exports.
 - Simplify WordPress shortcode surfaces.
 
@@ -181,3 +171,4 @@ Scoring:
 - Implemented items are removed from this file after verification and closure in the consolidated backlog.
 - Centralized model-client construction outside generators by moving scoped client construction to orchestrators/service-factory boundaries, adding a generator-boundary test, and verifying with focused tests plus live report-generation, OCR, and cross-report runs.
 - Reduced cross-report contract fragmentation by deleting the private one-off `src/contracts/_cross_report_analysis/common.py` owner, moving shared vocabulary into `src/contracts/_cross_report_analysis/__init__.py`, preserving the public `src/contracts/cross_report_analysis.py` facade, and verifying with contract tests, schema/architecture gates, mutation gate, full regression suite, and a live model-backed cross-report generation run.
+- Clarified report pipeline entrypoints by documenting the canonical batch, single-file, report-pipeline, report-generation, report-analysis, and `analysis_complete` restart entrypoints; removing the redundant ingest-level `report_generation_orchestrator` injection; and adding ownership tests for routing, direct stage invocation, and documentation. Verification used focused orchestrator tests plus a live existing-PDF report pipeline run and semantic restart canary.
