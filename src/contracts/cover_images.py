@@ -56,13 +56,21 @@ class CoverImageStyle:
 
 
 @dataclass(frozen=True)
+class CoverImageProfile:
+    schema_version: str = field(metadata={"doc": "Cover profile schema version."})
+    style: CoverImageStyle = field(metadata={"doc": "Profile palette and fonts."})
+    layouts: Dict[str, CoverImageLayout] = field(
+        metadata={"doc": "Canonical small, medium, and large cover layouts."}
+    )
+
+
+@dataclass(frozen=True)
 class CoverImageStyleConfig:
     schema_version: str = field(
         metadata={"doc": "Cover image style config schema version."}
     )
-    defaults: CoverImageStyle = field(metadata={"doc": "Default cover image style."})
-    layouts: Dict[str, CoverImageLayout] = field(
-        metadata={"doc": "Canonical small, medium, and large cover layouts."}
+    profiles: Dict[str, CoverImageProfile] = field(
+        metadata={"doc": "Named report and briefing cover profiles."}
     )
 
 
@@ -111,6 +119,10 @@ class CoverImageReport:
         default=None,
         metadata={"doc": "Required semantic cover fingerprint for schema version 2.0."},
     )
+    cover_profile: str = field(
+        default="report",
+        metadata={"doc": "Approved report or briefing cover profile."},
+    )
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> "CoverImageReport":
@@ -143,6 +155,7 @@ class CoverImageReport:
             time_period=str(payload.get("time_period") or "").strip() or None,
             region=str(payload.get("region") or "").strip() or None,
             fingerprint=CoverFingerprint.from_dict(fingerprint_payload),
+            cover_profile=str(payload.get("cover_profile") or "report").strip(),
         )
 
 

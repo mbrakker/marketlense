@@ -369,10 +369,15 @@ def render_cover_images() -> None:
             st.subheader("Style Summary")
             st.json(
                 {
-                    "palette_and_fonts": asdict(style_config.config.defaults),
-                    "layouts": {
-                        size: asdict(layout)
-                        for size, layout in style_config.config.layouts.items()
+                    "profiles": {
+                        name: {
+                            "palette_and_fonts": asdict(profile.style),
+                            "layouts": {
+                                size: asdict(layout)
+                                for size, layout in profile.layouts.items()
+                            },
+                        }
+                        for name, profile in style_config.config.profiles.items()
                     },
                 }
             )

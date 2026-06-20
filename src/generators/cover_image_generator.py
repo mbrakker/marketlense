@@ -39,6 +39,7 @@ def _normalize_report(report: CoverImageReport) -> CoverImageReport:
         ),
         region=" ".join(str(report.region).split()) if report.region else None,
         fingerprint=report.fingerprint,
+        cover_profile=str(report.cover_profile or "report").strip(),
     )
 
 
@@ -97,11 +98,17 @@ def generate_cover_images(
                 _error_outcome(report, "Semantic cover fingerprint is required")
             )
             continue
+        profile = config.profiles.get(report.cover_profile)
+        if profile is None:
+            outcomes.append(
+                _error_outcome(report, "Cover profile is not approved: " + report.cover_profile)
+            )
+            continue
 
         rendered: dict[str, CardCoverAsset] = {}
         render_error: AppError | None = None
         for size in CARD_SIZES:
-            layout = config.layouts[size]
+            layout = profile.layouts[size]
             output_path = str(
                 build_report_card_asset_path(
                     request.output_dir,
@@ -120,7 +127,7 @@ def generate_cover_images(
                         title=report.title,
                         publisher=report.publisher,
                         time_period=_covered_period(report),
-                        style=config.defaults,
+                        style=profile.style,
                         layout=layout,
                         fingerprint=report.fingerprint,
                     ),
@@ -164,6 +171,7 @@ def generate_cover_images(
                         "family": report.fingerprint.geometry_family,
                         "size": size,
                         "seed": report.fingerprint.seed,
+                        "cover_profile": report.cover_profile,
                         "title_font_size": response.title_font_size,
                         "output_path": response.output_path,
                     },

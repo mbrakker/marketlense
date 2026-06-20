@@ -8,6 +8,7 @@ import yaml
 
 from src.contracts.cover_images import (
     CoverImageLayout,
+    CoverImageProfile,
     CoverImageStyle,
     CoverImageStyleConfig,
     CoverStyleLoadRequest,
@@ -199,33 +200,51 @@ def load_cover_styles(
         )
     )
     data = _load_yaml(config_path)
-    if str(data.get("schema_version") or "").strip() != "2.0":
+    if str(data.get("schema_version") or "").strip() != "3.0":
         raise AppError(
             code="cover_style_invalid",
-            message="Cover style config must use schema version 2.0",
+            message="Cover style config must use schema version 3.0",
             retryable=False,
         )
-    palette_raw = data.get("palette") or {}
-    fonts_raw = data.get("fonts") or {}
-    layouts_raw = data.get("layouts") or {}
-    if not all(
-        isinstance(item, dict) for item in (palette_raw, fonts_raw, layouts_raw)
-    ):
+    profiles_raw = data.get("profiles") or {}
+    if not isinstance(profiles_raw, dict):
         raise AppError(
             code="cover_style_invalid",
-            message="Cover palette, fonts, and layouts must be mappings",
+            message="Cover style profiles must be a mapping",
             retryable=False,
         )
-    defaults = _parse_style(palette_raw, fonts_raw)
-    layouts = {
-        size: _parse_layout(layouts_raw.get(size) or {}, size)
-        for size in ("small", "medium", "large")
-    }
+    profiles = {}
+    for profile_name in ("report", "briefing"):
+        profile_raw = profiles_raw.get(profile_name)
+        if not isinstance(profile_raw, dict):
+            raise AppError(
+                code="cover_style_invalid",
+                message=f"Missing required cover style profile: {profile_name}",
+                retryable=False,
+            )
+        palette_raw = profile_raw.get("palette") or {}
+        fonts_raw = profile_raw.get("fonts") or {}
+        layouts_raw = profile_raw.get("layouts") or {}
+        if not all(
+            isinstance(item, dict) for item in (palette_raw, fonts_raw, layouts_raw)
+        ):
+            raise AppError(
+                code="cover_style_invalid",
+                message=f"Cover style profile is invalid: {profile_name}",
+                retryable=False,
+            )
+        profiles[profile_name] = CoverImageProfile(
+            schema_version="1.0",
+            style=_parse_style(palette_raw, fonts_raw),
+            layouts={
+                size: _parse_layout(layouts_raw.get(size) or {}, size)
+                for size in ("small", "medium", "large")
+            },
+        )
 
     config = CoverImageStyleConfig(
-        schema_version="2.0",
-        defaults=defaults,
-        layouts=layouts,
+        schema_version="3.0",
+        profiles=profiles,
     )
     logger.info(
         log_event(
@@ -235,9 +254,12 @@ def load_cover_styles(
             module=logger.name,
             fields={
                 "path": config_path,
-                "layouts": {
-                    size: [layout.width, layout.height]
-                    for size, layout in layouts.items()
+                "profiles": {
+                    name: {
+                        size: [layout.width, layout.height]
+                        for size, layout in profile.layouts.items()
+                    }
+                    for name, profile in profiles.items()
                 },
             },
         )
