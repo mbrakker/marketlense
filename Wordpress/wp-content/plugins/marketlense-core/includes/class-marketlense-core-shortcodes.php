@@ -43,6 +43,7 @@ final class Shortcodes
         'ml_briefing_archive' => 'render_briefing_archive',
         'ml_button_link' => 'render_button_link',
         'ml_inline_link' => 'render_inline_link',
+        'ml_archive_hero' => 'render_archive_hero',
         'ml_archive_metric' => 'render_archive_metric',
         'ml_brand_logo' => 'render_brand_logo',
         'ml_primary_nav' => 'render_primary_nav',
@@ -1324,6 +1325,112 @@ final class Shortcodes
         }
 
         return $this->render_navigation($items, 'ml-footer-nav', $label);
+    }
+
+    /**
+     * Renders the canonical directory/archive hero for a supported context.
+     *
+     * @param array<string,mixed> $attrs Shortcode attributes.
+     */
+    public function render_archive_hero(array $attrs = []): string
+    {
+        $atts = shortcode_atts(['context' => ''], $attrs, 'ml_archive_hero');
+        $context = sanitize_key((string) $atts['context']);
+        $contexts = [
+            'publishers' => [
+                'kicker' => __('Publisher directory', 'marketlense-core'),
+                'title' => __('Top publishers', 'marketlense-core'),
+                'lead' => __('Explore the research institutions, consultancies, and intelligence sources represented across the published Market Bearing archive.', 'marketlense-core'),
+                'metrics_label' => __('Publisher directory coverage', 'marketlense-core'),
+                'metrics' => [
+                    ['entity' => 'publishers', 'label' => __('Publishers', 'marketlense-core')],
+                    ['entity' => 'reports', 'label' => __('Reports', 'marketlense-core')],
+                    ['entity' => 'regions', 'label' => __('Regions', 'marketlense-core')],
+                    ['entity' => 'topics', 'label' => __('Topics', 'marketlense-core')],
+                ],
+            ],
+            'reports' => [
+                'kicker' => __('Research archive', 'marketlense-core'),
+                'title' => __('Published research, structured for review.', 'marketlense-core'),
+                'lead' => __('Search, filter, and compare governed research while keeping its publisher, taxonomy, evidence, and source visible.', 'marketlense-core'),
+                'metrics_label' => __('Research archive coverage', 'marketlense-core'),
+                'metrics' => [
+                    ['entity' => 'reports', 'label' => __('Reports', 'marketlense-core')],
+                    ['entity' => 'publishers', 'label' => __('Publishers', 'marketlense-core')],
+                    ['entity' => 'topics', 'label' => __('Topics', 'marketlense-core')],
+                    ['entity' => 'regions', 'label' => __('Regions', 'marketlense-core')],
+                ],
+            ],
+            'topics' => [
+                'kicker' => __('Topic directory', 'marketlense-core'),
+                'title' => __('The archive, organized by question.', 'marketlense-core'),
+                'lead' => __('Only topics connected to published reports, briefings, or signals appear here.', 'marketlense-core'),
+                'metrics_label' => __('Topic directory coverage', 'marketlense-core'),
+                'metrics' => [
+                    ['entity' => 'topics', 'label' => __('Topics', 'marketlense-core')],
+                    ['entity' => 'reports', 'label' => __('Reports', 'marketlense-core')],
+                    ['entity' => 'publishers', 'label' => __('Publishers', 'marketlense-core')],
+                    ['entity' => 'regions', 'label' => __('Regions', 'marketlense-core')],
+                ],
+            ],
+            'signals' => [
+                'kicker' => __('Intelligence signals', 'marketlense-core'),
+                'title' => __('Signals that keep their source attached.', 'marketlense-core'),
+                'lead' => __('Review standalone signals when published. Until then, this view reuses source-backed signals already present in governed report artifacts.', 'marketlense-core'),
+                'metrics_label' => __('Signals coverage', 'marketlense-core'),
+                'metrics' => [
+                    ['entity' => 'signals', 'label' => __('Signals', 'marketlense-core')],
+                    ['entity' => 'reports', 'label' => __('Reports', 'marketlense-core')],
+                    ['entity' => 'topics', 'label' => __('Topics', 'marketlense-core')],
+                    ['entity' => 'publishers', 'label' => __('Publishers', 'marketlense-core')],
+                ],
+            ],
+            'briefings' => [
+                'kicker' => __('Executive briefings', 'marketlense-core'),
+                'title' => __('Cross-report evidence, built for decisions.', 'marketlense-core'),
+                'lead' => __('Published briefings connect multiple sources into a concise market view while keeping evidence references visible.', 'marketlense-core'),
+                'metrics_label' => __('Briefings coverage', 'marketlense-core'),
+                'metrics' => [
+                    ['entity' => 'briefings', 'label' => __('Briefings', 'marketlense-core')],
+                    ['entity' => 'reports', 'label' => __('Reports', 'marketlense-core')],
+                    ['entity' => 'publishers', 'label' => __('Publishers', 'marketlense-core')],
+                    ['entity' => 'topics', 'label' => __('Topics', 'marketlense-core')],
+                ],
+            ],
+        ];
+        if (! isset($contexts[$context])) {
+            return '';
+        }
+
+        $config = $contexts[$context];
+        $title_id = 'ml-archive-hero-title-' . $context;
+
+        ob_start();
+        ?>
+        <section class="ml-archive-hero" aria-labelledby="<?php echo esc_attr($title_id); ?>">
+            <div class="ml-archive-hero__frame">
+                <header class="ml-archive-hero__copy">
+                    <p class="ml-archive-hero__kicker"><?php echo esc_html((string) $config['kicker']); ?></p>
+                    <h1 id="<?php echo esc_attr($title_id); ?>"><?php echo esc_html((string) $config['title']); ?></h1>
+                    <p class="ml-archive-hero__lead"><?php echo esc_html((string) $config['lead']); ?></p>
+                </header>
+                <div class="ml-archive-hero__metrics" aria-label="<?php echo esc_attr((string) $config['metrics_label']); ?>">
+                    <?php foreach ($config['metrics'] as $metric) : ?>
+                        <?php
+                        echo $this->render_archive_metric( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                            [
+                                'entity' => (string) $metric['entity'],
+                                'label' => (string) $metric['label'],
+                                'icon' => (string) $metric['entity'],
+                            ]
+                        );
+                        ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
+        <?php
+        return (string) ob_get_clean();
     }
 
     /**

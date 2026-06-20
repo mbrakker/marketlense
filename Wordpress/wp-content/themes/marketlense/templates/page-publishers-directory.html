@@ -2,43 +2,9 @@
 
 <!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-directory-page ml-publishers-page","layout":{"type":"default"}} -->
 <main id="main-content" class="wp-block-group ml-directory-page ml-publishers-page">
-  <!-- wp:group {"className":"ml-directory-hero","layout":{"type":"default"}} -->
-  <div class="wp-block-group ml-directory-hero">
-    <!-- wp:group {"className":"ml-directory-hero-frame","layout":{"type":"default"}} -->
-    <div class="wp-block-group ml-directory-hero-frame">
-      <!-- wp:group {"className":"ml-directory-hero-copy","layout":{"type":"default"}} -->
-      <div class="wp-block-group ml-directory-hero-copy">
-        <!-- wp:paragraph {"className":"ml-section-kicker"} -->
-        <p class="ml-section-kicker">Publisher directory</p>
-        <!-- /wp:paragraph -->
-        <!-- wp:heading {"level":1} -->
-        <h1 class="wp-block-heading">Top publishers</h1>
-        <!-- /wp:heading -->
-        <!-- wp:paragraph {"className":"ml-page-lead"} -->
-        <p class="ml-page-lead">Explore the research institutions, consultancies, and intelligence sources represented across the published Market Bearing archive.</p>
-        <!-- /wp:paragraph -->
-      </div>
-      <!-- /wp:group -->
-      <!-- wp:group {"className":"ml-publishers-hero-metrics","layout":{"type":"default"}} -->
-      <div class="wp-block-group ml-publishers-hero-metrics">
-        <!-- wp:shortcode -->
-        [ml_archive_metric entity="publishers" label="Publishers"]
-        <!-- /wp:shortcode -->
-        <!-- wp:shortcode -->
-        [ml_archive_metric entity="reports" label="Reports"]
-        <!-- /wp:shortcode -->
-        <!-- wp:shortcode -->
-        [ml_archive_metric entity="regions" label="Regions"]
-        <!-- /wp:shortcode -->
-        <!-- wp:shortcode -->
-        [ml_archive_metric entity="topics" label="Topics"]
-        <!-- /wp:shortcode -->
-      </div>
-      <!-- /wp:group -->
-    </div>
-    <!-- /wp:group -->
-  </div>
-  <!-- /wp:group -->
+  <!-- wp:shortcode -->
+  [ml_archive_hero context="publishers"]
+  <!-- /wp:shortcode -->
   <!-- wp:group {"className":"ml-directory-content-frame","layout":{"type":"default"}} -->
   <div class="wp-block-group ml-directory-content-frame">
     <!-- wp:group {"className":"ml-publishers-directory-head","layout":{"type":"default"}} -->

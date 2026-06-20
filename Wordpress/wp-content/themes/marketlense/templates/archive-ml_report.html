@@ -2,38 +2,9 @@
 
 <!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-directory-page ml-reports-archive-page","layout":{"type":"default"}} -->
 <main id="main-content" class="wp-block-group ml-directory-page ml-reports-archive-page">
-  <!-- wp:group {"className":"ml-directory-hero","layout":{"type":"default"}} -->
-  <div class="wp-block-group ml-directory-hero">
-    <!-- wp:group {"className":"ml-directory-hero-frame","layout":{"type":"default"}} -->
-    <div class="wp-block-group ml-directory-hero-frame">
-      <!-- wp:group {"className":"ml-directory-hero-copy","layout":{"type":"default"}} -->
-      <div class="wp-block-group ml-directory-hero-copy">
-        <!-- wp:paragraph {"className":"ml-section-kicker"} -->
-        <p class="ml-section-kicker">Research archive</p>
-        <!-- /wp:paragraph -->
-        <!-- wp:heading {"level":1} -->
-        <h1 class="wp-block-heading">Published research, structured for review.</h1>
-        <!-- /wp:heading -->
-        <!-- wp:paragraph {"className":"ml-page-lead"} -->
-        <p class="ml-page-lead">Search, filter, and compare governed research while keeping its publisher, taxonomy, evidence, and source visible.</p>
-        <!-- /wp:paragraph -->
-      </div>
-      <!-- /wp:group -->
-      <!-- wp:group {"className":"ml-reports-hero-stats","layout":{"type":"default"}} -->
-      <div class="wp-block-group ml-reports-hero-stats">
-        <!-- wp:paragraph {"className":"ml-reports-hero-stats-kicker"} -->
-        <p class="ml-reports-hero-stats-kicker">Archive coverage</p>
-        <!-- /wp:paragraph -->
-        <!-- wp:shortcode -->[ml_archive_metric entity="reports" label="Reports" icon="reports"]<!-- /wp:shortcode -->
-        <!-- wp:shortcode -->[ml_archive_metric entity="publishers" label="Publishers" icon="publishers"]<!-- /wp:shortcode -->
-        <!-- wp:shortcode -->[ml_archive_metric entity="topics" label="Topics" icon="topics"]<!-- /wp:shortcode -->
-        <!-- wp:shortcode -->[ml_archive_metric entity="regions" label="Regions" icon="regions"]<!-- /wp:shortcode -->
-      </div>
-      <!-- /wp:group -->
-    </div>
-    <!-- /wp:group -->
-  </div>
-  <!-- /wp:group -->
+  <!-- wp:shortcode -->
+  [ml_archive_hero context="reports"]
+  <!-- /wp:shortcode -->
 
   <!-- wp:group {"className":"ml-directory-content-frame","layout":{"type":"default"}} -->
   <div class="wp-block-group ml-directory-content-frame">
