@@ -144,6 +144,10 @@ def test_signal_generator_builds_grounded_publish_projection(
     assert projection.publisher_labels == ["Publisher A", "Publisher B"]
     assert projection.validation_status == "approved"
     assert projection.confidence >= 0.7
+    assert projection.card_content.summary
+    assert projection.card_content.source_count == 2
+    assert projection.card_content.evidence_count == 2
+    assert projection.card_content.fingerprint.geometry_family
     assert "projected evidence" in projection.uncertainty
     assert "Publisher A AI Commerce Report, page 2" in projection.body_html
     assert "report-a:claim:1" not in projection.body_html

@@ -72,3 +72,24 @@ profiles:
       large:
         <<: *large_layout
         title_rect: [96, 420, 1008, 760]
+
+  signal:
+    palette:
+      background: "#062A42"
+      background_elevated: "#0A3B5A"
+      geometry: "#5F9AB4"
+      geometry_highlight: "#D9EEF2"
+      text: "#F8FCFF"
+    fonts:
+      regular_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
+      bold_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
+    layouts:
+      small:
+        <<: *small_layout
+        title_rect: [120, 270, 920, 360]
+      medium:
+        <<: *medium_layout
+        title_rect: [96, 405, 1008, 690]
+      large:
+        <<: *large_layout
+        title_rect: [96, 420, 1008, 760]

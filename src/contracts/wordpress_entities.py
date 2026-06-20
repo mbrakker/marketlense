@@ -1,16 +1,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Mapping
 
 from src.contracts.cross_report_analysis import (
     CrossReportProjectedDataReadRequest,
     CrossReportPublishResultSummary,
     PublicationMode,
 )
+from src.contracts.signal_cards import SignalCardContent
 
 
 WORDPRESS_ENTITY_SCHEMA_VERSION = "1.0"
+
+
+def _string_list(payload: Mapping[str, object], key: str) -> List[str]:
+    raw = payload.get(key)
+    if not isinstance(raw, list):
+        raise ValueError(f"Signal publish projection requires a list for {key}")
+    return [str(value) for value in raw]
 
 
 @dataclass(frozen=True)
@@ -44,6 +52,9 @@ class SignalPublishProjection:
     validation_status: str = field(
         metadata={"doc": "Signal validation status, for example approved or blocked."}
     )
+    card_content: SignalCardContent = field(
+        metadata={"doc": "Validated signal-card content before cover rendering."}
+    )
     file_id: str = field(
         default="",
         metadata={"doc": "Stable pseudo file ID used for WordPress idempotency."},
@@ -70,6 +81,38 @@ class SignalPublishProjection:
         default="wordpress:ml_signal",
         metadata={"doc": "Canonical WordPress route for durable Signal posts."},
     )
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> "SignalPublishProjection":
+        card_payload = payload.get("card_content")
+        if not isinstance(card_payload, Mapping):
+            raise ValueError("Signal publish projections require card_content")
+        return cls(
+            schema_version=str(payload["schema_version"]),
+            title=str(payload["title"]),
+            slug=str(payload["slug"]),
+            summary_html=str(payload["summary_html"]),
+            body_html=str(payload["body_html"]),
+            evidence_ids=_string_list(payload, "evidence_ids"),
+            source_report_ids=_string_list(payload, "source_report_ids"),
+            topic_ids=_string_list(payload, "topic_ids"),
+            confidence=float(str(payload["confidence"])),
+            uncertainty=str(payload["uncertainty"]),
+            validation_status=str(payload["validation_status"]),
+            card_content=SignalCardContent.from_dict(card_payload),
+            file_id=str(payload.get("file_id") or ""),
+            html_text=str(payload.get("html_text") or ""),
+            topic_labels=_string_list(payload, "topic_labels")
+            if "topic_labels" in payload
+            else [],
+            tag_labels=_string_list(payload, "tag_labels")
+            if "tag_labels" in payload
+            else [],
+            publisher_labels=_string_list(payload, "publisher_labels")
+            if "publisher_labels" in payload
+            else [],
+            target_route=str(payload.get("target_route") or "wordpress:ml_signal"),
+        )
 
 
 @dataclass(frozen=True)
@@ -135,6 +178,11 @@ class SignalPostWorkflowRequest:
     db_path: str = field(metadata={"doc": "Analytics projection SQLite database path."})
     output_root: str = field(
         metadata={"doc": "Output root for Signal publish artifacts."}
+    )
+    cover_style_path: str = field(
+        metadata={
+            "doc": "Filesystem path to the Signal cover-style YAML configuration."
+        }
     )
     publication_mode: PublicationMode = field(
         default="publish_dry_run",

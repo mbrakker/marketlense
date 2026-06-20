@@ -122,6 +122,10 @@ class PublishHtmlSnapshot:
         default_factory=dict,
         metadata={"doc": "Briefing-card metadata and generated cover asset paths."},
     )
+    signal_card: Dict[str, object] = field(
+        default_factory=dict,
+        metadata={"doc": "Signal-card metadata and generated cover asset paths."},
+    )
 
 
 @dataclass(frozen=True)

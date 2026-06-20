@@ -173,6 +173,37 @@ def test_briefing_cover_renderer_writes_three_exact_assets(tmp_path) -> None:
     assert Image.open(assets.large.output_path).size == (1200, 1600)
 
 
+def test_signal_cover_renderer_writes_three_exact_assets(tmp_path) -> None:
+    outcomes = generate_cover_images(
+        CoverImageGenerationRequest(
+            schema_version="2.0",
+            output_dir=str(tmp_path / "out"),
+            style_config_path=str(STYLE_PATH),
+            reports=[
+                CoverImageReport(
+                    schema_version="2.0",
+                    file_id="signal-123",
+                    title="Checkout Trust Is Becoming a Conversion Condition",
+                    publisher="Market Bearing Signal",
+                    report_slug="checkout-trust-conversion-condition",
+                    time_period=None,
+                    region=None,
+                    fingerprint=_fingerprint(),
+                    cover_profile="signal",
+                )
+            ],
+        ),
+        _ctx(),
+    )
+
+    assert outcomes[0].status == "generated"
+    assets = outcomes[0].assets
+    assert assets is not None
+    assert Image.open(assets.small.output_path).size == (1600, 900)
+    assert Image.open(assets.medium.output_path).size == (1200, 1500)
+    assert Image.open(assets.large.output_path).size == (1200, 1600)
+
+
 def test_real_cover_renderer_wraps_complete_long_covered_period(tmp_path) -> None:
     covered_period = (
         "Primary focus: 2024-2028 with historical data points for 2019 and 2021 "

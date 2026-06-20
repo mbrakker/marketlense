@@ -121,7 +121,7 @@ class CoverImageReport:
     )
     cover_profile: str = field(
         default="report",
-        metadata={"doc": "Approved report or briefing cover profile."},
+        metadata={"doc": "Approved report, briefing, or signal cover profile."},
     )
 
     @classmethod

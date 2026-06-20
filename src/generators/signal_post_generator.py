@@ -22,6 +22,7 @@ from src.contracts.wordpress_entities import (
     SignalPostGenerationRequest,
     SignalPublishProjection,
 )
+from src.generators.signal_card_projection import build_signal_card_content
 from src.utils.coercion import ordered_unique_strings as _unique_ordered
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -402,6 +403,14 @@ def _projection_from_candidates(
         confidence=max(candidate.confidence for candidate in candidates),
         uncertainty=uncertainty,
         validation_status="approved",
+        card_content=build_signal_card_content(
+            title=title,
+            summary=candidates[0].summary,
+            confidence=max(candidate.confidence for candidate in candidates),
+            source_report_ids=source_report_ids,
+            evidence_ids=evidence_ids,
+            uncertainty=uncertainty,
+        ),
         file_id=f"signal:{slug}",
         html_text=f"<html><body>{body_html}</body></html>",
         topic_labels=topic_labels,
@@ -521,6 +530,14 @@ def build_signal_publish_projection(
         confidence=confidence,
         uncertainty=uncertainty,
         validation_status="approved",
+        card_content=build_signal_card_content(
+            title=title,
+            summary=str(selected_evidence[0].text),
+            confidence=confidence,
+            source_report_ids=source_report_ids,
+            evidence_ids=evidence_ids,
+            uncertainty=uncertainty,
+        ),
         file_id=f"signal:{slug}",
         html_text=f"<html><body>{body_html}</body></html>",
         topic_labels=topic_labels,

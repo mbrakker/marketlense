@@ -9,6 +9,7 @@ from src.contracts._cross_report_analysis import (
     PublicationMode,
 )
 
+
 @dataclass(frozen=True)
 class CrossReportPublishRequestSummary:
     schema_version: str = field(
@@ -165,4 +166,8 @@ class CrossReportPublishPackage:
     briefing_card: Dict[str, Any] = field(
         default_factory=dict,
         metadata={"doc": "Validated briefing-card fields and generated cover assets."},
+    )
+    signal_card: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Validated signal-card fields and generated cover assets."},
     )

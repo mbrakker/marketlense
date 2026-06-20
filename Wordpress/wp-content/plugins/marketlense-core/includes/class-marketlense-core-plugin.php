@@ -39,6 +39,10 @@ final class Plugin
 
     private Briefing_Card_Renderer $briefing_card_renderer;
 
+    private Signal_Card_View_Model_Builder $signal_card_view_model_builder;
+
+    private Signal_Card_Renderer $signal_card_renderer;
+
     private Shortcodes $shortcodes;
 
     private function __construct()
@@ -54,12 +58,16 @@ final class Plugin
         $this->report_card_renderer = new Report_Card_Renderer();
         $this->briefing_card_view_model_builder = new Briefing_Card_View_Model_Builder();
         $this->briefing_card_renderer = new Briefing_Card_Renderer();
+        $this->signal_card_view_model_builder = new Signal_Card_View_Model_Builder();
+        $this->signal_card_renderer = new Signal_Card_Renderer();
         $this->shortcodes = new Shortcodes(
             $this->view_model_builder,
             $this->stats,
             $this->report_card_renderer,
             $this->briefing_card_view_model_builder,
-            $this->briefing_card_renderer
+            $this->briefing_card_renderer,
+            $this->signal_card_view_model_builder,
+            $this->signal_card_renderer
         );
     }
 

@@ -38,6 +38,7 @@ final class Shortcodes
         'ml_strategic_themes' => 'render_strategic_themes',
         'ml_publisher_authority' => 'render_publisher_authority',
         'ml_signals_index' => 'render_signals_index',
+        'ml_signal_cards' => 'render_signal_cards',
         'ml_briefings_index' => 'render_briefings_index',
         'ml_signal_archive' => 'render_signal_archive',
         'ml_briefing_archive' => 'render_briefing_archive',
@@ -60,18 +61,26 @@ final class Shortcodes
 
     private Briefing_Card_Renderer $briefing_card_renderer;
 
+    private Signal_Card_View_Model_Builder $signal_card_view_model_builder;
+
+    private Signal_Card_Renderer $signal_card_renderer;
+
     public function __construct(
         Report_View_Model_Builder $view_model_builder,
         Intelligence_Stats $stats,
         Report_Card_Renderer $report_card_renderer,
         Briefing_Card_View_Model_Builder $briefing_card_view_model_builder,
-        Briefing_Card_Renderer $briefing_card_renderer
+        Briefing_Card_Renderer $briefing_card_renderer,
+        Signal_Card_View_Model_Builder $signal_card_view_model_builder,
+        Signal_Card_Renderer $signal_card_renderer
     ) {
         $this->view_model_builder = $view_model_builder;
         $this->stats = $stats;
         $this->report_card_renderer = $report_card_renderer;
         $this->briefing_card_view_model_builder = $briefing_card_view_model_builder;
         $this->briefing_card_renderer = $briefing_card_renderer;
+        $this->signal_card_view_model_builder = $signal_card_view_model_builder;
+        $this->signal_card_renderer = $signal_card_renderer;
     }
 
     /**
@@ -836,14 +845,57 @@ final class Shortcodes
             return $this->render_report_signal_archive($attrs);
         }
 
-        return $this->render_entity_archive(
+        return $this->render_signal_cards($attrs);
+    }
+
+    /**
+     * Renders canonical Signal cards at one approved density.
+     *
+     * @param array<string,mixed> $attrs Shortcode attributes.
+     */
+    public function render_signal_cards(array $attrs = []): string
+    {
+        $atts = shortcode_atts(
+            ['variant' => 'small', 'per_page' => (string) self::DEFAULT_PER_PAGE],
             $attrs,
-            'ml_signals_index',
-            Post_Type::SIGNAL_POST_TYPE,
-            __('Published Signals', 'marketlense-core'),
-            __('No validated Signals are available yet. Signals appear here after approved Signals have been published.', 'marketlense-core'),
-            __('Read Signal', 'marketlense-core')
+            'ml_signal_cards'
         );
+        $variant = sanitize_key((string) $atts['variant']);
+        if (! in_array($variant, ['small', 'medium', 'large'], true)) {
+            return '';
+        }
+        $query = new \WP_Query([
+            'post_type' => Post_Type::SIGNAL_POST_TYPE,
+            'post_status' => 'publish',
+            'posts_per_page' => max(1, min(48, (int) $atts['per_page'])),
+            'orderby' => 'date', 'order' => 'DESC', 'no_found_rows' => true,
+            'meta_query' => [['key' => 'ml_signal_card_schema_version', 'value' => '1.0']],
+        ]);
+        $cards = [];
+        while ($query->have_posts()) {
+            $query->the_post();
+            $post = get_post();
+            if (! $post instanceof \WP_Post) {
+                continue;
+            }
+            $signal = $this->signal_card_view_model_builder->build($post);
+            if (($signal['card_contract_valid'] ?? false) === true) {
+                $cards[] = $this->signal_card_renderer->render($signal, $variant);
+            }
+        }
+        wp_reset_postdata();
+        ob_start(); ?>
+        <section class="ml-entity-archive ml-report-browser-results" aria-label="<?php esc_attr_e('Published Signals', 'marketlense-core'); ?>">
+            <?php if ($cards !== []) : ?>
+                <div class="ml-report-browser-grid">
+                    <?php foreach ($cards as $card) : echo $card; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php else : ?>
+                <?php $this->render_institutional_empty_state(__('No validated Signals are available yet. Signals appear here after approved Signals have been published.', 'marketlense-core')); ?>
+            <?php endif; ?>
+        </section>
+        <?php return (string) ob_get_clean();
     }
 
     /**

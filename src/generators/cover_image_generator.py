@@ -101,7 +101,9 @@ def generate_cover_images(
         profile = config.profiles.get(report.cover_profile)
         if profile is None:
             outcomes.append(
-                _error_outcome(report, "Cover profile is not approved: " + report.cover_profile)
+                _error_outcome(
+                    report, "Cover profile is not approved: " + report.cover_profile
+                )
             )
             continue
 

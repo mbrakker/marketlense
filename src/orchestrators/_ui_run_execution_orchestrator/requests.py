@@ -239,6 +239,7 @@ def _signal_post_request(
         ),
         db_path=settings.reports_db,
         output_root=payload.output_root or settings.output_dir,
+        cover_style_path=settings.cover_style_path,
         publication_mode=cast(PublicationMode, payload.publication_mode),
         signal_store_db=payload.signal_store_db
         or settings.signal_store_db

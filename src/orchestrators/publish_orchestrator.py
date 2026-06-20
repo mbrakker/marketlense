@@ -321,6 +321,7 @@ def publish_cross_report_package(
                         canonical_route_intent=package.target_route,
                     ),
                     briefing_card=package.briefing_card,
+                    signal_card=package.signal_card,
                 ),
                 resolved_terms=resolved_terms,
             ),
@@ -449,6 +450,7 @@ def publish_cross_report_package(
 
 def publish_signal_projection(
     projection: SignalPublishProjection,
+    signal_card: dict[str, object],
     settings: PublishSettings,
     ctx: RunContext,
     *,
@@ -479,7 +481,7 @@ def publish_signal_projection(
             },
         )
     return publish_cross_report_package(
-        _signal_projection_package(projection),
+        _signal_projection_package(projection, signal_card),
         settings,
         ctx,
         dry_run=dry_run,
@@ -610,8 +612,7 @@ def run_publish(
                     root_ctx,
                 ).exists
                 or bool(
-                    candidate.html_snapshot
-                    and candidate.html_snapshot.briefing_card
+                    candidate.html_snapshot and candidate.html_snapshot.briefing_card
                 )
             )
         ]

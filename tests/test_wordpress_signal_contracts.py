@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
+from src.contracts.report_cards import CoverFingerprint
+from src.contracts.signal_cards import SignalCardContent
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
     SignalPublishProjection,
 )
 
 
-def test_signal_publish_projection_round_trips_without_default_required_fields() -> None:
+def test_signal_publish_projection_round_trips_without_default_required_fields() -> (
+    None
+):
     projection = SignalPublishProjection(
         schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
         title="Checkout trust is fragmenting",
@@ -21,10 +25,29 @@ def test_signal_publish_projection_round_trips_without_default_required_fields()
         confidence=0.82,
         uncertainty="Publisher coverage is strongest in retail sources.",
         validation_status="approved",
+        card_content=SignalCardContent(
+            schema_version="1.0",
+            summary="Trust signals diverged across checkout reports.",
+            confidence=0.82,
+            source_count=2,
+            evidence_count=2,
+            uncertainty="Publisher coverage is strongest in retail sources.",
+            fingerprint=CoverFingerprint(
+                schema_version="1.0",
+                geometry_family="signal_lattice",
+                evidence_shape="system",
+                direction="neutral",
+                geography_scope="unknown",
+                evidence_density="balanced",
+                domain_layer="grid",
+                seed=41,
+                selection_reason="Signal card contract test.",
+            ),
+        ),
         target_route="wordpress:ml_signal",
     )
 
-    round_tripped = SignalPublishProjection(**asdict(projection))
+    round_tripped = SignalPublishProjection.from_dict(asdict(projection))
 
     assert round_tripped == projection
     assert round_tripped.schema_version == "1.0"

@@ -276,6 +276,7 @@ def _cross_report_result_from_outcome(
 
 def _signal_projection_package(
     projection: SignalPublishProjection,
+    signal_card: dict[str, object],
 ) -> CrossReportPublishPackage:
     payload = asdict(projection)
     content_hash = hashlib.sha256(
@@ -327,4 +328,5 @@ def _signal_projection_package(
             "uncertainty": projection.uncertainty,
             "public_entity_metadata": asdict(publish_entity_metadata),
         },
+        signal_card=signal_card,
     )

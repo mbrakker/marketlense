@@ -134,12 +134,15 @@ def publish_html(
             ctx,
         )
     briefing_card = (
-        html_snapshot.briefing_card
-        if settings.wp.post_type == "ml_briefing"
-        else {}
+        html_snapshot.briefing_card if settings.wp.post_type == "ml_briefing" else {}
+    )
+    signal_card = (
+        html_snapshot.signal_card if settings.wp.post_type == "ml_signal" else {}
     )
     if briefing_card:
         _validate_briefing_card(briefing_card)
+    if signal_card:
+        _validate_signal_card(signal_card)
     if request.existing_post_id is not None:
         if card_manifest is not None:
             backfill_media_ids = _upload_report_card_covers(
@@ -166,9 +169,20 @@ def publish_html(
                 ctx=ctx,
                 sequential=True,
             )
-            card_meta = _briefing_card_post_meta(
-                briefing_card, backfill_media_ids
+            card_meta = _briefing_card_post_meta(briefing_card, backfill_media_ids)
+        elif signal_card:
+            backfill_media_ids = _upload_signal_card_covers(
+                card=signal_card,
+                html_path=request.html_path,
+                output_dir=settings.output_dir,
+                base_url=base_url,
+                auth_header=auth_header,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+                ctx=ctx,
+                sequential=True,
             )
+            card_meta = _signal_card_post_meta(signal_card, backfill_media_ids)
         else:
             raise AppError(
                 code="card_contract_required",
@@ -266,6 +280,18 @@ def publish_html(
             ctx=ctx,
         )
         featured_media_id = card_media_ids["large"]
+    if signal_card:
+        card_media_ids = _upload_signal_card_covers(
+            card=signal_card,
+            html_path=request.html_path,
+            output_dir=settings.output_dir,
+            base_url=base_url,
+            auth_header=auth_header,
+            ssl_verify=settings.wp.ssl_verify,
+            ca_bundle_path=settings.wp.ca_bundle_path,
+            ctx=ctx,
+        )
+        featured_media_id = card_media_ids["large"]
     rendered_body_html = replace_image_sources(html_snapshot.body_html, image_map)
     # Proxy-backed digest images stay more reliable on the WP frontend without
     # responsive srcset/sizes candidates that still point at synthetic query URLs.
@@ -297,7 +323,11 @@ def publish_html(
     post_meta = (
         _report_card_post_meta(card_manifest, card_media_ids)
         if card_manifest is not None
-        else _briefing_card_post_meta(briefing_card, card_media_ids) if briefing_card else None
+        else _briefing_card_post_meta(briefing_card, card_media_ids)
+        if briefing_card
+        else _signal_card_post_meta(signal_card, card_media_ids)
+        if signal_card
+        else None
     )
     create_resp = create_post(
         WordPressPostCreateRequest(
@@ -493,11 +523,67 @@ def _upload_briefing_card_covers(
     ctx: RunContext,
     sequential: bool = False,
 ) -> dict[str, int]:
+    return _upload_entity_card_covers(
+        card=card,
+        card_label="Briefing",
+        event="publish_briefing_card_covers_uploaded",
+        html_path=html_path,
+        output_dir=output_dir,
+        base_url=base_url,
+        auth_header=auth_header,
+        ssl_verify=ssl_verify,
+        ca_bundle_path=ca_bundle_path,
+        ctx=ctx,
+        sequential=sequential,
+    )
+
+
+def _upload_signal_card_covers(
+    *,
+    card: dict[str, object],
+    html_path: str,
+    output_dir: str,
+    base_url: str,
+    auth_header: str,
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
+    ctx: RunContext,
+    sequential: bool = False,
+) -> dict[str, int]:
+    return _upload_entity_card_covers(
+        card=card,
+        card_label="Signal",
+        event="publish_signal_card_covers_uploaded",
+        html_path=html_path,
+        output_dir=output_dir,
+        base_url=base_url,
+        auth_header=auth_header,
+        ssl_verify=ssl_verify,
+        ca_bundle_path=ca_bundle_path,
+        ctx=ctx,
+        sequential=sequential,
+    )
+
+
+def _upload_entity_card_covers(
+    *,
+    card: dict[str, object],
+    card_label: str,
+    event: str,
+    html_path: str,
+    output_dir: str,
+    base_url: str,
+    auth_header: str,
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
+    ctx: RunContext,
+    sequential: bool = False,
+) -> dict[str, int]:
     covers = card.get("covers")
     if not isinstance(covers, dict):
         raise AppError(
             code="cover_asset_set_incomplete",
-            message="Briefing card covers are required",
+            message=f"{card_label} card covers are required",
             retryable=False,
         )
     source_dir = Path(html_path).resolve().parent
@@ -508,7 +594,7 @@ def _upload_briefing_card_covers(
         if not raw_path:
             raise AppError(
                 code="cover_asset_set_incomplete",
-                message="Briefing card covers are required",
+                message=f"{card_label} card covers are required",
                 retryable=False,
                 context={"size": size},
             )
@@ -528,9 +614,7 @@ def _upload_briefing_card_covers(
                 candidate
                 for candidate in candidates
                 if file_exists(
-                    FileExistsRequest(
-                        schema_version="1.0", path=str(candidate)
-                    ),
+                    FileExistsRequest(schema_version="1.0", path=str(candidate)),
                     ctx,
                 ).exists
             ),
@@ -539,7 +623,7 @@ def _upload_briefing_card_covers(
         if local_path is None:
             raise AppError(
                 code="cover_asset_set_incomplete",
-                message="Briefing card cover file is missing",
+                message=f"{card_label} card cover file is missing",
                 retryable=False,
                 context={"size": size, "output_path": raw_path},
             )
@@ -579,7 +663,7 @@ def _upload_briefing_card_covers(
         log_event(
             ctx,
             role="generator",
-            event="publish_briefing_card_covers_uploaded",
+            event=event,
             module=logger.name,
             fields={
                 "small_id": ids["small"],
@@ -644,7 +728,9 @@ def _validate_briefing_card(card: dict[str, object]) -> None:
         )
 
 
-def _briefing_card_post_meta(card: dict[str, object], media_ids: dict[str, int]) -> dict[str, object]:
+def _briefing_card_post_meta(
+    card: dict[str, object], media_ids: dict[str, int]
+) -> dict[str, object]:
     raw_takeaways = card["takeaways"]
     takeaways = (
         [str(value).strip() for value in raw_takeaways]
@@ -662,6 +748,47 @@ def _briefing_card_post_meta(card: dict[str, object], media_ids: dict[str, int])
         "ml_briefing_card_cover_small_id": media_ids["small"],
         "ml_briefing_card_cover_medium_id": media_ids["medium"],
         "ml_briefing_card_cover_large_id": media_ids["large"],
+    }
+
+
+def _validate_signal_card(card: dict[str, object]) -> None:
+    required_text = ("summary", "uncertainty")
+    missing = [key for key in required_text if not str(card.get(key) or "").strip()]
+    try:
+        confidence = float(str(card.get("confidence") or ""))
+    except (TypeError, ValueError):
+        confidence = -1.0
+    if confidence < 0 or confidence > 1:
+        missing.append("confidence")
+    for key in ("source_count", "evidence_count"):
+        try:
+            value = int(str(card.get(key) or "0"))
+        except (TypeError, ValueError):
+            value = 0
+        if value < 1:
+            missing.append(key)
+    if missing:
+        raise AppError(
+            code="signal_card_contract_invalid",
+            message="Signal card metadata is incomplete",
+            retryable=False,
+            context={"missing_fields": sorted(set(missing))},
+        )
+
+
+def _signal_card_post_meta(
+    card: dict[str, object], media_ids: dict[str, int]
+) -> dict[str, object]:
+    return {
+        "ml_signal_card_schema_version": "1.0",
+        "ml_signal_card_summary": str(card["summary"]),
+        "ml_signal_card_uncertainty": str(card["uncertainty"]),
+        "ml_signal_card_confidence": float(str(card["confidence"])),
+        "ml_signal_source_count": int(str(card["source_count"])),
+        "ml_signal_evidence_count": int(str(card["evidence_count"])),
+        "ml_signal_card_cover_small_id": media_ids["small"],
+        "ml_signal_card_cover_medium_id": media_ids["medium"],
+        "ml_signal_card_cover_large_id": media_ids["large"],
     }
 
 

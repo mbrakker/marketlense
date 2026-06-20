@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -73,7 +74,10 @@ def _evidence(
         entity_uid=f"{report_id}:claim:{evidence_id}",
         content_class="claim",
         text=f"{publisher} reports AI commerce adoption is changing checkout behavior.",
-        source_metadata={"pages": [2], "source_url": f"https://sources.example/{report_id}"},
+        source_metadata={
+            "pages": [2],
+            "source_url": f"https://sources.example/{report_id}",
+        },
     )
 
 
@@ -121,8 +125,28 @@ def _workflow_request(
         db_path=str(tmp_path / "analytics.sqlite"),
         signal_store_db=signal_store_db,
         output_root=str(tmp_path),
+        cover_style_path=str(
+            Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"
+        ),
         publication_mode=publication_mode,
     )
+
+
+def _signal_card(projection) -> dict[str, object]:
+    card = projection.card_content
+    return {
+        "schema_version": card.schema_version,
+        "summary": card.summary,
+        "confidence": card.confidence,
+        "source_count": card.source_count,
+        "evidence_count": card.evidence_count,
+        "uncertainty": card.uncertainty,
+        "covers": {
+            "small": "signal-card-small.png",
+            "medium": "signal-card-medium.png",
+            "large": "signal-card-large.png",
+        },
+    }
 
 
 def _ensure_taxonomy(request, ctx):
@@ -173,6 +197,7 @@ def test_signal_workflow_dry_run_reads_projected_data_and_reports_payload(
     }
     assert read_requests[0].db_path == str(tmp_path / "analytics.sqlite")
     assert read_requests[0].minimum_projection_status == "projected"
+    assert len(list(tmp_path.rglob("*.png"))) == 3
 
 
 def test_signal_workflow_reads_candidates_from_separate_signal_store(
@@ -326,6 +351,7 @@ def test_publish_signal_projection_live_builds_payload_and_reuses_idempotency(
 
     first = publish_signal_projection(
         projection,
+        _signal_card(projection),
         settings,
         run_context,
         dry_run=False,
@@ -337,6 +363,7 @@ def test_publish_signal_projection_live_builds_payload_and_reuses_idempotency(
     )
     second = publish_signal_projection(
         projection,
+        _signal_card(projection),
         settings,
         run_context,
         dry_run=False,
@@ -358,6 +385,11 @@ def test_publish_signal_projection_live_builds_payload_and_reuses_idempotency(
     assert publish_request.resolved_terms.category_ids == [11]
     assert publish_request.resolved_terms.tag_ids == [31]
     assert publish_request.resolved_terms.taxonomy_terms == {"ml_publisher": [21, 22]}
+    assert publish_request.html_snapshot is not None
+    assert (
+        publish_request.html_snapshot.signal_card["summary"]
+        == projection.card_content.summary
+    )
 
 
 def test_publish_signal_projection_rejects_url_outside_signals_section(
@@ -385,6 +417,7 @@ def test_publish_signal_projection_rejects_url_outside_signals_section(
 
     result = publish_signal_projection(
         projection,
+        _signal_card(projection),
         publish_settings_factory(validation_policy="warn"),
         run_context,
         dry_run=False,

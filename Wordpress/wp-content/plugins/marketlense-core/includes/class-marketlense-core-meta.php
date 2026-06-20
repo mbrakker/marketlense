@@ -191,6 +191,26 @@ final class Meta
             'sanitize_callback' => [self::class, 'sanitize_card_insights'],
             'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
         ]);
+
+        foreach (['ml_signal_card_schema_version', 'ml_signal_card_summary', 'ml_signal_card_uncertainty'] as $key) {
+            register_post_meta(Post_Type::SIGNAL_POST_TYPE, $key, [
+                'single' => true, 'type' => 'string', 'show_in_rest' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+                'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+            ]);
+        }
+        register_post_meta(Post_Type::SIGNAL_POST_TYPE, 'ml_signal_card_confidence', [
+            'single' => true, 'type' => 'number', 'show_in_rest' => true,
+            'sanitize_callback' => static fn (mixed $value): float => max(0.0, min(1.0, (float) $value)),
+            'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+        ]);
+        foreach (['ml_signal_source_count', 'ml_signal_evidence_count', 'ml_signal_card_cover_small_id', 'ml_signal_card_cover_medium_id', 'ml_signal_card_cover_large_id'] as $key) {
+            register_post_meta(Post_Type::SIGNAL_POST_TYPE, $key, [
+                'single' => true, 'type' => 'integer', 'show_in_rest' => true,
+                'sanitize_callback' => [self::class, 'sanitize_card_media_id'],
+                'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+            ]);
+        }
     }
 
     /**

@@ -12,6 +12,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportPublishStatus,
     PublicationMode,
 )
+from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.signal_candidates import (
@@ -27,6 +28,7 @@ from src.contracts.wordpress_entities import (
     SignalPublishProjection,
 )
 from src.generators.signal_post_generator import build_signal_publish_projection
+from src.generators.cover_image_generator import generate_cover_images
 from src.orchestrators.publish_orchestrator import publish_signal_projection
 from src.services import analytics_store_service
 from src.utils.errors import AppError
@@ -39,12 +41,12 @@ class _PublishSignalFn(Protocol):
     def __call__(
         self,
         projection: SignalPublishProjection,
+        signal_card: dict[str, object],
         settings: PublishSettings,
         ctx: RunContext,
         *,
         dry_run: bool,
-    ) -> CrossReportPublishResultSummary:
-        ...
+    ) -> CrossReportPublishResultSummary: ...
 
 
 def _projected_data_request(
@@ -103,6 +105,62 @@ def _signal_not_requested_result(
     )
 
 
+def _signal_card_payload(
+    request: SignalPostWorkflowRequest,
+    projection: SignalPublishProjection,
+    ctx: RunContext,
+) -> dict[str, object]:
+    outcomes = generate_cover_images(
+        CoverImageGenerationRequest(
+            schema_version="2.0",
+            output_dir=request.output_root,
+            style_config_path=request.cover_style_path,
+            reports=[
+                CoverImageReport(
+                    schema_version="2.0",
+                    file_id=projection.file_id,
+                    title=projection.title,
+                    publisher="Market Lens Signal",
+                    report_slug=projection.slug,
+                    categories=list(projection.topic_ids),
+                    time_period=None,
+                    region=None,
+                    fingerprint=projection.card_content.fingerprint,
+                    cover_profile="signal",
+                )
+            ],
+        ),
+        ctx,
+    )
+    outcome = outcomes[0] if outcomes else None
+    if outcome is None or outcome.status != "generated" or outcome.assets is None:
+        raise AppError(
+            code="signal_card_cover_generation_failed",
+            message="Signal card covers could not be generated.",
+            retryable=False,
+            severity="error",
+            context={
+                "request_id": request.request_id,
+                "slug": projection.slug,
+                "error": outcome.error if outcome else "no cover outcome returned",
+            },
+        )
+    card = projection.card_content
+    return {
+        "schema_version": card.schema_version,
+        "summary": card.summary,
+        "confidence": card.confidence,
+        "source_count": card.source_count,
+        "evidence_count": card.evidence_count,
+        "uncertainty": card.uncertainty,
+        "covers": {
+            "small": outcome.assets.small.output_path,
+            "medium": outcome.assets.medium.output_path,
+            "large": outcome.assets.large.output_path,
+        },
+    }
+
+
 def run_signal_post_workflow(
     request: SignalPostWorkflowRequest,
     ctx: RunContext,
@@ -156,6 +214,7 @@ def run_signal_post_workflow(
         ctx,
         candidate_data=candidate_data,
     )
+    signal_card = _signal_card_payload(request, projection, ctx)
 
     if request.publication_mode in {"generate_only", "validate_only"}:
         publish_result = _signal_not_requested_result(
@@ -182,6 +241,7 @@ def run_signal_post_workflow(
 
         publish_result = publish_signal_fn(
             projection,
+            signal_card,
             replace(resolved_publish_settings, output_dir=request.output_root),
             ctx,
             dry_run=dry_run,

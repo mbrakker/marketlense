@@ -86,7 +86,7 @@ class TestHtmlUtils(unittest.TestCase):
             '"source_count":4,"evidence_count":32,'
             '"covers":{"small":"covers/small.png",'
             '"medium":"covers/medium.png","large":"covers/large.png"}}}'
-            '</script></body></html>'
+            "</script></body></html>"
         )
 
         snapshot = build_publish_html_snapshot(html)
@@ -94,9 +94,26 @@ class TestHtmlUtils(unittest.TestCase):
         self.assertEqual(snapshot.briefing_card["schema_version"], "1.0")
         self.assertEqual(snapshot.briefing_card["source_count"], 4)
         self.assertEqual(snapshot.briefing_card["evidence_count"], 32)
-        self.assertEqual(
-            snapshot.briefing_card["covers"]["large"], "covers/large.png"
+        self.assertEqual(snapshot.briefing_card["covers"]["large"], "covers/large.png")
+
+    def test_snapshot_extracts_embedded_signal_card(self) -> None:
+        html = (
+            '<html><body><script type="application/json" '
+            'data-market-lense-cross-report-metadata="true">'
+            '{"signal_card":{"schema_version":"1.0",'
+            '"summary":"Signal summary.","confidence":0.84,'
+            '"source_count":5,"evidence_count":14,'
+            '"uncertainty":"Coverage remains category-specific.",'
+            '"covers":{"small":"covers/small.png",'
+            '"medium":"covers/medium.png","large":"covers/large.png"}}}'
+            "</script></body></html>"
         )
+
+        snapshot = build_publish_html_snapshot(html)
+
+        self.assertEqual(snapshot.signal_card["schema_version"], "1.0")
+        self.assertEqual(snapshot.signal_card["confidence"], 0.84)
+        self.assertEqual(snapshot.signal_card["covers"]["large"], "covers/large.png")
 
 
 if __name__ == "__main__":

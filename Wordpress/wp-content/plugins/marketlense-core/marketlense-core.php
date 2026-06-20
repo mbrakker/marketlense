@@ -3,7 +3,7 @@
  * Plugin Name: Market Bearing Core
  * Plugin URI: https://marketlense.local
  * Description: Core WordPress domain layer for governed reports, signals, briefings, taxonomies, and evidence counters.
- * Version: 1.6.6
+ * Version: 1.6.7
  * Author: Market Bearing
  * Author URI: https://marketlense.local
  * Requires at least: 6.6
@@ -21,7 +21,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('MARKETLENSE_CORE_VERSION', '1.6.6');
+define('MARKETLENSE_CORE_VERSION', '1.6.7');
 define('MARKETLENSE_CORE_PATH', plugin_dir_path(__FILE__));
 define('MARKETLENSE_CORE_URL', plugin_dir_url(__FILE__));
 
@@ -37,6 +37,8 @@ require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-intelligen
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-report-card-renderer.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-briefing-card-view-model-builder.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-briefing-card-renderer.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-signal-card-view-model-builder.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-signal-card-renderer.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-shortcodes.php';
 
 register_activation_hook(__FILE__, ['\\MarketLense\\Core\\Plugin', 'activate']);

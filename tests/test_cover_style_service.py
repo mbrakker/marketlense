@@ -42,7 +42,7 @@ def test_default_cover_style_exposes_three_canonical_layouts() -> None:
     assert not hasattr(config, "categories")
 
 
-def test_default_cover_style_exposes_report_and_briefing_profiles() -> None:
+def test_default_cover_style_exposes_report_briefing_and_signal_profiles() -> None:
     config = load_cover_styles(
         CoverStyleLoadRequest(schema_version="2.0", path=""),
         _ctx(),
@@ -52,6 +52,8 @@ def test_default_cover_style_exposes_report_and_briefing_profiles() -> None:
     assert config.profiles["report"].style.background_color == "#061A31"
     assert config.profiles["briefing"].style.background_color == "#0A255A"
     assert config.profiles["briefing"].layouts["small"].title_y == 270
+    assert config.profiles["signal"].style.background_color == "#062A42"
+    assert config.profiles["signal"].layouts["small"].title_y == 270
 
 
 def test_cover_style_service_rejects_non_mapping_root(

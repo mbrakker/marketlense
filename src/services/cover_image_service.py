@@ -391,7 +391,7 @@ def _draw_geometry(
     elif family == "distribution_field":
         _draw_field_primitive(draw, bounds, rng, base, count=88)
         _draw_field_primitive(draw, bounds, rng, strong, count=12)
-    elif family == "concentration_core":
+    elif family in {"concentration_core", "radial_pulse"}:
         center = (int((left + right) / 2), int((top + bottom) / 2))
         for radius in range(min(right - left, bottom - top) // 2, 40, -70):
             draw.ellipse(
@@ -404,7 +404,9 @@ def _draw_geometry(
                 outline=base,
                 width=width,
             )
-        _draw_node_primitive(draw, center, 28, strong)
+        _draw_node_primitive(
+            draw, center, 28 if family == "concentration_core" else 20, strong
+        )
         _draw_field_primitive(draw, bounds, rng, base, count=36)
     elif family == "flow_channels":
         for index in range(5):
@@ -416,7 +418,7 @@ def _draw_geometry(
             ]
             _draw_band_primitive(draw, points, soft, thickness=14)
             _draw_line_primitive(draw, points, strong, width=width)
-    elif family == "network_constellation":
+    elif family in {"network_constellation", "interlaced_mesh"}:
         nodes = [
             (rng.randint(left, right), rng.randint(top, bottom)) for _ in range(18)
         ]
@@ -461,6 +463,23 @@ def _draw_geometry(
                 for upper_point, lower_point in zip(upper, lower)
             ]
             _draw_line_primitive(draw, midline, strong, width=width)
+    elif family == "split_horizon":
+        midpoint = int((top + bottom) / 2)
+        _draw_band_primitive(
+            draw,
+            [(left, midpoint - 42), (right, midpoint - 10)],
+            soft,
+            thickness=max(12, width * 4),
+        )
+        _draw_band_primitive(
+            draw,
+            [(left, midpoint + 42), (right, midpoint + 10)],
+            base,
+            thickness=max(12, width * 4),
+        )
+        _draw_line_primitive(
+            draw, [(left, midpoint), (right, midpoint)], strong, width=width
+        )
     else:
         _draw_matrix_primitive(draw, bounds, base, strong, rng)
 

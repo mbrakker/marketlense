@@ -214,7 +214,7 @@ def load_cover_styles(
             retryable=False,
         )
     profiles = {}
-    for profile_name in ("report", "briefing"):
+    for profile_name in ("report", "briefing", "signal"):
         profile_raw = profiles_raw.get(profile_name)
         if not isinstance(profile_raw, dict):
             raise AppError(

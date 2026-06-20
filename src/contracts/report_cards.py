@@ -49,6 +49,10 @@ GEOMETRY_FAMILIES = (
     "forecast_horizon",
     "uncertainty_envelope",
     "system_matrix",
+    "interlaced_mesh",
+    "radial_pulse",
+    "split_horizon",
+    "signal_lattice",
 )
 TITLE_SCALES = ("short", "medium", "long", "xlong")
 _COVER_DIMENSIONS = {

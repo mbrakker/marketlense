@@ -170,6 +170,14 @@ def extract_publish_entity_metadata(html_text: str) -> Optional[PublishEntityMet
 
 
 def extract_briefing_card(html_text: str) -> Dict[str, object]:
+    return _extract_cross_report_card(html_text, "briefing_card")
+
+
+def extract_signal_card(html_text: str) -> Dict[str, object]:
+    return _extract_cross_report_card(html_text, "signal_card")
+
+
+def _extract_cross_report_card(html_text: str, field_name: str) -> Dict[str, object]:
     match = _CROSS_REPORT_METADATA_RX.search(html_text)
     if not match:
         return {}
@@ -179,7 +187,7 @@ def extract_briefing_card(html_text: str) -> Dict[str, object]:
         return {}
     if not isinstance(payload, dict):
         return {}
-    card = payload.get("briefing_card")
+    card = payload.get(field_name)
     return dict(card) if isinstance(card, dict) else {}
 
 
@@ -211,6 +219,7 @@ def build_publish_html_snapshot(html_text: str) -> PublishHtmlSnapshot:
         preview_image_src=extract_preview_image(html_text),
         entity_metadata=extract_publish_entity_metadata(html_text),
         briefing_card=extract_briefing_card(html_text),
+        signal_card=extract_signal_card(html_text),
     )
 
 

@@ -35,6 +35,7 @@ Market Bearing Core provides the WordPress data model required by the Market Bea
   * `[ml_strategic_themes]`
   * `[ml_publisher_authority]`
   * `[ml_signals_index]`
+  * `[ml_signal_cards variant="small|medium|large" per_page="1..48"]` (reusable validated Signal cards; small shows the grounded statement and proof counts, medium adds topics, large adds the evidence condition)
   * `[ml_briefings_index]`
   * `[ml_signal_archive]` (legacy alias for `[ml_signals_index]`)
   * `[ml_briefing_archive]` (legacy alias for `[ml_briefings_index]`)
@@ -53,6 +54,10 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.6.7 =
+* Adds canonical small, medium, and large Signal cards with validated statement, confidence, source/evidence counts, topics, uncertainty condition, and three deterministic deep-petrol cover assets.
+* Adds `[ml_signal_cards]` as the reusable Signal-card shortcode and upgrades the Signals index to use the canonical card contract when Signal posts exist.
 
 = 1.6.6 =
 * Adds canonical small, medium, and large Briefing cards with validated metadata, semantic covers, source/evidence counters, and seven-day New badges.

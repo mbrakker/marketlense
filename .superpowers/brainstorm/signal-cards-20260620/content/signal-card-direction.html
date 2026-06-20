@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Signal Card Direction</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #eef3f8;
+      --surface: #ffffff;
+      --ink: #10243e;
+      --muted: #607188;
+      --line: #d5e0eb;
+      --signal-950: #062a42;
+      --signal-850: #0a3b5a;
+      --signal-700: #1e6389;
+      --signal-300: #82bdd0;
+      --signal-100: #d9eef2;
+      --focus: #0b5cad;
+      --rust: #b64b36;
+      --shadow: 0 1.25rem 3.25rem rgba(8, 31, 61, 0.11);
+      --serif: Georgia, "Times New Roman", serif;
+      --sans: "Segoe UI", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font-family: var(--sans); }
+    main { width: min(88rem, calc(100% - 2.5rem)); margin: 0 auto; padding: clamp(2.5rem, 6vw, 5rem) 0 6rem; }
+    h1, h2, h3, p { margin: 0; }
+
+    .intro { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(17rem, .65fr); gap: clamp(1.5rem, 4vw, 4rem); align-items: end; margin-bottom: 3rem; }
+    .eyebrow, .variant-label, .cover-label, .meta-label { color: var(--signal-700); font-size: .71rem; font-weight: 780; letter-spacing: .13em; text-transform: uppercase; }
+    .eyebrow { margin-bottom: .8rem; }
+    h1 { max-width: 13ch; font-family: var(--serif); font-size: clamp(2.6rem, 6vw, 5.25rem); font-weight: 600; letter-spacing: -.052em; line-height: .92; text-wrap: balance; }
+    .intro-copy { max-width: 36rem; color: var(--muted); font-size: 1rem; line-height: 1.62; text-wrap: pretty; }
+    .intro-copy strong { color: var(--ink); }
+
+    .principles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-bottom: 3rem; }
+    .principle { min-height: 8.5rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: .8rem; background: color-mix(in srgb, var(--surface) 82%, transparent); }
+    .principle strong { display: block; margin-bottom: .42rem; font-size: .87rem; }
+    .principle span { color: var(--muted); font-size: .84rem; line-height: 1.48; }
+
+    .showcase { display: grid; grid-template-columns: .82fr 1.07fr 1.42fr; gap: clamp(1rem, 2.2vw, 1.6rem); align-items: start; }
+    .variant { min-width: 0; }
+    .variant-label { display: flex; justify-content: space-between; gap: .75rem; margin: 0 .1rem .7rem; }
+    .variant-label span { color: var(--muted); font-size: .72rem; font-weight: 650; letter-spacing: 0; text-transform: none; }
+
+    .signal-card { container-type: inline-size; overflow: hidden; border: 1px solid color-mix(in srgb, var(--signal-700) 18%, var(--line)); border-radius: 1rem; background: var(--surface); box-shadow: var(--shadow); }
+    .signal-card__link { display: grid; min-height: 100%; color: inherit; text-decoration: none; }
+    .signal-card__link:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+    .signal-card__media { position: relative; overflow: clip; isolation: isolate; color: #f8fcff; background: var(--signal-950); }
+    .signal-card__cover { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
+    .signal-card__cover::before, .signal-card__cover::after { position: absolute; content: ""; pointer-events: none; }
+    .signal-card__media--trajectory .signal-card__cover { background: linear-gradient(128deg, var(--signal-950) 4%, var(--signal-850) 67%, #0e5879); }
+    .signal-card__media--trajectory .signal-card__cover::before { width: 115%; height: .08rem; right: -12%; bottom: 30%; transform: rotate(-27deg); background: linear-gradient(90deg, transparent, var(--signal-100) 46%, transparent 78%); box-shadow: 0 1.45rem 0 rgba(130, 189, 208, .38), 0 2.9rem 0 rgba(130, 189, 208, .18); }
+    .signal-card__media--trajectory .signal-card__cover::after { width: 13rem; height: 13rem; right: -6rem; top: -5.5rem; border: 1px solid rgba(217, 238, 242, .34); border-radius: 50%; box-shadow: 0 0 0 1.5rem rgba(130, 189, 208, .07), 0 0 0 3.3rem rgba(130, 189, 208, .045); }
+    .signal-card__media--field .signal-card__cover { background: radial-gradient(circle at 72% 30%, rgba(130, 189, 208, .25), transparent 0 19%), linear-gradient(145deg, #05263c, #0b4261 82%); }
+    .signal-card__media--field .signal-card__cover::before { inset: 12% -9% -8% 38%; background: repeating-radial-gradient(ellipse at 30% 80%, transparent 0 1.05rem, rgba(217, 238, 242, .24) 1.1rem 1.16rem, transparent 1.21rem 2.1rem); transform: rotate(-16deg); opacity: .75; }
+    .signal-card__media--field .signal-card__cover::after { width: 48%; aspect-ratio: 1; left: 12%; bottom: -20%; border: 1px solid rgba(217, 238, 242, .28); border-radius: 50%; box-shadow: 0 0 0 1rem rgba(130, 189, 208, .07), 0 0 0 2.3rem rgba(130, 189, 208, .05); }
+    .signal-card__media--network .signal-card__cover { background: linear-gradient(145deg, #051f34, #083951 65%, #0d516e); }
+    .signal-card__media--network .signal-card__cover::before { width: 95%; height: 75%; right: -6%; bottom: -4%; background-image: radial-gradient(circle, var(--signal-100) 0 .14rem, transparent .17rem), linear-gradient(28deg, transparent 49.5%, rgba(130, 189, 208, .48) 50% 50.5%, transparent 51%), linear-gradient(-33deg, transparent 49.5%, rgba(130, 189, 208, .3) 50% 50.5%, transparent 51%); background-size: 4.4rem 4.4rem, 5.4rem 4rem, 5.9rem 4.4rem; background-position: 0 0, .4rem .4rem, 0 .8rem; opacity: .7; transform: rotate(-8deg); }
+    .signal-card__media--network .signal-card__cover::after { width: 11rem; height: 11rem; left: -5rem; top: -4rem; border: 1px solid rgba(217, 238, 242, .25); border-radius: 50%; box-shadow: 0 0 0 2rem rgba(130, 189, 208, .06); }
+    .cover-label { position: absolute; top: 1rem; left: 1rem; color: rgba(248, 252, 255, .72); }
+    .cover-variation { position: absolute; top: 1rem; right: 1rem; color: rgba(248, 252, 255, .72); font-size: .66rem; font-weight: 750; letter-spacing: .1em; }
+    .new-badge { position: absolute; left: 1rem; bottom: 1rem; padding: .32rem .55rem; border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; background: rgba(4, 24, 40, .76); color: #fff; font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .cover-title { position: absolute; inset: 50% 1rem auto; max-width: 13ch; transform: translateY(-50%); font-family: var(--serif); font-size: clamp(1.25rem, 5cqi, 2.2rem); font-weight: 600; letter-spacing: -.045em; line-height: .95; text-wrap: balance; }
+
+    .signal-card__body { display: grid; min-width: 0; gap: .85rem; padding: clamp(1.1rem, 2.5cqi, 1.7rem); }
+    .signal-card__meta { display: flex; flex-wrap: wrap; gap: .4rem .7rem; align-items: center; color: var(--signal-700); font-size: .69rem; font-weight: 760; letter-spacing: .075em; text-transform: uppercase; }
+    .confidence { display: inline-flex; align-items: center; gap: .33rem; }
+    .confidence::before { width: .42rem; height: .42rem; border-radius: 50%; background: var(--signal-700); box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--signal-300) 35%, transparent); content: ""; }
+    .signal-card__title { color: var(--ink); font-family: var(--serif); font-size: clamp(1.25rem, 5.1cqi, 2.35rem); font-weight: 600; letter-spacing: -.04em; line-height: 1.04; text-wrap: balance; }
+    .signal-card__summary, .signal-card__caveat { color: var(--muted); font-size: .9rem; line-height: 1.56; text-wrap: pretty; }
+    .signal-card__summary { margin: 0; }
+    .signal-card__summary strong { color: var(--ink); font-weight: 700; }
+    .signal-card__topics, .signal-card__proof { display: flex; flex-wrap: wrap; gap: .45rem .8rem; margin: 0; padding: 0; list-style: none; }
+    .signal-card__topics li { padding: .28rem .5rem; border: 1px solid color-mix(in srgb, var(--signal-300) 54%, var(--line)); border-radius: 999px; color: var(--signal-700); font-size: .69rem; font-weight: 720; }
+    .signal-card__proof { color: var(--muted); font-size: .77rem; line-height: 1.35; }
+    .signal-card__proof li { display: inline-flex; align-items: center; gap: .35rem; }
+    .proof-icon { width: 1rem; height: 1rem; fill: none; stroke: var(--signal-700); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+    .signal-card__caveat { padding: .75rem .85rem; border-inline-start: .15rem solid var(--signal-300); background: color-mix(in srgb, var(--signal-100) 38%, white); }
+    .signal-card__caveat b { display: block; margin-bottom: .22rem; color: var(--signal-700); font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; }
+    .signal-card__action { display: inline-flex; align-items: center; align-self: end; gap: .45rem; color: var(--focus); font-size: .77rem; font-weight: 760; letter-spacing: .025em; }
+    .signal-card__action::after { font-size: 1.1rem; font-weight: 400; content: "→"; transition: transform 180ms ease; }
+    .signal-card__link:hover .signal-card__action::after, .signal-card__link:focus-visible .signal-card__action::after { transform: translateX(.2rem); }
+
+    .signal-card--small .signal-card__link { grid-template-rows: auto minmax(0, 1fr); }
+    .signal-card--small .signal-card__media { aspect-ratio: 16 / 9; }
+    .signal-card--small .signal-card__body { grid-template-rows: auto auto minmax(5em, 1fr) auto auto; min-height: 21rem; }
+    .signal-card--small .signal-card__title { font-size: clamp(1.3rem, 6cqi, 1.85rem); }
+    .signal-card--small .signal-card__summary { font-size: .84rem; }
+    .signal-card--medium .signal-card__link, .signal-card--large .signal-card__link { grid-template-columns: minmax(12.5rem, 35%) minmax(0, 1fr); }
+    .signal-card--medium .signal-card__media { min-height: 29rem; }
+    .signal-card--medium .signal-card__body { grid-template-rows: auto auto minmax(5em, 1fr) auto auto auto; min-height: 29rem; }
+    .signal-card--large .signal-card__media { min-height: 33rem; }
+    .signal-card--large .signal-card__body { grid-template-rows: auto auto minmax(5em, 1fr) auto auto auto auto; min-height: 33rem; padding: clamp(1.35rem, 3cqi, 2.2rem); }
+
+    .implementation-note { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1rem; align-items: start; margin-top: 2.75rem; padding: 1.15rem 1.25rem; border: 1px solid color-mix(in srgb, var(--signal-300) 52%, var(--line)); border-radius: .8rem; background: color-mix(in srgb, var(--signal-100) 48%, white); color: #35566c; font-size: .87rem; line-height: 1.52; }
+    .implementation-note strong { color: var(--signal-950); }
+    .implementation-note span { color: var(--rust); font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+
+    @media (max-width: 62rem) { .showcase { grid-template-columns: 1fr; max-width: 45rem; } .signal-card--medium .signal-card__media, .signal-card--large .signal-card__media { min-height: 24rem; } .signal-card--medium .signal-card__body, .signal-card--large .signal-card__body { min-height: 24rem; } }
+    @media (max-width: 44rem) { main { width: min(100% - 1.5rem, 88rem); } .intro, .principles { grid-template-columns: 1fr; } .signal-card--medium .signal-card__link, .signal-card--large .signal-card__link { grid-template-columns: 1fr; } .signal-card--medium .signal-card__media, .signal-card--large .signal-card__media { min-height: auto; aspect-ratio: 16 / 10; } .signal-card--medium .signal-card__body, .signal-card--large .signal-card__body { min-height: 0; } }
+    @media (prefers-reduced-motion: reduce) { .signal-card__action::after { transition: none; } .signal-card__link:hover .signal-card__action::after, .signal-card__link:focus-visible .signal-card__action::after { transform: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="intro">
+      <div>
+        <p class="eyebrow">Market Bearing / Signal cards / V0</p>
+        <h1>Evidence that deserves a clear signal.</h1>
+      </div>
+      <p class="intro-copy">This direction keeps the <strong>small, medium, and large</strong> placement system already established for reports. Signals change the reading job: they foreground confidence, evidence coverage, and uncertainty rather than report provenance.</p>
+    </header>
+
+    <section class="principles" aria-label="Signal card system decisions">
+      <article class="principle"><strong>Same placement vocabulary</strong><span>Small scans in an archive. Medium supports comparison. Large supports a featured signal. Layout, focus state, and responsive stacking align with report cards.</span></article>
+      <article class="principle"><strong>Distinct deep-blue covers</strong><span>Signal covers use deep petrol blue with deterministic semantic geometry. The preview shows three of up to twenty content-selected visual combinations.</span></article>
+      <article class="principle"><strong>Proof before decoration</strong><span>Every card keeps visible confidence, source-report count, and evidence-item count. Large cards surface the evidence condition without implying certainty that does not exist.</span></article>
+    </section>
+
+    <section class="showcase" aria-label="Signal card variants">
+      <div class="variant">
+        <p class="variant-label">Small <span>rapid signal scanning</span></p>
+        <article class="signal-card signal-card--small">
+          <a class="signal-card__link" href="#signal-details">
+            <div class="signal-card__media signal-card__media--trajectory">
+              <div class="signal-card__cover" aria-hidden="true"></div>
+              <span class="cover-label">Market signal</span><span class="cover-variation">03 / 20</span><span class="new-badge">New</span>
+              <strong class="cover-title">Checkout trust is fragmenting</strong>
+            </div>
+            <div class="signal-card__body">
+              <p class="signal-card__meta"><span>20 June 2026</span><span class="confidence">82% confidence</span></p>
+              <h2 class="signal-card__title">Checkout trust is fragmenting across commerce channels.</h2>
+              <p class="signal-card__summary">Evidence shows <strong>payment choice, delivery certainty, and AI-assisted discovery</strong> now shape one trust decision.</p>
+              <ul class="signal-card__proof"><li><svg class="proof-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v12H8a3 3 0 0 0-3 3Z"></path><path d="M8 19a3 3 0 0 0-3 3h14V4H8a3 3 0 0 0-3 3v12"></path></svg>3 source reports</li><li><svg class="proof-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg>8 evidence items</li></ul>
+              <span class="signal-card__action">Read signal</span>
+            </div>
+          </a>
+        </article>
+      </div>
+
+      <div class="variant">
+        <p class="variant-label">Medium <span>curated comparison</span></p>
+        <article class="signal-card signal-card--medium">
+          <a class="signal-card__link" href="#signal-details">
+            <div class="signal-card__media signal-card__media--field">
+              <div class="signal-card__cover" aria-hidden="true"></div>
+              <span class="cover-label">Market signal</span><span class="cover-variation">11 / 20</span><span class="new-badge">New</span>
+              <strong class="cover-title">Retail media is moving upstream</strong>
+            </div>
+            <div class="signal-card__body">
+              <p class="signal-card__meta"><span>20 June 2026</span><span class="confidence">76% confidence</span></p>
+              <h2 class="signal-card__title">Retail media is becoming an operating-model decision, not a channel plan.</h2>
+              <p class="signal-card__summary">The common pattern is a shift from campaign experimentation to <strong>measurement ownership, retail data access, and cross-functional accountability.</strong></p>
+              <ul class="signal-card__topics"><li>Retail media</li><li>Measurement</li><li>Operating model</li></ul>
+              <ul class="signal-card__proof"><li><svg class="proof-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v12H8a3 3 0 0 0-3 3Z"></path><path d="M8 19a3 3 0 0 0-3 3h14V4H8a3 3 0 0 0-3 3v12"></path></svg>4 source reports</li><li><svg class="proof-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg>11 evidence items</li></ul>
+              <span class="signal-card__action">Read signal</span>
+            </div>
+          </a>
+        </article>
+      </div>
+
+      <div class="variant">
+        <p class="variant-label">Large <span>featured evaluation</span></p>
+        <article class="signal-card signal-card--large" id="signal-details">
+          <a class="signal-card__link" href="#signal-details">
+            <div class="signal-card__media signal-card__media--network">
+              <div class="signal-card__cover" aria-hidden="true"></div>
+              <span class="cover-label">Market signal</span><span class="cover-variation">17 / 20</span><span class="new-badge">New</span>
+              <strong class="cover-title">AI shopping turns checkout into a trust layer</strong>
+            </div>
+            <div class="signal-card__body">
+              <p class="signal-card__meta"><span>20 June 2026</span><span class="confidence">84% confidence</span></p>
+              <h2 class="signal-card__title">AI shopping is turning checkout into a trust layer.</h2>
+              <p class="signal-card__summary">Across the source set, AI-assisted discovery changes what buyers need to believe before purchase. <strong>Product certainty, fulfilment transparency, and payment controls</strong> are converging into one conversion condition.</p>
+              <ul class="signal-card__topics"><li>AI commerce</li><li>Customer trust</li><li>Checkout</li></ul>
+              <div class="signal-card__caveat"><b>Evidence condition</b>Evidence is strongest in retail and technology publishers; validate the pattern against category-specific conversion data before treating it as market-wide.</div>
+              <ul class="signal-card__proof"><li><svg class="proof-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v12H8a3 3 0 0 0-3 3Z"></path><path d="M8 19a3 3 0 0 0-3 3h14V4H8a3 3 0 0 0-3 3v12"></path></svg>5 source reports</li><li><svg class="proof-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg>14 evidence items</li></ul>
+              <span class="signal-card__action">Read signal</span>
+            </div>
+          </a>
+        </article>
+      </div>
+    </section>
+
+    <aside class="implementation-note"><span>Preview only</span><p><strong>Production rendering rule:</strong> the examples demonstrate hierarchy only. The reusable implementation will render a signal card only from a validated contract containing the title, issue date, summary, confidence, source-report count, evidence-item count, topic labels, uncertainty note, and three generated cover assets. Briefings remain a separate reusable family because their executive-decision contract is not interchangeable with a signal.</p></aside>
+  </main>
+</body>
+</html>
