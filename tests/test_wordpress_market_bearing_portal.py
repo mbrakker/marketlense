@@ -31,6 +31,8 @@ SIGNAL_ARCHIVE = THEME / "templates" / "archive-ml_signal.html"
 BRIEFING_ARCHIVE = THEME / "templates" / "archive-ml_briefing.html"
 TOPICS_PAGE = THEME / "templates" / "page-topics-directory.html"
 PUBLISHERS_PAGE = THEME / "templates" / "page-publishers-directory.html"
+SIGNALS_PAGE = THEME / "templates" / "page-signals.html"
+BRIEFINGS_PAGE = THEME / "templates" / "page-briefings.html"
 
 
 def _editorial_ledger_css_rule(css: str, selector: str) -> str:
@@ -156,29 +158,49 @@ def test_navigation_covers_every_primary_prototype_destination() -> None:
     assert "['label' => __('Briefings'" in shortcodes
 
 
-def test_archive_templates_use_editorial_heroes_with_dynamic_counts() -> None:
+def test_archive_templates_use_shared_hero_with_four_dynamic_counts() -> None:
     templates = {
-        REPORT_ARCHIVE: 'entity="reports"',
-        GENERIC_ARCHIVE: 'entity="reports"',
-        SIGNAL_ARCHIVE: 'entity="signals"',
-        BRIEFING_ARCHIVE: 'entity="briefings"',
-        TOPICS_PAGE: 'entity="topics"',
-        PUBLISHERS_PAGE: 'entity="publishers"',
+        PUBLISHERS_PAGE: "publishers",
+        REPORT_ARCHIVE: "reports",
+        GENERIC_ARCHIVE: "reports",
+        TOPICS_PAGE: "topics",
+        SIGNALS_PAGE: "signals",
+        SIGNAL_ARCHIVE: "signals",
+        BRIEFINGS_PAGE: "briefings",
+        BRIEFING_ARCHIVE: "briefings",
     }
 
-    for template, counter_contract in templates.items():
+    for template, context in templates.items():
         content = template.read_text(encoding="utf-8")
-        assert "ml-directory-hero" in content
-        assert "[ml_archive_metric" in content
-        assert counter_contract in content
+        assert content.count(f'[ml_archive_hero context="{context}"]') == 1
+        assert "ml-directory-hero-frame" not in content
+        assert "[ml_archive_metric" not in content
 
-    report_archive = REPORT_ARCHIVE.read_text(encoding="utf-8")
-    generic_archive = GENERIC_ARCHIVE.read_text(encoding="utf-8")
-    assert 'entity="regions"' in report_archive
-    assert 'icon="regions"' in report_archive
-    assert "ml-reports-archive-page" in generic_archive
-    assert "ml-reports-hero-stats" in generic_archive
-    assert 'entity="regions"' in generic_archive
+    shortcodes = SHORTCODES.read_text(encoding="utf-8")
+    assert "'ml_archive_hero' => 'render_archive_hero'" in shortcodes
+    renderer = shortcodes[
+        shortcodes.index("public function render_archive_hero") : shortcodes.index(
+            "public function render_archive_metric"
+        )
+    ]
+    expected_metric_orders = {
+        "publishers": ["publishers", "reports", "regions", "topics"],
+        "reports": ["reports", "publishers", "topics", "regions"],
+        "topics": ["topics", "reports", "publishers", "regions"],
+        "signals": ["signals", "reports", "topics", "publishers"],
+        "briefings": ["briefings", "reports", "publishers", "topics"],
+    }
+    contexts = list(expected_metric_orders)
+    for index, context in enumerate(contexts):
+        context_start = renderer.index(f"'{context}' => [")
+        context_end = (
+            renderer.index(f"'{contexts[index + 1]}' => [", context_start)
+            if index + 1 < len(contexts)
+            else len(renderer)
+        )
+        context_config = renderer[context_start:context_end]
+        entities = re.findall(r"\['entity' => '([^']+)'", context_config)
+        assert entities == expected_metric_orders[context]
 
 
 def test_report_archive_exposes_real_live_search_region_and_period_filters() -> None:
