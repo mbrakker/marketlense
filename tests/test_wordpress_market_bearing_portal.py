@@ -33,6 +33,7 @@ TOPICS_PAGE = THEME / "templates" / "page-topics-directory.html"
 PUBLISHERS_PAGE = THEME / "templates" / "page-publishers-directory.html"
 SIGNALS_PAGE = THEME / "templates" / "page-signals.html"
 BRIEFINGS_PAGE = THEME / "templates" / "page-briefings.html"
+METHODOLOGY_PAGE = THEME / "templates" / "page-methodology.html"
 
 
 def _editorial_ledger_css_rule(css: str, selector: str) -> str:
@@ -168,6 +169,7 @@ def test_archive_templates_use_shared_hero_with_four_dynamic_counts() -> None:
         SIGNAL_ARCHIVE: "signals",
         BRIEFINGS_PAGE: "briefings",
         BRIEFING_ARCHIVE: "briefings",
+        METHODOLOGY_PAGE: "methodology",
     }
 
     for template, context in templates.items():
@@ -189,6 +191,7 @@ def test_archive_templates_use_shared_hero_with_four_dynamic_counts() -> None:
         "topics": ["topics", "reports", "publishers", "regions"],
         "signals": ["signals", "reports", "topics", "publishers"],
         "briefings": ["briefings", "reports", "publishers", "topics"],
+        "methodology": ["reports", "publishers", "topics", "regions"],
     }
     contexts = list(expected_metric_orders)
     for index, context in enumerate(contexts):
@@ -201,6 +204,18 @@ def test_archive_templates_use_shared_hero_with_four_dynamic_counts() -> None:
         context_config = renderer[context_start:context_end]
         entities = re.findall(r"\['entity' => '([^']+)'", context_config)
         assert entities == expected_metric_orders[context]
+
+    methodology = METHODOLOGY_PAGE.read_text(encoding="utf-8")
+    for preserved_section in (
+        "1. Ingest",
+        "2. Extract",
+        "3. Validate",
+        "4. Shape",
+        "5. Publish",
+        "6. Observe",
+        "Quality controls",
+    ):
+        assert preserved_section in methodology
 
 
 def test_report_archive_exposes_real_live_search_region_and_period_filters() -> None:
