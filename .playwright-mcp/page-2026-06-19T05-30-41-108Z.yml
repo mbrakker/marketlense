@@ -1,0 +1,246 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e5]:
+      - generic [ref=e7]:
+        - paragraph [ref=e8]:
+          - link "Market Bearing home" [ref=e9] [cursor=pointer]:
+            - /url: http://localhost/digitalinsights/
+            - generic [ref=e10]: MarketBearing
+        - generic [ref=e12]:
+          - generic [ref=e13]:
+            - navigation "Primary navigation" [ref=e15]:
+              - list [ref=e16]:
+                - listitem [ref=e17]:
+                  - link "Reports" [ref=e18] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/reports/
+                - listitem [ref=e19]:
+                  - link "Topics" [ref=e20] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/topics-directory/
+                - listitem [ref=e21]:
+                  - link "Publishers" [ref=e22] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/publishers-directory/
+                - listitem [ref=e23]:
+                  - link "Signals" [ref=e24] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/signals/
+                - listitem [ref=e25]:
+                  - link "Briefings" [ref=e26] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/briefings/
+                - listitem [ref=e27]:
+                  - link "Methodology" [ref=e28] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/methodology/
+            - search [ref=e29]:
+              - generic [ref=e30]: Search reports
+              - generic [ref=e31]:
+                - searchbox "Search reports" [ref=e32]
+                - button "Search" [ref=e33] [cursor=pointer]:
+                  - img [ref=e34]
+          - link "Request a briefing" [ref=e38] [cursor=pointer]:
+            - /url: http://localhost/digitalinsights/contact/
+            - text: Request a briefing
+    - main [ref=e39]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - paragraph [ref=e43]: Research archive
+          - heading "Published research, structured for review." [level=1] [ref=e44]
+          - paragraph [ref=e45]: Search, filter, and compare governed research while keeping its publisher, taxonomy, evidence, and source visible.
+        - generic [ref=e46]:
+          - paragraph [ref=e47]: Archive coverage
+          - generic "3 published reports" [ref=e48]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: "3"
+              - strong [ref=e52]: Reports
+          - generic "2 represented publishers" [ref=e53]:
+            - generic [ref=e55]:
+              - generic [ref=e56]: "2"
+              - strong [ref=e57]: Publishers
+          - generic "1 content-backed topic" [ref=e58]:
+            - generic [ref=e60]:
+              - generic [ref=e61]: "1"
+              - strong [ref=e62]: Topics
+          - generic "2 covered regions" [ref=e63]:
+            - generic [ref=e65]:
+              - generic [ref=e66]: "2"
+              - strong [ref=e67]: Regions
+      - region "Report browser" [ref=e69]:
+        - generic [ref=e70]:
+          - generic [ref=e73]:
+            - generic [ref=e74]: Search report archive
+            - searchbox "Search report archive" [ref=e75]
+          - generic "Active filters" [ref=e76]:
+            - generic [ref=e77]: Selected
+            - 'link "Category: Technology & Media" [ref=e78] [cursor=pointer]':
+              - /url: http://localhost/digitalinsights/reports/?ml_region=Global
+            - 'link "Region: Global" [ref=e79] [cursor=pointer]':
+              - /url: http://localhost/digitalinsights/reports/?category=technology-media
+            - link "Clear all" [ref=e80] [cursor=pointer]:
+              - /url: http://localhost/digitalinsights/reports/
+        - generic [ref=e81]:
+          - complementary [ref=e82]:
+            - group [ref=e84]:
+              - generic [ref=e85]:
+                - generic [ref=e86]:
+                  - generic [ref=e87]:
+                    - paragraph [ref=e88]: Filters
+                    - heading "Refine reports" [level=2] [ref=e89]
+                    - paragraph
+                  - paragraph
+                - paragraph [ref=e90]: Each facet only shows options with matching reports in the current view.
+                - generic [ref=e93]:
+                  - generic [ref=e94]:
+                    - generic [ref=e95]: Category
+                    - combobox "Category" [ref=e96]:
+                      - option "All categories"
+                      - option "Technology & Media (2)" [selected]
+                  - paragraph [ref=e97]:
+                    - generic [ref=e98]:
+                      - generic [ref=e99]: Region
+                      - combobox "Region" [ref=e100]:
+                        - option "All regions"
+                        - option "Global (2)" [selected]
+                        - option "United States (1)"
+                  - paragraph [ref=e101]:
+                    - generic [ref=e102]:
+                      - generic [ref=e103]: Publisher
+                      - combobox "Publisher" [ref=e104]:
+                        - option "All publishers" [selected]
+                        - option "Activate Consulting (2)"
+                  - paragraph [ref=e105]:
+                    - generic [ref=e106]:
+                      - generic [ref=e107]: Period
+                      - combobox "Period" [ref=e108]:
+                        - option "All periods" [selected]
+                        - option "2024E-2028E (1)"
+                        - option "2025 (1)"
+          - generic [ref=e109]:
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - paragraph [ref=e112]:
+                  - generic [ref=e113]: 2 reports
+                  - generic [ref=e114]: currently in view
+                - paragraph [ref=e115]: "Focused on the Technology & Media topic. Region: Global."
+                - paragraph
+              - navigation "Sort reports" [ref=e116]:
+                - link "Newest first" [ref=e117] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/?category=technology-media&ml_region=Global
+                  - generic: Newest
+                - link "Oldest first" [ref=e119] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/?category=technology-media&ml_region=Global&ml_sort=oldest
+                  - generic: Oldest
+                - link "Title A-Z" [ref=e121] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/?category=technology-media&ml_region=Global&ml_sort=title
+                  - generic: A-Z
+              - paragraph
+            - generic [ref=e123]:
+              - article [ref=e124]:
+                - link "New Activate Consulting ACTIVATE CONSULTING TECHNOLOGY & MEDIA OUTLOOK 2025 — ECOMMERCE Report details Marketplaces and retail media will drive eCommerce growth; retailers must adopt large, AI-enabled tech stacks. Read report" [ref=e125] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/activate-consulting-technology-media-outlook-2025-ecommerce-2/
+                  - paragraph
+                  - generic [ref=e127]: New
+                  - generic [ref=e128]:
+                    - paragraph [ref=e129]: Activate Consulting
+                    - heading "ACTIVATE CONSULTING TECHNOLOGY & MEDIA OUTLOOK 2025 — ECOMMERCE" [level=3] [ref=e130]
+                    - list "Report details" [ref=e131]:
+                      - listitem [ref=e132]:
+                        - img [ref=e133]
+                        - generic [ref=e135]: June 13, 2026
+                      - listitem [ref=e136]:
+                        - img [ref=e137]
+                        - generic [ref=e140]: Global
+                      - listitem [ref=e141]:
+                        - img [ref=e142]
+                        - generic [ref=e145]: "2025"
+                    - paragraph [ref=e146]: Marketplaces and retail media will drive eCommerce growth; retailers must adopt large, AI-enabled tech stacks.
+                    - paragraph [ref=e147]:
+                      - generic [ref=e148]:
+                        - text: Read report
+                        - img [ref=e149]
+                - paragraph [ref=e151]:
+                  - link:
+                    - /url: http://localhost/digitalinsights/reports/activate-consulting-technology-media-outlook-2025-ecommerce-2/
+              - article [ref=e152]:
+                - link "New Activate Consulting Activate Technology & Media Outlook 2025 Report details Global consumer internet and media grow $403B by 2028, led by ads and subscriptions. Read report" [ref=e153] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/activate-technology-media-outlook-2025/
+                  - paragraph
+                  - generic [ref=e155]: New
+                  - generic [ref=e156]:
+                    - paragraph [ref=e157]: Activate Consulting
+                    - heading "Activate Technology & Media Outlook 2025" [level=3] [ref=e158]
+                    - list "Report details" [ref=e159]:
+                      - listitem [ref=e160]:
+                        - img [ref=e161]
+                        - generic [ref=e163]: June 13, 2026
+                      - listitem [ref=e164]:
+                        - img [ref=e165]
+                        - generic [ref=e168]: Global
+                      - listitem [ref=e169]:
+                        - img [ref=e170]
+                        - generic [ref=e173]: 2024E-2028E
+                    - paragraph [ref=e174]: Global consumer internet and media grow $403B by 2028, led by ads and subscriptions.
+                    - paragraph [ref=e175]:
+                      - generic [ref=e176]:
+                        - text: Read report
+                        - img [ref=e177]
+                - paragraph [ref=e179]:
+                  - link:
+                    - /url: http://localhost/digitalinsights/reports/activate-technology-media-outlook-2025/
+              - paragraph [ref=e180]
+            - paragraph
+          - paragraph
+    - contentinfo [ref=e182]:
+      - generic [ref=e184]:
+        - generic [ref=e185]:
+          - paragraph [ref=e186]:
+            - link "Market Bearing home" [ref=e187] [cursor=pointer]:
+              - /url: http://localhost/digitalinsights/
+              - generic [ref=e188]: MarketBearing
+          - paragraph [ref=e190]: Governed, source-traceable intelligence built from published market research.
+          - list [ref=e191]:
+            - listitem [ref=e192]: Source-linked summaries for leadership review.
+            - listitem [ref=e193]: Evidence and provenance remain visible.
+            - listitem [ref=e194]: Coverage spans institutions, consultancies, and specialist publishers.
+        - generic [ref=e195]:
+          - paragraph [ref=e196]: Explore
+          - navigation "Footer navigation" [ref=e197]:
+            - list [ref=e198]:
+              - listitem [ref=e199]:
+                - link "Reports" [ref=e200] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/
+              - listitem [ref=e201]:
+                - link "Topics" [ref=e202] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/topics-directory/
+              - listitem [ref=e203]:
+                - link "Publishers" [ref=e204] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/publishers-directory/
+              - listitem [ref=e205]:
+                - link "Signals" [ref=e206] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/signals/
+              - listitem [ref=e207]:
+                - link "Briefings" [ref=e208] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/briefings/
+              - listitem [ref=e209]:
+                - link "About" [ref=e210] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/about/
+        - generic [ref=e211]:
+          - paragraph [ref=e212]: Standards
+          - navigation "Footer utilities" [ref=e213]:
+            - list [ref=e214]:
+              - listitem [ref=e215]:
+                - link "Methodology" [ref=e216] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/methodology/
+              - listitem [ref=e217]:
+                - link "Contact" [ref=e218] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/contact/
+              - listitem [ref=e219]:
+                - link "Privacy" [ref=e220] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/privacy/
+              - listitem [ref=e221]:
+                - link "Terms" [ref=e222] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/terms/
+        - generic [ref=e223]:
+          - paragraph [ref=e224]: Request
+          - paragraph [ref=e225]: Need a briefing, correction, or new report review?
+          - link "Get in touch" [ref=e227] [cursor=pointer]:
+            - /url: http://localhost/digitalinsights/contact/
+            - text: Get in touch

@@ -199,6 +199,27 @@ final class Intelligence_Stats
         return array_values($values);
     }
 
+    /**
+     * Returns non-empty report regions used by published report records.
+     *
+     * @return list<string>
+     */
+    public function report_regions(): array
+    {
+        $regions = [];
+        foreach ($this->published_report_ids() as $post_id) {
+            $region = trim((string) get_post_meta($post_id, Meta::META_REGION, true));
+            if (! $this->is_placeholder_term($region)) {
+                $regions[$region] = true;
+            }
+        }
+
+        $values = array_keys($regions);
+        natcasesort($values);
+
+        return array_values($values);
+    }
+
     private function published_post_type_count(string $post_type): int
     {
         $counts = wp_count_posts($post_type);

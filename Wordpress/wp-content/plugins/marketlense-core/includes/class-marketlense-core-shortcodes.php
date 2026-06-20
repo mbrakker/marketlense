@@ -130,8 +130,10 @@ final class Shortcodes
 
         $selected_topic = $this->selected_topic_slug();
         $selected_publisher = $this->selected_filter_slug('ml_publisher', Taxonomies::PUBLISHER_TAXONOMY);
-        $period_options = $this->stats->report_periods();
-        $selected_period = $this->selected_period($period_options);
+        $all_period_options = $this->stats->report_periods();
+        $selected_period = $this->selected_period($all_period_options);
+        $all_region_options = $this->stats->report_regions();
+        $selected_region = $this->selected_region($all_region_options);
         $selected_sort = $this->selected_sort();
         $selected_topic_term = null;
         if ($selected_topic !== '') {
@@ -153,51 +155,27 @@ final class Shortcodes
         if ($selected_period !== '') {
             $active_filters['ml_period'] = $selected_period;
         }
-        if ($selected_sort !== 'latest') {
-            $active_filters['ml_sort'] = $selected_sort;
+        if ($selected_region !== '') {
+            $active_filters['ml_region'] = $selected_region;
         }
-
-        $query_args = [
-            'post_status' => 'publish',
-            'posts_per_page' => $per_page,
-            'paged' => $current_page,
-        ];
-        $query_args = $this->apply_sort_to_query_args($query_args, $selected_sort);
-
+        $preserved_state_args = $active_filters;
         if ($search_term !== '') {
-            $query_args['s'] = $search_term;
+            $preserved_state_args['s'] = $search_term;
+        }
+        if ($selected_sort !== 'latest') {
+            $preserved_state_args['ml_sort'] = $selected_sort;
         }
 
-        if ($selected_period !== '') {
-            $query_args['meta_query'] = [
-                [
-                    'key' => Meta::META_TIME_PERIOD,
-                    'value' => $selected_period,
-                    'compare' => '=',
-                ],
-            ];
-        }
+        $facet_context = [
+            'topic' => $selected_topic,
+            'publisher' => $selected_publisher,
+            'period' => $selected_period,
+            'region' => $selected_region,
+            'search' => $search_term,
+        ];
 
-        if ($selected_topic !== '' || $selected_publisher !== '') {
-            $tax_query = ['relation' => 'AND'];
-            if ($selected_topic !== '') {
-                $tax_query[] = [
-                    'taxonomy' => Taxonomies::CATEGORY_TAXONOMY,
-                    'field' => 'slug',
-                    'terms' => [$selected_topic],
-                ];
-            }
-            if ($selected_publisher !== '') {
-                $tax_query[] = [
-                    'taxonomy' => Taxonomies::PUBLISHER_TAXONOMY,
-                    'field' => 'slug',
-                    'terms' => [$selected_publisher],
-                ];
-            }
-            $query_args['tax_query'] = $tax_query;
-        }
-
-        $query_args = Meta::apply_report_card_query_constraints($query_args);
+        $query_args = $this->report_browser_query_args($facet_context, $per_page, $current_page);
+        $query_args = $this->apply_sort_to_query_args($query_args, $selected_sort);
         $query = new \WP_Query($query_args);
         $is_topic_fallback = false;
         if (
@@ -217,13 +195,36 @@ final class Shortcodes
                 $is_topic_fallback = true;
             }
         }
-        $topic_options = $this->stats->scoped_terms(Taxonomies::CATEGORY_TAXONOMY);
-        $publisher_options = $this->stats->scoped_terms(Taxonomies::PUBLISHER_TAXONOMY);
+        $topic_options = $this->report_facet_terms(Taxonomies::CATEGORY_TAXONOMY, $facet_context, 'topic');
+        $publisher_options = $this->report_facet_terms(Taxonomies::PUBLISHER_TAXONOMY, $facet_context, 'publisher');
+        $period_options = $this->report_facet_meta_values(Meta::META_TIME_PERIOD, $facet_context, 'period');
+        $region_options = $this->report_facet_meta_values(Meta::META_REGION, $facet_context, 'region');
         $form_action = $archive_url;
+        if ($show_filters) {
+            $this->enqueue_report_filter_assets();
+        }
 
         ob_start();
         ?>
         <section class="ml-report-browser" aria-label="<?php esc_attr_e('Report browser', 'marketlense-core'); ?>">
+            <?php if ($show_filters) : ?>
+                <div class="ml-report-browser-utility-bar">
+                    <form class="ml-report-search-form" method="get" action="<?php echo esc_url($form_action); ?>" data-ml-live-filter-form>
+                        <span class="screen-reader-text" data-ml-filter-status aria-live="polite"></span>
+                        <?php
+                        $this->render_hidden_query_inputs($active_filters);
+                        if ($selected_sort !== 'latest') {
+                            $this->render_hidden_query_inputs(['ml_sort' => $selected_sort]);
+                        }
+                        ?>
+                        <label class="ml-report-search-field" for="ml_report_search">
+                            <span><?php esc_html_e('Search report archive', 'marketlense-core'); ?></span>
+                            <input id="ml_report_search" name="s" type="search" value="<?php echo esc_attr($search_term); ?>" placeholder="<?php esc_attr_e('Search by report title, publisher, topic, or signal', 'marketlense-core'); ?>" data-ml-live-filter-input>
+                        </label>
+                    </form>
+                    <?php $this->render_active_filter_chips($archive_url, $active_filters, $search_term, $selected_sort, $selected_topic_term, $selected_publisher_term, $selected_period, $selected_region); ?>
+                </div>
+            <?php endif; ?>
             <div class="ml-report-browser-layout">
                 <?php if ($show_filters) : ?>
                     <aside class="ml-report-browser-sidebar">
@@ -231,144 +232,77 @@ final class Shortcodes
                             <details class="ml-report-filter-panel" open>
                                 <summary class="ml-report-filter-summary"><?php esc_html_e('Filter reports', 'marketlense-core'); ?></summary>
                                 <div class="ml-report-filter-body">
-                                    <p class="ml-section-kicker"><?php esc_html_e('Refine the view', 'marketlense-core'); ?></p>
-                                    <h2 class="ml-report-browser-title"><?php esc_html_e('Filter the archive', 'marketlense-core'); ?></h2>
-                                    <p class="ml-report-browser-copy"><?php esc_html_e('Search and compare reports by topic, publisher, period, and sort order.', 'marketlense-core'); ?></p>
+                                    <div class="ml-report-filter-header">
+                                        <div>
+                                            <p class="ml-section-kicker"><?php esc_html_e('Filters', 'marketlense-core'); ?></p>
+                                            <h2 class="ml-report-browser-title"><?php esc_html_e('Refine reports', 'marketlense-core'); ?></h2>
+                                        </div>
+                                    </div>
+                                    <p class="ml-report-browser-copy"><?php esc_html_e('Each facet only shows options with matching reports in the current view.', 'marketlense-core'); ?></p>
 
-                                    <form class="ml-report-filter-form" method="get" action="<?php echo esc_url($form_action); ?>">
-                                <div class="ml-report-filter-grid">
-                                    <label class="ml-report-filter-field" for="ml_report_search">
-                                        <span><?php esc_html_e('Search reports', 'marketlense-core'); ?></span>
-                                        <input id="ml_report_search" name="s" type="search" value="<?php echo esc_attr($search_term); ?>" placeholder="<?php esc_attr_e('Title, publisher, topic, or signal', 'marketlense-core'); ?>">
-                                    </label>
+                                    <form class="ml-report-filter-form" method="get" action="<?php echo esc_url($form_action); ?>" data-ml-live-filter-form>
+                                        <span class="screen-reader-text" data-ml-filter-status aria-live="polite"></span>
+                                        <?php
+                                        $filter_form_state = [];
+                                        if ($search_term !== '') {
+                                            $filter_form_state['s'] = $search_term;
+                                        }
+                                        if ($selected_sort !== 'latest') {
+                                            $filter_form_state['ml_sort'] = $selected_sort;
+                                        }
+                                        $this->render_hidden_query_inputs($filter_form_state);
+                                        ?>
+                                        <div class="ml-report-filter-grid">
+                                            <label class="ml-report-filter-field" for="ml_topic_filter">
+                                                <span><?php esc_html_e('Category', 'marketlense-core'); ?></span>
+                                                <select id="ml_topic_filter" name="<?php echo esc_attr(self::TOPIC_QUERY_KEY); ?>">
+                                                    <option value=""><?php esc_html_e('All categories', 'marketlense-core'); ?></option>
+                                                    <?php foreach ($topic_options as $term) : ?>
+                                                        <option value="<?php echo esc_attr($term->slug); ?>" <?php selected($selected_topic, $term->slug); ?>>
+                                                            <?php echo esc_html(sprintf('%1$s (%2$d)', $term->name, (int) $term->count)); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
 
-                                    <label class="ml-report-filter-field" for="ml_topic_filter">
-                                        <span><?php esc_html_e('Topic', 'marketlense-core'); ?></span>
-                                        <select id="ml_topic_filter" name="<?php echo esc_attr(self::TOPIC_QUERY_KEY); ?>">
-                                            <option value=""><?php esc_html_e('All topics', 'marketlense-core'); ?></option>
-                                            <?php foreach ($topic_options as $term) : ?>
-                                                <option value="<?php echo esc_attr($term->slug); ?>" <?php selected($selected_topic, $term->slug); ?>>
-                                                    <?php echo esc_html($term->name); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </label>
+                                            <label class="ml-report-filter-field" for="ml_region_filter">
+                                                <span><?php esc_html_e('Region', 'marketlense-core'); ?></span>
+                                                <select id="ml_region_filter" name="ml_region">
+                                                    <option value=""><?php esc_html_e('All regions', 'marketlense-core'); ?></option>
+                                                    <?php foreach ($region_options as $region) : ?>
+                                                        <option value="<?php echo esc_attr($region['value']); ?>" <?php selected($selected_region, $region['value']); ?>>
+                                                            <?php echo esc_html(sprintf('%1$s (%2$d)', $region['value'], (int) $region['count'])); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
 
-                                    <label class="ml-report-filter-field" for="ml_publisher_filter">
-                                        <span><?php esc_html_e('Publisher', 'marketlense-core'); ?></span>
-                                        <select id="ml_publisher_filter" name="ml_publisher">
-                                            <option value=""><?php esc_html_e('All publishers', 'marketlense-core'); ?></option>
-                                            <?php foreach ($publisher_options as $term) : ?>
-                                                <option value="<?php echo esc_attr($term->slug); ?>" <?php selected($selected_publisher, $term->slug); ?>>
-                                                    <?php echo esc_html($term->name); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </label>
+                                            <label class="ml-report-filter-field" for="ml_publisher_filter">
+                                                <span><?php esc_html_e('Publisher', 'marketlense-core'); ?></span>
+                                                <select id="ml_publisher_filter" name="ml_publisher">
+                                                    <option value=""><?php esc_html_e('All publishers', 'marketlense-core'); ?></option>
+                                                    <?php foreach ($publisher_options as $term) : ?>
+                                                        <option value="<?php echo esc_attr($term->slug); ?>" <?php selected($selected_publisher, $term->slug); ?>>
+                                                            <?php echo esc_html(sprintf('%1$s (%2$d)', $term->name, (int) $term->count)); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
 
-                                    <label class="ml-report-filter-field" for="ml_period_filter">
-                                        <span><?php esc_html_e('Period', 'marketlense-core'); ?></span>
-                                        <select id="ml_period_filter" name="ml_period">
-                                            <option value=""><?php esc_html_e('All periods', 'marketlense-core'); ?></option>
-                                            <?php foreach ($period_options as $period) : ?>
-                                                <option value="<?php echo esc_attr($period); ?>" <?php selected($selected_period, $period); ?>>
-                                                    <?php echo esc_html($period); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </label>
-
-                                    <label class="ml-report-filter-field" for="ml_sort_filter">
-                                        <span><?php esc_html_e('Sort', 'marketlense-core'); ?></span>
-                                        <select id="ml_sort_filter" name="ml_sort">
-                                            <option value="latest" <?php selected($selected_sort, 'latest'); ?>><?php esc_html_e('Newest first', 'marketlense-core'); ?></option>
-                                            <option value="oldest" <?php selected($selected_sort, 'oldest'); ?>><?php esc_html_e('Oldest first', 'marketlense-core'); ?></option>
-                                            <option value="title" <?php selected($selected_sort, 'title'); ?>><?php esc_html_e('Title A-Z', 'marketlense-core'); ?></option>
-                                        </select>
-                                    </label>
-                                </div>
-
-                                <div class="ml-report-filter-actions">
-                                    <button type="submit" class="ml-button ml-button-primary">
-                                        <?php esc_html_e('Apply filters', 'marketlense-core'); ?>
-                                    </button>
-                                    <a class="ml-button ml-button-outline" href="<?php echo esc_url($archive_url); ?>">
-                                        <?php esc_html_e('Reset', 'marketlense-core'); ?>
-                                    </a>
-                                </div>
+                                            <label class="ml-report-filter-field" for="ml_period_filter">
+                                                <span><?php esc_html_e('Period', 'marketlense-core'); ?></span>
+                                                <select id="ml_period_filter" name="ml_period">
+                                                    <option value=""><?php esc_html_e('All periods', 'marketlense-core'); ?></option>
+                                                    <?php foreach ($period_options as $period) : ?>
+                                                        <option value="<?php echo esc_attr($period['value']); ?>" <?php selected($selected_period, $period['value']); ?>>
+                                                            <?php echo esc_html(sprintf('%1$s (%2$d)', $period['value'], (int) $period['count'])); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
+                                        </div>
                                     </form>
 
-                                    <?php if ($active_filters !== []) : ?>
-                                        <div class="ml-active-filters" aria-label="<?php esc_attr_e('Active filters', 'marketlense-core'); ?>">
-                                    <?php if ($selected_topic_term instanceof \WP_Term) : ?>
-                                        <?php
-                                        $topic_reset = add_query_arg(
-                                            [
-                                                's' => $search_term !== '' ? $search_term : null,
-                                                'ml_publisher' => $selected_publisher !== '' ? $selected_publisher : null,
-                                                'ml_period' => $selected_period !== '' ? $selected_period : null,
-                                                'ml_sort' => $selected_sort !== 'latest' ? $selected_sort : null,
-                                            ],
-                                            $archive_url
-                                        );
-                                        ?>
-                                        <a class="ml-filter-chip" href="<?php echo esc_url((string) $topic_reset); ?>">
-                                            <?php echo esc_html(sprintf(__('Topic: %s', 'marketlense-core'), $selected_topic_term->name)); ?>
-                                        </a>
-                                    <?php endif; ?>
-
-                                    <?php if ($selected_publisher_term instanceof \WP_Term) : ?>
-                                        <?php
-                                        $publisher_reset = add_query_arg(
-                                            [
-                                                's' => $search_term !== '' ? $search_term : null,
-                                                self::TOPIC_QUERY_KEY => $selected_topic !== '' ? $selected_topic : null,
-                                                'ml_period' => $selected_period !== '' ? $selected_period : null,
-                                                'ml_sort' => $selected_sort !== 'latest' ? $selected_sort : null,
-                                            ],
-                                            $archive_url
-                                        );
-                                        ?>
-                                        <a class="ml-filter-chip" href="<?php echo esc_url((string) $publisher_reset); ?>">
-                                            <?php echo esc_html(sprintf(__('Publisher: %s', 'marketlense-core'), $selected_publisher_term->name)); ?>
-                                        </a>
-                                    <?php endif; ?>
-
-                                    <?php if ($selected_period !== '') : ?>
-                                        <?php
-                                        $period_reset = add_query_arg(
-                                            [
-                                                's' => $search_term !== '' ? $search_term : null,
-                                                self::TOPIC_QUERY_KEY => $selected_topic !== '' ? $selected_topic : null,
-                                                'ml_publisher' => $selected_publisher !== '' ? $selected_publisher : null,
-                                                'ml_sort' => $selected_sort !== 'latest' ? $selected_sort : null,
-                                            ],
-                                            $archive_url
-                                        );
-                                        ?>
-                                        <a class="ml-filter-chip" href="<?php echo esc_url((string) $period_reset); ?>">
-                                            <?php echo esc_html(sprintf(__('Period: %s', 'marketlense-core'), $selected_period)); ?>
-                                        </a>
-                                    <?php endif; ?>
-
-                                    <?php if ($selected_sort !== 'latest') : ?>
-                                        <?php
-                                        $sort_reset = add_query_arg(
-                                            [
-                                                's' => $search_term !== '' ? $search_term : null,
-                                                self::TOPIC_QUERY_KEY => $selected_topic !== '' ? $selected_topic : null,
-                                                'ml_publisher' => $selected_publisher !== '' ? $selected_publisher : null,
-                                                'ml_period' => $selected_period !== '' ? $selected_period : null,
-                                            ],
-                                            $archive_url
-                                        );
-                                        ?>
-                                        <a class="ml-filter-chip" href="<?php echo esc_url((string) $sort_reset); ?>">
-                                            <?php echo esc_html(sprintf(__('Sort: %s', 'marketlense-core'), $this->sort_label($selected_sort))); ?>
-                                        </a>
-                                    <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
                                 </div>
                             </details>
                         </div>
@@ -397,10 +331,11 @@ final class Shortcodes
                                 <p class="ml-report-browser-context">
                                     <?php echo esc_html(sprintf(__('Search query: "%s"', 'marketlense-core'), $search_term)); ?>
                                 </p>
-                            <?php elseif ($selected_topic_term instanceof \WP_Term || $selected_publisher_term instanceof \WP_Term || $selected_period !== '') : ?>
-                                <p class="ml-report-browser-context"><?php echo esc_html($this->browser_context_copy($selected_topic_term, $selected_publisher_term, $selected_period)); ?></p>
+                            <?php elseif ($selected_topic_term instanceof \WP_Term || $selected_publisher_term instanceof \WP_Term || $selected_period !== '' || $selected_region !== '') : ?>
+                                <p class="ml-report-browser-context"><?php echo esc_html($this->browser_context_copy($selected_topic_term, $selected_publisher_term, $selected_period, $selected_region)); ?></p>
                             <?php endif; ?>
                         </div>
+                        <?php $this->render_report_sort_controls($archive_url, $preserved_state_args, $selected_sort); ?>
                     </div>
 
                     <?php if ($query->have_posts()) : ?>
@@ -430,6 +365,9 @@ final class Shortcodes
                             $pagination_args = $active_filters;
                             if ($search_term !== '') {
                                 $pagination_args['s'] = $search_term;
+                            }
+                            if ($selected_sort !== 'latest') {
+                                $pagination_args['ml_sort'] = $selected_sort;
                             }
                             ?>
                             <?php $this->render_pagination($query, $pagination_args); ?>
@@ -1377,12 +1315,14 @@ final class Shortcodes
             [
                 'entity' => 'reports',
                 'label' => __('Archive coverage', 'marketlense-core'),
+                'icon' => '',
             ],
             $attrs,
             'ml_archive_metric'
         );
         $entity = sanitize_key((string) $atts['entity']);
         $label = sanitize_text_field((string) $atts['label']);
+        $icon = sanitize_key((string) $atts['icon']);
         $metrics = $this->stats->homepage_metrics();
 
         $values = [
@@ -1400,6 +1340,11 @@ final class Shortcodes
                 count($this->stats->content_backed_terms(Taxonomies::PUBLISHER_TAXONOMY)),
                 __('represented publisher', 'marketlense-core'),
                 __('represented publishers', 'marketlense-core'),
+            ],
+            'regions' => [
+                count($this->stats->report_regions()),
+                __('covered region', 'marketlense-core'),
+                __('covered regions', 'marketlense-core'),
             ],
             'signals' => [
                 (int) $metrics['signal_count'],
@@ -1433,9 +1378,11 @@ final class Shortcodes
         $count_label = sprintf(_n('%1$d %2$s', '%1$d %3$s', $count, 'marketlense-core'), $count, $singular, $plural);
 
         return sprintf(
-            '<div class="ml-directory-principle"><span>%1$s</span><strong>%2$s</strong></div>',
-            esc_html($label),
-            esc_html($count_label)
+            '<div class="ml-directory-principle ml-archive-metric" aria-label="%1$s"><span class="ml-archive-metric-icon ml-archive-metric-icon--%2$s" aria-hidden="true"></span><span class="ml-archive-metric-content"><span class="ml-archive-metric-value">%3$s</span><strong>%4$s</strong></span></div>',
+            esc_attr($count_label),
+            esc_attr($icon !== '' ? $icon : $entity),
+            esc_html(number_format_i18n($count)),
+            esc_html($label)
         );
     }
 
@@ -1898,6 +1845,340 @@ final class Shortcodes
         return 1;
     }
 
+    private function enqueue_report_filter_assets(): void
+    {
+        wp_enqueue_script(
+            'marketlense-core-report-filters',
+            MARKETLENSE_CORE_URL . 'assets/js/report-filters.js',
+            [],
+            MARKETLENSE_CORE_VERSION,
+            true
+        );
+    }
+
+    /**
+     * @param array{topic:string,publisher:string,period:string,region:string,search:string} $filters
+     * @return array<string,mixed>
+     */
+    private function report_browser_query_args(array $filters, int $posts_per_page, int $paged = 1, string $exclude = ''): array
+    {
+        $query_args = [
+            'post_status' => 'publish',
+            'posts_per_page' => $posts_per_page,
+            'paged' => $paged,
+        ];
+
+        if ($filters['search'] !== '') {
+            $query_args['s'] = $filters['search'];
+        }
+
+        $meta_filters = [];
+        if ($exclude !== 'period' && $filters['period'] !== '') {
+            $meta_filters[] = [
+                'key' => Meta::META_TIME_PERIOD,
+                'value' => $filters['period'],
+                'compare' => '=',
+            ];
+        }
+        if ($exclude !== 'region' && $filters['region'] !== '') {
+            $meta_filters[] = [
+                'key' => Meta::META_REGION,
+                'value' => $filters['region'],
+                'compare' => '=',
+            ];
+        }
+        if ($meta_filters !== []) {
+            $query_args['meta_query'] = count($meta_filters) > 1
+                ? array_merge(['relation' => 'AND'], $meta_filters)
+                : $meta_filters;
+        }
+
+        $tax_query = ['relation' => 'AND'];
+        if ($exclude !== 'topic' && $filters['topic'] !== '') {
+            $tax_query[] = [
+                'taxonomy' => Taxonomies::CATEGORY_TAXONOMY,
+                'field' => 'slug',
+                'terms' => [$filters['topic']],
+            ];
+        }
+        if ($exclude !== 'publisher' && $filters['publisher'] !== '') {
+            $tax_query[] = [
+                'taxonomy' => Taxonomies::PUBLISHER_TAXONOMY,
+                'field' => 'slug',
+                'terms' => [$filters['publisher']],
+            ];
+        }
+        if (count($tax_query) > 1) {
+            $query_args['tax_query'] = $tax_query;
+        }
+
+        return Meta::apply_report_card_query_constraints($query_args);
+    }
+
+    /**
+     * @param array{topic:string,publisher:string,period:string,region:string,search:string} $filters
+     * @return list<int>
+     */
+    private function report_facet_post_ids(array $filters, string $exclude): array
+    {
+        $query_args = $this->report_browser_query_args($filters, -1, 1, $exclude);
+        $query_args['fields'] = 'ids';
+        $query_args['no_found_rows'] = true;
+
+        $query = new \WP_Query($query_args);
+        $ids = array_values(
+            array_filter(
+                array_map('intval', $query->posts),
+                static fn (int $post_id): bool => $post_id > 0
+            )
+        );
+        wp_reset_postdata();
+
+        return $ids;
+    }
+
+    /**
+     * @param array{topic:string,publisher:string,period:string,region:string,search:string} $filters
+     * @return list<\WP_Term>
+     */
+    private function report_facet_terms(string $taxonomy, array $filters, string $exclude): array
+    {
+        $post_ids = $this->report_facet_post_ids($filters, $exclude);
+        $items = [];
+        foreach ($post_ids as $post_id) {
+            $terms = get_the_terms($post_id, $taxonomy);
+            if (! is_array($terms)) {
+                continue;
+            }
+            foreach ($terms as $term) {
+                if (! ($term instanceof \WP_Term)) {
+                    continue;
+                }
+                if (! isset($items[$term->term_id])) {
+                    $items[$term->term_id] = clone $term;
+                    $items[$term->term_id]->count = 0;
+                }
+                $items[$term->term_id]->count++;
+            }
+        }
+
+        $terms = array_values($items);
+        usort(
+            $terms,
+            static function (\WP_Term $left, \WP_Term $right): int {
+                $count_compare = (int) $right->count <=> (int) $left->count;
+                if ($count_compare !== 0) {
+                    return $count_compare;
+                }
+
+                return strcasecmp($left->name, $right->name);
+            }
+        );
+
+        return $terms;
+    }
+
+    /**
+     * @param array{topic:string,publisher:string,period:string,region:string,search:string} $filters
+     * @return list<array{value:string,count:int}>
+     */
+    private function report_facet_meta_values(string $meta_key, array $filters, string $exclude): array
+    {
+        $post_ids = $this->report_facet_post_ids($filters, $exclude);
+        $counts = [];
+        foreach ($post_ids as $post_id) {
+            $value = trim((string) get_post_meta($post_id, $meta_key, true));
+            if ($value === '' || $value === '...' || strcasecmp($value, 'not extracted') === 0) {
+                continue;
+            }
+            $counts[$value] = ($counts[$value] ?? 0) + 1;
+        }
+
+        ksort($counts, SORT_NATURAL | SORT_FLAG_CASE);
+        $values = [];
+        foreach ($counts as $value => $count) {
+            $values[] = [
+                'value' => (string) $value,
+                'count' => (int) $count,
+            ];
+        }
+
+        return $values;
+    }
+
+    /**
+     * @param array<string,string> $args
+     */
+    private function render_hidden_query_inputs(array $args): void
+    {
+        foreach ($args as $name => $value) {
+            if ($value === '') {
+                continue;
+            }
+            printf(
+                '<input type="hidden" name="%1$s" value="%2$s">',
+                esc_attr($name),
+                esc_attr($value)
+            );
+        }
+    }
+
+    /**
+     * @param array<string,string> $active_filters
+     */
+    private function render_active_filter_chips(
+        string $archive_url,
+        array $active_filters,
+        string $search_term,
+        string $selected_sort,
+        ?\WP_Term $selected_topic_term,
+        ?\WP_Term $selected_publisher_term,
+        string $selected_period,
+        string $selected_region
+    ): void {
+        if ($active_filters === [] && $search_term === '') {
+            return;
+        }
+
+        $sort_arg = $selected_sort !== 'latest' ? $selected_sort : null;
+        ?>
+        <div class="ml-active-filters" aria-label="<?php esc_attr_e('Active filters', 'marketlense-core'); ?>">
+            <span class="ml-active-filters-label"><?php esc_html_e('Selected', 'marketlense-core'); ?></span>
+            <?php if ($search_term !== '') : ?>
+                <?php
+                $search_reset = add_query_arg(
+                    [
+                        self::TOPIC_QUERY_KEY => $active_filters[self::TOPIC_QUERY_KEY] ?? null,
+                        'ml_publisher' => $active_filters['ml_publisher'] ?? null,
+                        'ml_period' => $active_filters['ml_period'] ?? null,
+                        'ml_region' => $active_filters['ml_region'] ?? null,
+                        'ml_sort' => $sort_arg,
+                    ],
+                    $archive_url
+                );
+                ?>
+                <a class="ml-filter-chip" href="<?php echo esc_url((string) $search_reset); ?>">
+                    <?php echo esc_html(sprintf(__('Search: %s', 'marketlense-core'), $search_term)); ?>
+                </a>
+            <?php endif; ?>
+            <?php if ($selected_topic_term instanceof \WP_Term) : ?>
+                <?php
+                $topic_reset = add_query_arg(
+                    [
+                        's' => $search_term !== '' ? $search_term : null,
+                        'ml_publisher' => $active_filters['ml_publisher'] ?? null,
+                        'ml_period' => $active_filters['ml_period'] ?? null,
+                        'ml_region' => $active_filters['ml_region'] ?? null,
+                        'ml_sort' => $sort_arg,
+                    ],
+                    $archive_url
+                );
+                ?>
+                <a class="ml-filter-chip" href="<?php echo esc_url((string) $topic_reset); ?>">
+                    <?php echo esc_html(sprintf(__('Category: %s', 'marketlense-core'), $selected_topic_term->name)); ?>
+                </a>
+            <?php endif; ?>
+            <?php if ($selected_publisher_term instanceof \WP_Term) : ?>
+                <?php
+                $publisher_reset = add_query_arg(
+                    [
+                        's' => $search_term !== '' ? $search_term : null,
+                        self::TOPIC_QUERY_KEY => $active_filters[self::TOPIC_QUERY_KEY] ?? null,
+                        'ml_period' => $active_filters['ml_period'] ?? null,
+                        'ml_region' => $active_filters['ml_region'] ?? null,
+                        'ml_sort' => $sort_arg,
+                    ],
+                    $archive_url
+                );
+                ?>
+                <a class="ml-filter-chip" href="<?php echo esc_url((string) $publisher_reset); ?>">
+                    <?php echo esc_html(sprintf(__('Publisher: %s', 'marketlense-core'), $selected_publisher_term->name)); ?>
+                </a>
+            <?php endif; ?>
+            <?php if ($selected_period !== '') : ?>
+                <?php
+                $period_reset = add_query_arg(
+                    [
+                        's' => $search_term !== '' ? $search_term : null,
+                        self::TOPIC_QUERY_KEY => $active_filters[self::TOPIC_QUERY_KEY] ?? null,
+                        'ml_publisher' => $active_filters['ml_publisher'] ?? null,
+                        'ml_region' => $active_filters['ml_region'] ?? null,
+                        'ml_sort' => $sort_arg,
+                    ],
+                    $archive_url
+                );
+                ?>
+                <a class="ml-filter-chip" href="<?php echo esc_url((string) $period_reset); ?>">
+                    <?php echo esc_html(sprintf(__('Period: %s', 'marketlense-core'), $selected_period)); ?>
+                </a>
+            <?php endif; ?>
+            <?php if ($selected_region !== '') : ?>
+                <?php
+                $region_reset = add_query_arg(
+                    [
+                        's' => $search_term !== '' ? $search_term : null,
+                        self::TOPIC_QUERY_KEY => $active_filters[self::TOPIC_QUERY_KEY] ?? null,
+                        'ml_publisher' => $active_filters['ml_publisher'] ?? null,
+                        'ml_period' => $active_filters['ml_period'] ?? null,
+                        'ml_sort' => $sort_arg,
+                    ],
+                    $archive_url
+                );
+                ?>
+                <a class="ml-filter-chip" href="<?php echo esc_url((string) $region_reset); ?>">
+                    <?php echo esc_html(sprintf(__('Region: %s', 'marketlense-core'), $selected_region)); ?>
+                </a>
+            <?php endif; ?>
+            <a class="ml-filter-chip ml-filter-chip-clear" href="<?php echo esc_url($archive_url); ?>">
+                <?php esc_html_e('Clear all', 'marketlense-core'); ?>
+            </a>
+        </div>
+        <?php
+    }
+
+    /**
+     * @param array<string,string> $state_args
+     */
+    private function render_report_sort_controls(string $archive_url, array $state_args, string $selected_sort): void
+    {
+        $sort_options = [
+            'latest' => [
+                'label' => __('Newest', 'marketlense-core'),
+                'title' => __('Newest first', 'marketlense-core'),
+                'icon' => 'latest',
+            ],
+            'oldest' => [
+                'label' => __('Oldest', 'marketlense-core'),
+                'title' => __('Oldest first', 'marketlense-core'),
+                'icon' => 'oldest',
+            ],
+            'title' => [
+                'label' => __('A-Z', 'marketlense-core'),
+                'title' => __('Title A-Z', 'marketlense-core'),
+                'icon' => 'title',
+            ],
+        ];
+        ?>
+        <nav class="ml-report-sort-controls" aria-label="<?php esc_attr_e('Sort reports', 'marketlense-core'); ?>">
+            <?php foreach ($sort_options as $sort => $option) : ?>
+                <?php
+                $sort_args = $state_args;
+                if ($sort === 'latest') {
+                    unset($sort_args['ml_sort']);
+                } else {
+                    $sort_args['ml_sort'] = $sort;
+                }
+                $sort_url = add_query_arg($sort_args, $archive_url);
+                ?>
+                <a class="ml-report-sort-control <?php echo $selected_sort === $sort ? 'is-active' : ''; ?>" href="<?php echo esc_url((string) $sort_url); ?>" aria-label="<?php echo esc_attr((string) $option['title']); ?>" title="<?php echo esc_attr((string) $option['title']); ?>">
+                    <span class="ml-report-sort-icon ml-report-sort-icon--<?php echo esc_attr((string) $option['icon']); ?>" aria-hidden="true"></span>
+                    <span class="ml-report-sort-tooltip"><?php echo esc_html((string) $option['label']); ?></span>
+                </a>
+            <?php endforeach; ?>
+        </nav>
+        <?php
+    }
+
     private function selected_sort(): string
     {
         if (! isset($_GET['ml_sort'])) {
@@ -1933,6 +2214,20 @@ final class Shortcodes
     }
 
     /**
+     * @param list<string> $region_options
+     */
+    private function selected_region(array $region_options): string
+    {
+        if (! isset($_GET['ml_region'])) {
+            return '';
+        }
+
+        $region = sanitize_text_field(wp_unslash((string) $_GET['ml_region']));
+
+        return in_array($region, $region_options, true) ? $region : '';
+    }
+
+    /**
      * @param array<string,mixed> $query_args
      * @return array<string,mixed>
      */
@@ -1957,36 +2252,37 @@ final class Shortcodes
     private function browser_context_copy(
         ?\WP_Term $selected_topic,
         ?\WP_Term $selected_publisher,
-        string $selected_period = ''
+        string $selected_period = '',
+        string $selected_region = ''
     ): string
     {
+        $context_suffix = [];
+        if ($selected_period !== '') {
+            $context_suffix[] = sprintf(__('Period: %s.', 'marketlense-core'), $selected_period);
+        }
+        if ($selected_region !== '') {
+            $context_suffix[] = sprintf(__('Region: %s.', 'marketlense-core'), $selected_region);
+        }
+        $suffix = $context_suffix === [] ? '' : ' ' . implode(' ', $context_suffix);
+
         if ($selected_topic instanceof \WP_Term && $selected_publisher instanceof \WP_Term) {
-            $copy = sprintf(
+            return sprintf(
                 __('Focused on %1$s from %2$s.', 'marketlense-core'),
                 $selected_topic->name,
                 $selected_publisher->name
-            );
-            return $selected_period !== ''
-                ? $copy . ' ' . sprintf(__('Period: %s.', 'marketlense-core'), $selected_period)
-                : $copy;
+            ) . $suffix;
         }
 
         if ($selected_topic instanceof \WP_Term) {
-            $copy = sprintf(__('Focused on the %s topic.', 'marketlense-core'), $selected_topic->name);
-            return $selected_period !== ''
-                ? $copy . ' ' . sprintf(__('Period: %s.', 'marketlense-core'), $selected_period)
-                : $copy;
+            return sprintf(__('Focused on the %s topic.', 'marketlense-core'), $selected_topic->name) . $suffix;
         }
 
         if ($selected_publisher instanceof \WP_Term) {
-            $copy = sprintf(__('Focused on %s coverage.', 'marketlense-core'), $selected_publisher->name);
-            return $selected_period !== ''
-                ? $copy . ' ' . sprintf(__('Period: %s.', 'marketlense-core'), $selected_period)
-                : $copy;
+            return sprintf(__('Focused on %s coverage.', 'marketlense-core'), $selected_publisher->name) . $suffix;
         }
 
-        if ($selected_period !== '') {
-            return sprintf(__('Focused on the %s period.', 'marketlense-core'), $selected_period);
+        if ($context_suffix !== []) {
+            return trim(implode(' ', $context_suffix));
         }
 
         return '';

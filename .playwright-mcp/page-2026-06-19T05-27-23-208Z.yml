@@ -1,0 +1,205 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e5]:
+      - generic [ref=e7]:
+        - paragraph [ref=e8]:
+          - link "Market Bearing home" [ref=e9] [cursor=pointer]:
+            - /url: http://localhost/digitalinsights/
+            - generic [ref=e10]: MarketBearing
+        - generic [ref=e12]:
+          - generic [ref=e13]:
+            - navigation "Primary navigation" [ref=e15]:
+              - list [ref=e16]:
+                - listitem [ref=e17]:
+                  - link "Reports" [ref=e18] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/reports/
+                - listitem [ref=e19]:
+                  - link "Topics" [ref=e20] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/topics-directory/
+                - listitem [ref=e21]:
+                  - link "Publishers" [ref=e22] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/publishers-directory/
+                - listitem [ref=e23]:
+                  - link "Signals" [ref=e24] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/signals/
+                - listitem [ref=e25]:
+                  - link "Briefings" [ref=e26] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/briefings/
+                - listitem [ref=e27]:
+                  - link "Methodology" [ref=e28] [cursor=pointer]:
+                    - /url: http://localhost/digitalinsights/methodology/
+            - search [ref=e29]:
+              - generic [ref=e30]: Search reports
+              - generic [ref=e31]:
+                - searchbox "Search reports" [ref=e32]: market
+                - button "Search" [ref=e33] [cursor=pointer]:
+                  - img [ref=e34]
+          - link "Request a briefing" [ref=e38] [cursor=pointer]:
+            - /url: http://localhost/digitalinsights/contact/
+            - text: Request a briefing
+    - main [ref=e39]:
+      - generic [ref=e40]:
+        - paragraph [ref=e41]: Search
+        - 'heading "Search results for: “market”" [level=1] [ref=e42]'
+        - paragraph [ref=e43]: Search published reports, strategic themes, and publisher archives from the intelligence portal.
+        - search [ref=e44]:
+          - generic [ref=e45]: Search reports
+          - generic [ref=e46]:
+            - searchbox "Search reports" [ref=e47]: market
+            - button "Search" [ref=e48] [cursor=pointer]:
+              - img [ref=e49]
+      - region "Report browser" [ref=e51]:
+        - generic [ref=e52]:
+          - generic [ref=e55]:
+            - text: Search report archive
+            - searchbox "Search report archive" [ref=e56]: market
+          - generic "Active filters" [ref=e57]:
+            - generic [ref=e58]: Selected
+            - 'link "Search: market" [ref=e59] [cursor=pointer]':
+              - /url: http://localhost/digitalinsights/reports/
+              - text: "Search: market"
+            - link "Clear all" [ref=e60] [cursor=pointer]:
+              - /url: http://localhost/digitalinsights/reports/
+              - text: Clear all
+          - paragraph
+        - generic [ref=e61]:
+          - complementary [ref=e62]:
+            - group [ref=e64]:
+              - generic [ref=e65]:
+                - generic [ref=e66]:
+                  - generic [ref=e67]:
+                    - paragraph [ref=e68]: Filters
+                    - heading "Refine reports" [level=2] [ref=e69]
+                    - paragraph
+                  - paragraph
+                - generic [ref=e72]:
+                  - generic [ref=e73]:
+                    - generic [ref=e74]: Category
+                    - combobox "Category" [ref=e75]:
+                      - option "All categories" [selected]
+                      - option "Technology & Media (1)"
+                  - paragraph [ref=e76]:
+                    - generic [ref=e77]:
+                      - generic [ref=e78]: Region
+                      - combobox "Region" [ref=e79]:
+                        - option "All regions" [selected]
+                        - option "Global (1)"
+                  - paragraph [ref=e80]:
+                    - generic [ref=e81]:
+                      - generic [ref=e82]: Publisher
+                      - combobox "Publisher" [ref=e83]:
+                        - option "All publishers" [selected]
+                        - option "Activate Consulting (1)"
+                  - paragraph [ref=e84]:
+                    - generic [ref=e85]:
+                      - generic [ref=e86]: Period
+                      - combobox "Period" [ref=e87]:
+                        - option "All periods" [selected]
+                        - option "2025 (1)"
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - generic [ref=e90]:
+                - paragraph [ref=e91]:
+                  - generic [ref=e92]: 1 report
+                  - generic [ref=e93]: currently in view
+                - paragraph [ref=e94]: "Search query: \"market\""
+                - paragraph
+              - navigation "Sort reports" [ref=e95]:
+                - link "Newest first" [ref=e96] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/?s=market
+                  - text: Newest
+                - link "Oldest first" [ref=e97] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/?s=market&ml_sort=oldest
+                  - text: Oldest
+                - link "Title A-Z" [ref=e98] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/?s=market&ml_sort=title
+                  - text: A-Z
+              - paragraph
+            - generic [ref=e99]:
+              - article [ref=e100]:
+                - link "New Activate Consulting ACTIVATE CONSULTING TECHNOLOGY & MEDIA OUTLOOK 2025 — ECOMMERCE Report details Marketplaces and retail media will drive eCommerce growth; retailers must adopt large, AI-enabled tech stacks. Read report" [ref=e101] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/activate-consulting-technology-media-outlook-2025-ecommerce-2/
+                  - paragraph
+                  - generic [ref=e103]: New
+                  - generic [ref=e104]:
+                    - paragraph [ref=e105]: Activate Consulting
+                    - heading "ACTIVATE CONSULTING TECHNOLOGY & MEDIA OUTLOOK 2025 — ECOMMERCE" [level=3] [ref=e106]
+                    - list "Report details" [ref=e107]:
+                      - listitem [ref=e108]:
+                        - img [ref=e109]
+                        - generic [ref=e111]: June 13, 2026
+                      - listitem [ref=e112]:
+                        - img [ref=e113]
+                        - generic [ref=e116]: Global
+                      - listitem [ref=e117]:
+                        - img [ref=e118]
+                        - generic [ref=e121]: "2025"
+                    - paragraph [ref=e122]: Marketplaces and retail media will drive eCommerce growth; retailers must adopt large, AI-enabled tech stacks.
+                    - paragraph [ref=e123]:
+                      - generic [ref=e124]:
+                        - text: Read report
+                        - img [ref=e125]
+                - paragraph [ref=e127]:
+                  - link:
+                    - /url: http://localhost/digitalinsights/reports/activate-consulting-technology-media-outlook-2025-ecommerce-2/
+              - paragraph [ref=e128]
+            - paragraph
+          - paragraph
+    - contentinfo [ref=e130]:
+      - generic [ref=e132]:
+        - generic [ref=e133]:
+          - paragraph [ref=e134]:
+            - link "Market Bearing home" [ref=e135] [cursor=pointer]:
+              - /url: http://localhost/digitalinsights/
+              - generic [ref=e136]: MarketBearing
+          - paragraph [ref=e138]: Governed, source-traceable intelligence built from published market research.
+          - list [ref=e139]:
+            - listitem [ref=e140]: Source-linked summaries for leadership review.
+            - listitem [ref=e141]: Evidence and provenance remain visible.
+            - listitem [ref=e142]: Coverage spans institutions, consultancies, and specialist publishers.
+        - generic [ref=e143]:
+          - paragraph [ref=e144]: Explore
+          - navigation "Footer navigation" [ref=e145]:
+            - list [ref=e146]:
+              - listitem [ref=e147]:
+                - link "Reports" [ref=e148] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/reports/
+              - listitem [ref=e149]:
+                - link "Topics" [ref=e150] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/topics-directory/
+              - listitem [ref=e151]:
+                - link "Publishers" [ref=e152] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/publishers-directory/
+              - listitem [ref=e153]:
+                - link "Signals" [ref=e154] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/signals/
+              - listitem [ref=e155]:
+                - link "Briefings" [ref=e156] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/briefings/
+              - listitem [ref=e157]:
+                - link "About" [ref=e158] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/about/
+        - generic [ref=e159]:
+          - paragraph [ref=e160]: Standards
+          - navigation "Footer utilities" [ref=e161]:
+            - list [ref=e162]:
+              - listitem [ref=e163]:
+                - link "Methodology" [ref=e164] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/methodology/
+              - listitem [ref=e165]:
+                - link "Contact" [ref=e166] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/contact/
+              - listitem [ref=e167]:
+                - link "Privacy" [ref=e168] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/privacy/
+              - listitem [ref=e169]:
+                - link "Terms" [ref=e170] [cursor=pointer]:
+                  - /url: http://localhost/digitalinsights/terms/
+        - generic [ref=e171]:
+          - paragraph [ref=e172]: Request
+          - paragraph [ref=e173]: Need a briefing, correction, or new report review?
+          - link "Get in touch" [ref=e175] [cursor=pointer]:
+            - /url: http://localhost/digitalinsights/contact/
+            - text: Get in touch

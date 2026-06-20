@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 1.6.2
+Stable tag: 1.6.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ Market Bearing Core provides the WordPress data model required by the Market Bea
 * Publisher projection from digest metadata and taxonomy panels
 * Homepage hero snapshot includes a rotating `Signal of the moment` card sourced from a random report full-text key-data insight with linked report attribution
 * Shortcodes:
-  * `[ml_report_browser]` (`category` maps to native category slugs; `ml_publisher` maps to publisher taxonomy slugs; legacy `ml_topic` query params remain accepted)
+  * `[ml_report_browser]` (live search/category/region/publisher/period/sort filters; `category` maps to native category slugs; `ml_publisher` maps to publisher taxonomy slugs; legacy `ml_topic` query params remain accepted)
   * `[ml_home_metrics]`
   * `[ml_featured_digest]`
   * `[ml_featured_briefing]`
@@ -53,6 +53,18 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.6.5 =
+* Moved report archive search, selected filters, and sort controls out of the filter rail into sticky premium archive controls.
+* Added dependent report facets so each filter only shows options that still have matching reports in the current result set.
+
+= 1.6.4 =
+* Added icon-backed dynamic archive metrics including covered regions.
+* Upgraded the reusable live report filter rail with a professional header, clear action, and elevated native controls.
+
+= 1.6.3 =
+* Added reusable live report-browser filtering without an Apply button.
+* Added region filtering backed by report geography metadata.
 
 = 1.6.2 =
 * Report and publisher archives now paginate only canonical report-card contracts instead of producing empty grids from skipped legacy posts.

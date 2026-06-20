@@ -12,6 +12,7 @@ HEADER = THEME / "parts" / "header.html"
 FOOTER = THEME / "parts" / "footer.html"
 HERO = THEME / "patterns" / "hero-institutional.php"
 SHORTCODES = PLUGIN / "includes" / "class-marketlense-core-shortcodes.php"
+REPORT_FILTERS_JS = PLUGIN / "assets" / "js" / "report-filters.js"
 VIEW_MODEL = (
     PLUGIN / "includes" / "class-marketlense-core-report-view-model-builder.php"
 )
@@ -25,6 +26,7 @@ CONTENT_FORMATTING = (
     PLUGIN / "includes" / "class-marketlense-core-content-formatting.php"
 )
 REPORT_ARCHIVE = THEME / "templates" / "archive-ml_report.html"
+GENERIC_ARCHIVE = THEME / "templates" / "archive.html"
 SIGNAL_ARCHIVE = THEME / "templates" / "archive-ml_signal.html"
 BRIEFING_ARCHIVE = THEME / "templates" / "archive-ml_briefing.html"
 TOPICS_PAGE = THEME / "templates" / "page-topics-directory.html"
@@ -157,6 +159,7 @@ def test_navigation_covers_every_primary_prototype_destination() -> None:
 def test_archive_templates_use_editorial_heroes_with_dynamic_counts() -> None:
     templates = {
         REPORT_ARCHIVE: 'entity="reports"',
+        GENERIC_ARCHIVE: 'entity="reports"',
         SIGNAL_ARCHIVE: 'entity="signals"',
         BRIEFING_ARCHIVE: 'entity="briefings"',
         TOPICS_PAGE: 'entity="topics"',
@@ -169,15 +172,41 @@ def test_archive_templates_use_editorial_heroes_with_dynamic_counts() -> None:
         assert "[ml_archive_metric" in content
         assert counter_contract in content
 
+    report_archive = REPORT_ARCHIVE.read_text(encoding="utf-8")
+    generic_archive = GENERIC_ARCHIVE.read_text(encoding="utf-8")
+    assert 'entity="regions"' in report_archive
+    assert 'icon="regions"' in report_archive
+    assert "ml-reports-archive-page" in generic_archive
+    assert "ml-reports-hero-stats" in generic_archive
+    assert 'entity="regions"' in generic_archive
 
-def test_report_archive_exposes_real_search_and_period_filters() -> None:
+
+def test_report_archive_exposes_real_live_search_region_and_period_filters() -> None:
     shortcodes = SHORTCODES.read_text(encoding="utf-8")
+    stats = STATS.read_text(encoding="utf-8")
+    filter_js = REPORT_FILTERS_JS.read_text(encoding="utf-8")
 
     assert "ml_report_search" in shortcodes
+    assert "data-ml-live-filter-form" in shortcodes
+    assert "data-ml-live-filter-input" in shortcodes
+    assert "marketlense-core-report-filters" in shortcodes
     assert "ml_period_filter" in shortcodes
     assert 'name="ml_period"' in shortcodes
+    assert "ml_region_filter" in shortcodes
+    assert 'name="ml_region"' in shortcodes
+    assert "ml-report-browser-utility-bar" in shortcodes
+    assert "ml-report-search-form" in shortcodes
+    assert "ml-report-search-field" in shortcodes
+    assert shortcodes.index("ml-report-browser-utility-bar") < shortcodes.index("ml-report-browser-layout")
     assert "Meta::META_TIME_PERIOD" in shortcodes
+    assert "Meta::META_REGION" in shortcodes
     assert "report_periods()" in shortcodes
+    assert "report_regions()" in shortcodes
+    assert "public function report_regions()" in stats
+    assert "Apply filters" not in shortcodes
+    assert "form.submit()" in filter_js
+    assert "change" in filter_js
+    assert "input" in filter_js
 
 
 def test_taxonomy_directories_only_render_content_backed_entities() -> None:
@@ -272,9 +301,30 @@ def test_report_filters_use_a_compact_sticky_disclosure_rail() -> None:
 
     assert '<details class="ml-report-filter-panel" open>' in shortcodes
     assert "ml-report-filter-summary" in shortcodes
+    assert "ml-report-filter-header" in shortcodes
+    assert "ml-filter-chip-clear" in shortcodes
+    assert "render_active_filter_chips" in shortcodes
+    assert "report_facet_terms" in shortcodes
+    assert "report_facet_meta_values" in shortcodes
+    assert "ml_sort_filter" not in shortcodes
+    assert "render_report_sort_controls" in shortcodes
+    assert "ml-report-sort-controls" in shortcodes
+    assert ".ml-report-browser-sidebar" in css
     assert ".ml-report-browser-sidebar-card" in css
+    assert ".ml-report-browser-utility-bar" in css
+    assert ".ml-report-sort-controls" in css
+    assert ".ml-report-sort-icon--latest" in css
+    assert "width: 100%;" in css
+    assert "grid-template-columns: minmax(0, 1fr);" in css
+    assert "min-height: 2.22rem;" in css
+    assert "height: 1.95rem;" in css
+    assert "align-self: start;" in css
+    assert "position: sticky;" in css
     assert "max-height: calc(100dvh" in css
     assert "overflow-y: auto;" in css
+    assert ".ml-archive-metric-icon--regions" in css
+    assert "grid-template-columns: 2.6rem minmax(0, 1fr);" in css
+    assert "min-height: 2.08rem;" in css
 
 
 def test_topic_archives_fall_back_to_published_briefings_when_no_reports_exist() -> (

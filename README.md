@@ -382,6 +382,7 @@ Included:
 
 - FSE block theme templates/parts/patterns for editorial rendering
 - WordPress plugin for the Report, Signal, Briefing, and publisher taxonomy domain model
+- Reusable Reports archive browser with live search, category, region, publisher, period, and sort filters backed by canonical report cards
 - ZIP packaging scripts for backoffice installation
 - local sync, provisioning, and smoke-test scripts
 
@@ -433,7 +434,7 @@ Wordpress/
 
 Plugin slug: `marketlense-core`
 
-Current plugin package version: `1.2.10`. Deploy this package or newer when the
+Current plugin package version: `1.6.5`. Deploy this package or newer when the
 live WordPress REST schema must expose `ml_signal` and `ml_briefing`; older or
 stale deployed payloads can still report the same plugin slug while exposing
 only `ml_report`.

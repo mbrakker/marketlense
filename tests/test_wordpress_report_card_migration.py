@@ -179,6 +179,9 @@ def test_report_list_queries_paginate_only_canonical_card_contracts() -> None:
         "render_report_browser",
         "render_latest_reports",
     )
+    query_builder_start = shortcodes.index("private function report_browser_query_args")
+    query_builder_end = shortcodes.index("private function report_facet_post_ids")
+    report_browser_query_args = shortcodes[query_builder_start:query_builder_end]
     latest_reports = _method_source(
         shortcodes,
         "render_latest_reports",
@@ -188,7 +191,8 @@ def test_report_list_queries_paginate_only_canonical_card_contracts() -> None:
     assert "public static function apply_report_card_query_constraints" in meta
     assert "self::META_CARD_SCHEMA_VERSION" in meta
     assert "'value' => '1.0'" in meta
-    assert "Meta::apply_report_card_query_constraints($query_args)" in report_browser
+    assert "report_browser_query_args" in report_browser
+    assert "Meta::apply_report_card_query_constraints($query_args)" in report_browser_query_args
     assert "Meta::apply_report_card_query_constraints(" in latest_reports
 
 
@@ -287,11 +291,11 @@ def test_report_card_release_metadata_and_documentation_are_complete() -> None:
         encoding="utf-8"
     )
 
-    assert "Version: 1.6.2" in plugin
-    assert "MARKETLENSE_CORE_VERSION', '1.6.2'" in plugin
-    assert "Stable tag: 1.6.2" in plugin_readme
-    assert "= 1.6.2 =" in plugin_readme
-    assert "Version: 1.5.2" in theme
+    assert "Version: 1.6.5" in plugin
+    assert "MARKETLENSE_CORE_VERSION', '1.6.5'" in plugin
+    assert "Stable tag: 1.6.5" in plugin_readme
+    assert "= 1.6.5 =" in plugin_readme
+    assert "Version: 1.5.10" in theme
 
     for required_text in (
         "small",

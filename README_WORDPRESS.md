@@ -8,7 +8,7 @@ WordPress does not perform analysis, synthesis, metric extraction, or intelligen
 
 Reusable shortcode entrypoints are registered by `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-shortcodes.php`.
 
-- `[ml_report_browser]`: filtered and paginated report browser with search, topic, publisher, period, and sort controls.
+- `[ml_report_browser]`: reusable filtered and paginated report browser with sticky live search, selected-filter chips, pictogram sort controls, and dependent category, region, publisher, and period facets. Filter changes submit immediately without an Apply button and preserve the canonical report-card renderer.
 - `[ml_featured_digest]`: homepage Featured Report Brief module backed by the latest published report.
 - `[ml_featured_briefing]`: homepage Featured Briefing module. Renders the latest published Briefing or an explicit institutional empty state.
 - `[ml_briefings_index]`: canonical Briefings landing surface for `/briefings/`. Renders published Briefings or an explicit institutional empty state.
@@ -27,6 +27,7 @@ Reusable shortcode entrypoints are registered by `Wordpress/wp-content/plugins/m
 - Briefings publish to `ml_briefing` and automatically appear in `/briefings/` plus the homepage featured briefing.
 - Signals publish to `ml_signal` and automatically appear in `/signals/`. When no standalone signals exist, both homepage indicators and the Signals archive are derived from published report artifacts with source links.
 - Featured media, excerpts, publishers, periods, topics, findings, quotations, and citation counts are reused from the published WordPress records. Featured report metrics count current finding cards, evidence quote figures, assigned public WordPress categories, and the rendered evidence-reference total; legacy insight and quote markup remains supported. No report or briefing title is hardcoded into the theme or plugin.
+- The Reports archive uses a premium editorial hero with a dark dynamic metric console for reports, publishers, topics, and covered regions plus the reusable `[ml_report_browser]` shell. The sticky search toolbar spans the full report frame with selected-filter chips directly below the search row, while compact pictogram sorting and the sticky filter rail stay plugin-owned so archive, search, category, and publisher views share the same live dependent-facet behavior.
 - Topic and publisher directories aggregate only entities represented by published reports, briefings, or signals. Legacy sentinel metadata such as `...` and `Not extracted` is omitted from public presentation.
 - Topic archives fall back to published report briefs when no reports exist for the selected topic, without merging or rewriting taxonomy identities.
 - Public Briefing rendering removes internal evidence identifiers and folds source-map, uncertainty, and evidence appendices into accessible disclosures.
@@ -61,7 +62,7 @@ python -m src.cli publish-wp --force-report-cards
 wp eval-file Wordpress/scripts/audit-report-card-contracts.php
 ```
 
-Plugin `1.6.2` limits report and publisher archive pagination to canonical card contracts, safely omits any malformed migrated contract, and selects the newest valid report for hero placements. The forced publication command updates matched WordPress posts in place, synchronizes covered-period and geography metadata from the manifest, and does not create replacements. Run the backfill and forced publication commands before the audit so every published report becomes visible in canonical card placements. The final command must print `0 invalid published reports`; invalid rows are emitted as JSON lines containing the WordPress post ID, title, and failing card keys.
+Plugin `1.6.5` keeps report and publisher archive pagination limited to canonical report-card contracts, safely omits any malformed migrated contract, selects the newest valid report for hero placements, and adds live dependent archive filtering. The Reports archive hero renders icon-backed dynamic metrics for reports, publishers, topics, and covered regions, while the reusable browser keeps search, selected filters, pictogram sorting, and the compact filter rail sticky without an Apply button. The forced publication command updates matched WordPress posts in place, synchronizes covered-period and geography metadata from the manifest, and does not create replacements. Run the backfill and forced publication commands before the audit so every published report becomes visible in canonical card placements. The final command must print `0 invalid published reports`; invalid rows are emitted as JSON lines containing the WordPress post ID, title, and failing card keys.
 
 Browser verification covers the homepage, report archive, topic archive, publisher archive, and search at desktop, tablet, and mobile widths. Check horizontal overflow, title/TLDR completeness, aligned card actions, keyboard focus, 200% zoom/text spacing, and reduced-motion behavior.
 
