@@ -1397,6 +1397,18 @@ final class Shortcodes
                     ['entity' => 'topics', 'label' => __('Topics', 'marketlense-core')],
                 ],
             ],
+            'methodology' => [
+                'kicker' => __('Methodology', 'marketlense-core'),
+                'title' => __('How Market Bearing keeps published research connected to its evidence', 'marketlense-core'),
+                'lead' => __('The pipeline combines deterministic extraction, typed validation, and structured editorial shaping so every published report brief is reproducible, reviewable, and source-aware.', 'marketlense-core'),
+                'metrics_label' => __('Methodology archive coverage', 'marketlense-core'),
+                'metrics' => [
+                    ['entity' => 'reports', 'label' => __('Reports', 'marketlense-core')],
+                    ['entity' => 'publishers', 'label' => __('Publishers', 'marketlense-core')],
+                    ['entity' => 'topics', 'label' => __('Topics', 'marketlense-core')],
+                    ['entity' => 'regions', 'label' => __('Regions', 'marketlense-core')],
+                ],
+            ],
         ];
         if (! isset($contexts[$context])) {
             return '';

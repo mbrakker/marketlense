@@ -1,20 +1,13 @@
 <!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"div"} /-->
 
-<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell ml-page-frame","layout":{"type":"constrained"}} -->
-<main id="main-content" class="wp-block-group ml-shell ml-page-frame">
-  <!-- wp:group {"className":"ml-taxonomy-header","layout":{"type":"constrained"}} -->
-  <div class="wp-block-group ml-taxonomy-header">
-    <!-- wp:paragraph {"className":"ml-eyebrow"} -->
-    <p class="ml-eyebrow">Methodology</p>
-    <!-- /wp:paragraph -->
-    <!-- wp:heading {"level":1} -->
-    <h1 class="wp-block-heading">How Market Bearing keeps published research connected to its evidence</h1>
-    <!-- /wp:heading -->
-    <!-- wp:paragraph {"className":"ml-page-lead"} -->
-    <p class="ml-page-lead">The pipeline combines deterministic extraction, typed validation, and structured editorial shaping so every published report brief is reproducible, reviewable, and source-aware.</p>
-    <!-- /wp:paragraph -->
-  </div>
-  <!-- /wp:group -->
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-directory-page","layout":{"type":"default"}} -->
+<main id="main-content" class="wp-block-group ml-directory-page">
+  <!-- wp:shortcode -->
+  [ml_archive_hero context="methodology"]
+  <!-- /wp:shortcode -->
+
+  <!-- wp:group {"className":"ml-directory-content-frame ml-shell ml-page-frame","layout":{"type":"constrained"}} -->
+  <div class="wp-block-group ml-directory-content-frame ml-shell ml-page-frame">
 
   <!-- wp:columns {"className":"ml-page-grid ml-method-grid"} -->
   <div class="wp-block-columns ml-page-grid ml-method-grid">
@@ -127,6 +120,8 @@
   <!-- /wp:group -->
 
   <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
+  </div>
+  <!-- /wp:group -->
 </main>
 <!-- /wp:group -->
 
