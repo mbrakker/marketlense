@@ -320,6 +320,7 @@ def publish_cross_report_package(
                         source_artifact_id=package.file_id,
                         canonical_route_intent=package.target_route,
                     ),
+                    briefing_card=package.briefing_card,
                 ),
                 resolved_terms=resolved_terms,
             ),

@@ -463,6 +463,7 @@ def build_cross_report_publish_package(
     html_path: str,
     publish_requires_validation_pass: bool = True,
     target_route: str = "wordpress:ml_briefing",
+    briefing_card: dict[str, object] | None = None,
 ) -> CrossReportPublishPackage:
     validate_cross_report_contract(generated)
     validate_cross_report_contract(validation_result)
@@ -539,13 +540,14 @@ def build_cross_report_publish_package(
         "prompt_hashes": dict(generated.prompt_hashes),
         "validation_status": validation_result.status,
         "public_entity_metadata": asdict(publish_entity_metadata),
+        "briefing_card": briefing_card or {},
     }
     body_html, html_text = build_cross_report_html_document(
         generated=generated,
-        agreement_result=agreement_result,
-        source_metadata=source_metadata,
-        machine_metadata=machine_metadata,
-        file_id=package_id,
+            agreement_result=agreement_result,
+            source_metadata=source_metadata,
+            machine_metadata=machine_metadata,
+            file_id=package_id,
         publish_entity_metadata=publish_entity_metadata,
     )
     package = CrossReportPublishPackage(

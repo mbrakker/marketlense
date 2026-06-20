@@ -30,6 +30,8 @@ from src.contracts.cross_report_analysis import (
     validate_cross_report_contract,
 )
 from src.contracts.files import WriteBytesRequest
+from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
+from src.contracts.report_cards import CoverFingerprint
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
@@ -41,6 +43,7 @@ from src.generators.cross_report_analysis_generator import (
     generate_cross_report_analysis,
     validate_cross_report_generated_analysis,
 )
+from src.generators.cover_image_generator import generate_cover_images
 from src.orchestrators.publish_orchestrator import publish_cross_report_package
 from src.generators.cross_report_analysis_input_generator import (
     assemble_cross_report_analysis_inputs,
@@ -743,6 +746,40 @@ def run_cross_report_analysis(
     _log_transition(ctx, transitions, "validated", {"status": validation.status})
     artifact_path = _planned_artifact_path(request.output_root, generated.slug)
     publish_html_path = _planned_publish_html_path(request.output_root, generated.slug)
+    fingerprint = CoverFingerprint(
+        schema_version="1.0",
+        geometry_family="system_matrix",
+        evidence_shape="system",
+        direction="neutral",
+        geography_scope="unknown",
+        evidence_density="balanced",
+        domain_layer="forecast",
+        seed=int(hashlib.sha256(generated.analysis_id.encode("utf-8")).hexdigest()[:8], 16),
+        selection_reason="Cross-report briefing synthesizes multiple linked report systems.",
+    )
+    cover_outcomes = generate_cover_images(
+        CoverImageGenerationRequest(
+            schema_version="2.0",
+            output_dir=request.output_root,
+            style_config_path=str(getattr(settings, "cover_style_path", "")),
+            reports=[CoverImageReport(
+                schema_version="2.0", file_id=f"cross-report:{generated.analysis_id}",
+                title=generated.title, publisher="Market Bearing", report_slug=generated.slug,
+                time_period="", region=None, fingerprint=fingerprint, cover_profile="briefing",
+            )],
+        ),
+        ctx,
+    )
+    cover_assets = cover_outcomes[0].assets if cover_outcomes and cover_outcomes[0].status == "generated" else None
+    if cover_assets is None:
+        raise AppError(code="cover_asset_set_incomplete", message="Briefing cover generation did not produce all assets", retryable=False)
+    briefing_card = {
+        "schema_version": "1.0", "summary_compact": generated.executive_summary,
+        "summary_standard": generated.executive_summary, "decision_focus": generated.decision_focus,
+        "takeaways": list(generated.executive_takeaways), "source_count": len(generated.selected_sources),
+        "evidence_count": len(generated.evidence),
+        "covers": {size: getattr(cover_assets, size).output_path for size in ("small", "medium", "large")},
+    }
     publish_package = build_cross_report_publish_package(
         generated,
         validation,
@@ -756,6 +793,7 @@ def run_cross_report_analysis(
             )
         ),
         target_route=request.publish_target_route,
+        briefing_card=briefing_card,
     )
     _log_transition(
         ctx,
