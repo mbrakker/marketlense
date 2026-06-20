@@ -71,6 +71,12 @@ class CrossReportGeneratedAnalysisResult:
     cost_summary: Dict[str, Any] = field(
         metadata={"doc": "Token/cost summary when available from the LLM boundary."}
     )
+    decision_focus: str = field(
+        metadata={"doc": "Grounded decision statement for briefing-card presentation."}
+    )
+    executive_takeaways: List[str] = field(
+        metadata={"doc": "Exactly two grounded executive takeaways."}
+    )
 
 
 @dataclass(frozen=True)

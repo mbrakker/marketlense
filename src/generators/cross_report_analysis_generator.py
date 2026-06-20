@@ -755,6 +755,20 @@ def generate_cross_report_analysis(
         )
     )
     payload = _response_payload(response)
+    decision_focus = _required_text(payload, "decision_focus")
+    raw_takeaways = payload.get("executive_takeaways")
+    if (
+        not isinstance(raw_takeaways, list)
+        or len(raw_takeaways) != 2
+        or not all(isinstance(item, str) and item.strip() for item in raw_takeaways)
+    ):
+        raise AppError(
+            code="cross_report_analysis_output_invalid",
+            message="executive_takeaways must contain exactly two populated strings",
+            retryable=False,
+            severity="error",
+        )
+    takeaways = [_required_text({"value": item}, "value") for item in raw_takeaways]
     known_evidence = _known_evidence_ids(evidence_inputs)
     evidence_aliases = _known_evidence_aliases(evidence_inputs)
     known_raw_metrics = _known_raw_metric_ids(evidence_inputs)
@@ -775,6 +789,8 @@ def generate_cross_report_analysis(
         title=_required_text(payload, "title"),
         slug=_required_text(payload, "slug"),
         executive_summary=_required_text(payload, "executive_summary"),
+        decision_focus=decision_focus,
+        executive_takeaways=takeaways,
         selected_theme=signal_result.selected_theme,
         selected_sources=evidence_inputs.selected_sources,
         evidence=evidence_inputs.evidence,

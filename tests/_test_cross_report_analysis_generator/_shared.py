@@ -79,6 +79,11 @@ class FakeOpenAIClient:
                 "title": "AI Commerce Adoption Across Retail Reports",
                 "slug": "ai-commerce-adoption-across-retail-reports",
                 "executive_summary": "AI adoption is moving unevenly across retail reports.",
+                "decision_focus": "Decide how to sequence AI commerce investments.",
+                "executive_takeaways": [
+                    "Treat source divergence as a planning constraint.",
+                    "Validate AI commerce priorities against local evidence.",
+                ],
                 "sections": [
                     {
                         "section_id": "key-cross-report-signals",
@@ -130,6 +135,17 @@ class FakeOpenAIClient:
                 ],
             }
         )
+        if isinstance(self.payload, dict):
+            self.payload.setdefault(
+                "decision_focus", "Decide how to sequence AI commerce investments."
+            )
+            self.payload.setdefault(
+                "executive_takeaways",
+                [
+                    "Treat source divergence as a planning constraint.",
+                    "Validate AI commerce priorities against local evidence.",
+                ],
+            )
 
     def openai_chat_json(self, request, ctx):
         self.requests.append(request)
