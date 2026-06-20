@@ -344,8 +344,9 @@ def test_report_filters_use_a_compact_sticky_disclosure_rail() -> None:
     assert "position: sticky;" in css
     assert "max-height: calc(100dvh" in css
     assert "overflow-y: auto;" in css
+    assert ".ml-archive-hero__metrics" in css
     assert ".ml-archive-metric-icon--regions" in css
-    assert "grid-template-columns: 2.6rem minmax(0, 1fr);" in css
+    assert "grid-template-columns: 2.75rem minmax(0, 1fr);" in css
     assert "min-height: 2.08rem;" in css
 
 
