@@ -56,14 +56,22 @@ final class Shortcodes
 
     private Report_Card_Renderer $report_card_renderer;
 
+    private Briefing_Card_View_Model_Builder $briefing_card_view_model_builder;
+
+    private Briefing_Card_Renderer $briefing_card_renderer;
+
     public function __construct(
         Report_View_Model_Builder $view_model_builder,
         Intelligence_Stats $stats,
-        Report_Card_Renderer $report_card_renderer
+        Report_Card_Renderer $report_card_renderer,
+        Briefing_Card_View_Model_Builder $briefing_card_view_model_builder,
+        Briefing_Card_Renderer $briefing_card_renderer
     ) {
         $this->view_model_builder = $view_model_builder;
         $this->stats = $stats;
         $this->report_card_renderer = $report_card_renderer;
+        $this->briefing_card_view_model_builder = $briefing_card_view_model_builder;
+        $this->briefing_card_renderer = $briefing_card_renderer;
     }
 
     /**
@@ -729,7 +737,12 @@ final class Shortcodes
             </div>
 
             <?php if ($post instanceof \WP_Post) : ?>
-                <?php $this->render_featured_entity_card($post, __('Read Briefing', 'marketlense-core')); ?>
+                <?php $briefing = $this->briefing_card_view_model_builder->build($post); ?>
+                <?php if (($briefing['card_contract_valid'] ?? false) === true) : ?>
+                    <?php echo $this->briefing_card_renderer->render($briefing, 'large'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                <?php else : ?>
+                    <?php $this->render_institutional_empty_state(__('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core')); ?>
+                <?php endif; ?>
             <?php else : ?>
                 <?php $this->render_institutional_empty_state(__('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core')); ?>
             <?php endif; ?>

@@ -11088,6 +11088,30 @@ body {
 }
 /* END canonical report cards */
 
+/* BEGIN canonical briefing cards */
+.ml-briefing-card { container-type: inline-size; height: 100%; overflow: hidden; border: 1px solid color-mix(in srgb, #0a255a 18%, #d8e1ec); border-radius: 1rem; background: #fff; box-shadow: 0 0.75rem 2rem rgba(8, 31, 61, 0.1); }
+.ml-briefing-card__link { display: grid; height: 100%; color: inherit; text-decoration: none; }
+.ml-briefing-card__link:focus-visible { outline: 3px solid #174991; outline-offset: 4px; }
+.ml-briefing-card__media { position: relative; overflow: clip; background: #0a255a; }
+.ml-briefing-card__cover { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ml-briefing-card__badge { position: absolute; inset: .875rem auto auto .875rem; padding: .35rem .625rem; border-radius: 999px; background: rgba(4,20,51,.82); color: #fff; font-size: .6875rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.ml-briefing-card__body { display: grid; min-width: 0; padding: clamp(1.125rem,2.2vw,1.625rem); gap: .8rem; }
+.ml-briefing-card__meta, .ml-briefing-card__action { margin: 0; color: #174991; font-size: .75rem; font-weight: 750; letter-spacing: .075em; text-transform: uppercase; }
+.ml-briefing-card__title { margin: 0; color: var(--ml-brand-navy); font-family: var(--ml-font-editorial); font-size: clamp(1.1rem,1.55vw,1.45rem); line-height: 1.16; text-wrap: balance; }
+.ml-briefing-card__summary, .ml-briefing-card__focus { margin: 0; color: var(--ml-text-secondary); font-size: .9rem; line-height: 1.55; text-wrap: pretty; }
+.ml-briefing-card__focus { padding-inline-start: .8rem; border-inline-start: 2px solid #6f9ed4; }
+.ml-briefing-card__focus strong { display: block; color: #174991; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+.ml-briefing-card__counters, .ml-briefing-card__takeaways { display: flex; flex-wrap: wrap; gap: .5rem .9rem; margin: 0; padding: 0; color: var(--ml-text-muted); font-size: .78rem; list-style: none; }
+.ml-briefing-card__takeaways { display: grid; gap: .6rem; color: var(--ml-text-secondary); }
+.ml-briefing-card__takeaways li { padding-inline-start: 1rem; }
+.ml-briefing-card--small .ml-briefing-card__link { grid-template-rows: auto minmax(0,1fr); }
+.ml-briefing-card--small .ml-briefing-card__media { aspect-ratio: 16/9; }
+.ml-briefing-card--medium .ml-briefing-card__link, .ml-briefing-card--large .ml-briefing-card__link { grid-template-columns: minmax(13rem,36%) minmax(0,1fr); }
+.ml-briefing-card--medium .ml-briefing-card__media, .ml-briefing-card--large .ml-briefing-card__media { min-height: 100%; }
+@media (max-width: 782px) { .ml-briefing-card--medium .ml-briefing-card__link, .ml-briefing-card--large .ml-briefing-card__link { grid-template-columns: 1fr; } .ml-briefing-card--medium .ml-briefing-card__media, .ml-briefing-card--large .ml-briefing-card__media { aspect-ratio: 16/10; } }
+@media (prefers-reduced-motion: reduce) { .ml-briefing-card { transition: none; } }
+/* END canonical briefing cards */
+
 /* Reusable report filter rail */
 .ml-report-filter-header {
   display: flex;
