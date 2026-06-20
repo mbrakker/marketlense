@@ -13,12 +13,12 @@
 ## File Map
 
 - `src/contracts/cover_images.py`, `src/services/cover_style_service.py`, `src/config/cover-styles.yaml`, `src/generators/cover_image_generator.py`: report and briefing cover profiles.
-- `src/contracts/_cross_report_analysis/requests.py`, `src/generators/cross_report_analysis_generator.py`, `src/orchestrators/publish_orchestrator.py`, `src/contracts/wordpress.py`, `src/generators/publish_generator.py`: briefing-card projection and publication.
+- `src/contracts/_cross_report_analysis/generation.py`, `src/contracts/_cross_report_analysis/requests.py`, `src/generators/cross_report_analysis_generator.py`, `src/prompts/cross_report_analysis/synthesis/system.yaml`, `src/orchestrators/publish_orchestrator.py`, `src/contracts/wordpress.py`, `src/generators/publish_generator.py`: briefing-card generation, projection, and publication.
 - `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-briefing-card-view-model-builder.php`: validated briefing presentation model.
 - `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-briefing-card-renderer.php`: three canonical card variants.
 - `Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-meta.php`, `class-marketlense-core-plugin.php`, `class-marketlense-core-shortcodes.php`, and `marketlense-core.php`: metadata, injection, and placement migration.
 - `Wordpress/wp-content/themes/marketlense/assets/css/theme.css`: briefing-only presentation layer.
-- `tests/wordpress_runtime/briefing_card_view_model_harness.php`, `tests/wordpress_runtime/briefing_card_renderer_harness.php`, `tests/test_wordpress_briefing_card_migration.py`, `tests/test_cover_style_service.py`, `tests/integration/test_cover_image_service.py`, `tests/test_cross_report_publish_orchestrator.py`, and `tests/test_publish_generator.py`: regression coverage.
+- `tests/wordpress_runtime/briefing_card_view_model_harness.php`, `tests/wordpress_runtime/briefing_card_renderer_harness.php`, `tests/test_wordpress_briefing_card_migration.py`, `tests/test_cover_style_service.py`, `tests/integration/test_cover_image_service.py`, `tests/test_cross_report_analysis_generator.py`, `tests/test_cross_report_publish_orchestrator.py`, and `tests/test_publish_generator.py`: regression coverage.
 
 ### Task 1: Define Executive-Blue Cover Profiles
 
@@ -103,13 +103,15 @@ Commit: `git add src/contracts/cover_images.py src/generators/cover_image_genera
 
 ### Task 3: Project and Publish a Briefing Card Manifest
 
-**Files:** modify `src/contracts/_cross_report_analysis/requests.py`, `src/generators/cross_report_analysis_generator.py`, `src/orchestrators/publish_orchestrator.py`, `src/contracts/wordpress.py`, `src/generators/publish_generator.py`; test `tests/test_cross_report_publish_orchestrator.py` and `tests/test_publish_generator.py`.
+**Files:** modify `src/contracts/_cross_report_analysis/generation.py`, `src/contracts/_cross_report_analysis/requests.py`, `src/generators/cross_report_analysis_generator.py`, `src/prompts/cross_report_analysis/synthesis/system.yaml`, `src/orchestrators/publish_orchestrator.py`, `src/contracts/wordpress.py`, `src/generators/publish_generator.py`; test `tests/test_cross_report_analysis_generator.py`, `tests/test_cross_report_publish_orchestrator.py`, and `tests/test_publish_generator.py`.
 
-- [ ] **Step 1: Write failing publication assertions**
+- [ ] **Step 1: Write failing generated-field and publication assertions**
 
 ```python
 assert package.briefing_card_manifest.source_report_ids == ["report-1", "report-2"]
 assert package.briefing_card_manifest.evidence_count == 8
+assert generated.decision_focus.endswith(".")
+assert len(generated.executive_takeaways) == 2
 assert post_request.meta["ml_briefing_card_schema_version"] == "1.0"
 assert post_request.meta["ml_briefing_source_report_ids"] == [101, 102]
 assert post_request.meta["ml_briefing_evidence_count"] == 8
@@ -118,11 +120,15 @@ assert post_request.meta["ml_briefing_card_cover_small_id"] > 0
 
 - [ ] **Step 2: Confirm failure**
 
-Run: `pytest tests/test_cross_report_publish_orchestrator.py tests/test_publish_generator.py -k briefing_card -v`
+Run: `pytest tests/test_cross_report_analysis_generator.py tests/test_cross_report_publish_orchestrator.py tests/test_publish_generator.py -k briefing_card -v`
 
-Expected: FAIL because publish packages expose no briefing-card manifest.
+Expected: FAIL because generated analyses expose neither briefing decision fields nor a briefing-card manifest.
 
-- [ ] **Step 3: Add one validated manifest to the cross-report package**
+- [ ] **Step 3: Add validated decision fields at the existing generation boundary**
+
+Extend `CrossReportGeneratedAnalysisResult` with documented `decision_focus: str` and `executive_takeaways: List[str]` fields. Extend the JSON response schema in `src/prompts/cross_report_analysis/synthesis/system.yaml` to require one grounded, complete-sentence decision focus and exactly two grounded, complete-sentence executive takeaways. Parse both in `generate_cross_report_analysis()`, validate sentence completeness and the exactly-two rule in the existing cross-report validation module, and include them in the existing structured generator logs. This is a backward-incompatible generated-artifact contract change: bump its schema version and adapt every fixture/constructor that builds `CrossReportGeneratedAnalysisResult`.
+
+- [ ] **Step 4: Add one validated manifest to the cross-report package**
 
 ```python
 BriefingCardManifest(
@@ -136,13 +142,13 @@ BriefingCardManifest(
 
 Define this dataclass in the existing cross-report contract namespace. Require unique non-empty sources, exactly two takeaways, complete sentence summaries, full cover assets, and a briefing fingerprint. Derive compact summary through sentence-safe logic, upload all three assets before publishing, and persist only attachment IDs, source WordPress IDs, and evidence count in `ml_briefing` meta.
 
-- [ ] **Step 4: Verify idempotency and commit**
+- [ ] **Step 5: Verify idempotency and commit**
 
-Run: `pytest tests/test_cross_report_publish_orchestrator.py tests/test_publish_generator.py -k "briefing or cross_report" -v`
+Run: `pytest tests/test_cross_report_analysis_generator.py tests/test_cross_report_publish_orchestrator.py tests/test_publish_generator.py -k "briefing or cross_report" -v`
 
 Expected: PASS; identical packages produce neither duplicate media nor duplicate posts, and invalid source IDs/covers/takeaways fail before WordPress I/O.
 
-Commit: `git add src/contracts/_cross_report_analysis/requests.py src/generators/cross_report_analysis_generator.py src/orchestrators/publish_orchestrator.py src/contracts/wordpress.py src/generators/publish_generator.py tests/test_cross_report_publish_orchestrator.py tests/test_publish_generator.py; git commit -m "feat: publish briefing card manifests"`
+Commit: `git add src/contracts/_cross_report_analysis/generation.py src/contracts/_cross_report_analysis/requests.py src/generators/cross_report_analysis_generator.py src/prompts/cross_report_analysis/synthesis/system.yaml src/orchestrators/publish_orchestrator.py src/contracts/wordpress.py src/generators/publish_generator.py tests/test_cross_report_analysis_generator.py tests/test_cross_report_publish_orchestrator.py tests/test_publish_generator.py; git commit -m "feat: publish briefing card manifests"`
 
 ### Task 4: Add WordPress Contract, View Model, and Renderer
 
