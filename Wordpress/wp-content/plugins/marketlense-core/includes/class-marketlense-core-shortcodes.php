@@ -1052,9 +1052,11 @@ final class Shortcodes
 
         ob_start();
         ?>
-        <section class="ml-directory-list ml-publisher-directory-list">
+        <section class="ml-directory-list ml-publisher-directory-list" aria-label="<?php esc_attr_e('Publisher directory', 'marketlense-core'); ?>">
+            <?php $rank = 0; ?>
             <?php foreach ($items as $item) : ?>
                 <?php
+                $rank++;
                 $term = $item['term'];
                 $archive_link = get_term_link($term);
                 $homepage = (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_HOMEPAGE_META, true);
@@ -1064,9 +1066,14 @@ final class Shortcodes
                 $description = $this->publisher_description_excerpt($term->description);
                 ?>
                 <article class="ml-directory-card ml-publisher-directory-card">
-                    <div class="ml-publisher-directory-mark" aria-hidden="true"><?php echo esc_html($this->publisher_monogram($term->name)); ?></div>
+                    <div class="ml-publisher-directory-mark" aria-hidden="true">
+                        <span><?php echo esc_html($this->publisher_monogram($term->name)); ?></span>
+                    </div>
                     <div class="ml-publisher-directory-copy">
-                        <p class="ml-directory-count"><?php echo esc_html($this->content_count_line($item)); ?></p>
+                        <div class="ml-publisher-directory-card-topline">
+                            <p class="ml-directory-count"><?php echo esc_html($this->content_count_line($item)); ?></p>
+                            <span class="ml-publisher-directory-rank"><?php echo esc_html(sprintf('#%d', $rank)); ?></span>
+                        </div>
                         <h2>
                             <?php if (! is_wp_error($archive_link) && (int) $item['reports'] > 0) : ?>
                                 <a href="<?php echo esc_url((string) $archive_link); ?>">
@@ -1079,10 +1086,25 @@ final class Shortcodes
                         <?php if ($description !== '') : ?>
                             <p class="ml-directory-description"><?php echo esc_html($description); ?></p>
                         <?php endif; ?>
+                        <ul class="ml-publisher-directory-facts" aria-label="<?php esc_attr_e('Represented content', 'marketlense-core'); ?>">
+                            <li>
+                                <strong><?php echo esc_html(number_format_i18n((int) $item['reports'])); ?></strong>
+                                <span><?php esc_html_e('Reports', 'marketlense-core'); ?></span>
+                            </li>
+                            <li>
+                                <strong><?php echo esc_html(number_format_i18n((int) $item['briefings'])); ?></strong>
+                                <span><?php esc_html_e('Briefings', 'marketlense-core'); ?></span>
+                            </li>
+                            <li>
+                                <strong><?php echo esc_html(number_format_i18n((int) $item['signals'])); ?></strong>
+                                <span><?php esc_html_e('Signals', 'marketlense-core'); ?></span>
+                            </li>
+                        </ul>
                         <div class="ml-directory-actions">
                             <?php if (! is_wp_error($archive_link)) : ?>
-                                <a href="<?php echo esc_url((string) $archive_link); ?>">
-                                    <?php esc_html_e('View represented research', 'marketlense-core'); ?>
+                                <a class="ml-text-link" href="<?php echo esc_url((string) $archive_link); ?>">
+                                    <?php esc_html_e('View publisher profile', 'marketlense-core'); ?>
+                                    <span aria-hidden="true">&rarr;</span>
                                 </a>
                             <?php endif; ?>
                             <?php if ($homepage !== '') : ?>

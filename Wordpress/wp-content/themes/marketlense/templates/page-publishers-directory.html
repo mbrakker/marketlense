@@ -1,7 +1,7 @@
 <!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"div"} /-->
 
-<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-directory-page","layout":{"type":"default"}} -->
-<main id="main-content" class="wp-block-group ml-directory-page">
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-directory-page ml-publishers-page","layout":{"type":"default"}} -->
+<main id="main-content" class="wp-block-group ml-directory-page ml-publishers-page">
   <!-- wp:group {"className":"ml-directory-hero","layout":{"type":"default"}} -->
   <div class="wp-block-group ml-directory-hero">
     <!-- wp:group {"className":"ml-directory-hero-frame","layout":{"type":"default"}} -->
@@ -12,25 +12,82 @@
         <p class="ml-section-kicker">Publisher directory</p>
         <!-- /wp:paragraph -->
         <!-- wp:heading {"level":1} -->
-        <h1 class="wp-block-heading">Know the source behind the signal.</h1>
+        <h1 class="wp-block-heading">Top publishers</h1>
         <!-- /wp:heading -->
         <!-- wp:paragraph {"className":"ml-page-lead"} -->
-        <p class="ml-page-lead">Explore publishers represented by published intelligence, with direct archive and research destinations where metadata provides them.</p>
+        <p class="ml-page-lead">Explore the research institutions, consultancies, and intelligence sources represented across the published Market Bearing archive.</p>
         <!-- /wp:paragraph -->
       </div>
       <!-- /wp:group -->
-      <!-- wp:shortcode -->
-      [ml_archive_metric entity="publishers" label="Source coverage"]
-      <!-- /wp:shortcode -->
+      <!-- wp:group {"className":"ml-publishers-hero-metrics","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-publishers-hero-metrics">
+        <!-- wp:shortcode -->
+        [ml_archive_metric entity="publishers" label="Publishers"]
+        <!-- /wp:shortcode -->
+        <!-- wp:shortcode -->
+        [ml_archive_metric entity="reports" label="Reports"]
+        <!-- /wp:shortcode -->
+        <!-- wp:shortcode -->
+        [ml_archive_metric entity="regions" label="Regions"]
+        <!-- /wp:shortcode -->
+        <!-- wp:shortcode -->
+        [ml_archive_metric entity="topics" label="Topics"]
+        <!-- /wp:shortcode -->
+      </div>
+      <!-- /wp:group -->
     </div>
     <!-- /wp:group -->
   </div>
   <!-- /wp:group -->
   <!-- wp:group {"className":"ml-directory-content-frame","layout":{"type":"default"}} -->
   <div class="wp-block-group ml-directory-content-frame">
+    <!-- wp:group {"className":"ml-publishers-directory-head","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-publishers-directory-head">
+      <!-- wp:group {"layout":{"type":"default"}} -->
+      <div class="wp-block-group">
+        <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+        <p class="ml-section-kicker">All publishers</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:heading {"level":2} -->
+        <h2 class="wp-block-heading">Research sources with published evidence.</h2>
+        <!-- /wp:heading -->
+      </div>
+      <!-- /wp:group -->
+      <!-- wp:paragraph -->
+      <p>Directory cards are sourced from publisher taxonomy records and published report relationships.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:group -->
+
     <!-- wp:shortcode -->
     [ml_publishers_directory]
     <!-- /wp:shortcode -->
+
+    <!-- wp:group {"className":"ml-publishers-report-strip","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-publishers-report-strip">
+      <!-- wp:group {"className":"ml-publishers-directory-head","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-publishers-directory-head">
+        <!-- wp:group {"layout":{"type":"default"}} -->
+        <div class="wp-block-group">
+          <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+          <p class="ml-section-kicker">Latest reports</p>
+          <!-- /wp:paragraph -->
+          <!-- wp:heading {"level":2} -->
+          <h2 class="wp-block-heading">Fresh research from represented publishers.</h2>
+          <!-- /wp:heading -->
+        </div>
+        <!-- /wp:group -->
+        <!-- wp:shortcode -->
+        [ml_inline_link target="reports" label="View all reports"]
+        <!-- /wp:shortcode -->
+      </div>
+      <!-- /wp:group -->
+
+      <!-- wp:shortcode -->
+      [ml_report_browser per_page="6" show_filters="0" show_pagination="0" context="latest"]
+      <!-- /wp:shortcode -->
+    </div>
+    <!-- /wp:group -->
   </div>
   <!-- /wp:group -->
 </main>

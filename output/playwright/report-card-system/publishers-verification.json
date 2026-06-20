@@ -1,0 +1,112 @@
+[
+  {
+    "viewport": "publishers-1440x1000",
+    "status": 200,
+    "consoleMessages": [],
+    "requestFailures": [],
+    "metrics": {
+      "title": "Publishers directory – Digital Insights",
+      "hasMain": true,
+      "hasHero": true,
+      "metricTiles": 4,
+      "cards": 2,
+      "latestCards": 3,
+      "viewportOverflow": 0,
+      "overflowing": [
+        {
+          "tag": "span",
+          "className": "ml-brand-rule",
+          "scrollWidth": 172,
+          "clientWidth": 168,
+          "text": ""
+        },
+        {
+          "tag": "li",
+          "className": "wp-block-navigation-item current-menu-item",
+          "scrollWidth": 75,
+          "clientWidth": 71,
+          "text": "Publishers"
+        },
+        {
+          "tag": "a",
+          "className": "wp-block-navigation-item__content",
+          "scrollWidth": 75,
+          "clientWidth": 71,
+          "text": "Publishers"
+        },
+        {
+          "tag": "span",
+          "className": "ml-brand-rule",
+          "scrollWidth": 172,
+          "clientWidth": 168,
+          "text": ""
+        }
+      ]
+    },
+    "screenshot": "C:\\Programing\\Market lense\\output\\playwright\\report-card-system\\publishers-1440x1000.png"
+  },
+  {
+    "viewport": "publishers-768x1024",
+    "status": 200,
+    "consoleMessages": [],
+    "requestFailures": [],
+    "metrics": {
+      "title": "Publishers directory – Digital Insights",
+      "hasMain": true,
+      "hasHero": true,
+      "metricTiles": 4,
+      "cards": 2,
+      "latestCards": 3,
+      "viewportOverflow": 0,
+      "overflowing": [
+        {
+          "tag": "span",
+          "className": "ml-brand-rule",
+          "scrollWidth": 126,
+          "clientWidth": 122,
+          "text": ""
+        },
+        {
+          "tag": "span",
+          "className": "ml-brand-rule",
+          "scrollWidth": 126,
+          "clientWidth": 122,
+          "text": ""
+        }
+      ]
+    },
+    "screenshot": "C:\\Programing\\Market lense\\output\\playwright\\report-card-system\\publishers-768x1024.png"
+  },
+  {
+    "viewport": "publishers-390x844",
+    "status": 200,
+    "consoleMessages": [],
+    "requestFailures": [],
+    "metrics": {
+      "title": "Publishers directory – Digital Insights",
+      "hasMain": true,
+      "hasHero": true,
+      "metricTiles": 4,
+      "cards": 2,
+      "latestCards": 3,
+      "viewportOverflow": 0,
+      "overflowing": [
+        {
+          "tag": "span",
+          "className": "ml-brand-rule",
+          "scrollWidth": 126,
+          "clientWidth": 122,
+          "text": ""
+        },
+        {
+          "tag": "span",
+          "className": "ml-brand-rule",
+          "scrollWidth": 126,
+          "clientWidth": 122,
+          "text": ""
+        }
+      ]
+    },
+    "screenshot": "C:\\Programing\\Market lense\\output\\playwright\\report-card-system\\publishers-390x844.png"
+  }
+]
