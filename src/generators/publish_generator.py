@@ -235,11 +235,15 @@ def publish_html(
         covers = briefing_card.get("covers")
         if not isinstance(covers, dict) or any(not str(covers.get(size) or "").strip() for size in ("small", "medium", "large")):
             raise AppError(code="cover_asset_set_incomplete", message="Briefing card covers are required", retryable=False)
-        source = Path(request.html_path)
-        briefing_dir = source.with_suffix("").resolve()
+        output_root = Path(settings.output_dir).resolve()
         for size in ("small", "medium", "large"):
             asset_path = Path(str(covers[size]))
-            local_path = asset_path.resolve() if asset_path.is_absolute() else (briefing_dir / asset_path).resolve()
+            if asset_path.is_absolute():
+                local_path = asset_path.resolve()
+            elif asset_path.parts and asset_path.parts[0] == output_root.name:
+                local_path = (output_root.parent / asset_path).resolve()
+            else:
+                local_path = (output_root / asset_path).resolve()
             card_media_ids[size] = _upload_single_media(
                 job=_MediaUploadJob(src=str(covers[size]), local_path=str(local_path), is_preview=size == "large"),
                 base_url=base_url, auth_header=auth_header, ssl_verify=settings.wp.ssl_verify,
