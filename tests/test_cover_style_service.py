@@ -21,24 +21,37 @@ def test_default_cover_style_exposes_three_canonical_layouts() -> None:
     )
 
     config = response.config
-    assert config.schema_version == "2.0"
-    assert (config.layouts["small"].width, config.layouts["small"].height) == (
+    report = config.profiles["report"]
+    assert config.schema_version == "3.0"
+    assert (report.layouts["small"].width, report.layouts["small"].height) == (
         1600,
         900,
     )
-    assert (config.layouts["medium"].width, config.layouts["medium"].height) == (
+    assert (report.layouts["medium"].width, report.layouts["medium"].height) == (
         1200,
         1500,
     )
-    assert (config.layouts["large"].width, config.layouts["large"].height) == (
+    assert (report.layouts["large"].width, report.layouts["large"].height) == (
         1200,
         1600,
     )
-    medium = config.layouts["medium"]
+    medium = report.layouts["medium"]
     assert medium.publisher_font_min >= 36
     assert medium.title_font_min >= 52
     assert medium.period_font_min >= 30
     assert not hasattr(config, "categories")
+
+
+def test_default_cover_style_exposes_report_and_briefing_profiles() -> None:
+    config = load_cover_styles(
+        CoverStyleLoadRequest(schema_version="2.0", path=""),
+        _ctx(),
+    ).config
+
+    assert config.schema_version == "3.0"
+    assert config.profiles["report"].style.background_color == "#061A31"
+    assert config.profiles["briefing"].style.background_color == "#0A255A"
+    assert config.profiles["briefing"].layouts["small"].title_y == 270
 
 
 def test_cover_style_service_rejects_non_mapping_root(

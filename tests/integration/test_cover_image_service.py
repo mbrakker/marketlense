@@ -142,6 +142,37 @@ def test_real_cover_renderer_preserves_breakable_hyphenated_title(
     assert all(event["fields"]["title"] == title for event in complete_events)
 
 
+def test_briefing_cover_renderer_writes_three_exact_assets(tmp_path) -> None:
+    outcomes = generate_cover_images(
+        CoverImageGenerationRequest(
+            schema_version="2.0",
+            output_dir=str(tmp_path / "out"),
+            style_config_path=str(STYLE_PATH),
+            reports=[
+                CoverImageReport(
+                    schema_version="2.0",
+                    file_id="briefing-123",
+                    title="Retail Media Decision Window",
+                    publisher="Market Bearing",
+                    report_slug="retail-media-decision-window",
+                    time_period="20 June 2026",
+                    region="Global",
+                    fingerprint=_fingerprint(),
+                    cover_profile="briefing",
+                )
+            ],
+        ),
+        _ctx(),
+    )
+
+    assert outcomes[0].status == "generated"
+    assets = outcomes[0].assets
+    assert assets is not None
+    assert Image.open(assets.small.output_path).size == (1600, 900)
+    assert Image.open(assets.medium.output_path).size == (1200, 1500)
+    assert Image.open(assets.large.output_path).size == (1200, 1600)
+
+
 def test_real_cover_renderer_wraps_complete_long_covered_period(tmp_path) -> None:
     covered_period = (
         "Primary focus: 2024-2028 with historical data points for 2019 and 2021 "
@@ -193,8 +224,8 @@ def test_real_cover_renderer_rejects_impossible_unbroken_title(
                 title="X" * 80,
                 publisher="Market Lense Research",
                 time_period="Global | Q2 2026",
-                style=config.defaults,
-                layout=config.layouts["small"],
+                style=config.profiles["report"].style,
+                layout=config.profiles["report"].layouts["small"],
                 fingerprint=_fingerprint(),
             ),
             _ctx(),

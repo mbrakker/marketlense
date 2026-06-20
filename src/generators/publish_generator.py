@@ -230,6 +230,26 @@ def publish_html(
             ctx=ctx,
         )
         featured_media_id = card_media_ids["large"]
+    briefing_card = html_snapshot.briefing_card if settings.wp.post_type == "ml_briefing" else {}
+    if briefing_card:
+        covers = briefing_card.get("covers")
+        if not isinstance(covers, dict) or any(not str(covers.get(size) or "").strip() for size in ("small", "medium", "large")):
+            raise AppError(code="cover_asset_set_incomplete", message="Briefing card covers are required", retryable=False)
+        output_root = Path(settings.output_dir).resolve()
+        for size in ("small", "medium", "large"):
+            asset_path = Path(str(covers[size]))
+            if asset_path.is_absolute():
+                local_path = asset_path.resolve()
+            elif asset_path.parts and asset_path.parts[0] == output_root.name:
+                local_path = (output_root.parent / asset_path).resolve()
+            else:
+                local_path = (output_root / asset_path).resolve()
+            card_media_ids[size] = _upload_single_media(
+                job=_MediaUploadJob(src=str(covers[size]), local_path=str(local_path), is_preview=size == "large"),
+                base_url=base_url, auth_header=auth_header, ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path, ctx=ctx,
+            ).media_id
+        featured_media_id = card_media_ids["large"]
     rendered_body_html = replace_image_sources(html_snapshot.body_html, image_map)
     # Proxy-backed digest images stay more reliable on the WP frontend without
     # responsive srcset/sizes candidates that still point at synthetic query URLs.
@@ -261,7 +281,7 @@ def publish_html(
     post_meta = (
         _report_card_post_meta(card_manifest, card_media_ids)
         if card_manifest is not None
-        else None
+        else _briefing_card_post_meta(briefing_card, card_media_ids) if briefing_card else None
     )
     create_resp = create_post(
         WordPressPostCreateRequest(
@@ -465,6 +485,21 @@ def _report_card_post_meta(
         "ml_card_cover_small_id": media_ids["small"],
         "ml_card_cover_medium_id": media_ids["medium"],
         "ml_card_cover_large_id": media_ids["large"],
+    }
+
+
+def _briefing_card_post_meta(card: dict[str, object], media_ids: dict[str, int]) -> dict[str, object]:
+    return {
+        "ml_briefing_card_schema_version": "1.0",
+        "ml_briefing_card_summary_compact": str(card["summary_compact"]),
+        "ml_briefing_card_summary_standard": str(card["summary_standard"]),
+        "ml_briefing_card_decision_focus": str(card["decision_focus"]),
+        "ml_briefing_card_takeaways": list(card["takeaways"]),
+        "ml_briefing_source_count": int(card["source_count"]),
+        "ml_briefing_evidence_count": int(card["evidence_count"]),
+        "ml_briefing_card_cover_small_id": media_ids["small"],
+        "ml_briefing_card_cover_medium_id": media_ids["medium"],
+        "ml_briefing_card_cover_large_id": media_ids["large"],
     }
 
 

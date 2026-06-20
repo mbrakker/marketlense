@@ -56,14 +56,22 @@ final class Shortcodes
 
     private Report_Card_Renderer $report_card_renderer;
 
+    private Briefing_Card_View_Model_Builder $briefing_card_view_model_builder;
+
+    private Briefing_Card_Renderer $briefing_card_renderer;
+
     public function __construct(
         Report_View_Model_Builder $view_model_builder,
         Intelligence_Stats $stats,
-        Report_Card_Renderer $report_card_renderer
+        Report_Card_Renderer $report_card_renderer,
+        Briefing_Card_View_Model_Builder $briefing_card_view_model_builder,
+        Briefing_Card_Renderer $briefing_card_renderer
     ) {
         $this->view_model_builder = $view_model_builder;
         $this->stats = $stats;
         $this->report_card_renderer = $report_card_renderer;
+        $this->briefing_card_view_model_builder = $briefing_card_view_model_builder;
+        $this->briefing_card_renderer = $briefing_card_renderer;
     }
 
     /**
@@ -729,7 +737,12 @@ final class Shortcodes
             </div>
 
             <?php if ($post instanceof \WP_Post) : ?>
-                <?php $this->render_featured_entity_card($post, __('Read Briefing', 'marketlense-core')); ?>
+                <?php $briefing = $this->briefing_card_view_model_builder->build($post); ?>
+                <?php if (($briefing['card_contract_valid'] ?? false) === true) : ?>
+                    <?php echo $this->briefing_card_renderer->render($briefing, 'large'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                <?php else : ?>
+                    <?php $this->render_institutional_empty_state(__('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core')); ?>
+                <?php endif; ?>
             <?php else : ?>
                 <?php $this->render_institutional_empty_state(__('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core')); ?>
             <?php endif; ?>
@@ -850,14 +863,27 @@ final class Shortcodes
      */
     public function render_briefings_index(array $attrs = []): string
     {
-        return $this->render_entity_archive(
-            $attrs,
-            'ml_briefings_index',
-            Post_Type::BRIEFING_POST_TYPE,
-            __('Published Briefings', 'marketlense-core'),
-            __('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core'),
-            __('Read Briefing', 'marketlense-core')
-        );
+        $atts = shortcode_atts(['per_page' => (string) self::DEFAULT_PER_PAGE], $attrs, 'ml_briefings_index');
+        $query = new \WP_Query([
+            'post_type' => Post_Type::BRIEFING_POST_TYPE,
+            'post_status' => 'publish',
+            'posts_per_page' => max(1, min(48, (int) $atts['per_page'])),
+            'orderby' => 'date', 'order' => 'DESC', 'no_found_rows' => true,
+            'meta_query' => [['key' => 'ml_briefing_card_schema_version', 'value' => '1.0']],
+        ]);
+        ob_start(); ?>
+        <section class="ml-entity-archive ml-report-browser-results" aria-label="<?php esc_attr_e('Published Briefings', 'marketlense-core'); ?>">
+            <?php $rendered = false; while ($query->have_posts()) : $query->the_post(); $post = get_post(); ?>
+                <?php if ($post instanceof \WP_Post) : $briefing = $this->briefing_card_view_model_builder->build($post); ?>
+                    <?php if (($briefing['card_contract_valid'] ?? false) === true) : $rendered = true; ?>
+                        <div class="ml-report-browser-grid"><?php echo $this->briefing_card_renderer->render($briefing, 'small'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            <?php endwhile; ?>
+            <?php if (! $rendered) : $this->render_institutional_empty_state(__('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core')); endif; ?>
+            <?php wp_reset_postdata(); ?>
+        </section>
+        <?php return (string) ob_get_clean();
     }
 
     /**

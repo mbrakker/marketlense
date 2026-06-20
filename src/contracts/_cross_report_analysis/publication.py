@@ -162,3 +162,7 @@ class CrossReportPublishPackage:
     machine_metadata: Dict[str, Any] = field(
         metadata={"doc": "Machine-readable cross-report metadata embedded in HTML."}
     )
+    briefing_card: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Validated briefing-card fields and generated cover assets."},
+    )

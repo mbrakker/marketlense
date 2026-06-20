@@ -171,6 +171,26 @@ final class Meta
                 );
             }
         }
+
+        foreach (['ml_briefing_card_schema_version', 'ml_briefing_card_summary_compact', 'ml_briefing_card_summary_standard', 'ml_briefing_card_decision_focus'] as $key) {
+            register_post_meta(Post_Type::BRIEFING_POST_TYPE, $key, [
+                'single' => true, 'type' => 'string', 'show_in_rest' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+                'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+            ]);
+        }
+        foreach (['ml_briefing_source_count', 'ml_briefing_evidence_count', 'ml_briefing_card_cover_small_id', 'ml_briefing_card_cover_medium_id', 'ml_briefing_card_cover_large_id'] as $key) {
+            register_post_meta(Post_Type::BRIEFING_POST_TYPE, $key, [
+                'single' => true, 'type' => 'integer', 'show_in_rest' => true,
+                'sanitize_callback' => [self::class, 'sanitize_card_media_id'],
+                'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+            ]);
+        }
+        register_post_meta(Post_Type::BRIEFING_POST_TYPE, 'ml_briefing_card_takeaways', [
+            'single' => true, 'type' => 'array', 'show_in_rest' => ['schema' => ['type' => 'array', 'minItems' => 2, 'maxItems' => 2, 'items' => ['type' => 'string']]],
+            'sanitize_callback' => [self::class, 'sanitize_card_insights'],
+            'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
+        ]);
     }
 
     /**

@@ -463,6 +463,7 @@ def build_cross_report_publish_package(
     html_path: str,
     publish_requires_validation_pass: bool = True,
     target_route: str = "wordpress:ml_briefing",
+    briefing_card: dict[str, object] | None = None,
 ) -> CrossReportPublishPackage:
     validate_cross_report_contract(generated)
     validate_cross_report_contract(validation_result)
@@ -539,13 +540,14 @@ def build_cross_report_publish_package(
         "prompt_hashes": dict(generated.prompt_hashes),
         "validation_status": validation_result.status,
         "public_entity_metadata": asdict(publish_entity_metadata),
+        "briefing_card": briefing_card or {},
     }
     body_html, html_text = build_cross_report_html_document(
         generated=generated,
-        agreement_result=agreement_result,
-        source_metadata=source_metadata,
-        machine_metadata=machine_metadata,
-        file_id=package_id,
+            agreement_result=agreement_result,
+            source_metadata=source_metadata,
+            machine_metadata=machine_metadata,
+            file_id=package_id,
         publish_entity_metadata=publish_entity_metadata,
     )
     package = CrossReportPublishPackage(
@@ -755,6 +757,20 @@ def generate_cross_report_analysis(
         )
     )
     payload = _response_payload(response)
+    decision_focus = _required_text(payload, "decision_focus")
+    raw_takeaways = payload.get("executive_takeaways")
+    if (
+        not isinstance(raw_takeaways, list)
+        or len(raw_takeaways) != 2
+        or not all(isinstance(item, str) and item.strip() for item in raw_takeaways)
+    ):
+        raise AppError(
+            code="cross_report_analysis_output_invalid",
+            message="executive_takeaways must contain exactly two populated strings",
+            retryable=False,
+            severity="error",
+        )
+    takeaways = [_required_text({"value": item}, "value") for item in raw_takeaways]
     known_evidence = _known_evidence_ids(evidence_inputs)
     evidence_aliases = _known_evidence_aliases(evidence_inputs)
     known_raw_metrics = _known_raw_metric_ids(evidence_inputs)
@@ -775,6 +791,8 @@ def generate_cross_report_analysis(
         title=_required_text(payload, "title"),
         slug=_required_text(payload, "slug"),
         executive_summary=_required_text(payload, "executive_summary"),
+        decision_focus=decision_focus,
+        executive_takeaways=takeaways,
         selected_theme=signal_result.selected_theme,
         selected_sources=evidence_inputs.selected_sources,
         evidence=evidence_inputs.evidence,

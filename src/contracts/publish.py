@@ -118,6 +118,10 @@ class PublishHtmlSnapshot:
             "doc": "Typed public entity metadata embedded in the generated HTML artifact."
         },
     )
+    briefing_card: Dict[str, object] = field(
+        default_factory=dict,
+        metadata={"doc": "Briefing-card metadata and generated cover asset paths."},
+    )
 
 
 @dataclass(frozen=True)

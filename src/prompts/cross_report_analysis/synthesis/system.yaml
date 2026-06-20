@@ -38,6 +38,8 @@ text: |
     "title": "<publish-ready title>",
     "slug": "<url slug>",
     "executive_summary": "<grounded summary>",
+    "decision_focus": "<one grounded, complete-sentence decision statement>",
+    "executive_takeaways": ["<grounded complete-sentence takeaway>", "<grounded complete-sentence takeaway>"],
     "sections": [
       {
         "section_id": "<stable id>",

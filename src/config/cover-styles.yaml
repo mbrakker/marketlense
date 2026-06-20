@@ -1,53 +1,74 @@
-schema_version: "2.0"
+schema_version: "3.0"
 
-palette:
-  background: "#061A31"
-  background_elevated: "#082B54"
-  geometry: "#6F94B5"
-  geometry_highlight: "#D8E8F3"
-  text: "#F8FAFC"
+profiles:
+  report:
+    palette:
+      background: "#061A31"
+      background_elevated: "#082B54"
+      geometry: "#6F94B5"
+      geometry_highlight: "#D8E8F3"
+      text: "#F8FAFC"
+    fonts:
+      regular_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
+      bold_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
+    layouts:
+      small: &small_layout
+        width: 1600
+        height: 900
+        publisher_rect: [120, 92, 920, 64]
+        title_rect: [120, 220, 920, 390]
+        period_rect: [120, 744, 920, 54]
+        publisher_font_max: 34
+        publisher_font_min: 22
+        title_font_max: 72
+        title_font_min: 30
+        period_font_max: 28
+        period_font_min: 20
+        title_line_spacing: 0.28
+      medium: &medium_layout
+        width: 1200
+        height: 1500
+        publisher_rect: [96, 104, 1008, 84]
+        title_rect: [96, 300, 1008, 690]
+        period_rect: [96, 1270, 1008, 132]
+        publisher_font_max: 48
+        publisher_font_min: 36
+        title_font_max: 92
+        title_font_min: 52
+        period_font_max: 38
+        period_font_min: 30
+        title_line_spacing: 0.30
+      large: &large_layout
+        width: 1200
+        height: 1600
+        publisher_rect: [96, 104, 1008, 84]
+        title_rect: [96, 320, 1008, 760]
+        period_rect: [96, 1360, 1008, 132]
+        publisher_font_max: 48
+        publisher_font_min: 36
+        title_font_max: 96
+        title_font_min: 54
+        period_font_max: 38
+        period_font_min: 30
+        title_line_spacing: 0.30
 
-fonts:
-  regular_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
-  bold_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
-
-layouts:
-  small:
-    width: 1600
-    height: 900
-    publisher_rect: [120, 92, 920, 64]
-    title_rect: [120, 220, 920, 390]
-    period_rect: [120, 744, 920, 54]
-    publisher_font_max: 34
-    publisher_font_min: 22
-    title_font_max: 72
-    title_font_min: 30
-    period_font_max: 28
-    period_font_min: 20
-    title_line_spacing: 0.28
-  medium:
-    width: 1200
-    height: 1500
-    publisher_rect: [96, 104, 1008, 84]
-    title_rect: [96, 300, 1008, 690]
-    period_rect: [96, 1270, 1008, 132]
-    publisher_font_max: 48
-    publisher_font_min: 36
-    title_font_max: 92
-    title_font_min: 52
-    period_font_max: 38
-    period_font_min: 30
-    title_line_spacing: 0.30
-  large:
-    width: 1200
-    height: 1600
-    publisher_rect: [96, 104, 1008, 84]
-    title_rect: [96, 320, 1008, 760]
-    period_rect: [96, 1360, 1008, 132]
-    publisher_font_max: 48
-    publisher_font_min: 36
-    title_font_max: 96
-    title_font_min: 54
-    period_font_max: 38
-    period_font_min: 30
-    title_line_spacing: 0.30
+  briefing:
+    palette:
+      background: "#0A255A"
+      background_elevated: "#123A78"
+      geometry: "#6F9ED4"
+      geometry_highlight: "#D8E8F8"
+      text: "#F8FAFC"
+    fonts:
+      regular_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
+      bold_path: "./templates/Inter-VariableFont_opsz,wght.ttf"
+    layouts:
+      small:
+        <<: *small_layout
+        title_rect: [120, 270, 920, 360]
+      medium:
+        <<: *medium_layout
+        title_rect: [96, 360, 1008, 690]
+      large:
+        <<: *large_layout
+        title_rect: [96, 380, 1008, 760]
