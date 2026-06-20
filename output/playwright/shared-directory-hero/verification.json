@@ -38,10 +38,17 @@
         "heading": "Cross-report evidence, built for decisions.",
         "labels": ["Briefings", "Reports", "Publishers", "Topics"],
         "values": ["8", "59", "38", "37"]
+      },
+      {
+        "context": "methodology",
+        "heading": "How Market Bearing keeps published research connected to its evidence",
+        "labels": ["Reports", "Publishers", "Topics", "Regions"],
+        "values": ["59", "38", "37", "21"]
       }
     ],
     "viewports": ["1440x1000", "1024x900", "768x1024", "390x844"],
-    "total_cases": 20,
+    "methodology_viewports": ["1440x1000", "768x1024", "390x844"],
+    "total_cases": 23,
     "screenshot_pattern": "output/playwright/shared-directory-hero/{context}-{viewport}.png"
   },
   "assertions": {
@@ -70,4 +77,3 @@
     "mobile_card_overlap": false
   }
 }
-
