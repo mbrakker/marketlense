@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 1.6.5
+Stable tag: 1.6.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,10 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.6.6 =
+* Adds canonical small, medium, and large Briefing cards with validated metadata, semantic covers, source/evidence counters, and seven-day New badges.
+* Supports in-place Briefing card-contract migration and keeps the Briefings archive in one responsive card grid.
 
 = 1.6.5 =
 * Moved report archive search, selected filters, and sort controls out of the filter rail into sticky premium archive controls.

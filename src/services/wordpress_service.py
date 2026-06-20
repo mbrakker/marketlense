@@ -28,7 +28,7 @@ from src.services._wordpress_service.transport import (
 from src.services._wordpress_service.posts import (
     upload_media,
     create_post,
-    update_report_card,
+    update_card,
     find_post_by_file_id,
     find_posts_by_file_id_batch,
     _update_media_alt_text,
@@ -42,6 +42,9 @@ from src.services._wordpress_service.taxonomy import (
     ensure_tags,
     update_post_categories,
 )
+
+# Preserve the report-only entrypoint while card updates become entity-agnostic.
+update_report_card = update_card
 
 logger = logging.getLogger("market_lense.wordpress_service")
 DEFAULT_TIMEOUT = 30
@@ -77,6 +80,7 @@ __all__ = [
     "upload_media",
     "prepare_media_upload",
     "create_post",
+    "update_card",
     "update_report_card",
     "find_post_by_file_id",
     "find_posts_by_file_id_batch",

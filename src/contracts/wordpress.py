@@ -193,8 +193,8 @@ class WordPressPostCreateResponse:
 
 
 @dataclass(frozen=True)
-class WordPressReportCardUpdateRequest:
-    schema_version: str = field(metadata={"doc": "Report-card update schema version."})
+class WordPressCardUpdateRequest:
+    schema_version: str = field(metadata={"doc": "Card-contract update schema version."})
     base_url: str = field(metadata={"doc": "WordPress site base URL."})
     auth_header: str = field(metadata={"doc": "Authorization header value."})
     post_id: int = field(metadata={"doc": "Existing WordPress post ID to update."})
@@ -202,7 +202,7 @@ class WordPressReportCardUpdateRequest:
         metadata={"doc": "Canonical large card cover media ID."}
     )
     meta: Dict[str, object] = field(
-        metadata={"doc": "Complete validated canonical report-card metadata."}
+        metadata={"doc": "Complete validated canonical card metadata."}
     )
     ssl_verify: bool = field(
         default=True,
@@ -219,6 +219,10 @@ class WordPressReportCardUpdateRequest:
     post_type: str = field(
         default="posts", metadata={"doc": "REST post type endpoint slug."}
     )
+
+
+# Preserve the report-only contract name for existing callers during migration.
+WordPressReportCardUpdateRequest = WordPressCardUpdateRequest
 
 
 @dataclass(frozen=True)

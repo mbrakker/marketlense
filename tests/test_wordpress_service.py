@@ -14,7 +14,7 @@ from src.contracts.wordpress import (
     WordPressPostLookupBatchRequest,
     WordPressPostCreateRequest,
     WordPressPostLookupRequest,
-    WordPressReportCardUpdateRequest,
+    WordPressCardUpdateRequest,
     WordPressPostUpdateRequest,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
@@ -67,7 +67,7 @@ def test_update_report_card_sends_only_card_payload(wordpress_http) -> None:
         status_code=200,
         payload={"id": 12, "link": "https://site/reports/report/", "status": "publish"},
     )
-    request = WordPressReportCardUpdateRequest(
+    request = WordPressCardUpdateRequest(
         schema_version="1.0",
         base_url="https://site",
         auth_header="Bearer token",
@@ -77,7 +77,7 @@ def test_update_report_card_sends_only_card_payload(wordpress_http) -> None:
         post_type="ml_report",
     )
 
-    response = svc.update_report_card(request, _ctx())
+    response = svc.update_card(request, _ctx())
 
     call = wordpress_http.calls_for("POST", "https://site/wp-json/wp/v2/ml_report/12")[
         0

@@ -871,17 +871,27 @@ final class Shortcodes
             'orderby' => 'date', 'order' => 'DESC', 'no_found_rows' => true,
             'meta_query' => [['key' => 'ml_briefing_card_schema_version', 'value' => '1.0']],
         ]);
+        $cards = [];
+        while ($query->have_posts()) {
+            $query->the_post();
+            $post = get_post();
+            if (! $post instanceof \WP_Post) {
+                continue;
+            }
+            $briefing = $this->briefing_card_view_model_builder->build($post);
+            if (($briefing['card_contract_valid'] ?? false) === true) {
+                $cards[] = $this->briefing_card_renderer->render($briefing, 'small');
+            }
+        }
+        wp_reset_postdata();
         ob_start(); ?>
         <section class="ml-entity-archive ml-report-browser-results" aria-label="<?php esc_attr_e('Published Briefings', 'marketlense-core'); ?>">
-            <?php $rendered = false; while ($query->have_posts()) : $query->the_post(); $post = get_post(); ?>
-                <?php if ($post instanceof \WP_Post) : $briefing = $this->briefing_card_view_model_builder->build($post); ?>
-                    <?php if (($briefing['card_contract_valid'] ?? false) === true) : $rendered = true; ?>
-                        <div class="ml-report-browser-grid"><?php echo $this->briefing_card_renderer->render($briefing, 'small'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
-                    <?php endif; ?>
-                <?php endif; ?>
-            <?php endwhile; ?>
-            <?php if (! $rendered) : $this->render_institutional_empty_state(__('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core')); endif; ?>
-            <?php wp_reset_postdata(); ?>
+            <?php if ($cards !== []) : ?>
+                <div class="ml-report-browser-grid">
+                    <?php foreach ($cards as $card) : echo $card; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php else : $this->render_institutional_empty_state(__('No validated Briefings are available yet. Briefings appear here after approved Briefings have been published.', 'marketlense-core')); endif; ?>
         </section>
         <?php return (string) ob_get_clean();
     }

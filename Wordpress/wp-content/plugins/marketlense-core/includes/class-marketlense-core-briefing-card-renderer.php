@@ -45,7 +45,10 @@ final class Briefing_Card_Renderer
                     <p class="ml-briefing-card__summary"><?php echo esc_html($summary); ?></p>
                     <?php if ($variant !== 'small') : ?><p class="ml-briefing-card__focus"><strong><?php esc_html_e('Decision focus', 'marketlense-core'); ?></strong><?php echo esc_html($this->text($briefing, 'decision_focus')); ?></p><?php endif; ?>
                     <?php if ($variant === 'large') : ?><ul class="ml-briefing-card__takeaways"><?php foreach ($briefing['takeaways'] as $takeaway) : ?><li><?php echo esc_html((string) $takeaway); ?></li><?php endforeach; ?></ul><?php endif; ?>
-                    <ul class="ml-briefing-card__counters"><li><?php echo esc_html(sprintf(_n('%d source report', '%d source reports', (int) $briefing['source_count'], 'marketlense-core'), (int) $briefing['source_count'])); ?></li><li><?php echo esc_html(sprintf(_n('%d evidence item', '%d evidence items', (int) $briefing['evidence_count'], 'marketlense-core'), (int) $briefing['evidence_count'])); ?></li></ul>
+                    <ul class="ml-briefing-card__counters">
+                        <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="13" height="15" rx="2"></rect><path d="M8 9h5M8 13h5M8 17h3M17 8h3v11a1 1 0 0 1-1 1h-2"></path></svg><span><?php echo esc_html(sprintf(_n('%d source report', '%d source reports', (int) $briefing['source_count'], 'marketlense-core'), (int) $briefing['source_count'])); ?></span></li>
+                        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 7.2v9.6L12 21l7.5-4.2V7.2L12 3Z"></path><path d="m8.5 12 2.2 2.2 4.8-4.8"></path></svg><span><?php echo esc_html(sprintf(_n('%d evidence item', '%d evidence items', (int) $briefing['evidence_count'], 'marketlense-core'), (int) $briefing['evidence_count'])); ?></span></li>
+                    </ul>
                     <span class="ml-briefing-card__action"><?php esc_html_e('Read briefing', 'marketlense-core'); ?> &rarr;</span>
                 </div>
             </a>

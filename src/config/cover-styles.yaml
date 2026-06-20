@@ -68,7 +68,7 @@ profiles:
         title_rect: [120, 270, 920, 360]
       medium:
         <<: *medium_layout
-        title_rect: [96, 360, 1008, 690]
+        title_rect: [96, 405, 1008, 690]
       large:
         <<: *large_layout
-        title_rect: [96, 380, 1008, 760]
+        title_rect: [96, 420, 1008, 760]

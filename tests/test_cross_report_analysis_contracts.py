@@ -287,6 +287,11 @@ def _contracts() -> list[Any]:
         prompt_hashes={"system": "abc", "user": "def"},
         model="gpt-5-mini",
         cost_summary={"estimated_input_tokens": 1200},
+        decision_focus="Prioritize trust and transparency in AI commerce decisions.",
+        executive_takeaways=[
+            "Trust is a recurring constraint.",
+            "Transparency shapes adoption decisions.",
+        ],
     )
     validation = CrossReportValidationResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,

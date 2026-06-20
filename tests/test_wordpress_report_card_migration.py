@@ -291,11 +291,11 @@ def test_report_card_release_metadata_and_documentation_are_complete() -> None:
         encoding="utf-8"
     )
 
-    assert "Version: 1.6.5" in plugin
-    assert "MARKETLENSE_CORE_VERSION', '1.6.5'" in plugin
-    assert "Stable tag: 1.6.5" in plugin_readme
-    assert "= 1.6.5 =" in plugin_readme
-    assert "Version: 1.5.10" in theme
+    assert "Version: 1.6.6" in plugin
+    assert "MARKETLENSE_CORE_VERSION', '1.6.6'" in plugin
+    assert "Stable tag: 1.6.6" in plugin_readme
+    assert "= 1.6.6 =" in plugin_readme
+    assert "Version: 1.5.11" in theme
 
     for required_text in (
         "small",

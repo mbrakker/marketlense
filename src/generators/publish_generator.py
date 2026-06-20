@@ -25,7 +25,7 @@ from src.contracts.wordpress import (
     WordPressMediaPrepareRequest,
     WordPressMediaUploadRequest,
     WordPressPostCreateRequest,
-    WordPressReportCardUpdateRequest,
+    WordPressCardUpdateRequest,
     WordPressTagEnsureRequest,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
@@ -42,7 +42,7 @@ from src.services.wordpress_service import (
     ensure_tags,
     prepare_media_upload,
     upload_media,
-    update_report_card,
+    update_card,
 )
 from src.utils.errors import AppError
 from src.utils.html_utils import (
@@ -133,32 +133,56 @@ def publish_html(
             settings.output_dir,
             ctx,
         )
+    briefing_card = (
+        html_snapshot.briefing_card
+        if settings.wp.post_type == "ml_briefing"
+        else {}
+    )
+    if briefing_card:
+        _validate_briefing_card(briefing_card)
     if request.existing_post_id is not None:
-        if card_manifest is None:
+        if card_manifest is not None:
+            backfill_media_ids = _upload_report_card_covers(
+                manifest=card_manifest,
+                html_path=request.html_path,
+                output_dir=settings.output_dir,
+                base_url=base_url,
+                auth_header=auth_header,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+                ctx=ctx,
+                sequential=True,
+            )
+            card_meta = _report_card_post_meta(card_manifest, backfill_media_ids)
+        elif briefing_card:
+            backfill_media_ids = _upload_briefing_card_covers(
+                card=briefing_card,
+                html_path=request.html_path,
+                output_dir=settings.output_dir,
+                base_url=base_url,
+                auth_header=auth_header,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+                ctx=ctx,
+                sequential=True,
+            )
+            card_meta = _briefing_card_post_meta(
+                briefing_card, backfill_media_ids
+            )
+        else:
             raise AppError(
-                code="report_card_manifest_required",
-                message="An existing report-card update requires a valid manifest",
+                code="card_contract_required",
+                message="An existing card update requires a complete card contract",
                 retryable=False,
             )
-        backfill_media_ids = _upload_report_card_covers(
-            manifest=card_manifest,
-            html_path=request.html_path,
-            output_dir=settings.output_dir,
-            base_url=base_url,
-            auth_header=auth_header,
-            ssl_verify=settings.wp.ssl_verify,
-            ca_bundle_path=settings.wp.ca_bundle_path,
-            ctx=ctx,
-            sequential=True,
-        )
-        update_resp = update_report_card(
-            WordPressReportCardUpdateRequest(
+        update_resp = update_card(
+            WordPressCardUpdateRequest(
                 schema_version="1.0",
                 base_url=base_url,
                 auth_header=auth_header,
                 post_id=request.existing_post_id,
                 featured_media=backfill_media_ids["large"],
-                meta=_report_card_post_meta(card_manifest, backfill_media_ids),
+                meta=card_meta,
                 ssl_verify=settings.wp.ssl_verify,
                 ca_bundle_path=settings.wp.ca_bundle_path,
                 post_type=settings.wp.post_type,
@@ -230,25 +254,17 @@ def publish_html(
             ctx=ctx,
         )
         featured_media_id = card_media_ids["large"]
-    briefing_card = html_snapshot.briefing_card if settings.wp.post_type == "ml_briefing" else {}
     if briefing_card:
-        covers = briefing_card.get("covers")
-        if not isinstance(covers, dict) or any(not str(covers.get(size) or "").strip() for size in ("small", "medium", "large")):
-            raise AppError(code="cover_asset_set_incomplete", message="Briefing card covers are required", retryable=False)
-        output_root = Path(settings.output_dir).resolve()
-        for size in ("small", "medium", "large"):
-            asset_path = Path(str(covers[size]))
-            if asset_path.is_absolute():
-                local_path = asset_path.resolve()
-            elif asset_path.parts and asset_path.parts[0] == output_root.name:
-                local_path = (output_root.parent / asset_path).resolve()
-            else:
-                local_path = (output_root / asset_path).resolve()
-            card_media_ids[size] = _upload_single_media(
-                job=_MediaUploadJob(src=str(covers[size]), local_path=str(local_path), is_preview=size == "large"),
-                base_url=base_url, auth_header=auth_header, ssl_verify=settings.wp.ssl_verify,
-                ca_bundle_path=settings.wp.ca_bundle_path, ctx=ctx,
-            ).media_id
+        card_media_ids = _upload_briefing_card_covers(
+            card=briefing_card,
+            html_path=request.html_path,
+            output_dir=settings.output_dir,
+            base_url=base_url,
+            auth_header=auth_header,
+            ssl_verify=settings.wp.ssl_verify,
+            ca_bundle_path=settings.wp.ca_bundle_path,
+            ctx=ctx,
+        )
         featured_media_id = card_media_ids["large"]
     rendered_body_html = replace_image_sources(html_snapshot.body_html, image_map)
     # Proxy-backed digest images stay more reliable on the WP frontend without
@@ -465,6 +481,116 @@ def _upload_report_card_covers(
     return ids
 
 
+def _upload_briefing_card_covers(
+    *,
+    card: dict[str, object],
+    html_path: str,
+    output_dir: str,
+    base_url: str,
+    auth_header: str,
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
+    ctx: RunContext,
+    sequential: bool = False,
+) -> dict[str, int]:
+    covers = card.get("covers")
+    if not isinstance(covers, dict):
+        raise AppError(
+            code="cover_asset_set_incomplete",
+            message="Briefing card covers are required",
+            retryable=False,
+        )
+    source_dir = Path(html_path).resolve().parent
+    output_root = Path(output_dir).resolve()
+    jobs: dict[str, _MediaUploadJob] = {}
+    for size in ("small", "medium", "large"):
+        raw_path = str(covers.get(size) or "").strip()
+        if not raw_path:
+            raise AppError(
+                code="cover_asset_set_incomplete",
+                message="Briefing card covers are required",
+                retryable=False,
+                context={"size": size},
+            )
+        asset_path = Path(raw_path)
+        candidates = (
+            [asset_path.resolve()]
+            if asset_path.is_absolute()
+            else [
+                asset_path.resolve(),
+                (source_dir / asset_path).resolve(),
+                (output_root / asset_path).resolve(),
+                (output_root.parent / asset_path).resolve(),
+            ]
+        )
+        local_path = next(
+            (
+                candidate
+                for candidate in candidates
+                if file_exists(
+                    FileExistsRequest(
+                        schema_version="1.0", path=str(candidate)
+                    ),
+                    ctx,
+                ).exists
+            ),
+            None,
+        )
+        if local_path is None:
+            raise AppError(
+                code="cover_asset_set_incomplete",
+                message="Briefing card cover file is missing",
+                retryable=False,
+                context={"size": size, "output_path": raw_path},
+            )
+        jobs[size] = _MediaUploadJob(
+            src=raw_path,
+            local_path=str(local_path),
+            is_preview=size == "large",
+        )
+    ids: dict[str, int] = {}
+    if sequential:
+        for size, job in jobs.items():
+            ids[size] = _upload_single_media(
+                job=job,
+                base_url=base_url,
+                auth_header=auth_header,
+                ssl_verify=ssl_verify,
+                ca_bundle_path=ca_bundle_path,
+                ctx=ctx,
+            ).media_id
+    else:
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_size = {
+                executor.submit(
+                    _upload_single_media,
+                    job=job,
+                    base_url=base_url,
+                    auth_header=auth_header,
+                    ssl_verify=ssl_verify,
+                    ca_bundle_path=ca_bundle_path,
+                    ctx=ctx,
+                ): size
+                for size, job in jobs.items()
+            }
+            for future in as_completed(future_to_size):
+                ids[future_to_size[future]] = future.result().media_id
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_briefing_card_covers_uploaded",
+            module=logger.name,
+            fields={
+                "small_id": ids["small"],
+                "medium_id": ids["medium"],
+                "large_id": ids["large"],
+            },
+        )
+    )
+    return ids
+
+
 def _report_card_post_meta(
     manifest: ReportCardManifest,
     media_ids: dict[str, int],
@@ -488,15 +614,51 @@ def _report_card_post_meta(
     }
 
 
+def _validate_briefing_card(card: dict[str, object]) -> None:
+    required_text = (
+        "summary_compact",
+        "summary_standard",
+        "decision_focus",
+    )
+    missing = [key for key in required_text if not str(card.get(key) or "").strip()]
+    raw_takeaways = card.get("takeaways")
+    takeaways = (
+        [str(value).strip() for value in raw_takeaways]
+        if isinstance(raw_takeaways, list)
+        else []
+    )
+    if len(takeaways) != 2 or any(not value for value in takeaways):
+        missing.append("takeaways")
+    source_count = int(str(card.get("source_count") or 0))
+    evidence_count = int(str(card.get("evidence_count") or 0))
+    if source_count <= 0:
+        missing.append("source_count")
+    if evidence_count <= 0:
+        missing.append("evidence_count")
+    if missing:
+        raise AppError(
+            code="briefing_card_contract_invalid",
+            message="Briefing card metadata is incomplete",
+            retryable=False,
+            context={"missing_fields": sorted(set(missing))},
+        )
+
+
 def _briefing_card_post_meta(card: dict[str, object], media_ids: dict[str, int]) -> dict[str, object]:
+    raw_takeaways = card["takeaways"]
+    takeaways = (
+        [str(value).strip() for value in raw_takeaways]
+        if isinstance(raw_takeaways, list)
+        else []
+    )
     return {
         "ml_briefing_card_schema_version": "1.0",
         "ml_briefing_card_summary_compact": str(card["summary_compact"]),
         "ml_briefing_card_summary_standard": str(card["summary_standard"]),
         "ml_briefing_card_decision_focus": str(card["decision_focus"]),
-        "ml_briefing_card_takeaways": list(card["takeaways"]),
-        "ml_briefing_source_count": int(card["source_count"]),
-        "ml_briefing_evidence_count": int(card["evidence_count"]),
+        "ml_briefing_card_takeaways": list(takeaways),
+        "ml_briefing_source_count": int(str(card["source_count"])),
+        "ml_briefing_evidence_count": int(str(card["evidence_count"])),
         "ml_briefing_card_cover_small_id": media_ids["small"],
         "ml_briefing_card_cover_medium_id": media_ids["medium"],
         "ml_briefing_card_cover_large_id": media_ids["large"],

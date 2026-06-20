@@ -188,6 +188,11 @@ def _cross_report_cli_outcome() -> CrossReportOrchestratorOutcome:
         prompt_hashes={"system": "abc", "user": "def"},
         model="gpt-5-mini",
         cost_summary={"total_tokens": 100},
+        decision_focus="Prioritize the verified AI commerce signal.",
+        executive_takeaways=[
+            "AI commerce is visible in the selected report.",
+            "Raw metrics remain source-specific.",
+        ],
     )
     validation = CrossReportValidationResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,

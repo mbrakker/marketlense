@@ -63,6 +63,11 @@ class CountingOpenAIClient:
             "title": "AI Commerce Adoption Across Retail Reports",
             "slug": "ai-commerce-adoption-across-retail-reports",
             "executive_summary": "AI commerce adoption is visible across selected reports.",
+            "decision_focus": "Prioritize the shared AI commerce adoption signal.",
+            "executive_takeaways": [
+                "AI appears across both selected reports.",
+                "Raw metrics remain source-specific for decision review.",
+            ],
             "sections": [
                 {
                     "section_id": "key-cross-report-signals",

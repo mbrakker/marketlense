@@ -52,6 +52,14 @@ Every report has one deterministic cover identity selected from 16 geometry fami
 
 Report facts use pictograms for publication date, geography, and covered period. Global reports use a globe; regional and country-specific reports use a locator. The `New` badge appears only when a report was published less than 7 days before the current request.
 
+## Canonical Briefing Cards
+
+Briefings reuse the report-card size system through one renderer with `small`, `medium`, and `large` variants. Each variant uses a deterministic deep-blue semantic cover with its complete title centered vertically in the cover image. Small cards keep the compact executive summary; medium cards add the decision focus; large cards add exactly two grounded executive takeaways.
+
+Every variant shows icon-backed source-report and evidence-item counters. The `New` badge is computed from the WordPress publication timestamp and appears only during the first seven days. The archive queries only schema `1.0` card contracts and validates all summaries, counts, takeaways, and three cover attachments before rendering.
+
+Existing Briefings are updated in place through the forced card publication path. The publisher reads the embedded `briefing_card` contract, uploads its three cover sizes, sets the large cover as featured media, and writes the complete registered WordPress metadata without creating replacement posts.
+
 ## Verification
 
 ### Report Card Backfill Gate

@@ -1,6 +1,7 @@
 import unittest
 
 from src.utils.html_utils import (
+    build_publish_html_snapshot,
     extract_publish_entity_metadata,
     extract_body_html,
     extract_file_id,
@@ -72,6 +73,30 @@ class TestHtmlUtils(unittest.TestCase):
         self.assertEqual(metadata.source_artifact_id, "signal:checkout-trust")
         self.assertEqual(metadata.canonical_route_intent, "wordpress:ml_signal")
         self.assertTrue(metadata.publish_eligible)
+
+    def test_snapshot_extracts_embedded_briefing_card(self) -> None:
+        html = (
+            '<html><body><script type="application/json" '
+            'data-market-lense-cross-report-metadata="true">'
+            '{"briefing_card":{"schema_version":"1.0",'
+            '"summary_compact":"Compact summary.",'
+            '"summary_standard":"Standard summary.",'
+            '"decision_focus":"Prioritize the verified signal.",'
+            '"takeaways":["First takeaway.","Second takeaway."],'
+            '"source_count":4,"evidence_count":32,'
+            '"covers":{"small":"covers/small.png",'
+            '"medium":"covers/medium.png","large":"covers/large.png"}}}'
+            '</script></body></html>'
+        )
+
+        snapshot = build_publish_html_snapshot(html)
+
+        self.assertEqual(snapshot.briefing_card["schema_version"], "1.0")
+        self.assertEqual(snapshot.briefing_card["source_count"], 4)
+        self.assertEqual(snapshot.briefing_card["evidence_count"], 32)
+        self.assertEqual(
+            snapshot.briefing_card["covers"]["large"], "covers/large.png"
+        )
 
 
 if __name__ == "__main__":

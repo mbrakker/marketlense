@@ -598,16 +598,22 @@ def run_publish(
         candidates = [
             candidate
             for candidate in candidates
-            if file_exists(
-                FileExistsRequest(
-                    schema_version="1.0",
-                    path=str(
-                        Path(candidate.html_path).with_suffix("")
-                        / "report-card-manifest.json"
+            if (
+                file_exists(
+                    FileExistsRequest(
+                        schema_version="1.0",
+                        path=str(
+                            Path(candidate.html_path).with_suffix("")
+                            / "report-card-manifest.json"
+                        ),
                     ),
-                ),
-                root_ctx,
-            ).exists
+                    root_ctx,
+                ).exists
+                or bool(
+                    candidate.html_snapshot
+                    and candidate.html_snapshot.briefing_card
+                )
+            )
         ]
     if auto_discovery and limit is not None:
         candidates = candidates[:limit]

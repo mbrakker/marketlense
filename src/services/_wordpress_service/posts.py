@@ -14,7 +14,7 @@ from src.contracts.wordpress import (
     WordPressPostCreateResponse,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
-    WordPressReportCardUpdateRequest,
+    WordPressCardUpdateRequest,
     WordPressPostUpdateResponse,
 )
 from src.utils.errors import AppError
@@ -293,15 +293,15 @@ def create_post(
     )
 
 
-def update_report_card(
-    request: WordPressReportCardUpdateRequest, ctx: RunContext
+def update_card(
+    request: WordPressCardUpdateRequest, ctx: RunContext
 ) -> WordPressPostUpdateResponse:
     post_type_endpoint = _post_type_endpoint(request.post_type)
     logger.info(
         log_event(
             ctx,
             role="service",
-            event="wp_report_card_update_start",
+            event="wp_card_update_start",
             module=logger.name,
             fields={
                 "post_id": request.post_id,
@@ -334,9 +334,9 @@ def update_report_card(
         ssl_verify=request.ssl_verify,
         ca_bundle_path=request.ca_bundle_path,
         ctx=ctx,
-        request_error_event="wp_report_card_update_request_error",
-        request_error_code="wp_report_card_update_failed",
-        request_error_message="Failed to update WordPress report-card metadata",
+        request_error_event="wp_card_update_request_error",
+        request_error_code="wp_card_update_failed",
+        request_error_message="Failed to update WordPress card metadata",
         request_error_fields={
             "post_id": request.post_id,
             "post_type": post_type_endpoint,
@@ -346,9 +346,9 @@ def update_report_card(
     if resp.status_code >= 500:
         _raise_http_server_error(
             ctx=ctx,
-            event="wp_report_card_update_http_error",
-            code="wp_report_card_update_server_error",
-            message_prefix="Report-card update server error",
+            event="wp_card_update_http_error",
+            code="wp_card_update_server_error",
+            message_prefix="Card update server error",
             resp=resp,
             fields={
                 "url": url,
@@ -360,8 +360,8 @@ def update_report_card(
         )
     if resp.status_code >= 400:
         raise AppError(
-            code="wp_report_card_update_client_error",
-            message=f"Report-card update client error: {resp.status_code}",
+            code="wp_card_update_client_error",
+            message=f"Card update client error: {resp.status_code}",
             retryable=False,
         )
 
@@ -370,15 +370,15 @@ def update_report_card(
     link = data.get("link")
     if int(post_id or 0) != request.post_id or not link:
         raise AppError(
-            code="wp_report_card_update_invalid_response",
-            message="Report-card update returned invalid response",
+            code="wp_card_update_invalid_response",
+            message="Card update returned invalid response",
             retryable=False,
         )
     logger.info(
         log_event(
             ctx,
             role="service",
-            event="wp_report_card_update_complete",
+            event="wp_card_update_complete",
             module=logger.name,
             fields={
                 "post_id": request.post_id,

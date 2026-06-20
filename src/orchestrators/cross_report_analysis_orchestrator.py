@@ -316,6 +316,10 @@ def _generated_from_dict(payload: dict[str, Any]) -> CrossReportGeneratedAnalysi
         prompt_hashes=dict(payload["prompt_hashes"]),
         model=str(payload["model"]),
         cost_summary=dict(payload["cost_summary"]),
+        decision_focus=str(payload["decision_focus"]),
+        executive_takeaways=[
+            str(value) for value in payload["executive_takeaways"]
+        ],
     )
 
 

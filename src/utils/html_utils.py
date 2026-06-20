@@ -30,6 +30,11 @@ _PUBLISH_ENTITY_METADATA_RX = re.compile(
     r"(.*?)</script>",
     re.IGNORECASE | re.DOTALL,
 )
+_CROSS_REPORT_METADATA_RX = re.compile(
+    r'<script\b[^>]*data-market-lense-cross-report-metadata=["\']true["\'][^>]*>'
+    r"(.*?)</script>",
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def extract_image_sources(html_text: str) -> List[str]:
@@ -164,6 +169,20 @@ def extract_publish_entity_metadata(html_text: str) -> Optional[PublishEntityMet
     )
 
 
+def extract_briefing_card(html_text: str) -> Dict[str, object]:
+    match = _CROSS_REPORT_METADATA_RX.search(html_text)
+    if not match:
+        return {}
+    try:
+        payload = json.loads(html.unescape(match.group(1)).strip())
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    card = payload.get("briefing_card")
+    return dict(card) if isinstance(card, dict) else {}
+
+
 def ensure_publish_entity_metadata_html(
     html_text: str, metadata: PublishEntityMetadata
 ) -> str:
@@ -191,6 +210,7 @@ def build_publish_html_snapshot(html_text: str) -> PublishHtmlSnapshot:
         image_sources=extract_image_sources(html_text),
         preview_image_src=extract_preview_image(html_text),
         entity_metadata=extract_publish_entity_metadata(html_text),
+        briefing_card=extract_briefing_card(html_text),
     )
 
 
