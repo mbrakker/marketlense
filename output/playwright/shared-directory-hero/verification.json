@@ -1,0 +1,73 @@
+{
+  "artifact": "shared-directory-hero",
+  "verified_at": "2026-06-20",
+  "source": {
+    "renderer": "Wordpress/wp-content/plugins/marketlense-core/includes/class-marketlense-core-shortcodes.php",
+    "stylesheet": "Wordpress/wp-content/themes/marketlense/assets/css/theme.css",
+    "preview": ".codex_tmp/shared-hero-preview.html",
+    "note": "Local production-component harness used because available WordPress REST credentials cannot deploy plugin or theme files."
+  },
+  "matrix": {
+    "contexts": [
+      {
+        "context": "publishers",
+        "heading": "Top publishers",
+        "labels": ["Publishers", "Reports", "Regions", "Topics"],
+        "values": ["38", "59", "21", "37"]
+      },
+      {
+        "context": "reports",
+        "heading": "Published research, structured for review.",
+        "labels": ["Reports", "Publishers", "Topics", "Regions"],
+        "values": ["59", "38", "37", "21"]
+      },
+      {
+        "context": "topics",
+        "heading": "The archive, organized by question.",
+        "labels": ["Topics", "Reports", "Publishers", "Regions"],
+        "values": ["37", "59", "38", "21"]
+      },
+      {
+        "context": "signals",
+        "heading": "Signals that keep their source attached.",
+        "labels": ["Signals", "Reports", "Topics", "Publishers"],
+        "values": ["142", "59", "37", "38"]
+      },
+      {
+        "context": "briefings",
+        "heading": "Cross-report evidence, built for decisions.",
+        "labels": ["Briefings", "Reports", "Publishers", "Topics"],
+        "values": ["8", "59", "38", "37"]
+      }
+    ],
+    "viewports": ["1440x1000", "1024x900", "768x1024", "390x844"],
+    "total_cases": 20,
+    "screenshot_pattern": "output/playwright/shared-directory-hero/{context}-{viewport}.png"
+  },
+  "assertions": {
+    "all_cases_have_one_visible_h1": true,
+    "all_cases_have_four_metric_cards": true,
+    "all_metric_values_are_visible": true,
+    "all_cards_remain_inside_hero": true,
+    "all_cases_avoid_horizontal_overflow": true,
+    "desktop_columns": 4,
+    "tablet_columns": 2,
+    "mobile_columns": 1
+  },
+  "resilience": {
+    "context": "reports",
+    "viewport": "360x800",
+    "reduced_motion": true,
+    "wcag_text_spacing_override": true,
+    "horizontal_overflow": false,
+    "cards_inside_hero": true,
+    "active_hero_animations_after_settle": 0
+  },
+  "visual_review": {
+    "publisher_baseline_preserved": true,
+    "long_heading_collisions": false,
+    "metric_label_truncation": false,
+    "mobile_card_overlap": false
+  }
+}
+
