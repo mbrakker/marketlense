@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Briefing Card Direction</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #f3f7fc;
+      --ink: #10233d;
+      --muted: #586b82;
+      --line: #d5e0ec;
+      --blue: #0a255a;
+      --blue-2: #174991;
+      --signal: #7db5ff;
+      --white: #ffffff;
+      --shadow: 0 18px 40px rgba(10, 28, 46, .10);
+      --serif: Georgia, "Times New Roman", serif;
+      --sans: "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font-family: var(--sans); }
+    main { width: min(1420px, calc(100% - 40px)); margin: 0 auto; padding: 48px 0 72px; }
+    header { display: grid; gap: 12px; max-width: 760px; margin-bottom: 34px; }
+    .eyebrow { margin: 0; color: var(--blue-2); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-family: var(--serif); font-size: clamp(34px, 4vw, 56px); font-weight: 600; letter-spacing: -.045em; line-height: .98; }
+    .intro { color: var(--muted); font-size: 16px; line-height: 1.55; }
+    .system { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 32px 0 44px; }
+    .system div { padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.7); }
+    .system strong { display: block; margin-bottom: 5px; font-size: 13px; }
+    .system span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .showcase { display: grid; grid-template-columns: .82fr 1.12fr 1.5fr; gap: 24px; align-items: start; }
+    .variant { min-width: 0; }
+    .variant-label { display: flex; align-items: baseline; justify-content: space-between; margin: 0 2px 10px; color: var(--muted); font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .variant-label span { color: var(--blue-2); font-weight: 700; letter-spacing: 0; text-transform: none; }
+    .card { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--white); box-shadow: var(--shadow); }
+    .cover { position: relative; overflow: hidden; min-height: 150px; color: #fff; background: var(--blue); isolation: isolate; }
+    .cover::before, .cover::after { position: absolute; content: ""; z-index: -1; border-radius: 999px; opacity: .78; }
+    .cover::before { width: 180px; height: 180px; top: -70px; right: -24px; border: 1px solid rgba(196,222,255,.45); box-shadow: 0 0 0 24px rgba(101,162,255,.11), 0 0 0 48px rgba(101,162,255,.07); }
+    .cover::after { width: 260px; height: 1px; left: -30px; bottom: 36px; transform: rotate(-26deg); background: linear-gradient(90deg, transparent, var(--signal), transparent); box-shadow: 0 20px 0 rgba(125,181,255,.24), 0 40px 0 rgba(125,181,255,.12); }
+    .cover-label, .cover-period { position: absolute; left: 16px; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .cover-label { top: 14px; color: rgba(255,255,255,.72); }
+    .new-badge { position: absolute; top: 13px; right: 13px; padding: 6px 9px; border: 1px solid rgba(255,255,255,.32); border-radius: 999px; background: rgba(4,20,51,.72); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .09em; line-height: 1; text-transform: uppercase; }
+    .cover-title { position: absolute; inset: 50% 16px auto; max-width: 16ch; transform: translateY(-50%); font-family: var(--serif); font-size: 24px; font-weight: 600; line-height: .95; letter-spacing: -.04em; }
+    .cover-period { bottom: 12px; color: rgba(255,255,255,.72); }
+    .body { display: grid; gap: 13px; padding: 20px; }
+    .meta { color: var(--blue-2); font-size: 11px; font-weight: 800; letter-spacing: .085em; text-transform: uppercase; }
+    .title { font-family: var(--serif); font-size: 25px; font-weight: 600; line-height: 1.07; letter-spacing: -.032em; }
+    .summary { color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .focus { display: grid; gap: 5px; padding: 12px 13px; border-left: 2px solid #7db5ff; background: #f3f7fc; }
+    .focus b, .takeaways b { color: var(--blue-2); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
+    .focus span { font-size: 13px; font-weight: 650; line-height: 1.38; }
+    .counters { display: flex; flex-wrap: wrap; gap: 8px 13px; margin: 0; padding: 0; color: var(--muted); font-size: 12px; line-height: 1.35; list-style: none; }
+    .counters li { display: inline-flex; align-items: center; gap: 5px; }
+    .counter-icon { width: 15px; height: 15px; fill: none; stroke: var(--blue-2); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+    .takeaways { display: grid; gap: 8px; padding: 0; list-style: none; }
+    .takeaways li { position: relative; padding-left: 16px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .takeaways li::before { position: absolute; left: 1px; top: .48em; width: 6px; height: 6px; border-radius: 999px; background: var(--blue-2); content: ""; }
+    .action { display: inline-flex; align-items: center; gap: 8px; margin-top: 3px; color: var(--blue-2); font-size: 12px; font-weight: 800; text-decoration: none; }
+    .action::after { content: "→"; font-size: 18px; font-weight: 400; }
+    .small .cover { aspect-ratio: 16 / 9; }
+    .small .cover-title { font-size: 22px; }
+    .small .body { grid-template-rows: auto auto minmax(4.6em, 1fr) auto auto; min-height: 340px; }
+    .small .title { font-size: 22px; }
+    .small .summary { font-size: 13px; }
+    .medium, .large { display: grid; grid-template-columns: minmax(190px, 36%) 1fr; }
+    .medium .cover { min-height: 440px; }
+    .medium .body { grid-template-rows: auto auto minmax(4.6em, 1fr) auto auto auto; min-height: 440px; }
+    .large .cover { min-height: 475px; }
+    .large .body { grid-template-rows: auto auto minmax(4.6em, 1fr) auto auto auto auto; min-height: 475px; padding: 28px; }
+    .large .title { font-size: clamp(28px, 2.8vw, 42px); line-height: 1; }
+    .large .cover-title { font-size: 32px; }
+    .note { margin-top: 40px; padding: 18px 20px; border-radius: 14px; background: #e8f0fa; color: #38516e; font-size: 14px; line-height: 1.5; }
+    @media (max-width: 980px) { .showcase { grid-template-columns: 1fr; } .medium, .large { grid-template-columns: minmax(220px, 34%) 1fr; } .medium .cover, .large .cover { min-height: 360px; } }
+    @media (max-width: 620px) { main { width: min(100% - 28px, 1420px); padding-top: 32px; } .system { grid-template-columns: 1fr; } .medium, .large { grid-template-columns: 1fr; } .medium .cover, .large .cover { min-height: 240px; aspect-ratio: 16 / 10; } .medium .body, .large .body { min-height: 0; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">Market Bearing / V0</p>
+      <h1>Executive briefing cards</h1>
+      <p class="intro">The report-card system’s three placement sizes become a dedicated briefing family. The layout remains familiar; content changes from report provenance to decision-ready briefing context.</p>
+    </header>
+    <section class="system" aria-label="Design system decisions">
+      <div><strong>Same placement system</strong><span>Small, medium, and large retain the report-card layouts and responsive rules.</span></div>
+      <div><strong>Different visual identity</strong><span>Deep executive blue with abstract evidence geometry, distinct from report navy.</span></div>
+      <div><strong>Different reading job</strong><span>Briefings foreground what changed, decision focus, and executive takeaways.</span></div>
+    </section>
+    <section class="showcase" aria-label="Proposed briefing card variants">
+      <div class="variant">
+        <p class="variant-label">Small <span>rapid scanning</span></p>
+        <article class="card small">
+          <div class="cover"><span class="cover-label">Executive briefing</span><span class="new-badge">New</span><strong class="cover-title">Retail media decision window</strong><span class="cover-period">20 June 2026</span></div>
+          <div class="body"><p class="meta">Executive briefing · 20 June 2026</p><h2 class="title">The next decision window for retail media</h2><p class="summary">A concise decision context for leaders monitoring retail media investment and operating-model changes.</p><ul class="counters"><li><svg class="counter-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5h10a3 3 0 0 1 3 3v11H7a3 3 0 0 0-3 3Z"/><path d="M7 19.5a3 3 0 0 0-3 3h13a3 3 0 0 1 3-3v-14H7a3 3 0 0 0-3 3v11"/></svg><span><strong>N</strong> source reports</span></li><li><svg class="counter-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span><strong>N</strong> evidence items</span></li></ul><a class="action" href="#">Read briefing</a></div>
+        </article>
+      </div>
+      <div class="variant">
+        <p class="variant-label">Medium <span>curated comparison</span></p>
+        <article class="card medium">
+          <div class="cover"><span class="cover-label">Executive briefing</span><span class="new-badge">New</span><strong class="cover-title">Retail media decision window</strong><span class="cover-period">20 June 2026</span></div>
+          <div class="body"><p class="meta">Executive briefing · 20 June 2026</p><h2 class="title">The next decision window for retail media</h2><p class="summary">Investment is moving from channel experimentation toward measurement ownership and a more disciplined operating model.</p><div class="focus"><b>Decision focus</b><span>Decide which measurement capability should be owned internally before Q4 planning.</span></div><ul class="counters"><li><svg class="counter-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5h10a3 3 0 0 1 3 3v11H7a3 3 0 0 0-3 3Z"/><path d="M7 19.5a3 3 0 0 0-3 3h13a3 3 0 0 1 3-3v-14H7a3 3 0 0 0-3 3v11"/></svg><span><strong>N</strong> source reports</span></li><li><svg class="counter-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span><strong>N</strong> evidence items</span></li></ul><a class="action" href="#">Read briefing</a></div>
+        </article>
+      </div>
+      <div class="variant">
+        <p class="variant-label">Large <span>featured evaluation</span></p>
+        <article class="card large">
+          <div class="cover"><span class="cover-label">Executive briefing</span><span class="new-badge">New</span><strong class="cover-title">Retail media decision window</strong><span class="cover-period">20 June 2026</span></div>
+          <div class="body"><p class="meta">Executive briefing · 20 June 2026</p><h2 class="title">The next decision window for retail media</h2><p class="summary">Investment is moving from channel experimentation toward measurement ownership and a more disciplined operating model. This briefing frames the near-term choice for senior commercial leaders.</p><div class="focus"><b>Decision focus</b><span>Decide which measurement capability should be owned internally before Q4 planning.</span></div><ul class="takeaways"><li>Standardize the incrementality baseline before adding new commerce-media partners.</li><li>Treat retailer data access as an operating-model requirement, not a campaign detail.</li></ul><ul class="counters"><li><svg class="counter-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5h10a3 3 0 0 1 3 3v11H7a3 3 0 0 0-3 3Z"/><path d="M7 19.5a3 3 0 0 0-3 3h13a3 3 0 0 1 3-3v-14H7a3 3 0 0 0-3 3v11"/></svg><span><strong>N</strong> source reports</span></li><li><svg class="counter-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span><strong>N</strong> evidence items</span></li></ul><a class="action" href="#">Read briefing</a></div>
+        </article>
+      </div>
+    </section>
+    <p class="note">V0 uses intentional placeholder editorial copy and <strong>N</strong> counters only to demonstrate hierarchy. Production cards will render only validated briefing fields and computed source/evidence counts; no metrics or takeaways will be invented.</p>
+  </main>
+</body>
+</html>
