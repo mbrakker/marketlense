@@ -7,6 +7,12 @@ from pathlib import Path
 
 import requests
 
+from src.contracts.config import ConfigLoadRequest
+from src.contracts.report_store import PublicPublisherReportValueAggregateRequest
+from src.services.config_service import load_settings
+from src.services.report_store_service import list_public_publisher_report_value_aggregates
+from src.utils.logging import new_run_context
+
 from ..publisher_profiles_common import (
     build_term_payload,
     load_profile_rows,
@@ -24,6 +30,9 @@ REQUIRED_PROFILE_META_KEYS = {
     "ml_publisher_icon_source",
     "ml_publisher_notion_page_id",
     "ml_publisher_notion_page_url",
+    "ml_publisher_report_value_score",
+    "ml_publisher_report_value_band",
+    "ml_publisher_report_value_sample_size",
 }
 ICON_FETCH_HEADERS = {"User-Agent": "Market Lense Publisher Sync/1.0"}
 MAX_ICON_BYTES = 2_000_000
@@ -96,20 +105,51 @@ def main() -> None:
         ensure_publisher_taxonomy_ready(client)
         assert_publisher_profile_meta_ready(client)
         rows = load_profile_rows(config_path)
+        score_ctx = new_run_context(task_id="wordpress_publisher_report_value_sync")
+        app_settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), score_ctx)
+        term_ids: dict[str, int] = {}
+        published_file_ids: list[str] = []
         for row in rows:
             term_id = ensure_term(client, slug=row.slug, name=row.name)
+            term_ids[row.name.casefold()] = term_id
+            posts = client.get("wp/v2/posts", params={"ml_publisher": term_id, "status": "publish", "per_page": 100, "context": "edit", "_fields": "meta"})
+            if isinstance(posts, list):
+                for post in posts:
+                    meta = post.get("meta", {}) if isinstance(post, dict) else {}
+                    file_id = str(meta.get("ml_file_id", "")).strip() if isinstance(meta, dict) else ""
+                    if file_id:
+                        published_file_ids.append(file_id)
+        aggregate_response = list_public_publisher_report_value_aggregates(
+            PublicPublisherReportValueAggregateRequest(schema_version="1.0", db_path=app_settings.reports_db, published_file_ids=published_file_ids), score_ctx
+        )
+        aggregates = {item.publisher_name.casefold(): item for item in aggregate_response.aggregates}
+        quality_updates = 0
+        quality_unavailable = 0
+        for row in rows:
+            term_id = term_ids[row.name.casefold()]
             payload = build_term_payload(row)
             payload["meta"]["ml_publisher_icon_source"] = inline_icon_source(
                 raw_icon_source=row.icon_source,
                 download_url=resolve_icon_download_url(row),
                 publisher_name=row.name,
             )
+            aggregate = aggregates.get(row.name.casefold())
+            if aggregate is not None:
+                quality_updates += 1
+                payload["meta"].update({
+                    "ml_publisher_report_value_score": aggregate.average_score,
+                    "ml_publisher_report_value_band": aggregate.value_band,
+                    "ml_publisher_report_value_sample_size": aggregate.sample_size,
+                })
+            else:
+                quality_unavailable += 1
             update_term_profile(
                 client,
                 term_id=term_id,
                 payload=payload,
                 name=row.name,
             )
+        print(f"Publisher quality migration: inspected={len(rows)} updated={quality_updates} unavailable={quality_unavailable}")
     except RuntimeError as exc:
         fail(str(exc))
 

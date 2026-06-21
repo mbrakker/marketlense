@@ -35,6 +35,10 @@ final class Taxonomies
 
     public const PUBLISHER_NOTION_PAGE_URL_META = 'ml_publisher_notion_page_url';
 
+    public const PUBLISHER_REPORT_VALUE_SCORE_META = 'ml_publisher_report_value_score';
+    public const PUBLISHER_REPORT_VALUE_BAND_META = 'ml_publisher_report_value_band';
+    public const PUBLISHER_REPORT_VALUE_SAMPLE_SIZE_META = 'ml_publisher_report_value_sample_size';
+
     public function register(): void
     {
         register_taxonomy(
@@ -163,6 +167,17 @@ final class Taxonomies
                 },
             ]
         );
+        foreach ([
+            self::PUBLISHER_REPORT_VALUE_SCORE_META => 'number',
+            self::PUBLISHER_REPORT_VALUE_BAND_META => 'string',
+            self::PUBLISHER_REPORT_VALUE_SAMPLE_SIZE_META => 'integer',
+        ] as $key => $type) {
+            register_term_meta(self::PUBLISHER_TAXONOMY, $key, [
+                'type' => $type, 'single' => true, 'show_in_rest' => true,
+                'sanitize_callback' => $type === 'string' ? 'sanitize_key' : static fn ($value) => $type === 'integer' ? max(0, (int) $value) : max(0.0, min(100.0, (float) $value)),
+                'auth_callback' => static fn (): bool => current_user_can(self::PUBLISHER_MANAGE_CAPABILITY),
+            ]);
+        }
 
         add_action(
             self::PUBLISHER_TAXONOMY . '_add_form_fields',

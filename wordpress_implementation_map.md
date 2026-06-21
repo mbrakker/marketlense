@@ -74,7 +74,7 @@ Shortcodes are registered in `Wordpress/wp-content/plugins/marketlense-core/incl
 - `[ml_signals_index]`: canonical Signals landing surface for published Signals, with source-backed report-signal fallback.
 - `[ml_briefings_index]`: canonical Briefings landing surface for published Briefings, with institutional empty state fallback.
 - `[ml_topics_directory]`: category directory cards.
-- `[ml_publishers_directory]`: publisher directory cards with archive, homepage, and insights links.
+- `[ml_publishers_directory]`: filter-aware publisher directory cards with archive links, existing profile descriptions/logos, matching report-category citations, and synchronized public report-value aggregates. With no filters it shows every content-backed publisher; the shared report search/topic/period/region controls reduce the cards to matching-report publishers, while publisher filtering remains exclusive to the report archive.
 - `[ml_publisher_profile]`: publisher taxonomy profile block.
 - `[ml_signal_archive]`: legacy compatibility alias for `[ml_signals_index]`.
 - `[ml_briefing_archive]`: legacy compatibility alias for `[ml_briefings_index]`.

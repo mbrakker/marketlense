@@ -47,6 +47,7 @@ final class Archive_Browser
                 'per_page' => (string) self::DEFAULT_PER_PAGE,
                 'show_filters' => '1',
                 'show_pagination' => '1',
+                'card_size' => 'small',
             ],
             $attrs,
             'ml_' . $definition['slug'] . '_index'
@@ -54,6 +55,7 @@ final class Archive_Browser
         $per_page = max(1, min(48, (int) $atts['per_page']));
         $show_filters = $this->to_bool_flag($atts['show_filters']);
         $show_pagination = $this->to_bool_flag($atts['show_pagination']);
+        $card_size = in_array($atts['card_size'], ['small', 'medium', 'large'], true) ? $atts['card_size'] : 'small';
         $filters = $this->selected_filters();
         $sort = $this->selected_sort();
         $archive_url = $this->archive_url($definition);
@@ -114,7 +116,7 @@ final class Archive_Browser
                     <?php if ($query->have_posts()) : ?>
                         <div class="ml-report-browser-grid">
                             <?php while ($query->have_posts()) : $query->the_post(); $post = get_post(); ?>
-                                <?php if ($post instanceof \WP_Post) : echo $this->render_card($post, $content_type); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                <?php if ($post instanceof \WP_Post) : echo $this->render_card($post, $content_type, $card_size); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                 <?php endif; ?>
                             <?php endwhile; ?>
                         </div>
@@ -126,6 +128,70 @@ final class Archive_Browser
             </div>
             <?php wp_reset_postdata(); ?>
         </section>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    /** @return array{filters:array{topic:string,publisher:string,period:string,region:string,search:string},post_ids:list<int>,topics:list<\WP_Term>,periods:list<array{value:string,count:int}>,regions:list<array{value:string,count:int}>,has_active_filters:bool} */
+    public function publisher_directory_context(): array
+    {
+        $definition = $this->definition(self::REPORTS);
+        $filters = $this->selected_filters();
+        $filters['publisher'] = '';
+        $post_ids = $this->facet_ids($definition, $filters, 'publisher');
+        $this->enqueue_filter_assets();
+        return [
+            'filters' => $filters,
+            'post_ids' => $post_ids,
+            'topics' => $this->facet_terms($definition, $filters, 'topic'),
+            'periods' => $this->facet_meta_values($definition, $filters, Meta::META_TIME_PERIOD, 'period'),
+            'regions' => $this->facet_meta_values($definition, $filters, Meta::META_REGION, 'region'),
+            'has_active_filters' => $filters['topic'] !== '' || $filters['period'] !== '' || $filters['region'] !== '' || $filters['search'] !== '',
+        ];
+    }
+
+    /**
+     * Renders the report archive filter components for the publisher directory.
+     * Publishers are intentionally omitted: the remaining filters select publishers
+     * through their matching reports.
+     *
+     * @param array{filters:array{topic:string,publisher:string,period:string,region:string,search:string},post_ids:list<int>,topics:list<\WP_Term>,periods:list<array{value:string,count:int}>,regions:list<array{value:string,count:int}>,has_active_filters:bool} $context
+     */
+    public function render_publisher_directory_filters(array $context, string $directory_url): string
+    {
+        $filters = $context['filters'];
+        ob_start();
+        ?>
+        <div class="ml-report-browser-utility-bar">
+            <form class="ml-report-search-form" method="get" action="<?php echo esc_url($directory_url); ?>" data-ml-live-filter-form>
+                <span class="screen-reader-text" data-ml-filter-status aria-live="polite"></span>
+                <?php $this->render_hidden_inputs($this->filter_args($filters, ['search'])); ?>
+                <label class="ml-report-search-field" for="ml_publisher_directory_search">
+                    <span><?php esc_html_e('Search reports', 'marketlense-core'); ?></span>
+                    <input id="ml_publisher_directory_search" name="s" type="search" value="<?php echo esc_attr($filters['search']); ?>" placeholder="<?php esc_attr_e('Search reports', 'marketlense-core'); ?>" data-ml-live-filter-input>
+                </label>
+            </form>
+            <?php $this->render_active_filters($directory_url, $filters, 'latest'); ?>
+        </div>
+        <aside class="ml-report-browser-sidebar ml-publisher-directory-sidebar">
+            <div class="ml-report-browser-sidebar-card">
+                <details class="ml-report-filter-panel" open>
+                    <summary class="ml-report-filter-summary"><?php esc_html_e('Filter publishers', 'marketlense-core'); ?></summary>
+                    <div class="ml-report-filter-body">
+                        <div class="ml-report-filter-header"><div><p class="ml-section-kicker"><?php esc_html_e('Filters', 'marketlense-core'); ?></p><h2 class="ml-report-browser-title"><?php esc_html_e('Refine publishers', 'marketlense-core'); ?></h2></div></div>
+                        <form class="ml-report-filter-form" method="get" action="<?php echo esc_url($directory_url); ?>" data-ml-live-filter-form>
+                            <span class="screen-reader-text" data-ml-filter-status aria-live="polite"></span>
+                            <?php $this->render_hidden_inputs($this->filter_args($filters, ['topic', 'period', 'region'])); ?>
+                            <div class="ml-report-filter-grid">
+                                <?php $this->render_term_select('ml_publisher_directory_topic', 'category', __('Category', 'marketlense-core'), __('All categories', 'marketlense-core'), $filters['topic'], $context['topics']); ?>
+                                <?php $this->render_value_select('ml_publisher_directory_period', 'ml_period', __('Period', 'marketlense-core'), __('All periods', 'marketlense-core'), $filters['period'], $context['periods']); ?>
+                                <?php $this->render_value_select('ml_publisher_directory_region', 'ml_region', __('Region', 'marketlense-core'), __('All regions', 'marketlense-core'), $filters['region'], $context['regions']); ?>
+                            </div>
+                        </form>
+                    </div>
+                </details>
+            </div>
+        </aside>
         <?php
         return (string) ob_get_clean();
     }
@@ -171,12 +237,12 @@ final class Archive_Browser
         return is_string($url) && $url !== '' ? $url : home_url('/' . $definition['slug'] . 's/');
     }
 
-    private function render_card(\WP_Post $post, string $content_type): string
+    private function render_card(\WP_Post $post, string $content_type, string $card_size): string
     {
-        if ($content_type === self::REPORTS) { $report = $this->report_view_model_builder->build($post); return ($report['card_contract_valid'] ?? false) === true ? $this->report_card_renderer->render($report, 'small') : ''; }
-        if ($content_type === self::BRIEFINGS) { $briefing = $this->briefing_card_view_model_builder->build($post); return ($briefing['card_contract_valid'] ?? false) === true ? $this->briefing_card_renderer->render($briefing, 'small') : ''; }
+        if ($content_type === self::REPORTS) { $report = $this->report_view_model_builder->build($post); return ($report['card_contract_valid'] ?? false) === true ? $this->report_card_renderer->render($report, $card_size) : ''; }
+        if ($content_type === self::BRIEFINGS) { $briefing = $this->briefing_card_view_model_builder->build($post); return ($briefing['card_contract_valid'] ?? false) === true ? $this->briefing_card_renderer->render($briefing, $card_size) : ''; }
         $signal = $this->signal_card_view_model_builder->build($post);
-        return ($signal['card_contract_valid'] ?? false) === true ? $this->signal_card_renderer->render($signal, 'small') : '';
+        return ($signal['card_contract_valid'] ?? false) === true ? $this->signal_card_renderer->render($signal, $card_size) : '';
     }
 
     private function facet_ids(array $definition, array $filters, string $exclude): array { $args = $this->query_args($definition, $filters, -1, 1, 'latest', $exclude); $args['fields'] = 'ids'; $args['no_found_rows'] = true; $query = new \WP_Query($args); return array_map('intval', $query->posts); }

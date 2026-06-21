@@ -20,7 +20,7 @@ def test_archives_delegate_to_one_browser_owner() -> None:
     assert "class-marketlense-core-archive-browser.php" in BOOTSTRAP.read_text(encoding="utf-8")
 
 
-def test_shared_browser_exposes_controls_and_compact_cards() -> None:
+def test_shared_browser_exposes_controls_and_size_selectable_cards() -> None:
     source = ARCHIVE_BROWSER.read_text(encoding="utf-8")
 
     assert 'class="ml-archive-browser-page ml-reports-archive-page ml-report-browser"' in source
@@ -28,8 +28,10 @@ def test_shared_browser_exposes_controls_and_compact_cards() -> None:
     assert 'class="ml-report-browser-summary-value"' in source
     assert 'class="ml-report-sort-controls"' in source
     assert 'class="ml-report-browser-grid"' in source
-    assert "$this->briefing_card_renderer->render($briefing, 'small')" in source
-    assert "$this->signal_card_renderer->render($signal, 'small')" in source
+    assert "'card_size' => 'small'" in source
+    assert "in_array($atts['card_size'], ['small', 'medium', 'large'], true)" in source
+    assert "$this->briefing_card_renderer->render($briefing, $card_size)" in source
+    assert "$this->signal_card_renderer->render($signal, $card_size)" in source
 
 
 def test_shared_archive_marker_receives_reports_geometry() -> None:

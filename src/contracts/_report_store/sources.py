@@ -416,3 +416,29 @@ class PublisherResourceRankingResponse:
             "doc": "Ranked publisher resources ordered by rolling quality consistency."
         }
     )
+
+
+@dataclass(frozen=True)
+class PublicPublisherReportValueAggregateRequest:
+    schema_version: str = field(metadata={"doc": "Aggregate request schema version."})
+    db_path: str = field(metadata={"doc": "Report metadata SQLite path."})
+    published_file_ids: List[str] = field(
+        metadata={"doc": "Public WordPress report file identifiers eligible for aggregation."}
+    )
+
+
+@dataclass(frozen=True)
+class PublicPublisherReportValueAggregate:
+    schema_version: str = field(metadata={"doc": "Aggregate schema version."})
+    publisher_name: str = field(metadata={"doc": "Publisher name from scored public reports."})
+    average_score: float = field(metadata={"doc": "Average report-value score from public reports."})
+    value_band: str = field(metadata={"doc": "Canonical report-value band for the average score."})
+    sample_size: int = field(metadata={"doc": "Number of scored public reports in the aggregate."})
+
+
+@dataclass(frozen=True)
+class PublicPublisherReportValueAggregateResponse:
+    schema_version: str = field(metadata={"doc": "Aggregate response schema version."})
+    aggregates: List[PublicPublisherReportValueAggregate] = field(
+        metadata={"doc": "Public report-value aggregates grouped by publisher."}
+    )

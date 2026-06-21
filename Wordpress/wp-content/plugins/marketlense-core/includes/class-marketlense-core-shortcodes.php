@@ -66,6 +66,7 @@ final class Shortcodes
     private Signal_Card_Renderer $signal_card_renderer;
 
     private Archive_Browser $archive_browser;
+    private Publisher_Directory $publisher_directory;
 
     public function __construct(
         Report_View_Model_Builder $view_model_builder,
@@ -91,6 +92,7 @@ final class Shortcodes
             $signal_card_view_model_builder,
             $signal_card_renderer
         );
+        $this->publisher_directory = new Publisher_Directory($this->archive_browser, $stats);
     }
 
     /**
@@ -1148,85 +1150,7 @@ final class Shortcodes
      */
     public function render_publishers_directory(): string
     {
-        $items = $this->stats->content_backed_terms(Taxonomies::PUBLISHER_TAXONOMY, 300);
-        if ($items === []) {
-            return '<p>' . esc_html__('No publishers are available yet.', 'marketlense-core') . '</p>';
-        }
-
-        ob_start();
-        ?>
-        <section class="ml-directory-list ml-publisher-directory-list" aria-label="<?php esc_attr_e('Publisher directory', 'marketlense-core'); ?>">
-            <?php $rank = 0; ?>
-            <?php foreach ($items as $item) : ?>
-                <?php
-                $rank++;
-                $term = $item['term'];
-                $archive_link = get_term_link($term);
-                $homepage = (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_HOMEPAGE_META, true);
-                $insights_links = $this->publisher_external_urls(
-                    (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_INSIGHTS_META, true)
-                );
-                $description = $this->publisher_description_excerpt($term->description);
-                ?>
-                <article class="ml-directory-card ml-publisher-directory-card">
-                    <div class="ml-publisher-directory-mark" aria-hidden="true">
-                        <span><?php echo esc_html($this->publisher_monogram($term->name)); ?></span>
-                    </div>
-                    <div class="ml-publisher-directory-copy">
-                        <div class="ml-publisher-directory-card-topline">
-                            <p class="ml-directory-count"><?php echo esc_html($this->content_count_line($item)); ?></p>
-                            <span class="ml-publisher-directory-rank"><?php echo esc_html(sprintf('#%d', $rank)); ?></span>
-                        </div>
-                        <h2>
-                            <?php if (! is_wp_error($archive_link) && (int) $item['reports'] > 0) : ?>
-                                <a href="<?php echo esc_url((string) $archive_link); ?>">
-                                    <?php echo esc_html($term->name); ?>
-                                </a>
-                            <?php else : ?>
-                                <?php echo esc_html($term->name); ?>
-                            <?php endif; ?>
-                        </h2>
-                        <?php if ($description !== '') : ?>
-                            <p class="ml-directory-description"><?php echo esc_html($description); ?></p>
-                        <?php endif; ?>
-                        <ul class="ml-publisher-directory-facts" aria-label="<?php esc_attr_e('Represented content', 'marketlense-core'); ?>">
-                            <li>
-                                <strong><?php echo esc_html(number_format_i18n((int) $item['reports'])); ?></strong>
-                                <span><?php esc_html_e('Reports', 'marketlense-core'); ?></span>
-                            </li>
-                            <li>
-                                <strong><?php echo esc_html(number_format_i18n((int) $item['briefings'])); ?></strong>
-                                <span><?php esc_html_e('Briefings', 'marketlense-core'); ?></span>
-                            </li>
-                            <li>
-                                <strong><?php echo esc_html(number_format_i18n((int) $item['signals'])); ?></strong>
-                                <span><?php esc_html_e('Signals', 'marketlense-core'); ?></span>
-                            </li>
-                        </ul>
-                        <div class="ml-directory-actions">
-                            <?php if (! is_wp_error($archive_link)) : ?>
-                                <a class="ml-text-link" href="<?php echo esc_url((string) $archive_link); ?>">
-                                    <?php esc_html_e('View publisher profile', 'marketlense-core'); ?>
-                                    <span aria-hidden="true">&rarr;</span>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($homepage !== '') : ?>
-                                <a href="<?php echo esc_url($homepage); ?>" target="_blank" rel="noopener noreferrer">
-                                    <?php esc_html_e('Homepage', 'marketlense-core'); ?>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($insights_links !== []) : ?>
-                                <a href="<?php echo esc_url($insights_links[0]); ?>" target="_blank" rel="noopener noreferrer">
-                                    <?php esc_html_e('Research hub', 'marketlense-core'); ?>
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </article>
-            <?php endforeach; ?>
-        </section>
-        <?php
-        return (string) ob_get_clean();
+        return $this->publisher_directory->render();
     }
 
     /**

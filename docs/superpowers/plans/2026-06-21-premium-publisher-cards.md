@@ -225,7 +225,13 @@ Expected: `Built theme archive: ...marketlense.zip`
 
 Deploy the generated plugin and theme to the configured WordPress target, run `python Wordpress/scripts/sync-publisher-profiles-rest.py`, then verify `/publishers-directory/` at desktop, tablet, and mobile widths. Confirm logos load, quality aggregates only appear for matched public scores, filter changes update matching publisher cards, the publisher selector is absent, categories are tied to matching reports, and browser console output is clean.
 
-- [ ] **Step 5: Commit the verified implementation**
+- [ ] **Step 5: Migrate already published publisher cards**
+
+Deploy the plugin before migration so the new REST term-meta fields are registered. Run `python Wordpress/scripts/sync-publisher-profiles-rest.py` against the existing WordPress site. The command must inspect every current publisher term and update it in place from the configured report database; it must not create replacement terms, change term slugs, remove existing profile/logo metadata, or manufacture a score for publishers without matched public scored reports.
+
+Record the number of current terms inspected, the number updated with a quality aggregate, and the number intentionally left without one. Verify one existing scored publisher card shows the new assessment/category treatment and one existing unscored publisher card has no score panel.
+
+- [ ] **Step 6: Commit the verified implementation**
 
 ```bash
 git add src Wordpress tests README_WORDPRESS.md wordpress_implementation_map.md

@@ -16,6 +16,9 @@ from src.contracts.report_store import (
     ReportSourceRecordRequest,
     ReportSourceRecordResponse,
     ReportValueScoreRecordRequest,
+    PublicPublisherReportValueAggregate,
+    PublicPublisherReportValueAggregateRequest,
+    PublicPublisherReportValueAggregateResponse,
 )
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
@@ -24,6 +27,35 @@ from src.utils.url_utils import normalize_url
 
 from .common import _normalize_optional_url_key, logger
 from .connection import _metadata_conn
+
+
+def list_public_publisher_report_value_aggregates(
+    request: PublicPublisherReportValueAggregateRequest, ctx: RunContext
+) -> PublicPublisherReportValueAggregateResponse:
+    file_ids = sorted({value.strip() for value in request.published_file_ids if value.strip()})
+    if not file_ids:
+        return PublicPublisherReportValueAggregateResponse(schema_version="1.0", aggregates=[])
+    if not request.db_path.strip():
+        raise AppError(code="public_publisher_report_value_db_missing", message="Report metadata DB path is required for public publisher report values", retryable=False, severity="error")
+    placeholders = ",".join("?" for _ in file_ids)
+    with _metadata_conn(request.db_path, ctx) as conn:
+        rows = conn.execute(
+            f"""
+            SELECT r.publisher, AVG(s.report_value_score), COUNT(*)
+            FROM reports r JOIN report_sources s ON s.md5 = r.source_md5
+            WHERE r.file_id IN ({placeholders}) AND s.report_value_score IS NOT NULL
+              AND TRIM(COALESCE(r.publisher, '')) <> ''
+            GROUP BY lower(trim(r.publisher)), trim(r.publisher)
+            ORDER BY lower(trim(r.publisher))
+            """,
+            file_ids,
+        ).fetchall()
+    aggregates = []
+    for publisher_name, score, sample_size in rows:
+        average = round(float(score), 3)
+        band = "high" if average >= 78 else "medium" if average >= 60 else "low" if average >= 40 else "weak"
+        aggregates.append(PublicPublisherReportValueAggregate(schema_version="1.0", publisher_name=str(publisher_name).strip(), average_score=average, value_band=band, sample_size=int(sample_size)))
+    return PublicPublisherReportValueAggregateResponse(schema_version="1.0", aggregates=aggregates)
 
 
 def record_report_value_score(
