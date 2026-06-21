@@ -40,3 +40,12 @@ def test_shared_archive_marker_receives_reports_geometry() -> None:
     assert ".ml-archive-browser-page .ml-report-browser-head" in css
     assert ".ml-archive-browser-page .ml-briefing-card--small" in css
     assert ".ml-archive-browser-page .ml-signal-card--small" in css
+
+
+def test_shared_archive_cards_use_the_reports_card_height_and_compact_copy() -> None:
+    css = THEME_CSS.read_text(encoding="utf-8")
+
+    assert ".ml-archive-browser-page .ml-briefing-card--small," in css
+    assert "block-size: 33.5rem;" in css
+    assert ".ml-archive-browser-page .ml-briefing-card__summary," in css
+    assert "-webkit-line-clamp: 4;" in css
