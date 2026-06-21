@@ -175,10 +175,9 @@ final class Publisher_Directory
             </div>
             <div class="ml-publisher-directory-card-identity">
                 <div class="ml-publisher-directory-mark" aria-hidden="true">
+                    <span><?php echo esc_html($this->monogram($term->name)); ?></span>
                     <?php if ($logo !== '') : ?>
-                        <img src="<?php echo esc_url($logo); ?>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-                    <?php else : ?>
-                        <span><?php echo esc_html($this->monogram($term->name)); ?></span>
+                        <img src="<?php echo esc_url($logo); ?>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove();">
                     <?php endif; ?>
                 </div>
                 <div>
