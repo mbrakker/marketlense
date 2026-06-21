@@ -92,3 +92,18 @@ def test_signal_renderer_rejects_incomplete_contracts_and_unknown_variants() -> 
         "UnexpectedValueException:"
     )
     assert _render("compact")["error"].startswith("InvalidArgumentException:")
+
+
+def test_signals_archive_uses_the_compact_card_variant_from_the_shared_browser() -> None:
+    source = (
+        ROOT
+        / "Wordpress"
+        / "wp-content"
+        / "plugins"
+        / "marketlense-core"
+        / "includes"
+        / "class-marketlense-core-archive-browser.php"
+    ).read_text(encoding="utf-8")
+
+    assert "public const SIGNALS = 'signals';" in source
+    assert "$this->signal_card_renderer->render($signal, 'small')" in source
