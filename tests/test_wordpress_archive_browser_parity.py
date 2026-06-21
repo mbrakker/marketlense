@@ -23,7 +23,7 @@ def test_archives_delegate_to_one_browser_owner() -> None:
 def test_shared_browser_exposes_controls_and_compact_cards() -> None:
     source = ARCHIVE_BROWSER.read_text(encoding="utf-8")
 
-    assert 'class="ml-archive-browser-page ml-report-browser"' in source
+    assert 'class="ml-archive-browser-page ml-reports-archive-page ml-report-browser"' in source
     assert 'data-ml-live-filter-form' in source
     assert 'class="ml-report-browser-summary-value"' in source
     assert 'class="ml-report-sort-controls"' in source

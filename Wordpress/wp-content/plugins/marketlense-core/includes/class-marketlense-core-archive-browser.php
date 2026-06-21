@@ -69,7 +69,7 @@ final class Archive_Browser
 
         ob_start();
         ?>
-        <section class="ml-archive-browser-page ml-report-browser" aria-label="<?php echo esc_attr($definition['browser_label']); ?>">
+        <section class="ml-archive-browser-page ml-reports-archive-page ml-report-browser" aria-label="<?php echo esc_attr($definition['browser_label']); ?>">
             <?php if ($show_filters) : ?>
                 <div class="ml-report-browser-utility-bar">
                     <form class="ml-report-search-form" method="get" action="<?php echo esc_url($archive_url); ?>" data-ml-live-filter-form>
