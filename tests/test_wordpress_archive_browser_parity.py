@@ -49,3 +49,10 @@ def test_shared_archive_cards_use_the_reports_card_height_and_compact_copy() -> 
     assert "block-size: 33.5rem;" in css
     assert ".ml-archive-browser-page .ml-briefing-card__summary," in css
     assert "-webkit-line-clamp: 4;" in css
+
+
+def test_shared_browser_calculates_facet_counts_from_the_filtered_post_ids() -> None:
+    source = ARCHIVE_BROWSER.read_text(encoding="utf-8")
+
+    assert "$items[$term->term_id]->count = 0;" in source
+    assert "$items[$term->term_id]->count++;" in source

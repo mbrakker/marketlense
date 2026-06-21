@@ -180,7 +180,40 @@ final class Archive_Browser
     }
 
     private function facet_ids(array $definition, array $filters, string $exclude): array { $args = $this->query_args($definition, $filters, -1, 1, 'latest', $exclude); $args['fields'] = 'ids'; $args['no_found_rows'] = true; $query = new \WP_Query($args); return array_map('intval', $query->posts); }
-    private function facet_terms(array $definition, array $filters, string $exclude): array { $items = []; foreach ($this->facet_ids($definition, $filters, $exclude) as $id) { foreach ((array) get_the_terms($id, $exclude === 'topic' ? Taxonomies::CATEGORY_TAXONOMY : Taxonomies::PUBLISHER_TAXONOMY) as $term) { if ($term instanceof \WP_Term) { $items[$term->term_id] = $term; } } } return array_values($items); }
+    private function facet_terms(array $definition, array $filters, string $exclude): array
+    {
+        $items = [];
+        $taxonomy = $exclude === 'topic'
+            ? Taxonomies::CATEGORY_TAXONOMY
+            : Taxonomies::PUBLISHER_TAXONOMY;
+
+        foreach ($this->facet_ids($definition, $filters, $exclude) as $id) {
+            $terms = get_the_terms($id, $taxonomy);
+            if (! is_array($terms)) {
+                continue;
+            }
+
+            foreach ($terms as $term) {
+                if (! ($term instanceof \WP_Term)) {
+                    continue;
+                }
+                if (! isset($items[$term->term_id])) {
+                    $items[$term->term_id] = clone $term;
+                    $items[$term->term_id]->count = 0;
+                }
+                $items[$term->term_id]->count++;
+            }
+        }
+
+        $terms = array_values($items);
+        usort(
+            $terms,
+            static fn (\WP_Term $left, \WP_Term $right): int =>
+                ((int) $right->count <=> (int) $left->count) ?: strcasecmp($left->name, $right->name)
+        );
+
+        return $terms;
+    }
     private function facet_meta_values(array $definition, array $filters, string $meta_key, string $exclude): array { $values = []; foreach ($this->facet_ids($definition, $filters, $exclude) as $id) { $value = trim((string) get_post_meta($id, $meta_key, true)); if ($value !== '' && $value !== '...' && strcasecmp($value, 'not extracted') !== 0) { $values[$value] = ($values[$value] ?? 0) + 1; } } ksort($values, SORT_NATURAL | SORT_FLAG_CASE); return array_map(static fn(string $value, int $count): array => ['value' => $value, 'count' => $count], array_keys($values), $values); }
     private function render_term_select(string $id, string $name, string $label, string $all_label, string $selected, array $terms): void { ?><label class="ml-report-filter-field" for="<?php echo esc_attr($id); ?>"><span><?php echo esc_html($label); ?></span><select id="<?php echo esc_attr($id); ?>" name="<?php echo esc_attr($name); ?>"><option value=""><?php echo esc_html($all_label); ?></option><?php foreach ($terms as $term) : ?><option value="<?php echo esc_attr($term->slug); ?>" <?php selected($selected, $term->slug); ?>><?php echo esc_html(sprintf('%1$s (%2$d)', $term->name, (int) $term->count)); ?></option><?php endforeach; ?></select></label><?php }
     private function render_value_select(string $id, string $name, string $label, string $all_label, string $selected, array $values): void { ?><label class="ml-report-filter-field" for="<?php echo esc_attr($id); ?>"><span><?php echo esc_html($label); ?></span><select id="<?php echo esc_attr($id); ?>" name="<?php echo esc_attr($name); ?>"><option value=""><?php echo esc_html($all_label); ?></option><?php foreach ($values as $item) : ?><option value="<?php echo esc_attr($item['value']); ?>" <?php selected($selected, $item['value']); ?>><?php echo esc_html(sprintf('%1$s (%2$d)', $item['value'], $item['count'])); ?></option><?php endforeach; ?></select></label><?php }
