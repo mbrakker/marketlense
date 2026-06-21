@@ -318,6 +318,7 @@ def test_report_card_release_metadata_and_documentation_are_complete() -> None:
         "audit-report-card-contracts.php",
         "build-plugin-zip.ps1",
         "build-theme-zip.sh",
+        "build-theme-zip.ps1",
     ):
         assert required_text in docs
 

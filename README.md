@@ -423,6 +423,7 @@ Wordpress/
     build-theme-zip.sh
     build-plugin-zip.sh
     build-plugin-zip.ps1
+    build-theme-zip.ps1
     provision-site-structure.sh
     seed-publisher-homepages.sh
     sync-publisher-profiles.sh
@@ -517,7 +518,7 @@ Current theme highlights:
 - a richer `[ml_report_browser]` archive/search/category/publisher experience
 - imported publisher profile support from Notion (`[ml_publisher_profile]`, publisher insights/homepage/icon term metadata, and `Wordpress/config/publisher-profiles.json`)
 - redesigned trust and conversion pages (`About`, `Methodology`, `Contact`, `Submit a Report`)
-- a native PowerShell plugin packaging script at `Wordpress/scripts/build-plugin-zip.ps1` so Windows builds do not depend on `bash.exe`/WSL
+- native PowerShell plugin and theme packaging scripts at `Wordpress/scripts/build-plugin-zip.ps1` and `Wordpress/scripts/build-theme-zip.ps1` so Windows builds do not depend on `bash.exe`/WSL
 - automatic backfill of legacy report publisher/meta projections during plugin upgrade/runtime so homepage authority surfaces recover without manual post edits
 
 ### Provision Site IA
@@ -597,10 +598,11 @@ bash Wordpress/scripts/build-plugin-zip.sh
 bash Wordpress/scripts/build-theme-zip.sh
 ```
 
-From PowerShell on Windows, you can build the plugin archive without `bash.exe` / WSL:
+From PowerShell on Windows, build both archives without `bash.exe` / WSL:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\build-plugin-zip.ps1
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\build-theme-zip.ps1
 ```
 
 Build scripts use `zip` when available and automatically fall back to Python (`python` / `python3` / `py`) or local virtualenv interpreters when `zip` is not installed.
