@@ -61,10 +61,9 @@ def test_briefing_counters_have_source_and_evidence_icons() -> None:
 
 
 def test_briefing_archive_uses_one_shared_card_grid() -> None:
-    source = SHORTCODES.read_text(encoding="utf-8")
-    start = source.index("public function render_briefings_index")
-    end = source.index("public function render_briefing_archive", start)
-    method = source[start:end]
+    source = (SHORTCODES.parent / "class-marketlense-core-archive-browser.php").read_text(
+        encoding="utf-8"
+    )
 
-    assert method.count('<div class="ml-report-browser-grid">') == 1
-    assert "$cards[] = $this->briefing_card_renderer->render" in method
+    assert 'class="ml-report-browser-grid"' in source
+    assert "$this->briefing_card_renderer->render($briefing, 'small')" in source

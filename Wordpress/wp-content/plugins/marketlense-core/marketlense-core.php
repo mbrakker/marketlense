@@ -39,6 +39,7 @@ require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-briefing-c
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-briefing-card-renderer.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-signal-card-view-model-builder.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-signal-card-renderer.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-archive-browser.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-shortcodes.php';
 
 register_activation_hook(__FILE__, ['\\MarketLense\\Core\\Plugin', 'activate']);

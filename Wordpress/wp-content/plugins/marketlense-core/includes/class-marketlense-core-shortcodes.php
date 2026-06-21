@@ -65,6 +65,8 @@ final class Shortcodes
 
     private Signal_Card_Renderer $signal_card_renderer;
 
+    private Archive_Browser $archive_browser;
+
     public function __construct(
         Report_View_Model_Builder $view_model_builder,
         Intelligence_Stats $stats,
@@ -81,6 +83,14 @@ final class Shortcodes
         $this->briefing_card_renderer = $briefing_card_renderer;
         $this->signal_card_view_model_builder = $signal_card_view_model_builder;
         $this->signal_card_renderer = $signal_card_renderer;
+        $this->archive_browser = new Archive_Browser(
+            $view_model_builder,
+            $report_card_renderer,
+            $briefing_card_view_model_builder,
+            $briefing_card_renderer,
+            $signal_card_view_model_builder,
+            $signal_card_renderer
+        );
     }
 
     /**
@@ -124,6 +134,8 @@ final class Shortcodes
      */
     public function render_report_browser(array $attrs = []): string
     {
+        return $this->archive_browser->render($attrs, Archive_Browser::REPORTS);
+
         $atts = shortcode_atts(
             [
                 'per_page' => (string) self::DEFAULT_PER_PAGE,
@@ -845,7 +857,7 @@ final class Shortcodes
             return $this->render_report_signal_archive($attrs);
         }
 
-        return $this->render_signal_cards($attrs);
+        return $this->archive_browser->render($attrs, Archive_Browser::SIGNALS);
     }
 
     /**
@@ -915,6 +927,8 @@ final class Shortcodes
      */
     public function render_briefings_index(array $attrs = []): string
     {
+        return $this->archive_browser->render($attrs, Archive_Browser::BRIEFINGS);
+
         $atts = shortcode_atts(['per_page' => (string) self::DEFAULT_PER_PAGE], $attrs, 'ml_briefings_index');
         $query = new \WP_Query([
             'post_type' => Post_Type::BRIEFING_POST_TYPE,
