@@ -207,13 +207,13 @@ def test_archive_templates_use_shared_hero_with_four_dynamic_counts() -> None:
 
     methodology = METHODOLOGY_PAGE.read_text(encoding="utf-8")
     for preserved_section in (
-        "1. Ingest",
-        "2. Extract",
-        "3. Validate",
-        "4. Shape",
-        "5. Publish",
-        "6. Observe",
-        "Quality controls",
+        "Research grounding",
+        "Quality assessment",
+        "Expert interpretation",
+        "Editorial synthesis",
+        "Decision-ready delivery",
+        "Continuous stewardship",
+        "Research standards",
     ):
         assert preserved_section in methodology
 
@@ -316,6 +316,43 @@ def test_editorial_language_prefers_reports_and_report_briefs() -> None:
     assert "Read report brief" in shortcodes
     assert "_n('%d report', '%d reports'" in shortcodes
     assert " digest" not in templates.lower()
+
+
+def test_methodology_page_uses_an_evidence_led_flow_without_ai_framing() -> None:
+    template = METHODOLOGY_PAGE.read_text(encoding="utf-8")
+    css = THEME_CSS.read_text(encoding="utf-8")
+
+    assert "ml-methodology-ledger" in template
+    assert "Research grounding" in template
+    assert "Quality assessment" in template
+    assert "Research standards" in template
+    assert "prompt selection" not in template.lower()
+    assert "pipeline" not in template.lower()
+    assert ".ml-methodology-ledger" in css
+    assert ".ml-methodology-proof-band" in css
+    assert "@media (max-width: 900px)" in css
+
+
+def test_methodology_page_presents_expert_led_research_across_all_outputs() -> None:
+    template = METHODOLOGY_PAGE.read_text(encoding="utf-8")
+    shortcodes = SHORTCODES.read_text(encoding="utf-8")
+    css = THEME_CSS.read_text(encoding="utf-8")
+
+    for required_copy in (
+        "Industry experts",
+        "LinkedIn perspectives",
+        "reports, briefings, signals",
+        "Research grounding",
+        "Quality assessment",
+    ):
+        assert required_copy in template
+
+    assert "ml-methodology-ledger" in template
+    assert "ml-methodology-proof-band" in template
+    assert ".ml-methodology-ledger" in css
+    assert ".ml-methodology-proof-band" in css
+    assert "The pipeline combines" not in shortcodes
+    assert "expert commentary" in shortcodes
 
 
 def test_homepage_uses_compact_deep_blue_briefing_and_source_backed_signals() -> None:

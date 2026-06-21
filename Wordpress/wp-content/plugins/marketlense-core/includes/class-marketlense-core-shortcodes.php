@@ -1501,8 +1501,8 @@ final class Shortcodes
             ],
             'methodology' => [
                 'kicker' => __('Methodology', 'marketlense-core'),
-                'title' => __('How Market Bearing keeps published research connected to its evidence', 'marketlense-core'),
-                'lead' => __('The pipeline combines deterministic extraction, typed validation, and structured editorial shaping so every published report brief is reproducible, reviewable, and source-aware.', 'marketlense-core'),
+                'title' => __('Research that stands up to scrutiny', 'marketlense-core'),
+                'lead' => __('Market Bearing brings together published research, expert commentary, and carefully curated industry perspectives to produce grounded reports, briefings, and signals with a clear source trail.', 'marketlense-core'),
                 'metrics_label' => __('Methodology archive coverage', 'marketlense-core'),
                 'metrics' => [
                     ['entity' => 'reports', 'label' => __('Reports', 'marketlense-core')],
