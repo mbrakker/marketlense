@@ -17,6 +17,15 @@ def test_publisher_directory_reuses_report_filters_without_publisher_select() ->
     assert "ml-publisher-categories" in source
 
 
+def test_unfiltered_publisher_directory_uses_every_content_backed_publisher() -> None:
+    source = DIRECTORY.read_text(encoding="utf-8")
+
+    assert "content_backed_terms(Taxonomies::PUBLISHER_TAXONOMY, 300)" in source
+    assert "$context['has_active_filters']" in source
+    assert "? $this->matching_publisher_items($context['post_ids'])" in source
+    assert ": $this->all_publisher_items($context['post_ids']);" in source
+
+
 def test_archive_browser_exposes_publisher_directory_report_context() -> None:
     source = ARCHIVE.read_text(encoding="utf-8")
     assert "public function publisher_directory_context" in source
