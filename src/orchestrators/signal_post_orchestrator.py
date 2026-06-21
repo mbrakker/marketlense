@@ -119,7 +119,7 @@ def _signal_card_payload(
                 CoverImageReport(
                     schema_version="2.0",
                     file_id=projection.file_id,
-                    title=projection.title,
+                    title=projection.card_content.summary,
                     publisher="Market Lens Signal",
                     report_slug=projection.slug,
                     categories=list(projection.topic_ids),
