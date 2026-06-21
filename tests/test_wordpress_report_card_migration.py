@@ -192,7 +192,10 @@ def test_report_list_queries_paginate_only_canonical_card_contracts() -> None:
     assert "self::META_CARD_SCHEMA_VERSION" in meta
     assert "'value' => '1.0'" in meta
     assert "report_browser_query_args" in report_browser
-    assert "Meta::apply_report_card_query_constraints($query_args)" in report_browser_query_args
+    assert (
+        "Meta::apply_report_card_query_constraints($query_args)"
+        in report_browser_query_args
+    )
     assert "Meta::apply_report_card_query_constraints(" in latest_reports
 
 
@@ -291,10 +294,10 @@ def test_report_card_release_metadata_and_documentation_are_complete() -> None:
         encoding="utf-8"
     )
 
-    assert "Version: 1.6.6" in plugin
-    assert "MARKETLENSE_CORE_VERSION', '1.6.6'" in plugin
-    assert "Stable tag: 1.6.6" in plugin_readme
-    assert "= 1.6.6 =" in plugin_readme
+    assert "Version: 1.6.7" in plugin
+    assert "MARKETLENSE_CORE_VERSION', '1.6.7'" in plugin
+    assert "Stable tag: 1.6.7" in plugin_readme
+    assert "= 1.6.7 =" in plugin_readme
     assert "Version: 1.5.11" in theme
 
     for required_text in (

@@ -127,6 +127,7 @@ namespace MarketLense\Core {
     final class Post_Type
     {
         public const POST_TYPE = 'ml_report';
+        public const SIGNAL_POST_TYPE = 'ml_signal';
         public const BRIEFING_POST_TYPE = 'ml_briefing';
 
         /**

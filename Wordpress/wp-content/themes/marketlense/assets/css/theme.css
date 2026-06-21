@@ -11151,6 +11151,80 @@ body {
 @media (prefers-reduced-motion: reduce) { .ml-signal-card { transition: none; } }
 /* END canonical signal cards */
 
+/* BEGIN unified entity-card size contract */
+.ml-card--small .ml-card__media,
+.ml-briefing-card--small .ml-briefing-card__media,
+.ml-signal-card--small .ml-signal-card__media {
+  aspect-ratio: 16 / 9;
+}
+
+.ml-card__link > p:empty,
+.ml-briefing-card__link > p:empty,
+.ml-signal-card__link > p:empty,
+.ml-card__media > br,
+.ml-briefing-card__media > br,
+.ml-signal-card__media > br {
+  display: none;
+}
+
+.ml-card--medium .ml-card__link,
+.ml-briefing-card--medium .ml-briefing-card__link,
+.ml-signal-card--medium .ml-signal-card__link {
+  grid-template-columns: minmax(13rem, 36%) minmax(0, 1fr);
+  grid-template-rows: none;
+}
+
+.ml-card--large .ml-card__link,
+.ml-briefing-card--large .ml-briefing-card__link,
+.ml-signal-card--large .ml-signal-card__link {
+  grid-template-columns: minmax(16rem, 40%) minmax(0, 1fr);
+  grid-template-rows: none;
+}
+
+.ml-card--medium .ml-card__media,
+.ml-card--large .ml-card__media,
+.ml-briefing-card--medium .ml-briefing-card__media,
+.ml-briefing-card--large .ml-briefing-card__media,
+.ml-signal-card--medium .ml-signal-card__media,
+.ml-signal-card--large .ml-signal-card__media {
+  align-self: stretch;
+  aspect-ratio: auto;
+  border-radius: 1rem 0 0 1rem;
+}
+
+.ml-card--medium .ml-card__cover,
+.ml-card--large .ml-card__cover,
+.ml-briefing-card--medium .ml-briefing-card__cover,
+.ml-briefing-card--large .ml-briefing-card__cover,
+.ml-signal-card--medium .ml-signal-card__cover,
+.ml-signal-card--large .ml-signal-card__cover {
+  object-fit: contain;
+}
+
+@media (max-width: 782px) {
+  .ml-card--medium .ml-card__link,
+  .ml-card--large .ml-card__link,
+  .ml-briefing-card--medium .ml-briefing-card__link,
+  .ml-briefing-card--large .ml-briefing-card__link,
+  .ml-signal-card--medium .ml-signal-card__link,
+  .ml-signal-card--large .ml-signal-card__link {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .ml-card--medium .ml-card__media,
+  .ml-card--large .ml-card__media,
+  .ml-briefing-card--medium .ml-briefing-card__media,
+  .ml-briefing-card--large .ml-briefing-card__media,
+  .ml-signal-card--medium .ml-signal-card__media,
+  .ml-signal-card--large .ml-signal-card__media {
+    align-self: auto;
+    aspect-ratio: 16 / 10;
+    border-radius: 1rem 1rem 0 0;
+  }
+}
+/* END unified entity-card size contract */
+
 /* Reusable report filter rail */
 .ml-report-filter-header {
   display: flex;
