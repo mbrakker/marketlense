@@ -20,6 +20,9 @@ def test_publisher_directory_uses_the_report_archive_layout_without_a_publisher_
     assert "ml-publisher-categories" in source
     assert "ml-publisher-directory-eyebrow" in source
     assert "ml-publisher-directory-card__footer" in source
+    assert "publisher_description_sentence" in source
+    assert "ml-publisher-quality__label" in source
+    assert "ml-publisher-categories__label" in source
 
 
 def test_unfiltered_publisher_directory_uses_every_content_backed_publisher() -> None:

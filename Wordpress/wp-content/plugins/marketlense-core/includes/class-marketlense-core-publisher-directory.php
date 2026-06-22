@@ -166,6 +166,7 @@ final class Publisher_Directory
         $score = get_term_meta($term->term_id, Taxonomies::PUBLISHER_REPORT_VALUE_SCORE_META, true);
         $band = (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_REPORT_VALUE_BAND_META, true);
         $sample = (int) get_term_meta($term->term_id, Taxonomies::PUBLISHER_REPORT_VALUE_SAMPLE_SIZE_META, true);
+        $description = $this->publisher_description_sentence($term->description);
         $categories = $item['categories'];
         arsort($categories);
         $key_categories = array_slice(array_keys($categories), 0, 3);
@@ -188,7 +189,7 @@ final class Publisher_Directory
                 </div>
                 <div>
                     <h2><?php if (! is_wp_error($profile_url)) : ?><a href="<?php echo esc_url((string) $profile_url); ?>"><?php endif; ?><?php echo esc_html($term->name); ?><?php if (! is_wp_error($profile_url)) : ?></a><?php endif; ?></h2>
-                    <?php if ($term->description !== '') : ?><p class="ml-directory-description"><?php echo esc_html(wp_trim_words(wp_strip_all_tags($term->description), 22, '…')); ?></p><?php endif; ?>
+                    <?php if ($description !== '') : ?><p class="ml-directory-description"><?php echo esc_html($description); ?></p><?php endif; ?>
                 </div>
             </div>
             <ul class="ml-publisher-directory-facts" aria-label="<?php esc_attr_e('Represented content', 'marketlense-core'); ?>">
@@ -197,12 +198,15 @@ final class Publisher_Directory
                 <li><strong><?php echo esc_html(number_format_i18n($item['signals'])); ?></strong><span><?php esc_html_e('Signals', 'marketlense-core'); ?></span></li>
             </ul>
             <?php if (is_numeric($score) && $band !== '' && $sample > 0) : ?>
-                <p class="ml-publisher-quality"><strong><?php echo esc_html(number_format_i18n((float) $score, 1)); ?></strong><span><?php echo esc_html(sprintf(__('%1$s report value · %2$d assessed', 'marketlense-core'), ucfirst($band), $sample)); ?></span></p>
+                <div class="ml-publisher-quality">
+                    <div class="ml-publisher-quality__score"><span class="ml-publisher-quality__label"><?php esc_html_e('Report quality', 'marketlense-core'); ?></span><strong><?php echo esc_html(number_format_i18n((float) $score, 1)); ?></strong><span class="ml-publisher-quality__unit">/100</span></div>
+                    <span class="ml-publisher-quality__copy"><?php echo esc_html(sprintf(__('%1$s assessment · %2$d reports', 'marketlense-core'), ucfirst($band), $sample)); ?></span>
+                </div>
             <?php endif; ?>
             <?php if ($key_categories !== []) : ?>
                 <div class="ml-publisher-categories" aria-label="<?php esc_attr_e('Key report categories', 'marketlense-core'); ?>">
-                    <?php foreach ($key_categories as $category) : ?><span><?php echo esc_html($category); ?></span><?php endforeach; ?>
-                    <?php if ($additional_categories > 0) : ?><span>+<?php echo esc_html((string) $additional_categories); ?></span><?php endif; ?>
+                    <p class="ml-publisher-categories__label"><?php esc_html_e('Coverage', 'marketlense-core'); ?></p>
+                    <div class="ml-publisher-categories__chips"><?php foreach ($key_categories as $category) : ?><span><?php echo esc_html($category); ?></span><?php endforeach; ?><?php if ($additional_categories > 0) : ?><span>+<?php echo esc_html((string) $additional_categories); ?></span><?php endif; ?></div>
                 </div>
             <?php endif; ?>
             <div class="ml-publisher-directory-card__footer">
@@ -225,5 +229,21 @@ final class Publisher_Directory
             }
         }
         return $letters !== '' ? $letters : strtoupper(substr(trim($name), 0, 2));
+    }
+
+    private function publisher_description_sentence(string $description): string
+    {
+        $clean = trim(wp_strip_all_tags($description));
+        $clean = preg_replace('/\s+/', ' ', $clean) ?? '';
+        $clean = preg_replace('/(?<=[a-z])(?=[A-Z][a-z])/', ' ', $clean) ?? '';
+        if ($clean === '') {
+            return '';
+        }
+
+        if (preg_match('/^(.+?[.!?])(?:\s|$)/u', $clean, $matches) === 1) {
+            return trim((string) $matches[1]);
+        }
+
+        return wp_trim_words($clean, 28, '…');
     }
 }

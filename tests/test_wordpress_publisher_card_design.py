@@ -10,3 +10,5 @@ def test_publisher_cards_have_a_distinct_institutional_identity_and_footer() -> 
 
     assert ".ml-publisher-directory-eyebrow" in css
     assert ".ml-publisher-directory-card__footer" in css
+    assert ".ml-publisher-quality__label" in css
+    assert "minmax(min(100%, 19rem), 1fr)" in css

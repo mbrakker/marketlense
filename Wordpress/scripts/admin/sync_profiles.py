@@ -23,6 +23,7 @@ from ..wp_rest_common import WordPressRestClient, fail, load_rest_settings_from_
 
 PROFILE_CONFIG_ENV = "PUBLISHER_PROFILE_PATH"
 DEFAULT_CONFIG_NAME = "publisher-profiles.json"
+ICON_INLINE_FETCH_ENV = "PUBLISHER_ICON_INLINE_FETCH"
 PUBLISHER_TAXONOMY = "ml_publisher"
 REQUIRED_PROFILE_META_KEYS = {
     "ml_publisher_homepage",
@@ -86,7 +87,19 @@ def ensure_term(client: WordPressRestClient, *, slug: str, name: str) -> int:
 def update_term_profile(
     client: WordPressRestClient, *, term_id: int, payload: dict[str, object], name: str
 ) -> None:
-    updated = client.post(f"wp/v2/{PUBLISHER_TAXONOMY}/{term_id}", payload=payload)
+    try:
+        updated = client.post(f"wp/v2/{PUBLISHER_TAXONOMY}/{term_id}", payload=payload)
+    except RuntimeError as exc:
+        if "ml_publisher_homepage" not in str(exc):
+            raise
+        retry_payload = dict(payload)
+        retry_meta = dict(payload.get("meta", {}))
+        retry_meta.pop("ml_publisher_homepage", None)
+        retry_payload["meta"] = retry_meta
+        updated = client.post(
+            f"wp/v2/{PUBLISHER_TAXONOMY}/{term_id}", payload=retry_payload
+        )
+        print(f"Retried publisher profile without homepage meta: {name}")
     updated_id = int(updated.get("id", 0))
     if updated_id != term_id:
         raise RuntimeError(f"Failed to update publisher profile for '{name}'")
@@ -96,7 +109,7 @@ def update_term_profile(
 def main() -> None:
     script_root = Path(__file__).resolve().parent.parent
     config_path = Path(
-        os.getenv(PROFILE_CONFIG_ENV, str(script_root / "config" / DEFAULT_CONFIG_NAME))
+        os.getenv(PROFILE_CONFIG_ENV, str(script_root.parent / "config" / DEFAULT_CONFIG_NAME))
     )
 
     try:
@@ -123,15 +136,20 @@ def main() -> None:
             PublicPublisherReportValueAggregateRequest(schema_version="1.0", db_path=app_settings.reports_db, published_file_ids=published_file_ids), score_ctx
         )
         aggregates = {item.publisher_name.casefold(): item for item in aggregate_response.aggregates}
+        inline_icons = should_inline_icon_sources()
         quality_updates = 0
         quality_unavailable = 0
         for row in rows:
             term_id = term_ids[row.name.casefold()]
             payload = build_term_payload(row)
-            payload["meta"]["ml_publisher_icon_source"] = inline_icon_source(
-                raw_icon_source=row.icon_source,
-                download_url=resolve_icon_download_url(row),
-                publisher_name=row.name,
+            payload["meta"]["ml_publisher_icon_source"] = (
+                inline_icon_source(
+                    raw_icon_source=row.icon_source,
+                    download_url=resolve_icon_download_url(row),
+                    publisher_name=row.name,
+                )
+                if inline_icons
+                else row.icon_source
             )
             aggregate = aggregates.get(row.name.casefold())
             if aggregate is not None:
@@ -219,6 +237,15 @@ def assert_publisher_profile_meta_ready(client: WordPressRestClient) -> None:
             + ", ".join(missing_keys)
             + ". Deploy the updated marketlense-core plugin before running profile sync."
         )
+
+
+def should_inline_icon_sources() -> bool:
+    return os.getenv(ICON_INLINE_FETCH_ENV, "1").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
 
 
 def inline_icon_source(

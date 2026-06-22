@@ -36,3 +36,12 @@ def test_profile_sync_publishes_only_registered_public_report_value_meta() -> No
     ):
         assert key in sync
         assert key in taxonomy
+
+
+def test_profile_sync_can_update_quality_without_refetching_existing_logos() -> None:
+    sync = SYNC.read_text(encoding="utf-8")
+
+    assert 'PUBLISHER_ICON_INLINE_FETCH' in sync
+    assert 'script_root.parent / "config"' in sync
+    assert "retry_payload" in sync
+    assert "ml_publisher_homepage" in sync
