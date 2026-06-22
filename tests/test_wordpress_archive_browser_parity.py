@@ -34,6 +34,16 @@ def test_shared_browser_exposes_controls_and_size_selectable_cards() -> None:
     assert "$this->signal_card_renderer->render($signal, $card_size)" in source
 
 
+def test_generic_archives_keep_their_canonical_filter_query_reader() -> None:
+    source = ARCHIVE_BROWSER.read_text(encoding="utf-8")
+    start = source.index("public function render")
+    end = source.index("public function publisher_directory_context", start)
+    render_method = source[start:end]
+
+    assert "$this->selected_filters()" in render_method
+    assert "$this->selected_publisher_directory_filters()" not in render_method
+
+
 def test_shared_archive_marker_receives_reports_geometry() -> None:
     css = THEME_CSS.read_text(encoding="utf-8")
 

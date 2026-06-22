@@ -56,7 +56,7 @@ final class Archive_Browser
         $show_filters = $this->to_bool_flag($atts['show_filters']);
         $show_pagination = $this->to_bool_flag($atts['show_pagination']);
         $card_size = in_array($atts['card_size'], ['small', 'medium', 'large'], true) ? $atts['card_size'] : 'small';
-        $filters = $this->selected_publisher_directory_filters();
+        $filters = $this->selected_filters();
         $sort = $this->selected_sort();
         $archive_url = $this->archive_url($definition);
         $query = new \WP_Query($this->query_args($definition, $filters, $per_page, $this->current_page(), $sort));
@@ -136,7 +136,7 @@ final class Archive_Browser
     public function publisher_directory_context(): array
     {
         $definition = $this->definition(self::REPORTS);
-        $filters = $this->selected_filters();
+        $filters = $this->selected_publisher_directory_filters();
         $filters['publisher'] = '';
         $post_ids = $this->facet_ids($definition, $filters, 'publisher');
         $this->enqueue_filter_assets();

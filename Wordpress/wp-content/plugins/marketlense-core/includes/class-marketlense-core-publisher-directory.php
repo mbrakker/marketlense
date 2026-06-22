@@ -173,7 +173,10 @@ final class Publisher_Directory
         ?>
         <article class="ml-directory-card ml-publisher-directory-card ml-publisher-directory-card--small">
             <div class="ml-publisher-directory-card-topline">
-                <p class="ml-directory-count"><?php echo esc_html($is_filtered ? sprintf(_n('%d matching report', '%d matching reports', $item['matching_reports'], 'marketlense-core'), $item['matching_reports']) : sprintf(_n('%d published report', '%d published reports', $item['reports'], 'marketlense-core'), $item['reports'])); ?></p>
+                <div>
+                    <p class="ml-publisher-directory-eyebrow"><?php esc_html_e('Research publisher', 'marketlense-core'); ?></p>
+                    <p class="ml-directory-count"><?php echo esc_html($is_filtered ? sprintf(_n('%d matching report', '%d matching reports', $item['matching_reports'], 'marketlense-core'), $item['matching_reports']) : sprintf(_n('%d published report', '%d published reports', $item['reports'], 'marketlense-core'), $item['reports'])); ?></p>
+                </div>
                 <span class="ml-publisher-directory-rank">#<?php echo esc_html((string) $rank); ?></span>
             </div>
             <div class="ml-publisher-directory-card-identity">
@@ -202,7 +205,9 @@ final class Publisher_Directory
                     <?php if ($additional_categories > 0) : ?><span>+<?php echo esc_html((string) $additional_categories); ?></span><?php endif; ?>
                 </div>
             <?php endif; ?>
-            <?php if (! is_wp_error($profile_url)) : ?><a class="ml-text-link ml-publisher-directory-link" href="<?php echo esc_url((string) $profile_url); ?>"><?php esc_html_e('View publisher profile', 'marketlense-core'); ?><span aria-hidden="true">→</span></a><?php endif; ?>
+            <div class="ml-publisher-directory-card__footer">
+                <?php if (! is_wp_error($profile_url)) : ?><a class="ml-text-link ml-publisher-directory-link" href="<?php echo esc_url((string) $profile_url); ?>"><?php esc_html_e('View publisher profile', 'marketlense-core'); ?><span aria-hidden="true">→</span></a><?php endif; ?>
+            </div>
         </article>
         <?php
     }

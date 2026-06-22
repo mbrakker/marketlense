@@ -18,6 +18,8 @@ def test_publisher_directory_uses_the_report_archive_layout_without_a_publisher_
     assert "PUBLISHER_REPORT_VALUE_SCORE_META" in source
     assert "PUBLISHER_REPORT_VALUE_SAMPLE_SIZE_META" in source
     assert "ml-publisher-categories" in source
+    assert "ml-publisher-directory-eyebrow" in source
+    assert "ml-publisher-directory-card__footer" in source
 
 
 def test_unfiltered_publisher_directory_uses_every_content_backed_publisher() -> None:
@@ -40,3 +42,13 @@ def test_archive_browser_exposes_publisher_directory_report_context() -> None:
     assert "$filters['publisher'] = '';" in source
     assert "'has_active_filters'" in source
     assert "Meta::apply_report_card_query_constraints" in source
+
+
+def test_publisher_directory_context_reads_only_its_namespaced_filter_parameters() -> None:
+    source = ARCHIVE.read_text(encoding="utf-8")
+    start = source.index("public function publisher_directory_context")
+    end = source.index("public function render_publisher_directory_utility_bar", start)
+    context = source[start:end]
+
+    assert "$this->selected_publisher_directory_filters()" in context
+    assert "$this->selected_filters()" not in context
