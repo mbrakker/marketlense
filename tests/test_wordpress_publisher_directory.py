@@ -34,6 +34,9 @@ def test_archive_browser_exposes_publisher_directory_report_context() -> None:
     assert "public function publisher_directory_context" in source
     assert "public function render_publisher_directory_utility_bar" in source
     assert "public function render_publisher_directory_filter_sidebar" in source
+    assert "private function selected_publisher_directory_filters" in source
+    assert "ml_publisher_topic" in source
+    assert "ml_publisher_search" in source
     assert "$filters['publisher'] = '';" in source
     assert "'has_active_filters'" in source
     assert "Meta::apply_report_card_query_constraints" in source

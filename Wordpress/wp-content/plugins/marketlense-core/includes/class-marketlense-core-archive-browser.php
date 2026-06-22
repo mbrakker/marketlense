@@ -56,7 +56,7 @@ final class Archive_Browser
         $show_filters = $this->to_bool_flag($atts['show_filters']);
         $show_pagination = $this->to_bool_flag($atts['show_pagination']);
         $card_size = in_array($atts['card_size'], ['small', 'medium', 'large'], true) ? $atts['card_size'] : 'small';
-        $filters = $this->selected_filters();
+        $filters = $this->selected_publisher_directory_filters();
         $sort = $this->selected_sort();
         $archive_url = $this->archive_url($definition);
         $query = new \WP_Query($this->query_args($definition, $filters, $per_page, $this->current_page(), $sort));
@@ -165,13 +165,13 @@ final class Archive_Browser
         <div class="ml-report-browser-utility-bar">
             <form class="ml-report-search-form" method="get" action="<?php echo esc_url($directory_url); ?>" data-ml-live-filter-form>
                 <span class="screen-reader-text" data-ml-filter-status aria-live="polite"></span>
-                <?php $this->render_hidden_inputs($this->filter_args($filters, ['search'])); ?>
+                <?php $this->render_hidden_inputs($this->publisher_directory_filter_args($filters, ['search'])); ?>
                 <label class="ml-report-search-field" for="ml_publisher_directory_search">
                     <span><?php esc_html_e('Search reports', 'marketlense-core'); ?></span>
-                    <input id="ml_publisher_directory_search" name="s" type="search" value="<?php echo esc_attr($filters['search']); ?>" placeholder="<?php esc_attr_e('Search reports', 'marketlense-core'); ?>" data-ml-live-filter-input>
+                    <input id="ml_publisher_directory_search" name="ml_publisher_search" type="search" value="<?php echo esc_attr($filters['search']); ?>" placeholder="<?php esc_attr_e('Search reports', 'marketlense-core'); ?>" data-ml-live-filter-input>
                 </label>
             </form>
-            <?php $this->render_active_filters($directory_url, $filters, 'latest'); ?>
+            <?php $this->render_active_publisher_directory_filters($directory_url, $filters); ?>
         </div>
         <?php
         return (string) ob_get_clean();
@@ -195,11 +195,11 @@ final class Archive_Browser
                         <div class="ml-report-filter-header"><div><p class="ml-section-kicker"><?php esc_html_e('Filters', 'marketlense-core'); ?></p><h2 class="ml-report-browser-title"><?php esc_html_e('Refine publishers', 'marketlense-core'); ?></h2></div></div>
                         <form class="ml-report-filter-form" method="get" action="<?php echo esc_url($directory_url); ?>" data-ml-live-filter-form>
                             <span class="screen-reader-text" data-ml-filter-status aria-live="polite"></span>
-                            <?php $this->render_hidden_inputs($this->filter_args($filters, ['topic', 'period', 'region'])); ?>
+                            <?php $this->render_hidden_inputs($this->publisher_directory_filter_args($filters, ['topic', 'period', 'region'])); ?>
                             <div class="ml-report-filter-grid">
-                                <?php $this->render_term_select('ml_publisher_directory_topic', 'category', __('Category', 'marketlense-core'), __('All categories', 'marketlense-core'), $filters['topic'], $context['topics']); ?>
-                                <?php $this->render_value_select('ml_publisher_directory_period', 'ml_period', __('Period', 'marketlense-core'), __('All periods', 'marketlense-core'), $filters['period'], $context['periods']); ?>
-                                <?php $this->render_value_select('ml_publisher_directory_region', 'ml_region', __('Region', 'marketlense-core'), __('All regions', 'marketlense-core'), $filters['region'], $context['regions']); ?>
+                                <?php $this->render_term_select('ml_publisher_directory_topic', 'ml_publisher_topic', __('Category', 'marketlense-core'), __('All categories', 'marketlense-core'), $filters['topic'], $context['topics']); ?>
+                                <?php $this->render_value_select('ml_publisher_directory_period', 'ml_publisher_period', __('Period', 'marketlense-core'), __('All periods', 'marketlense-core'), $filters['period'], $context['periods']); ?>
+                                <?php $this->render_value_select('ml_publisher_directory_region', 'ml_publisher_region', __('Region', 'marketlense-core'), __('All regions', 'marketlense-core'), $filters['region'], $context['regions']); ?>
                             </div>
                         </form>
                     </div>
@@ -225,6 +225,12 @@ final class Archive_Browser
     private function selected_filters(): array
     {
         return ['topic' => sanitize_title((string) ($_GET['category'] ?? '')), 'publisher' => sanitize_title((string) ($_GET['ml_publisher'] ?? '')), 'period' => sanitize_text_field((string) ($_GET['ml_period'] ?? '')), 'region' => sanitize_text_field((string) ($_GET['ml_region'] ?? '')), 'search' => sanitize_text_field((string) ($_GET['s'] ?? ''))];
+    }
+
+    /** @return array{topic:string,publisher:string,period:string,region:string,search:string} */
+    private function selected_publisher_directory_filters(): array
+    {
+        return ['topic' => sanitize_title((string) ($_GET['ml_publisher_topic'] ?? '')), 'publisher' => '', 'period' => sanitize_text_field((string) ($_GET['ml_publisher_period'] ?? '')), 'region' => sanitize_text_field((string) ($_GET['ml_publisher_region'] ?? '')), 'search' => sanitize_text_field((string) ($_GET['ml_publisher_search'] ?? ''))];
     }
 
     /** @param array{slug:string,post_type:string|list<string>,schema_key:string,singular:string,plural:string,browser_label:string} $definition @param array{topic:string,publisher:string,period:string,region:string,search:string} $filters @return array<string,mixed> */
@@ -299,7 +305,9 @@ final class Archive_Browser
     private function render_value_select(string $id, string $name, string $label, string $all_label, string $selected, array $values): void { ?><label class="ml-report-filter-field" for="<?php echo esc_attr($id); ?>"><span><?php echo esc_html($label); ?></span><select id="<?php echo esc_attr($id); ?>" name="<?php echo esc_attr($name); ?>"><option value=""><?php echo esc_html($all_label); ?></option><?php foreach ($values as $item) : ?><option value="<?php echo esc_attr($item['value']); ?>" <?php selected($selected, $item['value']); ?>><?php echo esc_html(sprintf('%1$s (%2$d)', $item['value'], $item['count'])); ?></option><?php endforeach; ?></select></label><?php }
     private function render_hidden_inputs(array $args): void { foreach ($args as $key => $value) { if ($value !== '') { printf('<input type="hidden" name="%1$s" value="%2$s">', esc_attr($key), esc_attr($value)); } } }
     private function filter_args(array $filters, array $exclude): array { $args = ['category' => $filters['topic'], 'ml_publisher' => $filters['publisher'], 'ml_period' => $filters['period'], 'ml_region' => $filters['region'], 's' => $filters['search']]; foreach ($exclude as $key) { unset($args[$key === 'topic' ? 'category' : ($key === 'publisher' ? 'ml_publisher' : ($key === 'search' ? 's' : 'ml_' . $key))]); } return $args; }
+    private function publisher_directory_filter_args(array $filters, array $exclude): array { $args = ['ml_publisher_topic' => $filters['topic'], 'ml_publisher_period' => $filters['period'], 'ml_publisher_region' => $filters['region'], 'ml_publisher_search' => $filters['search']]; foreach ($exclude as $key) { unset($args['ml_publisher_' . ($key === 'topic' ? 'topic' : ($key === 'search' ? 'search' : $key))]); } return $args; }
     private function render_active_filters(string $archive_url, array $filters, string $sort): void { $active = array_filter($filters); if ($active === []) { return; } ?><div class="ml-active-filters" aria-label="<?php esc_attr_e('Active filters', 'marketlense-core'); ?>"><span class="ml-active-filters-label"><?php esc_html_e('Selected', 'marketlense-core'); ?></span><?php foreach ($active as $key => $value) : ?><a class="ml-filter-chip" href="<?php echo esc_url(add_query_arg($this->filter_args($filters, [$key]), $archive_url)); ?>"><?php echo esc_html(ucfirst($key) . ': ' . $value); ?></a><?php endforeach; ?><a class="ml-filter-chip ml-filter-chip-clear" href="<?php echo esc_url($archive_url); ?>"><?php esc_html_e('Clear all', 'marketlense-core'); ?></a></div><?php }
+    private function render_active_publisher_directory_filters(string $directory_url, array $filters): void { $active = array_filter($filters); if ($active === []) { return; } ?><div class="ml-active-filters" aria-label="<?php esc_attr_e('Active filters', 'marketlense-core'); ?>"><span class="ml-active-filters-label"><?php esc_html_e('Selected', 'marketlense-core'); ?></span><?php foreach ($active as $key => $value) : ?><a class="ml-filter-chip" href="<?php echo esc_url(add_query_arg($this->publisher_directory_filter_args($filters, [$key]), $directory_url)); ?>"><?php echo esc_html(ucfirst($key) . ': ' . $value); ?></a><?php endforeach; ?><a class="ml-filter-chip ml-filter-chip-clear" href="<?php echo esc_url($directory_url); ?>"><?php esc_html_e('Clear all', 'marketlense-core'); ?></a></div><?php }
     private function render_sort_controls(string $archive_url, array $filters, string $selected_sort, string $plural): void { ?><nav class="ml-report-sort-controls" aria-label="<?php echo esc_attr(sprintf(__('Sort %s', 'marketlense-core'), strtolower($plural))); ?>"><?php foreach (['latest' => __('Newest', 'marketlense-core'), 'oldest' => __('Oldest', 'marketlense-core'), 'title' => __('A-Z', 'marketlense-core')] as $sort => $label) : ?><a class="ml-report-sort-control <?php echo $selected_sort === $sort ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg(array_merge($this->filter_args($filters, []), $sort === 'latest' ? [] : ['ml_sort' => $sort]), $archive_url)); ?>"><span class="ml-report-sort-icon ml-report-sort-icon--<?php echo esc_attr($sort); ?>" aria-hidden="true"></span><span class="ml-report-sort-tooltip"><?php echo esc_html($label); ?></span></a><?php endforeach; ?></nav><?php }
     private function render_pagination(\WP_Query $query, array $filters): void { if ($query->max_num_pages <= 1) { return; } $links = paginate_links(['base' => str_replace('999999999', '%#%', (string) esc_url(get_pagenum_link(999999999))), 'current' => $this->current_page(), 'total' => $query->max_num_pages, 'type' => 'array', 'add_args' => $this->filter_args($filters, [])]); if (! is_array($links)) { return; } echo '<nav class="ml-pagination" aria-label="' . esc_attr__('Pagination', 'marketlense-core') . '"><ul>'; foreach ($links as $link) { echo '<li>' . wp_kses_post($link) . '</li>'; } echo '</ul></nav>'; }
     private function selected_sort(): string { $sort = sanitize_key((string) ($_GET['ml_sort'] ?? 'latest')); return in_array($sort, ['latest', 'oldest', 'title'], true) ? $sort : 'latest'; }

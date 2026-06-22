@@ -9166,27 +9166,6 @@ body {
   display: none;
 }
 
-.ml-publishers-report-strip .ml-card__media {
-  display: none;
-}
-
-.ml-publishers-report-strip .ml-card--small .ml-card__link {
-  grid-template-rows: minmax(0, 1fr);
-}
-
-.ml-publishers-report-strip .ml-card--small .ml-card__body {
-  min-height: 21rem;
-  padding: 1.25rem;
-}
-
-.ml-publishers-report-strip .ml-card__title {
-  font-family: var(--ml-font-sans);
-  font-size: 1.05rem;
-  font-weight: 760;
-  letter-spacing: 0;
-  line-height: 1.22;
-}
-
 .ml-report-filter-field input[type="search"] {
   width: 100%;
   min-height: 2.8rem;
