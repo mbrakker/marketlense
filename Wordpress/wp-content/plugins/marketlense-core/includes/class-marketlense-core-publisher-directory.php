@@ -34,9 +34,11 @@ final class Publisher_Directory
 
         ob_start();
         ?>
-        <section class="ml-publisher-browser ml-report-browser" aria-label="<?php esc_attr_e('Publisher directory', 'marketlense-core'); ?>">
-            <?php echo $this->browser->render_publisher_directory_filters($context, $directory_url); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-            <div class="ml-publisher-directory-results">
+        <section class="ml-archive-browser-page ml-reports-archive-page ml-publisher-browser ml-report-browser" aria-label="<?php esc_attr_e('Publisher directory', 'marketlense-core'); ?>">
+            <?php echo $this->browser->render_publisher_directory_utility_bar($context, $directory_url); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+            <div class="ml-report-browser-layout">
+                <?php echo $this->browser->render_publisher_directory_filter_sidebar($context, $directory_url); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                <div class="ml-report-browser-results ml-publisher-directory-results">
                 <div class="ml-report-browser-head">
                     <p class="ml-report-browser-summary">
                         <span class="ml-report-browser-summary-value"><?php echo esc_html((string) count($items)); ?> <?php esc_html_e('publishers', 'marketlense-core'); ?></span>
@@ -48,10 +50,11 @@ final class Publisher_Directory
                 <?php else : ?>
                     <div class="ml-directory-list ml-publisher-directory-list">
                         <?php foreach ($items as $rank => $item) : ?>
-                            <?php $this->render_card($item, $rank + 1); ?>
+                            <?php $this->render_card($item, $rank + 1, $context['has_active_filters']); ?>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
+                </div>
             </div>
         </section>
         <?php
@@ -155,7 +158,7 @@ final class Publisher_Directory
     }
 
     /** @param array{term:\WP_Term,reports:int,briefings:int,signals:int,total:int,matching_reports:int,categories:array<string,int>} $item */
-    private function render_card(array $item, int $rank): void
+    private function render_card(array $item, int $rank, bool $is_filtered): void
     {
         $term = $item['term'];
         $profile_url = get_term_link($term);
@@ -170,7 +173,7 @@ final class Publisher_Directory
         ?>
         <article class="ml-directory-card ml-publisher-directory-card ml-publisher-directory-card--small">
             <div class="ml-publisher-directory-card-topline">
-                <p class="ml-directory-count"><?php echo esc_html(sprintf(_n('%d matching report', '%d matching reports', $item['matching_reports'], 'marketlense-core'), $item['matching_reports'])); ?></p>
+                <p class="ml-directory-count"><?php echo esc_html($is_filtered ? sprintf(_n('%d matching report', '%d matching reports', $item['matching_reports'], 'marketlense-core'), $item['matching_reports']) : sprintf(_n('%d published report', '%d published reports', $item['reports'], 'marketlense-core'), $item['reports'])); ?></p>
                 <span class="ml-publisher-directory-rank">#<?php echo esc_html((string) $rank); ?></span>
             </div>
             <div class="ml-publisher-directory-card-identity">

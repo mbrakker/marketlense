@@ -157,7 +157,7 @@ final class Archive_Browser
      *
      * @param array{filters:array{topic:string,publisher:string,period:string,region:string,search:string},post_ids:list<int>,topics:list<\WP_Term>,periods:list<array{value:string,count:int}>,regions:list<array{value:string,count:int}>,has_active_filters:bool} $context
      */
-    public function render_publisher_directory_filters(array $context, string $directory_url): string
+    public function render_publisher_directory_utility_bar(array $context, string $directory_url): string
     {
         $filters = $context['filters'];
         ob_start();
@@ -173,6 +173,20 @@ final class Archive_Browser
             </form>
             <?php $this->render_active_filters($directory_url, $filters, 'latest'); ?>
         </div>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    /**
+     * Renders the report archive filter sidebar for the publisher directory.
+     *
+     * @param array{filters:array{topic:string,publisher:string,period:string,region:string,search:string},post_ids:list<int>,topics:list<\WP_Term>,periods:list<array{value:string,count:int}>,regions:list<array{value:string,count:int}>,has_active_filters:bool} $context
+     */
+    public function render_publisher_directory_filter_sidebar(array $context, string $directory_url): string
+    {
+        $filters = $context['filters'];
+        ob_start();
+        ?>
         <aside class="ml-report-browser-sidebar ml-publisher-directory-sidebar">
             <div class="ml-report-browser-sidebar-card">
                 <details class="ml-report-filter-panel" open>
