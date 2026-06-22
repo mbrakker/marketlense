@@ -22,6 +22,8 @@ Reusable shortcode entrypoints are registered by `Wordpress/wp-content/plugins/m
 - `[ml_topics_directory]`, `[ml_publishers_directory]`, and `[ml_publisher_profile]`: taxonomy and publisher discovery surfaces.
 
 Publisher directory cards use the same live report search, category, period, and region filter model as the report archive, but intentionally omit the publisher selector because publishers are the result dimension. The directory uses its own URL parameter namespace, so a report-archive query cannot narrow publisher cards accidentally. With no directory filters, it shows every content-backed publisher; active directory filters reduce that set to publishers with matching reports. Cards show existing publisher profile text and logo metadata, matching report categories, and a report-value aggregate only after `sync-publisher-profiles-rest.py` has matched scored report sources to public WordPress report `ml_file_id` values. Running that sync after deploying the plugin is the in-place migration for already published publisher cards; it preserves the existing terms and profile metadata.
+
+Run the profile migration as `python -m Wordpress.scripts.admin.sync_profiles`. Set `PUBLISHER_ICON_INLINE_FETCH=0` when existing remote logo sources should be preserved without waiting to inline them; the sync still updates the published profile text and report-value aggregates.
 - `[ml_button_link]`, `[ml_inline_link]`, `[ml_primary_nav]`, and `[ml_footer_nav]`: navigation and link helpers.
 
 ## Dynamic Publishing Model
