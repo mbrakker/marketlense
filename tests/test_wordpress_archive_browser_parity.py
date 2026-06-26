@@ -40,8 +40,17 @@ def test_generic_archives_keep_their_canonical_filter_query_reader() -> None:
     end = source.index("public function publisher_directory_context", start)
     render_method = source[start:end]
 
-    assert "$this->selected_filters()" in render_method
+    assert "$this->contextual_filters((string) $atts['context'])" in render_method
     assert "$this->selected_publisher_directory_filters()" not in render_method
+
+
+def test_auto_context_scopes_report_browser_to_the_current_publisher_term() -> None:
+    source = ARCHIVE_BROWSER.read_text(encoding="utf-8")
+
+    assert "'context' => 'auto'" in source
+    assert "$this->contextual_filters((string) $atts['context'])" in source
+    assert "is_tax(Taxonomies::PUBLISHER_TAXONOMY)" in source
+    assert "$filters['publisher'] = $term->slug;" in source
 
 
 def test_shared_archive_marker_receives_reports_geometry() -> None:

@@ -444,6 +444,95 @@ class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
                     ctx,
                 )
 
+    def test_link_report_to_source_sets_missing_lineage_without_overwriting(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_report_source_link")
+            upsert_metadata(
+                ReportMetadataUpsertRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    file_id="legacy-file-id",
+                    title="Legacy Report",
+                    publisher="Example Publisher",
+                    taxonomy=[],
+                    source_url=None,
+                    html_path=None,
+                    md5="legacy-md5",
+                ),
+                ctx,
+            )
+            record_report_source(
+                ReportSourceRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_domain="drive.google.com",
+                    report_name="Legacy Report",
+                    landing_page_url="https://drive.google.com/open?id=legacy-file-id",
+                    downloaded_at_utc="2026-06-23T00:00:00Z",
+                    md5="legacy-md5",
+                    publisher_name="Example Publisher",
+                ),
+                ctx,
+            )
+
+            linked = link_report_to_source(
+                ReportSourceLinkRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    file_id="legacy-file-id",
+                    source_md5="legacy-md5",
+                ),
+                ctx,
+            )
+            repeated = link_report_to_source(
+                ReportSourceLinkRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    file_id="legacy-file-id",
+                    source_md5="legacy-md5",
+                ),
+                ctx,
+            )
+
+            self.assertTrue(linked.linked)
+            self.assertFalse(repeated.linked)
+            conn = sqlite3.connect(db_path)
+            try:
+                source_md5 = conn.execute(
+                    "SELECT source_md5 FROM reports WHERE file_id=?",
+                    ("legacy-file-id",),
+                ).fetchone()[0]
+            finally:
+                conn.close()
+            self.assertEqual("legacy-md5", source_md5)
+            record_report_source(
+                ReportSourceRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_domain="drive.google.com",
+                    report_name="Replacement Report",
+                    landing_page_url="https://drive.google.com/open?id=replacement-file-id",
+                    downloaded_at_utc="2026-06-23T00:00:00Z",
+                    md5="replacement-md5",
+                    publisher_name="Example Publisher",
+                ),
+                ctx,
+            )
+            with self.assertRaises(AppError) as error:
+                link_report_to_source(
+                    ReportSourceLinkRequest(
+                        schema_version="1.0",
+                        db_path=db_path,
+                        file_id="legacy-file-id",
+                        source_md5="replacement-md5",
+                    ),
+                    ctx,
+                )
+            self.assertEqual("report_source_link_conflict", error.exception.code)
+
     def test_record_report_value_score_and_list_resource_history(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")

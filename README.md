@@ -557,6 +557,19 @@ What `sync-publisher-profiles.sh` does:
 - Inlines remote publisher icons to `data:image/...` payloads when possible
 - Is idempotent and safe to rerun after refreshing the Notion-derived JSON snapshot
 
+For legacy published reports that predate report-source scoring, restore their
+source lineage and deterministic value assessment before syncing publisher
+quality badges:
+
+```powershell
+python -m Wordpress.scripts.admin.backfill_published_report_sources
+$env:PUBLISHER_ICON_INLINE_FETCH='0'
+python -m Wordpress.scripts.admin.sync_profiles
+```
+
+The backfill only fills an empty `reports.source_md5` after recording the
+matching source row. Existing lineage is never replaced.
+
 `publisher-profiles.json` is generated from the Notion `REPORT SOURCES` snapshot and captures icon source, publisher name, homepage link, self-presentation text, and insights/report link per publisher.
 
 When the provisioning scripts fall back to REST, they auto-discover both `/wp-json/` and `?rest_route=/` API roots and honor `WP_SSL_VERIFY` / `WP_CA_BUNDLE_PATH` for hosted sites with custom TLS.
@@ -732,6 +745,21 @@ python -m src.cli update-wp-categories
 Use `python -m src.cli publish-wp --force-report-cards` only for canonical
 report-card migrations. It uploads the three generated cover assets and updates
 the matched existing WordPress report post in place.
+
+For a one-time repair of every report that is already published in WordPress,
+run the targeted admin migration instead:
+
+```powershell
+python Wordpress/scripts/marketlense_admin.py backfill-published-report-cards
+```
+
+It reads the live `posts` and `ml_report` records, resolves only their existing
+Drive file IDs, regenerates valid report-card artifacts where needed, and
+updates every existing record in place. Shared Drive sources are intentionally
+deduplicated for generation but every published WordPress record is updated.
+Legacy cover art is derived from high-signal published fields (title, publisher,
+categories, and the opening report copy) so sparse migrated reports receive
+content-specific geometries instead of the generic system-matrix fallback.
 
 Medium and large report cards stretch their cover panel to the full desktop card
 height. Their generated portrait covers use display-aware typography floors so

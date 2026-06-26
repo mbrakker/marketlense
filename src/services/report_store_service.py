@@ -33,6 +33,7 @@ from src.services._report_store_service.publishers import (
 )
 from src.services._report_store_service.sources import (
     get_report_download_drive_folder,
+    link_report_to_source,
     list_report_source_quality_history,
     list_public_publisher_report_value_aggregates,
     record_discovered_report_source,
@@ -47,6 +48,7 @@ __all__ = [
     "get_publisher_inventory_recovery_cache_record",
     "get_publisher_inventory_state",
     "get_report_download_drive_folder",
+    "link_report_to_source",
     "list_metadata",
     "list_report_source_quality_history",
     "list_public_publisher_report_value_aggregates",

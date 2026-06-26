@@ -54,7 +54,7 @@ _SESSION_POOL = _SessionPool()
 
 def _post_type_endpoint(post_type: str) -> str:
     token = str(post_type).strip().strip("/")
-    return token or "posts"
+    return "posts" if token in {"", "post"} else token
 
 
 def _requests_verify(*, ssl_verify: bool, ca_bundle_path: Optional[str]) -> bool | str:

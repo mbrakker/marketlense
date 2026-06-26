@@ -48,6 +48,7 @@ final class Archive_Browser
                 'show_filters' => '1',
                 'show_pagination' => '1',
                 'card_size' => 'small',
+                'context' => 'auto',
             ],
             $attrs,
             'ml_' . $definition['slug'] . '_index'
@@ -56,7 +57,7 @@ final class Archive_Browser
         $show_filters = $this->to_bool_flag($atts['show_filters']);
         $show_pagination = $this->to_bool_flag($atts['show_pagination']);
         $card_size = in_array($atts['card_size'], ['small', 'medium', 'large'], true) ? $atts['card_size'] : 'small';
-        $filters = $this->selected_filters();
+        $filters = $this->contextual_filters((string) $atts['context']);
         $sort = $this->selected_sort();
         $archive_url = $this->archive_url($definition);
         $query = new \WP_Query($this->query_args($definition, $filters, $per_page, $this->current_page(), $sort));
@@ -225,6 +226,20 @@ final class Archive_Browser
     private function selected_filters(): array
     {
         return ['topic' => sanitize_title((string) ($_GET['category'] ?? '')), 'publisher' => sanitize_title((string) ($_GET['ml_publisher'] ?? '')), 'period' => sanitize_text_field((string) ($_GET['ml_period'] ?? '')), 'region' => sanitize_text_field((string) ($_GET['ml_region'] ?? '')), 'search' => sanitize_text_field((string) ($_GET['s'] ?? ''))];
+    }
+
+    /** @return array{topic:string,publisher:string,period:string,region:string,search:string} */
+    private function contextual_filters(string $context): array
+    {
+        $filters = $this->selected_filters();
+        if (sanitize_key($context) !== 'auto' || ! is_tax(Taxonomies::PUBLISHER_TAXONOMY)) {
+            return $filters;
+        }
+        $term = get_queried_object();
+        if ($term instanceof \WP_Term && $term->taxonomy === Taxonomies::PUBLISHER_TAXONOMY) {
+            $filters['publisher'] = $term->slug;
+        }
+        return $filters;
     }
 
     /** @return array{topic:string,publisher:string,period:string,region:string,search:string} */

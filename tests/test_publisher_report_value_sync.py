@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from Wordpress.scripts.admin.sync_profiles import published_file_ids_by_term
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACTS = ROOT / "src" / "contracts" / "_report_store" / "sources.py"
@@ -41,7 +43,17 @@ def test_profile_sync_publishes_only_registered_public_report_value_meta() -> No
 def test_profile_sync_can_update_quality_without_refetching_existing_logos() -> None:
     sync = SYNC.read_text(encoding="utf-8")
 
-    assert 'PUBLISHER_ICON_INLINE_FETCH' in sync
+    assert "PUBLISHER_ICON_INLINE_FETCH" in sync
     assert 'script_root.parent / "config"' in sync
     assert "retry_payload" in sync
     assert "ml_publisher_homepage" in sync
+
+
+def test_published_file_ids_by_term_uses_actual_published_post_assignment() -> None:
+    assert published_file_ids_by_term(
+        [
+            {"meta": {"ml_file_id": "report-a"}, "ml_publisher": [12, 19]},
+            {"meta": {"ml_file_id": "report-b"}, "ml_publisher": [12]},
+            {"meta": {}, "ml_publisher": [99]},
+        ]
+    ) == {12: ["report-a", "report-b"], 19: ["report-a"]}

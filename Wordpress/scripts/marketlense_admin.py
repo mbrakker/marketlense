@@ -8,13 +8,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from Wordpress.scripts.admin import provision, seed_homepages, sync_profiles
+from Wordpress.scripts.admin import (
+    backfill_published_report_cards,
+    provision,
+    seed_homepages,
+    sync_profiles,
+)
 
 CommandHandler = Callable[[], None]
 COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "provision": provision.main,
     "seed-homepages": seed_homepages.main,
     "sync-profiles": sync_profiles.main,
+    "backfill-published-report-cards": backfill_published_report_cards.main,
 }
 
 

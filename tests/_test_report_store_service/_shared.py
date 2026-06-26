@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_report_store_service.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent / "test_report_store_service.py"
+)
 
 import os
 
@@ -40,6 +43,7 @@ from src.contracts.report_store import (
     ReportDownloadDriveFolderLookupRequest,
     ReportMetadataDbAccessRequest,
     ReportSourceDiscoveryRecordRequest,
+    ReportSourceLinkRequest,
     ReportSourceQualityHistoryRequest,
     ReportMetadataGetRequest,
     ReportSourceRecordRequest,
@@ -65,6 +69,7 @@ from src.services.report_store_service import (
     get_publisher_inventory_recovery_cache_record,
     list_report_source_quality_history,
     record_discovered_report_source,
+    link_report_to_source,
     record_report_value_score,
     get_publisher_download_route,
     get_publisher_inventory_state,
@@ -88,14 +93,20 @@ if __name__ == "__main__":
     unittest.main()
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

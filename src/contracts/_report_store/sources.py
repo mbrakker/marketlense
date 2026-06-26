@@ -63,6 +63,44 @@ class ReportSourceRecordResponse:
 
 
 @dataclass(frozen=True)
+class ReportSourceLinkRequest:
+    schema_version: str = field(
+        metadata={"doc": "Report-to-source lineage request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    file_id: str = field(
+        metadata={
+            "doc": "Published report file identifier whose blank source lineage may be filled."
+        }
+    )
+    source_md5: str = field(
+        metadata={
+            "doc": "Existing downloaded report-source checksum to link to the report."
+        }
+    )
+
+
+@dataclass(frozen=True)
+class ReportSourceLinkResponse:
+    schema_version: str = field(
+        metadata={"doc": "Report-to-source lineage response schema version."}
+    )
+    file_id: str = field(
+        metadata={
+            "doc": "Published report file identifier inspected for source lineage."
+        }
+    )
+    source_md5: str = field(
+        metadata={"doc": "Source checksum retained on the report after the operation."}
+    )
+    linked: bool = field(
+        metadata={"doc": "True only when an empty report source lineage was populated."}
+    )
+
+
+@dataclass(frozen=True)
 class ReportDownloadDriveFolderLookupRequest:
     schema_version: str = field(
         metadata={"doc": "Report-download Drive-folder lookup request schema version."}
@@ -423,17 +461,27 @@ class PublicPublisherReportValueAggregateRequest:
     schema_version: str = field(metadata={"doc": "Aggregate request schema version."})
     db_path: str = field(metadata={"doc": "Report metadata SQLite path."})
     published_file_ids: List[str] = field(
-        metadata={"doc": "Public WordPress report file identifiers eligible for aggregation."}
+        metadata={
+            "doc": "Public WordPress report file identifiers eligible for aggregation."
+        }
     )
 
 
 @dataclass(frozen=True)
 class PublicPublisherReportValueAggregate:
     schema_version: str = field(metadata={"doc": "Aggregate schema version."})
-    publisher_name: str = field(metadata={"doc": "Publisher name from scored public reports."})
-    average_score: float = field(metadata={"doc": "Average report-value score from public reports."})
-    value_band: str = field(metadata={"doc": "Canonical report-value band for the average score."})
-    sample_size: int = field(metadata={"doc": "Number of scored public reports in the aggregate."})
+    publisher_name: str = field(
+        metadata={"doc": "Publisher name from scored public reports."}
+    )
+    average_score: float = field(
+        metadata={"doc": "Average report-value score from public reports."}
+    )
+    value_band: str = field(
+        metadata={"doc": "Canonical report-value band for the average score."}
+    )
+    sample_size: int = field(
+        metadata={"doc": "Number of scored public reports in the aggregate."}
+    )
 
 
 @dataclass(frozen=True)

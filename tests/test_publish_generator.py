@@ -872,6 +872,50 @@ def test_publish_html_updates_existing_report_card_post_in_place(
     )
 
 
+def test_publish_html_updates_legacy_post_with_the_report_card_contract(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    settings = replace(settings, wp=replace(settings.wp, post_type="post"))
+    html_path = Path(settings.output_dir) / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text(
+        "<html><head><title>Report</title></head>"
+        "<body>Drive fileId: file123</body></html>",
+        encoding="utf-8",
+    )
+    _write_report_card_fixture(settings, html_path)
+    _add_card_media_responses(wordpress_http)
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/posts/42",
+        status_code=200,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    outcome = pg.publish_html(
+        PublishRequest(
+            schema_version="1.0",
+            html_path=str(html_path),
+            auth_header="Bearer token",
+            file_id="file123",
+            existing_post_id=42,
+        ),
+        settings,
+        run_context,
+    )
+
+    update_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/posts/42"
+    )[0]
+    assert outcome.status == "published"
+    assert update_call.json_data["meta"]["ml_publisher_name"] == "McKinsey & Company"
+    assert update_call.json_data["meta"]["ml_card_schema_version"] == "1.0"
+    assert update_call.json_data["meta"]["ml_card_cover_large_id"] == 303
+
+
 def test_publish_html_resolves_output_root_relative_card_cover_paths(
     publish_settings_factory,
     run_context,

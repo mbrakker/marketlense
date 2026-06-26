@@ -15,6 +15,8 @@ from src.contracts.report_store import (
     ReportSourceQualityHistoryResponse,
     ReportSourceRecordRequest,
     ReportSourceRecordResponse,
+    ReportSourceLinkRequest,
+    ReportSourceLinkResponse,
     ReportValueScoreRecordRequest,
     PublicPublisherReportValueAggregate,
     PublicPublisherReportValueAggregateRequest,
@@ -29,14 +31,119 @@ from .common import _normalize_optional_url_key, logger
 from .connection import _metadata_conn
 
 
+def link_report_to_source(
+    request: ReportSourceLinkRequest, ctx: RunContext
+) -> ReportSourceLinkResponse:
+    db_path = request.db_path.strip()
+    file_id = request.file_id.strip()
+    source_md5 = request.source_md5.strip().lower()
+    if not db_path:
+        raise AppError(
+            code="report_source_link_db_missing",
+            message="Report metadata DB path is required for source lineage linking",
+            retryable=False,
+            severity="error",
+        )
+    if not file_id:
+        raise AppError(
+            code="report_source_link_file_id_missing",
+            message="file_id is required for source lineage linking",
+            retryable=False,
+            severity="error",
+        )
+    if not source_md5:
+        raise AppError(
+            code="report_source_link_md5_missing",
+            message="source_md5 is required for source lineage linking",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_link_start",
+            module=logger.name,
+            fields={"db_path": db_path, "file_id": file_id, "source_md5": source_md5},
+        )
+    )
+    with _metadata_conn(db_path, ctx) as conn:
+        source_exists = conn.execute(
+            "SELECT 1 FROM report_sources WHERE md5=? LIMIT 1", (source_md5,)
+        ).fetchone()
+        if source_exists is None:
+            raise AppError(
+                code="report_source_link_source_missing",
+                message="A matching report source is required before source lineage linking",
+                retryable=False,
+                severity="error",
+                context={"file_id": file_id, "source_md5": source_md5},
+            )
+        row = conn.execute(
+            "SELECT source_md5 FROM reports WHERE file_id=?", (file_id,)
+        ).fetchone()
+        if row is None:
+            raise AppError(
+                code="report_source_link_report_missing",
+                message="Report does not exist for source lineage linking",
+                retryable=False,
+                severity="error",
+                context={"file_id": file_id},
+            )
+        existing_md5 = str(row[0] or "").strip().lower()
+        if existing_md5 and existing_md5 != source_md5:
+            raise AppError(
+                code="report_source_link_conflict",
+                message="Report already has different source lineage",
+                retryable=False,
+                severity="error",
+                context={
+                    "file_id": file_id,
+                    "existing_source_md5": existing_md5,
+                    "source_md5": source_md5,
+                },
+            )
+        linked = existing_md5 == ""
+        if linked:
+            conn.execute(
+                "UPDATE reports SET source_md5=?, updated_at=strftime('%s','now') WHERE file_id=?",
+                (source_md5, file_id),
+            )
+    response = ReportSourceLinkResponse(
+        schema_version="1.0",
+        file_id=file_id,
+        source_md5=source_md5,
+        linked=linked,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_link_complete",
+            module=logger.name,
+            fields={"file_id": file_id, "source_md5": source_md5, "linked": linked},
+        )
+    )
+    return response
+
+
 def list_public_publisher_report_value_aggregates(
     request: PublicPublisherReportValueAggregateRequest, ctx: RunContext
 ) -> PublicPublisherReportValueAggregateResponse:
-    file_ids = sorted({value.strip() for value in request.published_file_ids if value.strip()})
+    file_ids = sorted(
+        {value.strip() for value in request.published_file_ids if value.strip()}
+    )
     if not file_ids:
-        return PublicPublisherReportValueAggregateResponse(schema_version="1.0", aggregates=[])
+        return PublicPublisherReportValueAggregateResponse(
+            schema_version="1.0", aggregates=[]
+        )
     if not request.db_path.strip():
-        raise AppError(code="public_publisher_report_value_db_missing", message="Report metadata DB path is required for public publisher report values", retryable=False, severity="error")
+        raise AppError(
+            code="public_publisher_report_value_db_missing",
+            message="Report metadata DB path is required for public publisher report values",
+            retryable=False,
+            severity="error",
+        )
     placeholders = ",".join("?" for _ in file_ids)
     with _metadata_conn(request.db_path, ctx) as conn:
         rows = conn.execute(
@@ -53,9 +160,27 @@ def list_public_publisher_report_value_aggregates(
     aggregates = []
     for publisher_name, score, sample_size in rows:
         average = round(float(score), 3)
-        band = "high" if average >= 78 else "medium" if average >= 60 else "low" if average >= 40 else "weak"
-        aggregates.append(PublicPublisherReportValueAggregate(schema_version="1.0", publisher_name=str(publisher_name).strip(), average_score=average, value_band=band, sample_size=int(sample_size)))
-    return PublicPublisherReportValueAggregateResponse(schema_version="1.0", aggregates=aggregates)
+        band = (
+            "high"
+            if average >= 78
+            else "medium"
+            if average >= 60
+            else "low"
+            if average >= 40
+            else "weak"
+        )
+        aggregates.append(
+            PublicPublisherReportValueAggregate(
+                schema_version="1.0",
+                publisher_name=str(publisher_name).strip(),
+                average_score=average,
+                value_band=band,
+                sample_size=int(sample_size),
+            )
+        )
+    return PublicPublisherReportValueAggregateResponse(
+        schema_version="1.0", aggregates=aggregates
+    )
 
 
 def record_report_value_score(

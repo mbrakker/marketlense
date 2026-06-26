@@ -127,7 +127,7 @@ def publish_html(
         )
     base_url = settings.wp.site_url.rstrip("/")
     card_manifest = None
-    if settings.wp.post_type == "ml_report" and not file_id.startswith("cross-report:"):
+    if settings.wp.post_type in {"ml_report", "post", "posts"} and not file_id.startswith("cross-report:"):
         card_manifest = _load_report_card_manifest(
             request.html_path,
             settings.output_dir,
@@ -680,6 +680,7 @@ def _report_card_post_meta(
     media_ids: dict[str, int],
 ) -> dict[str, object]:
     return {
+        "ml_publisher_name": manifest.publisher,
         "ml_time_period": manifest.covered_period,
         "ml_region": manifest.geography_label,
         "ml_card_schema_version": manifest.schema_version,
