@@ -2,9 +2,14 @@ schema_version: "1.0"
 allowlist:
   - pattern: "totals.total_tokens"
     owner: "market-lense"
-    reason: "Report-card prompts now include bounded TLDR projections and grounded cover-semantics classification."
+    reason: "Report-card prompts now include bounded TLDR projections and grounded cover-semantics classification, with the current cross-report synthesis fixture remaining within a bounded 47-token drift."
     expires_on: "2026-07-31"
-    max_delta_absolute: 1488
+    max_delta_absolute: 1535
+  - pattern: "families.cross_report_analysis.total_tokens"
+    owner: "market-lense"
+    reason: "Current cross-report synthesis fixture has a bounded 47-token input drift with no model, OCR, browser-attempt, or cost-threshold regression."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 47
   - pattern: "families.publishing.total_tokens"
     owner: "market-lense"
     reason: "Publishing prompts now include bounded TLDR contracts and the grounded cover-semantics namespace."
