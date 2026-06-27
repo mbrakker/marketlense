@@ -796,6 +796,7 @@ def test_publish_html_uploads_three_card_covers_and_sends_registered_meta(
     assert post_call.json_data["meta"] == {
         "ml_time_period": "Q2 2026",
         "ml_region": "Global",
+        "ml_publisher_name": "McKinsey & Company",
         "ml_card_schema_version": "1.0",
         "ml_card_title_scale": "long",
         "ml_card_tldr_compact": "Complete compact TLDR.",

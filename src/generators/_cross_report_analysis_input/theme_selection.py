@@ -13,7 +13,7 @@ from dataclasses import replace
 from datetime import date
 from typing import Any
 
-from src.contracts.files import ListDirectoryRequest, ReadTextRequest
+from src.contracts.files import ListDirectoryRequest, ReadTextFilesRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
@@ -338,12 +338,16 @@ def _load_recent_theme_metadata(
     skipped_old = 0
     skipped_undated = 0
     skipped_invalid_date = 0
-    for entry in response.entries:
-        text_response = file_service.read_text(
-            ReadTextRequest(schema_version="1.0", path=entry.path), ctx
-        )
+    text_response = file_service.read_text_files(
+        ReadTextFilesRequest(
+            schema_version="1.0",
+            paths=[entry.path for entry in response.entries],
+        ),
+        ctx,
+    )
+    for file_response in text_response.files:
         try:
-            payload = json.loads(text_response.content)
+            payload = json.loads(file_response.content)
         except json.JSONDecodeError as exc:
             raise AppError(
                 code="cross_report_recent_artifact_invalid",
@@ -351,7 +355,7 @@ def _load_recent_theme_metadata(
                 cause=exc,
                 retryable=False,
                 severity="error",
-                context={"path": entry.path},
+                context={"path": file_response.path},
             ) from exc
         generated_at_raw = payload.get("generated_at_utc") or payload.get(
             "metadata", {}

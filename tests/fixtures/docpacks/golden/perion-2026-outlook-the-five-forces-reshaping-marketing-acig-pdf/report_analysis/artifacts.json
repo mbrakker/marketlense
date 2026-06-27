@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "Investigation Scope Overview",
     "Timeframe and Jurisdiction",
@@ -44,7 +44,8 @@
         "evidence": "findings: []; doc_map.not_found_reason: \"model_returned_no_json\"",
         "pages": []
       }
-    ]
+    ],
+    "card_tldr_compact": "Only a default investigation scope is available."
   },
   "insights_candidates": [
     {
@@ -313,5 +314,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "network",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "country"
   }
 }

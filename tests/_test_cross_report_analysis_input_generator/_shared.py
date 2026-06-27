@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_cross_report_analysis_input_generator.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent
+    / "test_cross_report_analysis_input_generator.py"
+)
 
 import json
 
@@ -27,6 +31,7 @@ from src.contracts.cross_report_analysis import (
 from src.contracts.files import (
     DirectoryEntry,
     ListDirectoryResponse,
+    ReadTextFilesResponse,
     ReadTextResponse,
 )
 
@@ -40,6 +45,7 @@ from src.generators.cross_report_analysis_input_generator import (
     select_cross_report_source_reports,
     validate_cross_report_publishability,
 )
+
 
 def _request(
     *, max_source_reports: int = 2, diagnostic: bool = False
@@ -59,6 +65,7 @@ def _request(
         override_publishability=False,
         publication_mode="generate_only",
     )
+
 
 def _candidate(
     report_id: str,
@@ -95,6 +102,7 @@ def _candidate(
         rejection_reasons=[],
     )
 
+
 def _projected_data(
     candidates: list[CrossReportSourceReportCandidate],
 ) -> CrossReportProjectedDataReadResponse:
@@ -110,12 +118,14 @@ def _projected_data(
         excluded_report_counts={},
     )
 
+
 def _events(caplog) -> list[dict]:
     return [
         json.loads(record.message)
         for record in caplog.records
         if record.name == "market_lense.cross_report_analysis_input_generator"
     ]
+
 
 def _selected_source(
     report_id: str,
@@ -143,6 +153,7 @@ def _selected_source(
         tags=tags,
     )
 
+
 def _source_selection(
     sources: list[CrossReportSelectedSourceReport],
 ) -> CrossReportSourceSelectionResult:
@@ -154,6 +165,7 @@ def _source_selection(
         cleaned_filters={"tag_filters": ["ai"], "category_filters": ["retail"]},
         excluded_report_counts={},
     )
+
 
 def _evidence(
     evidence_id: str,
@@ -174,6 +186,7 @@ def _evidence(
         text=text or f"{content_class} text for {report_id}",
         source_metadata={"pages": [1], "quality": "fixture"},
     )
+
 
 def _raw_metric(
     metric_id: str,
@@ -196,14 +209,20 @@ def _raw_metric(
     )
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

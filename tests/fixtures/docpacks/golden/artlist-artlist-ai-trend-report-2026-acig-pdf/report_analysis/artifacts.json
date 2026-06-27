@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "From access to intelligence",
     "The In-the-Box revolution",
@@ -43,7 +43,8 @@
         "evidence": "Physical experiences offer a powerful counter to digital sameness and fatigue and can spark an IRL → URL flywheel.",
         "pages": []
       }
-    ]
+    ],
+    "card_tldr_compact": "AI commoditizes polish while vision, orchestration and authenticity define creative advantage."
   },
   "insights_candidates": [
     {
@@ -280,5 +281,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "comparison",
+    "direction": "diverging",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "unknown"
   }
 }

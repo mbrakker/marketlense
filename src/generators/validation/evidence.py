@@ -399,6 +399,8 @@ def load_pdf_text_from_cache(cache_dir: str, md5: str | None, ctx: RunContext) -
             ctx,
         )
     except AppError as exc:  # pragma: no cover - best effort
+        if exc.retryable:
+            raise
         logger.info(
             log_event(
                 ctx,

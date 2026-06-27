@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "Media challenges and opportunities",
     "Rise of generative AI",
@@ -54,7 +54,8 @@
           29
         ]
       }
-    ]
+    ],
+    "card_tldr_compact": "UK media experts prioritize digital video while tightening AI, CTV and retail-media controls."
   },
   "insights_candidates": [
     {
@@ -329,5 +330,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "network",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "grid",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "country"
   }
 }

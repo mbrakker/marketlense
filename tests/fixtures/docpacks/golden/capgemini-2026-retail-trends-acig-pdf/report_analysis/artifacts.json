@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "Moments over merchandise",
     "Year of the private label",
@@ -41,7 +41,8 @@
         "evidence": "Only 36% trust Gen-AI product suggestions today, but 66% trust a digital assistant more when it provides clear explanations.",
         "pages": []
       }
-    ]
+    ],
+    "card_tldr_compact": "Experience-led retail, private labels, searchless shopping, AI and trust reshape 2026 buying."
   },
   "insights_candidates": [
     {
@@ -292,5 +293,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "comparison",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "global"
   }
 }

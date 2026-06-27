@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "Escape Velocity fantasies and fandoms",
     "Electric Dreams emotional AI and slop",
@@ -41,7 +41,8 @@
         "evidence": "40% say the online world feels so stressful they try to switch off; 50% try to ration their own screen time.",
         "pages": []
       }
-    ]
+    ],
+    "card_tldr_compact": "AI intimacy and analog relief push brands to collaborate with culture."
   },
   "insights_candidates": [
     {
@@ -299,5 +300,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "trend",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "country"
   }
 }

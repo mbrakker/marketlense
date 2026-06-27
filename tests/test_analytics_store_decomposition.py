@@ -122,3 +122,24 @@ def test_analytics_store_facade_import_order() -> None:
         and "._analytics_store." in node.module
     ]
     assert imports == ["common", "projection_write", "cross_report_read", "signals"]
+
+
+def test_projection_writer_batches_multirow_upserts() -> None:
+    source = (PACKAGE / "projection_write.py").read_text(encoding="utf-8")
+
+    for function_name in (
+        "_upsert_sections",
+        "_upsert_findings",
+        "_upsert_metrics",
+        "_upsert_quotes",
+        "_upsert_claims",
+        "_upsert_tags",
+        "_upsert_categories",
+        "_upsert_figures",
+        "_upsert_vector_queue",
+    ):
+        function_source = source.split(f"def {function_name}", 1)[1].split("\ndef ", 1)[
+            0
+        ]
+        assert ".executemany(" in function_source
+        assert ".execute(" not in function_source

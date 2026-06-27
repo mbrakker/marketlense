@@ -61,9 +61,10 @@ def test_briefing_counters_have_source_and_evidence_icons() -> None:
 
 
 def test_briefing_archive_uses_one_shared_card_grid() -> None:
-    source = (SHORTCODES.parent / "class-marketlense-core-archive-browser.php").read_text(
-        encoding="utf-8"
-    )
+    source = (
+        SHORTCODES.parent / "class-marketlense-core-archive-browser.php"
+    ).read_text(encoding="utf-8")
 
     assert 'class="ml-report-browser-grid"' in source
-    assert "$this->briefing_card_renderer->render($briefing, 'small')" in source
+    assert "$this->briefing_card_renderer->render($briefing, $card_size)" in source
+    assert "'card_size' => 'small'" in source

@@ -333,85 +333,7 @@ def _run_ocr_chunk(
     logger: logging.Logger,
     chunk_ctx,
 ) -> OpenAIPdfOcrResponse:
-    last_error: AppError | None = None
-    for attempt_index, candidate_model in enumerate(attempted_models, start=1):
-        logger.info(
-            log_event(
-                chunk_ctx,
-                role="generator",
-                event="ocr_model_attempt_start",
-                module=logger.name,
-                fields={
-                    "chunk_index": chunk.chunk_index,
-                    "source_page_start": chunk.start_page_number,
-                    "source_page_end": chunk.end_page_number,
-                    "attempt": attempt_index,
-                    "requested_model": candidate_model,
-                    "attempted_models": attempted_models,
-                },
-            )
-        )
-        try:
-            response = llm_client.openai_ocr_pdf(
-                OpenAIPdfOcrRequest(
-                    schema_version="1.0",
-                    api_key=runtime.settings.openai_api_key,
-                    pdf_path=chunk.chunk_pdf_path,
-                    model=candidate_model,
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
-                    timeout_seconds=runtime.settings.pdf_text_ocr_timeout_seconds,
-                    cost_ledger_path=runtime.settings.cost_ledger_path,
-                    cost_daily_path=runtime.settings.cost_daily_path,
-                    model_pricing=runtime.settings.model_pricing,
-                ),
-                chunk_ctx,
-            )
-        except AppError as exc:
-            last_error = exc
-            logger.warning(
-                log_event(
-                    chunk_ctx,
-                    role="generator",
-                    event="ocr_model_attempt_failed",
-                    module=logger.name,
-                    fields={
-                        "chunk_index": chunk.chunk_index,
-                        "source_page_start": chunk.start_page_number,
-                        "source_page_end": chunk.end_page_number,
-                        "attempt": attempt_index,
-                        "requested_model": candidate_model,
-                        "attempted_models": attempted_models,
-                        "error_code": exc.code,
-                        "error_message": exc.message,
-                        "retryable": exc.retryable,
-                        "fallback_remaining": attempt_index < len(attempted_models),
-                    },
-                )
-            )
-            continue
-        logger.info(
-            log_event(
-                chunk_ctx,
-                role="generator",
-                event="ocr_model_response",
-                module=logger.name,
-                fields={
-                    "chunk_index": chunk.chunk_index,
-                    "source_page_start": chunk.start_page_number,
-                    "source_page_end": chunk.end_page_number,
-                    "attempt": attempt_index,
-                    "requested_model": candidate_model,
-                    "resolved_model": response.model,
-                    "request_id": response.request_id or "",
-                    "raw_response": response.raw_text,
-                    "page_count": len(response.pages),
-                },
-            )
-        )
-        return response
-
-    if last_error is None:
+    if not attempted_models:
         raise AppError(
             code="pdf_text_ocr_failed",
             message="OCR fallback failed",
@@ -423,21 +345,96 @@ def _run_ocr_chunk(
                 "chunk_index": chunk.chunk_index,
             },
         )
-    raise AppError(
-        code="pdf_text_ocr_failed",
-        message="OCR fallback failed",
-        cause=last_error,
-        retryable=last_error.retryable,
-        severity=last_error.severity,
-        context={
-            "ocr_error_code": last_error.code,
-            "ocr_error_message": last_error.message,
-            "attempted_models": attempted_models,
-            "chunk_index": chunk.chunk_index,
-            "source_page_start": chunk.start_page_number,
-            "source_page_end": chunk.end_page_number,
-        },
-    ) from last_error
+
+    candidate_model = attempted_models[0]
+    logger.info(
+        log_event(
+            chunk_ctx,
+            role="generator",
+            event="ocr_model_attempt_start",
+            module=logger.name,
+            fields={
+                "chunk_index": chunk.chunk_index,
+                "source_page_start": chunk.start_page_number,
+                "source_page_end": chunk.end_page_number,
+                "attempt": 1,
+                "requested_model": candidate_model,
+                "attempted_models": attempted_models,
+            },
+        )
+    )
+    try:
+        response = llm_client.openai_ocr_pdf(
+            OpenAIPdfOcrRequest(
+                schema_version="1.0",
+                api_key=runtime.settings.openai_api_key,
+                pdf_path=chunk.chunk_pdf_path,
+                model=candidate_model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                timeout_seconds=runtime.settings.pdf_text_ocr_timeout_seconds,
+                cost_ledger_path=runtime.settings.cost_ledger_path,
+                cost_daily_path=runtime.settings.cost_daily_path,
+                model_pricing=runtime.settings.model_pricing,
+            ),
+            chunk_ctx,
+        )
+    except AppError as exc:
+        logger.warning(
+            log_event(
+                chunk_ctx,
+                role="generator",
+                event="ocr_model_attempt_failed",
+                module=logger.name,
+                fields={
+                    "chunk_index": chunk.chunk_index,
+                    "source_page_start": chunk.start_page_number,
+                    "source_page_end": chunk.end_page_number,
+                    "attempt": 1,
+                    "requested_model": candidate_model,
+                    "attempted_models": attempted_models,
+                    "error_code": exc.code,
+                    "error_message": exc.message,
+                    "retryable": exc.retryable,
+                },
+            )
+        )
+        raise AppError(
+            code="pdf_text_ocr_failed",
+            message="OCR fallback failed",
+            cause=exc,
+            retryable=exc.retryable,
+            severity=exc.severity,
+            context={
+                "ocr_error_code": exc.code,
+                "ocr_error_message": exc.message,
+                "attempted_models": attempted_models,
+                "chunk_index": chunk.chunk_index,
+                "source_page_start": chunk.start_page_number,
+                "source_page_end": chunk.end_page_number,
+            },
+        ) from exc
+
+    logger.info(
+        log_event(
+            chunk_ctx,
+            role="generator",
+            event="ocr_model_response",
+            module=logger.name,
+            fields={
+                "chunk_index": chunk.chunk_index,
+                "source_page_start": chunk.start_page_number,
+                "source_page_end": chunk.end_page_number,
+                "attempt": 1,
+                "requested_model": candidate_model,
+                "resolved_model": response.model,
+                "request_id": response.request_id or "",
+                "raw_response": response.raw_text,
+                "page_count": len(response.pages),
+            },
+        )
+    )
+    return response
 
 
 def _map_chunk_pages(

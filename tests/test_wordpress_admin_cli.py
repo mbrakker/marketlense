@@ -15,7 +15,7 @@ def test_wordpress_admin_cli_routes_each_command_to_one_handler() -> None:
     for command in handlers:
         assert marketlense_admin.main([command], handlers=handlers) == 0
 
-    assert calls == ["provision", "seed-homepages", "sync-profiles"]
+    assert calls == list(marketlense_admin.COMMAND_HANDLERS)
 
 
 def test_wordpress_admin_cli_dry_run_has_no_external_side_effect(capsys) -> None:

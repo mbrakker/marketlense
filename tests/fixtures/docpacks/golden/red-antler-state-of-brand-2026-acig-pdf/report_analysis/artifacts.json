@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "To Optimize or Opt Out?",
     "Turn Data Into Doing",
@@ -54,7 +54,8 @@
           3
         ]
       }
-    ]
+    ],
+    "card_tldr_compact": "Brands that choose a clear side win the Dichotomy Economy."
   },
   "insights_candidates": [
     {
@@ -312,5 +313,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "cycle",
+    "direction": "neutral",
+    "evidence_density": "metric_rich",
+    "domain_layer": "grid",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "unknown"
   }
 }

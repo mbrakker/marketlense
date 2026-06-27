@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "Navigating Uncertainty Without Overreacting",
     "Weaker Dollar Implications",
@@ -54,7 +54,8 @@
           18
         ]
       }
-    ]
+    ],
+    "card_tldr_compact": "Diversification, bonds, non-US assets and disciplined AI exposure anchor 2026 positioning."
   },
   "insights_candidates": [
     {
@@ -366,5 +367,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "uncertainty",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "global"
   }
 }

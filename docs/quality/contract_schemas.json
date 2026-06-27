@@ -3035,6 +3035,9 @@
           "additionalProperties": {},
           "type": "object"
         },
+        "decision_focus": {
+          "type": "string"
+        },
         "evidence": {
           "items": {
             "$ref": "#/$defs/src.contracts._cross_report_analysis.selection.CrossReportEvidenceReference"
@@ -3052,6 +3055,12 @@
         },
         "executive_summary": {
           "type": "string"
+        },
+        "executive_takeaways": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "model": {
           "type": "string"
@@ -3114,7 +3123,9 @@
         "evidence_map",
         "prompt_hashes",
         "model",
-        "cost_summary"
+        "cost_summary",
+        "decision_focus",
+        "executive_takeaways"
       ],
       "type": "object"
     },
@@ -3177,6 +3188,10 @@
         "body_html": {
           "type": "string"
         },
+        "briefing_card": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "canonical_artifact_path": {
           "type": "string"
         },
@@ -3234,6 +3249,10 @@
         },
         "selected_theme_id": {
           "type": "string"
+        },
+        "signal_card": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "slug": {
           "type": "string"
@@ -8069,6 +8088,76 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.sources.PublicPublisherReportValueAggregate": {
+      "additionalProperties": false,
+      "properties": {
+        "average_score": {
+          "type": "number"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "sample_size": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "value_band": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_name",
+        "average_score",
+        "value_band",
+        "sample_size"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.PublicPublisherReportValueAggregateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "published_file_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "published_file_ids"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.PublicPublisherReportValueAggregateResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "aggregates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._report_store.sources.PublicPublisherReportValueAggregate"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "aggregates"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.sources.PublisherResourceRankingItem": {
       "additionalProperties": false,
       "properties": {
@@ -8353,6 +8442,54 @@
         "discovered_at_utc",
         "discovered_on_page_number",
         "created_new"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.ReportSourceLinkRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_md5": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "file_id",
+        "source_md5"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.sources.ReportSourceLinkResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "file_id": {
+          "type": "string"
+        },
+        "linked": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_md5": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "file_id",
+        "source_md5",
+        "linked"
       ],
       "type": "object"
     },
@@ -12105,6 +12242,29 @@
       ],
       "type": "object"
     },
+    "src.contracts.cover_images.CoverImageProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "layouts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/src.contracts.cover_images.CoverImageLayout"
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "style": {
+          "$ref": "#/$defs/src.contracts.cover_images.CoverImageStyle"
+        }
+      },
+      "required": [
+        "schema_version",
+        "style",
+        "layouts"
+      ],
+      "type": "object"
+    },
     "src.contracts.cover_images.CoverImageRenderRequest": {
       "additionalProperties": false,
       "properties": {
@@ -12198,6 +12358,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "cover_profile": {
+          "type": "string"
         },
         "file_id": {
           "type": "string"
@@ -12310,12 +12473,9 @@
     "src.contracts.cover_images.CoverImageStyleConfig": {
       "additionalProperties": false,
       "properties": {
-        "defaults": {
-          "$ref": "#/$defs/src.contracts.cover_images.CoverImageStyle"
-        },
-        "layouts": {
+        "profiles": {
           "additionalProperties": {
-            "$ref": "#/$defs/src.contracts.cover_images.CoverImageLayout"
+            "$ref": "#/$defs/src.contracts.cover_images.CoverImageProfile"
           },
           "type": "object"
         },
@@ -12325,8 +12485,7 @@
       },
       "required": [
         "schema_version",
-        "defaults",
-        "layouts"
+        "profiles"
       ],
       "type": "object"
     },
@@ -14758,6 +14917,44 @@
         "schema_version",
         "path",
         "payload"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.ReadTextFilesRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "paths"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.ReadTextFilesResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.files.ReadTextResponse"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "files"
       ],
       "type": "object"
     },
@@ -18414,6 +18611,10 @@
         "body_html": {
           "type": "string"
         },
+        "briefing_card": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "entity_metadata": {
           "anyOf": [
             {
@@ -18455,6 +18656,10 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "signal_card": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "title": {
           "anyOf": [
@@ -21893,6 +22098,42 @@
         "group_count",
         "stale_candidate_count",
         "stale_group_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.signal_cards.SignalCardContent": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "type": "number"
+        },
+        "evidence_count": {
+          "type": "integer"
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/src.contracts.report_cards.CoverFingerprint"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_count": {
+          "type": "integer"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "uncertainty": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "summary",
+        "confidence",
+        "source_count",
+        "evidence_count",
+        "uncertainty",
+        "fingerprint"
       ],
       "type": "object"
     },
@@ -26707,6 +26948,55 @@
       ],
       "type": "object"
     },
+    "src.contracts.wordpress.WordPressCardUpdateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_header": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "ca_bundle_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "featured_media": {
+          "type": "integer"
+        },
+        "meta": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "post_id": {
+          "type": "integer"
+        },
+        "post_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "ssl_verify": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "base_url",
+        "auth_header",
+        "post_id",
+        "featured_media",
+        "meta"
+      ],
+      "type": "object"
+    },
     "src.contracts.wordpress.WordPressMediaPrepareRequest": {
       "additionalProperties": false,
       "properties": {
@@ -27325,55 +27615,6 @@
       ],
       "type": "object"
     },
-    "src.contracts.wordpress.WordPressReportCardUpdateRequest": {
-      "additionalProperties": false,
-      "properties": {
-        "auth_header": {
-          "type": "string"
-        },
-        "base_url": {
-          "type": "string"
-        },
-        "ca_bundle_path": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "featured_media": {
-          "type": "integer"
-        },
-        "meta": {
-          "additionalProperties": {},
-          "type": "object"
-        },
-        "post_id": {
-          "type": "integer"
-        },
-        "post_type": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "ssl_verify": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "schema_version",
-        "base_url",
-        "auth_header",
-        "post_id",
-        "featured_media",
-        "meta"
-      ],
-      "type": "object"
-    },
     "src.contracts.wordpress.WordPressTagEnsureRequest": {
       "additionalProperties": false,
       "properties": {
@@ -27592,6 +27833,9 @@
     "src.contracts.wordpress_entities.SignalPostWorkflowRequest": {
       "additionalProperties": false,
       "properties": {
+        "cover_style_path": {
+          "type": "string"
+        },
         "db_path": {
           "type": "string"
         },
@@ -27624,7 +27868,8 @@
         "request_id",
         "generation_request",
         "db_path",
-        "output_root"
+        "output_root",
+        "cover_style_path"
       ],
       "type": "object"
     },
@@ -27661,6 +27906,9 @@
       "properties": {
         "body_html": {
           "type": "string"
+        },
+        "card_content": {
+          "$ref": "#/$defs/src.contracts.signal_cards.SignalCardContent"
         },
         "confidence": {
           "type": "number"
@@ -27740,7 +27988,8 @@
         "topic_ids",
         "confidence",
         "uncertainty",
-        "validation_status"
+        "validation_status",
+        "card_content"
       ],
       "type": "object"
     }

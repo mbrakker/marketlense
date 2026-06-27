@@ -1,7 +1,22 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from pathlib import Path
+
 from ._shared import *  # noqa: F401,F403
+
+
+def test_source_selection_avoids_resorting_every_diversity_iteration() -> None:
+    source = Path(
+        "src/generators/_cross_report_analysis_input/source_selection.py"
+    ).read_text(encoding="utf-8")
+    function_source = source.split("def _select_diverse_sources", 1)[1].split(
+        "\ndef ", 1
+    )[0]
+
+    assert ".sort(" not in function_source
+    assert "min(rescored, key=sort_key)" in function_source
+
 
 def test_source_selection_is_ranked_deterministic_and_diverse(
     run_context,
@@ -99,6 +114,7 @@ def test_source_selection_is_ranked_deterministic_and_diverse(
     ][0]
     assert complete["fields"]["selected_report_ids"] == ["report-c", "report-b"]
 
+
 def test_source_selection_honors_max_report_cap_and_filters(run_context) -> None:
     projected_data = _projected_data(
         [
@@ -128,6 +144,7 @@ def test_source_selection_honors_max_report_cap_and_filters(run_context) -> None
         for candidate in result.rejected_candidates
     }
     assert rejected["report-b"] == ["tag_filter_mismatch"]
+
 
 def test_source_selection_honors_category_id_filters_when_label_differs(
     run_context,
@@ -161,6 +178,7 @@ def test_source_selection_honors_category_id_filters_when_label_differs(
     ]
     assert result.selected_sources[0].category_ids == ["retail-media"]
 
+
 def test_source_selection_normalizes_whitespace_dates(run_context) -> None:
     request = CrossReportAnalysisRequest(
         **{
@@ -187,6 +205,7 @@ def test_source_selection_normalizes_whitespace_dates(run_context) -> None:
     assert result.cleaned_filters["date_range_start"] == "2026-05-01"
     assert result.cleaned_filters["date_range_end"] == "2026-05-31"
     assert [source.report_id for source in result.selected_sources] == ["report-a"]
+
 
 def test_source_selection_rejects_invalid_date_filters_with_typed_error(
     run_context,
@@ -218,6 +237,7 @@ def test_source_selection_rejects_invalid_date_filters_with_typed_error(
         retryable=False,
         severity="error",
     )
+
 
 def test_source_selection_excludes_non_projected_sources_before_synthesis(
     run_context,
@@ -262,6 +282,7 @@ def test_source_selection_excludes_non_projected_sources_before_synthesis(
         "projection_status_not_projected": 1,
     }
 
+
 def test_source_selection_diagnostic_mode_can_inspect_failed_projection(
     run_context,
 ) -> None:
@@ -283,6 +304,7 @@ def test_source_selection_diagnostic_mode_can_inspect_failed_projection(
 
     assert [source.report_id for source in result.selected_sources] == ["report-b"]
     assert result.rejected_candidates == []
+
 
 def test_source_selection_empty_projected_set_fails_with_typed_error(
     run_context,
@@ -323,6 +345,7 @@ def test_source_selection_empty_projected_set_fails_with_typed_error(
     ][0]
     assert failed["fields"]["excluded_report_counts"] == {"projection_status_failed": 1}
 
+
 def test_theme_selection_uses_explicit_topic_without_auto_theme(
     run_context,
 ) -> None:
@@ -347,6 +370,7 @@ def test_theme_selection_uses_explicit_topic_without_auto_theme(
     assert result.selected_theme.theme_id == "theme-explicit-ai-commerce"
     assert result.selected_theme.source_report_ids == ["report-a"]
     assert result.theme_candidates[0].rationale.startswith("Explicit operator topic")
+
 
 def test_theme_selection_explicit_topic_does_not_load_recent_artifacts(
     run_context,
@@ -383,6 +407,7 @@ def test_theme_selection_explicit_topic_does_not_load_recent_artifacts(
 
     assert result.selected_theme.theme_id == "theme-explicit-ai-commerce"
     assert calls == []
+
 
 def test_theme_selection_auto_generates_ranked_candidates_and_logs(
     run_context,
@@ -460,6 +485,7 @@ def test_theme_selection_auto_generates_ranked_candidates_and_logs(
     assert complete["fields"]["selected_theme_id"] == "theme-tag-ai"
     assert "score_components" in complete["fields"]
 
+
 def test_theme_selection_auto_handles_tag_only_and_category_only_taxonomy(
     run_context,
 ) -> None:
@@ -523,6 +549,7 @@ def test_theme_selection_auto_handles_tag_only_and_category_only_taxonomy(
     assert category_only.selected_theme.matched_tags == []
     assert category_only.selected_theme.matched_categories == ["Retail"]
 
+
 def test_theme_selection_uses_total_taxonomy_sort_for_case_ties(
     run_context,
 ) -> None:
@@ -569,6 +596,7 @@ def test_theme_selection_uses_total_taxonomy_sort_for_case_ties(
     assert category_candidate.matched_tags == ["AI", "ai"]
     assert category_candidate.matched_categories == ["Retail"]
 
+
 def test_theme_selection_fails_when_no_eligible_theme(
     run_context,
     assert_app_error,
@@ -587,6 +615,7 @@ def test_theme_selection_fails_when_no_eligible_theme(
         retryable=False,
         severity="error",
     )
+
 
 def test_theme_variety_downranks_recent_repetition_through_file_service(
     run_context,
@@ -704,6 +733,7 @@ def test_theme_variety_downranks_recent_repetition_through_file_service(
     assert repeated.novelty_score == 0.0
     assert "recent_theme_repetition" in repeated.rejection_risks
     assert "recent_category_repetition:retail" in repeated.rejection_risks
+
 
 __all__ = [
     "test_source_selection_is_ranked_deterministic_and_diverse",

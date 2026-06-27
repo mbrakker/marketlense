@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "EvidencePack Scope Overview",
     "Objectives and Acceptance Criteria",
@@ -44,7 +44,8 @@
         "evidence": "retentionPolicy: retentionPeriod “7 years,” secureDeletionProcedure “Overwrite and cryptographic erase.” Deliverables: “EvidencePack Archive … hash manifest (SHA-256), chain-of-custody logs” and “Acquisition Report.”",
         "pages": []
       }
-    ]
+    ],
+    "card_tldr_compact": "The scope defines controls for preserving high-sensitivity digital evidence."
   },
   "insights_candidates": [],
   "insights_final": [
@@ -175,5 +176,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "flow",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "global"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "Personalización adaptativa en tiempo real",
     "Alineación ética y consumo por valores",
@@ -44,7 +44,8 @@
         "evidence": "La investigación sectorial muestra que la sostenibilidad y la rentabilidad son cada vez más interdependientes.",
         "pages": []
       }
-    ]
+    ],
+    "card_tldr_compact": "Personalización, valores y transparencia concentrarán la ventaja competitiva en 2026."
   },
   "insights_candidates": [
     {
@@ -299,5 +300,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "trend",
+    "direction": "neutral",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "unknown"
   }
 }

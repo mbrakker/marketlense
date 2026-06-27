@@ -43,6 +43,8 @@ from src.contracts.files import (
     PipelineStageCheckpoint,
     PdfCacheTextReadRequest,
     PdfCacheTextReadResponse,
+    ReadTextFilesRequest,
+    ReadTextFilesResponse,
     ReadBytesRequest,
     ReadBytesResponse,
     ReadJsonRequest,
@@ -238,6 +240,39 @@ def read_text(request: ReadTextRequest, ctx: RunContext) -> ReadTextResponse:
         )
     )
     return ReadTextResponse(schema_version="1.0", path=request.path, content=content)
+
+
+def read_text_files(
+    request: ReadTextFilesRequest, ctx: RunContext
+) -> ReadTextFilesResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="read_text_files_start",
+            module=logger.name,
+            fields={"path_count": len(request.paths)},
+        )
+    )
+    responses = [
+        read_text(
+            ReadTextRequest(schema_version=request.schema_version, path=path), ctx
+        )
+        for path in request.paths
+    ]
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="read_text_files_complete",
+            module=logger.name,
+            fields={
+                "path_count": len(request.paths),
+                "total_length": sum(len(response.content) for response in responses),
+            },
+        )
+    )
+    return ReadTextFilesResponse(schema_version="1.0", files=responses)
 
 
 def read_json(request: ReadJsonRequest, ctx: RunContext) -> ReadJsonResponse:

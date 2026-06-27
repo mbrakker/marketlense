@@ -18,6 +18,24 @@ class ReadTextResponse:
 
 
 @dataclass(frozen=True)
+class ReadTextFilesRequest:
+    schema_version: str = field(
+        metadata={"doc": "Read-text-files request schema version."}
+    )
+    paths: List[str] = field(metadata={"doc": "Filesystem paths to read."})
+
+
+@dataclass(frozen=True)
+class ReadTextFilesResponse:
+    schema_version: str = field(
+        metadata={"doc": "Read-text-files response schema version."}
+    )
+    files: List[ReadTextResponse] = field(
+        metadata={"doc": "Text files read in request order."}
+    )
+
+
+@dataclass(frozen=True)
 class ReadJsonRequest:
     schema_version: str = field(metadata={"doc": "Read JSON request schema version."})
     path: str = field(metadata={"doc": "Filesystem path to read and parse as JSON."})

@@ -1,10 +1,11 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [],
   "summary": {
     "tldr": "Insufficient evidence was provided to generate a grounded executive summary.",
     "executive_summary": "The supplied DocMap and evidence packs are empty or unavailable (not_found_reason: model_returned_no_json). Without populated sections, methods, findings, or limitations, no substantiated claims can be made. Please provide a complete DocMap and evidence packs so a concise, evidence-backed executive summary can be produced.",
-    "claim_evidence_map": []
+    "claim_evidence_map": [],
+    "card_tldr_compact": "Insufficient evidence was provided to generate a grounded executive summary."
   },
   "insights_candidates": [
     {
@@ -237,5 +238,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": false
+  },
+  "cover_semantics": {
+    "evidence_shape": "cycle",
+    "direction": "neutral",
+    "evidence_density": "metric_rich",
+    "domain_layer": "grid",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "unknown"
   }
 }

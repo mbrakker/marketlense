@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "Executive Summary and Predictions",
     "Generative AI App Revenue",
@@ -44,7 +44,8 @@
         "evidence": "“Bonus Prediction: ChatGPT Will Become the Top App by IAP Revenue by the End of 2026… ChatGPT was already the #2 app globally by IAP revenue.”",
         "pages": []
       }
-    ]
+    ],
+    "card_tldr_compact": "Generative AI and vertical video reshape the 2026 digital economy."
   },
   "insights_candidates": [],
   "insights_final": [
@@ -168,5 +169,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "hierarchy",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "global"
   }
 }

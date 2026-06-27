@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "What Defines Gen Q",
     "What Created Gen Q",
@@ -53,7 +53,8 @@
           13
         ]
       }
-    ]
+    ],
+    "card_tldr_compact": "Gen Q's pandemic-online formation calls for embodied offline interventions."
   },
   "insights_candidates": [
     {
@@ -333,5 +334,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "network",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "grid",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "global"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "AI Search Optimization",
     "LLM Reputation Management",
@@ -44,7 +44,8 @@
         "evidence": "“Advances in AI now make that kind of psychographic segmentation and micro-targeting feasible at scale… brands can see a two percent lift in incremental sales”",
         "pages": []
       }
-    ]
+    ],
+    "card_tldr_compact": "AI discovery, LLM reputation, misinformation and personalization move to marketing's center."
   },
   "insights_candidates": [
     {
@@ -306,5 +307,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "network",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "global"
   }
 }

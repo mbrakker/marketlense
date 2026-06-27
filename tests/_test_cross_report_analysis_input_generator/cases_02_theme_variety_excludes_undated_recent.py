@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_theme_variety_excludes_undated_recent_artifacts_and_logs(
     run_context,
     tmp_path,
@@ -60,29 +61,36 @@ def test_theme_variety_excludes_undated_recent_artifacts_and_logs(
             ],
         )
 
-    def _read_text(request_arg, ctx):
-        generated_at = "" if "undated" in request_arg.path else "not-a-date"
-        return ReadTextResponse(
+    def _read_text_files(request_arg, ctx):
+        return ReadTextFilesResponse(
             schema_version="1.0",
-            path=request_arg.path,
-            content=json.dumps(
-                {
-                    "generated_at_utc": generated_at,
-                    "selected_theme": {
-                        "theme_id": "theme-tag-ai",
-                        "matched_tags": ["AI"],
-                        "matched_categories": ["Retail"],
-                        "source_report_ids": ["old-report"],
-                    },
-                }
-            ),
+            files=[
+                ReadTextResponse(
+                    schema_version="1.0",
+                    path=path,
+                    content=json.dumps(
+                        {
+                            "generated_at_utc": ""
+                            if "undated" in path
+                            else "not-a-date",
+                            "selected_theme": {
+                                "theme_id": "theme-tag-ai",
+                                "matched_tags": ["AI"],
+                                "matched_categories": ["Retail"],
+                                "source_report_ids": ["old-report"],
+                            },
+                        }
+                    ),
+                )
+                for path in request_arg.paths
+            ],
         )
 
     external_boundary_mocks_only.setattr(
         input_gen.file_service, "list_directory", _list_directory
     )
     external_boundary_mocks_only.setattr(
-        input_gen.file_service, "read_text", _read_text
+        input_gen.file_service, "read_text_files", _read_text_files
     )
     caplog.set_level(
         logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
@@ -108,6 +116,7 @@ def test_theme_variety_excludes_undated_recent_artifacts_and_logs(
     ][0]
     assert loaded["fields"]["skipped_undated_artifacts"] == 1
     assert loaded["fields"]["skipped_invalid_date_artifacts"] == 1
+
 
 def test_theme_variety_prefers_source_diversity_and_stable_tie_breaking(
     run_context,
@@ -173,6 +182,7 @@ def test_theme_variety_prefers_source_diversity_and_stable_tie_breaking(
         candidate.theme_id for candidate in repeat.theme_candidates
     ]
 
+
 def test_publishability_gate_passes_supported_theme_and_logs(
     run_context,
     caplog,
@@ -231,6 +241,7 @@ def test_publishability_gate_passes_supported_theme_and_logs(
         "cross_report_publishability_check_start",
         "cross_report_publishability_check_complete",
     }
+
 
 @pytest.mark.parametrize(
     ("sources", "expected_issue"),
@@ -329,6 +340,7 @@ def test_publishability_gate_rejects_thin_coverage(
     )
     assert expected_issue in exc_info.value.context["issues"]
 
+
 def test_publishability_gate_rejects_duplicate_and_metric_dependency(
     run_context,
     assert_app_error,
@@ -391,6 +403,7 @@ def test_publishability_gate_rejects_duplicate_and_metric_dependency(
     assert "duplicate_theme_risk" in exc_info.value.context["issues"]
     assert "metric_normalization_dependency" in exc_info.value.context["issues"]
 
+
 def test_publishability_gate_allows_explicit_override_and_logs(
     run_context,
     caplog,
@@ -435,6 +448,7 @@ def test_publishability_gate_allows_explicit_override_and_logs(
         if event["event"] == "cross_report_publishability_check_complete"
     ][0]
     assert complete["fields"]["override_applied"] is True
+
 
 def test_publishability_gate_checks_publication_validation_prerequisite(
     run_context,
@@ -494,6 +508,7 @@ def test_publishability_gate_checks_publication_validation_prerequisite(
         severity="error",
     )
     assert "validation_not_passed" in exc_info.value.context["issues"]
+
 
 def test_evidence_input_assembly_filters_selected_reports_and_preserves_metric_provenance(
     run_context,
@@ -592,6 +607,7 @@ def test_evidence_input_assembly_filters_selected_reports_and_preserves_metric_p
     assert complete["fields"]["evidence_count"] == 3
     assert complete["fields"]["raw_metric_count"] == 1
 
+
 def test_evidence_input_assembly_enforces_cap_before_prompt_rendering(
     run_context,
 ) -> None:
@@ -636,6 +652,7 @@ def test_evidence_input_assembly_enforces_cap_before_prompt_rendering(
     ]
     assert result.dropped_evidence_counts == {"max_evidence_items_reached": 1}
     assert result.prompt_input_chars < 60000
+
 
 def test_evidence_input_assembly_preserves_cross_report_scoped_evidence_ids(
     run_context,
@@ -684,6 +701,7 @@ def test_evidence_input_assembly_preserves_cross_report_scoped_evidence_ids(
         ("report-b", "source-local-1"),
     ]
     assert result.dropped_evidence_counts == {"duplicate_evidence_id_same_report": 1}
+
 
 __all__ = [
     "test_theme_variety_excludes_undated_recent_artifacts_and_logs",

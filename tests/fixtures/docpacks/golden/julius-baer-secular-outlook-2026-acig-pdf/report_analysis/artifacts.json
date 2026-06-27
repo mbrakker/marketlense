@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "3.0",
   "toc_topics": [
     "Historical secular trends",
     "Multipolarity and strategic reshoring",
@@ -46,7 +46,8 @@
         "evidence": "Policy aims to shift household savings into equities to restore confidence; conditions for the first secular Chinese equity bull market are “slowly falling into place.”",
         "pages": []
       }
-    ]
+    ],
+    "card_tldr_compact": "A multipolar, innovation-led decade raises policy, gold, CHF and systemic-risk stakes."
   },
   "insights_candidates": [
     {
@@ -301,5 +302,13 @@
     "not_available": false,
     "reason": "",
     "evidence_present": true
+  },
+  "cover_semantics": {
+    "evidence_shape": "uncertainty",
+    "direction": "rising",
+    "evidence_density": "metric_rich",
+    "domain_layer": "forecast",
+    "selection_reason": "Derived deterministically from the published report copy during legacy card migration.",
+    "geography_scope": "global"
   }
 }

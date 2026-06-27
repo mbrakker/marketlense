@@ -237,6 +237,17 @@ def _select_diverse_sources(
     rejected: list[CrossReportSourceReportCandidate] = []
     selected_publishers: set[str] = set()
     rank = 1
+
+    def sort_key(
+        candidate: CrossReportSourceReportCandidate,
+    ) -> tuple[float, str, str, str]:
+        return (
+            -candidate.total_score,
+            candidate.publisher.casefold(),
+            candidate.report_date,
+            candidate.report_id,
+        )
+
     while remaining and len(selected) < max_source_reports:
         rescored: list[CrossReportSourceReportCandidate] = []
         for candidate in remaining:
@@ -257,15 +268,7 @@ def _select_diverse_sources(
                     ],
                 )
             )
-        rescored.sort(
-            key=lambda candidate: (
-                -candidate.total_score,
-                candidate.publisher.casefold(),
-                candidate.report_date,
-                candidate.report_id,
-            )
-        )
-        winner = rescored[0]
+        winner = min(rescored, key=sort_key)
         selected_publishers.add(winner.publisher.strip().casefold())
         selected.append(
             CrossReportSelectedSourceReport(
@@ -289,13 +292,13 @@ def _select_diverse_sources(
         rank += 1
         remaining = [
             candidate
-            for candidate in rescored[1:]
+            for candidate in rescored
             if candidate.report_id != winner.report_id
         ]
 
     rejected.extend(
         replace(candidate, rejection_reasons=["max_source_reports_reached"])
-        for candidate in remaining
+        for candidate in sorted(remaining, key=sort_key)
     )
     return selected, rejected
 

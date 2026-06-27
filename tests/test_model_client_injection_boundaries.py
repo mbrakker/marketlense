@@ -25,3 +25,14 @@ def test_generators_do_not_construct_model_clients() -> None:
                 offenders.append(f"{path}:{marker}")
 
     assert offenders == []
+
+
+def test_pdf_ocr_generator_does_not_own_model_retry_or_fallback() -> None:
+    source = Path("src/generators/pdf_text_ocr_generator.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "for attempt_index, candidate_model in enumerate(attempted_models" not in source
+    )
+    assert "fallback_remaining" not in source

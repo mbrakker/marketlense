@@ -199,25 +199,25 @@ def _upsert_report(
 
 
 def _upsert_sections(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
-    for row in rows:
-        conn.execute(
-            """
-            INSERT INTO report_sections(section_uid, report_id, section_id, title, summary, key_points_json, pages_json, order_index, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(section_uid) DO UPDATE SET
-                title=excluded.title,
-                summary=excluded.summary,
-                key_points_json=excluded.key_points_json,
-                pages_json=excluded.pages_json,
-                order_index=excluded.order_index,
-                schema_version=excluded.schema_version,
-                projection_version=excluded.projection_version,
-                source_pack=excluded.source_pack,
-                source_ref=excluded.source_ref,
-                model=excluded.model,
-                generated_at_utc=excluded.generated_at_utc,
-                analysis_run_id=excluded.analysis_run_id
-            """,
+    conn.executemany(
+        """
+        INSERT INTO report_sections(section_uid, report_id, section_id, title, summary, key_points_json, pages_json, order_index, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(section_uid) DO UPDATE SET
+            title=excluded.title,
+            summary=excluded.summary,
+            key_points_json=excluded.key_points_json,
+            pages_json=excluded.pages_json,
+            order_index=excluded.order_index,
+            schema_version=excluded.schema_version,
+            projection_version=excluded.projection_version,
+            source_pack=excluded.source_pack,
+            source_ref=excluded.source_ref,
+            model=excluded.model,
+            generated_at_utc=excluded.generated_at_utc,
+            analysis_run_id=excluded.analysis_run_id
+        """,
+        (
             (
                 str(row.section_uid),
                 str(row.report_id),
@@ -229,29 +229,31 @@ def _upsert_sections(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 row.order_index,
                 row.schema_version,
                 *_lineage_values(row.lineage),
-            ),
-        )
+            )
+            for row in rows
+        ),
+    )
 
 
 def _upsert_findings(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
-    for row in rows:
-        conn.execute(
-            """
-            INSERT INTO report_findings(finding_uid, report_id, finding_id, text, evidence, confidence, pages_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(finding_uid) DO UPDATE SET
-                text=excluded.text,
-                evidence=excluded.evidence,
-                confidence=excluded.confidence,
-                pages_json=excluded.pages_json,
-                schema_version=excluded.schema_version,
-                projection_version=excluded.projection_version,
-                source_pack=excluded.source_pack,
-                source_ref=excluded.source_ref,
-                model=excluded.model,
-                generated_at_utc=excluded.generated_at_utc,
-                analysis_run_id=excluded.analysis_run_id
-            """,
+    conn.executemany(
+        """
+        INSERT INTO report_findings(finding_uid, report_id, finding_id, text, evidence, confidence, pages_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(finding_uid) DO UPDATE SET
+            text=excluded.text,
+            evidence=excluded.evidence,
+            confidence=excluded.confidence,
+            pages_json=excluded.pages_json,
+            schema_version=excluded.schema_version,
+            projection_version=excluded.projection_version,
+            source_pack=excluded.source_pack,
+            source_ref=excluded.source_ref,
+            model=excluded.model,
+            generated_at_utc=excluded.generated_at_utc,
+            analysis_run_id=excluded.analysis_run_id
+        """,
+        (
             (
                 str(row.finding_uid),
                 str(row.report_id),
@@ -262,30 +264,32 @@ def _upsert_findings(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 _json(row.pages),
                 row.schema_version,
                 *_lineage_values(row.lineage),
-            ),
-        )
+            )
+            for row in rows
+        ),
+    )
 
 
 def _upsert_metrics(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
-    for row in rows:
-        conn.execute(
-            """
-            INSERT INTO report_metrics(metric_uid, report_id, metric_id, metric, value, unit, evidence_id, pages_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(metric_uid) DO UPDATE SET
-                metric=excluded.metric,
-                value=excluded.value,
-                unit=excluded.unit,
-                evidence_id=excluded.evidence_id,
-                pages_json=excluded.pages_json,
-                schema_version=excluded.schema_version,
-                projection_version=excluded.projection_version,
-                source_pack=excluded.source_pack,
-                source_ref=excluded.source_ref,
-                model=excluded.model,
-                generated_at_utc=excluded.generated_at_utc,
-                analysis_run_id=excluded.analysis_run_id
-            """,
+    conn.executemany(
+        """
+        INSERT INTO report_metrics(metric_uid, report_id, metric_id, metric, value, unit, evidence_id, pages_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(metric_uid) DO UPDATE SET
+            metric=excluded.metric,
+            value=excluded.value,
+            unit=excluded.unit,
+            evidence_id=excluded.evidence_id,
+            pages_json=excluded.pages_json,
+            schema_version=excluded.schema_version,
+            projection_version=excluded.projection_version,
+            source_pack=excluded.source_pack,
+            source_ref=excluded.source_ref,
+            model=excluded.model,
+            generated_at_utc=excluded.generated_at_utc,
+            analysis_run_id=excluded.analysis_run_id
+        """,
+        (
             (
                 str(row.metric_uid),
                 str(row.report_id),
@@ -297,30 +301,32 @@ def _upsert_metrics(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 _json(row.pages),
                 row.schema_version,
                 *_lineage_values(row.lineage),
-            ),
-        )
+            )
+            for row in rows
+        ),
+    )
 
 
 def _upsert_quotes(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
-    for row in rows:
-        conn.execute(
-            """
-            INSERT INTO report_quotes(quote_uid, report_id, quote_id, text, speaker, citation, page, evidence_id, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(quote_uid) DO UPDATE SET
-                text=excluded.text,
-                speaker=excluded.speaker,
-                citation=excluded.citation,
-                page=excluded.page,
-                evidence_id=excluded.evidence_id,
-                schema_version=excluded.schema_version,
-                projection_version=excluded.projection_version,
-                source_pack=excluded.source_pack,
-                source_ref=excluded.source_ref,
-                model=excluded.model,
-                generated_at_utc=excluded.generated_at_utc,
-                analysis_run_id=excluded.analysis_run_id
-            """,
+    conn.executemany(
+        """
+        INSERT INTO report_quotes(quote_uid, report_id, quote_id, text, speaker, citation, page, evidence_id, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(quote_uid) DO UPDATE SET
+            text=excluded.text,
+            speaker=excluded.speaker,
+            citation=excluded.citation,
+            page=excluded.page,
+            evidence_id=excluded.evidence_id,
+            schema_version=excluded.schema_version,
+            projection_version=excluded.projection_version,
+            source_pack=excluded.source_pack,
+            source_ref=excluded.source_ref,
+            model=excluded.model,
+            generated_at_utc=excluded.generated_at_utc,
+            analysis_run_id=excluded.analysis_run_id
+        """,
+        (
             (
                 str(row.quote_uid),
                 str(row.report_id),
@@ -332,29 +338,31 @@ def _upsert_quotes(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 row.evidence_id,
                 row.schema_version,
                 *_lineage_values(row.lineage),
-            ),
-        )
+            )
+            for row in rows
+        ),
+    )
 
 
 def _upsert_claims(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
-    for row in rows:
-        conn.execute(
-            """
-            INSERT INTO report_claims(claim_uid, report_id, claim, evidence_id, evidence, pages_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(claim_uid) DO UPDATE SET
-                claim=excluded.claim,
-                evidence_id=excluded.evidence_id,
-                evidence=excluded.evidence,
-                pages_json=excluded.pages_json,
-                schema_version=excluded.schema_version,
-                projection_version=excluded.projection_version,
-                source_pack=excluded.source_pack,
-                source_ref=excluded.source_ref,
-                model=excluded.model,
-                generated_at_utc=excluded.generated_at_utc,
-                analysis_run_id=excluded.analysis_run_id
-            """,
+    conn.executemany(
+        """
+        INSERT INTO report_claims(claim_uid, report_id, claim, evidence_id, evidence, pages_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(claim_uid) DO UPDATE SET
+            claim=excluded.claim,
+            evidence_id=excluded.evidence_id,
+            evidence=excluded.evidence,
+            pages_json=excluded.pages_json,
+            schema_version=excluded.schema_version,
+            projection_version=excluded.projection_version,
+            source_pack=excluded.source_pack,
+            source_ref=excluded.source_ref,
+            model=excluded.model,
+            generated_at_utc=excluded.generated_at_utc,
+            analysis_run_id=excluded.analysis_run_id
+        """,
+        (
             (
                 str(row.claim_uid),
                 str(row.report_id),
@@ -364,27 +372,29 @@ def _upsert_claims(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 _json(row.pages),
                 row.schema_version,
                 *_lineage_values(row.lineage),
-            ),
-        )
+            )
+            for row in rows
+        ),
+    )
 
 
 def _upsert_tags(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
-    for row in rows:
-        conn.execute(
-            """
-            INSERT INTO report_tags(tag_uid, report_id, tag, tag_type, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(tag_uid) DO UPDATE SET
-                tag=excluded.tag,
-                tag_type=excluded.tag_type,
-                schema_version=excluded.schema_version,
-                projection_version=excluded.projection_version,
-                source_pack=excluded.source_pack,
-                source_ref=excluded.source_ref,
-                model=excluded.model,
-                generated_at_utc=excluded.generated_at_utc,
-                analysis_run_id=excluded.analysis_run_id
-            """,
+    conn.executemany(
+        """
+        INSERT INTO report_tags(tag_uid, report_id, tag, tag_type, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(tag_uid) DO UPDATE SET
+            tag=excluded.tag,
+            tag_type=excluded.tag_type,
+            schema_version=excluded.schema_version,
+            projection_version=excluded.projection_version,
+            source_pack=excluded.source_pack,
+            source_ref=excluded.source_ref,
+            model=excluded.model,
+            generated_at_utc=excluded.generated_at_utc,
+            analysis_run_id=excluded.analysis_run_id
+        """,
+        (
             (
                 str(row.tag_uid),
                 str(row.report_id),
@@ -392,30 +402,32 @@ def _upsert_tags(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 row.tag_type,
                 row.schema_version,
                 *_lineage_values(row.lineage),
-            ),
-        )
+            )
+            for row in rows
+        ),
+    )
 
 
 def _upsert_categories(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
-    for row in rows:
-        conn.execute(
-            """
-            INSERT INTO report_categories(category_uid, report_id, category_id, label, fit_score, decision, selected, evidence_sections_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(category_uid) DO UPDATE SET
-                label=excluded.label,
-                fit_score=excluded.fit_score,
-                decision=excluded.decision,
-                selected=excluded.selected,
-                evidence_sections_json=excluded.evidence_sections_json,
-                schema_version=excluded.schema_version,
-                projection_version=excluded.projection_version,
-                source_pack=excluded.source_pack,
-                source_ref=excluded.source_ref,
-                model=excluded.model,
-                generated_at_utc=excluded.generated_at_utc,
-                analysis_run_id=excluded.analysis_run_id
-            """,
+    conn.executemany(
+        """
+        INSERT INTO report_categories(category_uid, report_id, category_id, label, fit_score, decision, selected, evidence_sections_json, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(category_uid) DO UPDATE SET
+            label=excluded.label,
+            fit_score=excluded.fit_score,
+            decision=excluded.decision,
+            selected=excluded.selected,
+            evidence_sections_json=excluded.evidence_sections_json,
+            schema_version=excluded.schema_version,
+            projection_version=excluded.projection_version,
+            source_pack=excluded.source_pack,
+            source_ref=excluded.source_ref,
+            model=excluded.model,
+            generated_at_utc=excluded.generated_at_utc,
+            analysis_run_id=excluded.analysis_run_id
+        """,
+        (
             (
                 str(row.category_uid),
                 str(row.report_id),
@@ -427,34 +439,36 @@ def _upsert_categories(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 _json(row.evidence_sections),
                 row.schema_version,
                 *_lineage_values(row.lineage),
-            ),
-        )
+            )
+            for row in rows
+        ),
+    )
 
 
 def _upsert_figures(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
-    for row in rows:
-        conn.execute(
-            """
-            INSERT INTO report_figures(figure_uid, report_id, candidate_id, image_path, kind, page, is_primary, detected_caption, generated_caption, display_caption, caption_source, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(figure_uid) DO UPDATE SET
-                candidate_id=excluded.candidate_id,
-                image_path=excluded.image_path,
-                kind=excluded.kind,
-                page=excluded.page,
-                is_primary=excluded.is_primary,
-                detected_caption=excluded.detected_caption,
-                generated_caption=excluded.generated_caption,
-                display_caption=excluded.display_caption,
-                caption_source=excluded.caption_source,
-                schema_version=excluded.schema_version,
-                projection_version=excluded.projection_version,
-                source_pack=excluded.source_pack,
-                source_ref=excluded.source_ref,
-                model=excluded.model,
-                generated_at_utc=excluded.generated_at_utc,
-                analysis_run_id=excluded.analysis_run_id
-            """,
+    conn.executemany(
+        """
+        INSERT INTO report_figures(figure_uid, report_id, candidate_id, image_path, kind, page, is_primary, detected_caption, generated_caption, display_caption, caption_source, schema_version, projection_version, source_pack, source_ref, model, generated_at_utc, analysis_run_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(figure_uid) DO UPDATE SET
+            candidate_id=excluded.candidate_id,
+            image_path=excluded.image_path,
+            kind=excluded.kind,
+            page=excluded.page,
+            is_primary=excluded.is_primary,
+            detected_caption=excluded.detected_caption,
+            generated_caption=excluded.generated_caption,
+            display_caption=excluded.display_caption,
+            caption_source=excluded.caption_source,
+            schema_version=excluded.schema_version,
+            projection_version=excluded.projection_version,
+            source_pack=excluded.source_pack,
+            source_ref=excluded.source_ref,
+            model=excluded.model,
+            generated_at_utc=excluded.generated_at_utc,
+            analysis_run_id=excluded.analysis_run_id
+        """,
+        (
             (
                 str(row.figure_uid),
                 str(row.report_id),
@@ -469,8 +483,10 @@ def _upsert_figures(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 row.caption_source,
                 row.schema_version,
                 *_lineage_values(row.lineage),
-            ),
-        )
+            )
+            for row in rows
+        ),
+    )
 
 
 def _validate_queue_row(row) -> None:
@@ -498,29 +514,30 @@ def _validate_queue_row(row) -> None:
 def _upsert_vector_queue(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
     for row in rows:
         _validate_queue_row(row)
-        conn.execute(
-            """
-            INSERT INTO vector_projection_queue(entity_uid, entity_type, report_id, text_payload, content_hash, metadata_json, content_class, embedding_status, embedding_version, created_at_utc, updated_at_utc)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(entity_uid) DO UPDATE SET
-                entity_type=excluded.entity_type,
-                report_id=excluded.report_id,
-                text_payload=excluded.text_payload,
-                content_hash=excluded.content_hash,
-                metadata_json=excluded.metadata_json,
-                content_class=excluded.content_class,
-                embedding_status=CASE
-                    WHEN vector_projection_queue.content_hash = excluded.content_hash
-                    THEN vector_projection_queue.embedding_status
-                    ELSE 'pending'
-                END,
-                embedding_version=CASE
-                    WHEN vector_projection_queue.content_hash = excluded.content_hash
-                    THEN vector_projection_queue.embedding_version
-                    ELSE ''
-                END,
-                updated_at_utc=excluded.updated_at_utc
-            """,
+    conn.executemany(
+        """
+        INSERT INTO vector_projection_queue(entity_uid, entity_type, report_id, text_payload, content_hash, metadata_json, content_class, embedding_status, embedding_version, created_at_utc, updated_at_utc)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(entity_uid) DO UPDATE SET
+            entity_type=excluded.entity_type,
+            report_id=excluded.report_id,
+            text_payload=excluded.text_payload,
+            content_hash=excluded.content_hash,
+            metadata_json=excluded.metadata_json,
+            content_class=excluded.content_class,
+            embedding_status=CASE
+                WHEN vector_projection_queue.content_hash = excluded.content_hash
+                THEN vector_projection_queue.embedding_status
+                ELSE 'pending'
+            END,
+            embedding_version=CASE
+                WHEN vector_projection_queue.content_hash = excluded.content_hash
+                THEN vector_projection_queue.embedding_version
+                ELSE ''
+            END,
+            updated_at_utc=excluded.updated_at_utc
+        """,
+        (
             (
                 str(row.entity_uid),
                 row.entity_type,
@@ -533,8 +550,10 @@ def _upsert_vector_queue(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 row.embedding_version,
                 row.created_at_utc,
                 row.updated_at_utc,
-            ),
-        )
+            )
+            for row in rows
+        ),
+    )
 
 
 def upsert_projection(

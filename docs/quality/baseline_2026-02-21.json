@@ -1,10 +1,4 @@
 {
-  "coverage": {
-    "global": 61.115,
-    "src/generators": 73.784,
-    "src/orchestrators": 71.5439,
-    "src/services": 44.6556
-  },
   "candidate_extraction": {
     "bbox_valid_rate": 1.0,
     "candidate_count_mean": 1.5,
@@ -14,6 +8,12 @@
     "preview_text_rate": 1.0,
     "report_count": 2,
     "table_count_mean": 0.5
+  },
+  "coverage": {
+    "global": 83.3816,
+    "src/generators": 87.1763,
+    "src/orchestrators": 84.8022,
+    "src/services": 82.968
   },
   "docpacks": {
     "evidence_reference_integrity_rate": 0.333333,
@@ -98,19 +98,43 @@
     "report_count": 16,
     "schema_valid_rate": 0.547619
   },
-  "generated_at_utc": "2026-02-21T18:00:18.578116+00:00",
+  "generated_at_utc": "2026-06-27T07:21:29.519095+00:00",
   "mutation": {
     "src/generators/artifact_generator.py": {
-      "killed": 2.0,
+      "killed": 3.0,
       "min_score": 60.0,
-      "score": 66.6667,
+      "score": 100.0,
       "total": 3.0
+    },
+    "src/generators/cover_image_generator.py": {
+      "killed": 1.0,
+      "min_score": 75.0,
+      "score": 100.0,
+      "total": 1.0
     },
     "src/generators/evidence_pack_generator.py": {
       "killed": 3.0,
       "min_score": 60.0,
       "score": 100.0,
       "total": 3.0
+    },
+    "src/generators/publish_generator.py": {
+      "killed": 4.0,
+      "min_score": 75.0,
+      "score": 100.0,
+      "total": 4.0
+    },
+    "src/generators/report_card_projection.py": {
+      "killed": 6.0,
+      "min_score": 80.0,
+      "score": 100.0,
+      "total": 6.0
+    },
+    "src/generators/report_render_generator.py": {
+      "killed": 4.0,
+      "min_score": 75.0,
+      "score": 100.0,
+      "total": 4.0
     },
     "src/generators/taxonomy_generator.py": {
       "killed": 3.0,
@@ -119,16 +143,16 @@
       "total": 4.0
     },
     "src/generators/validation_generator.py": {
-      "killed": 3.0,
+      "killed": 2.0,
       "min_score": 60.0,
       "score": 100.0,
-      "total": 3.0
+      "total": 2.0
     },
     "src/orchestrators/publish_queue_orchestrator.py": {
-      "killed": 3.0,
+      "killed": 1.0,
       "min_score": 50.0,
-      "score": 75.0,
-      "total": 4.0
+      "score": 100.0,
+      "total": 1.0
     },
     "src/orchestrators/report_pipeline_orchestrator.py": {
       "killed": 3.0,
@@ -137,21 +161,21 @@
       "total": 3.0
     },
     "src/services/drive_service.py": {
-      "killed": 2.0,
-      "min_score": 60.0,
-      "score": 100.0,
-      "total": 2.0
-    },
-    "src/services/openai_service.py": {
       "killed": 3.0,
       "min_score": 60.0,
       "score": 100.0,
       "total": 3.0
     },
-    "src/services/wordpress_service.py": {
-      "killed": 2.0,
+    "src/services/llm_service.py": {
+      "killed": 1.0,
       "min_score": 60.0,
-      "score": 66.6667,
+      "score": 100.0,
+      "total": 1.0
+    },
+    "src/services/wordpress_service.py": {
+      "killed": 3.0,
+      "min_score": 60.0,
+      "score": 100.0,
       "total": 3.0
     }
   },
