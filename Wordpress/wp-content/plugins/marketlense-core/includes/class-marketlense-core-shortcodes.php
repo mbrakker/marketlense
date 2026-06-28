@@ -358,7 +358,7 @@ final class Shortcodes
                                 <span class="ml-report-browser-summary-copy"><?php esc_html_e('currently in view', 'marketlense-core'); ?></span>
                             </p>
                             <?php if ($is_topic_fallback) : ?>
-                                <p class="ml-report-browser-context"><strong><?php esc_html_e('Report briefs in this topic', 'marketlense-core'); ?></strong></p>
+                                <p class="ml-report-browser-context"><strong><?php esc_html_e('Reports in this topic', 'marketlense-core'); ?></strong></p>
                             <?php elseif ($search_term !== '') : ?>
                                 <p class="ml-report-browser-context">
                                     <?php echo esc_html(sprintf(__('Search query: "%s"', 'marketlense-core'), $search_term)); ?>
@@ -380,7 +380,7 @@ final class Shortcodes
                                     continue;
                                 }
                                 if ($is_topic_fallback) {
-                                    $this->render_entity_card($post, __('Read report brief', 'marketlense-core'));
+                                    $this->render_entity_card($post, __('Read report', 'marketlense-core'));
                                 } else {
                                     $report = $this->view_model_builder->build($post);
                                     if (($report['card_contract_valid'] ?? false) !== true) {
@@ -686,7 +686,7 @@ final class Shortcodes
     }
 
     /**
-     * Renders the featured digest lead story.
+     * Renders the featured report lead story.
      */
     public function render_featured_digest(): string
     {
@@ -702,11 +702,11 @@ final class Shortcodes
 
         ob_start();
         ?>
-        <section class="ml-featured-digest" aria-label="<?php esc_attr_e('Featured report brief', 'marketlense-core'); ?>">
+        <section class="ml-featured-digest" aria-label="<?php esc_attr_e('Featured report', 'marketlense-core'); ?>">
             <div class="ml-section-heading ml-section-anchor">
                 <p class="ml-section-kicker ml-section-eyebrow"><?php esc_html_e('EDITORIAL', 'marketlense-core'); ?></p>
                 <div class="ml-section-heading-row">
-                    <h2 class="ml-section-title"><?php esc_html_e('Featured Report Brief', 'marketlense-core'); ?></h2>
+                    <h2 class="ml-section-title"><?php esc_html_e('Featured Report', 'marketlense-core'); ?></h2>
                     <a class="ml-inline-link" href="<?php echo esc_url(get_post_type_archive_link(Post_Type::POST_TYPE) ?: home_url('/reports/')); ?>">
                         <?php esc_html_e('Browse all reports', 'marketlense-core'); ?>
                         <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>

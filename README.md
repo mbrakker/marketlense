@@ -800,7 +800,9 @@ WordPress credentials and publish controls come from root `.env` / `app.yaml`:
 - `WP_SSL_VERIFY`
 - `WP_CA_BUNDLE_PATH`
 
-This repo currently publishes into core WordPress posts with `publish.wp.post_type=posts`. The bundled WordPress plugin treats digest posts with a recovered digest contract (`ml_is_digest=1` and, when available, `ml_file_id`) as first-class report content across archive/home surfaces, so report cards and intelligence modules still work even when the underlying post type is `post`.
+Canonical report post type: `ml_report`. The bundled config publishes new report artifacts to the `ml_report` REST route at `/wp-json/wp/v2/ml_report`, and the WordPress plugin registers that custom post type with the public `/reports/` archive.
+
+Legacy compatibility is intentionally narrower: the plugin still recognizes old core `post` records carrying the recovered digest contract (`ml_is_digest=1` and, when available, `ml_file_id`) so migrated report cards and intelligence modules remain visible. New report publishing must not target core `post` except for explicit one-time migration or repair flows.
 
 The checked-in `publish.wp.site_url` value targets `https://marketlense.medianewsonline.com` so publish flows and follow-on tooling stop reinforcing the legacy `http` scheme.
 

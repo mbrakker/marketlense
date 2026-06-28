@@ -299,7 +299,7 @@ def test_mobile_navigation_and_report_artifacts_do_not_force_page_overflow() -> 
     assert "min-height: 44px;" in css
 
 
-def test_editorial_language_prefers_reports_and_report_briefs() -> None:
+def test_editorial_language_prefers_reports_over_digest_or_brief_labels() -> None:
     shortcodes = SHORTCODES.read_text(encoding="utf-8")
     templates = "\n".join(
         path.read_text(encoding="utf-8")
@@ -312,8 +312,10 @@ def test_editorial_language_prefers_reports_and_report_briefs() -> None:
         )
     )
 
-    assert "Featured Report Brief" in shortcodes
-    assert "Read report brief" in shortcodes
+    assert "Featured Report" in shortcodes
+    assert "Featured Report Brief" not in shortcodes
+    assert "Report briefs" not in shortcodes
+    assert "Read report brief" not in shortcodes
     assert "_n('%d report', '%d reports'" in shortcodes
     assert " digest" not in templates.lower()
 
@@ -402,14 +404,14 @@ def test_report_filters_use_a_compact_sticky_disclosure_rail() -> None:
     assert "min-height: 2.08rem;" in css
 
 
-def test_topic_archives_fall_back_to_published_briefings_when_no_reports_exist() -> (
+def test_topic_archives_fall_back_to_published_entities_when_no_reports_exist() -> (
     None
 ):
     shortcodes = SHORTCODES.read_text(encoding="utf-8")
 
     assert "topic_entity_fallback_query" in shortcodes
     assert "Post_Type::BRIEFING_POST_TYPE" in shortcodes
-    assert "Report briefs in this topic" in shortcodes
+    assert "Reports in this topic" in shortcodes
 
 
 def test_briefing_output_removes_internal_ids_and_collapses_appendices() -> None:

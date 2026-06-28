@@ -34,7 +34,7 @@ Scoring:
 - Claim-level embedding persistence is live: `claim_embeddings` stores durable vectors/provider metadata/status/error taxonomy linked to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`, and `claim_embedding_orchestrator` owns pending/stale embedding workflow execution.
 - Cross-report Briefing and grounded Signal publish paths now reuse persisted claim embeddings for bounded semantic evidence preselection through `analytics_store_service.read_claim_embeddings`, while falling back to deterministic lexical/category ordering when embeddings are absent or stale. Durable Signal candidate extraction, ingestion-time Signal artifact-pack generation, separate Signal-store persistence, grouping, readback, and publish reuse are landed through `src/contracts/signal_candidates.py`, `src/generators/signal_candidate_generator.py`, `src/generators/report_signal_artifact_generator.py`, `src/orchestrators/signal_candidate_orchestrator.py`, `src/orchestrators/report_generation_orchestrator.py`, and `src/services/analytics_store_service.py`.
 - The bundled WordPress plugin registers `ml_report`, `ml_signal`, and `ml_briefing` with REST enabled. Live hosted WordPress REST exposure for `ml_briefing` and `ml_signal` was verified on 2026-06-28 with `Wordpress/scripts/verify-publish-entity-rest.py` using existing generated Briefing and Signal artifacts; readback confirmed draft post IDs 1728 and 1729, post type, slug, title, route template, status, and metadata.
-- README/config drift remains: README still states report publishing uses core `posts` in one section, while `src/config/app.yaml` defaults `publish.wp.post_type` to `ml_report`.
+- Report post-type drift is closed: README and README_WORDPRESS document canonical report publishing to `ml_report`, `src/config/app.yaml` and `src/config/app.example.yaml` default `publish.wp.post_type` to `ml_report`, the plugin registers `ml_report` with REST base `ml_report`, and legacy core `post` report/digest compatibility is documented as migration-only behavior. Live hosted WordPress verification on 2026-06-28 published an existing generated report artifact (`out/activate-2025-ecommerce-pdf.html`) as draft `ml_report` post ID 1739 and read it back from `/wp-json/wp/v2/ml_report/1739` with type `ml_report`, slug `live-report-post-type-verification-20260628`, status `draft`, and `/reports/%pagename%/` permalink template.
 - WordPress design token drift remains: README documents `settings.layout.wideSize` as `82rem`, while `Wordpress/wp-content/themes/marketlense/theme.json` currently uses `84rem`.
 
 ## Priority Order
@@ -138,16 +138,6 @@ Scoring:
     - Tests prove no Signal, freshness, strategic-theme, or publisher-authority claim is generated solely from WordPress post counts.
     - README documents the projection source used by each WordPress intelligence module.
 
-- **Title:** Resolve report post-type and entity naming drift between README, config, and WordPress [Impact: 4/5, Effort: 2/5]
-  - Explanation: README still says publishing targets core `posts` in one section, while `src/config/app.yaml` defaults to `ml_report`. The plugin supports both `post` legacy digests and `ml_report`, and public copy mixes Report, Digest, Brief, and Briefing.
-  - Pros: Prevents operators from publishing to the wrong content type.
-  - Cons: Requires a deliberate compatibility decision and copy/test updates.
-  - Acceptance Criteria:
-    - README, YAML config, WordPress plugin behavior, and publish tests agree on the canonical report post type.
-    - Compatibility behavior for old core `post` digests is explicitly documented or removed.
-    - Public UI copy consistently uses Report for report entities and Briefing only for briefing entities.
-    - Tests verify configured post type, WordPress payload post type, and resulting content type.
-
 - **Title:** Make WordPress categories the canonical Topic surface with full topic semantics [Impact: 4/5, Effort: 3/5]
   - Explanation: WordPress categories already serve the public Topic path, but they publish mostly as labels. README defines Topics as controlled taxonomy entries with definitions plus inclusion/exclusion rules.
   - Pros: Reuses the existing category implementation while making taxonomy governance visible.
@@ -160,13 +150,13 @@ Scoring:
     - Tests assert term semantics survive publish and readback.
 
 - **Title:** Promote live WordPress entity REST verification into a staging release gate [Impact: 4/5, Effort: 2/5]
-  - Explanation: Manual live verification now proves hosted `ml_briefing` and `ml_signal` REST exposure/readback, but release operations should catch stale plugin deployments before production publishing is attempted.
+  - Explanation: Manual live verification now proves hosted `ml_report`, `ml_briefing`, and `ml_signal` REST exposure/readback, but release operations should catch stale plugin deployments before production publishing is attempted.
   - Pros: Prevents repeated manual discovery of stale WordPress plugin state and gives operators auditable deployment evidence.
   - Cons: Requires a non-production WordPress target and cleanup policy for verification drafts.
   - Acceptance Criteria:
     - Release docs define the required staging WordPress env vars and existing artifact paths used by the verifier.
-    - A staging-only release gate runs `Wordpress/scripts/verify-publish-entity-rest.py` and archives sanitized JSON evidence.
-    - The gate fails on missing `ml_briefing`/`ml_signal` type exposure, route-template drift, metadata readback loss, or unexpected post status.
+    - A staging-only release gate runs live report, Briefing, and Signal REST publish/readback verification and archives sanitized JSON evidence.
+    - The gate fails on missing `ml_report`/`ml_briefing`/`ml_signal` type exposure, route-template drift, metadata readback loss, or unexpected post status.
     - Verification drafts are tagged for cleanup or removed by a documented operator command.
 
 ---
@@ -212,7 +202,8 @@ Scoring:
 - Ingestion-time grounded Signal artifacts, separate Signal-store persistence, and publish workflow reuse from the Signal base.
 - Claim-level embedding persistence beyond `vector_projection_queue`, including durable vector records, provider/model metadata, status/error taxonomy, idempotent/stale-aware workflow execution, and local claim/report/topic readback.
 - Briefing and Signal evidence preselection using persisted claim embeddings, including bounded semantic claim selection, stale/no-embedding fallback, structured selection summaries, idempotency material updates, and local live-corpus prompt-size verification.
-- Live WordPress REST exposure and draft readback for Briefing and Signal publish entities on the hosted site.
+- Live WordPress REST exposure and draft readback for Report, Briefing, and Signal publish entities on the hosted site.
+- Report post-type and entity naming drift between README, config, WordPress plugin behavior, and public copy.
 - Bounded Streamlit log reads and grouped directory-count walks through `file_service`.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
@@ -224,7 +215,6 @@ Scoring:
 - Real-time spend guardrails at run/day/publisher scopes with explicit override flow.
 - Budget-aware model routing with deterministic compaction.
 - Durable publish snapshot decision: real jobs/outbox or explicit readiness-snapshot naming.
-- WordPress report post-type naming cleanup.
 
 ### Phase 2: Intelligence Reuse and Public Entity Alignment
 

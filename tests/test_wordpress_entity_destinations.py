@@ -13,6 +13,9 @@ POST_TYPE_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-post-type.ph
 SHORTCODES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-shortcodes.php"
 TAXONOMIES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-taxonomies.php"
 README_PATH = REPO_ROOT / "README.md"
+README_WORDPRESS_PATH = REPO_ROOT / "README_WORDPRESS.md"
+APP_CONFIG_PATH = REPO_ROOT / "src" / "config" / "app.yaml"
+APP_EXAMPLE_CONFIG_PATH = REPO_ROOT / "src" / "config" / "app.example.yaml"
 GENERATOR_PATH = REPO_ROOT / "src" / "generators" / "cross_report_analysis_generator.py"
 CROSS_REPORT_REQUEST_CONTRACT_PATH = (
     REPO_ROOT / "src" / "contracts" / "_cross_report_analysis" / "requests.py"
@@ -30,6 +33,40 @@ def test_wordpress_registers_signal_and_briefing_destinations() -> None:
     assert re.search(r"'rest_base'\s*=>\s*self::BRIEFING_POST_TYPE", source)
     assert re.search(r"'slug'\s*=>\s*'signals'", source)
     assert re.search(r"'slug'\s*=>\s*'briefings'", source)
+
+
+def test_report_publish_contract_uses_ml_report_as_canonical_type() -> None:
+    post_type_source = POST_TYPE_PATH.read_text(encoding="utf-8")
+    readme_source = README_PATH.read_text(encoding="utf-8")
+    app_config_source = APP_CONFIG_PATH.read_text(encoding="utf-8")
+    app_example_source = APP_EXAMPLE_CONFIG_PATH.read_text(encoding="utf-8")
+
+    assert 'post_type: "ml_report"' in app_config_source
+    assert 'post_type: "ml_report"' in app_example_source
+    assert "public const POST_TYPE = 'ml_report';" in post_type_source
+    assert "public const CORE_POST_TYPE = 'post';" in post_type_source
+    assert re.search(r"register_post_type\(\s*self::POST_TYPE", post_type_source)
+    assert re.search(r"'rest_base'\s*=>\s*self::POST_TYPE", post_type_source)
+    assert re.search(r"'slug'\s*=>\s*'reports'", post_type_source)
+    assert "Canonical report post type: `ml_report`" in readme_source
+    assert "New report publishing must not target core `post`" in readme_source
+    assert "publish.wp.post_type=posts" not in readme_source
+
+
+def test_public_report_copy_uses_report_not_report_brief() -> None:
+    sources = {
+        "README.md": README_PATH.read_text(encoding="utf-8"),
+        "README_WORDPRESS.md": README_WORDPRESS_PATH.read_text(encoding="utf-8"),
+        "shortcodes": SHORTCODES_PATH.read_text(encoding="utf-8"),
+    }
+
+    for source in sources.values():
+        assert "Featured Report Brief" not in source
+        assert "Report Brief" not in source
+        assert "Report briefs" not in source
+        assert "Featured report brief" not in source
+
+    assert "Featured Report" in sources["shortcodes"]
 
 
 def test_wordpress_templates_render_canonical_signal_and_briefing_surfaces() -> None:
