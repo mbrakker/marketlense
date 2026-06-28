@@ -436,7 +436,7 @@ Wordpress/
 
 Plugin slug: `marketlense-core`
 
-Current plugin package version: `1.6.5`. Deploy this package or newer when the
+Current plugin package version: `1.6.7`. Deploy this package or newer when the
 live WordPress REST schema must expose `ml_signal` and `ml_briefing`; older or
 stale deployed payloads can still report the same plugin slug while exposing
 only `ml_report`.
@@ -473,6 +473,27 @@ Primary responsibilities:
   - `[ml_topics_directory]`
   - `[ml_publishers_directory]`
   - `[ml_publisher_profile]`
+
+### Live Signal and Briefing REST Verification
+
+After deploying or activating `marketlense-core` `1.6.7` or newer on a hosted
+WordPress site, verify the public entity REST contract with existing generated
+artifacts:
+
+```powershell
+python Wordpress/scripts/verify-publish-entity-rest.py `
+  --briefing-artifact out/live_model_client_injection_cross_report/cross_report_analysis/ai-brand-trust-consumer-decision-2026/analysis.json `
+  --signal-artifact out/allegro-2026-trends-macrotrends-es-acig-pdf/report_analysis/signals.json
+```
+
+The verifier loads `WP_SITE_URL`, `WP_USERNAME` plus `WP_APP_PASSWORD` or
+`WP_BEARER_TOKEN`, `WP_SSL_VERIFY`, and `WP_CA_BUNDLE_PATH` from the root
+environment. It first confirms `/wp-json/wp/v2/types` exposes `ml_briefing` and
+`ml_signal` with collection routes, then creates one draft post for each type
+from the supplied generated artifacts and reads both posts back with
+`context=edit`. The run fails unless post type, slug, title, status, permalink
+template route (`/briefings/` or `/signals/`), and submitted metadata are present
+on readback.
 
 ### Theme Contract
 
