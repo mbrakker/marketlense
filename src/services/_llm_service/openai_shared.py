@@ -98,8 +98,10 @@ REQUIRED_KEYS = (
 )
 
 _RESPONSES_UNSUPPORTED_PARAM_PREFIXES: dict[str, tuple[str, ...]] = {
-    # GPT-5 calls via Responses API reject temperature/seed.
-    "gpt-5": ("temperature", "seed"),
+    # Current Responses API client calls do not accept seed; GPT-5 also rejects
+    # caller-supplied temperature.
+    "": ("seed",),
+    "gpt-5": ("temperature",),
 }
 OPENAI_OCR_RESPONSE_FORMAT = {
     "type": "json_schema",

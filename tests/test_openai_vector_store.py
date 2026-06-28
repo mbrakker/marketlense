@@ -74,6 +74,8 @@ def test_openai_response_with_vector_store_writes_ledger(tmp_path, fake_openai) 
     assert fake_openai.calls["responses.create"][0]["tools"][0]["vector_store_ids"] == [
         "vs_123"
     ]
+    assert fake_openai.calls["responses.create"][0]["temperature"] == 0.1
+    assert "seed" not in fake_openai.calls["responses.create"][0]
     assert fake_openai.client_kwargs[0]["max_retries"] == 0
 
 

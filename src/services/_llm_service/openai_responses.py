@@ -252,11 +252,18 @@ def openai_respond_with_vector_store(
         ],
     }
     known_unsupported = _known_unsupported_responses_params(request.model)
-    if request.temperature is not None and "temperature" not in known_unsupported:
-        payload_args["temperature"] = request.temperature
-    if request.seed is not None and "seed" not in known_unsupported:
-        payload_args["seed"] = request.seed
-    if known_unsupported:
+    skipped_params: set[str] = set()
+    if request.temperature is not None:
+        if "temperature" in known_unsupported:
+            skipped_params.add("temperature")
+        else:
+            payload_args["temperature"] = request.temperature
+    if request.seed is not None:
+        if "seed" in known_unsupported:
+            skipped_params.add("seed")
+        else:
+            payload_args["seed"] = request.seed
+    if skipped_params:
         logger.info(
             log_event(
                 ctx,
@@ -265,7 +272,7 @@ def openai_respond_with_vector_store(
                 module=logger.name,
                 fields={
                     "model": request.model,
-                    "skipped_params": sorted(known_unsupported),
+                    "skipped_params": sorted(skipped_params),
                 },
             )
         )
