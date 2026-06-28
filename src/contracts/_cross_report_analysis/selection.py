@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from src.contracts._cross_report_analysis import (
     CrossReportContentClass,
     CrossReportEvidenceAgreementType,
     ProjectionReadinessStatus,
 )
+
 
 @dataclass(frozen=True)
 class CrossReportThemeCandidate:
@@ -361,6 +362,64 @@ class CrossReportRawMetricReference:
 
 
 @dataclass(frozen=True)
+class CrossReportSemanticPreselectionSummary:
+    schema_version: str = field(
+        metadata={"doc": "Semantic evidence preselection summary schema version."}
+    )
+    mode: str = field(
+        metadata={
+            "doc": "Selection mode: claim_embedding_similarity or deterministic_fallback."
+        }
+    )
+    candidate_claim_count: int = field(
+        metadata={"doc": "Projected claim evidence rows eligible before preselection."}
+    )
+    embedding_count: int = field(
+        metadata={"doc": "Claim embedding records supplied to evidence assembly."}
+    )
+    fresh_embedding_count: int = field(
+        metadata={
+            "doc": "Embedding records whose content hash matched projection data."
+        }
+    )
+    stale_embedding_count: int = field(
+        metadata={
+            "doc": "Embedding records ignored because content hash or vector data was stale."
+        }
+    )
+    selected_claim_count: int = field(
+        metadata={"doc": "Claim evidence rows retained by semantic preselection."}
+    )
+    selected_embedding_uids: List[str] = field(
+        metadata={
+            "doc": "Embedding UIDs selected in final deterministic evidence order.",
+            "required": False,
+        }
+    )
+    fallback_reason: str = field(
+        default="",
+        metadata={
+            "doc": "Reason deterministic fallback was used, empty for semantic selection.",
+            "required": False,
+        },
+    )
+    prompt_input_chars_before: int = field(
+        default=0,
+        metadata={
+            "doc": "Approximate evidence prompt characters before semantic preselection.",
+            "required": False,
+        },
+    )
+    prompt_input_chars_after: int = field(
+        default=0,
+        metadata={
+            "doc": "Approximate evidence prompt characters after semantic preselection.",
+            "required": False,
+        },
+    )
+
+
+@dataclass(frozen=True)
 class CrossReportProjectedDataReadResponse:
     schema_version: str = field(
         metadata={"doc": "Projected data read response schema version."}
@@ -504,4 +563,11 @@ class CrossReportEvidenceInputResult:
     prompt_input_chars: int = field(
         default=0,
         metadata={"doc": "Approximate bounded prompt-input character count."},
+    )
+    semantic_preselection: Optional[CrossReportSemanticPreselectionSummary] = field(
+        default=None,
+        metadata={
+            "doc": "Semantic claim preselection summary when claim embeddings were considered.",
+            "required": False,
+        },
     )

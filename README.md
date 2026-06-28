@@ -1181,6 +1181,8 @@ Projection-owned tables include `report_sections`, `report_findings`, `report_me
 
 `vector_projection_queue` stages embedding work with deterministic `entity_uid`, canonical `text_payload`, `content_hash`, metadata JSON, `content_class`, and `embedding_status` constrained to `pending`, `embedded`, or `failed`. `src/orchestrators/claim_embedding_orchestrator.py::run_claim_embedding_workflow` reads pending or stale claim rows, calls `src/services/llm_service.py::openai_create_embeddings`, persists vectors and provider metadata in `claim_embeddings`, and updates queue status/version through `analytics_store_service`. Re-embedding is deterministic when claim text, embedding metadata, content hash, model, or embedding version changes. `analytics_store_service.read_claim_embeddings` supports local readback by claim, report, topic taxonomy/category metadata, and embedding status without adding a new search service or deployable worker.
 
+Cross-report Briefing and Signal evidence assembly now read those persisted claim embeddings through `analytics_store_service.read_claim_embeddings` before prompt input assembly. The generator uses only fresh records whose `content_hash` still matches projected claim data, ranks embedded claims deterministically by vector similarity to the selected claim-embedding set, logs a `CrossReportSemanticPreselectionSummary`, and falls back to the previous deterministic evidence order when embeddings are missing, stale, or invalid. The summary records candidate/fresh/stale counts, selected embedding UIDs, and before/after prompt character estimates so live runs can prove prompt-size reduction without losing source-grounding coverage.
+
 Implementation notes live in `docs/quality/analytics-projection-foundation.md`.
 
 ---

@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import re
 from collections import Counter
+from dataclasses import asdict, replace
 from typing import Any
 
+from src.contracts.analytics_projection import ClaimEmbeddingRecord
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportAnalysisRequest,
@@ -23,6 +26,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportEvidenceReference,
     CrossReportProjectedDataReadResponse,
     CrossReportRawMetricReference,
+    CrossReportSemanticPreselectionSummary,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
     CrossReportSignalScore,
@@ -51,6 +55,7 @@ __all__ = (
     "_evidence_sort_key",
     "_raw_metric_sort_key",
     "_prompt_input_chars",
+    "_semantic_preselection_summary",
     "_signal_score_weights",
     "_signal_label",
     "_signal_candidates",
@@ -121,6 +126,193 @@ def _prompt_input_chars(
         for item in raw_metrics
     )
     return evidence_chars + metric_chars
+
+
+def _fresh_content_hash(
+    evidence: CrossReportEvidenceReference,
+    content_hashes: dict[str, dict[str, str]],
+) -> str:
+    report_hashes = content_hashes.get(evidence.report_id) or {}
+    for key in (evidence.entity_uid, evidence.evidence_id):
+        value = str(report_hashes.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _cosine_similarity(left: list[float], right: list[float]) -> float:
+    if not left or not right or len(left) != len(right):
+        return 0.0
+    left_norm = math.sqrt(sum(value * value for value in left))
+    right_norm = math.sqrt(sum(value * value for value in right))
+    if left_norm <= 0.0 or right_norm <= 0.0:
+        return 0.0
+    return sum(a * b for a, b in zip(left, right)) / (left_norm * right_norm)
+
+
+def _centroid(vectors: list[list[float]]) -> list[float]:
+    if not vectors:
+        return []
+    dimensions = len(vectors[0])
+    if dimensions <= 0 or any(len(vector) != dimensions for vector in vectors):
+        return []
+    return [
+        sum(vector[index] for vector in vectors) / len(vectors)
+        for index in range(dimensions)
+    ]
+
+
+def _embedding_by_entity(
+    claim_embeddings: list[ClaimEmbeddingRecord] | None,
+) -> dict[str, ClaimEmbeddingRecord]:
+    records: dict[str, ClaimEmbeddingRecord] = {}
+    for record in claim_embeddings or []:
+        if record.status != "embedded" or not record.vector:
+            continue
+        records.setdefault(str(record.entity_uid), record)
+    return records
+
+
+def _semantic_preselection_summary(
+    *,
+    mode: str,
+    candidate_claim_count: int,
+    embedding_count: int,
+    fresh_embedding_count: int,
+    stale_embedding_count: int,
+    selected_claims: list[CrossReportEvidenceReference],
+    selected_embedding_uids: list[str],
+    fallback_reason: str = "",
+    prompt_input_chars_before: int = 0,
+    prompt_input_chars_after: int = 0,
+) -> CrossReportSemanticPreselectionSummary:
+    return CrossReportSemanticPreselectionSummary(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        mode=mode,
+        candidate_claim_count=candidate_claim_count,
+        embedding_count=embedding_count,
+        fresh_embedding_count=fresh_embedding_count,
+        stale_embedding_count=stale_embedding_count,
+        selected_claim_count=len(selected_claims),
+        selected_embedding_uids=selected_embedding_uids,
+        fallback_reason=fallback_reason,
+        prompt_input_chars_before=prompt_input_chars_before,
+        prompt_input_chars_after=prompt_input_chars_after,
+    )
+
+
+def _semantic_preselected_evidence(
+    *,
+    candidate_evidence: list[CrossReportEvidenceReference],
+    claim_embeddings: list[ClaimEmbeddingRecord] | None,
+    content_hashes: dict[str, dict[str, str]],
+    selected_order: dict[str, int],
+    max_evidence_items: int,
+) -> tuple[
+    list[CrossReportEvidenceReference],
+    CrossReportSemanticPreselectionSummary | None,
+    Counter[str],
+]:
+    if claim_embeddings is None:
+        return candidate_evidence, None, Counter()
+
+    dropped: Counter[str] = Counter()
+    claim_evidence = [
+        item for item in candidate_evidence if str(item.content_class) == "claim"
+    ]
+    embeddings_by_entity = _embedding_by_entity(claim_embeddings)
+    fresh_records: dict[str, ClaimEmbeddingRecord] = {}
+    stale_count = 0
+    for item in claim_evidence:
+        record = embeddings_by_entity.get(item.entity_uid)
+        if record is None:
+            continue
+        expected_hash = _fresh_content_hash(item, content_hashes)
+        if not expected_hash or record.content_hash != expected_hash:
+            stale_count += 1
+            continue
+        fresh_records[item.entity_uid] = record
+
+    if not fresh_records:
+        summary = _semantic_preselection_summary(
+            mode="deterministic_fallback",
+            candidate_claim_count=len(claim_evidence),
+            embedding_count=len(claim_embeddings),
+            fresh_embedding_count=0,
+            stale_embedding_count=stale_count,
+            selected_claims=[],
+            selected_embedding_uids=[],
+            fallback_reason="no_fresh_claim_embeddings",
+        )
+        return candidate_evidence, summary, dropped
+
+    focus_vector = _centroid(
+        [record.vector or [] for record in fresh_records.values() if record.vector]
+    )
+    if not focus_vector:
+        summary = _semantic_preselection_summary(
+            mode="deterministic_fallback",
+            candidate_claim_count=len(claim_evidence),
+            embedding_count=len(claim_embeddings),
+            fresh_embedding_count=len(fresh_records),
+            stale_embedding_count=stale_count,
+            selected_claims=[],
+            selected_embedding_uids=[],
+            fallback_reason="embedding_dimensions_invalid",
+        )
+        return candidate_evidence, summary, dropped
+
+    semantic_ranked = sorted(
+        [
+            (
+                item,
+                fresh_records[item.entity_uid],
+                _cosine_similarity(
+                    fresh_records[item.entity_uid].vector or [], focus_vector
+                ),
+            )
+            for item in claim_evidence
+            if item.entity_uid in fresh_records
+        ],
+        key=lambda scored: (
+            -scored[2],
+            selected_order.get(scored[0].report_id, 9999),
+            scored[0].evidence_id,
+        ),
+    )
+    selected_claim_limit = max(1, min(max_evidence_items, len(semantic_ranked)))
+    selected_claims = [
+        item for item, _record, _score in semantic_ranked[:selected_claim_limit]
+    ]
+    selected_entity_uids = {item.entity_uid for item in selected_claims}
+    selected_embedding_by_entity = {
+        item.entity_uid: record
+        for item, record, _score in semantic_ranked[:selected_claim_limit]
+    }
+    preselected = [
+        item
+        for item in candidate_evidence
+        if str(item.content_class) != "claim" or item.entity_uid in selected_entity_uids
+    ]
+    dropped_count = len(claim_evidence) - len(selected_claims)
+    if dropped_count > 0:
+        dropped["semantic_claim_preselection"] = dropped_count
+    selected_embedding_uids = [
+        str(selected_embedding_by_entity[item.entity_uid].embedding_uid)
+        for item in preselected
+        if str(item.content_class) == "claim"
+        and item.entity_uid in selected_embedding_by_entity
+    ]
+    summary = _semantic_preselection_summary(
+        mode="claim_embedding_similarity",
+        candidate_claim_count=len(claim_evidence),
+        embedding_count=len(claim_embeddings),
+        fresh_embedding_count=len(fresh_records),
+        stale_embedding_count=stale_count,
+        selected_claims=selected_claims,
+        selected_embedding_uids=selected_embedding_uids,
+    )
+    return preselected, summary, dropped
 
 
 def _signal_score_weights(raw_weights: dict[str, float] | None) -> dict[str, float]:
@@ -598,6 +790,7 @@ def assemble_cross_report_analysis_inputs(
     ctx: RunContext,
     *,
     max_evidence_items: int = 48,
+    claim_embeddings: list[ClaimEmbeddingRecord] | None = None,
 ) -> CrossReportEvidenceInputResult:
     validate_cross_report_contract(request)
     validate_cross_report_contract(source_selection)
@@ -647,6 +840,18 @@ def assemble_cross_report_analysis_inputs(
         seen_evidence_keys.add(evidence_key)
         candidate_evidence.append(item)
 
+    prompt_chars_before_preselection = _prompt_input_chars(candidate_evidence, [])
+    candidate_evidence, semantic_preselection, semantic_dropped = (
+        _semantic_preselected_evidence(
+            candidate_evidence=candidate_evidence,
+            claim_embeddings=claim_embeddings,
+            content_hashes=projected_data.content_hashes,
+            selected_order=selected_order,
+            max_evidence_items=max_evidence_items,
+        )
+    )
+    dropped.update(semantic_dropped)
+
     bounded_evidence: list[CrossReportEvidenceReference] = []
     for item in candidate_evidence:
         if len(bounded_evidence) >= max_evidence_items:
@@ -664,6 +869,13 @@ def assemble_cross_report_analysis_inputs(
             continue
         raw_metrics.append(metric)
 
+    prompt_input_chars = _prompt_input_chars(bounded_evidence, raw_metrics)
+    if semantic_preselection is not None:
+        semantic_preselection = replace(
+            semantic_preselection,
+            prompt_input_chars_before=prompt_chars_before_preselection,
+            prompt_input_chars_after=prompt_input_chars,
+        )
     evidence_by_report: dict[str, list[str]] = {
         report_id: [] for report_id in selected_report_ids
     }
@@ -681,7 +893,8 @@ def assemble_cross_report_analysis_inputs(
         raw_metrics=raw_metrics,
         evidence_by_report_id=evidence_by_report,
         dropped_evidence_counts=dict(sorted(dropped.items())),
-        prompt_input_chars=_prompt_input_chars(bounded_evidence, raw_metrics),
+        prompt_input_chars=prompt_input_chars,
+        semantic_preselection=semantic_preselection,
     )
     validate_cross_report_contract(result)
     logger.info(
@@ -697,6 +910,11 @@ def assemble_cross_report_analysis_inputs(
                 "raw_metric_count": len(result.raw_metrics),
                 "prompt_input_chars": result.prompt_input_chars,
                 "dropped_evidence_counts": result.dropped_evidence_counts,
+                "semantic_preselection": (
+                    asdict(result.semantic_preselection)
+                    if result.semantic_preselection is not None
+                    else None
+                ),
             },
         )
     )

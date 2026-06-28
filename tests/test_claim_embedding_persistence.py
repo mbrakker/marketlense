@@ -5,8 +5,11 @@ import logging
 import sqlite3
 from dataclasses import replace
 
+import pytest
+
 from src.contracts.analytics_projection import (
     AnalyticsProjectionUpsertRequest,
+    ClaimEmbeddingPendingReadRequest,
     ClaimEmbeddingReadRequest,
     ClaimEmbeddingWorkflowRequest,
     PROJECTION_SCHEMA_VERSION,
@@ -18,6 +21,7 @@ from src.orchestrators.claim_embedding_orchestrator import (
     run_claim_embedding_workflow,
 )
 from src.services.analytics_store_service import (
+    read_pending_claim_embedding_rows,
     read_claim_embeddings,
     upsert_projection,
 )
@@ -143,6 +147,31 @@ def test_claim_embedding_workflow_persists_vectors_and_skips_unchanged_reruns(
     assert record.external_vector_id.startswith("local:claim_embeddings:")
     assert record.error_code == ""
     assert record.error_message == ""
+    default_status_readback = read_claim_embeddings(
+        ClaimEmbeddingReadRequest(
+            schema_version="1.0",
+            db_path=ingest_settings.reports_db,
+            statuses=[""],
+        ),
+        run_context,
+    )
+    assert [item.embedding_uid for item in default_status_readback.embeddings] == [
+        record.embedding_uid
+    ]
+    with sqlite3.connect(ingest_settings.reports_db) as conn:
+        conn.execute(
+            "UPDATE claim_embeddings SET metadata_json=? WHERE embedding_uid=?",
+            ("{", str(record.embedding_uid)),
+        )
+    invalid_metadata_readback = read_claim_embeddings(
+        ClaimEmbeddingReadRequest(
+            schema_version="1.0",
+            db_path=ingest_settings.reports_db,
+            statuses=["embedded"],
+        ),
+        run_context,
+    )
+    assert invalid_metadata_readback.embeddings[0].metadata == {}
 
     queue = _fetch_one(
         ingest_settings.reports_db,
@@ -154,6 +183,48 @@ def test_claim_embedding_workflow_persists_vectors_and_skips_unchanged_reruns(
         "embedding_version": "claim-embedding.v1",
     }
     assert_logs_have_required_fields(_events(caplog))
+
+
+def test_claim_embedding_read_rejects_invalid_status(
+    ingest_settings,
+    run_context,
+    assert_app_error,
+) -> None:
+    with pytest.raises(AppError) as exc_info:
+        read_claim_embeddings(
+            ClaimEmbeddingReadRequest(
+                schema_version="1.0",
+                db_path=ingest_settings.reports_db,
+                statuses=["pending"],
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="claim_embedding_read_status_invalid",
+        retryable=False,
+    )
+
+
+def test_claim_embedding_pending_read_limit_zero_returns_empty_contract(
+    ingest_settings,
+    run_context,
+) -> None:
+    response = read_pending_claim_embedding_rows(
+        ClaimEmbeddingPendingReadRequest(
+            schema_version="1.0",
+            db_path=ingest_settings.reports_db,
+            embedding_version="claim-embedding.v1",
+            provider="openai",
+            model="text-embedding-3-small",
+            limit=0,
+        ),
+        run_context,
+    )
+
+    assert response.schema_version == PROJECTION_SCHEMA_VERSION
+    assert response.rows == []
 
 
 def test_claim_embedding_workflow_records_failed_attempt_with_error_taxonomy(

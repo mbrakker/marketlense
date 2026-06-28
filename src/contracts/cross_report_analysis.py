@@ -38,6 +38,7 @@ from src.contracts._cross_report_analysis.selection import (
     CrossReportProjectedDataReadResponse,
     CrossReportPublishabilityResult,
     CrossReportRawMetricReference,
+    CrossReportSemanticPreselectionSummary,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
     CrossReportSignalScore,
@@ -47,7 +48,9 @@ from src.contracts._cross_report_analysis.selection import (
     CrossReportThemeCandidate,
     CrossReportThemeSelectionResult,
 )
-from src.contracts._cross_report_analysis.validation import validate_cross_report_contract
+from src.contracts._cross_report_analysis.validation import (
+    validate_cross_report_contract,
+)
 
 __all__ = [
     "CROSS_REPORT_ANALYSIS_SCHEMA_VERSION",
@@ -70,6 +73,7 @@ __all__ = [
     "CrossReportEvidenceAgreementGroup",
     "CrossReportEvidenceAgreementResult",
     "CrossReportRawMetricReference",
+    "CrossReportSemanticPreselectionSummary",
     "CrossReportAnalysisSection",
     "CrossReportGeneratedAnalysisResult",
     "CrossReportValidationResult",

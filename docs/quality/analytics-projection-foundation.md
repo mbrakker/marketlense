@@ -78,6 +78,14 @@ Embedding records include:
 
 `read_claim_embeddings` returns local durable records filtered by claim IDs, report IDs, topic taxonomy/category metadata, and status. This is reusable claim grounding inside the existing reports DB; it does not introduce a new deployable worker, peer analytics database, external vector database, or semantic-search product UI.
 
+## Briefing and Signal Evidence Preselection
+
+`run_cross_report_analysis` and `run_signal_candidate_extraction` read embedded claims through `analytics_store_service.read_claim_embeddings` after source/theme selection and before evidence assembly.
+
+`assemble_cross_report_analysis_inputs` stays a pure generator step. When fresh claim embeddings are supplied, it excludes records whose `content_hash` no longer matches the selected projection, ranks embedded claim evidence by deterministic vector similarity, and applies that bounded claim set before prompt input assembly. When no fresh embeddings are available, it preserves the existing deterministic report/class/evidence ordering.
+
+The returned `CrossReportEvidenceInputResult.semantic_preselection` summary records the mode, candidate claim count, supplied/fresh/stale embedding counts, selected embedding UIDs, fallback reason, and approximate prompt characters before and after selection. Cross-report idempotency material includes this summary so embedding-backed evidence changes cannot reuse a stale generated Briefing.
+
 ## Future Cross-Report Analytics
 
-Future analytics can build on this foundation by querying the projection tables for relational reporting and by reusing `claim_embeddings` for lower-cost claim grounding. The current implementation deliberately does not add dashboards, clustering, external vector search, or product workflows.
+Future analytics can build on this foundation by querying the projection tables for relational reporting and by benchmarking/tuning embedding-backed evidence preselection. The current implementation deliberately does not add dashboards, clustering, external vector search, or a new product UI.

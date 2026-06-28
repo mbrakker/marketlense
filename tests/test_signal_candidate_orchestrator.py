@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -11,6 +12,11 @@ from src.contracts.cross_report_analysis import (
     CrossReportProjectedDataReadResponse,
     CrossReportSourceReportCandidate,
 )
+from src.contracts.analytics_projection import (
+    ClaimEmbeddingReadResponse,
+    ClaimEmbeddingRecord,
+)
+from src.contracts.semantic_ids import EntityUid, ReportId
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionRequest,
@@ -83,7 +89,50 @@ def _evidence(
     )
 
 
+def _embedding(
+    evidence: CrossReportEvidenceReference,
+    *,
+    content_hash: str,
+    vector: list[float],
+) -> ClaimEmbeddingRecord:
+    return ClaimEmbeddingRecord(
+        schema_version="1.0",
+        embedding_uid=EntityUid(f"{evidence.entity_uid}:embedding:test"),
+        claim_uid=EntityUid(evidence.entity_uid),
+        entity_uid=EntityUid(evidence.entity_uid),
+        report_id=ReportId(evidence.report_id),
+        content_hash=content_hash,
+        embedding_version="claim-embedding.test.v1",
+        provider="openai",
+        model="text-embedding-3-small",
+        dimensions=len(vector),
+        vector=vector,
+        external_vector_id=f"local:claim_embeddings:{evidence.entity_uid}",
+        metadata={"taxonomy": ["ai", "retail"]},
+        status="embedded",
+        generated_at_utc="2026-06-28T12:00:00Z",
+        updated_at_utc="2026-06-28T12:00:00Z",
+        attempt_count=1,
+        error_code="",
+        error_message="",
+        error_retryable=False,
+        error_severity="",
+    )
+
+
 def _projected_data() -> CrossReportProjectedDataReadResponse:
+    report_a = _evidence(
+        "report-a:claim:1",
+        "report-a",
+        "Publisher A",
+        "AI commerce adoption is increasing.",
+    )
+    report_b = _evidence(
+        "report-b:claim:1",
+        "report-b",
+        "Publisher B",
+        "AI commerce adoption is accelerating.",
+    )
     return CrossReportProjectedDataReadResponse(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         source_candidates=[
@@ -91,23 +140,13 @@ def _projected_data() -> CrossReportProjectedDataReadResponse:
             _candidate("report-b", "Publisher B"),
         ],
         evidence=[
-            _evidence(
-                "report-a:claim:1",
-                "report-a",
-                "Publisher A",
-                "AI commerce adoption is increasing.",
-            ),
-            _evidence(
-                "report-b:claim:1",
-                "report-b",
-                "Publisher B",
-                "AI commerce adoption is accelerating.",
-            ),
+            report_a,
+            report_b,
         ],
         raw_metrics=[],
         content_hashes={
-            "report-a": {"report-a:claim:1": "hash-a"},
-            "report-b": {"report-b:claim:1": "hash-b"},
+            "report-a": {report_a.entity_uid: "hash-a"},
+            "report-b": {report_b.entity_uid: "hash-b"},
         },
         excluded_report_counts={},
     )
@@ -175,6 +214,7 @@ def test_signal_candidate_orchestrator_extracts_stores_and_clusters_candidates(
         "projected_data_read",
         "source_selected",
         "theme_selected",
+        "claim_embeddings_read",
         "evidence_assembled",
         "signals_scored",
         "agreement_grouped",
@@ -192,3 +232,50 @@ def test_signal_candidate_orchestrator_extracts_stores_and_clusters_candidates(
         "signal_candidate_extraction_start",
         "signal_candidate_extraction_complete",
     }
+
+
+def test_signal_candidate_orchestrator_reads_claim_embeddings_for_preselection(
+    tmp_path,
+    run_context,
+) -> None:
+    projected_data = _projected_data()
+    read_embedding_calls = []
+
+    def _read_projected_data(request, ctx):
+        return projected_data
+
+    def _read_claim_embeddings(request, ctx):
+        read_embedding_calls.append(request)
+        evidence_by_id = {item.evidence_id: item for item in projected_data.evidence}
+        return ClaimEmbeddingReadResponse(
+            schema_version="1.0",
+            embeddings=[
+                _embedding(
+                    evidence_by_id["report-a:claim:1"],
+                    content_hash="hash-a",
+                    vector=[0.0, 1.0],
+                ),
+                _embedding(
+                    evidence_by_id["report-b:claim:1"],
+                    content_hash="hash-b",
+                    vector=[0.0, 1.0],
+                ),
+            ],
+        )
+
+    request = replace(_request(tmp_path), max_evidence_items=1)
+    outcome = run_signal_candidate_extraction(
+        request,
+        run_context,
+        read_projected_data_fn=_read_projected_data,
+        read_claim_embeddings_fn=_read_claim_embeddings,
+    )
+
+    assert len(read_embedding_calls) == 1
+    embedding_request = read_embedding_calls[0]
+    assert embedding_request.db_path == str(tmp_path / "reports.sqlite")
+    assert embedding_request.report_ids == ["report-a", "report-b"]
+    assert embedding_request.topics == ["AI commerce", "ai_commerce", "Retail", "AI"]
+    assert embedding_request.statuses == ["embedded"]
+    assert embedding_request.limit == 4
+    assert outcome.candidate_count >= 1

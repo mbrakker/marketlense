@@ -3836,6 +3836,16 @@
             "$ref": "#/$defs/src.contracts._cross_report_analysis.selection.CrossReportSelectedSourceReport"
           },
           "type": "array"
+        },
+        "semantic_preselection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._cross_report_analysis.selection.CrossReportSemanticPreselectionSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -4190,6 +4200,58 @@
         "source_report_ids",
         "score_components",
         "selection_reasons"
+      ],
+      "type": "object"
+    },
+    "src.contracts._cross_report_analysis.selection.CrossReportSemanticPreselectionSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_claim_count": {
+          "type": "integer"
+        },
+        "embedding_count": {
+          "type": "integer"
+        },
+        "fallback_reason": {
+          "type": "string"
+        },
+        "fresh_embedding_count": {
+          "type": "integer"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "prompt_input_chars_after": {
+          "type": "integer"
+        },
+        "prompt_input_chars_before": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_claim_count": {
+          "type": "integer"
+        },
+        "selected_embedding_uids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "stale_embedding_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "mode",
+        "candidate_claim_count",
+        "embedding_count",
+        "fresh_embedding_count",
+        "stale_embedding_count",
+        "selected_claim_count",
+        "selected_embedding_uids"
       ],
       "type": "object"
     },

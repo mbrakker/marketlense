@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_signal_scoring_ranks_text_taxonomy_without_metric_normalization(
     run_context,
     caplog,
@@ -129,6 +130,264 @@ def test_signal_scoring_ranks_text_taxonomy_without_metric_normalization(
     assert complete["fields"]["selected_signal_ids"] == ["signal-ai", "signal-retail"]
     assert complete["fields"]["raw_metric_policy"] == result.raw_metric_policy
 
+
+def test_evidence_assembly_prefers_fresh_semantic_claim_embeddings_under_cap(
+    run_context,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=3,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-04",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    report_a_irrelevant = _evidence(
+        "report-a:claim:irrelevant",
+        report_id="report-a",
+        text="Legacy point-of-sale refresh plans remain mostly unchanged.",
+    )
+    report_a_relevant = _evidence(
+        "report-a:claim:ai-checkout",
+        report_id="report-a",
+        text="AI checkout personalization is expanding across retail teams.",
+    )
+    report_b_relevant = _evidence(
+        "report-b:claim:ai-checkout",
+        report_id="report-b",
+        text="Retail leaders are accelerating AI checkout personalization.",
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[report_a_irrelevant, report_a_relevant, report_b_relevant],
+        raw_metrics=[],
+        content_hashes={
+            "report-a": {
+                report_a_irrelevant.entity_uid: "hash-a-irrelevant",
+                report_a_relevant.entity_uid: "hash-a-relevant",
+            },
+            "report-b": {report_b_relevant.entity_uid: "hash-b-relevant"},
+        },
+        excluded_report_counts={},
+    )
+    caplog.set_level(
+        logging.INFO, logger="market_lense.cross_report_analysis_input_generator"
+    )
+
+    result = assemble_cross_report_analysis_inputs(
+        _request(),
+        source_selection,
+        projected_data,
+        run_context,
+        max_evidence_items=2,
+        claim_embeddings=[
+            _claim_embedding(
+                report_a_irrelevant.entity_uid,
+                report_id="report-a",
+                content_hash="hash-a-irrelevant",
+                vector=[1.0, 0.0],
+            ),
+            _claim_embedding(
+                report_a_relevant.entity_uid,
+                report_id="report-a",
+                content_hash="hash-a-relevant",
+                vector=[0.0, 1.0],
+            ),
+            _claim_embedding(
+                report_b_relevant.entity_uid,
+                report_id="report-b",
+                content_hash="hash-b-relevant",
+                vector=[0.0, 1.0],
+            ),
+        ],
+    )
+
+    assert [item.evidence_id for item in result.evidence] == [
+        "report-a:claim:ai-checkout",
+        "report-b:claim:ai-checkout",
+    ]
+    assert result.semantic_preselection is not None
+    assert result.semantic_preselection.mode == "claim_embedding_similarity"
+    assert result.semantic_preselection.candidate_claim_count == 3
+    assert result.semantic_preselection.selected_claim_count == 2
+    assert result.semantic_preselection.stale_embedding_count == 0
+    assert result.dropped_evidence_counts["semantic_claim_preselection"] == 1
+    events = _events(caplog)
+    assert_logs_have_required_fields(events)
+    complete = [
+        event
+        for event in events
+        if event["event"] == "cross_report_evidence_input_assembly_complete"
+    ][0]
+    assert complete["fields"]["semantic_preselection"]["mode"] == (
+        "claim_embedding_similarity"
+    )
+
+
+def test_evidence_assembly_falls_back_when_claim_embeddings_are_absent(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=2,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-04",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[
+            _evidence("report-a:claim:first", report_id="report-a"),
+            _evidence("report-a:claim:second", report_id="report-a"),
+            _evidence("report-b:claim:first", report_id="report-b"),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+
+    result = assemble_cross_report_analysis_inputs(
+        _request(),
+        source_selection,
+        projected_data,
+        run_context,
+        max_evidence_items=2,
+        claim_embeddings=[],
+    )
+
+    assert [item.evidence_id for item in result.evidence] == [
+        "report-a:claim:first",
+        "report-a:claim:second",
+    ]
+    assert result.semantic_preselection is not None
+    assert result.semantic_preselection.mode == "deterministic_fallback"
+    assert result.semantic_preselection.fallback_reason == "no_fresh_claim_embeddings"
+
+
+def test_evidence_assembly_excludes_stale_claim_embeddings(
+    run_context,
+) -> None:
+    source_selection = _source_selection(
+        [
+            _selected_source(
+                "report-a",
+                publisher="Publisher A",
+                report_date="2026-05-01",
+                evidence_count=2,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=1,
+            ),
+            _selected_source(
+                "report-b",
+                publisher="Publisher B",
+                report_date="2026-05-04",
+                evidence_count=1,
+                tags=["AI"],
+                categories=["Retail"],
+                rank=2,
+            ),
+        ]
+    )
+    stale_preferred = _evidence(
+        "report-b:claim:stale",
+        report_id="report-b",
+        text="AI checkout personalization is accelerating.",
+    )
+    fresh_a = _evidence(
+        "report-a:claim:fresh-a",
+        report_id="report-a",
+        text="AI checkout personalization is increasing.",
+    )
+    fresh_b = _evidence(
+        "report-a:claim:fresh-b",
+        report_id="report-a",
+        text="Retail personalization workflows are expanding.",
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[],
+        evidence=[fresh_a, fresh_b, stale_preferred],
+        raw_metrics=[],
+        content_hashes={
+            "report-a": {
+                fresh_a.entity_uid: "hash-fresh-a",
+                fresh_b.entity_uid: "hash-fresh-b",
+            },
+            "report-b": {stale_preferred.entity_uid: "hash-current"},
+        },
+        excluded_report_counts={},
+    )
+
+    result = assemble_cross_report_analysis_inputs(
+        _request(),
+        source_selection,
+        projected_data,
+        run_context,
+        max_evidence_items=1,
+        claim_embeddings=[
+            _claim_embedding(
+                stale_preferred.entity_uid,
+                report_id="report-b",
+                content_hash="hash-old",
+                vector=[0.0, 1.0],
+            ),
+            _claim_embedding(
+                fresh_a.entity_uid,
+                report_id="report-a",
+                content_hash="hash-fresh-a",
+                vector=[0.0, 1.0],
+            ),
+            _claim_embedding(
+                fresh_b.entity_uid,
+                report_id="report-a",
+                content_hash="hash-fresh-b",
+                vector=[0.0, 1.0],
+            ),
+        ],
+    )
+
+    assert [item.evidence_id for item in result.evidence] == ["report-a:claim:fresh-a"]
+    assert result.semantic_preselection is not None
+    assert result.semantic_preselection.stale_embedding_count == 1
+    assert result.semantic_preselection.selected_embedding_uids == [
+        f"{fresh_a.entity_uid}:embedding:test"
+    ]
+
+
 def test_signal_scoring_matches_short_labels_on_token_boundaries(
     run_context,
 ) -> None:
@@ -182,6 +441,7 @@ def test_signal_scoring_matches_short_labels_on_token_boundaries(
         score for score in result.signal_scores if score.signal_id == "signal-ai"
     )
     assert ai_signal.evidence_ids == ["report-a-claim-2"]
+
 
 def test_signal_scoring_disambiguates_slug_collisions(
     run_context,
@@ -240,6 +500,7 @@ def test_signal_scoring_disambiguates_slug_collisions(
 
     assert len(result.selected_signal_ids) == len(set(result.selected_signal_ids))
     assert {"signal-ai-ml", "signal-ai-ml-2"}.issubset(result.selected_signal_ids)
+
 
 def test_signal_scoring_is_unchanged_when_only_raw_metric_values_change(
     run_context,
@@ -349,6 +610,7 @@ def test_signal_scoring_is_unchanged_when_only_raw_metric_values_change(
     ]
     assert changed_metric_result.selected_signal_ids == base_result.selected_signal_ids
 
+
 def test_signal_scoring_rejects_invalid_signal_limit(
     run_context,
     assert_app_error,
@@ -405,6 +667,7 @@ def test_signal_scoring_rejects_invalid_signal_limit(
         retryable=False,
         severity="error",
     )
+
 
 def test_evidence_agreement_groups_convergent_signal_inputs(
     run_context,
@@ -492,6 +755,7 @@ def test_evidence_agreement_groups_convergent_signal_inputs(
     ][0]
     assert complete["fields"]["agreement_counts"]["convergent"] >= 1
 
+
 def test_evidence_agreement_groups_divergent_signal_inputs(
     run_context,
 ) -> None:
@@ -557,6 +821,7 @@ def test_evidence_agreement_groups_divergent_signal_inputs(
     assert "opposed_directional_language" in ai_group.uncertainty_reasons
     assert result.agreement_counts["divergent"] >= 1
 
+
 def test_evidence_agreement_requires_distinct_directional_evidence_for_divergence(
     run_context,
 ) -> None:
@@ -621,6 +886,7 @@ def test_evidence_agreement_requires_distinct_directional_evidence_for_divergenc
     assert ai_group.agreement_type == "convergent"
     assert ai_group.uncertainty_reasons == ["multi_publisher_alignment"]
 
+
 def test_evidence_agreement_same_publisher_opposition_is_thin_coverage(
     run_context,
 ) -> None:
@@ -684,8 +950,12 @@ def test_evidence_agreement_same_publisher_opposition_is_thin_coverage(
     )
     assert ai_group.agreement_type == "thin_coverage"
 
+
 __all__ = [
     "test_signal_scoring_ranks_text_taxonomy_without_metric_normalization",
+    "test_evidence_assembly_prefers_fresh_semantic_claim_embeddings_under_cap",
+    "test_evidence_assembly_falls_back_when_claim_embeddings_are_absent",
+    "test_evidence_assembly_excludes_stale_claim_embeddings",
     "test_signal_scoring_matches_short_labels_on_token_boundaries",
     "test_signal_scoring_disambiguates_slug_collisions",
     "test_signal_scoring_is_unchanged_when_only_raw_metric_values_change",

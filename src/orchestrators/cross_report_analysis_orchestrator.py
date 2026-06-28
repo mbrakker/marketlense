@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import time
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -31,6 +32,10 @@ from src.contracts.cross_report_analysis import (
 )
 from src.contracts.files import WriteBytesRequest
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
+from src.contracts.analytics_projection import (
+    ClaimEmbeddingReadRequest,
+    ClaimEmbeddingReadResponse,
+)
 from src.contracts.report_cards import CoverFingerprint
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
@@ -67,7 +72,7 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cross_report_analysis_orchestrator")
 _IDEMPOTENCY_SCOPE = "cross_report_analysis_orchestrator.generate"
-_IDEMPOTENCY_MATERIAL_VERSION = "2.0"
+_IDEMPOTENCY_MATERIAL_VERSION = "2.1"
 
 
 def _hash_payload(payload: dict[str, Any]) -> str:
@@ -229,6 +234,7 @@ def _idempotency_material(
     request: CrossReportAnalysisOrchestratorRequest,
     selected_report_ids: list[str],
     content_hashes: dict[str, dict[str, str]],
+    semantic_preselection: dict[str, Any] | None,
     prompt_hashes: dict[str, str],
     settings: Any,
 ) -> dict[str, Any]:
@@ -244,6 +250,7 @@ def _idempotency_material(
         "publish_target_route": request.publish_target_route,
         "selected_report_ids": selected_report_ids,
         "projection_content_hashes": content_hashes,
+        "semantic_preselection": semantic_preselection or {},
         "prompt_hashes": prompt_hashes,
         "config_fingerprint": _config_fingerprint(settings),
     }
@@ -317,9 +324,7 @@ def _generated_from_dict(payload: dict[str, Any]) -> CrossReportGeneratedAnalysi
         model=str(payload["model"]),
         cost_summary=dict(payload["cost_summary"]),
         decision_focus=str(payload["decision_focus"]),
-        executive_takeaways=[
-            str(value) for value in payload["executive_takeaways"]
-        ],
+        executive_takeaways=[str(value) for value in payload["executive_takeaways"]],
     )
 
 
@@ -511,6 +516,32 @@ def _theme_rotation_reference_date(request: CrossReportAnalysisRequest) -> str |
     return str(request.date_range_end or "").strip() or None
 
 
+def _embedding_topics(request: CrossReportAnalysisRequest) -> list[str]:
+    seen: set[str] = set()
+    topics: list[str] = []
+
+    def _append(value: str) -> None:
+        cleaned = str(value).strip()
+        normalized = cleaned.casefold()
+        if cleaned and normalized not in seen:
+            seen.add(normalized)
+            topics.append(cleaned)
+        slug = "_".join(
+            token for token in re.split(r"[^A-Za-z0-9]+", cleaned.casefold()) if token
+        )
+        if slug and slug not in seen:
+            seen.add(slug)
+            topics.append(slug)
+
+    for value in [
+        request.topic,
+        *request.category_filters,
+        *request.tag_filters,
+    ]:
+        _append(value)
+    return topics
+
+
 def run_cross_report_analysis(
     request: CrossReportAnalysisOrchestratorRequest,
     settings: Any,
@@ -519,6 +550,9 @@ def run_cross_report_analysis(
     read_projected_data_fn: Callable[
         [CrossReportProjectedDataReadRequest, RunContext], Any
     ] = analytics_store_service.read_cross_report_projected_data,
+    read_claim_embeddings_fn: Callable[
+        [ClaimEmbeddingReadRequest, RunContext], ClaimEmbeddingReadResponse
+    ] = analytics_store_service.read_claim_embeddings,
     write_bytes_fn: Callable[
         [WriteBytesRequest, RunContext], Any
     ] = file_service.write_bytes,
@@ -603,12 +637,39 @@ def run_cross_report_analysis(
         publish_requires_validation_pass=False,
     )
     _log_transition(ctx, transitions, "publishability_checked")
+    selected_report_ids = [
+        source.report_id for source in source_selection.selected_sources
+    ]
+    claim_embedding_response = _run_step(
+        step_name="read_claim_embeddings",
+        operation=lambda: read_claim_embeddings_fn(
+            ClaimEmbeddingReadRequest(
+                schema_version="1.0",
+                db_path=request.projected_data_request.db_path,
+                report_ids=selected_report_ids,
+                topics=_embedding_topics(request.analysis_request),
+                statuses=["embedded"],
+                limit=max(1, request.max_evidence_items * 4),
+            ),
+            ctx,
+        ),
+        request=request,
+        ctx=ctx,
+        sleep_fn=sleep_fn,
+    )
+    _log_transition(
+        ctx,
+        transitions,
+        "claim_embeddings_read",
+        {"embedding_count": len(claim_embedding_response.embeddings)},
+    )
     evidence_inputs = assemble_cross_report_analysis_inputs(
         request.analysis_request,
         source_selection,
         projected_data,
         ctx,
         max_evidence_items=request.max_evidence_items,
+        claim_embeddings=claim_embedding_response.embeddings,
     )
     _enforce_prompt_budget(
         evidence_inputs_chars=evidence_inputs.prompt_input_chars,
@@ -653,9 +714,6 @@ def run_cross_report_analysis(
         "system": prompt_set.system.sha256,
         "user": prompt_set.user.sha256,
     }
-    selected_report_ids = [
-        source.report_id for source in source_selection.selected_sources
-    ]
     selected_content_hashes = _selected_projection_content_hashes(
         content_hashes=projected_data.content_hashes,
         selected_sources=source_selection.selected_sources,
@@ -664,6 +722,11 @@ def run_cross_report_analysis(
         request=request,
         selected_report_ids=selected_report_ids,
         content_hashes=selected_content_hashes,
+        semantic_preselection=(
+            asdict(evidence_inputs.semantic_preselection)
+            if evidence_inputs.semantic_preselection is not None
+            else None
+        ),
         prompt_hashes=prompt_hashes,
         settings=settings,
     )
@@ -758,7 +821,9 @@ def run_cross_report_analysis(
         geography_scope="unknown",
         evidence_density="balanced",
         domain_layer="forecast",
-        seed=int(hashlib.sha256(generated.analysis_id.encode("utf-8")).hexdigest()[:8], 16),
+        seed=int(
+            hashlib.sha256(generated.analysis_id.encode("utf-8")).hexdigest()[:8], 16
+        ),
         selection_reason="Cross-report briefing synthesizes multiple linked report systems.",
     )
     cover_outcomes = generate_cover_images(
@@ -766,23 +831,45 @@ def run_cross_report_analysis(
             schema_version="2.0",
             output_dir=request.output_root,
             style_config_path=str(getattr(settings, "cover_style_path", "")),
-            reports=[CoverImageReport(
-                schema_version="2.0", file_id=f"cross-report:{generated.analysis_id}",
-                title=generated.title, publisher="Market Bearing", report_slug=generated.slug,
-                time_period="", region=None, fingerprint=fingerprint, cover_profile="briefing",
-            )],
+            reports=[
+                CoverImageReport(
+                    schema_version="2.0",
+                    file_id=f"cross-report:{generated.analysis_id}",
+                    title=generated.title,
+                    publisher="Market Bearing",
+                    report_slug=generated.slug,
+                    time_period="",
+                    region=None,
+                    fingerprint=fingerprint,
+                    cover_profile="briefing",
+                )
+            ],
         ),
         ctx,
     )
-    cover_assets = cover_outcomes[0].assets if cover_outcomes and cover_outcomes[0].status == "generated" else None
+    cover_assets = (
+        cover_outcomes[0].assets
+        if cover_outcomes and cover_outcomes[0].status == "generated"
+        else None
+    )
     if cover_assets is None:
-        raise AppError(code="cover_asset_set_incomplete", message="Briefing cover generation did not produce all assets", retryable=False)
+        raise AppError(
+            code="cover_asset_set_incomplete",
+            message="Briefing cover generation did not produce all assets",
+            retryable=False,
+        )
     briefing_card = {
-        "schema_version": "1.0", "summary_compact": generated.executive_summary,
-        "summary_standard": generated.executive_summary, "decision_focus": generated.decision_focus,
-        "takeaways": list(generated.executive_takeaways), "source_count": len(generated.selected_sources),
+        "schema_version": "1.0",
+        "summary_compact": generated.executive_summary,
+        "summary_standard": generated.executive_summary,
+        "decision_focus": generated.decision_focus,
+        "takeaways": list(generated.executive_takeaways),
+        "source_count": len(generated.selected_sources),
         "evidence_count": len(generated.evidence),
-        "covers": {size: getattr(cover_assets, size).output_path for size in ("small", "medium", "large")},
+        "covers": {
+            size: getattr(cover_assets, size).output_path
+            for size in ("small", "medium", "large")
+        },
     }
     publish_package = build_cross_report_publish_package(
         generated,

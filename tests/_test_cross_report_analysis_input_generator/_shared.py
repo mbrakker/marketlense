@@ -28,12 +28,16 @@ from src.contracts.cross_report_analysis import (
     CrossReportValidationResult,
 )
 
+from src.contracts.analytics_projection import ClaimEmbeddingRecord
+
 from src.contracts.files import (
     DirectoryEntry,
     ListDirectoryResponse,
     ReadTextFilesResponse,
     ReadTextResponse,
 )
+
+from src.contracts.semantic_ids import EntityUid, ReportId
 
 from src.generators import cross_report_analysis_input_generator as input_gen
 
@@ -206,6 +210,39 @@ def _raw_metric(
         context="Source-specific survey response",
         evidence_id=f"{report_id}-claim-1",
         source_metadata={"pages": [2], "raw_metric_reference": True},
+    )
+
+
+def _claim_embedding(
+    entity_uid: str,
+    *,
+    report_id: str,
+    content_hash: str,
+    vector: list[float],
+    embedding_uid: str | None = None,
+) -> ClaimEmbeddingRecord:
+    return ClaimEmbeddingRecord(
+        schema_version="1.0",
+        embedding_uid=EntityUid(embedding_uid or f"{entity_uid}:embedding:test"),
+        claim_uid=EntityUid(entity_uid),
+        entity_uid=EntityUid(entity_uid),
+        report_id=ReportId(report_id),
+        content_hash=content_hash,
+        embedding_version="claim-embedding.test.v1",
+        provider="openai",
+        model="text-embedding-3-small",
+        dimensions=len(vector),
+        vector=vector,
+        external_vector_id=f"local:claim_embeddings:{entity_uid}",
+        metadata={"taxonomy": ["ai", "retail"]},
+        status="embedded",
+        generated_at_utc="2026-06-28T12:00:00Z",
+        updated_at_utc="2026-06-28T12:00:00Z",
+        attempt_count=1,
+        error_code="",
+        error_message="",
+        error_retryable=False,
+        error_severity="",
     )
 
 

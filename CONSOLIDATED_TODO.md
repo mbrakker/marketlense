@@ -32,7 +32,7 @@ Scoring:
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
 - Claim-level embedding persistence is live: `claim_embeddings` stores durable vectors/provider metadata/status/error taxonomy linked to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`, and `claim_embedding_orchestrator` owns pending/stale embedding workflow execution.
-- Cross-report Briefing and grounded Signal publish paths exist locally. Durable Signal candidate extraction, ingestion-time Signal artifact-pack generation, separate Signal-store persistence, grouping, readback, and publish reuse are landed through `src/contracts/signal_candidates.py`, `src/generators/signal_candidate_generator.py`, `src/generators/report_signal_artifact_generator.py`, `src/orchestrators/signal_candidate_orchestrator.py`, `src/orchestrators/report_generation_orchestrator.py`, and `src/services/analytics_store_service.py`.
+- Cross-report Briefing and grounded Signal publish paths now reuse persisted claim embeddings for bounded semantic evidence preselection through `analytics_store_service.read_claim_embeddings`, while falling back to deterministic lexical/category ordering when embeddings are absent or stale. Durable Signal candidate extraction, ingestion-time Signal artifact-pack generation, separate Signal-store persistence, grouping, readback, and publish reuse are landed through `src/contracts/signal_candidates.py`, `src/generators/signal_candidate_generator.py`, `src/generators/report_signal_artifact_generator.py`, `src/orchestrators/signal_candidate_orchestrator.py`, `src/orchestrators/report_generation_orchestrator.py`, and `src/services/analytics_store_service.py`.
 - The local bundled WordPress plugin registers `ml_report`, `ml_signal`, and `ml_briefing` with REST enabled. Remote WordPress exposure remains an external deployment/readback verification item.
 - README/config drift remains: README still states report publishing uses core `posts` in one section, while `src/config/app.yaml` defaults `publish.wp.post_type` to `ml_report`.
 - WordPress design token drift remains: README documents `settings.layout.wideSize` as `82rem`, while `Wordpress/wp-content/themes/marketlense/theme.json` currently uses `84rem`.
@@ -84,16 +84,6 @@ Scoring:
 
 ## 2. Analytics Projection, Signals, and Embeddings
 
-- **Title:** Use persisted claim embeddings for Briefing and Signal evidence preselection [Impact: 5/5, Effort: 3/5]
-  - Explanation: Briefing and Signal input builders still rank projected evidence with deterministic lexical/category signals only. Persisted claim embeddings can preselect semantically relevant claims before prompt assembly, reducing prompt size while keeping source grounding reproducible.
-  - Pros: Improves thematic recall, reduces model input cost, and makes evidence selection less dependent on exact keyword overlap.
-  - Cons: Requires careful fallback behavior when embeddings are absent or stale.
-  - Acceptance Criteria:
-    - Cross-report and Signal input generation read embedded claims through `analytics_store_service.read_claim_embeddings`.
-    - Semantic preselection is bounded, logged, and falls back to existing deterministic selection when embeddings are unavailable.
-    - Prompt input token/character counts decrease on an existing projected report corpus without reducing citation coverage.
-    - Tests cover embedded-hit selection, no-embedding fallback, stale embedding exclusion, and deterministic tie-breaking.
-
 - **Title:** Add claim embedding freshness, retention, and cost controls [Impact: 4/5, Effort: 2/5]
   - Explanation: Embedding records now persist locally, but operators need visibility into stale content, failed attempts, model-version drift, and avoidable re-embedding spend.
   - Pros: Prevents silent embedding drift and unnecessary provider calls while making retry/cleanup decisions operationally visible.
@@ -103,6 +93,16 @@ Scoring:
     - Retention policy documents and tests which historical embedding versions are kept or pruned.
     - The embedding workflow skips unchanged rows with a logged cost-avoidance count.
     - Tests cover stale-count reporting, failed retry visibility, retention pruning, and unchanged-row skip accounting.
+
+- **Title:** Add semantic evidence preselection quality and cost benchmark [Impact: 4/5, Effort: 3/5]
+  - Explanation: Briefing and Signal evidence preselection now uses persisted claim embeddings, but the cap and ranking policy should be measured against existing projected corpora so quality gains and prompt-size reductions stay explicit as reports accumulate.
+  - Pros: Prevents silent recall loss, tunes prompt-size reduction with evidence, and gives operators a regression signal for embedding model/version changes.
+  - Cons: Needs a stable corpus and clear citation-coverage metric to avoid noisy benchmark churn.
+  - Acceptance Criteria:
+    - A benchmark command compares deterministic fallback vs embedding-backed preselection on existing projected reports without synthesizing fixtures.
+    - Output reports prompt character/token deltas, selected evidence overlap, source-report coverage, and citation coverage by Briefing/Signal run.
+    - The benchmark fails or warns when semantic preselection reduces required citation/source coverage below a documented threshold.
+    - Tests cover benchmark metric calculation, stale/no-embedding fallback metrics, and deterministic output ordering.
 
 - **Title:** Complete public entity projection coverage or narrow the README entity contract [Impact: 5/5, Effort: 5/5]
   - Explanation: Reports, Briefings, and Signals have local publish paths, but README still describes a broader public entity model including Figures, Regions, and Time Periods. Those surfaces need either durable public projection contracts/routes or explicit README-scoped exclusions.
@@ -211,6 +211,7 @@ Scoring:
 - Durable Signal candidate extraction, clustering, storage, readback, and publish reuse.
 - Ingestion-time grounded Signal artifacts, separate Signal-store persistence, and publish workflow reuse from the Signal base.
 - Claim-level embedding persistence beyond `vector_projection_queue`, including durable vector records, provider/model metadata, status/error taxonomy, idempotent/stale-aware workflow execution, and local claim/report/topic readback.
+- Briefing and Signal evidence preselection using persisted claim embeddings, including bounded semantic claim selection, stale/no-embedding fallback, structured selection summaries, idempotency material updates, and local live-corpus prompt-size verification.
 - Bounded Streamlit log reads and grouped directory-count walks through `file_service`.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
@@ -226,7 +227,7 @@ Scoring:
 
 ### Phase 2: Intelligence Reuse and Public Entity Alignment
 
-- Briefing/Signal evidence preselection using persisted claim embeddings.
+- Semantic evidence preselection benchmark and tuning.
 - Public entity projection coverage for Figures, Regions, and Time Periods, or README narrowing.
 - WordPress render-time intelligence synthesis replacement with approved projections.
 

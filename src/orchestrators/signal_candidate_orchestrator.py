@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Callable
 
+from src.contracts.analytics_projection import (
+    ClaimEmbeddingReadRequest,
+    ClaimEmbeddingReadResponse,
+)
 from src.contracts.cross_report_analysis import (
     CrossReportProjectedDataReadRequest,
     CrossReportProjectedDataReadResponse,
@@ -48,6 +53,32 @@ def _log_transition(
     )
 
 
+def _embedding_topics(request: SignalCandidateExtractionRequest) -> list[str]:
+    seen: set[str] = set()
+    topics: list[str] = []
+
+    def _append(value: str) -> None:
+        cleaned = str(value).strip()
+        normalized = cleaned.casefold()
+        if cleaned and normalized not in seen:
+            seen.add(normalized)
+            topics.append(cleaned)
+        slug = "_".join(
+            token for token in re.split(r"[^A-Za-z0-9]+", cleaned.casefold()) if token
+        )
+        if slug and slug not in seen:
+            seen.add(slug)
+            topics.append(slug)
+
+    for value in [
+        request.analysis_request.topic,
+        *request.analysis_request.category_filters,
+        *request.analysis_request.tag_filters,
+    ]:
+        _append(value)
+    return topics
+
+
 def run_signal_candidate_extraction(
     request: SignalCandidateExtractionRequest,
     ctx: RunContext,
@@ -56,6 +87,10 @@ def run_signal_candidate_extraction(
         [CrossReportProjectedDataReadRequest, RunContext],
         CrossReportProjectedDataReadResponse,
     ] = analytics_store_service.read_cross_report_projected_data,
+    read_claim_embeddings_fn: Callable[
+        [ClaimEmbeddingReadRequest, RunContext],
+        ClaimEmbeddingReadResponse,
+    ] = analytics_store_service.read_claim_embeddings,
     upsert_signal_candidates_fn: Callable[
         [SignalCandidateStoreRequest, RunContext],
         SignalCandidateStoreResponse,
@@ -94,12 +129,32 @@ def run_signal_candidate_extraction(
         ctx,
     )
     _log_transition(ctx, transitions, "theme_selected")
+    selected_report_ids = [
+        source.report_id for source in source_selection.selected_sources
+    ]
+    claim_embedding_response = read_claim_embeddings_fn(
+        ClaimEmbeddingReadRequest(
+            schema_version="1.0",
+            db_path=request.projected_data_request.db_path,
+            report_ids=selected_report_ids,
+            topics=_embedding_topics(request),
+            statuses=["embedded"],
+            limit=max(1, request.max_evidence_items * 4),
+        ),
+        ctx,
+    )
+    _log_transition(
+        ctx,
+        transitions,
+        "claim_embeddings_read",
+    )
     evidence_inputs = assemble_cross_report_analysis_inputs(
         request.analysis_request,
         source_selection,
         projected_data,
         ctx,
         max_evidence_items=request.max_evidence_items,
+        claim_embeddings=claim_embedding_response.embeddings,
     )
     _log_transition(ctx, transitions, "evidence_assembled")
     signal_result = score_cross_report_signals(

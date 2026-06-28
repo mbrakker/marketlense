@@ -19,6 +19,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportRawMetricReference,
     CrossReportSourceReportCandidate,
 )
+from src.contracts.analytics_projection import ClaimEmbeddingReadResponse
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptRenderResponse, PromptSet, PromptTemplate
 from src.orchestrators.cross_report_analysis_orchestrator import (
@@ -499,8 +500,45 @@ def test_cross_report_orchestrator_runs_pipeline_and_reuses_idempotency(
         if event["event"] == "cross_report_orchestrator_transition"
         and event["fields"]["transition"] == "idempotency_checked"
     ][0]
-    assert idempotency_event["fields"]["material_version"] == "2.0"
+    assert idempotency_event["fields"]["material_version"] == "2.1"
     assert "output_root" in idempotency_event["fields"]["material_fields"]
+    assert "semantic_preselection" in idempotency_event["fields"]["material_fields"]
+
+
+def test_cross_report_orchestrator_reads_claim_embeddings_for_preselection(
+    tmp_path,
+    run_context,
+) -> None:
+    read_embedding_calls = []
+
+    def _read_claim_embeddings(request, ctx):
+        read_embedding_calls.append(request)
+        return ClaimEmbeddingReadResponse(schema_version="1.0", embeddings=[])
+
+    outcome = run_cross_report_analysis(
+        _orchestrator_request(tmp_path),
+        _settings(tmp_path),
+        run_context,
+        read_projected_data_fn=lambda request, ctx: _projected_data(),
+        read_claim_embeddings_fn=_read_claim_embeddings,
+        prompt_client=FakePromptClient(),
+        openai_client=CountingOpenAIClient(),
+        sleep_fn=lambda seconds: None,
+    )
+
+    assert outcome.status == "validated"
+    assert len(read_embedding_calls) == 1
+    embedding_request = read_embedding_calls[0]
+    assert embedding_request.db_path == str(tmp_path / "reports.sqlite")
+    assert embedding_request.report_ids == ["report-b", "report-a"]
+    assert embedding_request.topics == [
+        "AI commerce adoption",
+        "ai_commerce_adoption",
+        "Retail",
+        "AI",
+    ]
+    assert embedding_request.statuses == ["embedded"]
+    assert embedding_request.limit == 24
 
 
 def test_cross_report_orchestrator_idempotency_changes_for_output_controls(

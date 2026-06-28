@@ -27,6 +27,7 @@ from src.contracts.cross_report_analysis import (
     CrossReportPublishRequestSummary,
     CrossReportPublishResultSummary,
     CrossReportRawMetricReference,
+    CrossReportSemanticPreselectionSummary,
     CrossReportSelectedSourceReport,
     CrossReportSelectedTheme,
     CrossReportSignalScore,
@@ -228,6 +229,19 @@ def _contracts() -> list[Any]:
         dropped_evidence_counts={},
         prompt_input_chars=512,
     )
+    semantic_preselection = CrossReportSemanticPreselectionSummary(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        mode="claim_embedding_similarity",
+        candidate_claim_count=4,
+        embedding_count=4,
+        fresh_embedding_count=3,
+        stale_embedding_count=1,
+        selected_claim_count=2,
+        selected_embedding_uids=["claim-a-1:embedding:test"],
+        fallback_reason="",
+        prompt_input_chars_before=1024,
+        prompt_input_chars_after=512,
+    )
     signal_result = CrossReportSignalScoreResult(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         selected_theme=selected_theme,
@@ -395,6 +409,7 @@ def _contracts() -> list[Any]:
         source_selection_result,
         publishability_result,
         evidence_input_result,
+        semantic_preselection,
         evidence,
         signal,
         signal_result,
