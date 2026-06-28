@@ -424,6 +424,15 @@ def _targets() -> Iterable[MutationTarget]:
             max_mutants=3,
             min_score=60.0,
         ),
+        MutationTarget(
+            module_path=ROOT / "src" / "orchestrators" / "retry_orchestrator.py",
+            test_paths=(
+                "tests/test_retry_decision_contract.py",
+                "tests/test_orchestrator_retry.py",
+            ),
+            max_mutants=6,
+            min_score=80.0,
+        ),
     ]
 
 

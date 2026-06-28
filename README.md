@@ -19,6 +19,7 @@ Key traits:
 - Report-download workflow isolation: `src/orchestrators/report_download_orchestrator.py` remains the public facade and `_report_download_orchestrator/workflow.py` remains its sequencing coordinator, while dependency construction, candidate readiness, failed-attempt forensics, route planning, route promotion, idempotent persistence, and optional Drive archival live in focused private sibling modules.
 - Generator logic that composes services into domain outputs.
 - Orchestrator that controls sequencing, retries, and state (including publishing).
+- Typed retry decisions: orchestrator retry wrappers normalize transient, deferred, credential-action, exhausted, and permanent failures into a `RetryDecision` contract with `retry`, `defer`, `abort`, or `user_action_required`, preserving bounded backoff/jitter while logging attempt count, max attempts, delay, error taxonomy, decision, reason, and next action.
 - Structured logging with run/task/span identifiers plus end-to-end trace IDs and nested span metadata.
 - Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
 - Validation retrieval performance: evidence windows store precomputed character n-gram vectors and norms, and `retrieve_evidence_windows` uses bounded top-k selection so metrics, quotes, numbers, grounding, and regeneration repair share faster deterministic evidence lookup.

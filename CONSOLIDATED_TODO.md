@@ -38,6 +38,7 @@ Scoring:
 - Vector-store cleanup is no longer backlog: `src/services/vector_store_service.py` exposes delete/prune operations, `src/orchestrators/vector_store_retention_orchestrator.py` runs retention cleanup, and README documents `analysis.vector_store_retention_days`.
 - Direct file-I/O boundary drift outside services is now guarded across generators, orchestrators, utilities, `_cli`, and `src/ui`. Remaining CLI/UI/orchestrator direct reads, existence checks, and path-kind probes were routed through `file_service` contracts, `FileStatResponse` now reports `is_file`/`is_dir`, and the role-I/O CI wrapper fails on new unwaived drift. A live report-download run on 2026-06-28 against the existing Payments NZ direct PDF completed as `pdf_download / downloaded`, wrote an 800,251-byte PDF through the branch runtime, recorded the source row and value score, and emitted service-owned file hash logs; the Drive-required variant reached live Google Drive write preflight and failed on the account's storage-quota policy before download.
 - Full report-generation semantic checkpoint resume is live for `source_prepared`, `selection_complete`, `analysis_complete`, `render_complete`, and `latest_safe`. Checkpoints now carry artifact integrity metadata for existing file artifacts, `selection_complete` persists vector-store indexing state, direct corrupt/missing/hash-mismatched checkpoint resumes fail with non-retryable `AppError`s, and `latest_safe` selects the newest checkpoint whose artifacts validate. A live IAS existing-PDF run on 2026-06-28 completed fresh generation in 582.003s, then resumed successfully from `source_prepared` in 165.630s, `selection_complete` in 317.949s after a transient model-output retry, `analysis_complete` in 0.820s, `render_complete` in 0.040s, and `latest_safe` in 0.058s.
+- Typed retry-decision normalization is live through `src/contracts/retry_decision.py` and `src/orchestrators/retry_orchestrator.py`. Existing retry wrappers now emit `RetryDecision` fields for `retry`, `defer`, `abort`, and `user_action_required` while preserving legacy attempt fields and bounded backoff/jitter. Verification on 2026-06-28 covered transient provider errors, validation-repair retries, DB locks, missing credentials, exhausted attempts, non-retryable contract failures, generic exceptions, negative jitter, contract round-trips, schema snapshots, full pytest with coverage, mutation gate including `retry_orchestrator.py` at 6/6 killed, quality regression, a live existing-PDF candidate extraction producing 22 candidates, and a live `render_complete` report-pipeline resume returning `processed`.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
 - Claim-level embedding persistence is live: `claim_embeddings` stores durable vectors/provider metadata/status/error taxonomy linked to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`, and `claim_embedding_orchestrator` owns pending/stale embedding workflow execution.
@@ -210,16 +211,6 @@ Scoring:
     - CLI/UI can run a read-only plan mode before execution and can execute an approved plan through existing orchestrators.
     - Tests cover ready, partially complete, failed, missing-credential, and publish-only states with plan contract and log assertions.
 
-- **Title:** Normalize retry and defer behavior through a typed retry-decision contract [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: A reusable retry orchestrator exists, but step-specific retry semantics such as doc-map retry transitions, model/provider failures, DB locks, and credential blockers are still encoded across multiple orchestrators.
-  - Why implement: A shared `RetryDecision` contract makes transient, permanent, deferred, and user-action-required failures consistent and easier for UI/CLI/planner flows to explain.
-  - Tradeoffs / risks: Over-generalizing retry policy can obscure step-specific context unless every decision carries a clear reason and owning step.
-  - Acceptance Criteria:
-    - A retry-decision resolver returns `retry`, `defer`, `abort`, or `user_action_required` with delay, max attempts, reason, and next action.
-    - Existing retry wrappers consume the decision contract while preserving bounded backoff and jitter.
-    - Structured logs include attempt count, delay, error taxonomy, decision, and reason.
-    - Tests cover transient provider errors, validation-repair retries, DB locks, missing credentials, exhausted attempts, and non-retryable contract failures.
-
 - **Title:** Add automatic preflight and credential remediation before expensive pipeline work [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Expensive PDF, browser, OCR, model, or publish work can start before all required credentials, folders, prompt namespaces, output paths, DBs, and external endpoints are known to be usable.
   - Why implement: A typed preflight report prevents doomed runs, saves cost, and gives the operator one actionable list of missing or stale prerequisites.
@@ -259,6 +250,16 @@ Scoring:
     - It returns next actions such as retry now, retry later, resume from checkpoint, request credential, cleanup transient resource, publish-only continuation, or mark permanent.
     - UI/CLI display the recommended action with reason and side-effect warning.
     - Tests cover process-launch failure, retryable `AppError`, missing credential, checkpoint-resumable failure, permanent validation failure, and dead-letter action recording.
+
+- **Title:** Add retry-decision telemetry and policy tuning reports [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: Retry/defer decisions are now normalized in logs, but operators still lack a compact view of which steps, error codes, publishers, and workflows consume retry budget or defer most often.
+  - Why implement: Turns the new `RetryDecision` contract into measurable reliability, speed, and cost improvements by showing where retries recover successfully, where they waste time, and where policy or preflight changes should reduce repeat failures.
+  - Tradeoffs / risks: Aggregation must use structured log fields only and avoid turning every isolated rare failure into a policy recommendation.
+  - Acceptance Criteria:
+    - A report groups retry decisions by step, error code, publisher/workflow when available, action, reason, attempt count, delay, and final outcome.
+    - Metrics include successful-after-retry rate, retry-exhaustion rate, deferred/user-action-required counts, cumulative retry delay, and estimated avoided or wasted model/browser calls.
+    - The run health scorecard can attach retry-decision telemetry and fail or warn on sustained retry-exhaustion growth above a documented threshold.
+    - Tests cover aggregation ordering, missing optional publisher/workflow fields, successful-after-retry accounting, deferred/user-action-required counts, and deterministic JSON output.
 
 - **Title:** Raise mutation and coverage gates for new control-plane interconnection logic [Impact: 4/5, Effort: 2/5]
   - Problem fixed: CI already runs broad coverage and targeted mutation gates, but new planner, retry-decision, resume-selection, artifact-registry, and failure-classifier logic would be high-risk interconnection code that can pass weak tests if only final status is asserted.

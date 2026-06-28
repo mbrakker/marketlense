@@ -22093,6 +22093,63 @@
       ],
       "type": "object"
     },
+    "src.contracts.retry_decision.RetryDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "retry",
+            "defer",
+            "abort",
+            "user_action_required"
+          ]
+        },
+        "attempt": {
+          "type": "integer"
+        },
+        "delay_seconds": {
+          "type": "number"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_retryable": {
+          "type": "boolean"
+        },
+        "error_severity": {
+          "type": "string"
+        },
+        "max_attempts": {
+          "type": "integer"
+        },
+        "next_action": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "step_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "step_name",
+        "action",
+        "attempt",
+        "max_attempts",
+        "delay_seconds",
+        "reason",
+        "next_action",
+        "error_code",
+        "error_retryable",
+        "error_severity"
+      ],
+      "type": "object"
+    },
     "src.contracts.run_context.RunContext": {
       "additionalProperties": false,
       "properties": {
