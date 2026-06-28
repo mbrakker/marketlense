@@ -61,5 +61,7 @@ jobs:
         run: python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_candidate_benchmark_ci.json
       - name: PDF crop-refine benchmark gate
         run: python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_crop_refine_benchmark_ci.json
+      - name: PDF benchmark trend gate
+        run: python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs
       - name: Prompt fixture corpus regression gate
         run: python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3
