@@ -30,6 +30,7 @@ Scoring:
 - Candidate extraction already performs binary page triage and shared page-artifact/fingerprint caching through `src/services/_pdf/figures.py`, `src/services/_pdf/page_artifacts.py`, and `src/services/_pdf/fingerprint_cache.py`.
 - PDF visual candidate extraction now uses indexed per-page relationships plus a lazy kept-candidate y-band overlap index behind the existing `pdf_service.collect_candidates` boundary. Side-by-side live existing-PDF verification on 2026-06-28 preserved candidate signatures on Capgemini, IAS, and Julius Baer benchmark PDFs and reduced aggregate median single-worker candidate extraction from 42.483s on `main` to 41.561s on the branch; per-PDF medians were 5.677s to 5.300s, 16.891s to 17.054s, and 19.915s to 19.207s.
 - PDF candidate extraction performance/equivalence is now a repeatable gate through `scripts/quality/pdf_candidate_benchmark.py`, `scripts/ci/check_pdf_candidate_benchmark.py`, `.github/workflows/ci.yml`, and `docs/quality/pdf_candidate_extraction_benchmark_baseline.json`. A strict live run on 2026-06-28 against existing Capgemini, IAS, and Julius Baer benchmark PDFs preserved all candidate signatures/counts/degraded-page counts with no warnings; observed medians were 5.255s, 16.787s, and 20.055s versus baselines of 5.300s, 17.054s, and 19.207s.
+- PDF crop/refine artifact equivalence and cost are now covered by `scripts/quality/pdf_crop_refine_benchmark.py`, `scripts/ci/check_pdf_crop_refine_benchmark.py`, `.github/workflows/ci.yml`, and `docs/quality/pdf_crop_refine_benchmark_baseline.json`. A live existing-artifact run on 2026-06-28 preserved candidate-pack signatures, crop-refine decision signatures, crop artifact hashes/counts, cached refine-decision counts, and estimated two-phase page model-call counts for IAS, Julius Baer, and Worldpanel outputs; observed medians were 0.028s, 0.077s, and 0.028s versus baselines of 0.030s, 0.076s, and 0.026s.
 - Vector-store cleanup is no longer backlog: `src/services/vector_store_service.py` exposes delete/prune operations, `src/orchestrators/vector_store_retention_orchestrator.py` runs retention cleanup, and README documents `analysis.vector_store_retention_days`.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
@@ -165,15 +166,15 @@ Scoring:
 
 ## 4. PDF, Dashboard, and Runtime Performance
 
-- **Title:** Extend PDF benchmark coverage to crop/refine artifact equivalence and cost [Impact: 4/5, Effort: 3/5]
-  - Explanation: Candidate discovery is now protected by a repeatable signature and runtime gate, but downstream crop generation, crop-refine decisions, and artifact hashes can still drift without an equivalent release signal.
-  - Pros: Protects end-to-end visual extraction quality, catches downstream latency/cost regressions, and reuses the new benchmark comparison pattern.
-  - Cons: Needs stable existing artifact roots and clear model-call budget policy so the gate does not become noisy.
+- **Title:** Add historical trend reporting for PDF candidate and crop-refine benchmark gates [Impact: 4/5, Effort: 2/5]
+  - Explanation: The PDF gates now protect point-in-time equivalence and runtime/cost thresholds, but operators still need a compact trend view to see slow degradation across releases before it crosses hard thresholds.
+  - Pros: Turns existing gate outputs into release evidence, catches gradual runtime/cost creep, and improves benchmark baseline governance.
+  - Cons: Needs concise retained history so benchmark evidence does not become noisy or large.
   - Acceptance Criteria:
-    - A benchmark command reuses existing generated candidate packs and crop artifacts without synthesizing fixtures.
-    - The command records crop artifact hashes, crop counts, ambiguous crop-refine model-call counts, median wall time, and per-PDF/report deltas.
-    - Release checks fail on crop artifact drift and warn/fail on documented latency or cost thresholds.
-    - README documents baseline refresh, acceptable artifact changes, and when crop/refine cost deltas are acceptable.
+    - A trend command ingests existing PDF candidate and crop-refine benchmark JSON outputs without rerunning extraction.
+    - The command records per-report runtime, artifact count, candidate/refine decision count, and estimated model-call history over a bounded retained window.
+    - Release checks warn or fail on sustained multi-run degradation even when a single run remains below the hard threshold.
+    - README documents retained history location, pruning, and when a trend regression can be waived.
 
 ## 5. Architecture, Schema Compatibility, and Observability
 
@@ -209,6 +210,7 @@ Scoring:
 - Bounded Streamlit log reads and grouped directory-count walks through `file_service`.
 - Measured PDF table/visual candidate hot-path optimization behind the canonical `pdf_service` boundary, including lazy indexed visual overlap checks and live existing-PDF equivalence/timing evidence.
 - PDF candidate extraction performance/equivalence regression gate, including committed dense-PDF baseline signatures, CI/release wrapper, live existing-PDF verification, and README refresh instructions.
+- PDF crop/refine artifact equivalence and cost benchmark gate, including existing generated artifact hashes, cached crop-refine decision signatures, estimated two-phase page model-call counts, CI/release wrapper, live existing-artifact verification, and README refresh instructions.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
 
@@ -229,7 +231,7 @@ Scoring:
 ### Phase 3: Resilience and Performance
 
 - Provider failover behind the canonical LLM service contract.
-- PDF crop/refine artifact equivalence and cost benchmark expansion.
+- PDF benchmark trend reporting across candidate and crop-refine gates.
 - Contract compatibility matrix.
 - Role-mixing/monolith-growth CI enforcement.
 - End-to-end trace read model.
