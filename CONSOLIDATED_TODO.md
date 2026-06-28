@@ -46,20 +46,21 @@ Scoring:
 
 ## Priority Order
 
-1. Cost and LLM controls.
-2. Analytics projection and embeddings.
-3. Publish durability and WordPress/public entity alignment.
-4. PDF/performance hotspots.
-5. Architecture, schema compatibility, and observability gates.
+1. Pipeline autopilot, planning, resume, and recovery interconnections.
+2. Cost and LLM controls.
+3. Analytics projection and embeddings.
+4. Publish durability and WordPress/public entity alignment.
+5. PDF/performance hotspots.
+6. Architecture, schema compatibility, and observability gates.
 
 ---
 
 ## 1. Cost and LLM Controls
 
 - **Title:** Enforce real-time spend guardrails across run/day/publisher budgets [Impact: 5/5, Effort: 2/5]
-  - Explanation: Cost ledger append and rollup paths exist, but they are post-hoc reporting. There is still no pre-call policy that warns, pauses, or blocks expensive model/browser/OCR work based on live spend.
-  - Pros: Prevents runaway spend and makes cost decisions operationally visible.
-  - Cons: Needs a clear operator override path so legitimate runs are not blocked silently.
+  - Problem fixed: Cost ledger append and rollup paths exist, but they are post-hoc reporting. There is still no pre-call policy that warns, pauses, or blocks expensive model/browser/OCR work based on live spend.
+  - Why implement: Prevents runaway spend and makes cost decisions operationally visible.
+  - Tradeoffs / risks: Needs a clear operator override path so legitimate runs are not blocked silently.
   - Acceptance Criteria:
     - YAML config defines thresholds for run, day, and publisher scopes.
     - Orchestrators check thresholds before model, browser, OCR, or other expensive calls.
@@ -67,9 +68,9 @@ Scoring:
     - Tests cover warn, hard-stop, and operator-override paths with output contract and log assertions.
 
 - **Title:** Implement budget-aware model routing with deterministic context compaction [Impact: 5/5, Effort: 4/5]
-  - Explanation: Model resolution is still mostly static through configured OpenAI models and namespace matching. `llm_service` records budget policy as not configured.
-  - Pros: Reduces cost, latency, timeout risk, and unreviewable ad hoc prompt trimming.
-  - Cons: Requires careful evidence-retention tests and benchmark ownership.
+  - Problem fixed: Model resolution is still mostly static through configured OpenAI models and namespace matching. `llm_service` records budget policy as not configured.
+  - Why implement: Reduces cost, latency, timeout risk, and unreviewable ad hoc prompt trimming.
+  - Tradeoffs / risks: Requires careful evidence-retention tests and benchmark ownership.
   - Acceptance Criteria:
     - Policy table maps task families to model tier, max input budget, fallback tier, and quality threshold.
     - Routing decision, budget decision, compaction strategy, and reason are logged for each call.
@@ -78,9 +79,9 @@ Scoring:
     - Benchmarks show token/cost reduction without quality regression on that corpus.
 
 - **Title:** Add provider failover behind the single LLM response contract [Impact: 4/5, Effort: 4/5]
-  - Explanation: The canonical LLM boundary exists, but provider choice is still OpenAI-primary with no tested fallback path behind a stable response contract.
-  - Pros: Improves resilience to provider outages and quota events without adding peer service entrypoints.
-  - Cons: Requires contract-normalization tests across provider responses.
+  - Problem fixed: The canonical LLM boundary exists, but provider choice is still OpenAI-primary with no tested fallback path behind a stable response contract.
+  - Why implement: Improves resilience to provider outages and quota events without adding peer service entrypoints.
+  - Tradeoffs / risks: Requires contract-normalization tests across provider responses.
   - Acceptance Criteria:
     - One canonical LLM service boundary owns provider selection and response adaptation.
     - Failover is policy-driven, bounded, logged, and orchestrator-visible.
@@ -92,9 +93,9 @@ Scoring:
 ## 2. Analytics Projection, Signals, and Embeddings
 
 - **Title:** Add claim embedding freshness, retention, and cost controls [Impact: 4/5, Effort: 2/5]
-  - Explanation: Embedding records now persist locally, but operators need visibility into stale content, failed attempts, model-version drift, and avoidable re-embedding spend.
-  - Pros: Prevents silent embedding drift and unnecessary provider calls while making retry/cleanup decisions operationally visible.
-  - Cons: Needs concise reporting so this does not become another dashboard surface.
+  - Problem fixed: Embedding records now persist locally, but operators need visibility into stale content, failed attempts, model-version drift, and avoidable re-embedding spend.
+  - Why implement: Prevents silent embedding drift and unnecessary provider calls while making retry/cleanup decisions operationally visible.
+  - Tradeoffs / risks: Needs concise reporting so this does not become another dashboard surface.
   - Acceptance Criteria:
     - A lightweight report summarizes embedded, pending, failed, stale, and model-version-mismatched claim counts by publisher/report/topic.
     - Retention policy documents and tests which historical embedding versions are kept or pruned.
@@ -102,9 +103,9 @@ Scoring:
     - Tests cover stale-count reporting, failed retry visibility, retention pruning, and unchanged-row skip accounting.
 
 - **Title:** Add semantic evidence preselection quality and cost benchmark [Impact: 4/5, Effort: 3/5]
-  - Explanation: Briefing and Signal evidence preselection now uses persisted claim embeddings, but the cap and ranking policy should be measured against existing projected corpora so quality gains and prompt-size reductions stay explicit as reports accumulate.
-  - Pros: Prevents silent recall loss, tunes prompt-size reduction with evidence, and gives operators a regression signal for embedding model/version changes.
-  - Cons: Needs a stable corpus and clear citation-coverage metric to avoid noisy benchmark churn.
+  - Problem fixed: Briefing and Signal evidence preselection now uses persisted claim embeddings, but the cap and ranking policy should be measured against existing projected corpora so quality gains and prompt-size reductions stay explicit as reports accumulate.
+  - Why implement: Prevents silent recall loss, tunes prompt-size reduction with evidence, and gives operators a regression signal for embedding model/version changes.
+  - Tradeoffs / risks: Needs a stable corpus and clear citation-coverage metric to avoid noisy benchmark churn.
   - Acceptance Criteria:
     - A benchmark command compares deterministic fallback vs embedding-backed preselection on existing projected reports without synthesizing fixtures.
     - Output reports prompt character/token deltas, selected evidence overlap, source-report coverage, and citation coverage by Briefing/Signal run.
@@ -112,9 +113,9 @@ Scoring:
     - Tests cover benchmark metric calculation, stale/no-embedding fallback metrics, and deterministic output ordering.
 
 - **Title:** Complete public entity projection coverage or narrow the README entity contract [Impact: 5/5, Effort: 5/5]
-  - Explanation: Reports, Briefings, and Signals have local publish paths, but README still describes a broader public entity model including Figures, Regions, and Time Periods. Those surfaces need either durable public projection contracts/routes or explicit README-scoped exclusions.
-  - Pros: Gives publishing one typed source of truth for every public entity.
-  - Cons: Broad schema, migration, and publish/readback work if all surfaces remain in scope.
+  - Problem fixed: Reports, Briefings, and Signals have local publish paths, but README still describes a broader public entity model including Figures, Regions, and Time Periods. Those surfaces need either durable public projection contracts/routes or explicit README-scoped exclusions.
+  - Why implement: Gives publishing one typed source of truth for every public entity.
+  - Tradeoffs / risks: Broad schema, migration, and publish/readback work if all surfaces remain in scope.
   - Acceptance Criteria:
     - Figures, Regions, and Time Periods have documented public projection contracts or explicit README exclusions.
     - Implemented public entities map to stable WordPress route/template/readback semantics.
@@ -126,9 +127,9 @@ Scoring:
 ## 3. Publish Durability and WordPress Alignment
 
 - **Title:** Turn the publish snapshot into durable jobs or rename it as an ops readiness snapshot [Impact: 5/5, Effort: 5/5]
-  - Explanation: `publish_queue_orchestrator.py` is live in UI/ops flows but only builds a read-only snapshot from HTML files and publish state. It does not enqueue durable publish intents or atomically couple publish side effects to state transitions.
-  - Pros: Either creates a real reliable publish queue or removes misleading queue language.
-  - Cons: Durable jobs require queue/outbox infrastructure; renaming requires UI/docs/API cleanup.
+  - Problem fixed: `publish_queue_orchestrator.py` is live in UI/ops flows but only builds a read-only snapshot from HTML files and publish state. It does not enqueue durable publish intents or atomically couple publish side effects to state transitions.
+  - Why implement: Either creates a real reliable publish queue or removes misleading queue language.
+  - Tradeoffs / risks: Durable jobs require queue/outbox infrastructure; renaming requires UI/docs/API cleanup.
   - Acceptance Criteria:
     - If implemented as jobs: publish intents can be enqueued, persisted, retried, dead-lettered, and idempotently delivered.
     - If kept read-only: contracts, UI labels, docs, and logs stop using queue terminology for this feature.
@@ -136,9 +137,9 @@ Scoring:
     - Failure-injection tests cover restart, retry, duplicate dispatch, and partial WordPress failures.
 
 - **Title:** Stop WordPress from synthesizing intelligence, freshness, and authority claims at render time [Impact: 5/5, Effort: 3/5]
-  - Explanation: README says WordPress must assemble approved projections/artifacts, but current WordPress shortcode/stat code still computes weekly signals, strategic themes, freshness-style movement, and publisher authority from WordPress counts and dates.
-  - Pros: Keeps analytical claims owned by the Python pipeline and reproducible from approved artifacts.
-  - Cons: Homepage modules need replacement data contracts and fail-closed behavior when projections are absent.
+  - Problem fixed: README says WordPress must assemble approved projections/artifacts, but current WordPress shortcode/stat code still computes weekly signals, strategic themes, freshness-style movement, and publisher authority from WordPress counts and dates.
+  - Why implement: Keeps analytical claims owned by the Python pipeline and reproducible from approved artifacts.
+  - Tradeoffs / risks: Homepage modules need replacement data contracts and fail-closed behavior when projections are absent.
   - Acceptance Criteria:
     - WordPress intelligence modules read approved projection/artifact data instead of deriving claims from live WP queries.
     - Missing projections fail closed with neutral UI or admin-visible diagnostics.
@@ -146,9 +147,9 @@ Scoring:
     - README documents the projection source used by each WordPress intelligence module.
 
 - **Title:** Make WordPress categories the canonical Topic surface with full topic semantics [Impact: 4/5, Effort: 3/5]
-  - Explanation: WordPress categories already serve the public Topic path, but they publish mostly as labels. README defines Topics as controlled taxonomy entries with definitions plus inclusion/exclusion rules.
-  - Pros: Reuses the existing category implementation while making taxonomy governance visible.
-  - Cons: Requires term contract expansion and migration/update behavior.
+  - Problem fixed: WordPress categories already serve the public Topic path, but they publish mostly as labels. README defines Topics as controlled taxonomy entries with definitions plus inclusion/exclusion rules.
+  - Why implement: Reuses the existing category implementation while making taxonomy governance visible.
+  - Tradeoffs / risks: Requires term contract expansion and migration/update behavior.
   - Acceptance Criteria:
     - README explicitly states native WordPress categories are the canonical public Topic implementation, or documents a different canonical taxonomy.
     - Topic/category contract includes definition, inclusion rules, exclusion rules, and version metadata.
@@ -157,9 +158,9 @@ Scoring:
     - Tests assert term semantics survive publish and readback.
 
 - **Title:** Promote live WordPress entity REST verification into a staging release gate [Impact: 4/5, Effort: 2/5]
-  - Explanation: Manual live verification now proves hosted `ml_report`, `ml_briefing`, and `ml_signal` REST exposure/readback, but release operations should catch stale plugin deployments before production publishing is attempted.
-  - Pros: Prevents repeated manual discovery of stale WordPress plugin state and gives operators auditable deployment evidence.
-  - Cons: Requires a non-production WordPress target and cleanup policy for verification drafts.
+  - Problem fixed: Manual live verification now proves hosted `ml_report`, `ml_briefing`, and `ml_signal` REST exposure/readback, but release operations should catch stale plugin deployments before production publishing is attempted.
+  - Why implement: Prevents repeated manual discovery of stale WordPress plugin state and gives operators auditable deployment evidence.
+  - Tradeoffs / risks: Requires a non-production WordPress target and cleanup policy for verification drafts.
   - Acceptance Criteria:
     - Release docs define the required staging WordPress env vars and existing artifact paths used by the verifier.
     - A staging-only release gate runs live report, Briefing, and Signal REST publish/readback verification and archives sanitized JSON evidence.
@@ -173,9 +174,9 @@ Scoring:
 ## 5. Architecture, Schema Compatibility, and Observability
 
 - **Title:** Publish release evidence reviews into CI job summaries and PR release notes [Impact: 3/5, Effort: 2/5]
-  - Explanation: Release evidence review Markdown is now generated and archived, but reviewers still need to open the artifact bundle to see the approval surface.
-  - Pros: Puts unwaived issues, waived issues, owners, expiry dates, and artifact freshness directly where release reviewers already work.
-  - Cons: Requires careful formatting and stable links so CI output stays concise and auditable.
+  - Problem fixed: Release evidence review Markdown is now generated and archived, but reviewers still need to open the artifact bundle to see the approval surface.
+  - Why implement: Puts unwaived issues, waived issues, owners, expiry dates, and artifact freshness directly where release reviewers already work.
+  - Tradeoffs / risks: Requires careful formatting and stable links so CI output stays concise and auditable.
   - Acceptance Criteria:
     - CI appends the generated release evidence review Markdown to the GitHub job summary after the approval gate runs.
     - Pull request or release-note automation links the archived `release-evidence-bundle` artifact and includes the final approval status.
@@ -183,9 +184,9 @@ Scoring:
     - README documents where reviewers should inspect the inline summary versus the full archived bundle.
 
 - **Title:** Extend CI gates into role-mixing and monolith-growth enforcement [Impact: 4/5, Effort: 3/5]
-  - Explanation: The repo already has broad CI coverage. The remaining useful gap is automation for role mixing, direct-I/O drift, service integration coverage waivers, and first-party long-file growth.
-  - Pros: Prevents architectural drift earlier and keeps the current rule set enforceable.
-  - Cons: Requires careful allowlist design for legitimate edge cases.
+  - Problem fixed: The repo already has broad CI coverage. The remaining useful gap is automation for role mixing, direct-I/O drift, service integration coverage waivers, and first-party long-file growth.
+  - Why implement: Prevents architectural drift earlier and keeps the current rule set enforceable.
+  - Tradeoffs / risks: Requires careful allowlist design for legitimate edge cases.
   - Acceptance Criteria:
     - Gate logic flags role mixing, direct I/O drift, or monolith-growth violations on first-party files.
     - Allowlist entries require owner plus expiry date.
@@ -194,6 +195,109 @@ Scoring:
 
 
 ---
+
+## 6. Pipeline Autopilot, Resume, and Recovery Interconnections
+
+- **Title:** Add a single pipeline planning brain before execution [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: CLI, UI, ingest, report generation, analysis, publish, and recovery paths currently require the operator or caller to know which entrypoint and flags to use. The system has strong individual orchestrators, but no typed plan that derives the safest next action from repository state, config, credentials, checkpoints, and publish readiness.
+  - Why implement: A plan-first control layer lets the pipeline need less user direction: users can request an intent such as `process ready reports`, `repair failed runs`, or `publish ready artifacts`, while the system decides which steps to run, skip, resume, or block.
+  - Tradeoffs / risks: Requires careful scope control so the planner does not become a second orchestration implementation or embed domain logic.
+  - Acceptance Criteria:
+    - A typed `PipelinePlan` contract lists ordered steps, skipped steps, blockers, required credentials, side-effect boundaries, resume points, idempotency keys, and expected outputs.
+    - A planner uses existing services/read models to inspect current state without performing side effects.
+    - CLI/UI can run a read-only plan mode before execution and can execute an approved plan through existing orchestrators.
+    - Tests cover ready, partially complete, failed, missing-credential, and publish-only states with plan contract and log assertions.
+
+- **Title:** Expand report-generation restart support to every persisted semantic checkpoint [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Report generation writes `source_prepared`, `selection_complete`, `analysis_complete`, and `render_complete` checkpoints, but runtime resume support accepts only `analysis_complete`. Earlier or later safe restart points still require repeated work or manual decisions.
+  - Why implement: Full checkpoint-aware resume reduces repeated PDF extraction, ranking, vector-store indexing, model calls, rendering, and operator intervention after long-run failures.
+  - Tradeoffs / risks: Requires strict artifact validation so stale or corrupted checkpoint references do not produce partial or misleading outputs.
+  - Acceptance Criteria:
+    - Resume is supported from `source_prepared`, `selection_complete`, `analysis_complete`, and `render_complete` where the required artifacts validate.
+    - The planner automatically selects the latest safe checkpoint when a run is repaired.
+    - Corrupt checkpoint, missing artifact, hash mismatch, and unsupported-stage paths fail with typed non-retryable `AppError`s and structured logs.
+    - Tests prove resumed outputs match fresh-run outputs except for approved volatile fields.
+
+- **Title:** Normalize retry and defer behavior through a typed retry-decision contract [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: A reusable retry orchestrator exists, but step-specific retry semantics such as doc-map retry transitions, model/provider failures, DB locks, and credential blockers are still encoded across multiple orchestrators.
+  - Why implement: A shared `RetryDecision` contract makes transient, permanent, deferred, and user-action-required failures consistent and easier for UI/CLI/planner flows to explain.
+  - Tradeoffs / risks: Over-generalizing retry policy can obscure step-specific context unless every decision carries a clear reason and owning step.
+  - Acceptance Criteria:
+    - A retry-decision resolver returns `retry`, `defer`, `abort`, or `user_action_required` with delay, max attempts, reason, and next action.
+    - Existing retry wrappers consume the decision contract while preserving bounded backoff and jitter.
+    - Structured logs include attempt count, delay, error taxonomy, decision, and reason.
+    - Tests cover transient provider errors, validation-repair retries, DB locks, missing credentials, exhausted attempts, and non-retryable contract failures.
+
+- **Title:** Add automatic preflight and credential remediation before expensive pipeline work [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Expensive PDF, browser, OCR, model, or publish work can start before all required credentials, folders, prompt namespaces, output paths, DBs, and external endpoints are known to be usable.
+  - Why implement: A typed preflight report prevents doomed runs, saves cost, and gives the operator one actionable list of missing or stale prerequisites.
+  - Tradeoffs / risks: Live endpoint checks must be bounded, sanitized, and optional for environments where external services are intentionally unavailable.
+  - Acceptance Criteria:
+    - Preflight checks Drive, LLM/model settings, WordPress publish configuration when publish is planned, file/cache/state/report DB writability, prompt namespaces, and browser dependencies when browser acquisition is planned.
+    - Results are emitted as a typed `PreflightReport` with blockers, warnings, auto-fixable issues, and exact next actions.
+    - Planner refuses expensive side effects when blocking preflight failures exist.
+    - Tests cover pass, warning-only, missing credential, missing prompt namespace, unwritable DB/path, and publish-target failure paths.
+
+- **Title:** Replace reflective report-function invocation with an explicit client/dependency bundle contract [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: `run_report_pipeline` currently introspects the report function signature to decide which model clients and resume arguments to pass. That hides integration mismatches until runtime and weakens the contract between pipeline and report-generation layers.
+  - Why implement: An explicit dataclass bundle makes the boundary self-documenting, statically inspectable, and easier to evolve when model scopes change.
+  - Tradeoffs / risks: Existing tests and injection seams must be migrated without reducing the ability to pass focused fakes at service boundaries.
+  - Acceptance Criteria:
+    - A typed report-generation client/dependency bundle carries source OCR, taxonomy, category-fit, evidence-pack, artifact, validation, regeneration, and figure-caption clients.
+    - `run_report_pipeline` passes the bundle explicitly instead of using `inspect.signature`.
+    - Report-generation tests cover missing/invalid bundle fields and injected fake clients without monkeypatching private helpers.
+    - Public behavior, prompt/model call counts, and retry semantics remain unchanged.
+
+- **Title:** Remove remaining direct file-I/O leaks outside services and expand the I/O boundary gate [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: File service provides typed/logged I/O, and generator/utility direct-I/O checks exist, but direct path/file operations can still appear in orchestrators, CLI, UI, or unscanned paths.
+  - Why implement: Routing all file effects through `file_service` gives consistent error taxonomy, structured logging, test seams, and atomic-write behavior across the whole pipeline.
+  - Tradeoffs / risks: Some orchestrator code currently builds paths for routing decisions; the gate needs an allowlist that distinguishes pure path calculation from external I/O.
+  - Acceptance Criteria:
+    - The I/O boundary scanner covers orchestrators and selected CLI/UI modules in addition to generators and utilities.
+    - Existing direct `open`, `Path.read_*`, `Path.write_*`, destructive path operations, and directory scans outside services are either migrated to service contracts or explicitly waived with owner/expiry.
+    - Tests prove migrated flows preserve outputs and logs.
+    - CI fails on new unwaived direct-I/O drift.
+
+- **Title:** Add a typed cross-step artifact registry instead of passing generic path strings [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Checkpoints and workflow payloads pass artifact references as generic string maps, so downstream stages trust path conventions rather than typed artifact identity, content hash, producer step, and required/optional semantics.
+  - Why implement: A registry makes source, selection, analysis, render, projection, signal, and publish dependencies explicit and verifiable, improving resume safety and cache correctness.
+  - Tradeoffs / risks: Requires migration around existing checkpoint payloads and backward-compatible reading of old artifact reference maps.
+  - Acceptance Criteria:
+    - `ArtifactRef` records include schema version, artifact ID, kind, path, content hash, producer step, required flag, and created timestamp.
+    - Checkpoints reference typed artifact IDs and validate required artifact availability before resume or publish.
+    - Legacy checkpoint artifact maps adapt into registry entries or fail with actionable typed errors.
+    - Tests cover missing artifact, stale hash, optional artifact absence, duplicate artifact ID, and successful fresh/resumed runs.
+
+- **Title:** Make UI runs self-healing with failure classification and suggested actions [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: UI runs record process state, output paths, errors, and dead-letter information, but failed runs are not consistently classified into retry, resume, defer, cleanup, credential action, or permanent-failure next steps.
+  - Why implement: Operators get one-click or clearly guided recovery instead of reading logs and deciding which low-level command to run next.
+  - Tradeoffs / risks: The classifier must consume structured evidence only and avoid inventing recovery actions that could duplicate side effects.
+  - Acceptance Criteria:
+    - A typed run-failure classifier consumes `UiRunRecord`, structured logs, output tail, `AppError` fields, checkpoints, and preflight state.
+    - It returns next actions such as retry now, retry later, resume from checkpoint, request credential, cleanup transient resource, publish-only continuation, or mark permanent.
+    - UI/CLI display the recommended action with reason and side-effect warning.
+    - Tests cover process-launch failure, retryable `AppError`, missing credential, checkpoint-resumable failure, permanent validation failure, and dead-letter action recording.
+
+- **Title:** Raise mutation and coverage gates for new control-plane interconnection logic [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: CI already runs broad coverage and targeted mutation gates, but new planner, retry-decision, resume-selection, artifact-registry, and failure-classifier logic would be high-risk interconnection code that can pass weak tests if only final status is asserted.
+  - Why implement: Strong mutation and coverage thresholds catch wrong branch conditions, skipped steps, bad retry counts, and unsafe resume decisions before they become production pipeline failures.
+  - Tradeoffs / risks: Gate thresholds must be scoped to critical logic so CI remains fast and useful rather than noisy.
+  - Acceptance Criteria:
+    - New planner/resume/retry/artifact/failure-classifier modules are included in targeted mutation tests.
+    - Tests assert step ordering, retry/defer decisions, checkpoint choice, idempotency keys, artifact validation, and structured logs.
+    - Coverage thresholds for new control-plane modules are higher than the global default or explicitly waived with owner/expiry.
+    - Mutation survivors in changed control-plane files require a new assertion or documented rare exemption.
+
+- **Title:** Add config-driven autopilot profiles for common pipeline intents [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: The settings model exposes many low-level knobs for workers, Drive listing, OCR, model scopes, ranking, caching, and publishing, so users still need operational knowledge to choose a safe run mode.
+  - Why implement: Profiles let users choose intent, not implementation details, and let the planner select safe defaults based on current state.
+  - Tradeoffs / risks: Profiles must be thin presets over existing typed settings, not a parallel configuration system.
+  - Acceptance Criteria:
+    - YAML defines documented profiles such as `safe_default`, `fast_cached`, `repair_failed`, `publish_ready`, `browser_acquisition`, `cost_saver`, and `high_quality`.
+    - The planner can recommend or apply a profile while logging every resolved low-level setting that changes behavior.
+    - Profile resolution validates against the existing settings contract and never hides secrets in YAML.
+    - Tests cover profile selection, explicit override precedence, invalid profile names, and deterministic resolved settings.
+
 
 ## Closed or Removed From Active Backlog
 
@@ -227,6 +331,7 @@ Scoring:
 
 ### Phase 1: Highest-Leverage Controls
 
+- Add pipeline planning, preflight, and full checkpoint resume so the system can choose safe next actions with less user direction.
 - Real-time spend guardrails at run/day/publisher scopes with explicit override flow.
 - Budget-aware model routing with deterministic compaction.
 - Durable publish snapshot decision: real jobs/outbox or explicit readiness-snapshot naming.
@@ -239,6 +344,7 @@ Scoring:
 
 ### Phase 3: Resilience and Performance
 
+- Normalize retry/defer decisions, add UI-run failure classification, and add typed artifact registry validation.
 - Provider failover behind the canonical LLM service contract.
 - Release evidence review summaries and waiver governance.
 - Contract compatibility matrix.
@@ -333,9 +439,9 @@ Scoring:
 ## 1. Canonical Service-Boundary Simplification
 
 - **Title:** Audit top-level service proliferation and demote internal capabilities [Impact: 4/5, Effort: 4/5]
-  - Explanation: Many top-level service files appear to be internal capabilities rather than true external-system boundaries.
-  - Pros: Makes service ownership easier to discover and reduces peer-boundary confusion.
-  - Cons: Requires careful compatibility facades for public imports.
+  - Problem fixed: Many top-level service files appear to be internal capabilities rather than true external-system boundaries.
+  - Why implement: Makes service ownership easier to discover and reduces peer-boundary confusion.
+  - Tradeoffs / risks: Requires careful compatibility facades for public imports.
   - Acceptance Criteria:
     - Every top-level service is classified as an external system boundary, canonical service boundary, or candidate internal capability.
     - Internal capabilities move under private subpackages only when semantic ownership improves.
@@ -346,18 +452,18 @@ Scoring:
 ## 2. Generator and Orchestrator Role-Boundary Cleanup
 
 - **Title:** Audit large orchestrators for domain-logic leakage [Impact: 4/5, Effort: 4/5]
-  - Explanation: Several orchestrators approach 800-1,000 lines and may mix control flow with domain decisions.
-  - Pros: Reduces future drift and improves test isolation.
-  - Cons: Must avoid size-only splitting and preserve behavior.
+  - Problem fixed: Several orchestrators approach 800-1,000 lines and may mix control flow with domain decisions.
+  - Why implement: Reduces future drift and improves test isolation.
+  - Tradeoffs / risks: Must avoid size-only splitting and preserve behavior.
   - Acceptance Criteria:
     - Each audited orchestrator has a role classification note and list of any domain decisions found.
     - Domain decisions move to generators only with red tests and movement audit evidence.
     - Pipeline tests prove retry counts, state transitions, and idempotency remain unchanged.
 
 - **Title:** Consolidate publish orchestration surfaces [Impact: 5/5, Effort: 5/5]
-  - Explanation: Publish workflow logic appears across publish orchestrator, publish queue/readiness, shared publish helpers, publish generator, and WordPress service paths.
-  - Pros: Reduces duplicate validation and side-effect sequencing.
-  - Cons: Broad workflow refactor with state and WordPress side effects.
+  - Problem fixed: Publish workflow logic appears across publish orchestrator, publish queue/readiness, shared publish helpers, publish generator, and WordPress service paths.
+  - Why implement: Reduces duplicate validation and side-effect sequencing.
+  - Tradeoffs / risks: Broad workflow refactor with state and WordPress side effects.
   - Acceptance Criteria:
     - One canonical publish workflow owns state transitions and side-effect sequencing.
     - Queue/readiness/batch variants call the canonical workflow or are explicitly read-only.
@@ -368,18 +474,18 @@ Scoring:
 ## 4. PDF and Visual-Heuristics Simplification
 
 - **Title:** Reduce PDF visual heuristics facade export surface [Impact: 4/5, Effort: 4/5]
-  - Explanation: The visual heuristics facade re-exports many private helpers, making the compatibility surface large.
-  - Pros: Shrinks private-helper coupling and makes semantic ownership clearer.
-  - Cons: Tests and internal callers may currently rely on compatibility exports.
+  - Problem fixed: The visual heuristics facade re-exports many private helpers, making the compatibility surface large.
+  - Why implement: Shrinks private-helper coupling and makes semantic ownership clearer.
+  - Tradeoffs / risks: Tests and internal callers may currently rely on compatibility exports.
   - Acceptance Criteria:
     - Public facade exports only stable operations needed by external callers.
     - Internal callers import semantic owner modules directly where appropriate.
     - Compatibility exports are removed only after tests prove no external dependency.
 
 - **Title:** Preserve PDF service as one canonical external/library boundary while reducing internals [Impact: 4/5, Effort: 4/5]
-  - Explanation: PDF internals are already split into many private capability modules; further splits should reduce coupling, not just file size.
-  - Pros: Prevents both monolith growth and fragmentation.
-  - Cons: Requires architecture review if three or more peer modules are introduced.
+  - Problem fixed: PDF internals are already split into many private capability modules; further splits should reduce coupling, not just file size.
+  - Why implement: Prevents both monolith growth and fragmentation.
+  - Tradeoffs / risks: Requires architecture review if three or more peer modules are introduced.
   - Acceptance Criteria:
     - Any PDF simplification keeps `pdf_service.py` as the canonical boundary.
     - New private modules have semantic ownership and no pass-through-only wrappers.
@@ -390,18 +496,18 @@ Scoring:
 ## 5. WordPress and Frontend Simplification
 
 - **Title:** Split or simplify the large WordPress shortcode class by semantic shortcode ownership [Impact: 4/5, Effort: 4/5]
-  - Explanation: The shortcode class owns many archive and rendering surfaces, including legacy Signal and Briefing archive renderers.
-  - Pros: Reduces PHP god-class risk and improves runtime testability.
-  - Cons: Requires WordPress runtime harness coverage and compatibility preservation.
+  - Problem fixed: The shortcode class owns many archive and rendering surfaces, including legacy Signal and Briefing archive renderers.
+  - Why implement: Reduces PHP god-class risk and improves runtime testability.
+  - Tradeoffs / risks: Requires WordPress runtime harness coverage and compatibility preservation.
   - Acceptance Criteria:
     - Shortcode handlers are grouped by semantic public surface, not arbitrary file size.
     - Shared view-model logic moves to existing builder classes where appropriate.
     - Runtime tests prove current shortcode output remains compatible.
 
 - **Title:** Stop WordPress render-time intelligence synthesis where Python projections should own claims [Impact: 5/5, Effort: 4/5]
-  - Explanation: WordPress still derives some intelligence/freshness/authority-style UI claims from local content state.
-  - Pros: Keeps analytical claims reproducible from approved pipeline artifacts.
-  - Cons: Requires projection contracts and neutral empty states.
+  - Problem fixed: WordPress still derives some intelligence/freshness/authority-style UI claims from local content state.
+  - Why implement: Keeps analytical claims reproducible from approved pipeline artifacts.
+  - Tradeoffs / risks: Requires projection contracts and neutral empty states.
   - Acceptance Criteria:
     - WordPress modules render approved projection data instead of deriving analytical claims from post counts or dates.
     - Missing projections fail closed with neutral UI or admin diagnostics.
