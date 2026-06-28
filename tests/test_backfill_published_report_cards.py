@@ -6,6 +6,7 @@ from Wordpress.scripts.admin.backfill_published_report_cards import (
     legacy_cover_semantics,
     legacy_card_content,
     limit_targets,
+    skip_targets_from_env,
     targets_from_posts,
 )
 
@@ -55,6 +56,31 @@ def test_legacy_card_content_uses_published_report_copy_and_taxonomy() -> None:
     assert card.region == "United Kingdom"
     assert card.key_insights[0].startswith("Retailers are concentrating")
     assert card.tldr_standard.endswith(".")
+
+
+def test_legacy_card_content_normalizes_filename_like_titles_for_cover_layout() -> None:
+    card = legacy_card_content(
+        {
+            "title": {"raw": "CM_AgencyFactSheet_updated_12.4.2024-1"},
+            "date": "2026-06-01T10:00:00",
+            "meta": {"ml_time_period": "2024", "ml_region": "Global"},
+            "ml_publisher": [15],
+            "categories": [8],
+            "content": {
+                "raw": """
+                <article><p class='hero-thesis'>Agency fact sheets summarize market conditions for client planning.</p>
+                <ul class='key-insights'>
+                    <li>Agency leaders are aligning service models with measurable commercial outcomes and client trust.</li>
+                    <li>Marketing teams are prioritising evidence-backed planning inputs for campaign investment decisions.</li>
+                </ul></article>
+                """
+            },
+        },
+        publisher_names={15: "Example Research"},
+        category_names={8: "Advertising Strategy"},
+    )
+
+    assert card.title == "CM Agency Fact Sheet updated 12.4.2024-1"
 
 
 def test_legacy_cover_semantics_reflects_published_report_content() -> None:
@@ -126,3 +152,13 @@ def test_limit_targets_keeps_first_allowed_targets() -> None:
 
     assert limit_targets(targets, 1) == targets[:1]
     assert limit_targets(targets, None) == targets
+
+
+def test_skip_targets_from_env_removes_numeric_and_typed_ids() -> None:
+    targets = [
+        PublishedReportTarget("1.0", "ml_report", 971, "file-971"),
+        PublishedReportTarget("1.0", "post", 844, "file-844"),
+        PublishedReportTarget("1.0", "ml_report", 965, "file-965"),
+    ]
+
+    assert skip_targets_from_env(targets, "ml_report:971,844") == targets[2:]

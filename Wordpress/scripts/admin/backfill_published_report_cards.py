@@ -97,6 +97,15 @@ def _text(value: object) -> str:
     return " ".join(str(value or "").split())
 
 
+def _legacy_display_title(value: object) -> str:
+    title = _text(value)
+    if "_" not in title:
+        return title
+    normalized = title.replace("_", " ")
+    normalized = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", normalized)
+    return _text(normalized)
+
+
 def _post_text(post: Mapping[str, object]) -> tuple[str, BeautifulSoup]:
     content = post.get("content")
     html = str(content.get("raw", "")) if isinstance(content, dict) else ""
@@ -335,7 +344,11 @@ def legacy_card_content(
 ) -> LegacyCardContent:
     """Recover a complete card contract only from existing published report data."""
     title_payload = post.get("title")
-    title = _text(title_payload.get("raw", "")) if isinstance(title_payload, dict) else ""
+    title = (
+        _legacy_display_title(title_payload.get("raw", ""))
+        if isinstance(title_payload, dict)
+        else ""
+    )
     meta = post.get("meta")
     meta = meta if isinstance(meta, dict) else {}
     text, soup = _post_text(post)
@@ -487,6 +500,41 @@ def limit_targets(
     return targets[:limit]
 
 
+def skip_targets_from_env(
+    targets: list[PublishedReportTarget], raw_value: str
+) -> list[PublishedReportTarget]:
+    """Remove explicitly skipped post IDs from a live migration batch."""
+    tokens = {_text(token) for token in raw_value.split(",") if _text(token)}
+    if not tokens:
+        return targets
+    skipped_numeric_ids: set[int] = set()
+    skipped_typed_ids: set[tuple[str, int]] = set()
+    for token in tokens:
+        if ":" in token:
+            raw_type, raw_id = token.split(":", 1)
+            try:
+                skipped_typed_ids.add((_text(raw_type), int(raw_id)))
+            except ValueError as exc:
+                raise RuntimeError(
+                    "MARKETLENSE_REPORT_CARD_BACKFILL_SKIP_IDS entries must "
+                    "be numeric IDs or post_type:ID pairs"
+                ) from exc
+            continue
+        try:
+            skipped_numeric_ids.add(int(token))
+        except ValueError as exc:
+            raise RuntimeError(
+                "MARKETLENSE_REPORT_CARD_BACKFILL_SKIP_IDS entries must "
+                "be numeric IDs or post_type:ID pairs"
+            ) from exc
+    return [
+        target
+        for target in targets
+        if target.post_id not in skipped_numeric_ids
+        and (target.post_type, target.post_id) not in skipped_typed_ids
+    ]
+
+
 def main() -> None:
     ctx = new_run_context(task_id="wordpress_published_report_card_backfill")
     try:
@@ -514,6 +562,9 @@ def main() -> None:
         limit = _positive_int_from_env("MARKETLENSE_REPORT_CARD_BACKFILL_LIMIT")
         sleep_seconds = _positive_number_from_env(
             "MARKETLENSE_REPORT_CARD_BACKFILL_SLEEP_SECONDS", 0.0
+        )
+        targets = skip_targets_from_env(
+            targets, os.environ.get("MARKETLENSE_REPORT_CARD_BACKFILL_SKIP_IDS", "")
         )
         total_targets = len(targets)
         targets = limit_targets(targets, limit)
