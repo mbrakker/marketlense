@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-06-28T11:44:52.537513+00:00",
+  "benchmarks": [
+    {
+      "report_root": "out/4/ias-industry-pulse-report-2026-acig-pdf",
+      "report_name": "ias-industry-pulse-report-2026-acig-pdf",
+      "candidate_pack_path": "out/benchmark_candidate_extraction_20260604/ias-industry-pulse-report-2026-acig/candidates/candidates.json",
+      "crop_refine_path": "out/4/ias-industry-pulse-report-2026-acig-pdf/report_analysis/crop_refine.json",
+      "crop_artifact_globs": [
+        "out/4/ias-industry-pulse-report-2026-acig-pdf/candidates/*.png",
+        "out/4/ias-industry-pulse-report-2026-acig-pdf/slices/*.png",
+        "out/4/ias-industry-pulse-report-2026-acig-pdf/crop_refine_pages/*.png"
+      ],
+      "expected_candidate_pack_signature": "c28331fec56b5505e4bad2754e7b147635c4afa7bbedc49245c8ba32332fa133",
+      "expected_crop_refine_signature": "65d1999e33fe63c864f7944f2d4e73c50aa3b7dc9ba7857b5cf8e661e001011c",
+      "expected_crop_artifact_signature": "eb1ed566933e8547d38db85c32b124efc814977e416cf15e58af02d68f020e87",
+      "expected_crop_artifact_count": 10,
+      "expected_refine_decision_count": 1,
+      "expected_estimated_model_call_count": 2,
+      "baseline_median_seconds": 0.030283,
+      "runtime_warn_percent": 50.0,
+      "runtime_fail_percent": 150.0
+    },
+    {
+      "report_root": "out/4/julius-baer-secular-outlook-2026-acig-pdf",
+      "report_name": "julius-baer-secular-outlook-2026-acig-pdf",
+      "candidate_pack_path": "out/benchmark_candidate_extraction_20260604/julius-baer-secular-outlook-2026-acig/candidates/candidates.json",
+      "crop_refine_path": "out/4/julius-baer-secular-outlook-2026-acig-pdf/report_analysis/crop_refine.json",
+      "crop_artifact_globs": [
+        "out/4/julius-baer-secular-outlook-2026-acig-pdf/candidates/*.png",
+        "out/4/julius-baer-secular-outlook-2026-acig-pdf/slices/*.png",
+        "out/4/julius-baer-secular-outlook-2026-acig-pdf/crop_refine_pages/*.png"
+      ],
+      "expected_candidate_pack_signature": "df78692a32c01a69831e3fbccbbdaf8dbdc4ef2432f22c29e47204f9503e0da4",
+      "expected_crop_refine_signature": "67ae861dd08dea235457a83fb0cd2b2c3335cf7b08d7340c10e11efd2cb235db",
+      "expected_crop_artifact_signature": "0ab0d0296bdca5cb4e194dfb712207ded120c0b6de890782d95f000fe54cbe2b",
+      "expected_crop_artifact_count": 29,
+      "expected_refine_decision_count": 5,
+      "expected_estimated_model_call_count": 10,
+      "baseline_median_seconds": 0.076001,
+      "runtime_warn_percent": 50.0,
+      "runtime_fail_percent": 150.0
+    },
+    {
+      "report_root": "out/9/worldpanel-brand-footprint-2025-acig-pdf",
+      "report_name": "worldpanel-brand-footprint-2025-acig-pdf",
+      "candidate_pack_path": "out/benchmark_candidate_extraction_20260604/worldpanel-brand-footprint-2025-acig/candidates/candidates.json",
+      "crop_refine_path": "out/9/worldpanel-brand-footprint-2025-acig-pdf/report_analysis/crop_refine.json",
+      "crop_artifact_globs": [
+        "out/9/worldpanel-brand-footprint-2025-acig-pdf/candidates/*.png",
+        "out/9/worldpanel-brand-footprint-2025-acig-pdf/slices/*.png",
+        "out/9/worldpanel-brand-footprint-2025-acig-pdf/crop_refine_pages/*.png"
+      ],
+      "expected_candidate_pack_signature": "8fcca0a6fbf0e23593558c45120e08d7f476264f21444f42add2a149f26c1052",
+      "expected_crop_refine_signature": "f0fb5bdfed9830ae1e975b843043c96de0035dd413aa0bfd713057a1cfd46c16",
+      "expected_crop_artifact_signature": "23817df1c88decae8a6137322fec598cf1316273abe39b21230ec45060592bf6",
+      "expected_crop_artifact_count": 6,
+      "expected_refine_decision_count": 1,
+      "expected_estimated_model_call_count": 2,
+      "baseline_median_seconds": 0.026102,
+      "runtime_warn_percent": 50.0,
+      "runtime_fail_percent": 150.0
+    }
+  ]
+}
