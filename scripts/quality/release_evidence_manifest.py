@@ -33,6 +33,7 @@ class ReleaseEvidenceArtifact:
     status: str
     passed: bool
     generated_at: str | None
+    modified_at: str | None
     producer_command: str
     byte_count: int
     artifact_sha256: str | None
@@ -65,13 +66,28 @@ def build_release_evidence_manifest(
     commit_sha: str,
     command_args: Sequence[str],
     generated_at: str | None = None,
+    fresh_after: str | None = None,
+    expected_commit_sha: str | None = None,
 ) -> ReleaseEvidenceManifest:
     artifacts: list[ReleaseEvidenceArtifact] = []
     issues: list[ReleaseEvidenceIssue] = []
+    fresh_after_dt = _parse_datetime(fresh_after) if fresh_after else None
     for artifact_input in sorted(artifact_inputs, key=lambda item: item.name):
-        artifact, artifact_issues = _read_artifact(artifact_input)
+        artifact, artifact_issues = _read_artifact(
+            artifact_input,
+            fresh_after=fresh_after_dt,
+        )
         artifacts.append(artifact)
         issues.extend(artifact_issues)
+    if expected_commit_sha and commit_sha != expected_commit_sha:
+        issues.append(
+            ReleaseEvidenceIssue(
+                artifact_name="release_evidence_manifest",
+                artifact_path="",
+                reason="commit_sha_mismatch",
+                detail=f"manifest commit {commit_sha} does not match {expected_commit_sha}",
+            )
+        )
     return ReleaseEvidenceManifest(
         schema_version="1.0",
         release_id=release_id,
@@ -98,6 +114,8 @@ def write_release_evidence_manifest(
 
 def _read_artifact(
     artifact_input: ReleaseEvidenceArtifactInput,
+    *,
+    fresh_after: datetime | None,
 ) -> tuple[ReleaseEvidenceArtifact, tuple[ReleaseEvidenceIssue, ...]]:
     path = artifact_input.path
     display_path = _rel(path)
@@ -116,6 +134,7 @@ def _read_artifact(
                 status="missing",
                 passed=False,
                 generated_at=None,
+                modified_at=None,
                 byte_count=0,
                 artifact_sha256=None,
             ),
@@ -125,6 +144,7 @@ def _read_artifact(
     raw = path.read_bytes()
     byte_count = len(raw)
     artifact_sha256 = hashlib.sha256(raw).hexdigest()
+    modified_at = datetime.fromtimestamp(path.stat().st_mtime, UTC)
     try:
         payload = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -136,6 +156,8 @@ def _read_artifact(
                 payload=xml_payload,
                 byte_count=byte_count,
                 artifact_sha256=artifact_sha256,
+                modified_at=modified_at,
+                fresh_after=fresh_after,
             )
         issue = ReleaseEvidenceIssue(
             artifact_name=artifact_input.name,
@@ -151,6 +173,7 @@ def _read_artifact(
                 status="invalid",
                 passed=False,
                 generated_at=None,
+                modified_at=_datetime_text(modified_at),
                 byte_count=byte_count,
                 artifact_sha256=artifact_sha256,
             ),
@@ -171,6 +194,7 @@ def _read_artifact(
                 status="invalid",
                 passed=False,
                 generated_at=None,
+                modified_at=_datetime_text(modified_at),
                 byte_count=byte_count,
                 artifact_sha256=artifact_sha256,
             ),
@@ -183,6 +207,8 @@ def _read_artifact(
         payload=payload,
         byte_count=byte_count,
         artifact_sha256=artifact_sha256,
+        modified_at=modified_at,
+        fresh_after=fresh_after,
     )
 
 
@@ -193,6 +219,8 @@ def _artifact_from_payload(
     payload: dict[str, Any],
     byte_count: int,
     artifact_sha256: str,
+    modified_at: datetime,
+    fresh_after: datetime | None,
 ) -> tuple[ReleaseEvidenceArtifact, tuple[ReleaseEvidenceIssue, ...]]:
     schema_version = _string_or_none(payload.get("schema_version"))
     generated_at = _string_or_none(payload.get("generated_at"))
@@ -219,6 +247,24 @@ def _artifact_from_payload(
                 detail=f"artifact status is {status}",
             )
         )
+    if (
+        artifact_input.required
+        and fresh_after is not None
+        and modified_at < fresh_after
+    ):
+        status = "stale"
+        passed = False
+        issues.append(
+            ReleaseEvidenceIssue(
+                artifact_name=artifact_input.name,
+                artifact_path=display_path,
+                reason="artifact_stale",
+                detail=(
+                    f"artifact modified at {_datetime_text(modified_at)} before "
+                    f"freshness threshold {_datetime_text(fresh_after)}"
+                ),
+            )
+        )
     return (
         _artifact(
             artifact_input,
@@ -227,6 +273,7 @@ def _artifact_from_payload(
             status=status,
             passed=passed,
             generated_at=generated_at,
+            modified_at=_datetime_text(modified_at),
             byte_count=byte_count,
             artifact_sha256=artifact_sha256,
         ),
@@ -254,6 +301,7 @@ def _artifact(
     status: str,
     passed: bool,
     generated_at: str | None,
+    modified_at: str | None,
     byte_count: int,
     artifact_sha256: str | None,
 ) -> ReleaseEvidenceArtifact:
@@ -266,6 +314,7 @@ def _artifact(
         status=status,
         passed=passed,
         generated_at=generated_at,
+        modified_at=modified_at,
         producer_command=artifact_input.producer_command,
         byte_count=byte_count,
         artifact_sha256=artifact_sha256,
@@ -326,6 +375,18 @@ def _rel(path: Path) -> str:
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _datetime_text(value: datetime) -> str:
+    return value.astimezone(UTC).replace(microsecond=0).isoformat()
+
+
+def _parse_datetime(value: str) -> datetime:
+    normalized = value.strip().replace("Z", "+00:00")
+    parsed = datetime.fromisoformat(normalized)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _git_commit_sha() -> str:
@@ -400,6 +461,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--expected-schema", action="append", default=[])
     parser.add_argument("--artifact-command", action="append", default=[])
     parser.add_argument("--commit-sha", default="")
+    parser.add_argument("--fresh-after", default="")
+    parser.add_argument("--require-head-commit", action="store_true")
     parser.add_argument(
         "--output-json",
         default="out/release_evidence_manifest.json",
@@ -413,6 +476,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not artifact_inputs:
         raise ValueError("At least one --artifact is required.")
     commit_sha = args.commit_sha or _git_commit_sha()
+    expected_commit_sha = _git_commit_sha() if args.require_head_commit else None
     command_args = tuple(
         sys.argv if argv is None else ("release_evidence_manifest", *argv)
     )
@@ -421,6 +485,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         release_id=args.release_id,
         commit_sha=commit_sha,
         command_args=command_args,
+        fresh_after=args.fresh_after or None,
+        expected_commit_sha=expected_commit_sha,
     )
     write_release_evidence_manifest(manifest, (ROOT / args.output_json).resolve())
     print(json.dumps(asdict(manifest), ensure_ascii=True, indent=2, sort_keys=True))
