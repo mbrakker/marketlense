@@ -21,7 +21,7 @@ Scoring:
 
 ## Current-State Evidence
 
-- CI currently runs formatting, risk classification, split-symbol linking, typing, architecture import, forbidden patching, repository hygiene, quality ledger, remediation runbook, backlog source, contract schema snapshot, WordPress subproject, default pytest with coverage, coverage gate, mutation gate, quality non-regression, and prompt fixture corpus regression through `.github/workflows/ci.yml`.
+- CI currently runs formatting, risk classification, split-symbol linking, typing, architecture import, forbidden patching, repository hygiene, quality ledger, remediation runbook, backlog source, contract schema snapshot, WordPress subproject, default pytest with coverage, coverage gate, mutation gate, quality non-regression, prompt fixture corpus regression, and release evidence manifest archival/freshness gates through `.github/workflows/ci.yml`.
 - Prompt dry-run validation and fixture-corpus regression are landed through `src/contracts/prompts.py`, `src/services/prompt_service.py`, `scripts/ci/check_prompt_fixture_regression.py`, `tests/test_prompt_dry_run_validation.py`, and `tests/test_prompt_fixture_corpus_regression.py`.
 - OCR confidence gating and native-confidence-based OCR fallback controls are landed in `src/config/app.yaml`, `src/generators/report_source_generator.py`, and the quality ledger.
 - Publisher discovery route memory, deferred recovery, direct-detail handling, KPI guardrail logging, and default-on rollout controls are landed. There is no active "publisher discovery rollout" backlog item unless a new measured gap is opened.
@@ -34,6 +34,7 @@ Scoring:
 - PDF benchmark trend reporting is now covered by `scripts/quality/pdf_benchmark_trends.py`, `scripts/ci/check_pdf_benchmark_trends.py`, `.github/workflows/ci.yml`, and README release-gate docs. A live run on 2026-06-28 consumed existing candidate and crop-refine benchmark JSON outputs without rerunning extraction, appended bounded local history under `out/`, and passed with no warnings. A four-run replay over already-produced benchmark outputs showed candidate recent medians down 4.3%, 4.6%, and 0.7% versus the older run, crop/refine estimated model-call counts unchanged at 2, 10, and 2, and crop/refine runtime drift contained at +1.1%, +3.9%, and +0.7%.
 - PDF benchmark trend evidence is now surfaced in `scripts/quality/run_health_scorecard.py` through optional retained candidate, crop/refine, and trend JSON inputs. A live scorecard run on 2026-06-28 consumed `out/pdf_candidate_benchmark_scorecard_live.json`, `out/pdf_crop_refine_benchmark_scorecard_live.json`, and `out/pdf_benchmark_trends_scorecard_live.json` without rerunning PDF extraction, wrote `out/run_health_scorecard_pdf_benchmark_live.json`, and reported complete passing evidence with 3 candidate rows, 3 crop/refine rows, and 9 trend rows. Candidate medians were 2.371s, 7.748s, and 9.512s versus baselines of 5.300s, 17.054s, and 19.207s; crop/refine medians were 0.0136s, 0.0353s, and 0.0155s versus baselines of 0.0303s, 0.0760s, and 0.0261s; estimated model-call counts stayed unchanged at 2, 10, and 2. A missing-evidence live scorecard run exited nonzero and marked PDF benchmark evidence incomplete.
 - Release evidence bundle manifests are now produced by `scripts/quality/release_evidence_manifest.py` and documented in README release review flow. A live run on 2026-06-28 consumed existing retained `coverage.xml`, `mutation_results.json`, PDF candidate benchmark JSON, PDF crop/refine benchmark JSON, PDF trend JSON, and PDF health scorecard JSON without rerunning those gates, wrote `out/release_evidence_manifest_live.json`, recorded commit SHA, producer commands, schema versions, byte counts, SHA-256 hashes, timestamps, and pass/fail status for 6 artifacts, and passed with no issues. A missing-artifact live run wrote `out/release_evidence_manifest_missing_live.json`, reported `artifact_missing`, and exited nonzero.
+- Release evidence manifest CI archival and freshness enforcement is now wired through `.github/workflows/ci.yml` and `scripts/quality/release_evidence_manifest.py`. CI records `RELEASE_EVIDENCE_STARTED_AT` before coverage generation, builds `out/run_health_scorecard_ci.json`, runs the manifest with `--fresh-after` and `--require-head-commit` after coverage, mutation, PDF benchmark, trend, health scorecard, and prompt gates, and uploads the manifest plus listed artifacts as the `release-evidence-bundle` artifact. A live run on 2026-06-28 consumed existing retained artifacts, wrote `out/release_evidence_manifest_freshness_live.json`, validated 6 artifact paths/schema versions/statuses/modification timestamps against `HEAD`, and passed with no issues; stale and commit-mismatch live runs wrote failure manifests and exited nonzero with `artifact_stale` and `commit_sha_mismatch`.
 - Vector-store cleanup is no longer backlog: `src/services/vector_store_service.py` exposes delete/prune operations, `src/orchestrators/vector_store_retention_orchestrator.py` runs retention cleanup, and README documents `analysis.vector_store_retention_days`.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
@@ -171,15 +172,15 @@ Scoring:
 
 ## 5. Architecture, Schema Compatibility, and Observability
 
-- **Title:** Promote release evidence manifests into CI artifact archival and freshness gates [Impact: 3/5, Effort: 3/5]
-  - Explanation: The manifest command now ties retained release artifacts together, but operators still run it manually and artifact freshness is not enforced by CI.
-  - Pros: Makes release evidence consistently archived, catches stale manifests before approval, and reduces manual handoff mistakes.
-  - Cons: Requires careful workflow ordering so optional local-only PDF artifacts do not block normal CI branches unintentionally.
+- **Title:** Add release evidence review summaries and waiver governance [Impact: 3/5, Effort: 2/5]
+  - Explanation: CI now archives fresh release evidence bundles, but operators still need a concise human-readable review surface and controlled waiver path for intentional warnings or environmental exceptions.
+  - Pros: Speeds release review, prevents untracked manual exceptions, and turns manifest issues into auditable decisions.
+  - Cons: Needs strict expiry/owner rules so waivers do not become permanent bypasses.
   - Acceptance Criteria:
-    - Release workflow runs the manifest command after coverage, mutation, PDF benchmark, trend, and health scorecard outputs are produced.
-    - The workflow uploads the manifest and listed artifacts as one retained CI/release artifact bundle.
-    - Freshness checks fail release approval when the manifest commit SHA does not match `HEAD`, listed artifacts are missing, or required artifacts are older than the gate run.
-    - README documents local-vs-CI artifact retention expectations and the operator review path for freshness failures.
+    - A command reads `out/release_evidence_manifest*.json` and writes a deterministic Markdown/JSON review summary grouped by artifact, status, freshness, and issue reason.
+    - A waiver file supports issue reason, artifact name, owner, expiry date, and justification, and CI fails on expired, ownerless, or unmatched waivers.
+    - Unwaived manifest issues fail release approval; waived issues remain visible in the uploaded release evidence bundle.
+    - README documents operator review and waiver-retirement flow.
 
 - **Title:** Extend CI gates into role-mixing and monolith-growth enforcement [Impact: 4/5, Effort: 3/5]
   - Explanation: The repo already has broad CI coverage. The remaining useful gap is automation for role mixing, direct-I/O drift, service integration coverage waivers, and first-party long-file growth.
@@ -217,6 +218,7 @@ Scoring:
 - PDF benchmark trend reporting across candidate and crop-refine gates, including bounded local history, sustained runtime/model-call regression detection, CI/release wrapper, live existing-output verification, and README retained-history guidance.
 - PDF benchmark trend evidence in release and health scorecards, including retained candidate/crop-refine/trend JSON inputs, incomplete-evidence failure reporting, live scorecard verification, and README operator flow.
 - Release evidence bundle manifest for retained quality-gate artifacts, including commit/command/path/schema/timestamp/hash/status recording, missing/invalid/schema-drift failure reporting, live retained-artifact verification, and README archive flow.
+- Release evidence manifest CI archival and freshness gates, including `HEAD` commit checks, artifact modified-time checks, CI health scorecard generation, `release-evidence-bundle` upload, live freshness verification, and README local-vs-CI retention flow.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
 
@@ -237,7 +239,7 @@ Scoring:
 ### Phase 3: Resilience and Performance
 
 - Provider failover behind the canonical LLM service contract.
-- Release evidence manifest CI archival and freshness enforcement.
+- Release evidence review summaries and waiver governance.
 - Contract compatibility matrix.
 - Role-mixing/monolith-growth CI enforcement.
 - End-to-end trace read model.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from scripts.quality.release_evidence_manifest import (
@@ -230,3 +231,62 @@ def test_release_evidence_manifest_flags_warning_payloads(tmp_path: Path) -> Non
     assert manifest.passed is False
     assert manifest.artifacts[0].status == "warned"
     assert [issue.reason for issue in manifest.issues] == ["artifact_failed"]
+
+
+def test_release_evidence_manifest_fails_stale_required_artifact(
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "mutation.json"
+    artifact_path.write_text(
+        json.dumps({"schema_version": "1.0", "passed": True}),
+        encoding="utf-8",
+    )
+    os.utime(artifact_path, (100.0, 100.0))
+
+    manifest = build_release_evidence_manifest(
+        artifact_inputs=(
+            ReleaseEvidenceArtifactInput(
+                name="mutation",
+                path=artifact_path,
+                expected_schema_version="1.0",
+            ),
+        ),
+        release_id="release-20260628",
+        commit_sha="abc123",
+        command_args=("manifest",),
+        generated_at="2026-06-28T12:00:00+00:00",
+        fresh_after="1970-01-01T00:02:00+00:00",
+    )
+
+    assert manifest.passed is False
+    assert manifest.artifacts[0].status == "stale"
+    assert manifest.artifacts[0].modified_at == "1970-01-01T00:01:40+00:00"
+    assert [issue.reason for issue in manifest.issues] == ["artifact_stale"]
+
+
+def test_release_evidence_manifest_fails_commit_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "scorecard.json"
+    artifact_path.write_text(
+        json.dumps({"schema_version": "1.0", "passed": True}),
+        encoding="utf-8",
+    )
+
+    manifest = build_release_evidence_manifest(
+        artifact_inputs=(
+            ReleaseEvidenceArtifactInput(
+                name="scorecard",
+                path=artifact_path,
+                expected_schema_version="1.0",
+            ),
+        ),
+        release_id="release-20260628",
+        commit_sha="old-sha",
+        command_args=("manifest",),
+        generated_at="2026-06-28T12:00:00+00:00",
+        expected_commit_sha="new-sha",
+    )
+
+    assert manifest.passed is False
+    assert {issue.reason for issue in manifest.issues} == {"commit_sha_mismatch"}

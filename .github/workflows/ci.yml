@@ -49,6 +49,8 @@ jobs:
         run: python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json
       - name: WordPress subproject checks
         run: python scripts/ci/check_wordpress_subproject.py
+      - name: Mark release evidence freshness start
+        run: echo "RELEASE_EVIDENCE_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
       - name: Run default pytest suite with coverage
         run: python -m pytest --cov=src --cov-report=xml --cov-report=term-missing
       - name: Coverage gate
@@ -63,5 +65,68 @@ jobs:
         run: python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_crop_refine_benchmark_ci.json
       - name: PDF benchmark trend gate
         run: python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs
+      - name: Build CI health scorecard
+        run: |
+          mkdir -p out
+          python - <<'PY'
+          from datetime import UTC, datetime
+          import json
+
+          payload = {
+              "timestamp": datetime.now(UTC).isoformat(),
+              "run_id": "ci-release-evidence",
+              "event": "release_evidence_inputs_ready",
+              "fields": {},
+          }
+          with open("out/ci_health_events.jsonl", "w", encoding="utf-8") as handle:
+              handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
+          PY
+          python scripts/quality/run_health_scorecard.py out/ci_health_events.jsonl --run-id ci-release-evidence --output-json out/run_health_scorecard_ci.json
       - name: Prompt fixture corpus regression gate
         run: python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3
+      - name: Build release evidence manifest
+        run: |
+          COVERAGE_SCHEMA=$(python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          print(ET.parse("coverage.xml").getroot().attrib.get("version", ""))
+          PY
+          )
+          python scripts/quality/release_evidence_manifest.py \
+            --release-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --artifact coverage=coverage.xml \
+            --expected-schema coverage="${COVERAGE_SCHEMA}" \
+            --artifact mutation=mutation_results.json \
+            --expected-schema mutation=1.0 \
+            --artifact pdf_candidate=out/pdf_candidate_benchmark_ci.json \
+            --expected-schema pdf_candidate=1.0 \
+            --artifact pdf_crop_refine=out/pdf_crop_refine_benchmark_ci.json \
+            --expected-schema pdf_crop_refine=1.0 \
+            --artifact pdf_trends=out/pdf_benchmark_trends_ci.json \
+            --expected-schema pdf_trends=1.0 \
+            --artifact health_scorecard=out/run_health_scorecard_ci.json \
+            --expected-schema health_scorecard=1.0 \
+            --artifact-command coverage="python scripts/ci/check_coverage.py --coverage-xml coverage.xml" \
+            --artifact-command mutation="python scripts/ci/run_mutation_gate.py --json-out mutation_results.json" \
+            --artifact-command pdf_candidate="python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_candidate_benchmark_ci.json" \
+            --artifact-command pdf_crop_refine="python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_crop_refine_benchmark_ci.json" \
+            --artifact-command pdf_trends="python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs" \
+            --artifact-command health_scorecard="python scripts/quality/run_health_scorecard.py out/ci_health_events.jsonl --run-id ci-release-evidence --output-json out/run_health_scorecard_ci.json" \
+            --fresh-after "${RELEASE_EVIDENCE_STARTED_AT}" \
+            --require-head-commit \
+            --output-json out/release_evidence_manifest_ci.json
+      - name: Upload release evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-bundle
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            out/release_evidence_manifest_ci.json
+            coverage.xml
+            mutation_results.json
+            out/pdf_candidate_benchmark_ci.json
+            out/pdf_crop_refine_benchmark_ci.json
+            out/pdf_benchmark_trends_ci.json
+            out/run_health_scorecard_ci.json
