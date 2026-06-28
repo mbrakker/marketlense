@@ -33,6 +33,7 @@ Scoring:
 - PDF crop/refine artifact equivalence and cost are now covered by `scripts/quality/pdf_crop_refine_benchmark.py`, `scripts/ci/check_pdf_crop_refine_benchmark.py`, `.github/workflows/ci.yml`, and `docs/quality/pdf_crop_refine_benchmark_baseline.json`. A live existing-artifact run on 2026-06-28 preserved candidate-pack signatures, crop-refine decision signatures, crop artifact hashes/counts, cached refine-decision counts, and estimated two-phase page model-call counts for IAS, Julius Baer, and Worldpanel outputs; observed medians were 0.028s, 0.077s, and 0.028s versus baselines of 0.030s, 0.076s, and 0.026s.
 - PDF benchmark trend reporting is now covered by `scripts/quality/pdf_benchmark_trends.py`, `scripts/ci/check_pdf_benchmark_trends.py`, `.github/workflows/ci.yml`, and README release-gate docs. A live run on 2026-06-28 consumed existing candidate and crop-refine benchmark JSON outputs without rerunning extraction, appended bounded local history under `out/`, and passed with no warnings. A four-run replay over already-produced benchmark outputs showed candidate recent medians down 4.3%, 4.6%, and 0.7% versus the older run, crop/refine estimated model-call counts unchanged at 2, 10, and 2, and crop/refine runtime drift contained at +1.1%, +3.9%, and +0.7%.
 - PDF benchmark trend evidence is now surfaced in `scripts/quality/run_health_scorecard.py` through optional retained candidate, crop/refine, and trend JSON inputs. A live scorecard run on 2026-06-28 consumed `out/pdf_candidate_benchmark_scorecard_live.json`, `out/pdf_crop_refine_benchmark_scorecard_live.json`, and `out/pdf_benchmark_trends_scorecard_live.json` without rerunning PDF extraction, wrote `out/run_health_scorecard_pdf_benchmark_live.json`, and reported complete passing evidence with 3 candidate rows, 3 crop/refine rows, and 9 trend rows. Candidate medians were 2.371s, 7.748s, and 9.512s versus baselines of 5.300s, 17.054s, and 19.207s; crop/refine medians were 0.0136s, 0.0353s, and 0.0155s versus baselines of 0.0303s, 0.0760s, and 0.0261s; estimated model-call counts stayed unchanged at 2, 10, and 2. A missing-evidence live scorecard run exited nonzero and marked PDF benchmark evidence incomplete.
+- Release evidence bundle manifests are now produced by `scripts/quality/release_evidence_manifest.py` and documented in README release review flow. A live run on 2026-06-28 consumed existing retained `coverage.xml`, `mutation_results.json`, PDF candidate benchmark JSON, PDF crop/refine benchmark JSON, PDF trend JSON, and PDF health scorecard JSON without rerunning those gates, wrote `out/release_evidence_manifest_live.json`, recorded commit SHA, producer commands, schema versions, byte counts, SHA-256 hashes, timestamps, and pass/fail status for 6 artifacts, and passed with no issues. A missing-artifact live run wrote `out/release_evidence_manifest_missing_live.json`, reported `artifact_missing`, and exited nonzero.
 - Vector-store cleanup is no longer backlog: `src/services/vector_store_service.py` exposes delete/prune operations, `src/orchestrators/vector_store_retention_orchestrator.py` runs retention cleanup, and README documents `analysis.vector_store_retention_days`.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
@@ -170,15 +171,15 @@ Scoring:
 
 ## 5. Architecture, Schema Compatibility, and Observability
 
-- **Title:** Build a release evidence bundle manifest for quality gates [Impact: 3/5, Effort: 2/5]
-  - Explanation: Health scorecards can now link PDF benchmark evidence, but release review still depends on operators manually keeping benchmark, trend, health, coverage, and mutation artifacts together.
-  - Pros: Improves release auditability, reduces missing-artifact mistakes, and makes evidence handoff deterministic.
-  - Cons: Needs a concise schema so the manifest does not become a duplicate dashboard.
+- **Title:** Promote release evidence manifests into CI artifact archival and freshness gates [Impact: 3/5, Effort: 3/5]
+  - Explanation: The manifest command now ties retained release artifacts together, but operators still run it manually and artifact freshness is not enforced by CI.
+  - Pros: Makes release evidence consistently archived, catches stale manifests before approval, and reduces manual handoff mistakes.
+  - Cons: Requires careful workflow ordering so optional local-only PDF artifacts do not block normal CI branches unintentionally.
   - Acceptance Criteria:
-    - A command writes a release evidence manifest with commit SHA, command arguments, artifact paths, schema versions, timestamps, and pass/fail status for retained quality-gate outputs.
-    - The manifest validates required retained files exist and have expected schema versions before release approval.
-    - README documents the archive/review flow and expected retained artifact links.
-    - Tests cover deterministic manifest ordering plus missing or invalid retained artifact reporting.
+    - Release workflow runs the manifest command after coverage, mutation, PDF benchmark, trend, and health scorecard outputs are produced.
+    - The workflow uploads the manifest and listed artifacts as one retained CI/release artifact bundle.
+    - Freshness checks fail release approval when the manifest commit SHA does not match `HEAD`, listed artifacts are missing, or required artifacts are older than the gate run.
+    - README documents local-vs-CI artifact retention expectations and the operator review path for freshness failures.
 
 - **Title:** Extend CI gates into role-mixing and monolith-growth enforcement [Impact: 4/5, Effort: 3/5]
   - Explanation: The repo already has broad CI coverage. The remaining useful gap is automation for role mixing, direct-I/O drift, service integration coverage waivers, and first-party long-file growth.
@@ -215,6 +216,7 @@ Scoring:
 - PDF crop/refine artifact equivalence and cost benchmark gate, including existing generated artifact hashes, cached crop-refine decision signatures, estimated two-phase page model-call counts, CI/release wrapper, live existing-artifact verification, and README refresh instructions.
 - PDF benchmark trend reporting across candidate and crop-refine gates, including bounded local history, sustained runtime/model-call regression detection, CI/release wrapper, live existing-output verification, and README retained-history guidance.
 - PDF benchmark trend evidence in release and health scorecards, including retained candidate/crop-refine/trend JSON inputs, incomplete-evidence failure reporting, live scorecard verification, and README operator flow.
+- Release evidence bundle manifest for retained quality-gate artifacts, including commit/command/path/schema/timestamp/hash/status recording, missing/invalid/schema-drift failure reporting, live retained-artifact verification, and README archive flow.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
 
@@ -235,7 +237,7 @@ Scoring:
 ### Phase 3: Resilience and Performance
 
 - Provider failover behind the canonical LLM service contract.
-- Release evidence bundle manifest for retained quality-gate artifacts.
+- Release evidence manifest CI archival and freshness enforcement.
 - Contract compatibility matrix.
 - Role-mixing/monolith-growth CI enforcement.
 - End-to-end trace read model.
