@@ -33,6 +33,7 @@ from .checkpoints import (
     _render_checkpoint_refs,
     _selection_checkpoint_payload,
     _source_checkpoint_payload,
+    _vector_indexing_checkpoint_payload,
     _write_stage_checkpoint,
 )
 
@@ -42,7 +43,7 @@ from .resume import (
     _doc_map_empty_outcome,
     _pdf_text_ocr_failed_outcome,
     _pdf_text_unextractable_outcome,
-    _resume_from_analysis_checkpoint,
+    _resume_from_checkpoint_stage,
     _run_projection,
     _run_signal_artifact_generation,
     _score_ingested_report_source,
@@ -167,21 +168,18 @@ def run_report_generation(
     runtime = _build_runtime_state(file, local_pdf_path, settings, md5, ctx)
     requested_resume_stage = str(resume_from_stage or "").strip()
     if requested_resume_stage:
-        if requested_resume_stage != STAGE_ANALYSIS_COMPLETE:
-            raise AppError(
-                code="report_pipeline_restart_stage_invalid",
-                message="Unsupported report pipeline restart stage",
-                retryable=False,
-                context={
-                    "file_id": runtime.file.file_id,
-                    "stage_name": requested_resume_stage,
-                    "supported_stages": [STAGE_ANALYSIS_COMPLETE],
-                },
-            )
-        return _resume_from_analysis_checkpoint(
+        return _resume_from_checkpoint_stage(
             runtime,
             deps,
             analytics_projection_fn,
+            requested_resume_stage=requested_resume_stage,
+            taxonomy_openai_client=taxonomy_openai_client,
+            category_fit_openai_client=category_fit_openai_client,
+            evidence_pack_openai_client=evidence_pack_openai_client,
+            artifact_openai_client=artifact_openai_client,
+            validation_openai_client=validation_openai_client,
+            regeneration_openai_client=regeneration_openai_client,
+            figure_caption_openai_client=figure_caption_openai_client,
         )
     logger.info(
         log_event(
@@ -243,6 +241,7 @@ def run_report_generation(
                 "schema_version": "1.0",
                 "source": _source_checkpoint_payload(source),
                 "selection": _selection_checkpoint_payload(selection),
+                "vector_indexing": _vector_indexing_checkpoint_payload(vector_state),
             },
         )
         preview_resp = render_preview_asset(runtime, source, deps.render)

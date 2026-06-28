@@ -75,7 +75,7 @@ def test_readme_documents_report_pipeline_entrypoints() -> None:
         "`src/orchestrators/report_pipeline_orchestrator.py::run_report_pipeline`",
         "`src/orchestrators/report_generation_orchestrator.py::run_report_generation`",
         "`src/orchestrators/report_analysis_orchestrator.py::run_report_analysis`",
-        '`resume_from_stage="analysis_complete"`',
+        "`resume_from_stage` supports `source_prepared`, `selection_complete`, `analysis_complete`, `render_complete`, and `latest_safe`",
     ]
 
     for fragment in expected_fragments:

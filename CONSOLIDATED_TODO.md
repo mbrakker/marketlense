@@ -37,6 +37,7 @@ Scoring:
 - Release evidence manifest CI archival and freshness enforcement is now wired through `.github/workflows/ci.yml` and `scripts/quality/release_evidence_manifest.py`. CI records `RELEASE_EVIDENCE_STARTED_AT` before coverage generation, builds `out/run_health_scorecard_ci.json`, runs the manifest with `--fresh-after` and `--require-head-commit` after coverage, mutation, PDF benchmark, trend, health scorecard, and prompt gates, and uploads the manifest plus listed artifacts as the `release-evidence-bundle` artifact. A live run on 2026-06-28 consumed existing retained artifacts, wrote `out/release_evidence_manifest_freshness_live.json`, validated 6 artifact paths/schema versions/statuses/modification timestamps against `HEAD`, and passed with no issues; stale and commit-mismatch live runs wrote failure manifests and exited nonzero with `artifact_stale` and `commit_sha_mismatch`.
 - Vector-store cleanup is no longer backlog: `src/services/vector_store_service.py` exposes delete/prune operations, `src/orchestrators/vector_store_retention_orchestrator.py` runs retention cleanup, and README documents `analysis.vector_store_retention_days`.
 - Direct file-I/O boundary drift outside services is now guarded across generators, orchestrators, utilities, `_cli`, and `src/ui`. Remaining CLI/UI/orchestrator direct reads, existence checks, and path-kind probes were routed through `file_service` contracts, `FileStatResponse` now reports `is_file`/`is_dir`, and the role-I/O CI wrapper fails on new unwaived drift. A live report-download run on 2026-06-28 against the existing Payments NZ direct PDF completed as `pdf_download / downloaded`, wrote an 800,251-byte PDF through the branch runtime, recorded the source row and value score, and emitted service-owned file hash logs; the Drive-required variant reached live Google Drive write preflight and failed on the account's storage-quota policy before download.
+- Full report-generation semantic checkpoint resume is live for `source_prepared`, `selection_complete`, `analysis_complete`, `render_complete`, and `latest_safe`. Checkpoints now carry artifact integrity metadata for existing file artifacts, `selection_complete` persists vector-store indexing state, direct corrupt/missing/hash-mismatched checkpoint resumes fail with non-retryable `AppError`s, and `latest_safe` selects the newest checkpoint whose artifacts validate. A live IAS existing-PDF run on 2026-06-28 completed fresh generation in 582.003s, then resumed successfully from `source_prepared` in 165.630s, `selection_complete` in 317.949s after a transient model-output retry, `analysis_complete` in 0.820s, `render_complete` in 0.040s, and `latest_safe` in 0.058s.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
 - Claim-level embedding persistence is live: `claim_embeddings` stores durable vectors/provider metadata/status/error taxonomy linked to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`, and `claim_embedding_orchestrator` owns pending/stale embedding workflow execution.
@@ -209,16 +210,6 @@ Scoring:
     - CLI/UI can run a read-only plan mode before execution and can execute an approved plan through existing orchestrators.
     - Tests cover ready, partially complete, failed, missing-credential, and publish-only states with plan contract and log assertions.
 
-- **Title:** Expand report-generation restart support to every persisted semantic checkpoint [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Report generation writes `source_prepared`, `selection_complete`, `analysis_complete`, and `render_complete` checkpoints, but runtime resume support accepts only `analysis_complete`. Earlier or later safe restart points still require repeated work or manual decisions.
-  - Why implement: Full checkpoint-aware resume reduces repeated PDF extraction, ranking, vector-store indexing, model calls, rendering, and operator intervention after long-run failures.
-  - Tradeoffs / risks: Requires strict artifact validation so stale or corrupted checkpoint references do not produce partial or misleading outputs.
-  - Acceptance Criteria:
-    - Resume is supported from `source_prepared`, `selection_complete`, `analysis_complete`, and `render_complete` where the required artifacts validate.
-    - The planner automatically selects the latest safe checkpoint when a run is repaired.
-    - Corrupt checkpoint, missing artifact, hash mismatch, and unsupported-stage paths fail with typed non-retryable `AppError`s and structured logs.
-    - Tests prove resumed outputs match fresh-run outputs except for approved volatile fields.
-
 - **Title:** Normalize retry and defer behavior through a typed retry-decision contract [Impact: 5/5, Effort: 3/5]
   - Problem fixed: A reusable retry orchestrator exists, but step-specific retry semantics such as doc-map retry transitions, model/provider failures, DB locks, and credential blockers are still encoded across multiple orchestrators.
   - Why implement: A shared `RetryDecision` contract makes transient, permanent, deferred, and user-action-required failures consistent and easier for UI/CLI/planner flows to explain.
@@ -316,6 +307,7 @@ Scoring:
 - Release evidence manifest CI archival and freshness gates, including `HEAD` commit checks, artifact modified-time checks, CI health scorecard generation, `release-evidence-bundle` upload, live freshness verification, and README local-vs-CI retention flow.
 - Release evidence review summaries and waiver governance, including deterministic Markdown/JSON review outputs, owner/expiry/justification waiver validation, CI approval gating, live clean/stale/waived manifest verification, and README operator review and waiver-retirement flow.
 - Remaining direct file-I/O leaks outside services and the expanded I/O boundary gate, including generator/orchestrator/utility/CLI/UI AST coverage, service-backed CLI/UI/orchestrator file probes, `FileStatResponse` path-kind metadata, contract schema refresh, focused regression coverage, and live report-download verification.
+- Full report-generation restart support for every persisted semantic checkpoint, including artifact-integrity validation, vector indexing state persistence at `selection_complete`, `source_prepared`/`selection_complete`/`analysis_complete`/`render_complete`/`latest_safe` runtime resume support, typed non-retryable failures for invalid checkpoint/artifact paths, focused regression coverage, and live IAS existing-PDF verification.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
 
@@ -323,7 +315,7 @@ Scoring:
 
 ### Phase 1: Highest-Leverage Controls
 
-- Add pipeline planning, preflight, and full checkpoint resume so the system can choose safe next actions with less user direction.
+- Add pipeline planning and preflight so the system can choose safe next actions with less user direction.
 - Real-time spend guardrails at run/day/publisher scopes with explicit override flow.
 - Budget-aware model routing with deterministic compaction.
 - Durable publish snapshot decision: real jobs/outbox or explicit readiness-snapshot naming.

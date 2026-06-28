@@ -5,6 +5,7 @@ import logging
 from typing import Optional
 from src.contracts.drive import DriveFile
 from src.contracts.files import (
+    FileStatRequest,
     PipelineCheckpointWriteRequest,
     PipelineStageCheckpoint,
 )
@@ -25,8 +26,10 @@ from src.contracts.report_generation import (
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationReport
+from src.generators.report_analysis_generator import VectorStoreIndexingState
 from src.generators.report_generation_shared import derive_title, report_slug
 from src.services.file_service import (
+    file_stat,
     write_pipeline_checkpoint,
 )
 from src.utils.errors import AppError
@@ -257,6 +260,10 @@ def _write_stage_checkpoint(
     artifact_refs: dict[str, str],
     payload: dict,
 ) -> str:
+    checkpoint_payload = dict(payload)
+    checkpoint_payload["artifact_integrity"] = _artifact_integrity_payload(
+        runtime, artifact_refs
+    )
     response = write_pipeline_checkpoint(
         PipelineCheckpointWriteRequest(
             schema_version="1.0",
@@ -269,7 +276,7 @@ def _write_stage_checkpoint(
                 stage_name=stage_name,
                 stage_status="completed",
                 artifact_refs=dict(artifact_refs),
-                payload=payload,
+                payload=checkpoint_payload,
                 completed_at_utc=datetime.now(timezone.utc).isoformat(),
                 source_run_id=str(runtime.ctx.run_id),
                 source_task_id=str(runtime.ctx.task_id),
@@ -292,6 +299,29 @@ def _write_stage_checkpoint(
         )
     )
     return response.checkpoint_path
+
+
+def _artifact_integrity_payload(
+    runtime: ReportRuntimeState, artifact_refs: dict[str, str]
+) -> dict:
+    files: dict[str, dict] = {}
+    for name, raw_path in artifact_refs.items():
+        path = str(raw_path or "").strip()
+        if not path:
+            continue
+        stat = file_stat(
+            FileStatRequest(schema_version="1.0", path=path, compute_md5=True),
+            runtime.ctx,
+        )
+        if not stat.exists or not stat.is_file or not stat.md5:
+            continue
+        files[str(name)] = {
+            "schema_version": "1.0",
+            "path": stat.path,
+            "size_bytes": stat.size_bytes,
+            "md5": stat.md5,
+        }
+    return {"schema_version": "1.0", "files": files}
 
 
 def _source_checkpoint_payload(source: ReportSourceState) -> dict:
@@ -319,6 +349,19 @@ def _selection_checkpoint_payload(selection: ReportSelectionState) -> dict:
         "payload": selection.payload.to_dict(),
         "rank_usage": dict(selection.rank_usage),
         "candidate_count": selection.candidate_count,
+    }
+
+
+def _vector_indexing_checkpoint_payload(
+    vector_state: VectorStoreIndexingState,
+) -> dict:
+    return {
+        "schema_version": "1.0",
+        "vector_store_id": vector_state.vector_store_id,
+        "openai_file_id": vector_state.openai_file_id,
+        "vector_store_status": vector_state.vector_store_status,
+        "indexed_at_utc": vector_state.indexed_at_utc,
+        "last_error": vector_state.last_error,
     }
 
 
@@ -546,6 +589,24 @@ def _analysis_state_from_checkpoint(
     )
 
 
+def _vector_indexing_state_from_checkpoint(
+    raw_state: object,
+) -> VectorStoreIndexingState:
+    if not isinstance(raw_state, dict):
+        raise AppError(
+            code="report_pipeline_checkpoint_invalid",
+            message="Checkpoint vector indexing state must be an object",
+            retryable=False,
+        )
+    return VectorStoreIndexingState(
+        vector_store_id=raw_state.get("vector_store_id"),
+        openai_file_id=raw_state.get("openai_file_id"),
+        vector_store_status=raw_state.get("vector_store_status"),
+        indexed_at_utc=raw_state.get("indexed_at_utc"),
+        last_error=raw_state.get("last_error"),
+    )
+
+
 def _preview_from_checkpoint(raw_preview: object) -> PreviewResponse:
     if not isinstance(raw_preview, dict):
         raise AppError(
@@ -567,8 +628,10 @@ __all__ = [
     "_regeneration_loop_from_dict",
     "_regeneration_attempts_from_list",
     "_write_stage_checkpoint",
+    "_artifact_integrity_payload",
     "_source_checkpoint_payload",
     "_selection_checkpoint_payload",
+    "_vector_indexing_checkpoint_payload",
     "_source_info_payload",
     "_source_text_payload",
     "_preview_checkpoint_payload",
@@ -578,5 +641,6 @@ __all__ = [
     "_source_state_from_checkpoint",
     "_selection_state_from_checkpoint",
     "_analysis_state_from_checkpoint",
+    "_vector_indexing_state_from_checkpoint",
     "_preview_from_checkpoint",
 ]

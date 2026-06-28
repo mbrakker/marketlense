@@ -11,7 +11,9 @@ from src.contracts.analytics_projection import (
 from src.utils.clock import utc_now_iso as _utc_now_iso
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.files import (
+    FileStatRequest,
     PipelineCheckpointReadRequest,
+    PipelineStageCheckpoint,
 )
 from src.contracts.ingest import IngestOutcome
 from src.contracts.report_generation import (
@@ -28,10 +30,14 @@ from src.contracts.report_store import (
     ReportValueScoreResponse,
 )
 from src.contracts.vector_store import VectorStoreDeleteRequest
+from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
 from src.generators.report_render_generator import (
+    render_preview_asset,
     render_report_output,
 )
+from src.generators.report_selection_generator import select_report_figures
+from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.generators.report_signal_artifact_generator import (
     SIGNAL_ARTIFACT_PACK_NAME,
     build_ingestion_signal_artifact_payload,
@@ -40,17 +46,24 @@ from src.generators.report_signal_artifact_generator import (
 )
 from src.orchestrators.analytics_projection_orchestrator import run_analytics_projection
 from src.services.file_service import (
+    file_stat,
     read_pipeline_checkpoint,
 )
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
 from .checkpoints import (
+    _analysis_checkpoint_payload,
+    _analysis_checkpoint_refs,
     _analysis_state_from_checkpoint,
     _preview_from_checkpoint,
     _render_checkpoint_refs,
+    _selection_checkpoint_payload,
     _selection_state_from_checkpoint,
+    _source_checkpoint_payload,
     _source_state_from_checkpoint,
+    _vector_indexing_checkpoint_payload,
+    _vector_indexing_state_from_checkpoint,
     _write_stage_checkpoint,
 )
 
@@ -343,20 +356,27 @@ def _run_signal_artifact_generation(
     return replace(outcome, evidence_packs=evidence_packs)
 
 
-def _resume_from_analysis_checkpoint(
+SUPPORTED_RESTART_STAGES = (
+    STAGE_SOURCE_PREPARED,
+    STAGE_SELECTION_COMPLETE,
+    STAGE_ANALYSIS_COMPLETE,
+    STAGE_RENDER_COMPLETE,
+)
+LATEST_SAFE_RESTART_STAGE = "latest_safe"
+
+
+def _read_validated_checkpoint(
     runtime: ReportRuntimeState,
-    dependencies: ReportGenerationDependencies,
-    analytics_projection_fn: Optional[
-        Callable[[AnalyticsProjectionRunRequest], object]
-    ],
-) -> IngestOutcome:
+    *,
+    stage_name: str,
+) -> tuple[PipelineStageCheckpoint, str]:
     response = read_pipeline_checkpoint(
         PipelineCheckpointReadRequest(
             schema_version="1.0",
             checkpoint_root=runtime.settings.output_dir,
             pipeline_name=REPORT_PIPELINE_NAME,
             file_id=runtime.file.file_id,
-            stage_name=STAGE_ANALYSIS_COMPLETE,
+            stage_name=stage_name,
         ),
         runtime.ctx,
     )
@@ -367,11 +387,144 @@ def _resume_from_analysis_checkpoint(
             retryable=False,
             context={
                 "file_id": runtime.file.file_id,
-                "stage_name": STAGE_ANALYSIS_COMPLETE,
+                "stage_name": stage_name,
                 "checkpoint_path": response.checkpoint_path,
             },
         )
-    checkpoint_payload = response.checkpoint.payload
+    checkpoint = response.checkpoint
+    if checkpoint.stage_status != "completed":
+        raise AppError(
+            code="report_pipeline_checkpoint_invalid",
+            message="Requested report pipeline checkpoint is not completed",
+            retryable=False,
+            context={
+                "file_id": runtime.file.file_id,
+                "stage_name": stage_name,
+                "stage_status": checkpoint.stage_status,
+                "checkpoint_path": response.checkpoint_path,
+            },
+        )
+    _validate_checkpoint_artifacts(runtime, checkpoint, response.checkpoint_path)
+    return checkpoint, response.checkpoint_path
+
+
+def _validate_checkpoint_artifacts(
+    runtime: ReportRuntimeState,
+    checkpoint: PipelineStageCheckpoint,
+    checkpoint_path: str,
+) -> None:
+    raw_integrity = checkpoint.payload.get("artifact_integrity")
+    if not isinstance(raw_integrity, dict):
+        return
+    raw_files = raw_integrity.get("files")
+    if not isinstance(raw_files, dict):
+        raise AppError(
+            code="report_pipeline_checkpoint_invalid",
+            message="Checkpoint artifact integrity payload must contain a files object",
+            retryable=False,
+            context={
+                "file_id": runtime.file.file_id,
+                "stage_name": checkpoint.stage_name,
+                "checkpoint_path": checkpoint_path,
+            },
+        )
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="orchestrator",
+            event="report_pipeline_checkpoint_artifact_validation_start",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "stage_name": checkpoint.stage_name,
+                "checkpoint_path": checkpoint_path,
+                "artifact_count": len(raw_files),
+            },
+        )
+    )
+    for name, raw_meta in raw_files.items():
+        if not isinstance(raw_meta, dict):
+            raise AppError(
+                code="report_pipeline_checkpoint_invalid",
+                message="Checkpoint artifact integrity entry must be an object",
+                retryable=False,
+                context={
+                    "file_id": runtime.file.file_id,
+                    "stage_name": checkpoint.stage_name,
+                    "artifact_name": str(name),
+                    "checkpoint_path": checkpoint_path,
+                },
+            )
+        expected_path = str(raw_meta.get("path") or "").strip()
+        expected_md5 = str(raw_meta.get("md5") or "").strip()
+        current_path = str(checkpoint.artifact_refs.get(str(name)) or "").strip()
+        if not expected_path or current_path != expected_path:
+            raise AppError(
+                code="report_pipeline_checkpoint_artifact_missing",
+                message="Checkpoint artifact reference is missing or changed",
+                retryable=False,
+                context={
+                    "file_id": runtime.file.file_id,
+                    "stage_name": checkpoint.stage_name,
+                    "artifact_name": str(name),
+                    "expected_path": expected_path,
+                    "current_path": current_path,
+                    "checkpoint_path": checkpoint_path,
+                },
+            )
+        stat = file_stat(
+            FileStatRequest(schema_version="1.0", path=expected_path, compute_md5=True),
+            runtime.ctx,
+        )
+        if not stat.exists or not stat.is_file:
+            raise AppError(
+                code="report_pipeline_checkpoint_artifact_missing",
+                message="Checkpoint artifact file is missing",
+                retryable=False,
+                context={
+                    "file_id": runtime.file.file_id,
+                    "stage_name": checkpoint.stage_name,
+                    "artifact_name": str(name),
+                    "path": expected_path,
+                    "checkpoint_path": checkpoint_path,
+                },
+            )
+        if expected_md5 and stat.md5 != expected_md5:
+            raise AppError(
+                code="report_pipeline_checkpoint_artifact_hash_mismatch",
+                message="Checkpoint artifact hash does not match persisted metadata",
+                retryable=False,
+                context={
+                    "file_id": runtime.file.file_id,
+                    "stage_name": checkpoint.stage_name,
+                    "artifact_name": str(name),
+                    "path": expected_path,
+                    "expected_md5": expected_md5,
+                    "actual_md5": stat.md5 or "",
+                    "checkpoint_path": checkpoint_path,
+                },
+            )
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="orchestrator",
+            event="report_pipeline_checkpoint_artifact_validation_complete",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "stage_name": checkpoint.stage_name,
+                "checkpoint_path": checkpoint_path,
+                "artifact_count": len(raw_files),
+            },
+        )
+    )
+
+
+def _log_semantic_restart(
+    runtime: ReportRuntimeState,
+    checkpoint: PipelineStageCheckpoint,
+    checkpoint_path: str,
+) -> None:
     logger.info(
         log_event(
             runtime.ctx,
@@ -380,20 +533,27 @@ def _resume_from_analysis_checkpoint(
             module=logger.name,
             fields={
                 "file_id": runtime.file.file_id,
-                "stage_name": STAGE_ANALYSIS_COMPLETE,
-                "checkpoint_path": response.checkpoint_path,
-                "artifact_ref_count": len(response.checkpoint.artifact_refs),
+                "stage_name": checkpoint.stage_name,
+                "checkpoint_path": checkpoint_path,
+                "artifact_ref_count": len(checkpoint.artifact_refs),
             },
         )
     )
-    source = _source_state_from_checkpoint(runtime, checkpoint_payload.get("source"))
-    selection = _selection_state_from_checkpoint(
-        runtime, source, checkpoint_payload.get("selection")
-    )
-    analysis = _analysis_state_from_checkpoint(
-        runtime, source, selection, checkpoint_payload.get("analysis")
-    )
-    preview_resp = _preview_from_checkpoint(checkpoint_payload.get("preview"))
+
+
+def _render_project_and_cleanup(
+    runtime: ReportRuntimeState,
+    source,
+    selection,
+    analysis: ReportAnalysisState,
+    preview_resp,
+    dependencies: ReportGenerationDependencies,
+    analytics_projection_fn: Optional[
+        Callable[[AnalyticsProjectionRunRequest], object]
+    ],
+    *,
+    existing_artifact_refs: dict[str, str],
+) -> IngestOutcome:
     report_value_score = _score_ingested_report_source(runtime, analysis, dependencies)
     analysis = _analysis_with_report_value_score(analysis, report_value_score)
     outcome = render_report_output(
@@ -408,7 +568,7 @@ def _resume_from_analysis_checkpoint(
         runtime,
         stage_name=STAGE_RENDER_COMPLETE,
         artifact_refs={
-            **dict(response.checkpoint.artifact_refs),
+            **dict(existing_artifact_refs),
             **_render_checkpoint_refs(
                 runtime,
                 source,
@@ -430,7 +590,7 @@ def _resume_from_analysis_checkpoint(
             runtime,
             stage_name=STAGE_RENDER_COMPLETE,
             artifact_refs={
-                **dict(response.checkpoint.artifact_refs),
+                **dict(existing_artifact_refs),
                 **_render_checkpoint_refs(
                     runtime,
                     source,
@@ -442,6 +602,316 @@ def _resume_from_analysis_checkpoint(
             payload={"schema_version": "1.0", "outcome": asdict(outcome)},
         )
     return _cleanup_transient_vector_store(outcome, runtime, dependencies)
+
+
+def _outcome_from_render_checkpoint(raw_outcome: object) -> IngestOutcome:
+    if not isinstance(raw_outcome, dict):
+        raise AppError(
+            code="report_pipeline_checkpoint_invalid",
+            message="Checkpoint render outcome must be an object",
+            retryable=False,
+        )
+    try:
+        return IngestOutcome(**raw_outcome)
+    except TypeError as exc:
+        raise AppError(
+            code="report_pipeline_checkpoint_invalid",
+            message="Checkpoint render outcome is incomplete",
+            cause=exc,
+            retryable=False,
+        ) from exc
+
+
+def _resume_from_analysis_checkpoint(
+    runtime: ReportRuntimeState,
+    dependencies: ReportGenerationDependencies,
+    analytics_projection_fn: Optional[
+        Callable[[AnalyticsProjectionRunRequest], object]
+    ],
+) -> IngestOutcome:
+    checkpoint, checkpoint_path = _read_validated_checkpoint(
+        runtime, stage_name=STAGE_ANALYSIS_COMPLETE
+    )
+    checkpoint_payload = checkpoint.payload
+    _log_semantic_restart(runtime, checkpoint, checkpoint_path)
+    source = _source_state_from_checkpoint(runtime, checkpoint_payload.get("source"))
+    selection = _selection_state_from_checkpoint(
+        runtime, source, checkpoint_payload.get("selection")
+    )
+    analysis = _analysis_state_from_checkpoint(
+        runtime, source, selection, checkpoint_payload.get("analysis")
+    )
+    preview_resp = _preview_from_checkpoint(checkpoint_payload.get("preview"))
+    return _render_project_and_cleanup(
+        runtime,
+        source,
+        selection,
+        analysis,
+        preview_resp,
+        dependencies,
+        analytics_projection_fn,
+        existing_artifact_refs=dict(checkpoint.artifact_refs),
+    )
+
+
+def _resume_from_source_checkpoint(
+    runtime: ReportRuntimeState,
+    dependencies: ReportGenerationDependencies,
+    analytics_projection_fn: Optional[
+        Callable[[AnalyticsProjectionRunRequest], object]
+    ],
+    *,
+    taxonomy_openai_client=None,
+    category_fit_openai_client=None,
+    evidence_pack_openai_client=None,
+    artifact_openai_client=None,
+    validation_openai_client=None,
+    regeneration_openai_client=None,
+    figure_caption_openai_client=None,
+) -> IngestOutcome:
+    checkpoint, checkpoint_path = _read_validated_checkpoint(
+        runtime, stage_name=STAGE_SOURCE_PREPARED
+    )
+    _log_semantic_restart(runtime, checkpoint, checkpoint_path)
+    source = _source_state_from_checkpoint(runtime, checkpoint.payload.get("source"))
+    vector_state = start_vector_store_indexing(runtime, source, dependencies.analysis)
+    selection = select_report_figures(runtime, source, dependencies.selection)
+    _write_stage_checkpoint(
+        runtime,
+        stage_name=STAGE_SELECTION_COMPLETE,
+        artifact_refs={
+            **dict(checkpoint.artifact_refs),
+            "source_pdf": runtime.local_pdf_path,
+            "analysis_pdf": source.analysis_pdf_path or runtime.local_pdf_path,
+        },
+        payload={
+            "schema_version": "1.0",
+            "source": _source_checkpoint_payload(source),
+            "selection": _selection_checkpoint_payload(selection),
+            "vector_indexing": _vector_indexing_checkpoint_payload(vector_state),
+        },
+    )
+    preview_resp = render_preview_asset(runtime, source, dependencies.render)
+    analysis = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        vector_state,
+        dependencies.analysis,
+        taxonomy_openai_client=taxonomy_openai_client,
+        category_fit_openai_client=category_fit_openai_client,
+        evidence_pack_openai_client=evidence_pack_openai_client,
+        artifact_openai_client=artifact_openai_client,
+        validation_openai_client=validation_openai_client,
+        regeneration_openai_client=regeneration_openai_client,
+        figure_caption_openai_client=figure_caption_openai_client,
+    )
+    _write_stage_checkpoint(
+        runtime,
+        stage_name=STAGE_ANALYSIS_COMPLETE,
+        artifact_refs=_analysis_checkpoint_refs(
+            runtime, source, analysis, preview_resp
+        ),
+        payload=_analysis_checkpoint_payload(source, selection, analysis, preview_resp),
+    )
+    return _render_project_and_cleanup(
+        runtime,
+        source,
+        selection,
+        analysis,
+        preview_resp,
+        dependencies,
+        analytics_projection_fn,
+        existing_artifact_refs=_analysis_checkpoint_refs(
+            runtime, source, analysis, preview_resp
+        ),
+    )
+
+
+def _resume_from_selection_checkpoint(
+    runtime: ReportRuntimeState,
+    dependencies: ReportGenerationDependencies,
+    analytics_projection_fn: Optional[
+        Callable[[AnalyticsProjectionRunRequest], object]
+    ],
+    *,
+    taxonomy_openai_client=None,
+    category_fit_openai_client=None,
+    evidence_pack_openai_client=None,
+    artifact_openai_client=None,
+    validation_openai_client=None,
+    regeneration_openai_client=None,
+    figure_caption_openai_client=None,
+) -> IngestOutcome:
+    checkpoint, checkpoint_path = _read_validated_checkpoint(
+        runtime, stage_name=STAGE_SELECTION_COMPLETE
+    )
+    checkpoint_payload = checkpoint.payload
+    _log_semantic_restart(runtime, checkpoint, checkpoint_path)
+    source = _source_state_from_checkpoint(runtime, checkpoint_payload.get("source"))
+    selection = _selection_state_from_checkpoint(
+        runtime, source, checkpoint_payload.get("selection")
+    )
+    vector_state = _vector_indexing_state_from_checkpoint(
+        checkpoint_payload.get("vector_indexing")
+    )
+    preview_resp = render_preview_asset(runtime, source, dependencies.render)
+    analysis = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        vector_state,
+        dependencies.analysis,
+        taxonomy_openai_client=taxonomy_openai_client,
+        category_fit_openai_client=category_fit_openai_client,
+        evidence_pack_openai_client=evidence_pack_openai_client,
+        artifact_openai_client=artifact_openai_client,
+        validation_openai_client=validation_openai_client,
+        regeneration_openai_client=regeneration_openai_client,
+        figure_caption_openai_client=figure_caption_openai_client,
+    )
+    analysis_refs = _analysis_checkpoint_refs(runtime, source, analysis, preview_resp)
+    _write_stage_checkpoint(
+        runtime,
+        stage_name=STAGE_ANALYSIS_COMPLETE,
+        artifact_refs=analysis_refs,
+        payload=_analysis_checkpoint_payload(source, selection, analysis, preview_resp),
+    )
+    return _render_project_and_cleanup(
+        runtime,
+        source,
+        selection,
+        analysis,
+        preview_resp,
+        dependencies,
+        analytics_projection_fn,
+        existing_artifact_refs=analysis_refs,
+    )
+
+
+def _resume_from_render_checkpoint(
+    runtime: ReportRuntimeState,
+) -> IngestOutcome:
+    checkpoint, checkpoint_path = _read_validated_checkpoint(
+        runtime, stage_name=STAGE_RENDER_COMPLETE
+    )
+    _log_semantic_restart(runtime, checkpoint, checkpoint_path)
+    return _outcome_from_render_checkpoint(checkpoint.payload.get("outcome"))
+
+
+def _select_latest_safe_restart_stage(runtime: ReportRuntimeState) -> str:
+    last_error: AppError | None = None
+    for stage_name in (
+        STAGE_RENDER_COMPLETE,
+        STAGE_ANALYSIS_COMPLETE,
+        STAGE_SELECTION_COMPLETE,
+        STAGE_SOURCE_PREPARED,
+    ):
+        try:
+            _read_validated_checkpoint(runtime, stage_name=stage_name)
+        except AppError as exc:
+            last_error = exc
+            logger.info(
+                log_event(
+                    runtime.ctx,
+                    role="orchestrator",
+                    event="report_pipeline_latest_safe_checkpoint_rejected",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "stage_name": stage_name,
+                        "error_code": exc.code,
+                        "error_retryable": exc.retryable,
+                    },
+                )
+            )
+            continue
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="orchestrator",
+                event="report_pipeline_latest_safe_checkpoint_selected",
+                module=logger.name,
+                fields={"file_id": runtime.file.file_id, "stage_name": stage_name},
+            )
+        )
+        return stage_name
+    if last_error is not None:
+        raise last_error
+    raise AppError(
+        code="report_pipeline_checkpoint_missing",
+        message="No report pipeline checkpoint was found",
+        retryable=False,
+        context={"file_id": runtime.file.file_id},
+    )
+
+
+def _resume_from_checkpoint_stage(
+    runtime: ReportRuntimeState,
+    dependencies: ReportGenerationDependencies,
+    analytics_projection_fn: Optional[
+        Callable[[AnalyticsProjectionRunRequest], object]
+    ],
+    *,
+    requested_resume_stage: str,
+    taxonomy_openai_client=None,
+    category_fit_openai_client=None,
+    evidence_pack_openai_client=None,
+    artifact_openai_client=None,
+    validation_openai_client=None,
+    regeneration_openai_client=None,
+    figure_caption_openai_client=None,
+) -> IngestOutcome:
+    stage_name = str(requested_resume_stage or "").strip()
+    if stage_name == LATEST_SAFE_RESTART_STAGE:
+        stage_name = _select_latest_safe_restart_stage(runtime)
+    if stage_name not in SUPPORTED_RESTART_STAGES:
+        raise AppError(
+            code="report_pipeline_restart_stage_invalid",
+            message="Unsupported report pipeline restart stage",
+            retryable=False,
+            context={
+                "file_id": runtime.file.file_id,
+                "stage_name": stage_name,
+                "supported_stages": [
+                    *SUPPORTED_RESTART_STAGES,
+                    LATEST_SAFE_RESTART_STAGE,
+                ],
+            },
+        )
+    if stage_name == STAGE_SOURCE_PREPARED:
+        return _resume_from_source_checkpoint(
+            runtime,
+            dependencies,
+            analytics_projection_fn,
+            taxonomy_openai_client=taxonomy_openai_client,
+            category_fit_openai_client=category_fit_openai_client,
+            evidence_pack_openai_client=evidence_pack_openai_client,
+            artifact_openai_client=artifact_openai_client,
+            validation_openai_client=validation_openai_client,
+            regeneration_openai_client=regeneration_openai_client,
+            figure_caption_openai_client=figure_caption_openai_client,
+        )
+    if stage_name == STAGE_SELECTION_COMPLETE:
+        return _resume_from_selection_checkpoint(
+            runtime,
+            dependencies,
+            analytics_projection_fn,
+            taxonomy_openai_client=taxonomy_openai_client,
+            category_fit_openai_client=category_fit_openai_client,
+            evidence_pack_openai_client=evidence_pack_openai_client,
+            artifact_openai_client=artifact_openai_client,
+            validation_openai_client=validation_openai_client,
+            regeneration_openai_client=regeneration_openai_client,
+            figure_caption_openai_client=figure_caption_openai_client,
+        )
+    if stage_name == STAGE_ANALYSIS_COMPLETE:
+        return _resume_from_analysis_checkpoint(
+            runtime,
+            dependencies,
+            analytics_projection_fn,
+        )
+    return _resume_from_render_checkpoint(runtime)
 
 
 def _pdf_text_unextractable_outcome(
@@ -580,7 +1050,15 @@ __all__ = [
     "_score_ingested_report_source",
     "_analysis_with_report_value_score",
     "_run_signal_artifact_generation",
+    "SUPPORTED_RESTART_STAGES",
+    "LATEST_SAFE_RESTART_STAGE",
+    "_read_validated_checkpoint",
+    "_validate_checkpoint_artifacts",
+    "_resume_from_checkpoint_stage",
+    "_resume_from_source_checkpoint",
+    "_resume_from_selection_checkpoint",
     "_resume_from_analysis_checkpoint",
+    "_resume_from_render_checkpoint",
     "_pdf_text_unextractable_outcome",
     "_pdf_text_ocr_failed_outcome",
     "_doc_map_empty_outcome",
