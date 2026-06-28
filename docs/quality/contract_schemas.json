@@ -14895,6 +14895,12 @@
         "exists": {
           "type": "boolean"
         },
+        "is_dir": {
+          "type": "boolean"
+        },
+        "is_file": {
+          "type": "boolean"
+        },
         "md5": {
           "anyOf": [
             {
@@ -14935,9 +14941,7 @@
       "required": [
         "schema_version",
         "path",
-        "exists",
-        "size_bytes",
-        "mtime_utc"
+        "exists"
       ],
       "type": "object"
     },

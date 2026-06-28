@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import json
 
 import typer
 from rich.table import Table
@@ -9,6 +8,7 @@ from rich import box
 
 from src.utils.errors import AppError
 from src.contracts.config import ConfigLoadRequest
+from src.contracts.files import ReadJsonRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
@@ -36,6 +36,7 @@ from src.services.run_registry_service import (
     get_ui_run_record,
     write_ui_run_record,
 )
+from src.services.file_service import read_json
 from src.services.ui_run_replay_service import write_ui_run_replay_manifest
 from src.utils.logging import new_run_context
 
@@ -56,6 +57,7 @@ _CLI_PATCH_POINTS = (
     "load_publisher_inventory_settings",
     "load_settings",
     "promote_private_api_evidence_to_browser_playbook",
+    "read_json",
     "read_text",
     "replay_ui_run",
     "run_acquisition_audit",
@@ -90,18 +92,31 @@ def _load_ui_run_worker_request(path: str) -> UiRunWorkerRequest:
             retryable=False,
         )
     try:
-        payload = json.loads(open(request_path, "r", encoding="utf-8").read())
-    except FileNotFoundError as exc:
-        raise AppError(
-            code="ui_run_worker_request_missing",
-            message=f"UI run worker request not found: {request_path}",
-            cause=exc,
-            retryable=False,
-        ) from exc
-    except json.JSONDecodeError as exc:
+        response = read_json(
+            ReadJsonRequest(schema_version="1.0", path=request_path),
+            new_run_context(task_id="cli_ui_run_worker_request"),
+        )
+        payload = response.payload
+    except AppError as exc:
+        if exc.code == "file_not_found":
+            raise AppError(
+                code="ui_run_worker_request_missing",
+                message=f"UI run worker request not found: {request_path}",
+                cause=exc,
+                retryable=False,
+            ) from exc
+        if exc.code == "file_json_invalid":
+            raise AppError(
+                code="ui_run_worker_request_invalid",
+                message=f"UI run worker request JSON invalid: {request_path}",
+                cause=exc,
+                retryable=False,
+            ) from exc
+        raise
+    except TypeError as exc:
         raise AppError(
             code="ui_run_worker_request_invalid",
-            message=f"UI run worker request JSON invalid: {request_path}",
+            message=f"UI run worker request root must be an object: {request_path}",
             cause=exc,
             retryable=False,
         ) from exc

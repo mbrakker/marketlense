@@ -9,7 +9,10 @@ from typing import Iterable
 ROOT = Path(__file__).resolve().parents[1]
 TARGET_DIRS: tuple[tuple[str, Path], ...] = (
     ("generator", ROOT / "src" / "generators"),
+    ("orchestrator", ROOT / "src" / "orchestrators"),
     ("utility", ROOT / "src" / "utils"),
+    ("cli", ROOT / "src" / "_cli"),
+    ("ui", ROOT / "src" / "ui"),
 )
 
 BANNED_NETWORK_IMPORT_PREFIXES: tuple[str, ...] = (
@@ -197,9 +200,17 @@ class _IoBoundaryScanner(ast.NodeVisitor):
         module = str(node.module or "").strip()
         for alias in node.names:
             local_name = alias.asname or alias.name
-            full_name = f"{module}.{alias.name}" if module else alias.name
+            if node.level:
+                relative_prefix = "." * node.level
+                full_name = (
+                    f"{relative_prefix}{module}.{alias.name}"
+                    if module
+                    else f"{relative_prefix}{alias.name}"
+                )
+            else:
+                full_name = f"{module}.{alias.name}" if module else alias.name
             self.aliases[local_name] = full_name
-            if _is_forbidden_network_module(full_name):
+            if node.level == 0 and _is_forbidden_network_module(full_name):
                 self._add_violation(
                     node,
                     f"forbidden direct network import in {self.role}: {full_name}",

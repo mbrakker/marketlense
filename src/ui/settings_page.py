@@ -14,9 +14,11 @@ from src.contracts.config_assets import (
     ConfigAssetReadRequest,
     ConfigAssetWriteRequest,
 )
+from src.contracts.files import FileExistsRequest
 from src.contracts.prompts import PromptNamespaceListRequest
 from src.services.config_asset_service import read_config_asset, write_config_asset
 from src.services.config_service import load_browser_download_settings
+from src.services.file_service import file_exists
 from src.services.prompt_service import list_prompt_namespaces
 from src.ui import state as ui_state
 from src.ui._streamlit_pages.read_models import _invalidate_dashboard_read_models
@@ -134,7 +136,17 @@ def build_settings_auth_rows(
     *,
     settings: Any | None,
     publish_settings: Any | None,
+    file_exists_fn=file_exists,
 ) -> list[dict[str, str]]:
+    def _configured_file_present(path: object) -> bool:
+        token = str(path or "").strip()
+        if not token:
+            return False
+        return file_exists_fn(
+            FileExistsRequest(schema_version="1.0", path=token),
+            _ctx("settings_auth_file_exists"),
+        ).exists
+
     return [
         {
             "name": "Drive auth mode",
@@ -146,8 +158,7 @@ def build_settings_auth_rows(
             "status": (
                 "present"
                 if settings
-                and settings.google_oauth_client_path
-                and Path(str(settings.google_oauth_client_path)).exists()
+                and _configured_file_present(settings.google_oauth_client_path)
                 else "missing"
             ),
             "source": str(settings.google_oauth_client_path or "") if settings else "",
@@ -157,8 +168,7 @@ def build_settings_auth_rows(
             "status": (
                 "present"
                 if settings
-                and settings.google_oauth_token_path
-                and Path(str(settings.google_oauth_token_path)).exists()
+                and _configured_file_present(settings.google_oauth_token_path)
                 else "missing"
             ),
             "source": str(settings.google_oauth_token_path or "") if settings else "",

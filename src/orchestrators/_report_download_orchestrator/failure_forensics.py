@@ -11,7 +11,7 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorRequest,
     ReportDownloadRoutePlanStep,
 )
-from src.contracts.files import ReadBytesRequest, WriteBytesRequest
+from src.contracts.files import FileStatRequest, ReadBytesRequest, WriteBytesRequest
 from src.contracts.run_context import RunContext
 from src.orchestrators._report_download_orchestrator.dependencies import (
     ReportDownloadDependencies,
@@ -184,7 +184,11 @@ def _persist_forensics_artifact(
     dependencies: ReportDownloadDependencies,
 ) -> FailedAcquisitionForensicsArtifact:
     source = Path(source_path)
-    if not source.exists() or not source.is_file():
+    stat_response = dependencies.file_stat(
+        FileStatRequest(schema_version="1.0", path=source_path),
+        ctx,
+    )
+    if not stat_response.exists or not stat_response.is_file:
         return FailedAcquisitionForensicsArtifact(
             schema_version="1.0",
             artifact_label=artifact_label,

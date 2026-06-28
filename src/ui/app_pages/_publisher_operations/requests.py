@@ -2,8 +2,11 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
-import os
 from urllib.parse import urlsplit
+
+from src.contracts.files import FileExistsRequest
+from src.services.file_service import file_exists
+from src.ui.common import _ctx
 
 from .shared import _AUDIT_PRESETS
 from .shared import *  # noqa: F401,F403
@@ -125,6 +128,7 @@ def oauth_file_status_label(
     path_mode: str,
     selected_path: str,
     configured_path: str,
+    file_exists_fn=file_exists,
 ) -> str:
     selected = str(selected_path or "").strip()
     configured = str(configured_path or "").strip()
@@ -132,7 +136,13 @@ def oauth_file_status_label(
         return "Missing: path not set"
     if path_mode == "Custom path":
         return "Selected; validated during login"
-    if configured and os.path.exists(configured):
+    configured_exists = False
+    if configured:
+        configured_exists = file_exists_fn(
+            FileExistsRequest(schema_version="1.0", path=configured),
+            _ctx("publisher_oauth_file_exists"),
+        ).exists
+    if configured and configured_exists:
         return f"Present: {configured}"
     return f"Missing: {configured or 'path not set'}"
 

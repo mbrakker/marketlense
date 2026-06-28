@@ -417,11 +417,21 @@ class FileStatResponse:
     schema_version: str = field(metadata={"doc": "File stat response schema version."})
     path: str = field(metadata={"doc": "Filesystem path stat'ed."})
     exists: bool = field(metadata={"doc": "True if the path exists."})
+    is_file: bool = field(
+        default=False,
+        metadata={"doc": "True when the existing path is a regular file."},
+    )
+    is_dir: bool = field(
+        default=False,
+        metadata={"doc": "True when the existing path is a directory."},
+    )
     size_bytes: Optional[int] = field(
-        metadata={"doc": "File size in bytes when available."}
+        default=None,
+        metadata={"doc": "File size in bytes when available."},
     )
     mtime_utc: Optional[float] = field(
-        metadata={"doc": "Last modified time (epoch seconds) when available."}
+        default=None,
+        metadata={"doc": "Last modified time (epoch seconds) when available."},
     )
     md5: Optional[str] = field(
         default=None, metadata={"doc": "MD5 checksum when computed."}

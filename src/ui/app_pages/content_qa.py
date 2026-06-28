@@ -8,7 +8,9 @@ from typing import Any
 
 import streamlit as st
 
+from src.contracts.files import FileExistsRequest
 from src.contracts.state import StateGetRequest
+from src.services.file_service import file_exists
 from src.services.state_service import get as get_state
 from src.ui import state as ui_state
 from src.ui._streamlit_pages.read_models import (
@@ -22,6 +24,13 @@ from src.ui.common import _as_utc, _chip_html, _ctx, _page_shell, _tip
 from src.utils.cover_path_utils import build_cover_asset_path
 from src.utils.gui_utils import status_chip_level
 from src.utils.slugify import slugify
+
+
+def _file_exists(path: Path) -> bool:
+    return file_exists(
+        FileExistsRequest(schema_version="1.0", path=str(path)),
+        _ctx("report_center_file_exists"),
+    ).exists
 
 
 def render_report_command_center() -> None:
@@ -153,17 +162,17 @@ def render_report_command_center() -> None:
                 / "assets"
                 / f"{slugify(f'{publisher} {title}')}.png"
             )
-            if cover_path.exists():
+            if _file_exists(cover_path):
                 st.image(
                     str(cover_path), caption="Cover preview", use_container_width=True
                 )
-            elif legacy_cover_path.exists():
+            elif _file_exists(legacy_cover_path):
                 st.image(
                     str(legacy_cover_path),
                     caption="Cover preview",
                     use_container_width=True,
                 )
-            elif legacy_cover_path_older.exists():
+            elif _file_exists(legacy_cover_path_older):
                 st.image(
                     str(legacy_cover_path_older),
                     caption="Cover preview",

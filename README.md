@@ -1239,7 +1239,7 @@ Test suites live under `tests/` (unit + contract + integration marker support):
 - `test_artifact_generator.py`: artifact JSON generation/validation
 - `test_report_regeneration_generator.py`: targeted regeneration generator behavior, prompt payloads, and error propagation
 - `test_regeneration_contracts.py`: regeneration contract round-trip and required-field coverage
-- `test_io_boundaries.py`: AST boundary gate that fails on direct filesystem/network I/O usage in `src/generators/*` and `src/utils/*`
+- `test_io_boundaries.py`: AST boundary gate that fails on direct filesystem/network I/O usage in `src/generators/*`, `src/orchestrators/*`, `src/utils/*`, `src/_cli/*`, and `src/ui/*`
 - `test_render_service_artifacts.py`: HTML sections for artifact rendering
 - `contracts/test_contract_roundtrip.py`: dataclass serialization/deserialization round-trip gate for `src/contracts/*`
 - Large behavior suites now live in same-name test packages with local shared builders, for example `tests/test_browser_report_download_service/*`, `tests/test_pdf_figures_service/*`, and `tests/test_publisher_inventory_service/*`. Their package `__init__.py` files re-export local builders to preserve existing helper imports used by adjacent tests.

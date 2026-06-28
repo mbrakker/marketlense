@@ -1132,6 +1132,8 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
             schema_version="1.0",
             path=request.path,
             exists=False,
+            is_file=False,
+            is_dir=False,
             size_bytes=None,
             mtime_utc=None,
             md5=None,
@@ -1148,6 +1150,8 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
         return response
     try:
         stat = path.stat()
+        is_file = path.is_file()
+        is_dir = path.is_dir()
     except OSError as exc:
         raise AppError(
             code="file_stat_failed",
@@ -1170,6 +1174,8 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
         schema_version="1.0",
         path=request.path,
         exists=True,
+        is_file=is_file,
+        is_dir=is_dir,
         size_bytes=stat.st_size,
         mtime_utc=stat.st_mtime,
         md5=md5,
@@ -1183,6 +1189,8 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
             fields={
                 "path": request.path,
                 "exists": True,
+                "is_file": response.is_file,
+                "is_dir": response.is_dir,
                 "size_bytes": response.size_bytes,
                 "mtime_utc": response.mtime_utc,
                 "md5": response.md5,

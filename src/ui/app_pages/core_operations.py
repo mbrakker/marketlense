@@ -15,12 +15,14 @@ import streamlit as st
 
 from src.contracts.categories import CategoryMappingLoadRequest, RecategorizeRequest
 from src.contracts.cover_images import CoverStyleLoadRequest
+from src.contracts.files import FileExistsRequest
 from src.contracts.publish import PublishQueueRequest
 from src.orchestrators.publish_queue_orchestrator import build_publish_queue_snapshot
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.category_mapping_service import load_mappings
 from src.services.cover_style_service import load_cover_styles
+from src.services.file_service import file_exists
 from src.ui import state as ui_state
 from src.ui._streamlit_pages.read_models import (
     CANDIDATE_STEPS,
@@ -41,6 +43,13 @@ from src.ui.common import (
 from src.ui.run_control import launch_background_run
 from src.utils.errors import AppError
 from src.utils.gui_utils import row_dicts
+
+
+def _file_exists(path: str) -> bool:
+    return file_exists(
+        FileExistsRequest(schema_version="1.0", path=str(path)),
+        _ctx("cover_preview_file_exists"),
+    ).exists
 
 
 def render_ingest_control() -> None:
@@ -414,7 +423,7 @@ def render_cover_images() -> None:
         )
         selected_path = generated_paths[selected]
         st.code(selected_path)
-        if Path(selected_path).exists():
+        if _file_exists(selected_path):
             st.image(selected_path, use_container_width=True)
 
 

@@ -16,7 +16,7 @@ from src.contracts.drive import (
     DriveUploadLocalFileRequest,
     DriveWritePreflightRequest,
 )
-from src.contracts.files import FileHashRequest
+from src.contracts.files import FileHashRequest, FileStatRequest
 from src.contracts.report_store import (
     PublisherGoogleFolderUpdateRequest,
     ReportDownloadDriveFolderLookupRequest,
@@ -361,7 +361,19 @@ def archive_single_artifact(
         FileHashRequest(schema_version="1.0", path=str(path)),
         ctx,
     )
-    size = path.stat().st_size
+    file_stat = dependencies.file_stat(
+        FileStatRequest(schema_version="1.0", path=str(path)),
+        ctx,
+    )
+    if not file_stat.exists or not file_stat.is_file:
+        raise AppError(
+            code="report_download_drive_upload_artifact_missing",
+            message="Report-download drive upload artifact is missing or not a file",
+            retryable=False,
+            severity="error",
+            context={"local_path": str(path)},
+        )
+    size = int(file_stat.size_bytes or 0)
     upload_checksum = sha256_json(
         {
             "schema_version": "1.0",

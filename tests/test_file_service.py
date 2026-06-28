@@ -10,6 +10,7 @@ import pytest
 
 from src.contracts.files import (
     FileBundleHashRequest,
+    FileStatRequest,
     JsonObjectCacheReadRequest,
     JsonObjectCacheWriteRequest,
     ListDirectoryRequest,
@@ -38,6 +39,7 @@ from src.services.file_service import (
     write_json_object_cache,
     list_directory,
     count_directory_patterns,
+    file_stat,
     load_structured_log_events,
     read_json,
     read_pipeline_checkpoint,
@@ -380,6 +382,39 @@ def test_read_json_returns_typed_payload_and_invalid_json_error(
             _ctx(),
         )
     assert_app_error(exc_info.value, code="file_json_invalid", retryable=False)
+
+
+def test_file_stat_reports_path_kind_for_files_dirs_and_missing_paths(
+    tmp_path: Path,
+) -> None:
+    file_path = tmp_path / "report.pdf"
+    dir_path = tmp_path / "artifacts"
+    file_path.write_bytes(b"pdf")
+    dir_path.mkdir()
+
+    file_response = file_stat(
+        FileStatRequest(schema_version="1.0", path=str(file_path)),
+        _ctx(),
+    )
+    dir_response = file_stat(
+        FileStatRequest(schema_version="1.0", path=str(dir_path)),
+        _ctx(),
+    )
+    missing_response = file_stat(
+        FileStatRequest(schema_version="1.0", path=str(tmp_path / "missing.pdf")),
+        _ctx(),
+    )
+
+    assert file_response.exists is True
+    assert file_response.is_file is True
+    assert file_response.is_dir is False
+    assert file_response.size_bytes == 3
+    assert dir_response.exists is True
+    assert dir_response.is_file is False
+    assert dir_response.is_dir is True
+    assert missing_response.exists is False
+    assert missing_response.is_file is False
+    assert missing_response.is_dir is False
 
 
 def test_load_structured_log_events_applies_byte_and_line_bounds(

@@ -33,6 +33,31 @@ def test_build_settings_workspace_metrics_counts_missing_auth() -> None:
     ]
 
 
+def test_build_settings_auth_rows_uses_file_service_boundary() -> None:
+    requests = []
+
+    def fake_file_exists(request, _ctx):
+        requests.append(request)
+        return SimpleNamespace(exists=request.path == "client.json")
+
+    settings = SimpleNamespace(
+        drive_auth_mode="oauth_user",
+        google_oauth_client_path="client.json",
+        google_oauth_token_path="token.json",
+    )
+
+    rows = settings_page.build_settings_auth_rows(
+        settings=settings,
+        publish_settings=None,
+        file_exists_fn=fake_file_exists,
+    )
+
+    by_name = {row["name"]: row for row in rows}
+    assert by_name["Google OAuth client"]["status"] == "present"
+    assert by_name["Google OAuth token"]["status"] == "missing"
+    assert [request.path for request in requests] == ["client.json", "token.json"]
+
+
 def test_build_runtime_summary_prefers_available_publish_auth() -> None:
     settings = SimpleNamespace(
         openai_model="gpt-5.4",

@@ -26,6 +26,8 @@ from src.contracts.drive import (
 from src.contracts.files import (
     FileHashRequest,
     FileHashResponse,
+    FileStatRequest,
+    FileStatResponse,
     ReadBytesRequest,
     ReadBytesResponse,
     WriteBytesRequest,
@@ -63,7 +65,7 @@ from src.services.drive_service import (
     preflight_drive_write_access,
     upload_local_file,
 )
-from src.services.file_service import file_md5, read_bytes, write_bytes
+from src.services.file_service import file_md5, file_stat, read_bytes, write_bytes
 from src.services.report_store_service import (
     get_report_download_drive_folder,
     get_publisher_download_route,
@@ -100,6 +102,7 @@ class ReportDownloadDependencies:
         BrowserDownloadIdentityFieldUpsertResponse,
     ]
     sleep_fn: Callable[[float], None]
+    file_stat: Callable[[FileStatRequest, RunContext], FileStatResponse] = file_stat
     promote_validated_browser_route_result_to_playbook: Callable[
         ..., BrowserRoutePlaybookPromotionResponse
     ] = promote_validated_browser_route_result_to_playbook
@@ -162,6 +165,7 @@ class ReportDownloadDependencies:
             get_publisher_download_route=get_publisher_download_route,
             record_publisher_download_route=record_publisher_download_route,
             file_md5=file_md5,
+            file_stat=file_stat,
             record_report_source=record_report_source,
             score_report_value=score_report_value,
             record_report_value_score=record_report_value_score,

@@ -122,30 +122,31 @@ def test_delivery_email_and_path_resolution_helpers() -> None:
     )
 
 
-def test_oauth_file_status_custom_paths_do_not_probe_filesystem(monkeypatch) -> None:
-    def fail_exists(path: str) -> bool:
-        raise AssertionError(f"unexpected filesystem probe for {path}")
-
-    monkeypatch.setattr(pages.os.path, "exists", fail_exists)
+def test_oauth_file_status_custom_paths_do_not_probe_filesystem() -> None:
+    def fail_exists(_request, _ctx):
+        raise AssertionError("unexpected filesystem probe for custom OAuth path")
 
     assert (
         pages.oauth_file_status_label(
             path_mode="Custom path",
             selected_path="../untrusted/oauth-client.json",
             configured_path="",
+            file_exists_fn=fail_exists,
         )
         == "Selected; validated during login"
     )
 
 
-def test_oauth_file_status_configured_paths_reports_presence(monkeypatch) -> None:
-    monkeypatch.setattr(pages.os.path, "exists", lambda path: path == "client.json")
+def test_oauth_file_status_configured_paths_reports_presence() -> None:
+    def fake_file_exists(request, _ctx):
+        return SimpleNamespace(exists=request.path == "client.json")
 
     assert (
         pages.oauth_file_status_label(
             path_mode="Configured path",
             selected_path="client.json",
             configured_path="client.json",
+            file_exists_fn=fake_file_exists,
         )
         == "Present: client.json"
     )
@@ -154,6 +155,7 @@ def test_oauth_file_status_configured_paths_reports_presence(monkeypatch) -> Non
             path_mode="Configured path",
             selected_path="missing.json",
             configured_path="missing.json",
+            file_exists_fn=fake_file_exists,
         )
         == "Missing: missing.json"
     )
