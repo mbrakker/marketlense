@@ -445,6 +445,16 @@ def _base_vector_report_dependencies(
             bytes_written=1024,
         )
 
+    def _render_preview(req, ctx):
+        del req, ctx
+        preview_path = tmp_path / "preview.png"
+        preview_path.write_bytes(b"preview")
+        return SimpleNamespace(
+            schema_version="1.1",
+            image_path=str(preview_path),
+            page_number=0,
+        )
+
     base = {
         "state_get": lambda req, ctx: None,
         "vector_store_get_status": lambda req, ctx: SimpleNamespace(
@@ -536,11 +546,7 @@ def _base_vector_report_dependencies(
             caption=None,
         ),
         "collect_candidates": lambda req, ctx: SimpleNamespace(candidates=[]),
-        "render_preview": lambda req, ctx: SimpleNamespace(
-            schema_version="1.1",
-            image_path=str(tmp_path / "preview.png"),
-            page_number=0,
-        ),
+        "render_preview": _render_preview,
         "generate_cover_images": _generate_cover_images,
         "write_report_card_manifest": _write_report_card_manifest,
         "extract_taxonomy": lambda req, ctx: TaxonomyExtractResponse(
