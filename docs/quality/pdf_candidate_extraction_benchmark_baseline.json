@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-06-28T00:00:00+00:00",
+  "benchmarks": [
+    {
+      "pdf_path": "cache/benchmark_20260604/CAPGEMINI - 2026-Retail-Trends_ACIG.pdf",
+      "report_name": "CAPGEMINI - 2026-Retail-Trends_ACIG",
+      "expected_candidate_count": 12,
+      "expected_signature": "b2e7ba59d7e7eff1cfa16b42d18782bd5acbd1978162075827cfa4958ac4c7e6",
+      "expected_degraded_page_count": 0,
+      "baseline_median_seconds": 5.3,
+      "runtime_warn_percent": 25.0,
+      "runtime_fail_percent": 75.0
+    },
+    {
+      "pdf_path": "cache/benchmark_20260604/IAS - Industry_Pulse_Report_2026_ACIG.pdf",
+      "report_name": "IAS - Industry_Pulse_Report_2026_ACIG",
+      "expected_candidate_count": 13,
+      "expected_signature": "b89d233d81139ed641ef846d6d2ce4e12ae61534e121c0bd9461451e01436c02",
+      "expected_degraded_page_count": 0,
+      "baseline_median_seconds": 17.054,
+      "runtime_warn_percent": 25.0,
+      "runtime_fail_percent": 75.0
+    },
+    {
+      "pdf_path": "cache/benchmark_20260604/JULIUS BAER - Secular-outlook-2026_ACIG.pdf",
+      "report_name": "JULIUS BAER - Secular-outlook-2026_ACIG",
+      "expected_candidate_count": 13,
+      "expected_signature": "f5b05e61721ab5ab29c0e5478d47db673b3a29011f6702f66306c7f16499a6e1",
+      "expected_degraded_page_count": 0,
+      "baseline_median_seconds": 19.207,
+      "runtime_warn_percent": 25.0,
+      "runtime_fail_percent": 75.0
+    }
+  ]
+}

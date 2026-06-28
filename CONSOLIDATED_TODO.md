@@ -29,6 +29,7 @@ Scoring:
 - Idempotency service support is live in `src/services/idempotency_service.py` and backs publish, report-download, and publisher-inventory write paths documented in `README.md`.
 - Candidate extraction already performs binary page triage and shared page-artifact/fingerprint caching through `src/services/_pdf/figures.py`, `src/services/_pdf/page_artifacts.py`, and `src/services/_pdf/fingerprint_cache.py`.
 - PDF visual candidate extraction now uses indexed per-page relationships plus a lazy kept-candidate y-band overlap index behind the existing `pdf_service.collect_candidates` boundary. Side-by-side live existing-PDF verification on 2026-06-28 preserved candidate signatures on Capgemini, IAS, and Julius Baer benchmark PDFs and reduced aggregate median single-worker candidate extraction from 42.483s on `main` to 41.561s on the branch; per-PDF medians were 5.677s to 5.300s, 16.891s to 17.054s, and 19.915s to 19.207s.
+- PDF candidate extraction performance/equivalence is now a repeatable gate through `scripts/quality/pdf_candidate_benchmark.py`, `scripts/ci/check_pdf_candidate_benchmark.py`, `.github/workflows/ci.yml`, and `docs/quality/pdf_candidate_extraction_benchmark_baseline.json`. A strict live run on 2026-06-28 against existing Capgemini, IAS, and Julius Baer benchmark PDFs preserved all candidate signatures/counts/degraded-page counts with no warnings; observed medians were 5.255s, 16.787s, and 20.055s versus baselines of 5.300s, 17.054s, and 19.207s.
 - Vector-store cleanup is no longer backlog: `src/services/vector_store_service.py` exposes delete/prune operations, `src/orchestrators/vector_store_retention_orchestrator.py` runs retention cleanup, and README documents `analysis.vector_store_retention_days`.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
@@ -164,15 +165,15 @@ Scoring:
 
 ## 4. PDF, Dashboard, and Runtime Performance
 
-- **Title:** Promote PDF candidate extraction performance equivalence into a regression gate [Impact: 4/5, Effort: 2/5]
-  - Explanation: Indexed page relationships and kept-candidate overlap checks now improve live candidate extraction on existing dense PDFs, but the benchmark is still manual evidence rather than a repeatable quality gate.
-  - Pros: Keeps speed gains from silently regressing while protecting candidate output equivalence.
-  - Cons: Needs stable thresholds that tolerate normal machine variance without hiding real regressions.
+- **Title:** Extend PDF benchmark coverage to crop/refine artifact equivalence and cost [Impact: 4/5, Effort: 3/5]
+  - Explanation: Candidate discovery is now protected by a repeatable signature and runtime gate, but downstream crop generation, crop-refine decisions, and artifact hashes can still drift without an equivalent release signal.
+  - Pros: Protects end-to-end visual extraction quality, catches downstream latency/cost regressions, and reuses the new benchmark comparison pattern.
+  - Cons: Needs stable existing artifact roots and clear model-call budget policy so the gate does not become noisy.
   - Acceptance Criteria:
-    - A benchmark command runs `pdf_service.collect_candidates` on existing dense PDFs without synthesizing fixtures.
-    - The command records candidate output signatures, counts, degraded-page counts, median wall time, and per-PDF deltas.
-    - CI or release checks fail on candidate signature drift and warn/fail on documented runtime thresholds.
-    - README documents how to refresh benchmark baselines and when a runtime delta is acceptable.
+    - A benchmark command reuses existing generated candidate packs and crop artifacts without synthesizing fixtures.
+    - The command records crop artifact hashes, crop counts, ambiguous crop-refine model-call counts, median wall time, and per-PDF/report deltas.
+    - Release checks fail on crop artifact drift and warn/fail on documented latency or cost thresholds.
+    - README documents baseline refresh, acceptable artifact changes, and when crop/refine cost deltas are acceptable.
 
 ## 5. Architecture, Schema Compatibility, and Observability
 
@@ -207,6 +208,7 @@ Scoring:
 - Report post-type and entity naming drift between README, config, WordPress plugin behavior, and public copy.
 - Bounded Streamlit log reads and grouped directory-count walks through `file_service`.
 - Measured PDF table/visual candidate hot-path optimization behind the canonical `pdf_service` boundary, including lazy indexed visual overlap checks and live existing-PDF equivalence/timing evidence.
+- PDF candidate extraction performance/equivalence regression gate, including committed dense-PDF baseline signatures, CI/release wrapper, live existing-PDF verification, and README refresh instructions.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
 
@@ -227,7 +229,7 @@ Scoring:
 ### Phase 3: Resilience and Performance
 
 - Provider failover behind the canonical LLM service contract.
-- Measured PDF hot-path optimization.
+- PDF crop/refine artifact equivalence and cost benchmark expansion.
 - Contract compatibility matrix.
 - Role-mixing/monolith-growth CI enforcement.
 - End-to-end trace read model.
