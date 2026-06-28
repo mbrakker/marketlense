@@ -202,6 +202,7 @@ class FakeOpenAIBoundary:
     def __init__(self) -> None:
         self.client_kwargs: list[dict[str, Any]] = []
         self.calls: dict[str, list[dict[str, Any]]] = {
+            "embeddings.create": [],
             "responses.create": [],
             "vector_stores.create": [],
             "vector_stores.delete": [],
@@ -263,6 +264,14 @@ class _FakeResponsesResource:
         return self._boundary._resolve("responses.create", kwargs)
 
 
+class _FakeEmbeddingsResource:
+    def __init__(self, boundary: FakeOpenAIBoundary) -> None:
+        self._boundary = boundary
+
+    def create(self, **kwargs: Any) -> Any:
+        return self._boundary._resolve("embeddings.create", kwargs)
+
+
 class _FakeVectorStoreFilesResource:
     def __init__(self, boundary: FakeOpenAIBoundary) -> None:
         self._boundary = boundary
@@ -303,6 +312,7 @@ class _FakeFilesResource:
 
 class _FakeOpenAIClient:
     def __init__(self, boundary: FakeOpenAIBoundary) -> None:
+        self.embeddings = _FakeEmbeddingsResource(boundary)
         self.responses = _FakeResponsesResource(boundary)
         self.vector_stores = _FakeVectorStoresResource(boundary)
         self.files = _FakeFilesResource(boundary)

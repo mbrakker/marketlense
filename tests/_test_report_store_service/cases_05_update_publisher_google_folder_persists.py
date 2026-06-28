@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 class TestReportStoreService05UpdatePublisherGoogleFolder(unittest.TestCase):
     def test_update_publisher_google_folder_persists_folder_url(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -378,8 +379,8 @@ class TestReportStoreService05UpdatePublisherGoogleFolder(unittest.TestCase):
                 ],
                 columns,
             )
-            self.assertEqual((13,), schema_version)
-            self.assertEqual(13, ledger_count)
+            self.assertEqual((14,), schema_version)
+            self.assertEqual(14, ledger_count)
             self.assertEqual(
                 (
                     "Activate Consulting",
@@ -677,5 +678,6 @@ class TestReportStoreService05UpdatePublisherGoogleFolder(unittest.TestCase):
                 "failed:publisher_inventory_browser_pagination_limit",
                 state.discovery_test_status,
             )
+
 
 __all__ = ["TestReportStoreService05UpdatePublisherGoogleFolder"]

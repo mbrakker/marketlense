@@ -8,6 +8,7 @@ from ..runner import (
 )
 
 from src.services._sqlite_migration._reports.schema import (
+    _CLAIM_EMBEDDINGS_TABLE_SQL,
     _REPORTS_CORE_TABLE_SQL,
     _REPORTS_REQUIRED_COLUMNS,
     _REPORT_CATEGORIES_TABLE_SQL,
@@ -151,4 +152,22 @@ def _reports_db_013_create_signal_candidate_projection(
         CREATE INDEX IF NOT EXISTS idx_signal_candidate_groups_extraction_request
         ON signal_candidate_groups(extraction_request_id)
         """
+    )
+
+
+def _reports_db_014_create_claim_embedding_records(
+    conn: sqlite3.Connection,
+) -> None:
+    conn.execute(_CLAIM_EMBEDDINGS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_claim_embeddings_claim_uid ON claim_embeddings(claim_uid)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_claim_embeddings_report_id ON claim_embeddings(report_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_claim_embeddings_status ON claim_embeddings(status)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_claim_embeddings_content_hash ON claim_embeddings(content_hash)"
     )

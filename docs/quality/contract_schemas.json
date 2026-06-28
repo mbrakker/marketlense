@@ -9504,6 +9504,415 @@
       ],
       "type": "object"
     },
+    "src.contracts.analytics_projection.ClaimEmbeddingPendingReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "embedding_version": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "embedding_version",
+        "provider",
+        "model",
+        "limit"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingPendingReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ClaimEmbeddingQueueItem"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "rows"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingPersistRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "record": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ClaimEmbeddingRecord"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "record"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingPersistResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "embedding_uid": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "embedded",
+            "failed"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "embedding_uid",
+        "status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingQueueItem": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_uid": {
+          "type": "string"
+        },
+        "content_class": {
+          "enum": [
+            "evidence",
+            "derived_evidence",
+            "editorial"
+          ]
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "entity_uid": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "text_payload": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "claim_uid",
+        "entity_uid",
+        "report_id",
+        "text_payload",
+        "content_hash",
+        "metadata",
+        "content_class"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_uids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "statuses": {
+          "items": {
+            "enum": [
+              "embedded",
+              "failed"
+            ]
+          },
+          "type": "array"
+        },
+        "topics": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "embeddings": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ClaimEmbeddingRecord"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "embeddings"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_count": {
+          "type": "integer"
+        },
+        "claim_uid": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "dimensions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "embedding_uid": {
+          "type": "string"
+        },
+        "embedding_version": {
+          "type": "string"
+        },
+        "entity_uid": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_message": {
+          "type": "string"
+        },
+        "error_retryable": {
+          "type": "boolean"
+        },
+        "error_severity": {
+          "type": "string"
+        },
+        "external_vector_id": {
+          "type": "string"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "embedded",
+            "failed"
+          ]
+        },
+        "updated_at_utc": {
+          "type": "string"
+        },
+        "vector": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "embedding_uid",
+        "claim_uid",
+        "entity_uid",
+        "report_id",
+        "content_hash",
+        "embedding_version",
+        "provider",
+        "model",
+        "dimensions",
+        "vector",
+        "external_vector_id",
+        "metadata",
+        "status",
+        "generated_at_utc",
+        "updated_at_utc",
+        "attempt_count",
+        "error_code",
+        "error_message",
+        "error_retryable",
+        "error_severity"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingWorkflowRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "cost_daily_path": {
+          "type": "string"
+        },
+        "cost_ledger_path": {
+          "type": "string"
+        },
+        "ctx": {
+          "$ref": "#/$defs/src.contracts.run_context.RunContext"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "embedding_version": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "model_pricing": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "api_key",
+        "provider",
+        "model",
+        "embedding_version",
+        "limit",
+        "timeout_seconds",
+        "ctx"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingWorkflowResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "embedded_count": {
+          "type": "integer"
+        },
+        "failed_count": {
+          "type": "integer"
+        },
+        "processed_entity_uids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "skipped_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "embedded_count",
+        "failed_count",
+        "skipped_count",
+        "processed_entity_uids"
+      ],
+      "type": "object"
+    },
     "src.contracts.analytics_projection.ProjectionLineage": {
       "additionalProperties": false,
       "properties": {
@@ -16564,6 +16973,115 @@
         "model",
         "temperature",
         "raw_content"
+      ],
+      "type": "object"
+    },
+    "src.contracts.openai.OpenAIEmbeddingRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "cost_daily_path": {
+          "type": "string"
+        },
+        "cost_ledger_path": {
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "model": {
+          "type": "string"
+        },
+        "model_pricing": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "api_key",
+        "model",
+        "inputs"
+      ],
+      "type": "object"
+    },
+    "src.contracts.openai.OpenAIEmbeddingResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "dimensions": {
+          "type": "integer"
+        },
+        "embeddings": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "total_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "embeddings",
+        "model",
+        "dimensions",
+        "request_id",
+        "input_tokens",
+        "total_tokens"
       ],
       "type": "object"
     },

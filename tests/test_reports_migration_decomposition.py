@@ -26,6 +26,7 @@ SCHEMA = {
     "_REPORT_CATEGORIES_TABLE_SQL",
     "_REPORT_FIGURES_TABLE_SQL",
     "_VECTOR_PROJECTION_QUEUE_TABLE_SQL",
+    "_CLAIM_EMBEDDINGS_TABLE_SQL",
     "_SIGNAL_CANDIDATES_TABLE_SQL",
     "_SIGNAL_CANDIDATE_GROUPS_TABLE_SQL",
 }
@@ -50,6 +51,7 @@ PROJECTIONS = {
     "_reports_db_010_create_analytics_projection_tables",
     "_reports_db_011_add_report_source_value_scores",
     "_reports_db_013_create_signal_candidate_projection",
+    "_reports_db_014_create_claim_embedding_records",
 }
 
 

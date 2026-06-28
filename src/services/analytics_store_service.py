@@ -59,6 +59,19 @@ from src.services._analytics_store.cross_report_read import (
     read_cross_report_projected_data,
 )
 
+from src.services._analytics_store.claim_embeddings import (
+    _embedding_uid,
+    _matches_topics,
+    _metadata_from_json,
+    _record_from_row,
+    _queue_item_from_row,
+    _validate_embedding_record,
+    claim_embedding_uid,
+    persist_claim_embedding,
+    read_claim_embeddings,
+    read_pending_claim_embedding_rows,
+)
+
 from src.services._analytics_store.signals import (
     _candidate_from_row,
     _candidate_matches_read_request,

@@ -18,6 +18,7 @@ from src.services._llm_service.openai_chat import (
     openai_chat_json,
     openai_chat_json_with_images,
 )
+from src.services._llm_service.embeddings import openai_create_embeddings
 from src.services._llm_service.openai_responses import (
     openai_ocr_pdf,
     openai_respond_with_vector_store,
@@ -57,6 +58,7 @@ __all__ = [
     "openai_chat_json",
     "openai_chat_json_with_images",
     "openai_client_policy_from_settings",
+    "openai_create_embeddings",
     "openai_legacy",
     "openai_ocr_pdf",
     "openai_respond_with_vector_store",

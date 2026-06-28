@@ -25,6 +25,7 @@ MODULE_SYMBOLS = {
         "_reports_db_006_create_or_upgrade_download_route_history",
         "_reports_db_007_normalize_inventory_recovery_cache",
         "_reports_db_013_create_signal_candidate_projection",
+        "_reports_db_014_create_claim_embedding_records",
     },
     "state.py": {
         "_STATE_DB_MIGRATIONS",

@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.contracts.openai import (
+    OpenAIEmbeddingRequest,
     OpenAIVectorStoreAttachFileRequest,
     OpenAIJSONImagePromptRequest,
     OpenAIResponseRequest,
@@ -517,6 +518,52 @@ def test_openai_vector_store_create_success(
         {"api_key": "key", "max_retries": 0, "timeout": 12.0}
     ]
     assert fake_openai.calls["vector_stores.create"][0]["name"] == "report"
+    assert_logs_have_required_fields(_events(caplog))
+
+
+def test_openai_embedding_service_returns_vectors_and_metadata(
+    fake_openai,
+    caplog,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
+    fake_openai.add(
+        "embeddings.create",
+        SimpleNamespace(
+            data=[
+                SimpleNamespace(embedding=[0.1, 0.2, 0.3]),
+                SimpleNamespace(embedding=[0.4, 0.5, 0.6]),
+            ],
+            model="text-embedding-3-small",
+            usage=SimpleNamespace(prompt_tokens=9, total_tokens=9),
+            id="emb_1",
+        ),
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service.openai")
+
+    resp = svc.openai_create_embeddings(
+        OpenAIEmbeddingRequest(
+            schema_version="1.0",
+            api_key="key",
+            model="text-embedding-3-small",
+            inputs=["first claim", "second claim"],
+            timeout_seconds=8.0,
+        ),
+        _ctx(),
+    )
+
+    assert resp.embeddings == [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+    assert resp.dimensions == 3
+    assert resp.model == "text-embedding-3-small"
+    assert resp.request_id == "emb_1"
+    assert resp.input_tokens == 9
+    assert_no_defaulted_required_fields(resp)
+    assert fake_openai.calls["embeddings.create"] == [
+        {"model": "text-embedding-3-small", "input": ["first claim", "second claim"]}
+    ]
+    assert fake_openai.client_kwargs == [
+        {"api_key": "key", "max_retries": 0, "timeout": 8.0}
+    ]
     assert_logs_have_required_fields(_events(caplog))
 
 

@@ -8,6 +8,52 @@ from src.contracts.report_models import ReportPayload
 
 
 @dataclass(frozen=True)
+class OpenAIEmbeddingRequest:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI embedding request schema version."}
+    )
+    api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    model: str = field(metadata={"doc": "OpenAI embedding model ID."})
+    inputs: List[str] = field(metadata={"doc": "Ordered texts to embed."})
+    timeout_seconds: Optional[float] = field(
+        default=None, metadata={"doc": "Request timeout in seconds, if set."}
+    )
+    cost_ledger_path: str = field(
+        default="./out/cost-ledger.jsonl",
+        metadata={"doc": "Filesystem path for the cost ledger JSONL output."},
+    )
+    cost_daily_path: str = field(
+        default="./out/cost-daily.json",
+        metadata={"doc": "Filesystem path for daily cost rollups."},
+    )
+    model_pricing: dict = field(
+        default_factory=dict,
+        metadata={"doc": "Per-model pricing table for cost estimation."},
+    )
+
+
+@dataclass(frozen=True)
+class OpenAIEmbeddingResponse:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI embedding response schema version."}
+    )
+    embeddings: List[List[float]] = field(
+        metadata={"doc": "Embedding vectors in the same order as the request inputs."}
+    )
+    model: str = field(metadata={"doc": "Embedding model used by the provider."})
+    dimensions: int = field(metadata={"doc": "Vector dimensionality."})
+    request_id: Optional[str] = field(
+        metadata={"doc": "Provider request identifier, if available."}
+    )
+    input_tokens: Optional[int] = field(
+        metadata={"doc": "Provider input token count, if available."}
+    )
+    total_tokens: Optional[int] = field(
+        metadata={"doc": "Provider total token count, if available."}
+    )
+
+
+@dataclass(frozen=True)
 class OpenAIUsageAccountingRequest:
     schema_version: str = field(
         metadata={"doc": "OpenAI usage accounting request schema version."}

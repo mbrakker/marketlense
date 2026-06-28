@@ -17,6 +17,8 @@ import openai as openai_legacy
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
     OpenAIAnalyzeResponse,
+    OpenAIEmbeddingRequest,
+    OpenAIEmbeddingResponse,
     OpenAIJSONImagePromptRequest,
     OpenAIJSONPromptRequest,
     OpenAIPdfOcrRequest,
@@ -799,6 +801,8 @@ __all__ = [
     "_openai_client_factory",
     "OpenAIAnalyzeRequest",
     "OpenAIAnalyzeResponse",
+    "OpenAIEmbeddingRequest",
+    "OpenAIEmbeddingResponse",
     "OpenAIJSONImagePromptRequest",
     "OpenAIJSONPromptRequest",
     "OpenAIPdfOcrRequest",

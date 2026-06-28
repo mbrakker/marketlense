@@ -18,6 +18,7 @@ PROJECTION_VERSION = "analytics_projection.v1"
 
 ProjectionStatus = Literal["not_projected", "projected", "failed"]
 EmbeddingStatus = Literal["pending", "embedded", "failed"]
+ClaimEmbeddingStatus = Literal["embedded", "failed"]
 ContentClass = Literal["evidence", "derived_evidence", "editorial"]
 
 
@@ -259,6 +260,208 @@ class VectorProjectionQueueRow(SemanticIdContract):
     )
     created_at_utc: str = field(metadata={"doc": "UTC timestamp when queued."})
     updated_at_utc: str = field(metadata={"doc": "UTC timestamp when updated."})
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingQueueItem(SemanticIdContract):
+    schema_version: str = field(
+        metadata={"doc": "Claim embedding queue item schema version."}
+    )
+    claim_uid: EntityUid = field(
+        metadata={"doc": "Stable projected claim UID from report_claims."}
+    )
+    entity_uid: EntityUid = field(
+        metadata={"doc": "Vector queue entity UID linked to the claim."}
+    )
+    report_id: ReportId = field(metadata={"doc": "Canonical report identifier."})
+    text_payload: str = field(metadata={"doc": "Canonical claim embedding text."})
+    content_hash: str = field(
+        metadata={"doc": "Hash of claim text and embedding-relevant metadata."}
+    )
+    metadata: Dict[str, Any] = field(
+        metadata={"doc": "Retrieval metadata copied from vector_projection_queue."}
+    )
+    content_class: ContentClass = field(
+        metadata={"doc": "Retrieval content class for the claim row."}
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingRecord(SemanticIdContract):
+    schema_version: str = field(metadata={"doc": "Claim embedding record version."})
+    embedding_uid: EntityUid = field(
+        metadata={"doc": "Deterministic embedding record UID."}
+    )
+    claim_uid: EntityUid = field(metadata={"doc": "Linked report_claims.claim_uid."})
+    entity_uid: EntityUid = field(
+        metadata={"doc": "Linked vector_projection_queue.entity_uid."}
+    )
+    report_id: ReportId = field(metadata={"doc": "Canonical report identifier."})
+    content_hash: str = field(metadata={"doc": "Embedded queue content hash."})
+    embedding_version: str = field(metadata={"doc": "Embedding workflow version."})
+    provider: str = field(metadata={"doc": "Embedding provider namespace."})
+    model: str = field(metadata={"doc": "Provider embedding model ID."})
+    dimensions: Optional[int] = field(
+        metadata={"doc": "Vector dimensionality for embedded records."}
+    )
+    vector: Optional[List[float]] = field(
+        metadata={"doc": "Stored embedding vector for embedded records."}
+    )
+    external_vector_id: str = field(
+        metadata={"doc": "External vector-store ID when vectors are stored remotely."}
+    )
+    metadata: Dict[str, Any] = field(
+        metadata={"doc": "Retrieval metadata used to filter embedded claims."}
+    )
+    status: ClaimEmbeddingStatus = field(
+        metadata={"doc": "Embedding record lifecycle status."}
+    )
+    generated_at_utc: str = field(
+        metadata={"doc": "UTC timestamp for this embedding attempt."}
+    )
+    updated_at_utc: str = field(
+        metadata={"doc": "UTC timestamp for the latest write of this record."}
+    )
+    attempt_count: int = field(
+        metadata={"doc": "Number of writes for this deterministic embedding record."}
+    )
+    error_code: str = field(metadata={"doc": "Typed error code for failed records."})
+    error_message: str = field(
+        metadata={"doc": "Sanitized error message for failed records."}
+    )
+    error_retryable: bool = field(
+        metadata={"doc": "Whether the failure is retryable by an orchestrator."}
+    )
+    error_severity: str = field(
+        metadata={"doc": "Typed failure severity for failed records."}
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingPendingReadRequest:
+    schema_version: str = field(
+        metadata={"doc": "Pending claim embedding read request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "SQLite reports DB path."})
+    embedding_version: str = field(
+        metadata={"doc": "Embedding version to compare against existing records."}
+    )
+    provider: str = field(metadata={"doc": "Embedding provider namespace."})
+    model: str = field(metadata={"doc": "Embedding model ID."})
+    limit: int = field(metadata={"doc": "Maximum number of claim rows to read."})
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingPendingReadResponse(SemanticIdContract):
+    schema_version: str = field(
+        metadata={"doc": "Pending claim embedding read response schema version."}
+    )
+    rows: List[ClaimEmbeddingQueueItem] = field(
+        metadata={"doc": "Claim queue rows requiring embedding or re-embedding."}
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingPersistRequest:
+    schema_version: str = field(
+        metadata={"doc": "Claim embedding persist request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "SQLite reports DB path."})
+    record: ClaimEmbeddingRecord = field(
+        metadata={"doc": "Claim embedding record to persist."}
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingPersistResponse(SemanticIdContract):
+    schema_version: str = field(
+        metadata={"doc": "Claim embedding persist response schema version."}
+    )
+    embedding_uid: EntityUid = field(
+        metadata={"doc": "Persisted deterministic embedding UID."}
+    )
+    status: ClaimEmbeddingStatus = field(
+        metadata={"doc": "Persisted embedding status."}
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingReadRequest:
+    schema_version: str = field(
+        metadata={"doc": "Claim embedding read request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "SQLite reports DB path."})
+    claim_uids: List[str] = field(
+        default_factory=list, metadata={"doc": "Optional claim UID filter."}
+    )
+    report_ids: List[str] = field(
+        default_factory=list, metadata={"doc": "Optional report ID filter."}
+    )
+    topics: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Optional topic filter matched against taxonomy and category IDs."
+        },
+    )
+    statuses: List[ClaimEmbeddingStatus] = field(
+        default_factory=lambda: ["embedded"],
+        metadata={"doc": "Embedding statuses to return."},
+    )
+    limit: int = field(default=100, metadata={"doc": "Maximum records to return."})
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingReadResponse(SemanticIdContract):
+    schema_version: str = field(
+        metadata={"doc": "Claim embedding read response schema version."}
+    )
+    embeddings: List[ClaimEmbeddingRecord] = field(
+        metadata={"doc": "Durable claim embedding records."}
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingWorkflowRequest:
+    schema_version: str = field(
+        metadata={"doc": "Claim embedding workflow request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "SQLite reports DB path."})
+    api_key: str = field(metadata={"doc": "Provider API key loaded from env/config."})
+    provider: str = field(metadata={"doc": "Embedding provider namespace."})
+    model: str = field(metadata={"doc": "Embedding model ID."})
+    embedding_version: str = field(metadata={"doc": "Embedding workflow version."})
+    limit: int = field(metadata={"doc": "Maximum queued claims to process."})
+    timeout_seconds: Optional[float] = field(
+        metadata={"doc": "Provider timeout in seconds, if set."}
+    )
+    ctx: RunContext = field(metadata={"doc": "Run context used for structured logs."})
+    cost_ledger_path: str = field(
+        default="./out/cost-ledger.jsonl",
+        metadata={"doc": "Filesystem path for provider cost ledger JSONL."},
+    )
+    cost_daily_path: str = field(
+        default="./out/cost-daily.json",
+        metadata={"doc": "Filesystem path for provider daily cost rollup."},
+    )
+    model_pricing: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Per-model pricing table for cost estimation."},
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingWorkflowResponse(SemanticIdContract):
+    schema_version: str = field(
+        metadata={"doc": "Claim embedding workflow response schema version."}
+    )
+    embedded_count: int = field(metadata={"doc": "Number of embedded claim records."})
+    failed_count: int = field(metadata={"doc": "Number of failed claim records."})
+    skipped_count: int = field(
+        metadata={"doc": "Number of rows skipped before provider calls."}
+    )
+    processed_entity_uids: List[EntityUid] = field(
+        metadata={"doc": "Entity UIDs attempted by this workflow run."}
+    )
 
 
 @dataclass(frozen=True)

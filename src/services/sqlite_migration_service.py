@@ -22,6 +22,7 @@ from ._sqlite_migration.runner import (
     _add_column_if_missing,
 )
 from ._sqlite_migration.reports import (
+    _CLAIM_EMBEDDINGS_TABLE_SQL,
     _REPORTS_CORE_TABLE_SQL,
     _REPORTS_REQUIRED_COLUMNS,
     _REPORT_SOURCES_TABLE_SQL,
@@ -54,6 +55,7 @@ from ._sqlite_migration.reports import (
     _reports_db_011_add_report_source_value_scores,
     _reports_db_012_create_private_api_candidate_ledger,
     _reports_db_013_create_signal_candidate_projection,
+    _reports_db_014_create_claim_embedding_records,
     _REPORTS_DB_MIGRATIONS,
 )
 from ._sqlite_migration.state import (

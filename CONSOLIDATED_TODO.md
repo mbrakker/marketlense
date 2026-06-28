@@ -31,7 +31,7 @@ Scoring:
 - Vector-store cleanup is no longer backlog: `src/services/vector_store_service.py` exposes delete/prune operations, `src/orchestrators/vector_store_retention_orchestrator.py` runs retention cleanup, and README documents `analysis.vector_store_retention_days`.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
-- `vector_projection_queue` persists `embedding_status` and `embedding_version`, but there is no stored embedding vector/provider reference or embedding workflow beyond queue staging.
+- Claim-level embedding persistence is live: `claim_embeddings` stores durable vectors/provider metadata/status/error taxonomy linked to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`, and `claim_embedding_orchestrator` owns pending/stale embedding workflow execution.
 - Cross-report Briefing and grounded Signal publish paths exist locally. Durable Signal candidate extraction, ingestion-time Signal artifact-pack generation, separate Signal-store persistence, grouping, readback, and publish reuse are landed through `src/contracts/signal_candidates.py`, `src/generators/signal_candidate_generator.py`, `src/generators/report_signal_artifact_generator.py`, `src/orchestrators/signal_candidate_orchestrator.py`, `src/orchestrators/report_generation_orchestrator.py`, and `src/services/analytics_store_service.py`.
 - The local bundled WordPress plugin registers `ml_report`, `ml_signal`, and `ml_briefing` with REST enabled. Remote WordPress exposure remains an external deployment/readback verification item.
 - README/config drift remains: README still states report publishing uses core `posts` in one section, while `src/config/app.yaml` defaults `publish.wp.post_type` to `ml_report`.
@@ -84,16 +84,25 @@ Scoring:
 
 ## 2. Analytics Projection, Signals, and Embeddings
 
-- **Title:** Persist claim-level embeddings beyond the vector projection queue [Impact: 5/5, Effort: 4/5]
-  - Explanation: Claims are projected into `report_claims` and queued in `vector_projection_queue`, but the system does not store actual embedding vectors, provider/vector-store references, embedding lifecycle timestamps, or completed/failed embedding records per claim.
-  - Pros: Enables reusable semantic retrieval over claims and makes Signal/Briefing grounding cheaper and reproducible.
-  - Cons: Requires a storage contract, migration, embedding workflow, and retention/versioning policy.
+- **Title:** Use persisted claim embeddings for Briefing and Signal evidence preselection [Impact: 5/5, Effort: 3/5]
+  - Explanation: Briefing and Signal input builders still rank projected evidence with deterministic lexical/category signals only. Persisted claim embeddings can preselect semantically relevant claims before prompt assembly, reducing prompt size while keeping source grounding reproducible.
+  - Pros: Improves thematic recall, reduces model input cost, and makes evidence selection less dependent on exact keyword overlap.
+  - Cons: Requires careful fallback behavior when embeddings are absent or stale.
   - Acceptance Criteria:
-    - A versioned embedding storage contract links each embedded claim to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`.
-    - An orchestrator-owned embedding workflow reads pending queue rows, calls the embedding service boundary, persists vectors or external vector IDs, and updates status.
-    - `embedding_version`, `content_hash`, provider/model metadata, generated timestamp, and retry/error taxonomy are stored and logged.
-    - Re-embedding behavior is deterministic when claim text, metadata, content hash, or embedding model version changes.
-    - Tests cover successful embedding, failed status, idempotent reruns, stale-content re-embedding, and retrieval by claim/report/topic metadata.
+    - Cross-report and Signal input generation read embedded claims through `analytics_store_service.read_claim_embeddings`.
+    - Semantic preselection is bounded, logged, and falls back to existing deterministic selection when embeddings are unavailable.
+    - Prompt input token/character counts decrease on an existing projected report corpus without reducing citation coverage.
+    - Tests cover embedded-hit selection, no-embedding fallback, stale embedding exclusion, and deterministic tie-breaking.
+
+- **Title:** Add claim embedding freshness, retention, and cost controls [Impact: 4/5, Effort: 2/5]
+  - Explanation: Embedding records now persist locally, but operators need visibility into stale content, failed attempts, model-version drift, and avoidable re-embedding spend.
+  - Pros: Prevents silent embedding drift and unnecessary provider calls while making retry/cleanup decisions operationally visible.
+  - Cons: Needs concise reporting so this does not become another dashboard surface.
+  - Acceptance Criteria:
+    - A lightweight report summarizes embedded, pending, failed, stale, and model-version-mismatched claim counts by publisher/report/topic.
+    - Retention policy documents and tests which historical embedding versions are kept or pruned.
+    - The embedding workflow skips unchanged rows with a logged cost-avoidance count.
+    - Tests cover stale-count reporting, failed retry visibility, retention pruning, and unchanged-row skip accounting.
 
 - **Title:** Complete public entity projection coverage or narrow the README entity contract [Impact: 5/5, Effort: 5/5]
   - Explanation: Reports, Briefings, and Signals have local publish paths, but README still describes a broader public entity model including Figures, Regions, and Time Periods. Those surfaces need either durable public projection contracts/routes or explicit README-scoped exclusions.
@@ -201,6 +210,7 @@ Scoring:
 - Vector-store delete/prune lifecycle and retention orchestration.
 - Durable Signal candidate extraction, clustering, storage, readback, and publish reuse.
 - Ingestion-time grounded Signal artifacts, separate Signal-store persistence, and publish workflow reuse from the Signal base.
+- Claim-level embedding persistence beyond `vector_projection_queue`, including durable vector records, provider/model metadata, status/error taxonomy, idempotent/stale-aware workflow execution, and local claim/report/topic readback.
 - Bounded Streamlit log reads and grouped directory-count walks through `file_service`.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
@@ -216,7 +226,7 @@ Scoring:
 
 ### Phase 2: Intelligence Reuse and Public Entity Alignment
 
-- Claim-level embedding persistence and embedding workflow.
+- Briefing/Signal evidence preselection using persisted claim embeddings.
 - Public entity projection coverage for Figures, Regions, and Time Periods, or README narrowing.
 - WordPress render-time intelligence synthesis replacement with approved projections.
 

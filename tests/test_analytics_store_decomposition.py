@@ -64,6 +64,19 @@ CROSS_REPORT_READ = {
     "read_cross_report_projected_data",
 }
 
+CLAIM_EMBEDDINGS = {
+    "_embedding_uid",
+    "claim_embedding_uid",
+    "_metadata_from_json",
+    "_queue_item_from_row",
+    "_record_from_row",
+    "read_pending_claim_embedding_rows",
+    "_validate_embedding_record",
+    "persist_claim_embedding",
+    "_matches_topics",
+    "read_claim_embeddings",
+}
+
 SIGNALS = {
     "_candidate_source_ref_from_dict",
     "_candidate_from_row",
@@ -96,6 +109,7 @@ def test_analytics_store_owner_modules_exist() -> None:
         "common.py",
         "projection_write.py",
         "cross_report_read.py",
+        "claim_embeddings.py",
         "signals.py",
     ):
         assert (PACKAGE / name).is_file()
@@ -106,6 +120,7 @@ def test_analytics_store_symbols_have_one_owner() -> None:
         "common.py": COMMON,
         "projection_write.py": PROJECTION_WRITE,
         "cross_report_read.py": CROSS_REPORT_READ,
+        "claim_embeddings.py": CLAIM_EMBEDDINGS,
         "signals.py": SIGNALS,
     }
     all_expected = set().union(*expected.values())
@@ -121,7 +136,13 @@ def test_analytics_store_facade_import_order() -> None:
         and node.module
         and "._analytics_store." in node.module
     ]
-    assert imports == ["common", "projection_write", "cross_report_read", "signals"]
+    assert imports == [
+        "common",
+        "projection_write",
+        "cross_report_read",
+        "claim_embeddings",
+        "signals",
+    ]
 
 
 def test_projection_writer_batches_multirow_upserts() -> None:

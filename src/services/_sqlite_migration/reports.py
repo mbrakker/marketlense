@@ -5,6 +5,7 @@ from __future__ import annotations
 from src.services._sqlite_migration.runner import _MigrationSpec
 
 from src.services._sqlite_migration._reports.schema import (
+    _CLAIM_EMBEDDINGS_TABLE_SQL,
     _DOWNLOAD_ROUTE_HISTORY_TABLE_SQL,
     _INVENTORY_RECOVERY_CACHE_TABLE_SQL,
     _INVENTORY_ROUTE_HISTORY_TABLE_SQL,
@@ -46,6 +47,7 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_010_create_analytics_projection_tables,
     _reports_db_011_add_report_source_value_scores,
     _reports_db_013_create_signal_candidate_projection,
+    _reports_db_014_create_claim_embedding_records,
 )
 
 _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
@@ -113,5 +115,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_013_create_signal_candidate_projection",
         version=13,
         apply_fn=_reports_db_013_create_signal_candidate_projection,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_014_create_claim_embedding_records",
+        version=14,
+        apply_fn=_reports_db_014_create_claim_embedding_records,
     ),
 )

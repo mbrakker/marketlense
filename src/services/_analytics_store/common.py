@@ -228,6 +228,29 @@ CREATE TABLE IF NOT EXISTS vector_projection_queue (
   updated_at_utc TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS claim_embeddings (
+  embedding_uid TEXT PRIMARY KEY,
+  claim_uid TEXT NOT NULL,
+  entity_uid TEXT NOT NULL,
+  report_id TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  embedding_version TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  dimensions INTEGER,
+  vector_json TEXT,
+  external_vector_id TEXT NOT NULL,
+  metadata_json TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('embedded','failed')),
+  generated_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  attempt_count INTEGER NOT NULL,
+  error_code TEXT NOT NULL,
+  error_message TEXT NOT NULL,
+  error_retryable INTEGER NOT NULL,
+  error_severity TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_report_sections_report_id ON report_sections(report_id);
 CREATE INDEX IF NOT EXISTS idx_report_findings_report_id ON report_findings(report_id);
 CREATE INDEX IF NOT EXISTS idx_report_metrics_report_id ON report_metrics(report_id);
@@ -239,6 +262,10 @@ CREATE INDEX IF NOT EXISTS idx_report_figures_report_id ON report_figures(report
 CREATE INDEX IF NOT EXISTS idx_vector_projection_queue_report_id ON vector_projection_queue(report_id);
 CREATE INDEX IF NOT EXISTS idx_vector_projection_queue_status ON vector_projection_queue(embedding_status);
 CREATE INDEX IF NOT EXISTS idx_vector_projection_queue_content_hash ON vector_projection_queue(content_hash);
+CREATE INDEX IF NOT EXISTS idx_claim_embeddings_claim_uid ON claim_embeddings(claim_uid);
+CREATE INDEX IF NOT EXISTS idx_claim_embeddings_report_id ON claim_embeddings(report_id);
+CREATE INDEX IF NOT EXISTS idx_claim_embeddings_status ON claim_embeddings(status);
+CREATE INDEX IF NOT EXISTS idx_claim_embeddings_content_hash ON claim_embeddings(content_hash);
 CREATE INDEX IF NOT EXISTS idx_reports_projection_status ON reports(projection_status);
 """
 
@@ -298,7 +325,7 @@ def _analytics_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="reports_db",
                     db_path=db_path,
-                    target_version=13,
+                    target_version=14,
                     ctx=ctx,
                 ),
                 conn,

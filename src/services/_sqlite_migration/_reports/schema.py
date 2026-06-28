@@ -416,6 +416,31 @@ CREATE TABLE IF NOT EXISTS vector_projection_queue (
 );
 """
 
+_CLAIM_EMBEDDINGS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS claim_embeddings (
+  embedding_uid TEXT PRIMARY KEY,
+  claim_uid TEXT NOT NULL,
+  entity_uid TEXT NOT NULL,
+  report_id TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  embedding_version TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  dimensions INTEGER,
+  vector_json TEXT,
+  external_vector_id TEXT NOT NULL,
+  metadata_json TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('embedded','failed')),
+  generated_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  attempt_count INTEGER NOT NULL,
+  error_code TEXT NOT NULL,
+  error_message TEXT NOT NULL,
+  error_retryable INTEGER NOT NULL,
+  error_severity TEXT NOT NULL
+);
+"""
+
 _SIGNAL_CANDIDATES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS signal_candidates (
   candidate_id TEXT PRIMARY KEY,
