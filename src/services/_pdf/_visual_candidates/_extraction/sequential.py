@@ -61,6 +61,7 @@ from src.services._pdf.visual_heuristics import (
     _tally_reason,
     _text_stats,
     _trim_top_page_number,
+    _VisualOverlapIndex,
 )
 from src.services._pdf._visual_candidates.raster import (
     _candidate_ocr_density,
@@ -102,6 +103,7 @@ from .context import (
 PANEL_CHART_CONTEXT_TEXT_RATIO_MAX = 0.85
 SMALL_DECORATIVE_RASTER_MAX_AREA_FRAC = 0.12
 SMALL_DECORATIVE_RASTER_MAX_TEXT_CHARS = 180
+VISUAL_OVERLAP_INDEX_MIN_KEPT = 8
 
 
 def _extract_visuals_sequential(
@@ -132,6 +134,7 @@ def _extract_visuals_sequential(
             if page_ctx is None:
                 continue
             kept: List[tuple[fitz.Rect, float, int]] = []
+            overlap_index: Optional[_VisualOverlapIndex] = None
             page_candidates: List[_VisualPageCandidateEntry] = []
             local_sequence = 0
             for rect_item in page_ctx.rect_items:
@@ -930,9 +933,14 @@ def _extract_visuals_sequential(
                     score += 0.15
                 elif rect_item.kind == "heading":
                     score -= 0.05
+                if overlap_index is None and len(kept) >= VISUAL_OVERLAP_INDEX_MIN_KEPT:
+                    overlap_index = _VisualOverlapIndex(page_rect=page_ctx.page_rect)
+                    for kept_index, (kept_rect, _score, _page_index) in enumerate(kept):
+                        overlap_index.add(kept_index, kept_rect)
                 local_sequence = _append_visual_page_candidate(
                     page_candidates=page_candidates,
                     kept=kept,
+                    overlap_index=overlap_index,
                     candidate=candidate,
                     final_rect=final_rect,
                     score=score,

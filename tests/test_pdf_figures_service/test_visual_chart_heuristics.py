@@ -5,7 +5,14 @@ from src.services._pdf.visual_candidates import (
     _embedded_visual_is_oversized_wrapper,
     _has_side_by_side_visual_sibling,
 )
-from src.services._pdf.visual_heuristics import _VisualCandidateRelationships
+from src.services._pdf._visual_candidates._extraction.context import (
+    _append_visual_page_candidate,
+    _emit_visual_page_candidates,
+)
+from src.services._pdf.visual_heuristics import (
+    _VisualCandidateRelationships,
+    _VisualOverlapIndex,
+)
 
 
 class _TrackedRectItem:
@@ -76,6 +83,83 @@ def test_visual_relationship_index_bounds_sibling_and_wrapper_scans() -> None:
         is True
     )
     assert sum(item.rect_access_count for item in far_items) == 0
+
+
+def test_visual_overlap_index_limits_lookup_to_intersecting_page_bands() -> None:
+    page_rect = fitz.Rect(0.0, 0.0, 600.0, 800.0)
+    overlap_index = _VisualOverlapIndex(page_rect=page_rect, bin_height=64.0)
+    far_rects = [
+        fitz.Rect(40.0, 500.0 + index * 4.0, 160.0, 522.0 + index * 4.0)
+        for index in range(36)
+    ]
+    near_rect = fitz.Rect(100.0, 120.0, 220.0, 240.0)
+    for index, rect in enumerate([*far_rects, near_rect]):
+        overlap_index.add(index, rect)
+
+    assert overlap_index.lookup(fitz.Rect(110.0, 130.0, 230.0, 250.0)) == [
+        len(far_rects)
+    ]
+
+
+def test_append_visual_page_candidate_preserves_replacement_with_overlap_index() -> (
+    None
+):
+    page_rect = fitz.Rect(0.0, 0.0, 600.0, 800.0)
+    overlap_index = _VisualOverlapIndex(page_rect=page_rect)
+    page_candidates = []
+    kept = []
+    first = Candidate(
+        schema_version="1.0",
+        id="chart-0-pending-0",
+        kind="chart",
+        page=0,
+        bbox=(100.0, 100.0, 220.0, 220.0),
+        preview_text="first",
+        caption="first",
+    )
+    replacement = Candidate(
+        schema_version="1.0",
+        id="chart-0-pending-1",
+        kind="chart",
+        page=0,
+        bbox=(104.0, 104.0, 224.0, 224.0),
+        preview_text="replacement",
+        caption="replacement",
+    )
+
+    local_sequence = _append_visual_page_candidate(
+        page_candidates=page_candidates,
+        kept=kept,
+        overlap_index=overlap_index,
+        candidate=first,
+        final_rect=fitz.Rect(first.bbox),
+        score=0.4,
+        local_sequence=0,
+        legacy_order_candidate=True,
+        stats={"raw": 0, "kept": 0, "rejected": 0, "reasons": {}},
+    )
+    local_sequence = _append_visual_page_candidate(
+        page_candidates=page_candidates,
+        kept=kept,
+        overlap_index=overlap_index,
+        candidate=replacement,
+        final_rect=fitz.Rect(replacement.bbox),
+        score=0.8,
+        local_sequence=local_sequence,
+        legacy_order_candidate=True,
+        stats={"raw": 0, "kept": 1, "rejected": 0, "reasons": {}},
+    )
+    emitted = []
+    _emit_visual_page_candidates(
+        emitted, page_number=0, page_candidates=page_candidates
+    )
+
+    assert local_sequence == 1
+    assert len(kept) == 1
+    assert overlap_index.lookup(fitz.Rect(replacement.bbox)) == [0]
+    assert [(candidate.id, candidate.caption) for candidate in emitted] == [
+        ("chart-0-0", "replacement")
+    ]
 
 
 def test_collect_candidates_chart_bbox_excludes_corner_page_number_and_body_text(

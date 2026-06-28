@@ -197,6 +197,68 @@ class _VisualCandidateRelationships:
         return tuple(out)
 
 
+class _VisualOverlapIndex:
+    """Page-local y-band index for visual candidate overlap checks."""
+
+    def __init__(
+        self,
+        *,
+        page_rect: fitz.Rect,
+        bin_height: float = 96.0,
+    ) -> None:
+        self._page_rect = fitz.Rect(page_rect)
+        self._bin_height = max(1.0, float(bin_height))
+        self._bins: Dict[int, List[int]] = {}
+        self._bins_by_index: Dict[int, Tuple[int, ...]] = {}
+        self._rects: Dict[int, fitz.Rect] = {}
+
+    def add(self, index: int, rect: fitz.Rect) -> None:
+        self.remove(index)
+        resolved = fitz.Rect(rect)
+        if resolved.is_empty or resolved.get_area() <= 0.0:
+            return
+        buckets = tuple(self._bin_indexes_for_rect(resolved))
+        for bucket in buckets:
+            self._bins.setdefault(bucket, []).append(index)
+        self._bins_by_index[index] = buckets
+        self._rects[index] = resolved
+
+    def remove(self, index: int) -> None:
+        previous = self._bins_by_index.pop(index, ())
+        for bucket in previous:
+            values = self._bins.get(bucket)
+            if values is None:
+                continue
+            self._bins[bucket] = [value for value in values if value != index]
+        self._rects.pop(index, None)
+
+    def lookup(self, rect: fitz.Rect) -> List[int]:
+        resolved = fitz.Rect(rect)
+        if resolved.is_empty or resolved.get_area() <= 0.0:
+            return []
+        matches: Dict[int, None] = {}
+        for bucket in self._bin_indexes_for_rect(resolved):
+            for index in self._bins.get(bucket, []):
+                existing = self._rects.get(index)
+                if existing is None:
+                    continue
+                if self._intersects_y(resolved, existing):
+                    matches[index] = None
+        return sorted(matches)
+
+    def _bin_indexes_for_rect(self, rect: fitz.Rect) -> range:
+        return _VisualCandidateRelationships._bin_indexes_for_range(
+            rect.y0,
+            rect.y1,
+            page_rect=self._page_rect,
+            bin_height=self._bin_height,
+        )
+
+    @staticmethod
+    def _intersects_y(left: fitz.Rect, right: fitz.Rect) -> bool:
+        return min(left.y1, right.y1) > max(left.y0, right.y0)
+
+
 @dataclass(frozen=True)
 class _PageTextLine:
     rect: fitz.Rect
@@ -347,8 +409,14 @@ def _chart_candidate_score(
 def _find_overlapping_kept(
     rect: fitz.Rect,
     kept: List[Tuple[fitz.Rect, float, int]],
+    *,
+    overlap_index: Optional[_VisualOverlapIndex] = None,
 ) -> Optional[int]:
-    for idx, (existing, _score, _out_idx) in enumerate(kept):
+    indexes = (
+        overlap_index.lookup(rect) if overlap_index is not None else range(len(kept))
+    )
+    for idx in indexes:
+        existing, _score, _out_idx = kept[idx]
         if _rect_iou(rect, existing) >= CHART_OVERLAP_IOU:
             return idx
         if _rect_containment_ratio(rect, existing) >= CHART_OVERLAP_CONTAINMENT:
@@ -618,6 +686,7 @@ def _rect_intersection_area(a: fitz.Rect, b: fitz.Rect) -> float:
 __all__ = [
     "_ChartRect",
     "_VisualCandidateRelationships",
+    "_VisualOverlapIndex",
     "_PageTextLine",
     "_s",
     "_int_count",

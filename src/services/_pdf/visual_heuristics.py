@@ -565,6 +565,7 @@ from ._visual_heuristics.shared import *
 _LOCAL_PRIVATE_EXPORTS = [
     "_ChartRect",
     "_VisualCandidateRelationships",
+    "_VisualOverlapIndex",
     "_PageTextLine",
     "_s",
     "_int_count",
