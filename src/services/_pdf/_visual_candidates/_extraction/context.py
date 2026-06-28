@@ -23,6 +23,7 @@ from src.services._pdf.visual_heuristics import (
     _int_count,
     _tally_reason,
     _VisualCandidateRelationships,
+    _VisualOverlapIndex,
 )
 from src.services._pdf._visual_candidates.raster import (
     _RasterProbeCache,
@@ -114,6 +115,7 @@ def _append_visual_page_candidate(
     *,
     page_candidates: List[_VisualPageCandidateEntry],
     kept: list[tuple[fitz.Rect, float, int]],
+    overlap_index: Optional[_VisualOverlapIndex],
     candidate: Candidate,
     final_rect: fitz.Rect,
     score: float,
@@ -121,14 +123,18 @@ def _append_visual_page_candidate(
     legacy_order_candidate: bool,
     stats: Dict[str, object],
 ) -> int:
-    overlap_index = _find_overlapping_kept(final_rect, kept)
-    if overlap_index is not None:
-        existing_score = kept[overlap_index][1]
+    overlapping_index = _find_overlapping_kept(
+        final_rect,
+        kept,
+        overlap_index=overlap_index,
+    )
+    if overlapping_index is not None:
+        existing_score = kept[overlapping_index][1]
         if score <= existing_score:
             stats["rejected"] = _int_count(stats["rejected"]) + 1
             _tally_reason(stats, "overlap_dup")
             return local_sequence
-        page_index = kept[overlap_index][2]
+        page_index = kept[overlapping_index][2]
         existing_entry = page_candidates[page_index]
         page_candidates[page_index] = _VisualPageCandidateEntry(
             candidate=candidate,
@@ -137,7 +143,9 @@ def _append_visual_page_candidate(
             sequence=existing_entry.sequence,
             recovered_only=existing_entry.recovered_only and not legacy_order_candidate,
         )
-        kept[overlap_index] = (final_rect, score, page_index)
+        kept[overlapping_index] = (final_rect, score, page_index)
+        if overlap_index is not None:
+            overlap_index.add(overlapping_index, final_rect)
         stats["replaced"] = _int_count(stats.get("replaced", 0)) + 1
         return local_sequence
     page_candidates.append(
@@ -150,6 +158,8 @@ def _append_visual_page_candidate(
         )
     )
     kept.append((final_rect, score, len(page_candidates) - 1))
+    if overlap_index is not None:
+        overlap_index.add(len(kept) - 1, final_rect)
     stats["kept"] = _int_count(stats["kept"]) + 1
     return local_sequence + 1
 

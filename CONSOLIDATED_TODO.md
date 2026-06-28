@@ -28,6 +28,7 @@ Scoring:
 - Targeted validation regeneration and claim/evidence binding are landed through `src/generators/report_regeneration_generator.py`, `src/generators/validation/*`, and README validation docs.
 - Idempotency service support is live in `src/services/idempotency_service.py` and backs publish, report-download, and publisher-inventory write paths documented in `README.md`.
 - Candidate extraction already performs binary page triage and shared page-artifact/fingerprint caching through `src/services/_pdf/figures.py`, `src/services/_pdf/page_artifacts.py`, and `src/services/_pdf/fingerprint_cache.py`.
+- PDF visual candidate extraction now uses indexed per-page relationships plus a lazy kept-candidate y-band overlap index behind the existing `pdf_service.collect_candidates` boundary. Side-by-side live existing-PDF verification on 2026-06-28 preserved candidate signatures on Capgemini, IAS, and Julius Baer benchmark PDFs and reduced aggregate median single-worker candidate extraction from 42.483s on `main` to 41.561s on the branch; per-PDF medians were 5.677s to 5.300s, 16.891s to 17.054s, and 19.915s to 19.207s.
 - Vector-store cleanup is no longer backlog: `src/services/vector_store_service.py` exposes delete/prune operations, `src/orchestrators/vector_store_retention_orchestrator.py` runs retention cleanup, and README documents `analysis.vector_store_retention_days`.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
@@ -163,15 +164,15 @@ Scoring:
 
 ## 4. PDF, Dashboard, and Runtime Performance
 
-- **Title:** Optimize measured PDF table/visual candidate hot paths without changing the public PDF boundary [Impact: 4/5, Effort: 3/5]
-  - Explanation: PDF facade decomposition has landed, but `long_scripts.md` still identifies focused hot paths in table dedupe/screening, visual candidate extraction, panel detection, and crop refinement. The next work should be measured algorithmic improvement, not another size-only split.
-  - Pros: Improves runtime on visually dense reports while preserving the canonical `pdf_service` boundary.
-  - Cons: Needs careful real-PDF equivalence gates to avoid extraction regressions.
+- **Title:** Promote PDF candidate extraction performance equivalence into a regression gate [Impact: 4/5, Effort: 2/5]
+  - Explanation: Indexed page relationships and kept-candidate overlap checks now improve live candidate extraction on existing dense PDFs, but the benchmark is still manual evidence rather than a repeatable quality gate.
+  - Pros: Keeps speed gains from silently regressing while protecting candidate output equivalence.
+  - Cons: Needs stable thresholds that tolerate normal machine variance without hiding real regressions.
   - Acceptance Criteria:
-    - Baseline and target metrics are captured on dense PDF fixtures before implementation.
-    - Indexed table dedupe and/or precomputed per-page visual relationships reduce measured runtime or asymptotic scan cost.
-    - Candidate output remains semantically equivalent unless a documented quality change is approved.
-    - Tests cover near-duplicate/distinct tables, dense panels, multi-chart layouts, decorative images, wrappers, and crop boundaries.
+    - A benchmark command runs `pdf_service.collect_candidates` on existing dense PDFs without synthesizing fixtures.
+    - The command records candidate output signatures, counts, degraded-page counts, median wall time, and per-PDF deltas.
+    - CI or release checks fail on candidate signature drift and warn/fail on documented runtime thresholds.
+    - README documents how to refresh benchmark baselines and when a runtime delta is acceptable.
 
 ## 5. Architecture, Schema Compatibility, and Observability
 
@@ -205,6 +206,7 @@ Scoring:
 - Live WordPress REST exposure and draft readback for Report, Briefing, and Signal publish entities on the hosted site.
 - Report post-type and entity naming drift between README, config, WordPress plugin behavior, and public copy.
 - Bounded Streamlit log reads and grouped directory-count walks through `file_service`.
+- Measured PDF table/visual candidate hot-path optimization behind the canonical `pdf_service` boundary, including lazy indexed visual overlap checks and live existing-PDF equivalence/timing evidence.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
 
