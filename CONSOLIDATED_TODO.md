@@ -172,15 +172,15 @@ Scoring:
 
 ## 5. Architecture, Schema Compatibility, and Observability
 
-- **Title:** Add release evidence review summaries and waiver governance [Impact: 3/5, Effort: 2/5]
-  - Explanation: CI now archives fresh release evidence bundles, but operators still need a concise human-readable review surface and controlled waiver path for intentional warnings or environmental exceptions.
-  - Pros: Speeds release review, prevents untracked manual exceptions, and turns manifest issues into auditable decisions.
-  - Cons: Needs strict expiry/owner rules so waivers do not become permanent bypasses.
+- **Title:** Publish release evidence reviews into CI job summaries and PR release notes [Impact: 3/5, Effort: 2/5]
+  - Explanation: Release evidence review Markdown is now generated and archived, but reviewers still need to open the artifact bundle to see the approval surface.
+  - Pros: Puts unwaived issues, waived issues, owners, expiry dates, and artifact freshness directly where release reviewers already work.
+  - Cons: Requires careful formatting and stable links so CI output stays concise and auditable.
   - Acceptance Criteria:
-    - A command reads `out/release_evidence_manifest*.json` and writes a deterministic Markdown/JSON review summary grouped by artifact, status, freshness, and issue reason.
-    - A waiver file supports issue reason, artifact name, owner, expiry date, and justification, and CI fails on expired, ownerless, or unmatched waivers.
-    - Unwaived manifest issues fail release approval; waived issues remain visible in the uploaded release evidence bundle.
-    - README documents operator review and waiver-retirement flow.
+    - CI appends the generated release evidence review Markdown to the GitHub job summary after the approval gate runs.
+    - Pull request or release-note automation links the archived `release-evidence-bundle` artifact and includes the final approval status.
+    - Summary output remains bounded for large manifests while preserving all unwaived issue details.
+    - README documents where reviewers should inspect the inline summary versus the full archived bundle.
 
 - **Title:** Extend CI gates into role-mixing and monolith-growth enforcement [Impact: 4/5, Effort: 3/5]
   - Explanation: The repo already has broad CI coverage. The remaining useful gap is automation for role mixing, direct-I/O drift, service integration coverage waivers, and first-party long-file growth.
@@ -219,6 +219,7 @@ Scoring:
 - PDF benchmark trend evidence in release and health scorecards, including retained candidate/crop-refine/trend JSON inputs, incomplete-evidence failure reporting, live scorecard verification, and README operator flow.
 - Release evidence bundle manifest for retained quality-gate artifacts, including commit/command/path/schema/timestamp/hash/status recording, missing/invalid/schema-drift failure reporting, live retained-artifact verification, and README archive flow.
 - Release evidence manifest CI archival and freshness gates, including `HEAD` commit checks, artifact modified-time checks, CI health scorecard generation, `release-evidence-bundle` upload, live freshness verification, and README local-vs-CI retention flow.
+- Release evidence review summaries and waiver governance, including deterministic Markdown/JSON review outputs, owner/expiry/justification waiver validation, CI approval gating, live clean/stale/waived manifest verification, and README operator review and waiver-retirement flow.
 - Generic "add more CI" wording. Active CI work must target specific drift that current gates do not catch.
 - Empty audit sections from earlier consolidated TODO versions.
 

@@ -7,6 +7,7 @@ from pathlib import Path
 from scripts.quality.release_evidence_manifest import (
     ReleaseEvidenceArtifactInput,
     build_release_evidence_manifest,
+    main,
     write_release_evidence_manifest,
 )
 
@@ -290,3 +291,28 @@ def test_release_evidence_manifest_fails_commit_sha_mismatch(
 
     assert manifest.passed is False
     assert {issue.reason for issue in manifest.issues} == {"commit_sha_mismatch"}
+
+
+def test_release_evidence_manifest_allow_issues_writes_failed_manifest(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "release_evidence_manifest.json"
+
+    exit_code = main(
+        [
+            "--release-id",
+            "release-20260628",
+            "--artifact",
+            f"missing={tmp_path / 'missing.json'}",
+            "--expected-schema",
+            "missing=1.0",
+            "--allow-issues",
+            "--output-json",
+            str(output_path),
+        ]
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert payload["passed"] is False
+    assert payload["issues"][0]["reason"] == "artifact_missing"

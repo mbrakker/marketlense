@@ -464,6 +464,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--fresh-after", default="")
     parser.add_argument("--require-head-commit", action="store_true")
     parser.add_argument(
+        "--allow-issues",
+        action="store_true",
+        help="Write failed manifests without making this command the approval gate.",
+    )
+    parser.add_argument(
         "--output-json",
         default="out/release_evidence_manifest.json",
     )
@@ -490,7 +495,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     write_release_evidence_manifest(manifest, (ROOT / args.output_json).resolve())
     print(json.dumps(asdict(manifest), ensure_ascii=True, indent=2, sort_keys=True))
-    return 0 if manifest.passed else 1
+    return 0 if manifest.passed or args.allow_issues else 1
 
 
 if __name__ == "__main__":

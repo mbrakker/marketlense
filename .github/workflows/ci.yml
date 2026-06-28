@@ -114,7 +114,15 @@ jobs:
             --artifact-command health_scorecard="python scripts/quality/run_health_scorecard.py out/ci_health_events.jsonl --run-id ci-release-evidence --output-json out/run_health_scorecard_ci.json" \
             --fresh-after "${RELEASE_EVIDENCE_STARTED_AT}" \
             --require-head-commit \
+            --allow-issues \
             --output-json out/release_evidence_manifest_ci.json
+      - name: Build release evidence review
+        run: |
+          python scripts/quality/release_evidence_review.py \
+            --manifest-json out/release_evidence_manifest_ci.json \
+            --waivers-yaml docs/quality/release_evidence_waivers.yaml \
+            --output-json out/release_evidence_review_ci.json \
+            --output-md out/release_evidence_review_ci.md
       - name: Upload release evidence bundle
         if: always()
         uses: actions/upload-artifact@v4
@@ -124,6 +132,9 @@ jobs:
           if-no-files-found: warn
           path: |
             out/release_evidence_manifest_ci.json
+            out/release_evidence_review_ci.json
+            out/release_evidence_review_ci.md
+            docs/quality/release_evidence_waivers.yaml
             coverage.xml
             mutation_results.json
             out/pdf_candidate_benchmark_ci.json
