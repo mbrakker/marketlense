@@ -23,6 +23,7 @@ from src.orchestrators._report_generation_orchestrator.checkpoints import (
     _analysis_state_from_checkpoint,
     _vector_indexing_state_from_checkpoint,
     _preview_from_checkpoint,
+    _artifact_registry_payload,
 )
 
 from src.orchestrators._report_generation_orchestrator.resume import (
@@ -39,6 +40,7 @@ from src.orchestrators._report_generation_orchestrator.resume import (
     _run_signal_artifact_generation,
     _read_validated_checkpoint,
     _validate_checkpoint_artifacts,
+    _validate_checkpoint_artifact_registry,
     _resume_from_checkpoint_stage,
     _resume_from_source_checkpoint,
     _resume_from_selection_checkpoint,
@@ -83,6 +85,7 @@ __all__ = [
     "_analysis_state_from_checkpoint",
     "_vector_indexing_state_from_checkpoint",
     "_preview_from_checkpoint",
+    "_artifact_registry_payload",
     "LATEST_SAFE_RESTART_STAGE",
     "SUPPORTED_RESTART_STAGES",
     "_run_projection",
@@ -96,6 +99,7 @@ __all__ = [
     "_run_signal_artifact_generation",
     "_read_validated_checkpoint",
     "_validate_checkpoint_artifacts",
+    "_validate_checkpoint_artifact_registry",
     "_resume_from_checkpoint_stage",
     "_resume_from_source_checkpoint",
     "_resume_from_selection_checkpoint",

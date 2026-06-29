@@ -9,6 +9,7 @@ from src.contracts.ui_run_control import (
     UiRunDeadLetterErrorTaxonomy,
     UiRunDeadLetterIdentity,
     UiRunDeadLetterRecord,
+    UiRunFailureClassification,
     UiRunRecord,
 )
 
@@ -93,7 +94,10 @@ def infer_dead_letter_category(
             "config_validation",
             f"{stage} failed because required input or configuration was invalid.",
         )
-    if any(token in code or token in message for token in ("auth", "permission", "captcha", "forbidden", "blocked")):
+    if any(
+        token in code or token in message
+        for token in ("auth", "permission", "captcha", "forbidden", "blocked")
+    ):
         return (
             "permission_blocked",
             f"{stage} was blocked by permissions, auth, or access controls.",
@@ -103,14 +107,31 @@ def infer_dead_letter_category(
             "artifact_io",
             f"{stage} failed while reading, writing, or validating local artifacts.",
         )
-    if any(token in code for token in ("empty", "quality", "validation", "unreachable_archive", "no_report_assets")):
+    if any(
+        token in code
+        for token in (
+            "empty",
+            "quality",
+            "validation",
+            "unreachable_archive",
+            "no_report_assets",
+        )
+    ):
         return (
             "content_gap",
             f"{stage} completed with content-quality or source-coverage failure conditions.",
         )
     if retryable is True or any(
         token in code or token in message
-        for token in ("timeout", "tempor", "rate_limit", "request_failed", "unavailable", "connect", "retry")
+        for token in (
+            "timeout",
+            "tempor",
+            "rate_limit",
+            "request_failed",
+            "unavailable",
+            "connect",
+            "retry",
+        )
     ):
         return (
             "external_dependency",
@@ -154,7 +175,10 @@ def infer_dead_letter_artifact_links(
 ) -> UiRunDeadLetterArtifactLinks:
     registry = Path(registry_path).expanduser().resolve()
     manifest_path = (
-        registry.parent / "ui_runs" / _normalized_text(record.run_id) / "replay_manifest.json"
+        registry.parent
+        / "ui_runs"
+        / _normalized_text(record.run_id)
+        / "replay_manifest.json"
     )
     return UiRunDeadLetterArtifactLinks(
         schema_version="1.0",
@@ -166,6 +190,133 @@ def infer_dead_letter_artifact_links(
             for path in list(record.artifact_paths or [])
             if _normalized_text(path)
         ],
+    )
+
+
+def _first_preflight_next_action(preflight_state: dict[str, Any]) -> str:
+    blockers = preflight_state.get("blockers")
+    if not isinstance(blockers, list):
+        return ""
+    for blocker in blockers:
+        if not isinstance(blocker, dict):
+            continue
+        next_action = _normalized_text(blocker.get("next_action"))
+        if next_action:
+            return next_action
+    return ""
+
+
+def _resume_stage(
+    *,
+    record: UiRunRecord,
+    checkpoints: list[str],
+) -> str:
+    summary = dict(record.result_summary or {})
+    for key in ("latest_safe_resume_stage", "resume_from_stage", "checkpoint_stage"):
+        stage = _normalized_text(summary.get(key))
+        if stage:
+            return stage
+    for stage in reversed([_normalized_text(item) for item in checkpoints]):
+        if stage:
+            return stage
+    return ""
+
+
+def classify_ui_run_failure(
+    *,
+    record: UiRunRecord,
+    structured_events: list[dict[str, Any]] | None = None,
+    output_tail: str = "",
+    checkpoints: list[str] | None = None,
+    preflight_state: dict[str, Any] | None = None,
+) -> UiRunFailureClassification:
+    del structured_events
+    code = _normalized_text(record.error_code).lower()
+    message = _normalized_text(record.error_message).lower()
+    tail = _normalized_text(output_tail).lower()
+    checkpoint_names = list(checkpoints or [])
+    preflight = dict(preflight_state or {})
+    side_effect_warning = (
+        "Review persisted artifacts and idempotency keys before repeating side effects."
+    )
+
+    credential_action = _first_preflight_next_action(preflight)
+    if credential_action or any(
+        token in f"{code} {message}"
+        for token in ("credential", "api_key", "oauth", "missing_api_key")
+    ):
+        return UiRunFailureClassification(
+            schema_version="1.0",
+            action="request_credential",
+            reason="Failure evidence indicates missing or invalid credentials.",
+            side_effect_warning="No expensive side effects should be retried until credentials are fixed.",
+            retryable=False,
+            suggested_command=credential_action,
+        )
+
+    resume_stage = _resume_stage(record=record, checkpoints=checkpoint_names)
+    if resume_stage and record.run_type in {"ingest", "report_generation"}:
+        return UiRunFailureClassification(
+            schema_version="1.0",
+            action="resume_from_checkpoint",
+            reason=f"Run has a completed checkpoint suitable for resume: {resume_stage}.",
+            side_effect_warning="Resume from the checkpoint to avoid repeating completed stages.",
+            retryable=True,
+            resume_stage=resume_stage,
+            suggested_command=f"--resume-from-stage {resume_stage}",
+        )
+
+    if code == "ui_run_launch_failed" or any(
+        token in f"{code} {message} {tail}"
+        for token in ("permissionerror", "locked", "launch_failed")
+    ):
+        return UiRunFailureClassification(
+            schema_version="1.0",
+            action="cleanup_transient_resource",
+            reason="The worker launch failed before workflow execution completed.",
+            side_effect_warning="Cleanup only local worker/output resources before retrying.",
+            retryable=False,
+        )
+
+    if record.error_retryable is True:
+        retry_later = any(
+            token in f"{code} {message}"
+            for token in ("rate_limit", "quota", "temporarily_unavailable")
+        )
+        return UiRunFailureClassification(
+            schema_version="1.0",
+            action="retry_later" if retry_later else "retry_now",
+            reason="The failed AppError is marked retryable by the workflow boundary.",
+            side_effect_warning=side_effect_warning,
+            retryable=True,
+        )
+
+    if record.run_type == "publish" and any(
+        token in code for token in ("render", "projection", "artifact")
+    ):
+        return UiRunFailureClassification(
+            schema_version="1.0",
+            action="publish_only_continuation",
+            reason="Publish run failed after upstream artifacts were already produced.",
+            side_effect_warning="Continue only the publish side effect after confirming artifact IDs.",
+            retryable=False,
+        )
+
+    if any(token in code for token in ("validation", "quality", "content_gap")):
+        return UiRunFailureClassification(
+            schema_version="1.0",
+            action="mark_permanent",
+            reason="Failure evidence indicates a non-retryable validation or content-quality failure.",
+            side_effect_warning="Do not retry without changing source content or validation inputs.",
+            retryable=False,
+        )
+
+    return UiRunFailureClassification(
+        schema_version="1.0",
+        action="mark_permanent",
+        reason="Failure evidence is non-retryable and has no safe automated recovery path.",
+        side_effect_warning=side_effect_warning,
+        retryable=False,
     )
 
 
@@ -193,6 +344,18 @@ def build_dead_letter_record(
         error_message=record.error_message,
         retryable=record.error_retryable,
     )
+    classification = classify_ui_run_failure(record=record)
+    result_summary = asdict(record).get("result_summary", {})
+    result_summary["failure_classification"] = {
+        "schema_version": classification.schema_version,
+        "action": classification.action,
+        "reason": classification.reason,
+        "side_effect_warning": classification.side_effect_warning,
+        "retryable": classification.retryable,
+        "resume_stage": classification.resume_stage,
+        "suggested_command": classification.suggested_command,
+    }
+    auto_note = f"{classification.action}: {classification.reason}"
     return UiRunDeadLetterRecord(
         schema_version="1.0",
         run_id=record.run_id,
@@ -217,9 +380,9 @@ def build_dead_letter_record(
             registry_path=registry_path,
             record=record,
         ),
-        result_summary=asdict(record).get("result_summary", {}),
+        result_summary=result_summary,
         recovery_run_id=_normalized_text(recovery_run_id),
         last_action=_normalized_text(last_action),
-        last_action_note=_normalized_text(last_action_note),
+        last_action_note=_normalized_text(last_action_note) or auto_note,
         last_action_at_utc=_normalized_text(last_action_at_utc),
     )

@@ -12,6 +12,7 @@ import pytest
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_context import RunContext
 from src.orchestrators import report_pipeline_orchestrator as orch
 from src.orchestrators import retry_orchestrator as retry_orch
@@ -80,7 +81,16 @@ def test_run_report_pipeline_retries_retryable(
     calls = {"count": 0}
     sleep_calls: list[float] = []
 
-    def _gen(file, local_pdf_path, settings, md5, ctx):
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle=None,
+        resume_from_stage=None,
+    ):
         calls["count"] += 1
         if calls["count"] < 3:
             raise AppError(
@@ -154,7 +164,16 @@ def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
     calls = {"count": 0}
     sleep_calls: list[float] = []
 
-    def _gen(file, local_pdf_path, settings, md5, ctx):
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle=None,
+        resume_from_stage=None,
+    ):
         calls["count"] += 1
         raise AppError(code="openai_request_failed", message="retry", retryable=True)
 
@@ -239,7 +258,16 @@ def test_run_report_pipeline_retries_doc_map_transition_with_logs(
         status="processed",
     )
 
-    def _gen(file, local_pdf_path, settings, md5, ctx):
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle=None,
+        resume_from_stage=None,
+    ):
         calls["count"] += 1
         return retry_outcome if calls["count"] == 1 else success_outcome
 
@@ -308,7 +336,16 @@ def test_run_report_pipeline_retries_doc_map_no_content_with_valid_text(
         status="processed",
     )
 
-    def _gen(file, local_pdf_path, settings, md5, ctx):
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle=None,
+        resume_from_stage=None,
+    ):
         calls["count"] += 1
         return retry_outcome if calls["count"] == 1 else success_outcome
 
@@ -351,7 +388,16 @@ def test_run_report_pipeline_does_not_retry_doc_map_no_content_with_invalid_text
         doc_map_summary={"not_found_reason": "no_content"},
     )
 
-    def _gen(file, local_pdf_path, settings, md5, ctx):
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle=None,
+        resume_from_stage=None,
+    ):
         calls["count"] += 1
         return retry_outcome
 
@@ -393,7 +439,16 @@ def test_run_report_pipeline_doc_map_retry_is_bounded(monkeypatch) -> None:
         doc_map_summary={"not_found_reason": "model_returned_no_json"},
     )
 
-    def _gen(file, local_pdf_path, settings, md5, ctx):
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle=None,
+        resume_from_stage=None,
+    ):
         calls["count"] += 1
         return retry_outcome
 
@@ -469,11 +524,12 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
         md5,
         ctx,
         *,
-        evidence_pack_openai_client=None,
-        artifact_openai_client=None,
+        client_bundle=None,
+        resume_from_stage=None,
     ):
-        assert evidence_pack_openai_client is not None
-        assert artifact_openai_client is not None
+        assert client_bundle is not None
+        evidence_pack_openai_client = client_bundle.evidence_pack_client
+        artifact_openai_client = client_bundle.artifact_client
         vector_req = SimpleNamespace(model="gpt-5", vector_store_id="vs_1")
         chat_req = SimpleNamespace(model="gpt-5")
         with ThreadPoolExecutor(max_workers=4) as pool:
@@ -569,10 +625,11 @@ def test_run_report_pipeline_owns_retry_around_single_attempt_llm_service(
         md5,
         ctx,
         *,
-        evidence_pack_openai_client=None,
-        artifact_openai_client=None,
+        client_bundle=None,
+        resume_from_stage=None,
     ):
-        assert artifact_openai_client is not None
+        assert client_bundle is not None
+        artifact_openai_client = client_bundle.artifact_client
         response = artifact_openai_client.openai_chat_json(
             SimpleNamespace(model="gpt-5-mini"),
             ctx,
@@ -613,7 +670,16 @@ def test_run_report_pipeline_forwards_resume_stage_to_report_generation() -> Non
     )
     captured: dict[str, str] = {}
 
-    def _gen(file, local_pdf_path, settings, md5, ctx, *, resume_from_stage=None):
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle=None,
+        resume_from_stage=None,
+    ):
         captured["resume_from_stage"] = str(resume_from_stage or "")
         return IngestOutcome(
             schema_version="1.0",
@@ -637,6 +703,96 @@ def test_run_report_pipeline_forwards_resume_stage_to_report_generation() -> Non
 
     assert response.status == "processed"
     assert captured == {"resume_from_stage": "analysis_complete"}
+
+
+def test_run_report_pipeline_passes_explicit_report_client_bundle() -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    captured: dict[str, object] = {}
+
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle,
+        resume_from_stage=None,
+    ):
+        captured["bundle"] = client_bundle
+        captured["resume_from_stage"] = str(resume_from_stage or "")
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.name or file.file_id,
+            md5=md5,
+            html_path="./out/a.html",
+            status="processed",
+        )
+
+    response = orch.run_report_pipeline(
+        file,
+        local_pdf_path="./cache/a.pdf",
+        settings=_settings(),
+        md5="md5",
+        ctx=_ctx(),
+        retries=0,
+        generate_report_fn=_gen,
+        resume_from_stage="selection_complete",
+    )
+
+    assert response.status == "processed"
+    assert isinstance(captured["bundle"], ReportGenerationClientBundle)
+    bundle = captured["bundle"]
+    assert bundle.source_ocr_client is not None
+    assert bundle.taxonomy_client is not None
+    assert bundle.category_fit_client is not None
+    assert bundle.evidence_pack_client is not None
+    assert bundle.artifact_client is not None
+    assert bundle.validation_client is not None
+    assert bundle.regeneration_client is not None
+    assert bundle.figure_caption_client is not None
+    assert captured["resume_from_stage"] == "selection_complete"
+
+
+def test_report_pipeline_orchestrator_does_not_use_signature_reflection() -> None:
+    source = orch.__loader__.get_source(orch.__name__)
+
+    assert source is not None
+    assert "inspect.signature" not in source
+
+
+def test_report_generation_client_bundle_rejects_missing_client(
+    assert_app_error,
+) -> None:
+    bundle = ReportGenerationClientBundle(
+        schema_version="1.0",
+        source_ocr_client=object(),
+        taxonomy_client=object(),
+        category_fit_client=object(),
+        evidence_pack_client=object(),
+        artifact_client=object(),
+        validation_client=object(),
+        regeneration_client=object(),
+        figure_caption_client=None,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        bundle.validate()
+
+    assert_app_error(
+        exc_info.value,
+        code="report_generation_client_bundle_invalid",
+        retryable=False,
+        severity="error",
+    )
+    assert exc_info.value.context["field"] == "figure_caption_client"
 
 
 def test_run_report_pipeline_preflights_before_model_client_construction(

@@ -8,6 +8,10 @@ from src.contracts.analytics_projection import (
 )
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.report_generation import (
+    ReportGenerationClientBundle,
+    require_report_generation_client_bundle,
+)
 from src.contracts.run_context import RunContext
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
@@ -110,6 +114,7 @@ def run_report_generation(
     validation_openai_client=None,
     regeneration_openai_client=None,
     figure_caption_openai_client=None,
+    client_bundle: Optional[ReportGenerationClientBundle] = None,
     dependencies: Optional[ReportGenerationDependencies] = None,
     analytics_projection_fn: Optional[
         Callable[[AnalyticsProjectionRunRequest], object]
@@ -121,50 +126,61 @@ def run_report_generation(
         if dependencies is not None
         else _default_report_generation_dependencies()
     )
-    source_openai_client = _build_model_client(
-        settings,
-        scope="pdf_text_ocr",
-        provided_client=source_openai_client,
-        openai_ocr_pdf=deps.source.openai_ocr_pdf,
-    )
-    taxonomy_openai_client = _build_model_client(
-        settings,
-        scope="taxonomy",
-        provided_client=taxonomy_openai_client,
-    )
-    category_fit_openai_client = _build_model_client(
-        settings,
-        scope="context_category_fit",
-        provided_client=category_fit_openai_client,
-    )
-    evidence_pack_openai_client = _build_model_client(
-        settings,
-        scope="evidence_pack_generator",
-        provided_client=evidence_pack_openai_client,
-    )
-    artifact_openai_client = _build_model_client(
-        settings,
-        scope="artifact_generator",
-        provided_client=artifact_openai_client,
-    )
-    validation_openai_client = _build_model_client(
-        settings,
-        scope="validation",
-        provided_client=validation_openai_client,
-    )
-    regeneration_openai_client = _build_model_client(
-        settings,
-        scope="artifact_regeneration",
-        provided_client=regeneration_openai_client,
-    )
-    figure_caption_openai_client = _build_model_client(
-        settings,
-        scope="figure_caption",
-        provided_client=figure_caption_openai_client,
-        openai_chat_json_with_images=(
-            deps.analysis.figure_caption.openai_chat_json_with_images
-        ),
-    )
+    if client_bundle is not None:
+        bundle = require_report_generation_client_bundle(client_bundle)
+        source_openai_client = bundle.source_ocr_client
+        taxonomy_openai_client = bundle.taxonomy_client
+        category_fit_openai_client = bundle.category_fit_client
+        evidence_pack_openai_client = bundle.evidence_pack_client
+        artifact_openai_client = bundle.artifact_client
+        validation_openai_client = bundle.validation_client
+        regeneration_openai_client = bundle.regeneration_client
+        figure_caption_openai_client = bundle.figure_caption_client
+    else:
+        source_openai_client = _build_model_client(
+            settings,
+            scope="pdf_text_ocr",
+            provided_client=source_openai_client,
+            openai_ocr_pdf=deps.source.openai_ocr_pdf,
+        )
+        taxonomy_openai_client = _build_model_client(
+            settings,
+            scope="taxonomy",
+            provided_client=taxonomy_openai_client,
+        )
+        category_fit_openai_client = _build_model_client(
+            settings,
+            scope="context_category_fit",
+            provided_client=category_fit_openai_client,
+        )
+        evidence_pack_openai_client = _build_model_client(
+            settings,
+            scope="evidence_pack_generator",
+            provided_client=evidence_pack_openai_client,
+        )
+        artifact_openai_client = _build_model_client(
+            settings,
+            scope="artifact_generator",
+            provided_client=artifact_openai_client,
+        )
+        validation_openai_client = _build_model_client(
+            settings,
+            scope="validation",
+            provided_client=validation_openai_client,
+        )
+        regeneration_openai_client = _build_model_client(
+            settings,
+            scope="artifact_regeneration",
+            provided_client=regeneration_openai_client,
+        )
+        figure_caption_openai_client = _build_model_client(
+            settings,
+            scope="figure_caption",
+            provided_client=figure_caption_openai_client,
+            openai_chat_json_with_images=(
+                deps.analysis.figure_caption.openai_chat_json_with_images
+            ),
+        )
     runtime = _build_runtime_state(file, local_pdf_path, settings, md5, ctx)
     requested_resume_stage = str(resume_from_stage or "").strip()
     if requested_resume_stage:

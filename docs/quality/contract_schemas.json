@@ -20301,6 +20301,65 @@
       ],
       "type": "object"
     },
+    "src.contracts.report_artifacts.ArtifactRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "producer_step": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "kind",
+        "path",
+        "content_hash",
+        "producer_step",
+        "required",
+        "created_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_artifacts.ArtifactRegistry": {
+      "additionalProperties": false,
+      "properties": {
+        "refs": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.report_artifacts.ArtifactRef"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "refs"
+      ],
+      "type": "object"
+    },
     "src.contracts.report_assets.CropRefineBBoxApplyRequest": {
       "additionalProperties": false,
       "properties": {
@@ -21816,6 +21875,34 @@
         "data_dict",
         "evidence_paths",
         "evidence_packs"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_generation.ReportGenerationClientBundle": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_client": {},
+        "category_fit_client": {},
+        "evidence_pack_client": {},
+        "figure_caption_client": {},
+        "regeneration_client": {},
+        "schema_version": {
+          "type": "string"
+        },
+        "source_ocr_client": {},
+        "taxonomy_client": {},
+        "validation_client": {}
+      },
+      "required": [
+        "schema_version",
+        "source_ocr_client",
+        "taxonomy_client",
+        "category_fit_client",
+        "evidence_pack_client",
+        "artifact_client",
+        "validation_client",
+        "regeneration_client",
+        "figure_caption_client"
       ],
       "type": "object"
     },
@@ -25705,6 +25792,40 @@
       ],
       "type": "object"
     },
+    "src.contracts.ui_run_control.UiRunFailureClassification": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "resume_stage": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "side_effect_warning": {
+          "type": "string"
+        },
+        "suggested_command": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "action",
+        "reason",
+        "side_effect_warning",
+        "retryable"
+      ],
+      "type": "object"
+    },
     "src.contracts.ui_run_control.UiRunLaunchRequest": {
       "additionalProperties": false,
       "properties": {
@@ -25824,6 +25945,16 @@
     "src.contracts.ui_run_control.UiRunPollResponse": {
       "additionalProperties": false,
       "properties": {
+        "failure_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.ui_run_control.UiRunFailureClassification"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "output_chunk": {
           "anyOf": [
             {

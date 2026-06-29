@@ -112,7 +112,16 @@ def test_retry_on_retryable_app_error(
             sleep_fn=report_pipeline_orch.time.sleep,
         )
 
-    def _generate_report(file, cache_path, current_settings, md5, ctx):
+    def _generate_report(
+        file,
+        cache_path,
+        current_settings,
+        md5,
+        ctx,
+        *,
+        client_bundle=None,
+        resume_from_stage=None,
+    ):
         attempt_count["value"] += 1
         raise retry_error
 

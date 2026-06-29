@@ -52,6 +52,7 @@ from src.services.ui_run_replay_service import write_ui_run_worker_request
 from src.utils.clock import utc_now_iso as _utc_now
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.ui_run_dead_letter import classify_ui_run_failure
 from src.utils.ui_run_paths import ui_run_dir
 
 logger = logging.getLogger("market_lense.ui_run_control_orchestrator")
@@ -314,10 +315,17 @@ def poll_ui_run(request: UiRunPollRequest, ctx: RunContext) -> UiRunPollResponse
             ),
             ctx,
         ).chunk
+    failure_classification = None
+    if record.status == "failed":
+        failure_classification = classify_ui_run_failure(
+            record=record,
+            output_tail=output_chunk.text if output_chunk is not None else "",
+        )
     return UiRunPollResponse(
         schema_version="1.0",
         record=record,
         output_chunk=output_chunk,
+        failure_classification=failure_classification,
     )
 
 

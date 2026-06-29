@@ -643,13 +643,21 @@ def render_run_center() -> None:
                 )
             else:
                 selected_record = polled.record
-                dead_letter_actions = list_selected_dead_letter_actions(settings, limit=20)
+                dead_letter_actions = list_selected_dead_letter_actions(
+                    settings, limit=20
+                )
                 summary_cols = st.columns(2)
                 summary_cols[0].metric("Status", selected_record.status)
                 summary_cols[1].metric("Artifacts", len(selected_record.artifact_paths))
                 st.caption(
                     f"Run `{selected_record.run_id[:8]}` | type `{selected_record.run_type}` | created `{selected_record.created_at_utc}`"
                 )
+                if polled.failure_classification is not None:
+                    classification = polled.failure_classification
+                    st.info(
+                        f"Recommended action: {classification.action}. {classification.reason} "
+                        f"Side-effect warning: {classification.side_effect_warning}"
+                    )
                 if selected_record.artifact_paths:
                     st.dataframe(
                         [{"path": path} for path in selected_record.artifact_paths],
@@ -721,7 +729,9 @@ def render_run_center() -> None:
                                     recovery_run_id=str(response.record.run_id),
                                     note="Retry launched from Run Center.",
                                 )
-                                ui_state.set_selected_run_id(str(response.record.run_id))
+                                ui_state.set_selected_run_id(
+                                    str(response.record.run_id)
+                                )
                             st.rerun()
                         if selected_record.status == "failed":
                             if st.button(

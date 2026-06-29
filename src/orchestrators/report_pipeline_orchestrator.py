@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import inspect
 import logging
-from typing import Mapping
 import time
 from typing import Callable, Optional
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pipeline_preflight import PipelinePreflightReport
+from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_context import RunContext
 from src.orchestrators.report_generation_orchestrator import (
     run_report_generation as generate_report_orchestrator,
@@ -66,42 +65,18 @@ def _invoke_report_fn(
     settings: IngestSettings,
     md5: Optional[str],
     ctx: RunContext,
-    evidence_pack_openai_client,
-    artifact_openai_client,
-    source_openai_client=None,
-    taxonomy_openai_client=None,
-    category_fit_openai_client=None,
-    validation_openai_client=None,
-    regeneration_openai_client=None,
-    figure_caption_openai_client=None,
+    client_bundle: ReportGenerationClientBundle,
     resume_from_stage: Optional[str] = None,
 ) -> IngestOutcome:
-    kwargs = {}
-    try:
-        parameters: Mapping[str, inspect.Parameter] = inspect.signature(
-            report_fn
-        ).parameters
-    except (TypeError, ValueError):
-        parameters = {}
-    if "source_openai_client" in parameters:
-        kwargs["source_openai_client"] = source_openai_client
-    if "taxonomy_openai_client" in parameters:
-        kwargs["taxonomy_openai_client"] = taxonomy_openai_client
-    if "category_fit_openai_client" in parameters:
-        kwargs["category_fit_openai_client"] = category_fit_openai_client
-    if "evidence_pack_openai_client" in parameters:
-        kwargs["evidence_pack_openai_client"] = evidence_pack_openai_client
-    if "artifact_openai_client" in parameters:
-        kwargs["artifact_openai_client"] = artifact_openai_client
-    if "validation_openai_client" in parameters:
-        kwargs["validation_openai_client"] = validation_openai_client
-    if "regeneration_openai_client" in parameters:
-        kwargs["regeneration_openai_client"] = regeneration_openai_client
-    if "figure_caption_openai_client" in parameters:
-        kwargs["figure_caption_openai_client"] = figure_caption_openai_client
-    if "resume_from_stage" in parameters:
-        kwargs["resume_from_stage"] = resume_from_stage
-    return report_fn(file, local_pdf_path, settings, md5, ctx, **kwargs)
+    return report_fn(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        client_bundle=client_bundle.validate(),
+        resume_from_stage=resume_from_stage,
+    )
 
 
 def run_report_pipeline(
@@ -193,6 +168,17 @@ def run_report_pipeline(
         scope="figure_caption",
         base_client=openai_client_override,
     )
+    client_bundle = ReportGenerationClientBundle(
+        schema_version="1.0",
+        source_ocr_client=source_openai_client,
+        taxonomy_client=taxonomy_openai_client,
+        category_fit_client=category_fit_openai_client,
+        evidence_pack_client=evidence_openai_client,
+        artifact_client=artifact_openai_client,
+        validation_client=validation_openai_client,
+        regeneration_client=regeneration_openai_client,
+        figure_caption_client=figure_caption_openai_client,
+    ).validate()
     logger.info(
         log_event(
             ctx,
@@ -229,14 +215,7 @@ def run_report_pipeline(
             settings=settings,
             md5=md5,
             ctx=ctx,
-            evidence_pack_openai_client=evidence_openai_client,
-            artifact_openai_client=artifact_openai_client,
-            source_openai_client=source_openai_client,
-            taxonomy_openai_client=taxonomy_openai_client,
-            category_fit_openai_client=category_fit_openai_client,
-            validation_openai_client=validation_openai_client,
-            regeneration_openai_client=regeneration_openai_client,
-            figure_caption_openai_client=figure_caption_openai_client,
+            client_bundle=client_bundle,
             resume_from_stage=resume_from_stage,
         )
         doc_map_reason = _doc_map_reason(outcome)

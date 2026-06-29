@@ -301,6 +301,35 @@ class UiRunDeadLetterActionRecord:
 
 
 @dataclass(frozen=True)
+class UiRunFailureClassification:
+    schema_version: str = field(
+        metadata={"doc": "UI-run failure classification schema version."}
+    )
+    action: str = field(
+        metadata={
+            "doc": "Recommended next action: retry_now, retry_later, resume_from_checkpoint, request_credential, cleanup_transient_resource, publish_only_continuation, or mark_permanent."
+        }
+    )
+    reason: str = field(
+        metadata={"doc": "Structured human-readable reason for the recommendation."}
+    )
+    side_effect_warning: str = field(
+        metadata={"doc": "Warning about side effects or duplicate-work risk."}
+    )
+    retryable: bool = field(
+        metadata={"doc": "Whether automated retry is considered safe."}
+    )
+    resume_stage: str = field(
+        default="",
+        metadata={"doc": "Checkpoint stage to resume from when applicable."},
+    )
+    suggested_command: str = field(
+        default="",
+        metadata={"doc": "Operator command or credential action hint when applicable."},
+    )
+
+
+@dataclass(frozen=True)
 class UiRunLaunchRequest:
     schema_version: str = field(
         metadata={"doc": "UI-run launch request schema version."}
@@ -356,6 +385,10 @@ class UiRunPollResponse:
     output_chunk: Optional[ProcessOutputChunk] = field(
         default=None,
         metadata={"doc": "Optional trailing worker output chunk for the run."},
+    )
+    failure_classification: Optional[UiRunFailureClassification] = field(
+        default=None,
+        metadata={"doc": "Recommended failure recovery action for failed runs."},
     )
 
 

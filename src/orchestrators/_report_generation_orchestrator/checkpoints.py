@@ -9,6 +9,11 @@ from src.contracts.files import (
     PipelineCheckpointWriteRequest,
     PipelineStageCheckpoint,
 )
+from src.contracts.report_artifacts import (
+    ArtifactRef,
+    ArtifactRegistry,
+    artifact_registry_to_payload,
+)
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
 from src.contracts.pdf_utils import PdfInfoResponse
@@ -264,6 +269,11 @@ def _write_stage_checkpoint(
     checkpoint_payload["artifact_integrity"] = _artifact_integrity_payload(
         runtime, artifact_refs
     )
+    checkpoint_payload["artifact_registry"] = _artifact_registry_payload(
+        runtime,
+        stage_name=stage_name,
+        artifact_refs=artifact_refs,
+    )
     response = write_pipeline_checkpoint(
         PipelineCheckpointWriteRequest(
             schema_version="1.0",
@@ -295,10 +305,57 @@ def _write_stage_checkpoint(
                 "stage_name": stage_name,
                 "checkpoint_path": response.checkpoint_path,
                 "artifact_ref_count": len(artifact_refs),
+                "artifact_registry_count": len(
+                    checkpoint_payload["artifact_registry"]["refs"]
+                ),
             },
         )
     )
     return response.checkpoint_path
+
+
+def _artifact_required(artifact_id: str) -> bool:
+    return artifact_id not in {
+        "contents_image",
+        "preview_image",
+    }
+
+
+def _artifact_registry_payload(
+    runtime: ReportRuntimeState,
+    *,
+    stage_name: str,
+    artifact_refs: dict[str, str],
+) -> dict:
+    created_at_utc = datetime.now(timezone.utc).isoformat()
+    refs: list[ArtifactRef] = []
+    for raw_artifact_id, raw_path in artifact_refs.items():
+        artifact_id = str(raw_artifact_id or "").strip()
+        path = str(raw_path or "").strip()
+        if not artifact_id or not path:
+            continue
+        stat = file_stat(
+            FileStatRequest(schema_version="1.0", path=path, compute_md5=True),
+            runtime.ctx,
+        )
+        required = _artifact_required(artifact_id)
+        if required and (not stat.exists or not stat.is_file):
+            continue
+        refs.append(
+            ArtifactRef(
+                schema_version="1.0",
+                artifact_id=artifact_id,
+                kind=artifact_id,
+                path=stat.path,
+                content_hash=stat.md5 or "",
+                producer_step=stage_name,
+                required=required,
+                created_at_utc=created_at_utc,
+            )
+        )
+    return artifact_registry_to_payload(
+        ArtifactRegistry(schema_version="1.0", refs=refs)
+    )
 
 
 def _artifact_integrity_payload(
@@ -628,6 +685,7 @@ __all__ = [
     "_regeneration_loop_from_dict",
     "_regeneration_attempts_from_list",
     "_write_stage_checkpoint",
+    "_artifact_registry_payload",
     "_artifact_integrity_payload",
     "_source_checkpoint_payload",
     "_selection_checkpoint_payload",

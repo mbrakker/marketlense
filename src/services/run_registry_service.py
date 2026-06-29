@@ -322,7 +322,7 @@ def _upsert_dead_letter_for_failed_record(
                 str(dead_letter.run_id),
                 "auto_triaged",
                 "system",
-                dead_letter.triage_reason,
+                dead_letter.last_action_note or dead_letter.triage_reason,
                 "",
                 dead_letter.updated_at_utc,
             ),

@@ -15,6 +15,7 @@ from src.contracts.files import (
     PipelineCheckpointReadRequest,
     PipelineStageCheckpoint,
 )
+from src.contracts.report_artifacts import artifact_registry_from_payload
 from src.contracts.ingest import IngestOutcome
 from src.contracts.report_generation import (
     ReportAnalysisState,
@@ -413,6 +414,7 @@ def _validate_checkpoint_artifacts(
     checkpoint: PipelineStageCheckpoint,
     checkpoint_path: str,
 ) -> None:
+    _validate_checkpoint_artifact_registry(runtime, checkpoint, checkpoint_path)
     raw_integrity = checkpoint.payload.get("artifact_integrity")
     if not isinstance(raw_integrity, dict):
         return
@@ -515,6 +517,97 @@ def _validate_checkpoint_artifacts(
                 "stage_name": checkpoint.stage_name,
                 "checkpoint_path": checkpoint_path,
                 "artifact_count": len(raw_files),
+            },
+        )
+    )
+
+
+def _validate_checkpoint_artifact_registry(
+    runtime: ReportRuntimeState,
+    checkpoint: PipelineStageCheckpoint,
+    checkpoint_path: str,
+) -> None:
+    registry = artifact_registry_from_payload(
+        checkpoint.payload.get("artifact_registry")
+    )
+    if registry is None:
+        return
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="orchestrator",
+            event="report_pipeline_checkpoint_artifact_registry_validation_start",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "stage_name": checkpoint.stage_name,
+                "checkpoint_path": checkpoint_path,
+                "artifact_count": len(registry.refs),
+            },
+        )
+    )
+    for ref in registry.refs:
+        expected_path = str(ref.path or "").strip()
+        current_path = str(checkpoint.artifact_refs.get(ref.artifact_id) or "").strip()
+        if current_path and current_path != expected_path:
+            raise AppError(
+                code="report_pipeline_checkpoint_artifact_missing",
+                message="Checkpoint artifact registry path differs from artifact_refs",
+                retryable=False,
+                context={
+                    "file_id": runtime.file.file_id,
+                    "stage_name": checkpoint.stage_name,
+                    "artifact_id": ref.artifact_id,
+                    "expected_path": expected_path,
+                    "current_path": current_path,
+                    "checkpoint_path": checkpoint_path,
+                },
+            )
+        stat = file_stat(
+            FileStatRequest(schema_version="1.0", path=expected_path, compute_md5=True),
+            runtime.ctx,
+        )
+        if not stat.exists or not stat.is_file:
+            if ref.required:
+                raise AppError(
+                    code="report_pipeline_checkpoint_artifact_missing",
+                    message="Required checkpoint artifact is missing",
+                    retryable=False,
+                    context={
+                        "file_id": runtime.file.file_id,
+                        "stage_name": checkpoint.stage_name,
+                        "artifact_id": ref.artifact_id,
+                        "path": expected_path,
+                        "checkpoint_path": checkpoint_path,
+                    },
+                )
+            continue
+        if ref.content_hash and stat.md5 != ref.content_hash:
+            raise AppError(
+                code="report_pipeline_checkpoint_artifact_hash_mismatch",
+                message="Checkpoint artifact registry hash does not match current file",
+                retryable=False,
+                context={
+                    "file_id": runtime.file.file_id,
+                    "stage_name": checkpoint.stage_name,
+                    "artifact_id": ref.artifact_id,
+                    "path": expected_path,
+                    "expected_md5": ref.content_hash,
+                    "actual_md5": stat.md5 or "",
+                    "checkpoint_path": checkpoint_path,
+                },
+            )
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="orchestrator",
+            event="report_pipeline_checkpoint_artifact_registry_validation_complete",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "stage_name": checkpoint.stage_name,
+                "checkpoint_path": checkpoint_path,
+                "artifact_count": len(registry.refs),
             },
         )
     )
@@ -1054,6 +1147,7 @@ __all__ = [
     "LATEST_SAFE_RESTART_STAGE",
     "_read_validated_checkpoint",
     "_validate_checkpoint_artifacts",
+    "_validate_checkpoint_artifact_registry",
     "_resume_from_checkpoint_stage",
     "_resume_from_source_checkpoint",
     "_resume_from_selection_checkpoint",

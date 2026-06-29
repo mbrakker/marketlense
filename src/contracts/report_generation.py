@@ -14,6 +14,70 @@ from src.contracts.regeneration import (
 from src.contracts.report_models import ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
+from src.utils.errors import AppError
+
+
+@dataclass(frozen=True)
+class ReportGenerationClientBundle:
+    schema_version: str = field(
+        metadata={"doc": "Report-generation model-client bundle schema version."}
+    )
+    source_ocr_client: Any = field(
+        metadata={"doc": "Client used for source OCR model calls."}
+    )
+    taxonomy_client: Any = field(
+        metadata={"doc": "Client used for taxonomy model calls."}
+    )
+    category_fit_client: Any = field(
+        metadata={"doc": "Client used for context/category-fit model calls."}
+    )
+    evidence_pack_client: Any = field(
+        metadata={"doc": "Client used for evidence-pack model calls."}
+    )
+    artifact_client: Any = field(
+        metadata={"doc": "Client used for report artifact model calls."}
+    )
+    validation_client: Any = field(
+        metadata={"doc": "Client used for validation model calls."}
+    )
+    regeneration_client: Any = field(
+        metadata={"doc": "Client used for artifact-regeneration model calls."}
+    )
+    figure_caption_client: Any = field(
+        metadata={"doc": "Client used for figure-caption model calls."}
+    )
+
+    def validate(self) -> "ReportGenerationClientBundle":
+        for field_name in (
+            "source_ocr_client",
+            "taxonomy_client",
+            "category_fit_client",
+            "evidence_pack_client",
+            "artifact_client",
+            "validation_client",
+            "regeneration_client",
+            "figure_caption_client",
+        ):
+            if getattr(self, field_name) is None:
+                raise AppError(
+                    code="report_generation_client_bundle_invalid",
+                    message="Report-generation client bundle is missing a required client",
+                    retryable=False,
+                    context={"field": field_name},
+                )
+        return self
+
+
+def require_report_generation_client_bundle(
+    bundle: Any,
+) -> ReportGenerationClientBundle:
+    if not isinstance(bundle, ReportGenerationClientBundle):
+        raise AppError(
+            code="report_generation_client_bundle_invalid",
+            message="Report-generation client bundle must be a ReportGenerationClientBundle",
+            retryable=False,
+        )
+    return bundle.validate()
 
 
 @dataclass(frozen=True)

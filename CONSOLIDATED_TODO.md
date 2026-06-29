@@ -42,6 +42,7 @@ Scoring:
 - Pipeline preflight before expensive report work is live through `src/contracts/pipeline_preflight.py` and `src/orchestrators/pipeline_preflight_orchestrator.py`. `run_report_pipeline` now runs a typed preflight before model client construction and blocks expensive side effects with `AppError(code="pipeline_preflight_blocked")` when prerequisites fail. The preflight checks writable output/cache/state/report paths, OpenAI model credentials, required prompt namespaces, optional live Drive write readiness with OAuth refresh remediation, browser readiness, and WordPress publish target readiness through the canonical service boundaries. Live verification on 2026-06-29 loaded the project config and publish settings, checked 19 prerequisites, found 0 blockers and 0 warnings, refreshed Drive OAuth credentials automatically, and allowed expensive work only after preflight passed.
 - Retry-decision telemetry and policy tuning reports are live through `src/contracts/retry_telemetry.py`, `src/orchestrators/retry_telemetry_orchestrator.py`, `scripts/quality/retry_decision_telemetry.py`, and the run health scorecard. A live structured retry-boundary run on 2026-06-29 produced 2 retry decisions, reported a successful-after-retry rate of 1.0, retry-exhaustion rate of 0.0, 1 credential-action avoided-call estimate, and attached the same telemetry to `out/live_retry_health_scorecard_success_20260629.json` with no scorecard warnings.
 - New control-plane interconnection gates cover pipeline preflight and retry telemetry through `scripts/ci/check_coverage.py`, `scripts/ci/run_mutation_gate.py`, and focused tests. Verification on 2026-06-29 showed `src/control-plane` coverage at 94.05% against the new 85% gate, targeted control-plane mutation at 12/12 killed across preflight and retry telemetry, focused control-plane tests at 31 passed, and the full non-integration suite at 3320 passed.
+- Explicit report-generation client bundles, typed checkpoint artifact registries, and UI-run failure classifications are live. `run_report_pipeline` now passes `ReportGenerationClientBundle` instead of reflecting report-function signatures, checkpoints persist typed artifact refs with hashes and required/optional semantics, resume validates registry entries while preserving legacy checkpoint compatibility, and UI poll/dead-letter paths expose recommended next actions. Verification on 2026-06-29 covered focused red/green tests, contract round trips for 1,368 dataclasses, full default pytest with coverage at 3,345 passed / 25 deselected, coverage gate at 83.59% global and 95.55% control-plane, mutation gate with `report_pipeline_orchestrator.py` at 3/3 killed, and quality non-regression. Live existing-PDF runs with real model/API calls wrote registries for source/selection/analysis/render checkpoints and validated `latest_safe` resume in 0.144s after a 523.947s fresh run and 0.082s after a 501.629s fresh run; live UI worker failure classification persisted an `auto_triaged` dead-letter action with `mark_permanent` recommendation for an invalid report-download payload.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
 - Claim-level embedding persistence is live: `claim_embeddings` stores durable vectors/provider metadata/status/error taxonomy linked to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`, and `claim_embedding_orchestrator` owns pending/stale embedding workflow execution.
@@ -214,36 +215,6 @@ Scoring:
     - CLI/UI can run a read-only plan mode before execution and can execute an approved plan through existing orchestrators.
     - Tests cover ready, partially complete, failed, missing-credential, and publish-only states with plan contract and log assertions.
 
-- **Title:** Replace reflective report-function invocation with an explicit client/dependency bundle contract [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: `run_report_pipeline` currently introspects the report function signature to decide which model clients and resume arguments to pass. That hides integration mismatches until runtime and weakens the contract between pipeline and report-generation layers.
-  - Why implement: An explicit dataclass bundle makes the boundary self-documenting, statically inspectable, and easier to evolve when model scopes change.
-  - Tradeoffs / risks: Existing tests and injection seams must be migrated without reducing the ability to pass focused fakes at service boundaries.
-  - Acceptance Criteria:
-    - A typed report-generation client/dependency bundle carries source OCR, taxonomy, category-fit, evidence-pack, artifact, validation, regeneration, and figure-caption clients.
-    - `run_report_pipeline` passes the bundle explicitly instead of using `inspect.signature`.
-    - Report-generation tests cover missing/invalid bundle fields and injected fake clients without monkeypatching private helpers.
-    - Public behavior, prompt/model call counts, and retry semantics remain unchanged.
-
-- **Title:** Add a typed cross-step artifact registry instead of passing generic path strings [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Checkpoints and workflow payloads pass artifact references as generic string maps, so downstream stages trust path conventions rather than typed artifact identity, content hash, producer step, and required/optional semantics.
-  - Why implement: A registry makes source, selection, analysis, render, projection, signal, and publish dependencies explicit and verifiable, improving resume safety and cache correctness.
-  - Tradeoffs / risks: Requires migration around existing checkpoint payloads and backward-compatible reading of old artifact reference maps.
-  - Acceptance Criteria:
-    - `ArtifactRef` records include schema version, artifact ID, kind, path, content hash, producer step, required flag, and created timestamp.
-    - Checkpoints reference typed artifact IDs and validate required artifact availability before resume or publish.
-    - Legacy checkpoint artifact maps adapt into registry entries or fail with actionable typed errors.
-    - Tests cover missing artifact, stale hash, optional artifact absence, duplicate artifact ID, and successful fresh/resumed runs.
-
-- **Title:** Make UI runs self-healing with failure classification and suggested actions [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: UI runs record process state, output paths, errors, and dead-letter information, but failed runs are not consistently classified into retry, resume, defer, cleanup, credential action, or permanent-failure next steps.
-  - Why implement: Operators get one-click or clearly guided recovery instead of reading logs and deciding which low-level command to run next.
-  - Tradeoffs / risks: The classifier must consume structured evidence only and avoid inventing recovery actions that could duplicate side effects.
-  - Acceptance Criteria:
-    - A typed run-failure classifier consumes `UiRunRecord`, structured logs, output tail, `AppError` fields, checkpoints, and preflight state.
-    - It returns next actions such as retry now, retry later, resume from checkpoint, request credential, cleanup transient resource, publish-only continuation, or mark permanent.
-    - UI/CLI display the recommended action with reason and side-effect warning.
-    - Tests cover process-launch failure, retryable `AppError`, missing credential, checkpoint-resumable failure, permanent validation failure, and dead-letter action recording.
-
 - **Title:** Add config-driven autopilot profiles for common pipeline intents [Impact: 4/5, Effort: 3/5]
   - Problem fixed: The settings model exposes many low-level knobs for workers, Drive listing, OCR, model scopes, ranking, caching, and publishing, so users still need operational knowledge to choose a safe run mode.
   - Why implement: Profiles let users choose intent, not implementation details, and let the planner select safe defaults based on current state.
@@ -253,6 +224,17 @@ Scoring:
     - The planner can recommend or apply a profile while logging every resolved low-level setting that changes behavior.
     - Profile resolution validates against the existing settings contract and never hides secrets in YAML.
     - Tests cover profile selection, explicit override precedence, invalid profile names, and deterministic resolved settings.
+
+- **Title:** Add registry-backed report-card publication-date remediation [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Live report-pipeline runs can complete analysis, render HTML, and persist valid checkpoint registries, then finish with `card_publication_date_invalid` because report-card publication-date evidence is missing or not normalized.
+  - Why implement: Turns a high-cost terminal failure into a targeted repair/resume action that reuses existing checkpoints and avoids repeating model/vector work.
+  - Tradeoffs / risks: Must not invent dates. Repairs must use source-backed `doc_map`, report metadata, or explicit operator input and fail closed when evidence is absent.
+  - Acceptance Criteria:
+    - UI failure classification maps `card_publication_date_invalid` to a targeted repair action with side-effect warning and resume stage.
+    - The repair path reads typed artifact registry entries for `doc_map`, `artifacts`, validation, and rendered HTML instead of scanning path conventions.
+    - Publication-date normalization accepts only source-supported dates or explicit operator-supplied dates with audit fields.
+    - Tests cover source-supported repair, absent-date fail-closed behavior, operator override audit fields, registry-missing failure, and idempotent resume.
+    - Live verification on existing PDFs shows a previously blocked report-card run resumes from checkpoint without rerunning upstream model work.
 
 
 ## Closed or Removed From Active Backlog
