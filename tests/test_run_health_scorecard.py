@@ -203,3 +203,31 @@ def test_run_health_scorecard_reports_missing_pdf_evidence_as_incomplete() -> No
         "missing crop_refine benchmark evidence; missing trend benchmark evidence"
         in scorecard.warnings
     )
+
+
+def test_run_health_scorecard_attaches_retry_telemetry_and_warns_on_exhaustion() -> (
+    None
+):
+    scorecard = build_scorecard(
+        [
+            {
+                "run_id": "run-1",
+                "event": "report_pipeline_failed",
+                "fields": {
+                    "step": "report_pipeline",
+                    "decision": "abort",
+                    "reason": "retry_attempts_exhausted",
+                    "error_code": "openai_request_failed",
+                    "decision_attempt": 3,
+                    "delay_seconds": 0,
+                },
+            }
+        ],
+        run_id="run-1",
+        max_retry_exhaustion_rate=0.0,
+    )
+
+    assert scorecard.retry_telemetry_report is not None
+    assert scorecard.retry_telemetry_report.retry_exhaustion_count == 1
+    assert scorecard.retry_telemetry_report.retry_exhaustion_rate == 1.0
+    assert "retry_exhaustion_rate 1.0000 exceeds 0.0000" in scorecard.warnings

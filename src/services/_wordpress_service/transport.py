@@ -10,6 +10,10 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 import requests
 import urllib3
 from src.contracts.run_context import RunContext
+from src.contracts.wordpress import (
+    WordPressPublishTargetPreflightRequest,
+    WordPressPublishTargetPreflightResponse,
+)
 from src.services._http_transport_common import session_pool_key as _session_pool_key
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -368,6 +372,103 @@ def _safe_json(text: str) -> Dict[str, Any]:
         return {}
 
 
+def preflight_publish_target(
+    request: WordPressPublishTargetPreflightRequest,
+    ctx: RunContext,
+) -> WordPressPublishTargetPreflightResponse:
+    endpoint = _post_type_endpoint(request.post_type)
+    base = request.base_url.rstrip("/")
+    url = f"{base}/wp-json/wp/v2/types/{endpoint}"
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="wordpress_publish_target_preflight_start",
+            module=logger.name,
+            fields={
+                "base_url": base,
+                "post_type": request.post_type,
+                "endpoint": endpoint,
+            },
+        )
+    )
+    result = _execute_request(
+        method="GET",
+        url=url,
+        headers={"Authorization": request.auth_header},
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wordpress_publish_target_preflight_failed",
+        request_error_code="wordpress_publish_target_unreachable",
+        request_error_message="WordPress publish target preflight failed",
+        request_error_fields={"post_type": request.post_type, "endpoint": endpoint},
+    )
+    response = result.response
+    status_code = int(getattr(response, "status_code", 0) or 0)
+    if status_code >= 500:
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wordpress_publish_target_preflight_failed",
+            code="wordpress_publish_target_unreachable",
+            message_prefix="WordPress publish target preflight failed",
+            resp=response,
+            fields={"post_type": request.post_type, "endpoint": endpoint},
+        )
+    if status_code >= 400:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="wordpress_publish_target_preflight_failed",
+                module=logger.name,
+                fields={
+                    "post_type": request.post_type,
+                    "endpoint": endpoint,
+                    "status_code": status_code,
+                },
+            )
+        )
+        raise AppError(
+            code="wordpress_publish_target_unavailable",
+            message=f"WordPress publish target preflight failed: {status_code}",
+            retryable=False,
+            context={"post_type": request.post_type, "status_code": status_code},
+        )
+    payload = _safe_json(getattr(response, "text", "") or "")
+    if not isinstance(payload, dict):
+        payload = {}
+    if str(payload.get("rest_base") or payload.get("slug") or endpoint).strip() == "":
+        raise AppError(
+            code="wordpress_publish_target_invalid_response",
+            message="WordPress publish target preflight returned invalid JSON",
+            retryable=False,
+            context={"post_type": request.post_type},
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="wordpress_publish_target_preflight_complete",
+            module=logger.name,
+            fields={
+                "post_type": request.post_type,
+                "endpoint": endpoint,
+                "status_code": status_code,
+                "pool_reused": result.pool_reused,
+            },
+        )
+    )
+    return WordPressPublishTargetPreflightResponse(
+        schema_version="1.0",
+        base_url=base,
+        post_type=request.post_type,
+        endpoint=endpoint,
+        reachable=True,
+        status_code=status_code,
+    )
+
+
 __all__ = [
     "_WordPressRequestResult",
     "_SessionPool",
@@ -388,4 +489,5 @@ __all__ = [
     "_raise_http_server_error",
     "_raise_http_redirect_error",
     "_safe_json",
+    "preflight_publish_target",
 ]

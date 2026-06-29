@@ -18823,6 +18823,194 @@
       ],
       "type": "object"
     },
+    "src.contracts.pipeline_preflight.PipelinePreflightCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "auto_fix_applied": {
+          "type": "boolean"
+        },
+        "check_name": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "next_action": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "warning",
+            "blocker",
+            "auto_fixed"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "check_name",
+        "status",
+        "code",
+        "message",
+        "next_action",
+        "auto_fix_applied",
+        "metadata"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pipeline_preflight.PipelinePreflightReport": {
+      "additionalProperties": false,
+      "properties": {
+        "auto_fixable_issues": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pipeline_preflight.PipelinePreflightCheck"
+          },
+          "type": "array"
+        },
+        "auto_fixed_count": {
+          "type": "integer"
+        },
+        "blocker_count": {
+          "type": "integer"
+        },
+        "blockers": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pipeline_preflight.PipelinePreflightCheck"
+          },
+          "type": "array"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pipeline_preflight.PipelinePreflightCheck"
+          },
+          "type": "array"
+        },
+        "expensive_side_effects_allowed": {
+          "type": "boolean"
+        },
+        "next_actions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "planned_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "warning_count": {
+          "type": "integer"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pipeline_preflight.PipelinePreflightCheck"
+          },
+          "type": "array"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "planned_side_effects",
+        "passed",
+        "expensive_side_effects_allowed",
+        "blocker_count",
+        "warning_count",
+        "auto_fixed_count",
+        "checks",
+        "blockers",
+        "warnings",
+        "auto_fixable_issues",
+        "next_actions"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pipeline_preflight.PipelinePreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "planned_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "prompt_namespaces": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "publish_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.publish.PublishSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "require_browser": {
+          "type": "boolean"
+        },
+        "require_drive": {
+          "type": "boolean"
+        },
+        "require_live_endpoints": {
+          "type": "boolean"
+        },
+        "require_llm": {
+          "type": "boolean"
+        },
+        "require_publish": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/src.contracts.ingest.IngestSettings"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "planned_side_effects",
+        "settings",
+        "prompt_namespaces",
+        "require_llm",
+        "require_drive",
+        "require_publish",
+        "require_browser",
+        "require_live_endpoints"
+      ],
+      "type": "object"
+    },
     "src.contracts.prompts.PromptDryRunBenchmark": {
       "additionalProperties": false,
       "properties": {
@@ -22147,6 +22335,148 @@
         "error_code",
         "error_retryable",
         "error_severity"
+      ],
+      "type": "object"
+    },
+    "src.contracts.retry_telemetry.RetryDecisionTelemetryReport": {
+      "additionalProperties": false,
+      "properties": {
+        "cumulative_retry_delay_seconds": {
+          "type": "number"
+        },
+        "decision_count": {
+          "type": "integer"
+        },
+        "deferred_count": {
+          "type": "integer"
+        },
+        "estimated_avoided_calls": {
+          "type": "integer"
+        },
+        "estimated_wasted_calls": {
+          "type": "integer"
+        },
+        "retry_count": {
+          "type": "integer"
+        },
+        "retry_exhaustion_count": {
+          "type": "integer"
+        },
+        "retry_exhaustion_rate": {
+          "type": "number"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.retry_telemetry.RetryDecisionTelemetryRow"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "successful_after_retry_count": {
+          "type": "integer"
+        },
+        "successful_after_retry_rate": {
+          "type": "number"
+        },
+        "user_action_required_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "decision_count",
+        "retry_count",
+        "deferred_count",
+        "user_action_required_count",
+        "retry_exhaustion_count",
+        "successful_after_retry_count",
+        "successful_after_retry_rate",
+        "retry_exhaustion_rate",
+        "cumulative_retry_delay_seconds",
+        "estimated_wasted_calls",
+        "estimated_avoided_calls",
+        "rows"
+      ],
+      "type": "object"
+    },
+    "src.contracts.retry_telemetry.RetryDecisionTelemetryRow": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "cumulative_delay_seconds": {
+          "type": "number"
+        },
+        "decision_count": {
+          "type": "integer"
+        },
+        "deferred_count": {
+          "type": "integer"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "estimated_avoided_calls": {
+          "type": "integer"
+        },
+        "estimated_wasted_calls": {
+          "type": "integer"
+        },
+        "final_outcomes": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "max_attempt": {
+          "type": "integer"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "retry_exhaustion_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "step_name": {
+          "type": "string"
+        },
+        "successful_after_retry_count": {
+          "type": "integer"
+        },
+        "user_action_required_count": {
+          "type": "integer"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "step_name",
+        "error_code",
+        "publisher",
+        "workflow",
+        "action",
+        "reason",
+        "decision_count",
+        "max_attempt",
+        "cumulative_delay_seconds",
+        "successful_after_retry_count",
+        "retry_exhaustion_count",
+        "deferred_count",
+        "user_action_required_count",
+        "estimated_wasted_calls",
+        "estimated_avoided_calls",
+        "final_outcomes"
       ],
       "type": "object"
     },
@@ -28209,6 +28539,75 @@
       "required": [
         "schema_version",
         "post_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress.WordPressPublishTargetPreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_header": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "ca_bundle_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "post_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "ssl_verify": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "base_url",
+        "auth_header",
+        "post_type"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress.WordPressPublishTargetPreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "post_type": {
+          "type": "string"
+        },
+        "reachable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status_code": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "base_url",
+        "post_type",
+        "endpoint",
+        "reachable",
+        "status_code"
       ],
       "type": "object"
     },

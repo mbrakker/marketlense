@@ -15,6 +15,10 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.run_context import RunContext
 from src.orchestrators import report_pipeline_orchestrator as orch
 from src.orchestrators import retry_orchestrator as retry_orch
+from src.contracts.pipeline_preflight import (
+    PipelinePreflightReport,
+    PipelinePreflightCheck,
+)
 from src.utils.errors import AppError
 
 
@@ -633,3 +637,69 @@ def test_run_report_pipeline_forwards_resume_stage_to_report_generation() -> Non
 
     assert response.status == "processed"
     assert captured == {"resume_from_stage": "analysis_complete"}
+
+
+def test_run_report_pipeline_preflights_before_model_client_construction(
+    monkeypatch,
+    assert_app_error,
+) -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    model_client_calls = {"count": 0}
+
+    def _build_client(*_args, **_kwargs):
+        model_client_calls["count"] += 1
+        raise AssertionError("model clients must not be built after blocking preflight")
+
+    blocking_check = PipelinePreflightCheck(
+        schema_version="1.0",
+        check_name="openai_api_key",
+        status="blocker",
+        code="openai_missing_api_key",
+        message="OpenAI API key is missing",
+        next_action="set_OPENAI_API_KEY",
+        auto_fix_applied=False,
+        metadata={},
+    )
+    blocking_report = PipelinePreflightReport(
+        schema_version="1.0",
+        workflow="report_pipeline",
+        planned_side_effects=["pdf", "model"],
+        passed=False,
+        expensive_side_effects_allowed=False,
+        blocker_count=1,
+        warning_count=0,
+        auto_fixed_count=0,
+        checks=[blocking_check],
+        blockers=[blocking_check],
+        warnings=[],
+        auto_fixable_issues=[],
+        next_actions=["set_OPENAI_API_KEY", "rerun_preflight"],
+    )
+
+    monkeypatch.setattr(orch.llm_service, "build_client_for_settings", _build_client)
+
+    with pytest.raises(AppError) as exc_info:
+        orch.run_report_pipeline(
+            file,
+            local_pdf_path="./cache/a.pdf",
+            settings=_settings(),
+            md5="md5",
+            ctx=_ctx(),
+            retries=0,
+            generate_report_fn=lambda *_args, **_kwargs: None,
+            preflight_fn=lambda *_args, **_kwargs: blocking_report,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="pipeline_preflight_blocked",
+        retryable=False,
+        severity="error",
+    )
+    assert model_client_calls["count"] == 0

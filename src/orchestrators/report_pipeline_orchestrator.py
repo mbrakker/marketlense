@@ -8,11 +8,16 @@ from typing import Callable, Optional
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.pipeline_preflight import PipelinePreflightReport
 from src.contracts.run_context import RunContext
 from src.orchestrators.report_generation_orchestrator import (
     run_report_generation as generate_report_orchestrator,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.orchestrators.pipeline_preflight_orchestrator import (
+    assert_expensive_side_effects_allowed,
+    preflight_report_pipeline,
+)
 from src.services import llm_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -110,8 +115,15 @@ def run_report_pipeline(
     generate_report_fn: Optional[Callable[..., IngestOutcome]] = None,
     openai_client_override=None,
     resume_from_stage: Optional[str] = None,
+    preflight_fn: Optional[Callable[..., PipelinePreflightReport]] = None,
 ) -> IngestOutcome:
     report_fn = generate_report_fn or generate_report_orchestrator
+    preflight_report = (
+        preflight_fn(settings, ctx)
+        if preflight_fn is not None
+        else preflight_report_pipeline(settings, ctx)
+    )
+    assert_expensive_side_effects_allowed(preflight_report, ctx)
     evidence_max_in_flight = coerce_int(
         getattr(settings, "evidence_pack_global_max_in_flight", 2), 2, min_value=1
     )

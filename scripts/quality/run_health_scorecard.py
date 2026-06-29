@@ -2,10 +2,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.contracts.retry_telemetry import RetryDecisionTelemetryReport
+from src.orchestrators.retry_telemetry_orchestrator import (
+    build_retry_decision_telemetry,
+)
 
 
 @dataclass(frozen=True)
@@ -61,6 +71,7 @@ class RunHealthScorecard:
     latency_seconds: float | None
     warnings: tuple[str, ...]
     pdf_benchmark_scorecard: PdfBenchmarkScorecard | None = None
+    retry_telemetry_report: RetryDecisionTelemetryReport | None = None
 
 
 def _parse_timestamp(value: Any) -> datetime | None:
@@ -104,6 +115,7 @@ def build_scorecard(
     pdf_benchmark_source_files: Iterable[str] = (),
     missing_pdf_benchmark_sources: Iterable[str] = (),
     require_pdf_benchmark_evidence: bool = False,
+    max_retry_exhaustion_rate: float | None = None,
 ) -> RunHealthScorecard:
     events = list(payloads)
     selected_run_id = str(run_id or (events[0].get("run_id") if events else "") or "")
@@ -155,6 +167,19 @@ def build_scorecard(
     if max_cost_usd is not None and cost_usd > max_cost_usd:
         warnings.append(f"cost_usd {cost_usd:.6f} exceeds {max_cost_usd:.6f}")
 
+    retry_telemetry_report = build_retry_decision_telemetry(events)
+    if retry_telemetry_report.decision_count == 0:
+        retry_telemetry_report = None
+    elif (
+        max_retry_exhaustion_rate is not None
+        and retry_telemetry_report.retry_exhaustion_rate > max_retry_exhaustion_rate
+    ):
+        warnings.append(
+            "retry_exhaustion_rate "
+            f"{retry_telemetry_report.retry_exhaustion_rate:.4f} exceeds "
+            f"{max_retry_exhaustion_rate:.4f}"
+        )
+
     missing_pdf_sources = tuple(missing_pdf_benchmark_sources)
     pdf_payload_inputs = (
         tuple(pdf_candidate_payloads or ()),
@@ -203,6 +228,7 @@ def build_scorecard(
         latency_seconds=latency_seconds,
         warnings=tuple(warnings),
         pdf_benchmark_scorecard=pdf_benchmark_scorecard,
+        retry_telemetry_report=retry_telemetry_report,
     )
 
 
@@ -461,6 +487,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--max-errors", type=int, default=0)
     parser.add_argument("--max-retries", type=int, default=3)
     parser.add_argument("--max-cost-usd", type=float, default=None)
+    parser.add_argument("--max-retry-exhaustion-rate", type=float, default=None)
     parser.add_argument("--pdf-candidate-json", action="append", default=[])
     parser.add_argument("--pdf-crop-refine-json", action="append", default=[])
     parser.add_argument("--pdf-trend-json", action="append", default=[])
@@ -498,6 +525,7 @@ def main() -> int:
             *missing_trend,
         ),
         require_pdf_benchmark_evidence=args.require_pdf_benchmark_evidence,
+        max_retry_exhaustion_rate=args.max_retry_exhaustion_rate,
     )
     encoded = json.dumps(asdict(scorecard), ensure_ascii=True, indent=2, sort_keys=True)
     if args.output_json:

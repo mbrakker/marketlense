@@ -1,0 +1,26 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from scripts.ci import check_coverage, run_mutation_gate
+
+
+def test_control_plane_modules_have_stricter_coverage_gate() -> None:
+    source = Path("scripts/ci/check_coverage.py").read_text(encoding="utf-8")
+
+    assert "src/orchestrators/pipeline_preflight_orchestrator.py" in source
+    assert "src/orchestrators/retry_telemetry_orchestrator.py" in source
+    assert "COVERAGE_CONTROL_PLANE_MIN" in source
+    assert check_coverage._threshold("COVERAGE_CONTROL_PLANE_MIN", 85.0) == 85.0
+
+
+def test_control_plane_modules_are_targeted_by_mutation_gate() -> None:
+    targets = list(run_mutation_gate._targets())
+    module_paths = {target.module_path.as_posix() for target in targets}
+
+    assert any(
+        path.endswith("pipeline_preflight_orchestrator.py") for path in module_paths
+    )
+    assert any(
+        path.endswith("retry_telemetry_orchestrator.py") for path in module_paths
+    )

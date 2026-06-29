@@ -433,6 +433,30 @@ def _targets() -> Iterable[MutationTarget]:
             max_mutants=6,
             min_score=80.0,
         ),
+        MutationTarget(
+            module_path=ROOT
+            / "src"
+            / "orchestrators"
+            / "pipeline_preflight_orchestrator.py",
+            test_paths=(
+                "tests/test_pipeline_preflight_orchestrator.py",
+                "tests/test_report_pipeline_orchestrator.py",
+            ),
+            max_mutants=6,
+            min_score=85.0,
+        ),
+        MutationTarget(
+            module_path=ROOT
+            / "src"
+            / "orchestrators"
+            / "retry_telemetry_orchestrator.py",
+            test_paths=(
+                "tests/test_retry_decision_telemetry.py",
+                "tests/test_run_health_scorecard.py",
+            ),
+            max_mutants=6,
+            min_score=85.0,
+        ),
     ]
 
 

@@ -41,6 +41,36 @@ class WordPressAuthSettings:
 
 
 @dataclass(frozen=True)
+class WordPressPublishTargetPreflightRequest:
+    schema_version: str = field(
+        metadata={"doc": "WordPress publish-target preflight request schema version."}
+    )
+    base_url: str = field(metadata={"doc": "WordPress site base URL."})
+    auth_header: str = field(metadata={"doc": "Authorization header value."})
+    post_type: str = field(metadata={"doc": "REST post type endpoint slug."})
+    ssl_verify: bool = field(
+        default=True,
+        metadata={"doc": "Whether HTTPS certificates should be verified."},
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional CA bundle path used for HTTPS verification."},
+    )
+
+
+@dataclass(frozen=True)
+class WordPressPublishTargetPreflightResponse:
+    schema_version: str = field(
+        metadata={"doc": "WordPress publish-target preflight response schema version."}
+    )
+    base_url: str = field(metadata={"doc": "WordPress site base URL checked."})
+    post_type: str = field(metadata={"doc": "REST post type endpoint slug checked."})
+    endpoint: str = field(metadata={"doc": "Resolved REST endpoint checked."})
+    reachable: bool = field(metadata={"doc": "True when the REST target is usable."})
+    status_code: int = field(metadata={"doc": "HTTP status code returned."})
+
+
+@dataclass(frozen=True)
 class WordPressPublisherProfileSeed:
     schema_version: str = field(
         metadata={"doc": "Publisher profile seed schema version."}
@@ -194,7 +224,9 @@ class WordPressPostCreateResponse:
 
 @dataclass(frozen=True)
 class WordPressCardUpdateRequest:
-    schema_version: str = field(metadata={"doc": "Card-contract update schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Card-contract update schema version."}
+    )
     base_url: str = field(metadata={"doc": "WordPress site base URL."})
     auth_header: str = field(metadata={"doc": "Authorization header value."})
     post_id: int = field(metadata={"doc": "Existing WordPress post ID to update."})

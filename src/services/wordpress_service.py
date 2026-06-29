@@ -3,6 +3,13 @@ import logging
 from typing import Any
 import requests
 
+from src.contracts.publish import PublishSettings
+from src.contracts.run_context import RunContext
+from src.contracts.wordpress import (
+    WordPressAuthSettings,
+    WordPressPublishTargetPreflightRequest,
+    WordPressPublishTargetPreflightResponse,
+)
 from src.services._wordpress_service.transport import (
     _WordPressRequestResult,
     _SessionPool,
@@ -23,6 +30,7 @@ from src.services._wordpress_service.transport import (
     _raise_http_server_error,
     _raise_http_redirect_error,
     _safe_json,
+    preflight_publish_target as _preflight_publish_target_request,
 )
 
 from src.services._wordpress_service.posts import (
@@ -42,6 +50,7 @@ from src.services._wordpress_service.taxonomy import (
     ensure_tags,
     update_post_categories,
 )
+from src.utils.wp_auth import build_auth_header
 
 # Preserve the report-only entrypoint while card updates become entity-agnostic.
 update_report_card = update_card
@@ -56,6 +65,29 @@ _ORIGINAL_REQUEST_CALLS: dict[str, Any] = {
     "GET": requests.get,
     "POST": requests.post,
 }
+
+
+def preflight_publish_target(
+    settings: PublishSettings | WordPressAuthSettings, ctx: RunContext
+) -> WordPressPublishTargetPreflightResponse:
+    wp = settings.wp if hasattr(settings, "wp") else settings
+    auth_header = build_auth_header(
+        username=getattr(wp, "username", None),
+        app_password=getattr(wp, "app_password", None),
+        bearer_token=getattr(wp, "bearer_token", None),
+    )
+    return _preflight_publish_target_request(
+        WordPressPublishTargetPreflightRequest(
+            schema_version="1.0",
+            base_url=wp.site_url,
+            auth_header=auth_header,
+            post_type=wp.post_type,
+            ssl_verify=wp.ssl_verify,
+            ca_bundle_path=wp.ca_bundle_path,
+        ),
+        ctx,
+    )
+
 
 __all__ = [
     "_WordPressRequestResult",
@@ -77,6 +109,7 @@ __all__ = [
     "_raise_http_server_error",
     "_raise_http_redirect_error",
     "_safe_json",
+    "preflight_publish_target",
     "upload_media",
     "prepare_media_upload",
     "create_post",

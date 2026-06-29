@@ -72,6 +72,33 @@ def _collect_global_slice(root: ET.Element) -> CoverageSlice:
     )
 
 
+def _collect_file_slice(
+    root: ET.Element, package_name: str, files: tuple[str, ...]
+) -> CoverageSlice:
+    normalized_files: set[str] = set()
+    for item in files:
+        normalized = item.replace("\\", "/").lower().lstrip("./")
+        normalized_files.add(normalized)
+        if normalized.startswith("src/"):
+            normalized_files.add(normalized[len("src/") :])
+    lines_valid = 0
+    lines_covered = 0
+    for class_node in root.findall(".//class"):
+        filename = (class_node.attrib.get("filename") or "").replace("\\", "/").lower()
+        if filename not in normalized_files and not any(
+            filename.endswith(f"/{target}") for target in normalized_files
+        ):
+            continue
+        line_nodes = class_node.findall("./lines/line")
+        lines_valid += len(line_nodes)
+        lines_covered += sum(
+            1 for line in line_nodes if int(line.attrib.get("hits", "0")) > 0
+        )
+    return CoverageSlice(
+        name=package_name, lines_valid=lines_valid, lines_covered=lines_covered
+    )
+
+
 def main() -> int:
     args = _parse_args()
     tree = ET.parse(args.coverage_xml)
@@ -82,6 +109,7 @@ def main() -> int:
         "src/orchestrators": _threshold("COVERAGE_ORCHESTRATORS_MIN", 60.0),
         "src/generators": _threshold("COVERAGE_GENERATORS_MIN", 60.0),
         "src/services": _threshold("COVERAGE_SERVICES_MIN", 44.0),
+        "src/control-plane": _threshold("COVERAGE_CONTROL_PLANE_MIN", 85.0),
     }
 
     coverage_slices = [
@@ -93,6 +121,16 @@ def main() -> int:
             root, "src/generators", ("src/generators", "generators")
         ),
         _collect_package_slice(root, "src/services", ("src/services", "services")),
+        _collect_file_slice(
+            root,
+            "src/control-plane",
+            (
+                "src/orchestrators/pipeline_preflight_orchestrator.py",
+                "src/orchestrators/retry_telemetry_orchestrator.py",
+                "src/contracts/pipeline_preflight.py",
+                "src/contracts/retry_telemetry.py",
+            ),
+        ),
     ]
     coverage_by_name = {item.name: item for item in coverage_slices}
 
