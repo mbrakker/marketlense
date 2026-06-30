@@ -439,19 +439,21 @@ Wordpress/
 
 Plugin slug: `marketlense-core`
 
-Current plugin package version: `1.6.7`. Deploy this package or newer when the
-live WordPress REST schema must expose `ml_signal` and `ml_briefing`; older or
-stale deployed payloads can still report the same plugin slug while exposing
-only `ml_report`.
+Current plugin package version: `1.6.8`. Deploy this package or newer when the
+live WordPress REST schema must expose `ml_signal`, `ml_briefing`, and governed
+native-category Topic semantics; older or stale deployed payloads can still
+report the same plugin slug while exposing only earlier entity or term-meta
+surfaces.
 
 Primary responsibilities:
 
 - Registers custom post type `ml_report` (`show_in_rest=true`, REST base `ml_report`)
 - Registers custom post types `ml_signal` and `ml_briefing` (`show_in_rest=true`, REST bases `ml_signal` and `ml_briefing`)
 - Registers taxonomies:
-  - native WordPress `category` support on `ml_report`, `ml_signal`, and `ml_briefing` for public topic/archive/filter UX
+  - native WordPress `category` support on `ml_report`, `ml_signal`, and `ml_briefing` as the canonical public Topic implementation for archive/filter UX
   - `ml_publisher`
 - Keeps legacy `ml_topic` taxonomy data internal only for backward compatibility; it is not a public archive/filter surface
+- Stores governed Topic semantics on native categories: the category description carries the public summary, while `ml_topic_definition`, `ml_topic_include_when`, `ml_topic_exclude_when`, and `ml_topic_schema_version` preserve the approved taxonomy definition, inclusion rules, exclusion rules, and source schema version from `src/config/category-mappings.yaml`.
 - Registers publisher term metadata:
   - `ml_publisher_homepage`
   - `ml_publisher_insights_url`
@@ -477,26 +479,40 @@ Primary responsibilities:
   - `[ml_publishers_directory]`
   - `[ml_publisher_profile]`
 
-### Live Signal and Briefing REST Verification
+### Live WordPress Entity REST Verification
 
-After deploying or activating `marketlense-core` `1.6.7` or newer on a hosted
+After deploying or activating `marketlense-core` `1.6.8` or newer on a hosted
 WordPress site, verify the public entity REST contract with existing generated
 artifacts:
 
 ```powershell
 python Wordpress/scripts/verify-publish-entity-rest.py `
+  --report-artifact out/activate-2025-ecommerce-pdf.html `
   --briefing-artifact out/live_model_client_injection_cross_report/cross_report_analysis/ai-brand-trust-consumer-decision-2026/analysis.json `
-  --signal-artifact out/allegro-2026-trends-macrotrends-es-acig-pdf/report_analysis/signals.json
+  --signal-artifact out/allegro-2026-trends-macrotrends-es-acig-pdf/report_analysis/signals.json `
+  --output-json out/wordpress_entity_rest_verification_live.json
 ```
 
 The verifier loads `WP_SITE_URL`, `WP_USERNAME` plus `WP_APP_PASSWORD` or
 `WP_BEARER_TOKEN`, `WP_SSL_VERIFY`, and `WP_CA_BUNDLE_PATH` from the root
-environment. It first confirms `/wp-json/wp/v2/types` exposes `ml_briefing` and
-`ml_signal` with collection routes, then creates one draft post for each type
-from the supplied generated artifacts and reads both posts back with
+environment. It first confirms `/wp-json/wp/v2/types` exposes `ml_report`,
+`ml_briefing`, and `ml_signal` with collection routes, then creates one draft
+post for each type from the supplied generated artifacts and reads them back with
 `context=edit`. The run fails unless post type, slug, title, status, permalink
-template route (`/briefings/` or `/signals/`), and submitted metadata are present
-on readback.
+template route (`/reports/`, `/briefings/`, or `/signals/`), and submitted
+metadata are present on readback.
+
+For staging release gates, set repository variable
+`RUN_WORDPRESS_STAGING_REST_GATE=1` and provide `WP_STAGING_SITE_URL` plus either
+`WP_STAGING_BEARER_TOKEN` or `WP_STAGING_USERNAME`/`WP_STAGING_APP_PASSWORD` as
+GitHub secrets. Optional variables are `WP_STAGING_SSL_VERIFY`,
+`WP_STAGING_CA_BUNDLE_PATH`, `WP_STAGING_REPORT_ARTIFACT`,
+`WP_STAGING_BRIEFING_ARTIFACT`, and `WP_STAGING_SIGNAL_ARTIFACT`. The gate uses
+the artifact paths above by default and uploads
+`out/wordpress_entity_rest_verification_staging.json` in the release evidence
+bundle. Verification drafts are created with slugs containing
+`staging-rest-gate-`; operators can clean them from the staging WordPress admin
+or via REST by searching that slug prefix and deleting the matching draft posts.
 
 ### Theme Contract
 

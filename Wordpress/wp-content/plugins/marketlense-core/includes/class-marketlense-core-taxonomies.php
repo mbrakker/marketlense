@@ -25,6 +25,14 @@ final class Taxonomies
 
     public const PUBLISHER_TAXONOMY = 'ml_publisher';
 
+    public const TOPIC_DEFINITION_META = 'ml_topic_definition';
+
+    public const TOPIC_INCLUDE_WHEN_META = 'ml_topic_include_when';
+
+    public const TOPIC_EXCLUDE_WHEN_META = 'ml_topic_exclude_when';
+
+    public const TOPIC_SCHEMA_VERSION_META = 'ml_topic_schema_version';
+
     public const PUBLISHER_HOMEPAGE_META = 'ml_publisher_homepage';
 
     public const PUBLISHER_INSIGHTS_META = 'ml_publisher_insights_url';
@@ -178,6 +186,47 @@ final class Taxonomies
                 'auth_callback' => static fn (): bool => current_user_can(self::PUBLISHER_MANAGE_CAPABILITY),
             ]);
         }
+
+        register_term_meta(
+            self::CATEGORY_TAXONOMY,
+            self::TOPIC_DEFINITION_META,
+            [
+                'type'              => 'string',
+                'single'            => true,
+                'show_in_rest'      => true,
+                'sanitize_callback' => 'sanitize_textarea_field',
+                'auth_callback'     => static fn (): bool => current_user_can(self::PUBLISHER_MANAGE_CAPABILITY),
+            ]
+        );
+        foreach ([self::TOPIC_INCLUDE_WHEN_META, self::TOPIC_EXCLUDE_WHEN_META] as $topic_rules_meta) {
+            register_term_meta(
+                self::CATEGORY_TAXONOMY,
+                $topic_rules_meta,
+                [
+                    'type'              => 'array',
+                    'single'            => true,
+                    'show_in_rest'      => [
+                        'schema' => [
+                            'type'  => 'array',
+                            'items' => ['type' => 'string'],
+                        ],
+                    ],
+                    'sanitize_callback' => [$this, 'sanitize_topic_rule_list_meta'],
+                    'auth_callback'     => static fn (): bool => current_user_can(self::PUBLISHER_MANAGE_CAPABILITY),
+                ]
+            );
+        }
+        register_term_meta(
+            self::CATEGORY_TAXONOMY,
+            self::TOPIC_SCHEMA_VERSION_META,
+            [
+                'type'              => 'string',
+                'single'            => true,
+                'show_in_rest'      => true,
+                'sanitize_callback' => 'sanitize_text_field',
+                'auth_callback'     => static fn (): bool => current_user_can(self::PUBLISHER_MANAGE_CAPABILITY),
+            ]
+        );
 
         add_action(
             self::PUBLISHER_TAXONOMY . '_add_form_fields',
@@ -368,6 +417,27 @@ final class Taxonomies
         }
 
         return (string) esc_url_raw($validated, ['https', 'http']);
+    }
+
+    /**
+     * Sanitizes topic rule-list term metadata before REST persistence.
+     *
+     * @param mixed $value Raw REST/meta value.
+     *
+     * @return array<int, string>
+     */
+    public function sanitize_topic_rule_list_meta($value): array
+    {
+        $items = is_array($value) ? $value : [];
+        $sanitized = [];
+        foreach ($items as $item) {
+            $text = trim(sanitize_text_field((string) $item));
+            if ($text !== '') {
+                $sanitized[] = $text;
+            }
+        }
+
+        return array_values($sanitized);
     }
 
     /**

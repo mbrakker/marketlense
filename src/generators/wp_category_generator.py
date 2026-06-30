@@ -58,10 +58,29 @@ def update_post_categories_for_record(
             error="no_categories",
         )
 
-    id_to_label = {cat.id: cat.label or cat.id for cat in mappings.mappings.categories}
+    id_to_category = {cat.id: cat for cat in mappings.mappings.categories}
     terms = [
         WordPressTaxonomyTerm(
-            schema_version="1.0", slug=cat_id, name=id_to_label.get(cat_id, cat_id)
+            schema_version="1.1",
+            slug=cat_id,
+            name=(id_to_category[cat_id].label or cat_id)
+            if cat_id in id_to_category
+            else cat_id,
+            description=id_to_category[cat_id].description
+            if cat_id in id_to_category
+            else "",
+            definition=id_to_category[cat_id].definition
+            if cat_id in id_to_category
+            else "",
+            include_when=list(id_to_category[cat_id].include_when)
+            if cat_id in id_to_category
+            else [],
+            exclude_when=list(id_to_category[cat_id].exclude_when)
+            if cat_id in id_to_category
+            else [],
+            semantics_version=id_to_category[cat_id].schema_version
+            if cat_id in id_to_category
+            else "",
         )
         for cat_id in categories
     ]

@@ -49,6 +49,20 @@ jobs:
         run: python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json
       - name: WordPress subproject checks
         run: python scripts/ci/check_wordpress_subproject.py
+      - name: WordPress staging REST gate
+        if: ${{ vars.RUN_WORDPRESS_STAGING_REST_GATE == '1' }}
+        env:
+          RUN_WORDPRESS_STAGING_REST_GATE: "1"
+          WP_STAGING_SITE_URL: ${{ secrets.WP_STAGING_SITE_URL }}
+          WP_STAGING_USERNAME: ${{ secrets.WP_STAGING_USERNAME }}
+          WP_STAGING_APP_PASSWORD: ${{ secrets.WP_STAGING_APP_PASSWORD }}
+          WP_STAGING_BEARER_TOKEN: ${{ secrets.WP_STAGING_BEARER_TOKEN }}
+          WP_STAGING_SSL_VERIFY: ${{ vars.WP_STAGING_SSL_VERIFY }}
+          WP_STAGING_CA_BUNDLE_PATH: ${{ vars.WP_STAGING_CA_BUNDLE_PATH }}
+          WP_STAGING_REPORT_ARTIFACT: ${{ vars.WP_STAGING_REPORT_ARTIFACT }}
+          WP_STAGING_BRIEFING_ARTIFACT: ${{ vars.WP_STAGING_BRIEFING_ARTIFACT }}
+          WP_STAGING_SIGNAL_ARTIFACT: ${{ vars.WP_STAGING_SIGNAL_ARTIFACT }}
+        run: python scripts/ci/check_wordpress_staging_rest_gate.py
       - name: Mark release evidence freshness start
         run: echo "RELEASE_EVIDENCE_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
       - name: Run default pytest suite with coverage
@@ -135,6 +149,7 @@ jobs:
             out/release_evidence_review_ci.json
             out/release_evidence_review_ci.md
             docs/quality/release_evidence_waivers.yaml
+            out/wordpress_entity_rest_verification_staging.json
             coverage.xml
             mutation_results.json
             out/pdf_candidate_benchmark_ci.json

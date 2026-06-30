@@ -28,6 +28,9 @@ def _mappings() -> CategoryMappingLoadResponse:
                     id="digital_payments",
                     label="Digital Payments",
                     description="Payments category",
+                    definition="Reports centered on payment behavior.",
+                    include_when=["Payment evidence is central."],
+                    exclude_when=["Payments are only a side detail."],
                     tags=["payments"],
                 ),
                 CategoryDefinition(
@@ -35,6 +38,9 @@ def _mappings() -> CategoryMappingLoadResponse:
                     id="consumer_behavior",
                     label="Consumer Behavior",
                     description="Behavior category",
+                    definition="Reports centered on consumer behavior.",
+                    include_when=["Shopper evidence is central."],
+                    exclude_when=["Shopper evidence is incidental."],
                     tags=["behavior"],
                 ),
             ],
@@ -66,9 +72,16 @@ def test_wp_category_update_applies_categories(external_boundary_mocks_only):
         lambda req, ctx: (
             (_ for _ in ()).throw(AssertionError("ssl_verify should be disabled"))
             if req.ssl_verify is not False
-            else WordPressTaxonomyEnsureResponse(
-                schema_version="1.0",
-                slug_to_id={"digital_payments": 101, "consumer_behavior": 102},
+            else (
+                (_ for _ in ()).throw(AssertionError("topic semantics missing"))
+                if req.terms[0].definition != "Reports centered on payment behavior."
+                or req.terms[0].include_when != ["Payment evidence is central."]
+                or req.terms[0].exclude_when != ["Payments are only a side detail."]
+                or req.terms[0].semantics_version != "1.0"
+                else WordPressTaxonomyEnsureResponse(
+                    schema_version="1.0",
+                    slug_to_id={"digital_payments": 101, "consumer_behavior": 102},
+                )
             )
         ),
     )

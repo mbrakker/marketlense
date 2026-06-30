@@ -8,7 +8,7 @@ import pytest
 from src.contracts.publish import PublishRequest
 from src.generators import publish_generator as pg
 from src.utils.errors import AppError
-from tests.test_publish_generator import _write_report_card_fixture
+from tests.support.publish_fixtures import write_report_card_fixture
 
 
 def test_publish_html_rejects_invalid_card_tldr_before_media_or_post(
@@ -25,7 +25,7 @@ def test_publish_html_rejects_invalid_card_tldr_before_media_or_post(
         "<body>Drive fileId: file123</body></html>",
         encoding="utf-8",
     )
-    _write_report_card_fixture(settings, html_path)
+    write_report_card_fixture(settings, html_path)
     manifest_path = html_path.with_suffix("") / "report-card-manifest.json"
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     payload["tldr_compact"] = "Incomplete summary"

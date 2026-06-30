@@ -31,6 +31,14 @@ class FakeRestClient:
     def get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         if path == "wp/v2/types":
             return {
+                "ml_report": {
+                    "rest_base": "ml_report",
+                    "_links": {
+                        "wp:items": [
+                            {"href": "https://site.test/wp-json/wp/v2/ml_report"}
+                        ]
+                    },
+                },
                 "ml_briefing": {
                     "rest_base": "ml_briefing",
                     "_links": {
@@ -61,7 +69,9 @@ class FakeRestClient:
             "status": payload["status"],
             "link": f"https://site.test/{post_type}/{payload['slug']}/",
             "permalink_template": (
-                "https://site.test/briefings/%pagename%/"
+                "https://site.test/reports/%pagename%/"
+                if post_type == "ml_report"
+                else "https://site.test/briefings/%pagename%/"
                 if post_type == "ml_briefing"
                 else "https://site.test/signals/%pagename%/"
             ),
@@ -109,6 +119,26 @@ def test_build_briefing_payload_uses_existing_publish_package(tmp_path: Path) ->
         "ml_briefing_source_count": 2,
         "ml_briefing_evidence_count": 3,
     }
+
+
+def test_build_report_payload_uses_existing_html_artifact(tmp_path: Path) -> None:
+    artifact = tmp_path / "report.html"
+    artifact.write_text(
+        "<html><head><title>Retail Payments Report</title></head>"
+        "<body><h1>Ignored heading</h1><p>Generated report body</p></body></html>",
+        encoding="utf-8",
+    )
+
+    payload = verify_publish_entity_rest.build_report_payload(
+        artifact,
+        slug_suffix="rest-check",
+        status="draft",
+    )
+
+    assert payload.post_type == "ml_report"
+    assert payload.title == "Retail Payments Report"
+    assert payload.slug == "retail-payments-report-rest-check"
+    assert payload.content_html.startswith("<html>")
 
 
 def test_build_signal_payload_uses_approved_signal_candidate(tmp_path: Path) -> None:
@@ -176,18 +206,34 @@ def test_verify_remote_entities_creates_and_reads_back_each_entity(
         status="draft",
         meta={"ml_signal_card_schema_version": "1.0"},
     )
+    report_payload = verify_publish_entity_rest.EntityDraftPayload(
+        schema_version="1.0",
+        post_type="ml_report",
+        source_artifact_path=str(tmp_path / "report.html"),
+        title="Report title",
+        slug="report-title-rest-check",
+        content_html="<article>Report</article>",
+        excerpt="Report",
+        status="draft",
+    )
     client = FakeRestClient()
 
     result = verify_publish_entity_rest.verify_remote_entities(
         client,
+        report_payload=report_payload,
         briefing_payload=briefing_payload,
         signal_payload=signal_payload,
     )
 
-    assert [item.post_type for item in result] == ["ml_briefing", "ml_signal"]
+    assert [item.post_type for item in result] == [
+        "ml_report",
+        "ml_briefing",
+        "ml_signal",
+    ]
     assert all(item.route_confirmed for item in result)
-    assert result[0].collection_route.endswith("/wp/v2/ml_briefing")
-    assert result[1].collection_route.endswith("/wp/v2/ml_signal")
+    assert result[0].collection_route.endswith("/wp/v2/ml_report")
+    assert result[1].collection_route.endswith("/wp/v2/ml_briefing")
+    assert result[2].collection_route.endswith("/wp/v2/ml_signal")
 
 
 def test_verify_remote_entities_rejects_missing_remote_signal_type(
@@ -215,6 +261,7 @@ def test_verify_remote_entities_rejects_missing_remote_signal_type(
     with pytest.raises(RuntimeError, match="does not expose ml_signal"):
         verify_publish_entity_rest.verify_remote_entities(
             MissingSignalTypeClient(),
+            report_payload=payload,
             briefing_payload=payload,
             signal_payload=payload,
         )

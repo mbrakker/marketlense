@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_publish_batches_preflight_and_term_resolution(
     publish_settings_factory,
     run_context,
@@ -82,8 +83,26 @@ def test_publish_batches_preflight_and_term_resolution(
             )
         return FakeHttpResponse.from_payload(status_code=200, payload=[])
 
+    written_categories: dict[str, dict[str, object]] = {}
+
     def _lookup_categories(call: RecordedHttpRequest) -> FakeHttpResponse:
         slug = str((call.params or {}).get("slug") or "")
+        if call.params.get("context") == "edit":
+            payload = written_categories.get(slug)
+            if not payload:
+                raise AssertionError(
+                    f"category semantics not written before readback: {slug}"
+                )
+            return FakeHttpResponse.from_payload(
+                status_code=200,
+                payload=[
+                    {
+                        "id": 11 if slug == "digital_payments" else 12,
+                        "description": payload.get("description", ""),
+                        "meta": payload.get("meta", {}),
+                    }
+                ],
+            )
         if slug == "digital_payments":
             return FakeHttpResponse.from_payload(status_code=200, payload=[{"id": 11}])
         return FakeHttpResponse.from_payload(status_code=200, payload=[])
@@ -91,8 +110,16 @@ def test_publish_batches_preflight_and_term_resolution(
     def _create_categories(call: RecordedHttpRequest) -> FakeHttpResponse:
         payload = call.json_data or {}
         if payload.get("slug") == "retail_media":
+            written_categories["retail_media"] = payload
             return FakeHttpResponse.from_payload(status_code=201, payload={"id": 12})
         raise AssertionError(f"unexpected category payload: {payload}")
+
+    def _update_categories(call: RecordedHttpRequest) -> FakeHttpResponse:
+        payload = call.json_data or {}
+        if payload.get("slug") == "digital_payments":
+            written_categories["digital_payments"] = payload
+            return FakeHttpResponse.from_payload(status_code=200, payload={"id": 11})
+        raise AssertionError(f"unexpected category update payload: {payload}")
 
     def _lookup_publishers(call: RecordedHttpRequest) -> FakeHttpResponse:
         _ = call
@@ -127,6 +154,11 @@ def test_publish_batches_preflight_and_term_resolution(
         "POST", "https://example.com/wp-json/wp/v2/categories", _create_categories
     )
     wordpress_http.add(
+        "POST",
+        "https://example.com/wp-json/wp/v2/categories/11",
+        _update_categories,
+    )
+    wordpress_http.add(
         "GET", "https://example.com/wp-json/wp/v2/ml_publisher", _lookup_publishers
     )
     wordpress_http.add(
@@ -156,23 +188,25 @@ def test_publish_batches_preflight_and_term_resolution(
         "POST", "https://example.com/wp-json/wp/v2/ml_report"
     )[0]
     events = _json_events(caplog, orch.logger.name)
-    assert [result.status for result in results] == ["skipped", "published"]
-    assert results[0].error == "already_exists"
-    assert results[0].post_id == 501
-    assert results[1].file_id == "file456"
+    results_by_file_id = {str(result.file_id or ""): result for result in results}
+    assert results_by_file_id["file123"].status == "skipped"
+    assert results_by_file_id["file123"].error == "already_exists"
+    assert results_by_file_id["file123"].post_id == 501
+    assert results_by_file_id["file456"].status == "published"
     assert second_post_call.json_data["categories"] == [11, 12]
     assert second_post_call.json_data["tags"] == [31, 32]
     assert second_post_call.json_data["ml_publisher"] == [22]
     assert first_publish_row is not None
     assert first_publish_row.wp_post_id == 501
-    assert (
-        len(
-            wordpress_http.calls_for(
-                "GET", "https://example.com/wp-json/wp/v2/categories"
-            )
-        )
-        == 2
+    category_get_calls = wordpress_http.calls_for(
+        "GET", "https://example.com/wp-json/wp/v2/categories"
     )
+    assert len(category_get_calls) == 4
+    assert [
+        call.params.get("context")
+        for call in category_get_calls
+        if call.params.get("context") == "edit"
+    ] == ["edit", "edit"]
     assert (
         len(wordpress_http.calls_for("GET", "https://example.com/wp-json/wp/v2/tags"))
         == 2
@@ -187,6 +221,7 @@ def test_publish_batches_preflight_and_term_resolution(
     )
     assert any(event.get("event") == "publish_preflight_complete" for event in events)
     assert_logs_have_required_fields(events)
+
 
 def test_publish_preflight_term_batch_failure_does_not_block_other_files(
     publish_settings_factory,
@@ -284,6 +319,7 @@ def test_publish_preflight_term_batch_failure_does_not_block_other_files(
         == 1
     )
 
+
 def test_publish_retries_retryable_app_error(
     publish_settings_factory,
     run_context,
@@ -354,6 +390,7 @@ def test_publish_retries_retryable_app_error(
     assert len(retry_logs) == 2
     assert_logs_have_required_fields(caplog.records)
 
+
 def test_publish_ignores_publish_state_for_different_post_type(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:
@@ -406,6 +443,7 @@ def test_publish_ignores_publish_state_for_different_post_type(
     assert publish_row.wp_post_id == 101
     assert publish_row.post_type == settings.wp.post_type
 
+
 def test_publish_uses_provided_run_context_for_logs(
     publish_settings_factory,
     run_context,
@@ -439,6 +477,7 @@ def test_publish_uses_provided_run_context_for_logs(
     assert any(event.get("event") == "publish_start" for event in events)
     assert any(event.get("event") == "publish_complete" for event in events)
     assert all(event.get("run_id") == run_context.run_id for event in events)
+
 
 __all__ = [
     "test_publish_batches_preflight_and_term_resolution",

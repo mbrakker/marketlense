@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-06-29
+Last audited: 2026-06-30
 
 This file is the single active backlog for this repository. It supersedes older backlog notes, archived planning docs, and ad hoc audit intake.
 
@@ -49,14 +49,17 @@ Scoring:
 - Cross-report Briefing and grounded Signal publish paths now reuse persisted claim embeddings for bounded semantic evidence preselection through `analytics_store_service.read_claim_embeddings`, while falling back to deterministic lexical/category ordering when embeddings are absent or stale. Durable Signal candidate extraction, ingestion-time Signal artifact-pack generation, separate Signal-store persistence, grouping, readback, and publish reuse are landed through `src/contracts/signal_candidates.py`, `src/generators/signal_candidate_generator.py`, `src/generators/report_signal_artifact_generator.py`, `src/orchestrators/signal_candidate_orchestrator.py`, `src/orchestrators/report_generation_orchestrator.py`, and `src/services/analytics_store_service.py`.
 - The bundled WordPress plugin registers `ml_report`, `ml_signal`, and `ml_briefing` with REST enabled. Live hosted WordPress REST exposure for `ml_briefing` and `ml_signal` was verified on 2026-06-28 with `Wordpress/scripts/verify-publish-entity-rest.py` using existing generated Briefing and Signal artifacts; readback confirmed draft post IDs 1728 and 1729, post type, slug, title, route template, status, and metadata.
 - Report post-type drift is closed: README and README_WORDPRESS document canonical report publishing to `ml_report`, `src/config/app.yaml` and `src/config/app.example.yaml` default `publish.wp.post_type` to `ml_report`, the plugin registers `ml_report` with REST base `ml_report`, and legacy core `post` report/digest compatibility is documented as migration-only behavior. Live hosted WordPress verification on 2026-06-28 published an existing generated report artifact (`out/activate-2025-ecommerce-pdf.html`) as draft `ml_report` post ID 1739 and read it back from `/wp-json/wp/v2/ml_report/1739` with type `ml_report`, slug `live-report-post-type-verification-20260628`, status `draft`, and `/reports/%pagename%/` permalink template.
+- Native WordPress categories are now the canonical public Topic surface with governed topic semantics. `WordPressTaxonomyTerm` carries description, definition, inclusion rules, exclusion rules, and semantics version; publish/category generators and publish preflight write those fields through the WordPress taxonomy service; the service performs authenticated REST readback and fails with `wp_taxonomy_semantics_readback_mismatch` when semantic meta is missing; the bundled plugin registers `ml_topic_definition`, `ml_topic_include_when`, `ml_topic_exclude_when`, and `ml_topic_schema_version` term meta for category REST exposure; and the topic directory/category archive templates render approved term semantics. Live hosted WordPress verification on 2026-06-30 wrote/read back the existing `digital_payments` Topic as category term ID 116 with description plus all four `ml_topic_*` meta keys.
+- Live WordPress entity REST verification is now a staging release gate. `Wordpress/scripts/verify-publish-entity-rest.py` verifies `ml_report`, `ml_briefing`, and `ml_signal` publish/readback from existing generated artifacts, `scripts/ci/check_wordpress_staging_rest_gate.py` runs the verifier when staging WordPress env vars are enabled, CI archives sanitized JSON evidence, and README documents required env vars, artifact paths, and draft cleanup by slug prefix. Live hosted WordPress verification on 2026-06-30 created/read back draft IDs 1746 (`ml_report`), 1747 (`ml_briefing`), and 1748 (`ml_signal`) with route templates, status, and metadata readback intact.
 - WordPress design token drift remains: README documents `settings.layout.wideSize` as `82rem`, while `Wordpress/wp-content/themes/marketlense/theme.json` currently uses `84rem`.
+- Live visual QA on 2026-06-30 against `http://marketlense.medianewsonline.com/` found public-site launch blockers and premium-quality gaps: HTTPS failed for the tested hostname, `/publisher/not-extracted/` returned a fatal WordPress error with a PHP stack trace and server paths, "Not extracted" appeared as a public publisher, contact/submission CTAs looped without an intake form, mobile search results had horizontal overflow, and generated/OCR artifacts leaked into public report cards and exhibit captions.
 
 ## Priority Order
 
 1. Pipeline autopilot, planning, resume, and recovery interconnections.
 2. Cost and LLM controls.
 3. Analytics projection and embeddings.
-4. Publish durability and WordPress/public entity alignment.
+4. Publish durability, WordPress/public entity alignment, and public-site QA.
 5. PDF/performance hotspots.
 6. Architecture, schema compatibility, and observability gates.
 
@@ -119,6 +122,17 @@ Scoring:
     - The benchmark fails or warns when semantic preselection reduces required citation/source coverage below a documented threshold.
     - Tests cover benchmark metric calculation, stale/no-embedding fallback metrics, and deterministic output ordering.
 
+- **Title:** Use canonical Topic semantics for category-fit validation and evidence routing [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Topic definitions and inclusion/exclusion rules are now canonical and visible in WordPress, but upstream category-fit and evidence-routing logic still gets most value from labels, tags, and embeddings rather than enforcing the governed Topic semantics as a validation surface.
+  - Why implement: Converts Topic governance into measurable quality control for classification, Briefing/Signal evidence selection, and public topic pages.
+  - Tradeoffs / risks: Topic rules must stay deterministic and prompt-service-owned; the gate must flag ambiguity without inventing category assignments or suppressing valid cross-topic evidence.
+  - Acceptance Criteria:
+    - Category-fit validation consumes approved Topic definitions and inclusion/exclusion rules through existing config/service contracts, not inline prompt text.
+    - Report, Briefing, and Signal routing logs record which Topic semantic rule supported or rejected each selected category/evidence bundle.
+    - Ambiguous or rule-conflicting assignments produce typed remediation signals instead of silently publishing weak topic mappings.
+    - A benchmark over existing report artifacts measures topic assignment precision, rejected-conflict count, evidence-routing overlap, and prompt-size impact before/after semantic rule use.
+    - Tests cover positive fit, exclusion-rule rejection, ambiguous fit, stale/missing Topic semantics, and deterministic fallback behavior.
+
 - **Title:** Complete public entity projection coverage or narrow the README entity contract [Impact: 5/5, Effort: 5/5]
   - Problem fixed: Reports, Briefings, and Signals have local publish paths, but README still describes a broader public entity model including Figures, Regions, and Time Periods. Those surfaces need either durable public projection contracts/routes or explicit README-scoped exclusions.
   - Why implement: Gives publishing one typed source of truth for every public entity.
@@ -153,26 +167,71 @@ Scoring:
     - Tests prove no Signal, freshness, strategic-theme, or publisher-authority claim is generated solely from WordPress post counts.
     - README documents the projection source used by each WordPress intelligence module.
 
-- **Title:** Make WordPress categories the canonical Topic surface with full topic semantics [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: WordPress categories already serve the public Topic path, but they publish mostly as labels. README defines Topics as controlled taxonomy entries with definitions plus inclusion/exclusion rules.
-  - Why implement: Reuses the existing category implementation while making taxonomy governance visible.
-  - Tradeoffs / risks: Requires term contract expansion and migration/update behavior.
+- **Title:** Harden hosted WordPress launch trust surface [Impact: 5/5, Effort: 2/5]
+  - Problem fixed: The hosted public site currently fails HTTPS for the tested hostname, publishes HTTP sitemap URLs, exposes a fatal WordPress/PHP stack trace on `/publisher/not-extracted/`, and lacks the expected branded failure surface for production incidents.
+  - Why implement: A trust-positioned intelligence product cannot feel premium or reliable while transport security, error handling, and infrastructure disclosure are visibly broken.
+  - Tradeoffs / risks: Requires coordinated hosting, WordPress configuration, and deployment validation; staging and production behavior must be verified separately.
   - Acceptance Criteria:
-    - README explicitly states native WordPress categories are the canonical public Topic implementation, or documents a different canonical taxonomy.
-    - Topic/category contract includes definition, inclusion rules, exclusion rules, and version metadata.
-    - WordPress category creation/update writes approved topic descriptions or term meta through the service boundary.
-    - Topic directory and category archive templates render approved topic semantics without ad hoc copy.
-    - Tests assert term semantics survive publish and readback.
+    - `https://marketlense.medianewsonline.com/` serves successfully and HTTP requests redirect to HTTPS.
+    - Robots and sitemap URLs use HTTPS canonical URLs.
+    - Public fatal errors never expose PHP stack traces, plugin paths, server filesystem paths, or WordPress troubleshooting internals.
+    - Branded 404/500 pages render with safe copy, navigation, and no diagnostic leakage.
+    - A hosted smoke test verifies HTTPS, canonical sitemap URL, representative public pages, and safe error behavior.
 
-- **Title:** Promote live WordPress entity REST verification into a staging release gate [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: Manual live verification now proves hosted `ml_report`, `ml_briefing`, and `ml_signal` REST exposure/readback, but release operations should catch stale plugin deployments before production publishing is attempted.
-  - Why implement: Prevents repeated manual discovery of stale WordPress plugin state and gives operators auditable deployment evidence.
-  - Tradeoffs / risks: Requires a non-production WordPress target and cleanup policy for verification drafts.
+- **Title:** Add real public intake flows for briefing, correction, and report submission CTAs [Impact: 5/5, Effort: 2/5]
+  - Problem fixed: The live `Request a briefing`, `Send a correction`, and `Start a submission request` paths loop back to informational pages and do not expose a form, email, calendar, or structured intake workflow.
+  - Why implement: Broken conversion paths make the site look unfinished and prevent strategic leads, corrections, and source submissions from reaching operators with usable context.
+  - Tradeoffs / risks: Intake must avoid collecting secrets or unnecessary personal data and must route submissions without introducing a new external boundary unless explicitly reviewed.
   - Acceptance Criteria:
-    - Release docs define the required staging WordPress env vars and existing artifact paths used by the verifier.
-    - A staging-only release gate runs live report, Briefing, and Signal REST publish/readback verification and archives sanitized JSON evidence.
-    - The gate fails on missing `ml_report`/`ml_briefing`/`ml_signal` type exposure, route-template drift, metadata readback loss, or unexpected post status.
-    - Verification drafts are tagged for cleanup or removed by a documented operator command.
+    - Briefing, correction, and submission CTAs each lead to a working intake path with explicit required fields and confirmation state.
+    - Correction intake requires report URL, section, source-backed correction text, and contact details.
+    - Submission intake requires source URL/upload location, publisher, publication date when known, region when known, urgency, and business context.
+    - Submitted requests are persisted or delivered through an approved service boundary with structured logs and redaction.
+    - Tests or hosted smoke checks cover successful submission, validation errors, spam/empty input rejection, and CTA routing.
+
+- **Title:** Add public content-governance checks for metadata and extraction leakage [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Public pages expose pipeline artifacts and polluted metadata, including `Not extracted` as a publisher, publisher labels such as `YouGov Year: 2024`, sentence-length period/region filters, raw generated snippets, and empty/default-looking report-card fields.
+  - Why implement: The visual system is credible, but visible data-governance failures undermine the premium consultancy positioning and can also trigger runtime crashes when required card values are missing.
+  - Tradeoffs / risks: The gate must fail closed without inventing missing metadata; remediation may require source-backed repair or explicit operator approval.
+  - Acceptance Criteria:
+    - Public publish/readiness checks reject placeholder publishers, default/sentinel metadata, and metadata labels containing extracted field names.
+    - Publisher, period, region, and category values are normalized before they reach WordPress filters or cards.
+    - Reports with missing required card values are withheld or routed to remediation instead of rendering partial cards.
+    - The `/publisher/not-extracted/` class of failure has a regression test that proves missing publisher data cannot crash public archives.
+    - README documents the editorial QA gate and operator remediation path for blocked public entities.
+
+- **Title:** Polish mobile search, navigation, and responsive public workflows [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Mobile QA found horizontal overflow on search results, a cramped archive/search control row, an unfinished-looking mobile menu overlay, a stray bullet artifact near the open menu, a very tall hero text stack, and clipped desktop header search placeholder text.
+  - Why implement: Search and navigation are primary workflows; responsive defects make the product feel less mature than its content architecture.
+  - Tradeoffs / risks: Changes should be scoped to theme/UI behavior and must not alter archive query semantics or WordPress projection contracts.
+  - Acceptance Criteria:
+    - Homepage, search results, reports archive, report detail, contact, and submit pages have no horizontal overflow at 390px, tablet, and desktop widths.
+    - Mobile menu uses an accessible button with open/close state, focus behavior, and a visually intentional panel/backdrop.
+    - Header search input and button labels fit without clipping across tested widths.
+    - Mobile search/filter/sort controls remain usable without layout shifts or overlapping text.
+    - Visual browser smoke screenshots are captured for the key public pages and retained as release evidence.
+
+- **Title:** Raise report-card and evidence-exhibit presentation to premium editorial quality [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Report cards and detail pages expose raw OCR/table fragments, labels like `Additional figure 2`, blank or weak thumbnails, repeated generated summaries, and internal identifiers such as `f1`/`q3` without enough editorial context.
+  - Why implement: The report detail structure is strategically valuable, but raw extraction artifacts make the experience feel automated rather than analyst-curated.
+  - Tradeoffs / risks: Exhibit and card titles must be source-grounded and deterministic; editorial polish must not fabricate claims or hide evidence provenance.
+  - Acceptance Criteria:
+    - Report cards use concise, analyst-quality summaries with no raw extraction prefixes, OCR fragments, or duplicate generated boilerplate.
+    - Exhibit cards render human-readable titles and captions instead of raw table strings or generic figure numbers.
+    - Blank or low-information thumbnails are replaced by deterministic branded covers or validated source previews.
+    - Evidence identifiers remain available for audit but are presented with readable labels and source context.
+    - Regression checks fail when public card/exhibit copy contains known leakage patterns such as `F1`, `Additional figure`, `Overview ... Executive summary`, or required-field placeholders.
+
+- **Title:** Add public-site SEO, social metadata, and performance baseline gates [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: Homepage source sampling found a title but no detected meta description, canonical, or Open Graph tags, and a sampled methodology page showed roughly 4.8s to first response in browser timing.
+  - Why implement: Premium public sites need predictable sharing, indexing, canonicalization, and basic speed budgets, especially for a research archive intended to be discovered and cited.
+  - Tradeoffs / risks: Performance thresholds should be measured against the hosted environment and avoid noisy gates until a stable baseline exists.
+  - Acceptance Criteria:
+    - Homepage, archive, report detail, briefing, signal, methodology, contact, and submit pages publish meta description, canonical URL, and Open Graph/Twitter metadata.
+    - Metadata values are generated from approved public contracts and do not expose internal pipeline fields.
+    - A lightweight hosted performance smoke check records response start, DOM complete, request count, and page weight for representative pages.
+    - Initial thresholds are documented with owner, baseline, target, and review date.
+    - README documents SEO/social metadata ownership and the public performance baseline process.
 
 ---
 
@@ -284,6 +343,7 @@ Scoring:
 - Semantic evidence preselection benchmark and tuning.
 - Public entity projection coverage for Figures, Regions, and Time Periods, or README narrowing.
 - WordPress render-time intelligence synthesis replacement with approved projections.
+- Public-site launch trust hardening, intake flows, content-governance checks, and premium presentation QA.
 
 ### Phase 3: Resilience and Performance
 

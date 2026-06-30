@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, NoReturn, Optional
 import requests
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
@@ -11,6 +11,7 @@ from src.contracts.wordpress import (
     WordPressTagEnsureResponse,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyEnsureResponse,
+    WordPressTaxonomyTerm,
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -28,6 +29,10 @@ HTTP_ERROR_BODY_LIMIT = 1000
 REDACTED_HEADER_KEYS = {"authorization", "cookie", "set-cookie"}
 WORDPRESS_HTTP_POOL_CONNECTIONS = 8
 WORDPRESS_HTTP_POOL_MAXSIZE = 8
+TOPIC_DEFINITION_META = "ml_topic_definition"
+TOPIC_INCLUDE_WHEN_META = "ml_topic_include_when"
+TOPIC_EXCLUDE_WHEN_META = "ml_topic_exclude_when"
+TOPIC_SCHEMA_VERSION_META = "ml_topic_schema_version"
 _ORIGINAL_REQUEST_CALLS: dict[str, Any] = {
     "GET": requests.get,
     "POST": requests.post,
@@ -39,7 +44,7 @@ def _ensure_terms(
     ctx: RunContext,
     base_url: str,
     auth_header: str,
-    terms: list[tuple[str, str]],
+    terms: list[WordPressTaxonomyTerm],
     ssl_verify: bool,
     ca_bundle_path: Optional[str],
     lookup_failed_code: str,
@@ -62,7 +67,10 @@ def _ensure_terms(
         "Authorization": auth_header,
         "Content-Type": "application/json",
     }
-    for slug, name in terms:
+    for term in terms:
+        slug = term.slug
+        name = term.name or term.slug
+        term_payload = _term_payload(term)
         lookup_result = _execute_request(
             method="GET",
             url=base_url,
@@ -113,7 +121,7 @@ def _ensure_terms(
                 method="POST",
                 url=base_url,
                 headers=headers,
-                data=json.dumps({"name": name, "slug": slug}),
+                data=json.dumps(term_payload),
                 ssl_verify=ssl_verify,
                 ca_bundle_path=ca_bundle_path,
                 ctx=ctx,
@@ -152,6 +160,53 @@ def _ensure_terms(
                 )
             data = _safe_json(create_resp.text)
             term_id = data.get("id")
+            if term_id and _term_semantics_payload(term):
+                _validate_term_semantics_readback(
+                    ctx=ctx,
+                    base_url=base_url,
+                    term=term,
+                    term_id=int(term_id),
+                    auth_header=auth_header,
+                    ssl_verify=ssl_verify,
+                    ca_bundle_path=ca_bundle_path,
+                    lookup_failed_code=lookup_failed_code,
+                    lookup_failed_message=lookup_failed_message,
+                    lookup_server_code=lookup_server_code,
+                    lookup_server_prefix=lookup_server_prefix,
+                    lookup_client_code=lookup_client_code,
+                    lookup_client_prefix=lookup_client_prefix,
+                )
+        elif _term_semantics_payload(term):
+            _update_term_semantics(
+                ctx=ctx,
+                base_url=base_url,
+                term_id=int(term_id),
+                auth_header=auth_header,
+                payload=term_payload,
+                ssl_verify=ssl_verify,
+                ca_bundle_path=ca_bundle_path,
+                update_failed_code=create_failed_code,
+                update_failed_message=create_failed_message,
+                update_server_code=create_server_code,
+                update_server_prefix=create_server_prefix,
+                update_client_code=create_client_code,
+                update_client_prefix=create_client_prefix,
+            )
+            _validate_term_semantics_readback(
+                ctx=ctx,
+                base_url=base_url,
+                term=term,
+                term_id=int(term_id),
+                auth_header=auth_header,
+                ssl_verify=ssl_verify,
+                ca_bundle_path=ca_bundle_path,
+                lookup_failed_code=lookup_failed_code,
+                lookup_failed_message=lookup_failed_message,
+                lookup_server_code=lookup_server_code,
+                lookup_server_prefix=lookup_server_prefix,
+                lookup_client_code=lookup_client_code,
+                lookup_client_prefix=lookup_client_prefix,
+            )
 
         if not term_id:
             raise AppError(
@@ -161,6 +216,217 @@ def _ensure_terms(
             )
         slug_to_id[slug] = int(term_id)
     return slug_to_id
+
+
+def _term_semantics_payload(term: WordPressTaxonomyTerm) -> dict[str, object]:
+    meta: dict[str, object] = {}
+    if term.definition.strip():
+        meta[TOPIC_DEFINITION_META] = term.definition.strip()
+    include_when = [value.strip() for value in term.include_when if value.strip()]
+    if include_when:
+        meta[TOPIC_INCLUDE_WHEN_META] = include_when
+    exclude_when = [value.strip() for value in term.exclude_when if value.strip()]
+    if exclude_when:
+        meta[TOPIC_EXCLUDE_WHEN_META] = exclude_when
+    if term.semantics_version.strip():
+        meta[TOPIC_SCHEMA_VERSION_META] = term.semantics_version.strip()
+    return meta
+
+
+def _term_payload(term: WordPressTaxonomyTerm) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "name": term.name or term.slug,
+        "slug": term.slug,
+    }
+    if term.description.strip():
+        payload["description"] = term.description.strip()
+    meta = _term_semantics_payload(term)
+    if meta:
+        payload["meta"] = meta
+    return payload
+
+
+def _update_term_semantics(
+    *,
+    ctx: RunContext,
+    base_url: str,
+    term_id: int,
+    auth_header: str,
+    payload: dict[str, object],
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
+    update_failed_code: str,
+    update_failed_message: str,
+    update_server_code: str,
+    update_server_prefix: str,
+    update_client_code: str,
+    update_client_prefix: str,
+) -> None:
+    update_result = _execute_request(
+        method="POST",
+        url=f"{base_url.rstrip('/')}/{term_id}",
+        headers={
+            "Authorization": auth_header,
+            "Content-Type": "application/json",
+        },
+        data=json.dumps(payload),
+        ssl_verify=ssl_verify,
+        ca_bundle_path=ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wp_taxonomy_update_request_error",
+        request_error_code=update_failed_code,
+        request_error_message=update_failed_message,
+        request_error_fields={"base_url": base_url, "term_id": term_id},
+    )
+    resp = update_result.response
+    if resp.status_code >= 500:
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wp_taxonomy_update_http_error",
+            code=update_server_code,
+            message_prefix=update_server_prefix,
+            resp=resp,
+            fields={
+                "base_url": base_url,
+                "term_id": term_id,
+                "used_pooled_session": update_result.used_pooled_session,
+                "pool_key": update_result.pool_key,
+                "pool_reused": update_result.pool_reused,
+            },
+        )
+    if resp.status_code >= 400:
+        raise AppError(
+            code=update_client_code,
+            message=f"{update_client_prefix}: {resp.status_code}",
+            retryable=False,
+        )
+
+
+def _validate_term_semantics_readback(
+    *,
+    ctx: RunContext,
+    base_url: str,
+    term: WordPressTaxonomyTerm,
+    term_id: int,
+    auth_header: str,
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
+    lookup_failed_code: str,
+    lookup_failed_message: str,
+    lookup_server_code: str,
+    lookup_server_prefix: str,
+    lookup_client_code: str,
+    lookup_client_prefix: str,
+) -> None:
+    expected_meta = _term_semantics_payload(term)
+    readback_result = _execute_request(
+        method="GET",
+        url=base_url,
+        headers={"Authorization": auth_header},
+        params={"slug": term.slug, "context": "edit"},
+        ssl_verify=ssl_verify,
+        ca_bundle_path=ca_bundle_path,
+        ctx=ctx,
+        request_error_event="wp_taxonomy_semantics_readback_request_error",
+        request_error_code=lookup_failed_code,
+        request_error_message=lookup_failed_message,
+        request_error_fields={"base_url": base_url, "slug": term.slug},
+    )
+    resp = readback_result.response
+    if resp.status_code >= 500:
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wp_taxonomy_semantics_readback_http_error",
+            code=lookup_server_code,
+            message_prefix=lookup_server_prefix,
+            resp=resp,
+            fields={
+                "base_url": base_url,
+                "slug": term.slug,
+                "used_pooled_session": readback_result.used_pooled_session,
+                "pool_key": readback_result.pool_key,
+                "pool_reused": readback_result.pool_reused,
+            },
+        )
+    if resp.status_code >= 400:
+        raise AppError(
+            code=lookup_client_code,
+            message=f"{lookup_client_prefix}: {resp.status_code}",
+            retryable=False,
+        )
+
+    payload = _safe_json(resp.text)
+    if not isinstance(payload, list):
+        _raise_term_semantics_readback_mismatch(
+            term=term,
+            term_id=term_id,
+            reason="readback_payload_not_list",
+            expected_meta=expected_meta,
+        )
+    readback_term = next(
+        (
+            item
+            for item in payload
+            if isinstance(item, dict) and int(item.get("id") or 0) == term_id
+        ),
+        None,
+    )
+    if not isinstance(readback_term, dict):
+        _raise_term_semantics_readback_mismatch(
+            term=term,
+            term_id=term_id,
+            reason="readback_term_missing",
+            expected_meta=expected_meta,
+        )
+
+    if (
+        term.description.strip()
+        and readback_term.get("description") != term.description.strip()
+    ):
+        _raise_term_semantics_readback_mismatch(
+            term=term,
+            term_id=term_id,
+            reason="description_mismatch",
+            expected_meta=expected_meta,
+        )
+
+    readback_meta = readback_term.get("meta")
+    if not isinstance(readback_meta, dict):
+        _raise_term_semantics_readback_mismatch(
+            term=term,
+            term_id=term_id,
+            reason="meta_missing",
+            expected_meta=expected_meta,
+        )
+    for key, expected_value in expected_meta.items():
+        if readback_meta.get(key) != expected_value:
+            _raise_term_semantics_readback_mismatch(
+                term=term,
+                term_id=term_id,
+                reason=f"meta_mismatch:{key}",
+                expected_meta=expected_meta,
+            )
+
+
+def _raise_term_semantics_readback_mismatch(
+    *,
+    term: WordPressTaxonomyTerm,
+    term_id: int,
+    reason: str,
+    expected_meta: dict[str, object],
+) -> NoReturn:
+    raise AppError(
+        code="wp_taxonomy_semantics_readback_mismatch",
+        message="WordPress taxonomy term semantics failed REST readback validation",
+        retryable=False,
+        severity="error",
+        context={
+            "term_id": term_id,
+            "slug": term.slug,
+            "reason": reason,
+            "expected_meta_keys": sorted(expected_meta),
+        },
+    )
 
 
 def ensure_taxonomy_terms(
@@ -192,7 +458,7 @@ def ensure_taxonomy_terms(
         ctx=ctx,
         base_url=base_url,
         auth_header=request.auth_header,
-        terms=[(term.slug, term.name or term.slug) for term in request.terms],
+        terms=list(request.terms),
         ssl_verify=request.ssl_verify,
         ca_bundle_path=request.ca_bundle_path,
         lookup_failed_code="wp_taxonomy_lookup_failed",
@@ -250,7 +516,10 @@ def ensure_tags(
         ctx=ctx,
         base_url=base_url,
         auth_header=request.auth_header,
-        terms=[(slug, slug) for slug in request.tags],
+        terms=[
+            WordPressTaxonomyTerm(schema_version="1.0", slug=slug, name=slug)
+            for slug in request.tags
+        ],
         ssl_verify=request.ssl_verify,
         ca_bundle_path=request.ca_bundle_path,
         lookup_failed_code="wp_tag_lookup_failed",
@@ -368,6 +637,8 @@ def update_post_categories(
 
 __all__ = [
     "_ensure_terms",
+    "_term_payload",
+    "_term_semantics_payload",
     "ensure_taxonomy_terms",
     "ensure_tags",
     "update_post_categories",

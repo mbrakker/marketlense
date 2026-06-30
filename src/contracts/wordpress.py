@@ -367,6 +367,36 @@ class WordPressTaxonomyTerm:
     )
     slug: str = field(metadata={"doc": "WordPress taxonomy term slug."})
     name: str = field(metadata={"doc": "WordPress taxonomy term display name."})
+    description: str = field(
+        default="",
+        metadata={
+            "doc": "Approved public term description written to the WordPress term description."
+        },
+    )
+    definition: str = field(
+        default="",
+        metadata={
+            "doc": "Approved topic definition stored as WordPress term metadata."
+        },
+    )
+    include_when: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Approved topic inclusion rules stored as WordPress term metadata."
+        },
+    )
+    exclude_when: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Approved topic exclusion rules stored as WordPress term metadata."
+        },
+    )
+    semantics_version: str = field(
+        default="",
+        metadata={
+            "doc": "Source category/topic semantics schema version stored as term metadata."
+        },
+    )
 
 
 @dataclass(frozen=True)

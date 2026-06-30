@@ -127,7 +127,11 @@ def publish_html(
         )
     base_url = settings.wp.site_url.rstrip("/")
     card_manifest = None
-    if settings.wp.post_type in {"ml_report", "post", "posts"} and not file_id.startswith("cross-report:"):
+    if settings.wp.post_type in {
+        "ml_report",
+        "post",
+        "posts",
+    } and not file_id.startswith("cross-report:"):
         card_manifest = _load_report_card_manifest(
             request.html_path,
             settings.output_dir,
@@ -826,12 +830,29 @@ def _resolve_term_assignments(
             ),
             ctx,
         )
-        id_to_label = {
-            cat.id: cat.label or cat.id for cat in mappings_resp.mappings.categories
-        }
+        id_to_category = {cat.id: cat for cat in mappings_resp.mappings.categories}
         terms = [
             WordPressTaxonomyTerm(
-                schema_version="1.0", slug=cat_id, name=id_to_label.get(cat_id, cat_id)
+                schema_version="1.1",
+                slug=cat_id,
+                name=(id_to_category[cat_id].label or cat_id)
+                if cat_id in id_to_category
+                else cat_id,
+                description=id_to_category[cat_id].description
+                if cat_id in id_to_category
+                else "",
+                definition=id_to_category[cat_id].definition
+                if cat_id in id_to_category
+                else "",
+                include_when=list(id_to_category[cat_id].include_when)
+                if cat_id in id_to_category
+                else [],
+                exclude_when=list(id_to_category[cat_id].exclude_when)
+                if cat_id in id_to_category
+                else [],
+                semantics_version=id_to_category[cat_id].schema_version
+                if cat_id in id_to_category
+                else "",
             )
             for cat_id in metadata.categories
         ]

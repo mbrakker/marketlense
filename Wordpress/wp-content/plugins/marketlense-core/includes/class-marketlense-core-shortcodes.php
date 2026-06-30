@@ -27,6 +27,7 @@ final class Shortcodes
         'ml_report_browser' => 'render_report_browser',
         'ml_latest_reports' => 'render_latest_reports',
         'ml_topics_directory' => 'render_topics_directory',
+        'ml_topic_semantics' => 'render_current_topic_semantics',
         'ml_publishers_directory' => 'render_publishers_directory',
         'ml_publisher_profile' => 'render_publisher_profile',
         'ml_home_metrics' => 'render_home_metrics',
@@ -1129,6 +1130,7 @@ final class Shortcodes
                     <?php if ($term->description !== '') : ?>
                         <p><?php echo esc_html($term->description); ?></p>
                     <?php endif; ?>
+                    <?php echo $this->render_topic_semantics($term, false); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     <p class="ml-directory-count"><?php echo esc_html($this->content_count_line($item)); ?></p>
                     <?php if (! is_wp_error($link) && (int) $item['reports'] > 0) : ?>
                         <div class="ml-directory-actions">
@@ -1143,6 +1145,84 @@ final class Shortcodes
         </section>
         <?php
         return (string) ob_get_clean();
+    }
+
+    /**
+     * Renders governed semantics for the current native category topic archive.
+     */
+    public function render_current_topic_semantics(): string
+    {
+        if (! is_category()) {
+            return '';
+        }
+        $term = get_queried_object();
+        if (! $term instanceof \WP_Term) {
+            return '';
+        }
+
+        return $this->render_topic_semantics($term, true);
+    }
+
+    /**
+     * Renders approved topic semantics stored on the native category term.
+     */
+    private function render_topic_semantics(\WP_Term $term, bool $include_rules): string
+    {
+        $definition = trim((string) get_term_meta($term->term_id, Taxonomies::TOPIC_DEFINITION_META, true));
+        $include_when = $this->topic_rule_list($term->term_id, Taxonomies::TOPIC_INCLUDE_WHEN_META);
+        $exclude_when = $this->topic_rule_list($term->term_id, Taxonomies::TOPIC_EXCLUDE_WHEN_META);
+        $schema_version = trim((string) get_term_meta($term->term_id, Taxonomies::TOPIC_SCHEMA_VERSION_META, true));
+        if ($definition === '' && $include_when === [] && $exclude_when === [] && $schema_version === '') {
+            return '';
+        }
+
+        ob_start();
+        ?>
+        <section class="ml-topic-semantics" data-topic-semantics-version="<?php echo esc_attr($schema_version); ?>">
+            <?php if ($definition !== '') : ?>
+                <p class="ml-topic-definition"><?php echo esc_html($definition); ?></p>
+            <?php endif; ?>
+            <?php if ($include_rules && $include_when !== []) : ?>
+                <div class="ml-topic-rules">
+                    <h2><?php esc_html_e('Included when', 'marketlense-core'); ?></h2>
+                    <ul>
+                        <?php foreach ($include_when as $rule) : ?>
+                            <li><?php echo esc_html($rule); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+            <?php if ($include_rules && $exclude_when !== []) : ?>
+                <div class="ml-topic-rules">
+                    <h2><?php esc_html_e('Excluded when', 'marketlense-core'); ?></h2>
+                    <ul>
+                        <?php foreach ($exclude_when as $rule) : ?>
+                            <li><?php echo esc_html($rule); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+        </section>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function topic_rule_list(int $term_id, string $meta_key): array
+    {
+        $raw = get_term_meta($term_id, $meta_key, true);
+        $items = is_array($raw) ? $raw : [];
+        $rules = [];
+        foreach ($items as $item) {
+            $text = trim((string) $item);
+            if ($text !== '') {
+                $rules[] = $text;
+            }
+        }
+
+        return array_values($rules);
     }
 
     /**

@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 1.6.7
+Stable tag: 1.6.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,10 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.6.8 =
+* Writes governed Topic semantics from native WordPress categories, including definitions, inclusion rules, exclusion rules, and schema version term metadata.
+* Extends live REST verification to cover `ml_report`, `ml_briefing`, and `ml_signal` draft create/readback evidence.
 
 = 1.6.7 =
 * Adds canonical small, medium, and large Signal cards with validated statement, confidence, source/evidence counts, topics, uncertainty condition, and three deterministic deep-petrol cover assets.

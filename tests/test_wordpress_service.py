@@ -20,6 +20,7 @@ from src.contracts.wordpress import (
     WordPressTaxonomyTerm,
 )
 from src.services import wordpress_service as svc
+from src.utils.errors import AppError
 from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 
 
@@ -458,6 +459,147 @@ def test_ensure_taxonomy_terms_creates_missing_terms(wordpress_http) -> None:
         len(wordpress_http.calls_for("POST", "https://site/wp-json/wp/v2/categories"))
         == 1
     )
+
+
+def test_ensure_taxonomy_terms_writes_topic_semantics_for_existing_terms(
+    wordpress_http,
+) -> None:
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/categories",
+        status_code=200,
+        payload=[{"id": 5}],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://site/wp-json/wp/v2/categories/5",
+        status_code=200,
+        payload={"id": 5},
+    )
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/categories",
+        status_code=200,
+        payload=[
+            {
+                "id": 5,
+                "description": "Payments category",
+                "meta": {
+                    "ml_topic_definition": "Reports centered on digital payment behavior.",
+                    "ml_topic_include_when": [
+                        "Checkout, wallet, or fraud evidence is central."
+                    ],
+                    "ml_topic_exclude_when": [
+                        "Payments are only a minor operational detail."
+                    ],
+                    "ml_topic_schema_version": "1.2",
+                },
+            }
+        ],
+    )
+    request = WordPressTaxonomyEnsureRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        taxonomy_rest_base="categories",
+        terms=[
+            WordPressTaxonomyTerm(
+                schema_version="1.1",
+                slug="digital_payments",
+                name="Digital Payments",
+                description="Payments category",
+                definition="Reports centered on digital payment behavior.",
+                include_when=["Checkout, wallet, or fraud evidence is central."],
+                exclude_when=["Payments are only a minor operational detail."],
+                semantics_version="1.2",
+            )
+        ],
+    )
+
+    response = svc.ensure_taxonomy_terms(request, _ctx())
+
+    update_call = wordpress_http.calls_for(
+        "POST", "https://site/wp-json/wp/v2/categories/5"
+    )[0]
+    assert response.slug_to_id == {"digital_payments": 5}
+    assert update_call.json_data == {
+        "name": "Digital Payments",
+        "slug": "digital_payments",
+        "description": "Payments category",
+        "meta": {
+            "ml_topic_definition": "Reports centered on digital payment behavior.",
+            "ml_topic_include_when": [
+                "Checkout, wallet, or fraud evidence is central."
+            ],
+            "ml_topic_exclude_when": ["Payments are only a minor operational detail."],
+            "ml_topic_schema_version": "1.2",
+        },
+    }
+    readback_call = wordpress_http.calls_for(
+        "GET", "https://site/wp-json/wp/v2/categories"
+    )[1]
+    assert readback_call.params == {"slug": "digital_payments", "context": "edit"}
+
+
+def test_ensure_taxonomy_terms_rejects_missing_topic_semantics_readback(
+    wordpress_http,
+    assert_app_error,
+) -> None:
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/categories",
+        status_code=200,
+        payload=[{"id": 5}],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://site/wp-json/wp/v2/categories/5",
+        status_code=200,
+        payload={"id": 5},
+    )
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/categories",
+        status_code=200,
+        payload=[
+            {
+                "id": 5,
+                "description": "Payments category",
+                "meta": {},
+            }
+        ],
+    )
+    request = WordPressTaxonomyEnsureRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        taxonomy_rest_base="categories",
+        terms=[
+            WordPressTaxonomyTerm(
+                schema_version="1.1",
+                slug="digital_payments",
+                name="Digital Payments",
+                description="Payments category",
+                definition="Reports centered on digital payment behavior.",
+                include_when=["Checkout, wallet, or fraud evidence is central."],
+                exclude_when=["Payments are only a minor operational detail."],
+                semantics_version="1.2",
+            )
+        ],
+    )
+
+    try:
+        svc.ensure_taxonomy_terms(request, _ctx())
+    except AppError as err:
+        assert_app_error(
+            err,
+            code="wp_taxonomy_semantics_readback_mismatch",
+            retryable=False,
+            severity="error",
+        )
+        assert err.context["reason"] == "meta_mismatch:ml_topic_definition"
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
 
 
 def test_ensure_taxonomy_terms_rejects_empty_rest_base(assert_app_error) -> None:

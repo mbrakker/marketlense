@@ -21,8 +21,12 @@ from Wordpress.scripts.wp_rest_common import (
 )
 
 
-REQUIRED_POST_TYPES = ("ml_briefing", "ml_signal")
-ENTITY_ROUTE_SEGMENTS = {"ml_briefing": "/briefings/", "ml_signal": "/signals/"}
+REQUIRED_POST_TYPES = ("ml_report", "ml_briefing", "ml_signal")
+ENTITY_ROUTE_SEGMENTS = {
+    "ml_report": "/reports/",
+    "ml_briefing": "/briefings/",
+    "ml_signal": "/signals/",
+}
 
 
 class RestClient(Protocol):
@@ -105,6 +109,26 @@ def build_briefing_payload(
     )
 
 
+def build_report_payload(
+    artifact_path: Path, *, slug_suffix: str, status: str
+) -> EntityDraftPayload:
+    if not artifact_path.is_file():
+        raise RuntimeError(f"Report artifact path does not exist: {artifact_path}")
+    html_text = artifact_path.read_text(encoding="utf-8")
+    title = _html_title(html_text) or artifact_path.stem.replace("-", " ").title()
+    excerpt = _strip_tags(html_text)[:500]
+    return EntityDraftPayload(
+        schema_version="1.0",
+        post_type="ml_report",
+        source_artifact_path=str(artifact_path),
+        title=title,
+        slug=_verification_slug(slugify(title), slug_suffix),
+        content_html=html_text,
+        excerpt=excerpt,
+        status=status,
+    )
+
+
 def build_signal_payload(
     artifact_path: Path, *, slug_suffix: str, status: str
 ) -> EntityDraftPayload:
@@ -153,12 +177,13 @@ def build_signal_payload(
 def verify_remote_entities(
     client: RestClient,
     *,
+    report_payload: EntityDraftPayload,
     briefing_payload: EntityDraftPayload,
     signal_payload: EntityDraftPayload,
 ) -> list[EntityVerification]:
     type_routes = _verify_type_exposure(client.get("wp/v2/types"))
     verifications: list[EntityVerification] = []
-    for payload in (briefing_payload, signal_payload):
+    for payload in (report_payload, briefing_payload, signal_payload):
         created = _create_draft(client, payload)
         readback = _read_back_post(client, payload.post_type, created)
         _assert_readback(payload, readback)
@@ -369,12 +394,34 @@ def _strip_tags(value: str) -> str:
     return re.sub(r"<[^>]+>", "", value).strip()
 
 
+def _html_title(html_text: str) -> str:
+    title_match = re.search(
+        r"<title[^>]*>(.*?)</title>", html_text, flags=re.IGNORECASE | re.DOTALL
+    )
+    if title_match:
+        title = _strip_tags(title_match.group(1))
+        if title:
+            return title
+    heading_match = re.search(
+        r"<h1[^>]*>(.*?)</h1>", html_text, flags=re.IGNORECASE | re.DOTALL
+    )
+    if heading_match:
+        return _strip_tags(heading_match.group(1))
+    return ""
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Verify live WordPress REST exposure and draft readback for "
-            "ml_briefing and ml_signal using existing generated artifacts."
+            "ml_report, ml_briefing, and ml_signal using existing generated artifacts."
         )
+    )
+    parser.add_argument(
+        "--report-artifact",
+        required=True,
+        type=Path,
+        help="Existing generated report HTML artifact.",
     )
     parser.add_argument(
         "--briefing-artifact",
@@ -399,6 +446,11 @@ def _parse_args() -> argparse.Namespace:
         default="",
         help="Unique suffix for created verification slugs.",
     )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        help="Optional path for sanitized verification evidence JSON.",
+    )
     return parser.parse_args()
 
 
@@ -407,6 +459,11 @@ def main() -> None:
     suffix = str(args.slug_suffix or "").strip()
     if not suffix:
         suffix = "rest-verify-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    report_payload = build_report_payload(
+        args.report_artifact,
+        slug_suffix=suffix,
+        status=args.status,
+    )
     briefing_payload = build_briefing_payload(
         args.briefing_artifact,
         slug_suffix=suffix,
@@ -420,17 +477,20 @@ def main() -> None:
     client = WordPressRestClient(load_rest_settings_from_env())
     verifications = verify_remote_entities(
         client,
+        report_payload=report_payload,
         briefing_payload=briefing_payload,
         signal_payload=signal_payload,
     )
-    print(
-        json.dumps(
-            [verification.__dict__ for verification in verifications],
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=True,
-        )
+    output = json.dumps(
+        [verification.__dict__ for verification in verifications],
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
     )
+    if args.output_json is not None:
+        args.output_json.parent.mkdir(parents=True, exist_ok=True)
+        args.output_json.write_text(output + "\n", encoding="utf-8")
+    print(output)
 
 
 if __name__ == "__main__":

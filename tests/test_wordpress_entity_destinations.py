@@ -93,6 +93,23 @@ def test_wordpress_shortcodes_expose_signal_and_briefing_archives() -> None:
     assert "Post_Type::BRIEFING_POST_TYPE" in source
 
 
+def test_native_categories_are_governed_topic_surface() -> None:
+    shortcode_source = SHORTCODES_PATH.read_text(encoding="utf-8")
+    taxonomy_source = TAXONOMIES_PATH.read_text(encoding="utf-8")
+    category_template = (THEME_TEMPLATES / "category.html").read_text(encoding="utf-8")
+
+    assert "public const CATEGORY_TAXONOMY = 'category';" in taxonomy_source
+    assert "TOPIC_DEFINITION_META = 'ml_topic_definition'" in taxonomy_source
+    assert "TOPIC_INCLUDE_WHEN_META = 'ml_topic_include_when'" in taxonomy_source
+    assert "TOPIC_EXCLUDE_WHEN_META = 'ml_topic_exclude_when'" in taxonomy_source
+    assert "register_term_meta(\n            self::CATEGORY_TAXONOMY" in taxonomy_source
+    assert (
+        "'ml_topic_semantics' => 'render_current_topic_semantics'" in shortcode_source
+    )
+    assert "Taxonomies::TOPIC_DEFINITION_META" in shortcode_source
+    assert "[ml_topic_semantics]" in category_template
+
+
 def test_publisher_taxonomy_assigns_to_signal_and_briefing_destinations() -> None:
     source = TAXONOMIES_PATH.read_text(encoding="utf-8")
 

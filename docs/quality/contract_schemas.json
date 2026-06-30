@@ -28911,10 +28911,31 @@
     "src.contracts.wordpress.WordPressTaxonomyTerm": {
       "additionalProperties": false,
       "properties": {
+        "definition": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "exclude_when": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "include_when": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "name": {
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "semantics_version": {
           "type": "string"
         },
         "slug": {

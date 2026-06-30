@@ -112,7 +112,7 @@ def _resolve_batch_term_assignments(
         _normalize_string_list(record.categories)
         for record in selected_metadata.values()
     )
-    category_labels: dict[str, str] = {}
+    category_definitions = {}
     if needs_category_labels:
         mappings_resp = load_category_mappings(
             CategoryMappingLoadRequest(
@@ -122,9 +122,8 @@ def _resolve_batch_term_assignments(
             ),
             ctx,
         )
-        category_labels = {
-            category.id: category.label or category.id
-            for category in mappings_resp.mappings.categories
+        category_definitions = {
+            category.id: category for category in mappings_resp.mappings.categories
         }
 
     category_cache: dict[tuple[str, ...], list[int]] = {}
@@ -141,9 +140,32 @@ def _resolve_batch_term_assignments(
             if category_key not in category_cache:
                 terms = [
                     WordPressTaxonomyTerm(
-                        schema_version="1.0",
+                        schema_version="1.1",
                         slug=category_id,
-                        name=category_labels.get(category_id, category_id),
+                        name=(category_definitions[category_id].label or category_id)
+                        if category_id in category_definitions
+                        else category_id,
+                        description=category_definitions[category_id].description
+                        if category_id in category_definitions
+                        else "",
+                        definition=category_definitions[category_id].definition
+                        if category_id in category_definitions
+                        else "",
+                        include_when=list(
+                            category_definitions[category_id].include_when
+                        )
+                        if category_id in category_definitions
+                        else [],
+                        exclude_when=list(
+                            category_definitions[category_id].exclude_when
+                        )
+                        if category_id in category_definitions
+                        else [],
+                        semantics_version=category_definitions[
+                            category_id
+                        ].schema_version
+                        if category_id in category_definitions
+                        else "",
                     )
                     for category_id in categories
                 ]
