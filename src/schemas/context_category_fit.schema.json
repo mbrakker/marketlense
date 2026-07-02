@@ -60,6 +60,25 @@
             "items": {
               "type": "string"
             }
+          },
+          "semantic_rule_status": {
+            "type": "string",
+            "enum": ["supported", "rejected", "ambiguous", "not_evaluated"]
+          },
+          "supported_topic_rules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rejected_topic_rules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "remediation_signal": {
+            "type": "string"
           }
         }
       }

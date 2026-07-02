@@ -847,6 +847,60 @@ def test_render_report_output_writes_complete_report_card_manifest(tmp_path):
     )
 
 
+def test_render_report_output_does_not_use_file_modified_time_for_card_date(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        artifacts_payload={
+            "summary": {
+                "tldr": "A complete standard summary explains the report.",
+                "card_tldr_compact": "A compact report-card summary.",
+            },
+            "cover_semantics": {
+                "evidence_shape": "trend",
+                "direction": "rising",
+                "evidence_density": "balanced",
+                "domain_layer": "grid",
+                "selection_reason": "The report presents a sustained trend.",
+            },
+            "insights_final": [
+                {"text": "Channel efficiency improved."},
+                {"text": "Investment shifted."},
+            ],
+        },
+        evidence_packs={"doc_map": {"title": source.payload.title}},
+    )
+    writes = []
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(
+        render_report=_render_report,
+        write_report_card_manifest=lambda req, ctx: writes.append(req),
+    )
+
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=render_preview_asset(runtime, source, deps),
+    )
+
+    assert writes == []
+    assert outcome.status == "error"
+    assert outcome.error
+    assert outcome.error.startswith("card_publication_date_invalid:")
+
+
 def test_render_report_output_does_not_write_manifest_after_cover_error(tmp_path):
     runtime = _runtime(tmp_path, md5="md5")
     source = _source(runtime)

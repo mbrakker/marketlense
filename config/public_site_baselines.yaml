@@ -1,0 +1,22 @@
+schema_version: '1.0'
+owner: publishing_quality
+review_date: '2026-08-01'
+baseline:
+  response_start_ms: 5000
+  dom_complete_ms: 20000
+  request_count: 80
+  page_weight_bytes: 3000000
+target:
+  response_start_ms: 1200
+  dom_complete_ms: 3500
+  request_count: 55
+  page_weight_bytes: 1800000
+required_metadata:
+  - meta.description
+  - link.canonical
+  - og.title
+  - og.description
+  - og.url
+  - twitter.card
+  - twitter.title
+  - twitter.description

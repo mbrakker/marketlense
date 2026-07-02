@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-06-30
+Last audited: 2026-07-02
 
 This file is the single active backlog for this repository. It supersedes older backlog notes, archived planning docs, and ad hoc audit intake.
 
@@ -51,6 +51,9 @@ Scoring:
 - Report post-type drift is closed: README and README_WORDPRESS document canonical report publishing to `ml_report`, `src/config/app.yaml` and `src/config/app.example.yaml` default `publish.wp.post_type` to `ml_report`, the plugin registers `ml_report` with REST base `ml_report`, and legacy core `post` report/digest compatibility is documented as migration-only behavior. Live hosted WordPress verification on 2026-06-28 published an existing generated report artifact (`out/activate-2025-ecommerce-pdf.html`) as draft `ml_report` post ID 1739 and read it back from `/wp-json/wp/v2/ml_report/1739` with type `ml_report`, slug `live-report-post-type-verification-20260628`, status `draft`, and `/reports/%pagename%/` permalink template.
 - Native WordPress categories are now the canonical public Topic surface with governed topic semantics. `WordPressTaxonomyTerm` carries description, definition, inclusion rules, exclusion rules, and semantics version; publish/category generators and publish preflight write those fields through the WordPress taxonomy service; the service performs authenticated REST readback and fails with `wp_taxonomy_semantics_readback_mismatch` when semantic meta is missing; the bundled plugin registers `ml_topic_definition`, `ml_topic_include_when`, `ml_topic_exclude_when`, and `ml_topic_schema_version` term meta for category REST exposure; and the topic directory/category archive templates render approved term semantics. Live hosted WordPress verification on 2026-06-30 wrote/read back the existing `digital_payments` Topic as category term ID 116 with description plus all four `ml_topic_*` meta keys.
 - Live WordPress entity REST verification is now a staging release gate. `Wordpress/scripts/verify-publish-entity-rest.py` verifies `ml_report`, `ml_briefing`, and `ml_signal` publish/readback from existing generated artifacts, `scripts/ci/check_wordpress_staging_rest_gate.py` runs the verifier when staging WordPress env vars are enabled, CI archives sanitized JSON evidence, and README documents required env vars, artifact paths, and draft cleanup by slug prefix. Live hosted WordPress verification on 2026-06-30 created/read back draft IDs 1746 (`ml_report`), 1747 (`ml_briefing`), and 1748 (`ml_signal`) with route templates, status, and metadata readback intact.
+- Canonical Topic semantics now feed category-fit validation and persisted evidence-routing audit fields. Category-fit candidates record semantic rule status, supporting/rejecting rules, and typed remediation signals; selected weak assignments are flagged as `topic_semantics_ambiguous`, exclusion conflicts are rejected, and context-category-fit payloads persist the semantic audit. Live existing-artifact verification on 2026-07-02 used the Julius Baer report analysis artifacts with a real OpenAI call and surfaced the selected Macroeconomics assignment as ambiguous instead of silently treating a weak semantic fit as fully validated.
+- Registry-backed report-card publication-date remediation is live through typed repair contracts, generator-owned normalization, UI failure classification for `card_publication_date_invalid`, and render-time fail-closed date sourcing. Repairs read artifact registry refs for `doc_map`, `artifacts`, `validation`, and `rendered_html`; source-supported dates or audited operator overrides are accepted, while absent registry evidence fails closed. Live existing-checkpoint verification on 2026-07-02 reached `report_card_publication_date_absent` without rerunning upstream model work, proving missing dates are no longer invented from filesystem modified times.
+- Public-site SEO, social metadata, and hosted performance baseline gates are live through `marketlense-core` 1.6.9 metadata rendering, `scripts/quality/public_site_seo_performance.py`, `scripts/ci/check_public_site_seo_performance.py`, `config/public_site_baselines.yaml`, and README release instructions. Live hosted verification on 2026-07-02 passed across homepage, reports, briefings, signals, methodology, contact, and submit pages with no missing metadata and no baseline violations; representative measured maxima were 4.300s response start, 15.972s DOM complete, 28 discovered requests, and 1,602,978 bytes page weight.
 - WordPress design token drift remains: README documents `settings.layout.wideSize` as `82rem`, while `Wordpress/wp-content/themes/marketlense/theme.json` currently uses `84rem`.
 - Live visual QA on 2026-06-30 against `http://marketlense.medianewsonline.com/` found public-site launch blockers and premium-quality gaps: HTTPS failed for the tested hostname, `/publisher/not-extracted/` returned a fatal WordPress error with a PHP stack trace and server paths, "Not extracted" appeared as a public publisher, contact/submission CTAs looped without an intake form, mobile search results had horizontal overflow, and generated/OCR artifacts leaked into public report cards and exhibit captions.
 
@@ -121,17 +124,6 @@ Scoring:
     - Output reports prompt character/token deltas, selected evidence overlap, source-report coverage, and citation coverage by Briefing/Signal run.
     - The benchmark fails or warns when semantic preselection reduces required citation/source coverage below a documented threshold.
     - Tests cover benchmark metric calculation, stale/no-embedding fallback metrics, and deterministic output ordering.
-
-- **Title:** Use canonical Topic semantics for category-fit validation and evidence routing [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Topic definitions and inclusion/exclusion rules are now canonical and visible in WordPress, but upstream category-fit and evidence-routing logic still gets most value from labels, tags, and embeddings rather than enforcing the governed Topic semantics as a validation surface.
-  - Why implement: Converts Topic governance into measurable quality control for classification, Briefing/Signal evidence selection, and public topic pages.
-  - Tradeoffs / risks: Topic rules must stay deterministic and prompt-service-owned; the gate must flag ambiguity without inventing category assignments or suppressing valid cross-topic evidence.
-  - Acceptance Criteria:
-    - Category-fit validation consumes approved Topic definitions and inclusion/exclusion rules through existing config/service contracts, not inline prompt text.
-    - Report, Briefing, and Signal routing logs record which Topic semantic rule supported or rejected each selected category/evidence bundle.
-    - Ambiguous or rule-conflicting assignments produce typed remediation signals instead of silently publishing weak topic mappings.
-    - A benchmark over existing report artifacts measures topic assignment precision, rejected-conflict count, evidence-routing overlap, and prompt-size impact before/after semantic rule use.
-    - Tests cover positive fit, exclusion-rule rejection, ambiguous fit, stale/missing Topic semantics, and deterministic fallback behavior.
 
 - **Title:** Complete public entity projection coverage or narrow the README entity contract [Impact: 5/5, Effort: 5/5]
   - Problem fixed: Reports, Briefings, and Signals have local publish paths, but README still describes a broader public entity model including Figures, Regions, and Time Periods. Those surfaces need either durable public projection contracts/routes or explicit README-scoped exclusions.
@@ -222,16 +214,15 @@ Scoring:
     - Evidence identifiers remain available for audit but are presented with readable labels and source context.
     - Regression checks fail when public card/exhibit copy contains known leakage patterns such as `F1`, `Additional figure`, `Overview ... Executive summary`, or required-field placeholders.
 
-- **Title:** Add public-site SEO, social metadata, and performance baseline gates [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: Homepage source sampling found a title but no detected meta description, canonical, or Open Graph tags, and a sampled methodology page showed roughly 4.8s to first response in browser timing.
-  - Why implement: Premium public sites need predictable sharing, indexing, canonicalization, and basic speed budgets, especially for a research archive intended to be discovered and cited.
-  - Tradeoffs / risks: Performance thresholds should be measured against the hosted environment and avoid noisy gates until a stable baseline exists.
+- **Title:** Reduce hosted public-site latency toward the committed performance targets [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: The hosted SEO/performance gate now records stable representative metrics, but homepage, report archive, and signal archive response-start and DOM-complete timings remain much slower than the documented targets.
+  - Why implement: The new gate should drive measurable speed gains for discovery and research workflows instead of only preventing worse regressions.
+  - Tradeoffs / risks: Optimizations must not weaken public metadata, archive completeness, WordPress projection contracts, or the no-runtime-intelligence-synthesis boundary.
   - Acceptance Criteria:
-    - Homepage, archive, report detail, briefing, signal, methodology, contact, and submit pages publish meta description, canonical URL, and Open Graph/Twitter metadata.
-    - Metadata values are generated from approved public contracts and do not expose internal pipeline fields.
-    - A lightweight hosted performance smoke check records response start, DOM complete, request count, and page weight for representative pages.
-    - Initial thresholds are documented with owner, baseline, target, and review date.
-    - README documents SEO/social metadata ownership and the public performance baseline process.
+    - A hosted baseline comparison run shows response-start and DOM-complete reductions for homepage, report archive, briefing archive, signal archive, methodology, contact, and submit pages against `out/public_site_seo_performance_live.json`.
+    - At least the homepage, report archive, and signal archive meet or materially move toward the `target` values in `config/public_site_baselines.yaml`, with any remaining gap documented.
+    - The gate continues to pass all SEO/social metadata checks and records request count plus page weight without increasing either metric above the current baseline.
+    - Tests or hosted smoke evidence prove optimizations do not remove approved public contracts, canonical URLs, Open Graph tags, or Twitter metadata.
 
 ---
 
@@ -283,18 +274,6 @@ Scoring:
     - The planner can recommend or apply a profile while logging every resolved low-level setting that changes behavior.
     - Profile resolution validates against the existing settings contract and never hides secrets in YAML.
     - Tests cover profile selection, explicit override precedence, invalid profile names, and deterministic resolved settings.
-
-- **Title:** Add registry-backed report-card publication-date remediation [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Live report-pipeline runs can complete analysis, render HTML, and persist valid checkpoint registries, then finish with `card_publication_date_invalid` because report-card publication-date evidence is missing or not normalized.
-  - Why implement: Turns a high-cost terminal failure into a targeted repair/resume action that reuses existing checkpoints and avoids repeating model/vector work.
-  - Tradeoffs / risks: Must not invent dates. Repairs must use source-backed `doc_map`, report metadata, or explicit operator input and fail closed when evidence is absent.
-  - Acceptance Criteria:
-    - UI failure classification maps `card_publication_date_invalid` to a targeted repair action with side-effect warning and resume stage.
-    - The repair path reads typed artifact registry entries for `doc_map`, `artifacts`, validation, and rendered HTML instead of scanning path conventions.
-    - Publication-date normalization accepts only source-supported dates or explicit operator-supplied dates with audit fields.
-    - Tests cover source-supported repair, absent-date fail-closed behavior, operator override audit fields, registry-missing failure, and idempotent resume.
-    - Live verification on existing PDFs shows a previously blocked report-card run resumes from checkpoint without rerunning upstream model work.
-
 
 ## Closed or Removed From Active Backlog
 

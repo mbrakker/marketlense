@@ -255,6 +255,30 @@ def classify_ui_run_failure(
         )
 
     resume_stage = _resume_stage(record=record, checkpoints=checkpoint_names)
+    if code == "card_publication_date_invalid" and record.run_type in {
+        "ingest",
+        "report_generation",
+    }:
+        repair_stage = resume_stage or "analysis_complete"
+        return UiRunFailureClassification(
+            schema_version="1.0",
+            action="repair_report_card_publication_date",
+            reason=(
+                "Report-card manifest creation failed because no source-supported "
+                "publication date was available."
+            ),
+            side_effect_warning=(
+                "Repair only the report-card publication date from typed registry "
+                "artifacts or an audited operator override, then resume from the "
+                f"{repair_stage} checkpoint to avoid upstream model calls."
+            ),
+            retryable=False,
+            resume_stage=repair_stage,
+            suggested_command=(
+                "remediate report-card publication date, then "
+                f"--resume-from-stage {repair_stage}"
+            ),
+        )
     if resume_stage and record.run_type in {"ingest", "report_generation"}:
         return UiRunFailureClassification(
             schema_version="1.0",

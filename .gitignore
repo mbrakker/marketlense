@@ -56,6 +56,8 @@ cache/
 debug/
 state/
 .codex_tmp/
+.playwright-cli/
+playwright-cli/
 tools/*
 !tools/browser-use/
 !tools/browser-use/**

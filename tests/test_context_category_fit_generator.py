@@ -282,6 +282,8 @@ def test_fit_report_categories_from_context_returns_selected_categories(
     assert response.categories == ["technology", "ai_automation"]
     assert response.category_labels == ["Technology & Innovation", "AI & Automation"]
     assert response.fits[0].decision == "primary"
+    assert response.fits[0].semantic_rule_status == "supported"
+    assert response.fits[0].supported_topic_rules
     assert response.fits[1].decision == "secondary"
     assert openai_client.requests[0][0].model == "gpt-5-mini"
     assert "enterprise technology platforms" in openai_client.requests[0][0].user_prompt
@@ -374,3 +376,165 @@ def test_fit_report_categories_from_context_defaults_missing_optional_fields() -
     assert response.categories == ["technology"]
     assert response.fits[0].why_not_fit == ""
     assert response.fits[0].evidence_sections == []
+    assert response.fits[0].semantic_rule_status == "supported"
+
+
+def test_fit_report_categories_rejects_topic_exclusion_conflict() -> None:
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-1",
+        title="Consumer Media Outlook",
+        publisher="Publisher",
+        region="Global",
+        time_period="2026",
+        overview=(
+            "Technology is only an enabling theme inside a broader consumer "
+            "media report."
+        ),
+        methods=[],
+        key_findings=["Audience behavior, media spend, and consumer demand dominate."],
+        limitations=[],
+        sections=[],
+    )
+    mappings = CategoryMappings(
+        schema_version="1.0",
+        categories=[
+            CategoryDefinition(
+                id="technology",
+                label="Technology & Innovation",
+                description="Reports about technology shifts.",
+                definition="Reports whose primary subject is enterprise technology.",
+                include_when=["Evidence centers on enterprise technology shifts."],
+                exclude_when=[
+                    "Reject when technology is only an enabling theme inside a broader consumer or media report."
+                ],
+            )
+        ],
+        inference_rules=[],
+        uncategorized=[],
+    )
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(schema_version="1.0", mappings=mappings)
+
+    settings = SimpleNamespace(
+        openai_model="gpt-5-mini",
+        openai_models={},
+        openai_api_key="test-key",
+        openai_seed=None,
+        openai_timeout_seconds=30.0,
+        cost_ledger_path="./out/cost-ledger.jsonl",
+        cost_daily_path="./out/cost-daily.json",
+        model_pricing={"gpt-5-mini": {}},
+    )
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=settings,
+            category_mapping_path="unused",
+        ),
+        _ctx(),
+        openai_client=RecordingOpenAIClient(
+            {
+                "schema_version": "1.0",
+                "selected_category_ids": ["technology"],
+                "category_fits": [
+                    {
+                        "category_id": "technology",
+                        "label": "Technology & Innovation",
+                        "fit_score": 0.88,
+                        "decision": "primary",
+                        "why_fit": "Technology appears in the report.",
+                        "evidence_sections": ["Overview"],
+                    }
+                ],
+            }
+        ),
+        prompt_client=RecordingPromptClient(),
+        mapping_client=mapping_client,
+    )
+
+    assert response.categories == []
+    assert response.fits[0].decision == "reject"
+    assert response.fits[0].semantic_rule_status == "rejected"
+    assert response.fits[0].rejected_topic_rules
+    assert response.fits[0].remediation_signal == "topic_semantics_exclusion_conflict"
+
+
+def test_fit_report_categories_marks_ambiguous_topic_fit() -> None:
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-1",
+        title="General Outlook",
+        publisher="Publisher",
+        region="Global",
+        time_period="2026",
+        overview="A broad operating outlook without a central category signal.",
+        methods=[],
+        key_findings=[],
+        limitations=[],
+        sections=[],
+    )
+    mappings = CategoryMappings(
+        schema_version="1.0",
+        categories=[
+            CategoryDefinition(
+                id="technology",
+                label="Technology & Innovation",
+                description="Reports about technology shifts.",
+                definition="Reports whose primary subject is enterprise technology.",
+                include_when=["Evidence centers on enterprise technology shifts."],
+                exclude_when=["Reject when technology is only a side example."],
+            )
+        ],
+        inference_rules=[],
+        uncategorized=[],
+    )
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(schema_version="1.0", mappings=mappings)
+
+    settings = SimpleNamespace(
+        openai_model="gpt-5-mini",
+        openai_models={},
+        openai_api_key="test-key",
+        openai_seed=None,
+        openai_timeout_seconds=30.0,
+        cost_ledger_path="./out/cost-ledger.jsonl",
+        cost_daily_path="./out/cost-daily.json",
+        model_pricing={"gpt-5-mini": {}},
+    )
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=settings,
+            category_mapping_path="unused",
+        ),
+        _ctx(),
+        openai_client=RecordingOpenAIClient(
+            {
+                "schema_version": "1.0",
+                "selected_category_ids": ["technology"],
+                "category_fits": [
+                    {
+                        "category_id": "technology",
+                        "label": "Technology & Innovation",
+                        "fit_score": 0.72,
+                        "decision": "secondary",
+                        "why_fit": "The model selected a weak category.",
+                        "evidence_sections": [],
+                    }
+                ],
+            }
+        ),
+        prompt_client=RecordingPromptClient(),
+        mapping_client=mapping_client,
+    )
+
+    assert response.categories == ["technology"]
+    assert response.fits[0].semantic_rule_status == "ambiguous"
+    assert response.fits[0].remediation_signal == "topic_semantics_ambiguous"

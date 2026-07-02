@@ -96,6 +96,7 @@ final class Plugin
         add_action('pre_get_posts', [$this->post_type, 'filter_frontend_queries']);
         add_filter('wp_sitemaps_enabled', '__return_true');
         add_filter('wp_robots', [self::class, 'public_robots']);
+        add_action('wp_head', [self::class, 'render_public_metadata'], 1);
         $this->media_proxy->register();
         $this->content_formatting->register();
 
@@ -170,5 +171,142 @@ final class Plugin
         $robots['follow'] = true;
 
         return $robots;
+    }
+
+    /**
+     * Emits public SEO and social metadata for first-party pages and entity surfaces.
+     */
+    public static function render_public_metadata(): void
+    {
+        if (is_admin() || is_feed() || is_robots() || is_trackback()) {
+            return;
+        }
+
+        $metadata = self::public_metadata();
+        if ($metadata['description'] === '' || $metadata['canonical'] === '') {
+            return;
+        }
+
+        echo "\n" . '<meta name="description" content="' . esc_attr($metadata['description']) . '">' . "\n";
+        echo '<link rel="canonical" href="' . esc_url($metadata['canonical']) . '">' . "\n";
+        echo '<meta property="og:type" content="' . esc_attr($metadata['type']) . '">' . "\n";
+        echo '<meta property="og:title" content="' . esc_attr($metadata['title']) . '">' . "\n";
+        echo '<meta property="og:description" content="' . esc_attr($metadata['description']) . '">' . "\n";
+        echo '<meta property="og:url" content="' . esc_url($metadata['canonical']) . '">' . "\n";
+        echo '<meta property="og:site_name" content="' . esc_attr(get_bloginfo('name')) . '">' . "\n";
+        if ($metadata['image'] !== '') {
+            echo '<meta property="og:image" content="' . esc_url($metadata['image']) . '">' . "\n";
+        }
+        echo '<meta name="twitter:card" content="' . esc_attr($metadata['image'] !== '' ? 'summary_large_image' : 'summary') . '">' . "\n";
+        echo '<meta name="twitter:title" content="' . esc_attr($metadata['title']) . '">' . "\n";
+        echo '<meta name="twitter:description" content="' . esc_attr($metadata['description']) . '">' . "\n";
+        if ($metadata['image'] !== '') {
+            echo '<meta name="twitter:image" content="' . esc_url($metadata['image']) . '">' . "\n";
+        }
+    }
+
+    /**
+     * @return array{title:string,description:string,canonical:string,type:string,image:string}
+     */
+    private static function public_metadata(): array
+    {
+        $site_name = trim((string) get_bloginfo('name'));
+        $site_description = self::trim_description((string) get_bloginfo('description'));
+        $title = trim((string) wp_get_document_title());
+        $description = $site_description;
+        $canonical = self::current_canonical_url();
+        $type = 'website';
+        $image = '';
+
+        if (is_front_page() || is_home()) {
+            $title = $site_name;
+            $description = $site_description !== '' ? $site_description : __('Governed market research, signals, and executive briefings.', 'marketlense-core');
+            $canonical = home_url('/');
+        } elseif (is_post_type_archive(Post_Type::POST_TYPE)) {
+            $title = __('Reports', 'marketlense-core') . ' - ' . $site_name;
+            $description = __('Browse governed market research reports with publisher, topic, region, and period filters.', 'marketlense-core');
+            $archive = get_post_type_archive_link(Post_Type::POST_TYPE);
+            $canonical = is_string($archive) ? $archive : $canonical;
+        } elseif (is_post_type_archive(Post_Type::BRIEFING_POST_TYPE)) {
+            $title = __('Briefings', 'marketlense-core') . ' - ' . $site_name;
+            $description = __('Read executive briefings synthesized from governed market research evidence.', 'marketlense-core');
+            $archive = get_post_type_archive_link(Post_Type::BRIEFING_POST_TYPE);
+            $canonical = is_string($archive) ? $archive : $canonical;
+        } elseif (is_post_type_archive(Post_Type::SIGNAL_POST_TYPE)) {
+            $title = __('Signals', 'marketlense-core') . ' - ' . $site_name;
+            $description = __('Track market signals backed by source-linked evidence and confidence metadata.', 'marketlense-core');
+            $archive = get_post_type_archive_link(Post_Type::SIGNAL_POST_TYPE);
+            $canonical = is_string($archive) ? $archive : $canonical;
+        } elseif (is_category()) {
+            $term = get_queried_object();
+            if ($term instanceof \WP_Term) {
+                $title = $term->name . ' - ' . $site_name;
+                $term_description = self::trim_description((string) term_description($term->term_id, $term->taxonomy));
+                $description = $term_description !== '' ? $term_description : sprintf(__('Market research for %s.', 'marketlense-core'), $term->name);
+                $term_link = get_term_link($term);
+                if (is_string($term_link)) {
+                    $canonical = $term_link;
+                }
+            }
+        } elseif (is_singular()) {
+            $post = get_post();
+            if ($post instanceof \WP_Post) {
+                $title = get_the_title($post) . ' - ' . $site_name;
+                $description = self::post_public_description($post, $site_description);
+                $canonical = (string) get_permalink($post);
+                $type = in_array($post->post_type, [Post_Type::POST_TYPE, Post_Type::BRIEFING_POST_TYPE, Post_Type::SIGNAL_POST_TYPE, Post_Type::CORE_POST_TYPE], true) ? 'article' : 'website';
+                $image = self::post_social_image($post);
+            }
+        }
+
+        return [
+            'title' => self::trim_description($title, 90),
+            'description' => self::trim_description($description),
+            'canonical' => $canonical,
+            'type' => $type,
+            'image' => $image,
+        ];
+    }
+
+    private static function post_public_description(\WP_Post $post, string $fallback): string
+    {
+        $excerpt = trim((string) get_the_excerpt($post));
+        if ($excerpt !== '') {
+            return self::trim_description($excerpt);
+        }
+        $content = wp_strip_all_tags(strip_shortcodes((string) $post->post_content));
+        if (trim($content) !== '') {
+            return self::trim_description($content);
+        }
+        return self::trim_description($fallback);
+    }
+
+    private static function post_social_image(\WP_Post $post): string
+    {
+        if (! has_post_thumbnail($post)) {
+            return '';
+        }
+        $image = wp_get_attachment_image_url((int) get_post_thumbnail_id($post), 'large');
+        return is_string($image) ? $image : '';
+    }
+
+    private static function trim_description(string $value, int $max_length = 160): string
+    {
+        $text = trim(preg_replace('/\s+/', ' ', wp_strip_all_tags($value)) ?: '');
+        if (strlen($text) <= $max_length) {
+            return $text;
+        }
+        return rtrim(substr($text, 0, $max_length - 3)) . '...';
+    }
+
+    private static function current_canonical_url(): string
+    {
+        $canonical = wp_get_canonical_url();
+        if (is_string($canonical) && $canonical !== '') {
+            return $canonical;
+        }
+        global $wp;
+        $request = isset($wp->request) ? (string) $wp->request : '';
+        return $request !== '' ? home_url('/' . ltrim($request, '/')) : home_url('/');
     }
 }

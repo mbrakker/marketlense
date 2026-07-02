@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import asdict
-from datetime import date
 import os
 from pathlib import Path
 import re
@@ -33,6 +32,9 @@ from src.generators.report_card_projection import (
     build_cover_fingerprint,
     build_report_card_manifest,
 )
+from src.generators.report_card_date_remediation_generator import (
+    normalize_source_supported_publication_date,
+)
 from src.generators.report_generation_shared import (
     html_cache_key,
     logger,
@@ -44,26 +46,33 @@ from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
 
-def _publication_date(runtime: ReportRuntimeState, artifacts: dict) -> str:
-    candidates = [
-        artifacts.get("publication_date"),
-        artifacts.get("published_date"),
-        artifacts.get("report_date"),
-        runtime.file.modified_time,
-    ]
-    for candidate in candidates:
-        value = str(candidate or "").strip()
-        if not value:
-            continue
-        normalized = value[:10]
-        try:
-            date.fromisoformat(normalized)
-        except ValueError:
-            continue
+def _publication_date(
+    runtime: ReportRuntimeState, artifacts: dict, doc_map: dict | None
+) -> str:
+    normalized, source = normalize_source_supported_publication_date(
+        artifacts_payload=artifacts,
+        doc_map_payload=doc_map,
+    )
+    if normalized:
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="generator",
+                event="report_card_publication_date_sourced",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "publication_date": normalized,
+                    "source": source,
+                },
+            )
+        )
         return normalized
     raise AppError(
         code="card_publication_date_invalid",
-        message="A valid report publication date is required for report cards",
+        message=(
+            "A source-supported report publication date is required for report cards"
+        ),
         retryable=False,
     )
 
@@ -552,7 +561,11 @@ def render_report_output(
                     schema_version="1.0",
                     title=cover_title,
                     publisher=cover_publisher,
-                    published_date=_publication_date(runtime, artifacts_payload),
+                    published_date=_publication_date(
+                        runtime,
+                        artifacts_payload,
+                        analysis.evidence_packs.get("doc_map"),
+                    ),
                     region=cover_region or "",
                     covered_period=cover_time_period or "",
                     tldr_compact=str(summary.get("card_tldr_compact") or ""),

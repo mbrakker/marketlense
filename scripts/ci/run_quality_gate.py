@@ -28,6 +28,7 @@ def quality_gate_commands() -> tuple[tuple[str, ...], ...]:
             "docs/quality/contract_schemas.json",
         ),
         ("python", "scripts/ci/check_wordpress_subproject.py"),
+        ("python", "scripts/ci/check_public_site_seo_performance.py"),
         (
             "python",
             "-m",

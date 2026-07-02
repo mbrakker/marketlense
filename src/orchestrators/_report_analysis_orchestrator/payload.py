@@ -34,6 +34,18 @@ def _serialize_context_category_fit_payload(fit_response) -> dict[str, Any]:
                 "why_fit": str(fit.why_fit),
                 "why_not_fit": str(fit.why_not_fit),
                 "evidence_sections": list(fit.evidence_sections or []),
+                "semantic_rule_status": str(
+                    getattr(fit, "semantic_rule_status", "not_evaluated")
+                ),
+                "supported_topic_rules": list(
+                    getattr(fit, "supported_topic_rules", []) or []
+                ),
+                "rejected_topic_rules": list(
+                    getattr(fit, "rejected_topic_rules", []) or []
+                ),
+                "remediation_signal": str(
+                    getattr(fit, "remediation_signal", "") or ""
+                ),
             }
             for fit in fit_response.fits
         ],

@@ -52,6 +52,9 @@ Key traits:
 - Analytics persistence and publication orchestration retain their canonical boundaries while using semantic private owners: analytics projection writes, cross-report reads, and signal storage live under `_analytics_store/`; reports migrations are grouped under `_sqlite_migration/_reports/`; and publish routing, preflight, idempotency, and cross-report helpers live under `_publish_orchestrator/` while public workflows remain in `publish_orchestrator.py`.
 - Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
 - Artifact reference robustness: artifact evidence IDs are canonicalized against docpacks before validation (supports comma/list-like model output and quote aliases such as `quote_1 -> q1`), preventing TL;DR/insights/quotes dropouts caused by malformed IDs.
+- Topic semantics guardrail: context-first category fitting validates model-selected categories against canonical WordPress Topic definitions, inclusion rules, and exclusion rules from `category-mappings.yaml`, records supported/rejected/ambiguous rule evidence in `context_category_fit`, and emits remediation signals when assignments are weak or conflicting.
+- Report-card date remediation: report-card manifests no longer fall back to Drive/file modified time for publication dates. Dates must come from source-backed artifacts/doc maps or an explicit audited operator override, and UI-run dead letters route `card_publication_date_invalid` to targeted registry-backed repair before checkpoint resume.
+- Public-site quality gate: `scripts/quality/public_site_seo_performance.py` verifies hosted SEO/social metadata and records response-start, DOM-complete, request-count, and page-weight baselines using thresholds owned in `config/public_site_baselines.yaml`; the CI wrapper is opt-in through `RUN_PUBLIC_SITE_SEO_PERFORMANCE_GATE=1`.
 - Claim-span grounding: summary `claim_evidence_map` entries now carry normalized `evidence_spans` derived deterministically from known evidence packs/doc-map sections, validation rejects summary claims that lack a bound evidence ID/span path, and rendered HTML exposes compact public citation micro-lines using safe evidence ID, report page, and citation labels when available for summary claims, insights, and quotes while suppressing local artifact IDs and path-like citation targets. Unknown quote speakers now render as `<Publisher name> expert team`.
 - Deterministic TOC structure: artifacts now include authoritative `toc_entries`, built directly from eligible `doc_map.sections` in source order. Legacy `toc_topics` and `toc_topics_expanded` are compatibility projections derived from `toc_entries`, and HTML renders the Covered topics section from those deterministic entries.
 - TOC integrity guard: validation now enforces one-to-one coverage between eligible DocMap sections and generated TOC structure, flags missing/duplicate/stale/out-of-order entries with machine-readable repair metadata, logs `artifact_topic_brief_mapping_audit` diagnostics for mapped and unmapped `toc_topics_expanded` topic briefs, and targeted regeneration rebuilds `toc_entries`, `toc_topics`, and `toc_topics_expanded` deterministically from DocMap without another model call.
@@ -439,7 +442,7 @@ Wordpress/
 
 Plugin slug: `marketlense-core`
 
-Current plugin package version: `1.6.8`. Deploy this package or newer when the
+Current plugin package version: `1.6.9`. Deploy this package or newer when the
 live WordPress REST schema must expose `ml_signal`, `ml_briefing`, and governed
 native-category Topic semantics; older or stale deployed payloads can still
 report the same plugin slug while exposing only earlier entity or term-meta
@@ -481,7 +484,7 @@ Primary responsibilities:
 
 ### Live WordPress Entity REST Verification
 
-After deploying or activating `marketlense-core` `1.6.8` or newer on a hosted
+After deploying or activating `marketlense-core` `1.6.9` or newer on a hosted
 WordPress site, verify the public entity REST contract with existing generated
 artifacts:
 
@@ -513,6 +516,39 @@ the artifact paths above by default and uploads
 bundle. Verification drafts are created with slugs containing
 `staging-rest-gate-`; operators can clean them from the staging WordPress admin
 or via REST by searching that slug prefix and deleting the matching draft posts.
+
+### Public-Site SEO, Social, and Performance Gate
+
+`marketlense-core` owns first-party public metadata at `wp_head`: meta
+description, canonical URL, Open Graph title/description/url/site/image where
+available, and Twitter card/title/description/image where available. Values are
+derived from public WordPress contracts only: site name/description, archive
+labels, category term descriptions, post titles, excerpts/content, permalinks,
+and featured images. Internal artifact IDs, local paths, evidence-pack names,
+and unpublished pipeline fields must not be rendered into public metadata.
+
+Hosted release checks use:
+
+```powershell
+python scripts/quality/public_site_seo_performance.py `
+  --base-url $env:PUBLIC_SITE_BASE_URL `
+  --path / `
+  --path /reports/ `
+  --path /briefings/ `
+  --path /signals/ `
+  --path /methodology/ `
+  --path /contact/ `
+  --path /submit/ `
+  --output-json out/public_site_seo_performance_live.json
+```
+
+Threshold ownership lives in `config/public_site_baselines.yaml` with owner,
+baseline, target, and review date. The gate records response start, DOM
+complete, discovered request count, page weight, missing metadata, and threshold
+violations per URL. CI runs it only when
+`RUN_PUBLIC_SITE_SEO_PERFORMANCE_GATE=1`; staging must also provide
+`PUBLIC_SITE_BASE_URL`, and may provide comma-separated `PUBLIC_SITE_SEO_PATHS`
+to include specific report, briefing, and signal detail URLs.
 
 ### Theme Contract
 

@@ -544,6 +544,10 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
                 "why_fit": "The report strongly aligns with this category.",
                 "why_not_fit": "",
                 "evidence_sections": ["Overview"],
+                "semantic_rule_status": "not_evaluated",
+                "supported_topic_rules": [],
+                "rejected_topic_rules": [],
+                "remediation_signal": "",
             }
         ],
     }

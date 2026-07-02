@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any, Dict, List
 
 from src.contracts.categories import CategoryMappingLoadRequest
@@ -25,6 +26,38 @@ from src.utils.logging import log_event
 from src.utils.model_client_contract import require_injected_model_client
 
 logger = logging.getLogger("market_lense.context_category_fit_generator")
+
+_STOP_WORDS = {
+    "about",
+    "across",
+    "broader",
+    "central",
+    "centers",
+    "dominant",
+    "evidence",
+    "focuses",
+    "inside",
+    "main",
+    "mainly",
+    "market",
+    "models",
+    "only",
+    "overview",
+    "primary",
+    "really",
+    "repeated",
+    "repeatedly",
+    "reject",
+    "report",
+    "reports",
+    "shape",
+    "subject",
+    "supporting",
+    "theme",
+    "when",
+    "where",
+    "whose",
+}
 
 
 def fit_report_categories_from_context(
@@ -159,6 +192,8 @@ def fit_report_categories_from_context(
         payload=payload,
         report_id=request.context.report_id,
         category_profiles=category_profiles,
+        context=request.context,
+        ctx=ctx,
         model=str(response.model or prompt_bundle.resolved_model or ""),
         raw_response=str(response.text or ""),
         request_id=str(response.request_id or "") or None,
@@ -173,6 +208,9 @@ def fit_report_categories_from_context(
                 "report_id": fit_response.report_id,
                 "categories": fit_response.categories,
                 "candidate_count": len(fit_response.fits),
+                "topic_semantic_status_counts": _semantic_status_counts(
+                    fit_response.fits
+                ),
                 "request_id": fit_response.request_id or "",
                 "model": fit_response.model,
             },
@@ -231,16 +269,114 @@ def _normalize_fit_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def _context_search_text(context: ReportCategoryContext) -> str:
+    parts: list[str] = [
+        context.title,
+        context.publisher,
+        context.region,
+        context.time_period,
+        context.overview,
+        *context.methods,
+        *context.key_findings,
+        *context.limitations,
+    ]
+    for section in context.sections:
+        parts.extend([section.section_label, section.summary, *section.key_points])
+    return " ".join(str(part or "") for part in parts).casefold()
+
+
+def _semantic_tokens(value: str) -> set[str]:
+    tokens = set()
+    for token in re.findall(r"[a-z0-9][a-z0-9_'-]{2,}", value.casefold()):
+        normalized = token.strip("_-'")
+        if len(normalized) < 4 or normalized in _STOP_WORDS:
+            continue
+        tokens.add(normalized)
+    return tokens
+
+
+def _matching_rules(rules: list[str], context_text: str) -> list[str]:
+    context_tokens = _semantic_tokens(context_text)
+    matched: list[str] = []
+    for rule in rules:
+        clean_rule = str(rule or "").strip()
+        if not clean_rule:
+            continue
+        rule_tokens = _semantic_tokens(clean_rule)
+        if not rule_tokens:
+            continue
+        overlap = sorted(rule_tokens.intersection(context_tokens))
+        required = min(2, len(rule_tokens))
+        if len(overlap) >= required:
+            matched.append(clean_rule)
+    return matched
+
+
+def _apply_topic_semantics(
+    *,
+    candidate: CategoryFitCandidate,
+    profile: dict[str, Any],
+    context_text: str,
+) -> CategoryFitCandidate:
+    include_rules = [str(item) for item in profile.get("include_when") or []]
+    exclude_rules = [str(item) for item in profile.get("exclude_when") or []]
+    supported_rules = _matching_rules(include_rules, context_text)
+    rejected_rules = _matching_rules(exclude_rules, context_text)
+    decision = candidate.decision
+    status = "not_evaluated"
+    remediation_signal = ""
+    why_not_fit = candidate.why_not_fit
+    if rejected_rules and decision != "reject":
+        decision = "reject"
+        status = "rejected"
+        remediation_signal = "topic_semantics_exclusion_conflict"
+        if not why_not_fit:
+            why_not_fit = "Canonical Topic exclusion rule matched the report context."
+    elif decision == "reject":
+        status = "rejected"
+    elif supported_rules:
+        status = "supported"
+    else:
+        status = "ambiguous"
+        remediation_signal = "topic_semantics_ambiguous"
+
+    return CategoryFitCandidate(
+        schema_version=candidate.schema_version,
+        category_id=candidate.category_id,
+        label=candidate.label,
+        fit_score=candidate.fit_score,
+        decision=decision,
+        why_fit=candidate.why_fit,
+        why_not_fit=why_not_fit,
+        evidence_sections=list(candidate.evidence_sections),
+        semantic_rule_status=status,
+        supported_topic_rules=supported_rules,
+        rejected_topic_rules=rejected_rules,
+        remediation_signal=remediation_signal,
+    )
+
+
+def _semantic_status_counts(fits: list[CategoryFitCandidate]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for fit in fits:
+        status = str(fit.semantic_rule_status or "not_evaluated")
+        counts[status] = counts.get(status, 0) + 1
+    return dict(sorted(counts.items()))
+
+
 def _coerce_fit_response(
     *,
     payload: dict,
     report_id: str,
-    category_profiles: List[dict[str, str]],
+    category_profiles: List[dict[str, Any]],
+    context: ReportCategoryContext,
+    ctx,
     model: str,
     raw_response: str,
     request_id: str | None,
 ) -> ContextCategoryFitResponse:
     profile_by_id = {str(item["id"]): item for item in category_profiles}
+    context_text = _context_search_text(context)
     fits: List[CategoryFitCandidate] = []
     for item in payload.get("category_fits") or []:
         if not isinstance(item, dict):
@@ -265,8 +401,7 @@ def _coerce_fit_response(
             text = str(value or "").strip()
             if text and text not in evidence_sections:
                 evidence_sections.append(text)
-        fits.append(
-            CategoryFitCandidate(
+        fit = CategoryFitCandidate(
                 schema_version="1.0",
                 category_id=category_id,
                 label=label or profile_by_id[category_id]["label"],
@@ -275,6 +410,12 @@ def _coerce_fit_response(
                 why_fit=str(item.get("why_fit") or "").strip(),
                 why_not_fit=str(item.get("why_not_fit") or "").strip(),
                 evidence_sections=evidence_sections,
+        )
+        fits.append(
+            _apply_topic_semantics(
+                candidate=fit,
+                profile=profile_by_id[category_id],
+                context_text=context_text,
             )
         )
     fits.sort(
@@ -291,18 +432,48 @@ def _coerce_fit_response(
     selected_ids: List[str] = []
     for category_id in payload.get("selected_category_ids") or []:
         text = str(category_id or "").strip()
-        if text in profile_by_id and text not in selected_ids:
+        selected_fit = next((fit for fit in fits if fit.category_id == text), None)
+        if (
+            text in profile_by_id
+            and text not in selected_ids
+            and (selected_fit is None or selected_fit.decision != "reject")
+        ):
             selected_ids.append(text)
     if not selected_ids:
         for fit in fits:
             if (
                 fit.decision in {"primary", "secondary"}
+                and fit.semantic_rule_status != "ambiguous"
                 and fit.category_id not in selected_ids
             ):
                 selected_ids.append(fit.category_id)
             if len(selected_ids) >= 2:
                 break
     selected_ids = selected_ids[:2]
+    rejected_conflicts = [
+        fit.category_id
+        for fit in fits
+        if fit.remediation_signal == "topic_semantics_exclusion_conflict"
+    ]
+    ambiguous = [
+        fit.category_id
+        for fit in fits
+        if fit.remediation_signal == "topic_semantics_ambiguous"
+    ]
+    if rejected_conflicts or ambiguous:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="context_category_fit_topic_semantics_remediation",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "rejected_conflicts": rejected_conflicts,
+                    "ambiguous": ambiguous,
+                },
+            )
+        )
     labels = [profile_by_id[item]["label"] for item in selected_ids]
     return ContextCategoryFitResponse(
         schema_version="1.0",

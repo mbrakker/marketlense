@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 1.6.8
+Stable tag: 1.6.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,9 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.6.9 =
+* Emits public meta descriptions, canonical URLs, Open Graph tags, and Twitter card metadata for homepage, archives, categories, report/detail entities, and trust pages.
 
 = 1.6.8 =
 * Writes governed Topic semantics from native WordPress categories, including definitions, inclusion rules, exclusion rules, and schema version term metadata.

@@ -82,3 +82,16 @@ def test_wordpress_plugin_preserves_ingested_report_html_without_wpautop() -> No
     assert "Content_Formatting" in bootstrap
     assert re.search(r"remove_filter\(\s*'the_content'\s*,\s*'wpautop'", formatting)
     assert "Post_Type::report_post_types()" in formatting
+
+
+def test_wordpress_plugin_emits_public_seo_and_social_metadata() -> None:
+    plugin_source = PLUGIN_BOOTSTRAP.read_text(encoding="utf-8")
+    main_source = PLUGIN_MAIN.read_text(encoding="utf-8")
+
+    assert "Version: 1.6.9" in main_source
+    assert "add_action('wp_head', [self::class, 'render_public_metadata'], 1)" in plugin_source
+    assert 'meta name="description"' in plugin_source
+    assert 'rel="canonical"' in plugin_source
+    assert 'property="og:title"' in plugin_source
+    assert 'name="twitter:card"' in plugin_source
+    assert "post_public_description" in plugin_source

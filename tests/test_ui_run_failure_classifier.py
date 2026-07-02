@@ -105,6 +105,22 @@ def test_classifies_checkpoint_failure_as_resume_from_checkpoint() -> None:
     assert "completed checkpoint" in classification.reason
 
 
+def test_classifies_report_card_date_failure_as_targeted_repair() -> None:
+    classification = classify_ui_run_failure(
+        record=_failed_record(
+            error_code="card_publication_date_invalid",
+            retryable=False,
+            result_summary={"latest_safe_resume_stage": "analysis_complete"},
+        ),
+        checkpoints=["analysis_complete"],
+    )
+
+    assert classification.action == "repair_report_card_publication_date"
+    assert classification.retryable is False
+    assert classification.resume_stage == "analysis_complete"
+    assert "typed registry artifacts" in classification.side_effect_warning
+
+
 def test_classifies_permanent_validation_failure_as_mark_permanent() -> None:
     classification = classify_ui_run_failure(
         record=_failed_record(

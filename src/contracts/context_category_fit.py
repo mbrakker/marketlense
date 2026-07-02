@@ -109,6 +109,26 @@ class CategoryFitCandidate:
         default_factory=list,
         metadata={"doc": "Section labels supporting the fit decision."},
     )
+    semantic_rule_status: str = field(
+        default="not_evaluated",
+        metadata={
+            "doc": "Canonical Topic rule audit status: supported, rejected, ambiguous, or not_evaluated."
+        },
+    )
+    supported_topic_rules: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Topic include rules that matched the report context."},
+    )
+    rejected_topic_rules: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Topic exclusion rules that matched the report context."},
+    )
+    remediation_signal: str = field(
+        default="",
+        metadata={
+            "doc": "Typed remediation signal when canonical Topic rules conflict or are stale/ambiguous."
+        },
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Category-fit candidate schema version."}
     )
