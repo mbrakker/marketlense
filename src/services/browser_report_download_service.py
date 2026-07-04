@@ -266,7 +266,10 @@ def download_report_with_browser_use(
     should_try_direct_pdf_fetch = (
         request.route_family_hint == "direct_pdf_probe"
         or url_looks_like_direct_pdf(normalized_execution_url)
-        or doc_type_prediction.predicted_doc_type == "direct_pdf"
+        or (
+            doc_type_prediction.predicted_doc_type == "direct_pdf"
+            and not str(request.route_family_hint or "").strip().startswith("browser_")
+        )
     )
     if should_try_direct_pdf_fetch:
         direct_pdf_result = try_direct_pdf_download(

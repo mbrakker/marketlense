@@ -102,6 +102,9 @@ def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
     assert "Previously successful route" not in bundle.task_prompt
     assert "do not click unrelated navigation links" in bundle.task_prompt
     assert "click the exact matching option text" in bundle.task_prompt
+    assert "configured value is true-like" in bundle.task_prompt
+    assert "optional marketing/newsletter opt-in checkboxes unchecked" in bundle.task_prompt
+    assert "open the iframe `src` or same-origin popup/form target directly" in bundle.task_prompt
     assert "return `blocked_email_domain` immediately" in bundle.task_prompt
 
 def test_download_report_with_browser_use_redacts_identity_values_from_prompt_logs(

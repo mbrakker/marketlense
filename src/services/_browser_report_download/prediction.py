@@ -54,6 +54,7 @@ def predict_pre_browser_doc_type(
     candidate_pdf_url = _normalized_candidate_pdf_url(request)
     redirect_pdf_url = _extract_direct_pdf_target(normalized_execution_url)
     source_page_url = _normalized_source_page_url(request)
+    planned_browser_route = route_family.startswith("browser_")
 
     if route_family == "direct_pdf_probe" and normalized_execution_url:
         return PreBrowserDocTypePrediction(
@@ -91,7 +92,7 @@ def predict_pre_browser_doc_type(
             evidence_labels=["embedded_pdf_target", "query_redirect_pdf"],
         )
 
-    if candidate_pdf_url:
+    if candidate_pdf_url and not planned_browser_route:
         confidence_score = 0.93 if route_family.startswith("browser_") else 0.9
         decision_reason = "Discovery already supplied a candidate PDF URL, so verify that target before browser startup."
         evidence_labels = ["candidate_trace_pdf_url"]

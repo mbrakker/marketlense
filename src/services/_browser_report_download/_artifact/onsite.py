@@ -72,6 +72,7 @@ _SCROLL_GROWTH_MARKERS = (
     "new content",
     "end of article",
 )
+_ONSITE_HTML_FETCH_TIMEOUT_SECONDS = 15.0
 
 
 def _build_salvaged_onsite_result(
@@ -479,7 +480,10 @@ def _try_fetch_onsite_capture_html(
     try:
         return http_runtime.fetch_html_from_url(
             page_url=final_url,
-            timeout_seconds=request.settings.timeout_seconds,
+            timeout_seconds=min(
+                _ONSITE_HTML_FETCH_TIMEOUT_SECONDS,
+                max(1.0, float(request.settings.timeout_seconds or 1.0)),
+            ),
             ctx=ctx,
             normalized_url=normalized_url,
         )

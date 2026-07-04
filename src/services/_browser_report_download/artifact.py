@@ -149,25 +149,33 @@ def finalize_browser_report_download_result(
         or request.attempt_url
         or normalized_url
     ).strip()
+    should_materialize_pdf_targets = not (
+        str(request.route_family_hint or "").strip() == "browser_email_form"
+        and str(agent_result.route_kind or "").strip() == "email_delivery"
+    )
     downloaded_path, used_candidate_pdf_url = _complete_pdf_artifact(
         request=request,
         ctx=ctx,
         normalized_url=normalized_url,
         download_dir=download_dir,
         downloaded_path=downloaded_path,
-        target_urls=[
-            request.candidate_trace.pdf_url
-            if request.candidate_trace is not None
-            else "",
-            *_resolve_observed_document_urls(
-                network_resource_urls=list(browser_run.network_resource_urls or []),
-                dom_snapshot_html=browser_html,
-                candidate_urls=[resolved_target_url, final_url],
-            ),
-            *list(browser_run.network_resource_urls or []),
-            resolved_target_url,
-            final_url,
-        ],
+        target_urls=(
+            [
+                request.candidate_trace.pdf_url
+                if request.candidate_trace is not None
+                else "",
+                *_resolve_observed_document_urls(
+                    network_resource_urls=list(browser_run.network_resource_urls or []),
+                    dom_snapshot_html=browser_html,
+                    candidate_urls=[resolved_target_url, final_url],
+                ),
+                *list(browser_run.network_resource_urls or []),
+                resolved_target_url,
+                final_url,
+            ]
+            if should_materialize_pdf_targets
+            else []
+        ),
     )
     blocked_reason = _resolve_blocked_reason(
         request=request,
@@ -244,19 +252,25 @@ def finalize_browser_report_download_result(
             normalized_url=normalized_url,
             download_dir=download_dir,
             downloaded_path=downloaded_path,
-            target_urls=[
-                request.candidate_trace.pdf_url
-                if request.candidate_trace is not None
-                else "",
-                *_resolve_observed_document_urls(
-                    network_resource_urls=list(browser_run.network_resource_urls or []),
-                    dom_snapshot_html=browser_html,
-                    candidate_urls=[resolved_target_url, final_url],
-                ),
-                *list(browser_run.network_resource_urls or []),
-                resolved_target_url,
-                final_url,
-            ],
+            target_urls=(
+                [
+                    request.candidate_trace.pdf_url
+                    if request.candidate_trace is not None
+                    else "",
+                    *_resolve_observed_document_urls(
+                        network_resource_urls=list(
+                            browser_run.network_resource_urls or []
+                        ),
+                        dom_snapshot_html=browser_html,
+                        candidate_urls=[resolved_target_url, final_url],
+                    ),
+                    *list(browser_run.network_resource_urls or []),
+                    resolved_target_url,
+                    final_url,
+                ]
+                if should_materialize_pdf_targets
+                else []
+            ),
         )
         used_candidate_pdf_url = (
             used_candidate_pdf_url or observed_used_candidate_pdf_url

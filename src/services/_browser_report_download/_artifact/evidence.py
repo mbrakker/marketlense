@@ -31,6 +31,8 @@ from . import ARTIFACT_LOGGER_NAME, _VERIFIED_EMAIL_SIGNAL_MARKERS
 
 logger = logging.getLogger(ARTIFACT_LOGGER_NAME)
 
+_TERMINAL_HTML_FETCH_TIMEOUT_SECONDS = 15.0
+
 _ROUTE_STEP_EVIDENCE_CATEGORIES = {
     "screenshot",
     "page_info",
@@ -608,7 +610,10 @@ def _try_fetch_terminal_html(
     try:
         return http_runtime.fetch_html_from_url(
             page_url=token,
-            timeout_seconds=request.settings.timeout_seconds,
+            timeout_seconds=min(
+                _TERMINAL_HTML_FETCH_TIMEOUT_SECONDS,
+                max(1.0, float(request.settings.timeout_seconds or 1.0)),
+            ),
             ctx=ctx,
             normalized_url=normalized_url,
         )

@@ -570,7 +570,7 @@ publisher_overrides:
   - schema_version: '1.0'
     key: industry
     label: Industry
-    value: Retail
+    value: Cosmetics & Personal Care
     aliases:
     - select your industry
     - industry
@@ -583,6 +583,54 @@ publisher_overrides:
     - state or region
     - region
     - province
+- schema_version: '1.0'
+  host_pattern: consumeredge.com
+  delivery_emails: []
+  field_values:
+  - schema_version: '1.0'
+    key: organization_type
+    label: Organization Type
+    value: Venture Capital
+    aliases:
+    - organization type
+    - organization_type
+- schema_version: '1.0'
+  host_pattern: business.adobe.com
+  delivery_emails: []
+  field_values:
+  - schema_version: '1.0'
+    key: state_region
+    label: State
+    value: Vienna
+    aliases:
+    - state
+    - province
+    - state or province
+  - schema_version: '1.0'
+    key: country
+    label: Country
+    value: Austria
+    aliases:
+    - country
+    - country/region
+- schema_version: '1.0'
+  host_pattern: gwi.com
+  delivery_emails: []
+  field_values:
+  - schema_version: '1.0'
+    key: company_size
+    label: Company size
+    value: 1-10 employees
+    aliases:
+    - company size
+    - company_size_legacy
+  - schema_version: '1.0'
+    key: company_size_name_company_size_legacy_required_select
+    label: Company size (name=company_size_legacy) - required - select
+    value: 1-10 employees
+    aliases:
+    - company size
+    - company_size_legacy
 - schema_version: '1.0'
   host_pattern: bigcommerce.com
   delivery_emails: []
@@ -603,6 +651,75 @@ publisher_overrides:
     aliases:
     - projected annual revenue
     - projected annual online revenue
+- schema_version: '1.0'
+  host_pattern: proximic.com
+  delivery_emails: []
+  field_values:
+  - schema_version: '1.0'
+    key: industry
+    label: Industry
+    value: 'Technology: Advertising / Marketing'
+    aliases:
+    - industry
+  - schema_version: '1.0'
+    key: department
+    label: Department
+    value: Marketing
+    aliases:
+    - department
+    - job function
+  - schema_version: '1.0'
+    key: level
+    label: Level
+    value: Manager
+    aliases:
+    - level
+    - seniority
+  - schema_version: '1.0'
+    key: number_of_employees
+    label: Number of Employees
+    value: 1-10
+    aliases:
+    - number of employees
+    - employees
+  - schema_version: '1.0'
+    key: preferred_language
+    label: Preferred Language
+    value: English
+    aliases:
+    - preferred language
+    - language
+  - schema_version: '1.0'
+    key: state_region
+    label: State or Province
+    value: Vienna
+    aliases:
+    - state
+    - state or province
+    - province
+  - schema_version: '1.0'
+    key: zip_code
+    label: Zip Code
+    value: '1010'
+    aliases:
+    - zip code
+    - postal code
+  - schema_version: '1.0'
+    key: website_url
+    label: Website
+    value: https://marketbearing.eu
+    aliases:
+    - website
+    - website url
+  - schema_version: '1.0'
+    key: i_have_read_understand_and_agree_to_comscore_s_privacy_policy_terms_of_use_product_terms_comscore_markets_terms_agreement_checkbox
+    label: I have read, understand and agree to Comscore's Privacy Policy / Terms
+      of Use / Product Terms / Comscore Markets Terms (agreement checkbox)
+    value: 'true'
+    aliases:
+    - privacy agreement
+    - terms agreement
+    - agreement checkbox
 - schema_version: '1.0'
   host_pattern: mintel.com
   delivery_emails: []

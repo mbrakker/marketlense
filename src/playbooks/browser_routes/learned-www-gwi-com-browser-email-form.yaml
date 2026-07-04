@@ -1,0 +1,70 @@
+schema_version: '1.0'
+playbook_id: learned-www-gwi-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-04T18:52:23Z'
+stale_after_days: 120
+publisher_pattern: www.gwi.com
+host_patterns:
+- www.gwi.com
+url_path_markers:
+- reports
+- new-american-consumer
+route_family: browser_email_form
+route_kind: email_delivery
+summary: Accepted cookie banner, clicked 'Download now' CTA which opened a lead form;
+  filled firstname, lastname, email, company size and country; submitted the form
+  and reached a download-confirmation page instructing that an email with a download
+  link will be sent.
+steps:
+- schema_version: '1.0'
+  action: click
+  target: Accept all
+  verification: Cookie consent accepted; cookie modal dismissed
+- schema_version: '1.0'
+  action: click
+  target: Download now
+  verification: Lead form displayed instead of direct PDF
+- schema_version: '1.0'
+  action: input
+  target: '***REDACTED***'
+  verification: First name field populated with '***REDACTED***'
+- schema_version: '1.0'
+  action: input
+  target: '***REDACTED***'
+  verification: Last name field populated with '***REDACTED***'
+- schema_version: '1.0'
+  action: input
+  target: '***REDACTED***'
+  verification: Email field populated with '***REDACTED***'
+- schema_version: '1.0'
+  action: select
+  target: '***REDACTED***'
+  verification: Company size set to '***REDACTED***'
+- schema_version: '1.0'
+  action: select
+  target: '***REDACTED***'
+  verification: Country set to '***REDACTED***'
+- schema_version: '1.0'
+  action: click
+  target: Submit
+  verification: Form submitted; navigated to download-confirmation page showing confirmation
+    text
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- submit_observed
+- delivery_text
+- success_url
+- form_disappeared
+- network_confirmation_request
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-04T18:52:23Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

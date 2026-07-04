@@ -297,15 +297,20 @@ def test_download_report_with_browser_use_fetches_onsite_html_when_browser_html_
         "import_module",
         lambda module_name: runtime,
     )
-    external_boundary_mocks_only.setattr(
-        http_runtime,
-        "fetch_html_from_url",
-        lambda **kwargs: (
+
+    def _fetch_html_from_url(**kwargs):
+        assert kwargs["timeout_seconds"] == 15.0
+        return (
             "<html><body><article><h1>Global innovation outlook report</h1>"
             "<h2>Executive summary</h2><p>" + ("Report section. " * 120) + "</p>"
             "<h2>Methodology</h2><p>" + ("More report content. " * 120) + "</p>"
             "</article></body></html>"
-        ),
+        )
+
+    external_boundary_mocks_only.setattr(
+        http_runtime,
+        "fetch_html_from_url",
+        _fetch_html_from_url,
     )
 
     response = service.download_report_with_browser_use(
@@ -366,15 +371,20 @@ def test_download_report_with_browser_use_fetches_terminal_html_for_email_delive
         "import_module",
         lambda module_name: runtime,
     )
-    external_boundary_mocks_only.setattr(
-        http_runtime,
-        "fetch_html_from_url",
-        lambda **kwargs: (
+
+    def _fetch_email_terminal_html(**kwargs):
+        assert kwargs["timeout_seconds"] == 15.0
+        return (
             "<html><head><title>Thank you for downloading the report</title></head>"
             "<body><main><h1>Thank you</h1>"
             "<p>A copy of the report will be sent to your inbox shortly.</p>"
             "</main></body></html>"
-        ),
+        )
+
+    external_boundary_mocks_only.setattr(
+        http_runtime,
+        "fetch_html_from_url",
+        _fetch_email_terminal_html,
     )
 
     response = service.download_report_with_browser_use(

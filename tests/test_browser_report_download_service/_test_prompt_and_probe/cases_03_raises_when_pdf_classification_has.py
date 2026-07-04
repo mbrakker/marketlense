@@ -434,6 +434,65 @@ def test_download_report_with_browser_use_prefers_candidate_pdf_probe(
     assert response.used_candidate_pdf_url is True
     assert response.route_family == "direct_pdf_probe"
 
+def test_download_report_with_browser_use_respects_planned_browser_email_form_after_candidate_pdf_probe_fails(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    candidate_trace = PublisherInventoryCandidateTrace(
+        schema_version="1.0",
+        canonical_url="https://example.com/gated-report",
+        title="Gated Report",
+        discovered_on_page_number=1,
+        source_page_urls=["https://example.com/reports"],
+        discovery_provenances=["direct_pdf_source"],
+        pdf_url="https://cdn.example.com/gated-report.pdf",
+        published_at_text=None,
+        max_confidence=0.96,
+    )
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the lead form and received confirmation that the report will be emailed.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        if str(url).casefold().endswith(".pdf"):
+            raise AssertionError(
+                "browser email fallback must not retry candidate PDF fetch"
+            )
+        return _FakeResponse(
+            content=b"<html><body><form><input name='email'></form></body></html>",
+            headers={"Content-Type": "text/html"},
+            url=str(url),
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=candidate_trace.canonical_url,
+            settings=_settings(tmp_path),
+            candidate_trace=candidate_trace,
+            attempt_url=candidate_trace.canonical_url,
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "email_required"
+    assert response.route_kind == "email_delivery"
+    assert response.route_family == "browser_email_form"
+    assert response.used_candidate_pdf_url is False
+
 def test_download_report_with_browser_use_salvages_empty_browser_result_from_candidate_pdf(
     tmp_path: Path,
     run_context,

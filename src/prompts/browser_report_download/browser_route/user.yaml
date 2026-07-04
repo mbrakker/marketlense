@@ -15,8 +15,10 @@ text: |
   Always return a concise `route_summary` describing the successful clicks or form steps so the system can reuse it later.
   Every meaningful `route_steps` item must declare `expected_evidence`: use `page_info`, `screenshot`, `network_event`, `artifact`, `dom_hash`, and/or `confirmation_text` to describe how the action was verified after it ran.
   For selector-hostile visible surfaces such as custom dropdowns, shadow DOM controls, cross-origin iframes, canvas-like controls, and virtualized lists, use visible labels, accessible names, keyboard navigation, and DOM state changes. Remember only visible-target descriptions and verification evidence in `route_summary`, `route_steps`, or remembered guidance.
+  If a same-origin modal iframe form is visible but its controls are not indexed or fillable, open the iframe `src` or same-origin popup/form `href` directly in the current tab and continue the form there.
 
   Use the following configured identity values when a matching form field is available. Do not invent missing values.
+  Treat configured checkbox-like values literally: `true`, `yes`, `checked`, and `1` mean check the matching checkbox; `false`, `no`, `unchecked`, and `0` mean leave it unchecked. Required agreement/privacy/terms/consent checkboxes with a configured true-like value must be checked before submit. Optional marketing/newsletter opt-ins must remain unchecked unless a matching value explicitly says to check them.
   {% for identity in identity_entries %}
   - {{ identity.label }}{% if identity.aliases %} (aliases: {{ identity.aliases }}){% endif %}: {{ identity.value }}
   {% endfor %}
@@ -71,7 +73,10 @@ text: |
   - Stay on the candidate report page or opened form; do not click unrelated navigation links such as login, consulting, related posts, or recommended articles unless they are the report CTA itself.
   - If the form lives behind an in-page anchor such as `#download`, use that form directly instead of exploring unrelated links.
   - Inspect the form before submission and capture all encountered field labels.
+  - If the CTA opens a same-origin modal iframe and the form controls are not accessible, open the iframe `src` or same-origin popup/form target directly in the current tab before declaring a blocker.
   - Use only configured identity values. If a required field is missing, stop and return the correct blocker code instead of guessing.
+  - For required agreement/privacy/terms/consent checkboxes, check the matching box when the configured value is true-like (`true`, `yes`, `checked`, or `1`) and verify it is checked before submission.
+  - Keep optional marketing/newsletter opt-in checkboxes unchecked unless a matching configured value explicitly says to check them.
   - For searchable dropdowns or comboboxes, do not rely on one-shot input alone: click into the field, type with keyboard events, wait for the suggestion list, click the exact matching option text, and verify the visible/input value persists after blur.
   - Before clicking submit, verify that every required field is satisfied and that no required field still shows placeholder text, browser validation UI, or an empty combobox state.
   - If you cannot verify a required searchable field such as Location or Country, do not report a completed submission.

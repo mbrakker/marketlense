@@ -265,15 +265,20 @@ def test_download_report_with_browser_use_salvages_empty_result_via_terminal_htm
         "import_module",
         lambda module_name: runtime,
     )
-    external_boundary_mocks_only.setattr(
-        http_runtime,
-        "fetch_html_from_url",
-        lambda **kwargs: (
+
+    def _fetch_html_from_url(**kwargs):
+        assert kwargs["timeout_seconds"] == 15.0
+        return (
             "<html><head><title>Digital 2021: Bosnia and Herzegovina</title></head>"
             "<body><article><h1>Digital 2021: Bosnia and Herzegovina</h1>"
             "<p>Report overview, audience, and internet usage analysis.</p>"
             "</article></body></html>"
-        ),
+        )
+
+    external_boundary_mocks_only.setattr(
+        http_runtime,
+        "fetch_html_from_url",
+        _fetch_html_from_url,
     )
 
     response = service.download_report_with_browser_use(
