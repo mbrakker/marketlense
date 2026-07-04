@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import Any, Callable, MutableMapping, TypeVar
+from typing import Any, Callable, Protocol, TypeVar, overload
 
 import streamlit as st
 
@@ -46,6 +46,17 @@ from src.utils.gui_utils import compute_task_duration_rollups, row_dicts
 _DASHBOARD_READ_MODEL_CACHE_KEY = "dashboard_read_models"
 _DASHBOARD_CACHE_INVALIDATION_REASON_KEY = "dashboard_read_models_last_invalidation"
 _T = TypeVar("_T")
+
+
+class _SessionStateLike(Protocol):
+    @overload
+    def get(self, key: str | int, /) -> Any | None: ...
+
+    @overload
+    def get(self, key: str | int, /, default: _T) -> Any | _T: ...
+
+    def __setitem__(self, key: str | int, value: Any) -> None: ...
+
 
 _DASHBOARD_CACHE_INVALIDATION_RULES: dict[str, set[str] | None] = {
     "refresh_all": None,
@@ -149,7 +160,7 @@ def _selected_report_index(reports: list[dict[str, Any]]) -> int:
 
 
 def _dashboard_read_model_store(
-    session_state: MutableMapping[str, Any],
+    session_state: _SessionStateLike,
 ) -> dict[tuple[object, ...], Any]:
     cache = session_state.get(_DASHBOARD_READ_MODEL_CACHE_KEY)
     if isinstance(cache, dict):
@@ -160,7 +171,7 @@ def _dashboard_read_model_store(
 
 
 def _load_dashboard_read_model(
-    session_state: MutableMapping[str, Any],
+    session_state: _SessionStateLike,
     *,
     view_name: str,
     identity: tuple[object, ...] = (),
@@ -174,7 +185,7 @@ def _load_dashboard_read_model(
 
 
 def _invalidate_dashboard_read_models(
-    session_state: MutableMapping[str, Any], *, reason: str
+    session_state: _SessionStateLike, *, reason: str
 ) -> list[str]:
     if reason not in _DASHBOARD_CACHE_INVALIDATION_RULES:
         raise ValueError(f"Unknown dashboard cache invalidation reason: {reason}")

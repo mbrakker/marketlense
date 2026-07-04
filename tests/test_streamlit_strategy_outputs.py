@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from src.contracts.semantic_ids import RunId
+from src.contracts.ui_run_control import UiRunSummary
 from src.ui.app_pages import strategy_outputs
 
 
@@ -97,6 +99,26 @@ def test_build_signal_payloads_use_structured_filters() -> None:
     assert post_payload["publication_mode"] == "generate_only"
     assert post_payload["output_root"] == "out"
     assert post_payload["request_id"] == "signal-post"
+
+
+def test_replay_run_rows_use_summary_contract_without_artifact_paths() -> None:
+    summary = UiRunSummary(
+        schema_version="1.0",
+        run_id=RunId("run-12345678"),
+        run_type="cross_report_analysis",
+        display_name="Cross-report analysis",
+        status="succeeded",
+        created_at_utc="2026-07-03T00:00:00Z",
+    )
+
+    assert strategy_outputs.build_replay_run_rows([summary]) == [
+        {
+            "run_id": "run-12345678",
+            "workflow": "Cross-report analysis",
+            "status": "succeeded",
+            "created_at_utc": "2026-07-03T00:00:00Z",
+        }
+    ]
 
 
 def test_projection_and_signal_chart_rows_are_semantic() -> None:

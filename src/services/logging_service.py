@@ -71,7 +71,7 @@ def setup_logging(
     log_date = datetime.now().strftime("%Y-%m-%d")
     log_path = os.path.join(log_dir, f"{LOG_FILE_PREFIX}_{log_date}.log")
 
-    handlers = []
+    handlers: list[logging.Handler] = []
     if use_rich:
         handlers = [RichHandler(show_time=False, rich_tracebacks=True)]
     else:

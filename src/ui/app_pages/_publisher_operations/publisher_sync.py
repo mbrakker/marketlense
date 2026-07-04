@@ -118,7 +118,7 @@ def render_publisher_sync() -> None:
                 )
             except UI_SURFACE_EXCEPTIONS as exc:
                 st.error(str(exc))
-    result = st.session_state.get("last_publisher_sync_result")
+    latest_result = st.session_state.get("last_publisher_sync_result")
     with main_col:
         _render_guided_panel(
             "What this action does",
@@ -129,7 +129,7 @@ def render_publisher_sync() -> None:
             ),
         )
         st.subheader("Latest sync result")
-        if result is None:
+        if latest_result is None:
             _render_empty_state(
                 "No publisher sync has run in this session",
                 "Run sync to see how many publisher rows were replaced and which snapshot file was used.",
@@ -139,7 +139,9 @@ def render_publisher_sync() -> None:
                 [
                     {
                         "label": "Rows replaced",
-                        "value": str(getattr(result, "replaced_count", "") or ""),
+                        "value": str(
+                            getattr(latest_result, "replaced_count", "") or ""
+                        ),
                         "help": _tip(
                             "How many publisher rows were written into the reports database by the latest sync.",
                             "A non-zero count means the database was refreshed from the snapshot.",
@@ -147,7 +149,9 @@ def render_publisher_sync() -> None:
                     },
                     {
                         "label": "Source page",
-                        "value": str(getattr(result, "source_page_url", "") or ""),
+                        "value": str(
+                            getattr(latest_result, "source_page_url", "") or ""
+                        ),
                         "help": _tip(
                             "Original Notion source page recorded in the synchronized snapshot.",
                             "This helps confirm where the synced publisher data came from.",
@@ -159,7 +163,9 @@ def render_publisher_sync() -> None:
             )
             _render_payload_area(
                 "Sync details",
-                result.__dict__ if hasattr(result, "__dict__") else result,
+                latest_result.__dict__
+                if hasattr(latest_result, "__dict__")
+                else latest_result,
                 help_text=_tip(
                     "Full structured result from the latest publisher sync in this session.",
                     "Use this if you need the raw metadata behind the sync action.",

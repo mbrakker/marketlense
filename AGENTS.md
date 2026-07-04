@@ -15,6 +15,16 @@ Any implementation that violates them is **invalid by design**.
 
 ---
 
+## Project-Local Runtime Notes
+
+Known local WordPress install path: `C:\Users\Михаил\Studio\marker-lense`.
+
+Known local Studio browser URL: `http://localhost:8881/`.
+
+When updating the local WordPress theme or plugin, sync from this repo into that install with `Wordpress\scripts\sync-local-wordpress.ps1`; do not symlink the block theme.
+
+---
+
 ## 0. Agent Behavioral Discipline
 
 These rules govern how agents decide what to do before writing or changing code.

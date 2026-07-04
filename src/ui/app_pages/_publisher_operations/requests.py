@@ -90,7 +90,7 @@ def build_saved_delivery_email_options(browser_settings: object | None) -> list[
 
 def resolve_delivery_email_value(
     *,
-    mode: str,
+    mode: str | None,
     saved_email: str,
     custom_email: str,
 ) -> str:
@@ -103,7 +103,7 @@ def resolve_delivery_email_value(
 
 def resolve_audit_limits(
     *,
-    preset: str,
+    preset: str | None,
     custom_publisher_limit: int,
     custom_candidate_limit: int,
 ) -> tuple[int, int]:
@@ -114,7 +114,7 @@ def resolve_audit_limits(
 
 def resolve_path_choice(
     *,
-    mode: str,
+    mode: str | None,
     configured_path: str,
     custom_path: str,
 ) -> str:

@@ -122,11 +122,12 @@ def render_report_command_center() -> None:
             }
         )
         st.subheader("Provenance")
+        file_id = str(report.get("file_id") or "").strip()
         state_row = get_state(
             StateGetRequest(
                 schema_version="1.0",
                 state_db=settings.state_db,
-                file_id=report.get("file_id"),
+                file_id=file_id,
             ),
             _ctx("report_center_state"),
         )
@@ -140,7 +141,6 @@ def render_report_command_center() -> None:
             st.code(html_path)
         publisher = str(report.get("publisher") or "").strip()
         title = str(report.get("title") or "").strip()
-        file_id = str(report.get("file_id") or "").strip()
         if title and file_id:
             report_slug = Path(html_path).stem if html_path else None
             cover_path = build_cover_asset_path(

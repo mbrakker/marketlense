@@ -655,7 +655,7 @@ When the provisioning scripts fall back to REST, they auto-discover both `/wp-js
 
 If your local WordPress runtime cannot safely follow theme symlinks, keep the local theme/plugin as real directories and sync from the repo instead of linking.
 
-For the local WordPress instance at `C:\Users\Михаил\Studio\marker-lense`, do not symlink the block theme into the local site. Some local stacks resolve theme symlinks through `/internal/symlinks/...`, which breaks `theme.json` loading in the web runtime.
+The known local WordPress install for this project is `C:\Users\Михаил\Studio\marker-lense`, served by Studio at `http://localhost:8881/` when the site is online. Do not symlink the block theme into that local site. Some local stacks resolve theme symlinks through `/internal/symlinks/...`, which breaks `theme.json` loading in the web runtime.
 
 One-shot sync:
 

@@ -14,6 +14,7 @@ from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateReadRequest,
 )
+from src.contracts.ui_run_control import UiRunSummary
 from src.services.analytics_store_service import (
     read_cross_report_projected_data,
     read_signal_candidates,
@@ -357,6 +358,18 @@ def build_signal_support_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]
     return [
         {"support": support, "candidate_count": count}
         for support, count in sorted(counts.items())
+    ]
+
+
+def build_replay_run_rows(records: list[UiRunSummary]) -> list[dict[str, Any]]:
+    return [
+        {
+            "run_id": str(record.run_id),
+            "workflow": record.display_name,
+            "status": record.status,
+            "created_at_utc": record.created_at_utc,
+        }
+        for record in records
     ]
 
 
@@ -827,19 +840,7 @@ def _render_replay_tab(settings: Any) -> None:
         ),
     )
     selected = recent_runs[selected_index]
-    st.dataframe(
-        [
-            {
-                "run_id": selected.run_id,
-                "workflow": selected.display_name,
-                "status": selected.status,
-                "created_at_utc": selected.created_at_utc,
-                "artifact_count": len(selected.artifact_paths),
-            }
-        ],
-        width="stretch",
-        hide_index=True,
-    )
+    st.dataframe(build_replay_run_rows([selected]), width="stretch", hide_index=True)
     confirmed = st.checkbox(
         "Replay may execute the recorded workflow again",
         help=_tip(
