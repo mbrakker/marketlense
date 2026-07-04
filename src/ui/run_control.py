@@ -20,6 +20,7 @@ from src.contracts.ui_run_control import (
     UiRunPollResponse,
 )
 from src.contracts.semantic_ids import RunId
+from src.contracts.workflow_control import RunIntent
 from src.orchestrators.ui_run_control_orchestrator import (
     apply_dead_letter_action,
     cancel_ui_run,
@@ -29,6 +30,7 @@ from src.orchestrators.ui_run_control_orchestrator import (
     list_ui_runs,
     poll_ui_run,
 )
+from src.orchestrators import workflow_control_orchestrator as workflow_control
 from src.ui.common import _ctx
 from src.ui import state as ui_state
 
@@ -41,6 +43,9 @@ def launch_background_run(
     request_payload: dict[str, Any],
 ) -> UiRunLaunchResponse:
     registry_path = ui_state.get_ui_run_registry_path(settings)
+    workflow_payload = _resolve_ui_workflow_control_payload(run_type, request_payload)
+    enriched_payload = dict(request_payload)
+    enriched_payload["workflow_control"] = workflow_payload
     response = launch_ui_run(
         UiRunLaunchRequest(
             schema_version="1.0",
@@ -48,12 +53,89 @@ def launch_background_run(
             workspace_root=str(Path(__file__).resolve().parents[2]),
             run_type=run_type,
             display_name=display_name,
-            request_payload=request_payload,
+            request_payload=enriched_payload,
         ),
         _ctx(f"launch_{run_type}"),
     )
     ui_state.set_selected_run_id(response.record.run_id)
     return response
+
+
+def _resolve_ui_workflow_control_payload(
+    run_type: str,
+    request_payload: dict[str, Any],
+) -> dict[str, Any]:
+    intent = _ui_run_type_to_intent(run_type)
+    ctx = _ctx(f"workflow_control_{run_type}")
+    settings = workflow_control.default_workflow_control_settings()
+    resolved = workflow_control.resolve_run_intent(
+        RunIntent(
+            schema_version="1.0",
+            intent=intent,
+            subject=str(
+                request_payload.get("url")
+                or request_payload.get("file_id")
+                or request_payload.get("topic")
+                or ""
+            ),
+            publisher=str(
+                request_payload.get("publisher")
+                or request_payload.get("publisher_name")
+                or ""
+            ),
+            report_id=str(request_payload.get("report_id") or ""),
+            requested_side_effects=[],
+            dry_run=False,
+            allow_automation=True,
+            metadata={"source": "ui", "run_type": run_type},
+        ),
+        settings,
+        ctx=ctx,
+    )
+    retry_policy_id = ""
+    if resolved.workflow:
+        step_name = (
+            "wordpress_publish"
+            if resolved.workflow == "publishing"
+            else "report_pipeline"
+            if resolved.workflow == "report_generation"
+            else "execute"
+        )
+        retry_policy_id = workflow_control.resolve_retry_policy(
+            settings,
+            workflow_name=resolved.workflow,
+            step_name=step_name,
+            ctx=ctx,
+        ).policy_id
+    return {
+        "status": resolved.status,
+        "intent": resolved.intent_key,
+        "workflow": resolved.workflow,
+        "preflight_profile": resolved.preflight_profile,
+        "budget_profile": resolved.budget_profile,
+        "retry_policy_id": retry_policy_id,
+        "resume_stage": resolved.resume_stage,
+        "side_effect_plan": list(resolved.side_effect_plan),
+        "alternatives": list(resolved.alternatives),
+        "blockers": list(resolved.blockers),
+    }
+
+
+def _ui_run_type_to_intent(run_type: str) -> str:
+    normalized = str(run_type or "").strip().lower().replace("-", "_")
+    mapping = {
+        "ingest": "ingest new reports",
+        "report_generation": "ingest new reports",
+        "report_download": "acquire missing pdf",
+        "publisher_discovery": "refresh publisher inventory",
+        "publisher_inventory": "refresh publisher inventory",
+        "publish": "publish ready reports",
+        "publish_wp": "publish ready reports",
+        "ui_replay": "replay ui run",
+        "ui_run_replay": "replay ui run",
+        "browser_acquisition": "audit acquisition",
+    }
+    return mapping.get(normalized, normalized)
 
 
 def poll_selected_run(

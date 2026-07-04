@@ -24417,6 +24417,89 @@
       ],
       "type": "object"
     },
+    "src.contracts.state.WorkflowControlObservationListRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer"
+        },
+        "observed_after_utc": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.WorkflowControlObservationListResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_control.WorkflowControlObservation"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "observations"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.WorkflowControlObservationWriteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "observation": {
+          "$ref": "#/$defs/src.contracts.workflow_control.WorkflowControlObservation"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "observation"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.WorkflowControlObservationWriteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "observation": {
+          "$ref": "#/$defs/src.contracts.workflow_control.WorkflowControlObservation"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "observation"
+      ],
+      "type": "object"
+    },
     "src.contracts.streamlit_dashboard.DirectoryCountCheck": {
       "additionalProperties": false,
       "properties": {
@@ -29506,6 +29589,158 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.ModelCallAuditRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_decision": {
+          "type": "string"
+        },
+        "cache_key": {
+          "type": "string"
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "output_schema_version": {
+          "type": "string"
+        },
+        "output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "provider_decision": {
+          "type": "string"
+        },
+        "rendered_prompt_redaction_hash": {
+          "type": "string"
+        },
+        "response_id": {
+          "type": "string"
+        },
+        "schema_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "seed_supported": {
+          "type": "boolean"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validation_result": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "operation",
+        "scope",
+        "provider_decision",
+        "prompt_namespace",
+        "prompt_hash",
+        "rendered_prompt_redaction_hash",
+        "model",
+        "temperature",
+        "seed",
+        "seed_supported",
+        "schema_name",
+        "output_schema_version",
+        "response_id",
+        "input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "estimated_cost_usd",
+        "cache_key",
+        "cache_decision",
+        "validation_result"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.ModelCallReplayBundle": {
+      "additionalProperties": false,
+      "properties": {
+        "audit_record": {
+          "$ref": "#/$defs/src.contracts.workflow_control.ModelCallAuditRecord"
+        },
+        "live_provider_call_allowed": {
+          "type": "boolean"
+        },
+        "replay_inputs": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "audit_record",
+        "replay_inputs",
+        "live_provider_call_allowed"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.OperationalMemoryRecommendation": {
       "additionalProperties": false,
       "properties": {
@@ -29664,6 +29899,275 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.PreLlmDataQualityDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "expensive_work_allowed": {
+          "type": "boolean"
+        },
+        "outcome": {
+          "enum": [
+            "proceed",
+            "skip_duplicate",
+            "defer",
+            "repair",
+            "hold",
+            "user_action_required"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "remediation": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_signals": {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "outcome",
+        "expensive_work_allowed",
+        "reason",
+        "source_signals",
+        "remediation"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.PreLlmDataQualityInput": {
+      "additionalProperties": false,
+      "properties": {
+        "already_processed": {
+          "type": "boolean"
+        },
+        "duplicate_report": {
+          "type": "boolean"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "known_gated_lead_form": {
+          "type": "boolean"
+        },
+        "md5": {
+          "type": "string"
+        },
+        "publication_date_evidence": {
+          "type": "boolean"
+        },
+        "publisher_matches": {
+          "type": "boolean"
+        },
+        "report_like": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stale_already_processed": {
+          "type": "boolean"
+        },
+        "supported_file_type": {
+          "type": "boolean"
+        },
+        "text_char_count": {
+          "type": "integer"
+        },
+        "visual_candidate_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "file_id",
+        "md5",
+        "already_processed",
+        "duplicate_report",
+        "text_char_count",
+        "supported_file_type",
+        "report_like",
+        "stale_already_processed",
+        "publisher_matches",
+        "publication_date_evidence",
+        "visual_candidate_count",
+        "known_gated_lead_form"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.PreflightRemediationAction": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "after_status": {
+          "type": "string"
+        },
+        "before_status": {
+          "type": "string"
+        },
+        "check_name": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "result": {
+          "type": "string"
+        },
+        "safe_to_auto_apply": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "side_effect_boundary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "check_name",
+        "action",
+        "result",
+        "safe_to_auto_apply",
+        "side_effect_boundary",
+        "before_status",
+        "after_status",
+        "code",
+        "message",
+        "metadata"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.PreflightRemediationArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_control.PreflightRemediationAction"
+          },
+          "type": "array"
+        },
+        "auto_applied_count": {
+          "type": "integer"
+        },
+        "blocked_unsafe_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "user_action_required_count": {
+          "type": "integer"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "actions",
+        "auto_applied_count",
+        "user_action_required_count",
+        "blocked_unsafe_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.PublishPolicyDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "min_confidence": {
+          "type": "number"
+        },
+        "override_used": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "repair_supported": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "action",
+        "reason",
+        "min_confidence",
+        "repair_supported",
+        "override_used"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.PublishPolicyInput": {
+      "additionalProperties": false,
+      "properties": {
+        "automation_enabled": {
+          "type": "boolean"
+        },
+        "editorial_risk": {
+          "type": "string"
+        },
+        "family_confidence": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
+        "missing_metadata": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "override": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "validation_status",
+        "family_confidence",
+        "warnings",
+        "missing_metadata",
+        "editorial_risk",
+        "override",
+        "automation_enabled"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.ResolvedRetryPolicy": {
       "additionalProperties": false,
       "properties": {
@@ -29687,6 +30191,115 @@
         "step_name",
         "policy_id",
         "policy"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.ResolvedRunIntent": {
+      "additionalProperties": false,
+      "properties": {
+        "alternatives": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "blockers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "budget_profile": {
+          "type": "string"
+        },
+        "explanation": {
+          "type": "string"
+        },
+        "intent_key": {
+          "type": "string"
+        },
+        "preflight_profile": {
+          "type": "string"
+        },
+        "resume_stage": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "side_effect_plan": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "intent_key",
+        "workflow",
+        "preflight_profile",
+        "budget_profile",
+        "resume_stage",
+        "side_effect_plan",
+        "alternatives",
+        "blockers",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.RunIntent": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_automation": {
+          "type": "boolean"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "intent": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "requested_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "intent",
+        "subject",
+        "publisher",
+        "report_id",
+        "requested_side_effects",
+        "dry_run",
+        "allow_automation",
+        "metadata"
       ],
       "type": "object"
     },
@@ -29756,6 +30369,91 @@
         "checkpoint_outputs",
         "validation_gates",
         "terminal_outcomes"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.WorkflowControlObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "cost_usd": {
+          "type": "number"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_retryable": {
+          "type": "boolean"
+        },
+        "error_severity": {
+          "type": "string"
+        },
+        "latency_ms": {
+          "type": "integer"
+        },
+        "observed_at_utc": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "report_key": {
+          "type": "string"
+        },
+        "resource_pressure": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "retry_count": {
+          "type": "integer"
+        },
+        "route": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "step_name": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "observed_at_utc",
+        "run_id",
+        "workflow",
+        "step_name",
+        "route",
+        "publisher",
+        "report_key",
+        "outcome",
+        "error_code",
+        "error_retryable",
+        "error_severity",
+        "latency_ms",
+        "cost_usd",
+        "retry_count",
+        "resource_pressure"
       ],
       "type": "object"
     },

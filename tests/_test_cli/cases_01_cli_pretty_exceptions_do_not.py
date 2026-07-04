@@ -386,26 +386,55 @@ class TestCli01CliPrettyExceptionsDo(unittest.TestCase):
             cli, "load_settings", return_value=settings
         ) as load_settings_mock:
             with patch.object(
-                cli, "run_ingest", return_value=outcomes
-            ) as run_ingest_mock:
-                cli.ingest(folder=None, limit=1, force_report_cards=False)
-                load_settings_mock.assert_called_once()
-                run_ingest_mock.assert_called_once()
-                passed_settings = run_ingest_mock.call_args.args[0]
-                passed_ctx = run_ingest_mock.call_args.kwargs.get("ctx")
-                self.assertFalse(
-                    run_ingest_mock.call_args.kwargs.get("force_report_cards")
-                )
-                self.assertIs(passed_ctx, load_settings_mock.call_args.args[1])
-                self.assertIsInstance(passed_settings, IngestSettings)
-                self.assertEqual("folder", passed_settings.gdrive_folder_id)
-                self.assertEqual("gpt-5", passed_settings.openai_model)
+                cli,
+                "_resolve_cli_workflow_control",
+                return_value={
+                    "workflow": "report_generation",
+                    "preflight_profile": "report_generation",
+                    "retry_policy_id": "report_generation.report_pipeline.v1",
+                },
+            ) as workflow_mock:
+                with patch.object(
+                    cli, "run_ingest", return_value=outcomes
+                ) as run_ingest_mock:
+                    with patch.object(
+                        cli, "write_workflow_control_observation"
+                    ) as feedback_mock:
+                        cli.ingest(folder=None, limit=1, force_report_cards=False)
+                        load_settings_mock.assert_called_once()
+                        workflow_mock.assert_called_once()
+                        self.assertEqual(
+                            "ingest new reports",
+                            workflow_mock.call_args.kwargs["intent"],
+                        )
+                        run_ingest_mock.assert_called_once()
+                        feedback_mock.assert_called_once()
+                        feedback_request = feedback_mock.call_args.args[0]
+                        self.assertEqual(
+                            "./state/index.sqlite", feedback_request.state_db
+                        )
+                        self.assertEqual(
+                            "report_generation",
+                            feedback_request.observation.workflow,
+                        )
+                        self.assertEqual(
+                            "succeeded", feedback_request.observation.outcome
+                        )
+                        passed_settings = run_ingest_mock.call_args.args[0]
+                        passed_ctx = run_ingest_mock.call_args.kwargs.get("ctx")
+                        self.assertFalse(
+                            run_ingest_mock.call_args.kwargs.get("force_report_cards")
+                        )
+                        self.assertIs(passed_ctx, load_settings_mock.call_args.args[1])
+                        self.assertIsInstance(passed_settings, IngestSettings)
+                        self.assertEqual("folder", passed_settings.gdrive_folder_id)
+                        self.assertEqual("gpt-5", passed_settings.openai_model)
 
-                cli.ingest(folder=None, limit=1, force_report_cards=True)
-                self.assertEqual(2, run_ingest_mock.call_count)
-                self.assertTrue(
-                    run_ingest_mock.call_args.kwargs.get("force_report_cards")
-                )
+                        cli.ingest(folder=None, limit=1, force_report_cards=True)
+                        self.assertEqual(2, run_ingest_mock.call_count)
+                        self.assertTrue(
+                            run_ingest_mock.call_args.kwargs.get("force_report_cards")
+                        )
 
     def test_publish_wires_settings_and_orchestrator(self) -> None:
         import src.cli as cli
@@ -441,13 +470,38 @@ class TestCli01CliPrettyExceptionsDo(unittest.TestCase):
             cli, "load_publish_settings", return_value=settings
         ) as load_settings_mock:
             with patch.object(
-                cli, "run_publish", return_value=outcomes
-            ) as run_publish_mock:
-                cli.publish_wp(limit=1)
-                load_settings_mock.assert_called_once()
-                run_publish_mock.assert_called_once()
-                passed_settings = run_publish_mock.call_args.args[0]
-                self.assertIsInstance(passed_settings, PublishSettings)
+                cli,
+                "_resolve_cli_workflow_control",
+                return_value={
+                    "workflow": "publishing",
+                    "preflight_profile": "publishing",
+                    "retry_policy_id": "publishing.wordpress_publish.v1",
+                },
+            ) as workflow_mock:
+                with patch.object(
+                    cli, "run_publish", return_value=outcomes
+                ) as run_publish_mock:
+                    with patch.object(
+                        cli, "write_workflow_control_observation"
+                    ) as feedback_mock:
+                        cli.publish_wp(limit=1)
+                        load_settings_mock.assert_called_once()
+                        workflow_mock.assert_called_once()
+                        self.assertEqual(
+                            "publish ready reports",
+                            workflow_mock.call_args.kwargs["intent"],
+                        )
+                        run_publish_mock.assert_called_once()
+                        feedback_mock.assert_called_once()
+                        feedback_request = feedback_mock.call_args.args[0]
+                        self.assertEqual(
+                            "publishing", feedback_request.observation.workflow
+                        )
+                        self.assertEqual(
+                            "succeeded", feedback_request.observation.outcome
+                        )
+                        passed_settings = run_publish_mock.call_args.args[0]
+                        self.assertIsInstance(passed_settings, PublishSettings)
 
     def test_cost_report_wires_service(self) -> None:
         import src.cli as cli

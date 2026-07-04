@@ -295,6 +295,102 @@ def test_generic_builder_names_preserve_provider_operations_contract() -> None:
     )
 
 
+def test_llm_client_logs_replayable_model_call_audit_record(
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service")
+
+    class _SuccessfulClient:
+        def openai_chat_json(self, req, ctx):
+            return SimpleNamespace(
+                schema_version="1.0",
+                parsed_json={"ok": True},
+                input_tokens=12,
+                output_tokens=5,
+                total_tokens=17,
+                request_id="resp_123",
+                model=req.model,
+            )
+
+    client = llm_service.build_openai_client(
+        base_client=_SuccessfulClient(),
+        policy=LLMClientPolicy(schema_version="1.0", scope="audit-scope"),
+    )
+
+    result = client.openai_chat_json(
+        SimpleNamespace(
+            model="gpt-5-mini",
+            temperature=0.2,
+            seed=42,
+            system_prompt="system prompt",
+            user_prompt="user prompt",
+            prompt_namespace="report_vs/doc_map",
+            prompt_hash="prompt-hash",
+            schema_name="doc_map",
+            schema_version="1.0",
+            response_cache_enabled=True,
+            response_cache_dir="cache",
+            response_cache_ttl_seconds=60.0,
+            validation_result="pass",
+            timeout_seconds=30.0,
+        ),
+        _ctx(),
+    )
+
+    assert result.parsed_json == {"ok": True}
+    events = _events(caplog)
+    audits = [event for event in events if event.get("event") == "llm_model_call_audit"]
+    assert len(audits) == 1
+    assert_logs_have_required_fields(audits)
+    fields = cast(dict[str, Any], audits[0]["fields"])
+    assert fields["prompt_namespace"] == "report_vs/doc_map"
+    assert fields["prompt_hash"] == "prompt-hash"
+    assert fields["rendered_prompt_redaction_hash"]
+    assert fields["model"] == "gpt-5-mini"
+    assert fields["seed_supported"] is True
+    assert fields["schema_name"] == "doc_map"
+    assert fields["response_id"] == "resp_123"
+    assert fields["total_tokens"] == 17
+    assert fields["cache_decision"] == "enabled"
+    assert fields["provider_decision"] == "openai_primary"
+    assert "system prompt" not in json.dumps(audits)
+    assert "user prompt" not in json.dumps(audits)
+
+
+def test_llm_replay_bundle_reconstructs_context_without_provider_call() -> None:
+    record = llm_service.build_model_call_audit_record(
+        operation="openai_chat_json",
+        scope="audit-scope",
+        request=SimpleNamespace(
+            model="gpt-5-mini",
+            temperature=0.0,
+            seed=None,
+            system_prompt="system",
+            user_prompt="user",
+            prompt_namespace="report_vs/doc_map",
+            prompt_hash="hash",
+            schema_name="doc_map",
+            schema_version="1.0",
+            response_cache_enabled=False,
+        ),
+        response=SimpleNamespace(
+            request_id=None,
+            input_tokens=None,
+            output_tokens=None,
+            total_tokens=None,
+            model="gpt-5-mini",
+        ),
+    )
+
+    bundle = llm_service.build_model_call_replay_bundle(record)
+
+    assert bundle.live_provider_call_allowed is False
+    assert bundle.audit_record.operation == "openai_chat_json"
+    assert bundle.replay_inputs["prompt_namespace"] == "report_vs/doc_map"
+    assert bundle.replay_inputs["model"] == "gpt-5-mini"
+
+
 def test_openrouter_client_construction_is_owned_by_llm_service(
     caplog,
     assert_logs_have_required_fields,

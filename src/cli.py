@@ -94,6 +94,7 @@ from src.services.run_registry_service import (
     get_ui_run_record,
     write_ui_run_record,
 )
+from src.services.state_service import write_workflow_control_observation
 from src.services.ui_run_replay_service import write_ui_run_replay_manifest
 from src.utils.gui_utils import (
     extract_log_date_from_filename,
@@ -129,6 +130,7 @@ from src._cli.ui_runs import (
     ui_run_worker,
 )
 from src._cli.pipeline import (
+    _resolve_cli_workflow_control,
     cost_report,
     extract_candidates,
     generate_covers,

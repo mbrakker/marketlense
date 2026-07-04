@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from src.contracts.workflow_control import WorkflowControlObservation
+
 
 @dataclass(frozen=True)
 class StateCheckRequest:
@@ -460,4 +462,59 @@ class StateReportDownloadRouteResponse:
     last_final_page_url: Optional[str] = field(
         default=None,
         metadata={"doc": "Last final browser URL observed for this route, if any."},
+    )
+
+
+@dataclass(frozen=True)
+class WorkflowControlObservationWriteRequest:
+    schema_version: str = field(
+        metadata={"doc": "Workflow-control observation write request schema version."}
+    )
+    state_db: str = field(metadata={"doc": "SQLite path for workflow-control state."})
+    observation: WorkflowControlObservation = field(
+        metadata={"doc": "Workflow-control observation to persist."}
+    )
+
+
+@dataclass(frozen=True)
+class WorkflowControlObservationWriteResponse:
+    schema_version: str = field(
+        metadata={"doc": "Workflow-control observation write response schema version."}
+    )
+    observation: WorkflowControlObservation = field(
+        metadata={"doc": "Persisted workflow-control observation."}
+    )
+
+
+@dataclass(frozen=True)
+class WorkflowControlObservationListRequest:
+    schema_version: str = field(
+        metadata={"doc": "Workflow-control observation list request schema version."}
+    )
+    state_db: str = field(metadata={"doc": "SQLite path for workflow-control state."})
+    workflow: str = field(
+        default="",
+        metadata={"doc": "Optional workflow filter."},
+    )
+    publisher: str = field(
+        default="",
+        metadata={"doc": "Optional publisher filter."},
+    )
+    observed_after_utc: str = field(
+        default="",
+        metadata={"doc": "Optional lower-bound UTC timestamp for TTL filtering."},
+    )
+    limit: int = field(
+        default=200,
+        metadata={"doc": "Maximum observations to return."},
+    )
+
+
+@dataclass(frozen=True)
+class WorkflowControlObservationListResponse:
+    schema_version: str = field(
+        metadata={"doc": "Workflow-control observation list response schema version."}
+    )
+    observations: List[WorkflowControlObservation] = field(
+        metadata={"doc": "Persisted observations sorted newest first."}
     )

@@ -5,7 +5,13 @@ from typing import Any, Callable, Optional, TypeVar
 
 from src.contracts.llm import LLMClientPolicy, LLMProviderOperations
 from src.contracts.run_context import RunContext
+from src.contracts.workflow_control import ModelCallAuditRecord, ModelCallReplayBundle
 from src.services._llm_service import openai_chat, openai_responses
+from src.services._llm_service.audit import (
+    audit_record_fields,
+    build_model_call_audit_record,
+    build_model_call_replay_bundle,
+)
 from src.services._llm_service.policy import _execute_with_policy, logger
 from src.utils.logging import log_event
 
@@ -79,7 +85,7 @@ class LLMServiceClient:
                     },
                 )
             )
-        return _execute_with_policy(
+        response = _execute_with_policy(
             ctx=ctx,
             operation_name=operation_name,
             policy=self._policy,
@@ -87,6 +93,39 @@ class LLMServiceClient:
             monotonic_fn=self._monotonic_fn,
             call=call,
         )
+        if request is not None:
+            try:
+                audit_record = build_model_call_audit_record(
+                    operation=operation_name,
+                    scope=self._policy.scope,
+                    request=request,
+                    response=response,
+                )
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="llm_model_call_audit",
+                        module=logger.name,
+                        fields=audit_record_fields(audit_record),
+                    )
+                )
+            except Exception as exc:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="llm_model_call_audit_failed",
+                        module=logger.name,
+                        fields={
+                            "operation": operation_name,
+                            "scope": self._policy.scope,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        },
+                    )
+                )
+        return response
 
     def openai_chat_json(self, req: Any, ctx: RunContext) -> Any:
         return self._run(
@@ -225,6 +264,8 @@ __all__ = [
     "build_client",
     "build_client_for_settings",
     "build_client_from_callables",
+    "build_model_call_audit_record",
+    "build_model_call_replay_bundle",
     "build_openai_client",
     "build_openai_client_for_settings",
     "build_openai_client_from_callables",

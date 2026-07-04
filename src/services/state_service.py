@@ -20,6 +20,10 @@ from src.services._state_service.routes import (
     get_report_download_route,
     record_report_download_route,
 )
+from src.services._state_service.workflow_control import (
+    list_workflow_control_observations,
+    write_workflow_control_observation,
+)
 
 __all__ = [
     "already_processed",
@@ -32,8 +36,10 @@ __all__ = [
     "get_report_download_route",
     "list_processed",
     "list_published",
+    "list_workflow_control_observations",
     "record",
     "record_publish",
     "record_report_download_route",
+    "write_workflow_control_observation",
     "set_ingest_cursor",
 ]

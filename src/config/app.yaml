@@ -427,6 +427,223 @@ workflow_control:
         - "processed"
         - "skipped"
         - "error"
+    publisher_inventory:
+      workflow: "publisher_inventory"
+      version: "1.0"
+      states: ["pending", "preflighted", "running", "completed", "failed"]
+      initial_state: "pending"
+      transitions:
+        - from_state: "pending"
+          to_state: "preflighted"
+          step_name: "preflight"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "preflighted"
+          to_state: "running"
+          step_name: "execute"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "completed"
+          step_name: "complete"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "failed"
+          step_name: "fail"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+      prerequisites:
+        preflighted: ["preflight"]
+      checkpoint_outputs: []
+      validation_gates: ["preflight"]
+      terminal_outcomes: ["completed", "failed"]
+    report_download:
+      workflow: "report_download"
+      version: "1.0"
+      states: ["pending", "preflighted", "running", "completed", "failed"]
+      initial_state: "pending"
+      transitions:
+        - from_state: "pending"
+          to_state: "preflighted"
+          step_name: "preflight"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "preflighted"
+          to_state: "running"
+          step_name: "execute"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "completed"
+          step_name: "complete"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "failed"
+          step_name: "fail"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+      prerequisites:
+        preflighted: ["preflight"]
+      checkpoint_outputs: []
+      validation_gates: ["preflight"]
+      terminal_outcomes: ["completed", "failed"]
+    cross_report_analysis:
+      workflow: "cross_report_analysis"
+      version: "1.0"
+      states: ["pending", "preflighted", "running", "completed", "failed"]
+      initial_state: "pending"
+      transitions:
+        - from_state: "pending"
+          to_state: "preflighted"
+          step_name: "preflight"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "preflighted"
+          to_state: "running"
+          step_name: "execute"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "completed"
+          step_name: "complete"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "failed"
+          step_name: "fail"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+      prerequisites:
+        preflighted: ["preflight"]
+      checkpoint_outputs: []
+      validation_gates: ["preflight"]
+      terminal_outcomes: ["completed", "failed"]
+    publishing:
+      workflow: "publishing"
+      version: "1.0"
+      states: ["pending", "preflighted", "running", "completed", "failed"]
+      initial_state: "pending"
+      transitions:
+        - from_state: "pending"
+          to_state: "preflighted"
+          step_name: "preflight"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "preflighted"
+          to_state: "running"
+          step_name: "execute"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "completed"
+          step_name: "complete"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "failed"
+          step_name: "fail"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+      prerequisites:
+        preflighted: ["preflight"]
+      checkpoint_outputs: []
+      validation_gates: ["preflight"]
+      terminal_outcomes: ["completed", "failed"]
+    ui_replay:
+      workflow: "ui_replay"
+      version: "1.0"
+      states: ["pending", "preflighted", "running", "completed", "failed"]
+      initial_state: "pending"
+      transitions:
+        - from_state: "pending"
+          to_state: "preflighted"
+          step_name: "preflight"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "preflighted"
+          to_state: "running"
+          step_name: "execute"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "completed"
+          step_name: "complete"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "failed"
+          step_name: "fail"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+      prerequisites:
+        preflighted: ["preflight"]
+      checkpoint_outputs: []
+      validation_gates: ["preflight"]
+      terminal_outcomes: ["completed", "failed"]
+    wordpress_sync:
+      workflow: "wordpress_sync"
+      version: "1.0"
+      states: ["pending", "preflighted", "running", "completed", "failed"]
+      initial_state: "pending"
+      transitions:
+        - from_state: "pending"
+          to_state: "preflighted"
+          step_name: "preflight"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "preflighted"
+          to_state: "running"
+          step_name: "execute"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "completed"
+          step_name: "complete"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "failed"
+          step_name: "fail"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+      prerequisites:
+        preflighted: ["preflight"]
+      checkpoint_outputs: []
+      validation_gates: ["preflight"]
+      terminal_outcomes: ["completed", "failed"]
+    browser_acquisition:
+      workflow: "browser_acquisition"
+      version: "1.0"
+      states: ["pending", "preflighted", "running", "completed", "failed"]
+      initial_state: "pending"
+      transitions:
+        - from_state: "pending"
+          to_state: "preflighted"
+          step_name: "preflight"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "preflighted"
+          to_state: "running"
+          step_name: "execute"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "completed"
+          step_name: "complete"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "failed"
+          step_name: "fail"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+      prerequisites:
+        preflighted: ["preflight"]
+      checkpoint_outputs: []
+      validation_gates: ["preflight"]
+      terminal_outcomes: ["completed", "failed"]
   concurrency:
     model:
       min_limit: 1

@@ -18,6 +18,8 @@ from src.contracts.state import (
     StateRecordRequest,
     StateReportDownloadRouteGetRequest,
     StateReportDownloadRouteRecordRequest,
+    WorkflowControlObservationListRequest,
+    WorkflowControlObservationWriteRequest,
 )
 from src.services._state_service import common as state_common
 from src.services.state_service import (
@@ -32,8 +34,11 @@ from src.services.state_service import (
     record,
     record_publish,
     record_report_download_route,
+    list_workflow_control_observations,
+    write_workflow_control_observation,
     set_ingest_cursor,
 )
+from src.contracts.workflow_control import WorkflowControlObservation
 from src.utils.errors import AppError
 
 
@@ -101,8 +106,8 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
-    assert schema_version == (5,)
-    assert ledger_count == 5
+    assert schema_version == (6,)
+    assert ledger_count == 6
 
 
 def test_record_and_get_with_defaults(tmp_path: Path) -> None:
@@ -444,3 +449,75 @@ def test_report_download_route_roundtrip(tmp_path: Path) -> None:
     assert response.route_summary == "Click the top download button."
     assert response.outcome == "downloaded"
     assert response.last_final_page_url == "https://example.com/report/final"
+
+
+def test_workflow_control_observation_roundtrip_and_ttl(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    fresh = WorkflowControlObservation(
+        schema_version="1.0",
+        observed_at_utc="2026-07-04T10:00:00Z",
+        run_id="run-fresh",
+        workflow="report_download",
+        step_name="http_pdf",
+        route="http_pdf",
+        publisher="Example Publisher",
+        report_key="https://example.com/report",
+        outcome="succeeded",
+        error_code="",
+        error_retryable=False,
+        error_severity="",
+        latency_ms=1200,
+        cost_usd=0.01,
+        retry_count=0,
+        resource_pressure={"model": 0.0},
+    )
+    stale = WorkflowControlObservation(
+        schema_version="1.0",
+        observed_at_utc="2026-06-01T10:00:00Z",
+        run_id="run-stale",
+        workflow="report_download",
+        step_name="browser_acquisition",
+        route="browser_render",
+        publisher="Example Publisher",
+        report_key="https://example.com/report-old",
+        outcome="failed",
+        error_code="browser_timeout",
+        error_retryable=True,
+        error_severity="warning",
+        latency_ms=9000,
+        cost_usd=0.25,
+        retry_count=1,
+        resource_pressure={"browser_failure_rate": 0.5},
+    )
+
+    write_workflow_control_observation(
+        WorkflowControlObservationWriteRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            observation=stale,
+        ),
+        _ctx(),
+    )
+    write_workflow_control_observation(
+        WorkflowControlObservationWriteRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            observation=fresh,
+        ),
+        _ctx(),
+    )
+
+    response = list_workflow_control_observations(
+        WorkflowControlObservationListRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            workflow="report_download",
+            publisher="Example Publisher",
+            observed_after_utc="2026-07-01T00:00:00Z",
+            limit=20,
+        ),
+        _ctx(),
+    )
+
+    assert [item.run_id for item in response.observations] == ["run-fresh"]
+    assert response.observations[0].resource_pressure == {"model": 0.0}

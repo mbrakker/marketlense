@@ -64,6 +64,38 @@ workflow_control:
         base_delay_seconds: 1.0
         backoff_step_seconds: 1.0
         jitter_seconds: 0.25
+  workflow_contracts:
+    report_download:
+      workflow: "report_download"
+      version: "1.0"
+      states: ["pending", "preflighted", "running", "completed", "failed"]
+      initial_state: "pending"
+      transitions:
+        - from_state: "pending"
+          to_state: "preflighted"
+          step_name: "preflight"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "preflighted"
+          to_state: "running"
+          step_name: "execute"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "completed"
+          step_name: "complete"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "running"
+          to_state: "failed"
+          step_name: "fail"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+      prerequisites:
+        preflighted: ["preflight"]
+      checkpoint_outputs: []
+      validation_gates: ["preflight"]
+      terminal_outcomes: ["completed", "failed"]
   concurrency:
     browser:
       min_limit: 1

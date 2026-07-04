@@ -143,6 +143,55 @@ def test_openai_chat_json_delegates_usage_accounting(
     assert not (tmp_path / "ledger.jsonl").exists()
 
 
+def test_openai_chat_json_emits_redacted_model_call_audit(
+    external_boundary_mocks_only,
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service.openai")
+
+    class _FakeChatCompletions:
+        def create(self, **kwargs):
+            usage = SimpleNamespace(
+                prompt_tokens=12,
+                completion_tokens=5,
+                total_tokens=17,
+            )
+            message = SimpleNamespace(content=json.dumps({"ok": True}))
+            choice = SimpleNamespace(message=message)
+            return SimpleNamespace(id="chat_1", choices=[choice], usage=usage)
+
+    class _FakeClient:
+        def __init__(self, **kwargs):
+            self.chat = SimpleNamespace(completions=_FakeChatCompletions())
+
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
+
+    result = svc.openai_chat_json(_chat_request(tmp_path), _ctx())
+
+    assert result.parsed_json == {"ok": True}
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.llm_service.openai"
+    ]
+    audits = [event for event in events if event.get("event") == "llm_model_call_audit"]
+    assert len(audits) == 1
+    assert_logs_have_required_fields(audits)
+    fields = audits[0]["fields"]
+    assert fields["operation"] == "openai_chat_json"
+    assert fields["scope"] == "direct-openai-chat-json"
+    assert fields["rendered_prompt_redaction_hash"]
+    assert fields["model"] == "gpt-4.1-mini"
+    assert fields["response_id"] == "chat_1"
+    assert fields["input_tokens"] == 12
+    assert fields["output_tokens"] == 5
+    assert fields["total_tokens"] == 17
+    assert "system" not in json.dumps(audits)
+    assert "user" not in json.dumps(audits)
+
+
 def test_openai_chat_json_semantic_response_cache_skips_repeated_provider_call(
     monkeypatch,
     tmp_path,

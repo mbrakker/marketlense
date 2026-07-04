@@ -55,6 +55,27 @@ CREATE TABLE IF NOT EXISTS report_download_routes (
 );
 """
 
+_STATE_WORKFLOW_CONTROL_OBSERVATIONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS workflow_control_observations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  observed_at_utc TEXT NOT NULL,
+  run_id TEXT NOT NULL,
+  workflow TEXT NOT NULL,
+  step_name TEXT NOT NULL,
+  route TEXT NOT NULL,
+  publisher TEXT NOT NULL DEFAULT '',
+  report_key TEXT NOT NULL DEFAULT '',
+  outcome TEXT NOT NULL,
+  error_code TEXT NOT NULL DEFAULT '',
+  error_retryable INTEGER NOT NULL DEFAULT 0,
+  error_severity TEXT NOT NULL DEFAULT '',
+  latency_ms INTEGER NOT NULL DEFAULT 0,
+  cost_usd REAL NOT NULL DEFAULT 0.0,
+  retry_count INTEGER NOT NULL DEFAULT 0,
+  resource_pressure_json TEXT NOT NULL DEFAULT '{}'
+);
+"""
+
 
 def _state_db_001_create_base_tables(conn: sqlite3.Connection) -> None:
     conn.execute(_STATE_PROCESSED_TABLE_SQL)
@@ -119,6 +140,20 @@ def _state_db_005_add_report_download_final_page_url(
     )
 
 
+def _state_db_006_create_workflow_control_observations(
+    conn: sqlite3.Connection,
+) -> None:
+    conn.execute(_STATE_WORKFLOW_CONTROL_OBSERVATIONS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_control_observations_workflow_time "
+        "ON workflow_control_observations(workflow, observed_at_utc DESC)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_workflow_control_observations_publisher "
+        "ON workflow_control_observations(publisher, observed_at_utc DESC)"
+    )
+
+
 _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="state_db_001_create_base_tables",
@@ -144,5 +179,10 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_005_add_report_download_final_page_url",
         version=5,
         apply_fn=_state_db_005_add_report_download_final_page_url,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_006_create_workflow_control_observations",
+        version=6,
+        apply_fn=_state_db_006_create_workflow_control_observations,
     ),
 )

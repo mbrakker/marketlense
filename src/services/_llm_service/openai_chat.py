@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+from src.services._llm_service.audit import (
+    audit_record_fields,
+    build_model_call_audit_record,
+)
 from src.services._llm_service.openai_shared import *
 from src.services._llm_service.openai_client import *
 
@@ -438,6 +442,37 @@ def openai_chat_json(
         total_tokens=metadata.total_tokens,
         request_id=metadata.request_id,
     )
+    try:
+        audit_record = build_model_call_audit_record(
+            operation="openai_chat_json",
+            scope="direct-openai-chat-json",
+            request=request,
+            response=result,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="llm_model_call_audit",
+                module=logger.name,
+                fields=audit_record_fields(audit_record),
+            )
+        )
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="llm_model_call_audit_failed",
+                module=logger.name,
+                fields={
+                    "operation": "openai_chat_json",
+                    "scope": "direct-openai-chat-json",
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                },
+            )
+        )
     _write_semantic_response_cache(
         cache_spec,
         ctx,

@@ -35,7 +35,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
                 schema_version="1.0",
                 database_key="state_db",
                 db_path=str(db_path),
-                target_version=5,
+                target_version=6,
                 ctx=_ctx(),
             ),
             conn,
@@ -53,14 +53,22 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
             "SELECT current_version FROM schema_version WHERE database_key=?",
             ("state_db",),
         ).fetchone()
+        workflow_table = conn.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='workflow_control_observations'
+            """
+        ).fetchone()
 
-    assert response.current_version == 5
+    assert response.current_version == 6
     assert [step.migration_id for step in response.applied_steps] == [
         "state_db_001_create_base_tables",
         "state_db_002_add_processed_vector_columns",
         "state_db_003_add_processed_ocr_columns",
         "state_db_004_add_published_post_type",
         "state_db_005_add_report_download_final_page_url",
+        "state_db_006_create_workflow_control_observations",
     ]
     assert ledger_rows == [
         ("state_db_001_create_base_tables", 1),
@@ -68,8 +76,10 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         ("state_db_003_add_processed_ocr_columns", 3),
         ("state_db_004_add_published_post_type", 4),
         ("state_db_005_add_report_download_final_page_url", 5),
+        ("state_db_006_create_workflow_control_observations", 6),
     ]
-    assert version_row == (5,)
+    assert version_row == (6,)
+    assert workflow_table == ("workflow_control_observations",)
     assert_logs_have_required_fields(caplog.records)
 
 

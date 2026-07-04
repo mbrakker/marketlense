@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 
+import time
+
 import typer
 from rich.table import Table
 from rich import box
@@ -12,19 +14,24 @@ from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.semantic_ids import RunId
+from src.contracts.state import WorkflowControlObservationWriteRequest
+from src.contracts.workflow_control import WorkflowControlObservation
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
+from src.orchestrators import workflow_control_orchestrator as workflow_control
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.config_service import (
     build_ingest_settings,
     load_settings,
     load_publish_settings,
 )
+from src.services.state_service import write_workflow_control_observation
 from src.services.logging_service import setup_logging
+from src.utils.clock import utc_now_iso
 from src.utils.logging import log_event, new_run_context
 
 from src._cli.app import cli_app, console, logger
@@ -61,11 +68,121 @@ _CLI_PATCH_POINTS = (
     "setup_logging",
     "write_ui_run_record",
     "write_ui_run_replay_manifest",
+    "write_workflow_control_observation",
+    "_resolve_cli_workflow_control",
 )
 
 
 def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
+
+
+def _resolve_cli_workflow_control(
+    *,
+    intent: str,
+    ctx,
+    subject: str = "",
+    publisher: str = "",
+    report_id: str = "",
+    requested_side_effects: list[str] | None = None,
+) -> dict[str, object]:
+    settings = workflow_control.default_workflow_control_settings()
+    resolved = workflow_control.resolve_run_intent(
+        workflow_control.RunIntent(
+            schema_version="1.0",
+            intent=intent,
+            subject=subject,
+            publisher=publisher,
+            report_id=report_id,
+            requested_side_effects=list(requested_side_effects or []),
+            dry_run=False,
+            allow_automation=True,
+            metadata={"source": "cli"},
+        ),
+        settings,
+        ctx=ctx,
+    )
+    retry_policy_id = ""
+    if resolved.workflow:
+        step_name = (
+            "wordpress_publish"
+            if resolved.workflow == "publishing"
+            else "report_pipeline"
+            if resolved.workflow == "report_generation"
+            else "execute"
+        )
+        retry_policy_id = workflow_control.resolve_retry_policy(
+            settings,
+            workflow_name=resolved.workflow,
+            step_name=step_name,
+            ctx=ctx,
+        ).policy_id
+    payload: dict[str, object] = {
+        "status": resolved.status,
+        "workflow": resolved.workflow,
+        "preflight_profile": resolved.preflight_profile,
+        "budget_profile": resolved.budget_profile,
+        "retry_policy_id": retry_policy_id,
+        "resume_stage": resolved.resume_stage,
+        "side_effect_plan": list(resolved.side_effect_plan),
+        "alternatives": list(resolved.alternatives),
+        "blockers": list(resolved.blockers),
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_workflow_control_resolved",
+            module=logger.name,
+            fields=payload,
+        )
+    )
+    console.print(
+        "[cyan]Workflow control:[/cyan] "
+        f"{payload['workflow'] or payload['status']} "
+        f"(profile={payload['preflight_profile'] or '-'}, "
+        f"retry={payload['retry_policy_id'] or '-'})"
+    )
+    return payload
+
+
+def _record_cli_workflow_feedback(
+    *,
+    state_db: str,
+    workflow: str,
+    step_name: str,
+    route: str,
+    outcome: str,
+    count: int,
+    started_at: float,
+    ctx,
+) -> None:
+    latency_ms = max(0, int((time.perf_counter() - started_at) * 1000))
+    write_workflow_control_observation(
+        WorkflowControlObservationWriteRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            observation=WorkflowControlObservation(
+                schema_version="1.0",
+                observed_at_utc=utc_now_iso(),
+                run_id=str(ctx.run_id),
+                workflow=workflow,
+                step_name=step_name,
+                route=route,
+                publisher="",
+                report_key="",
+                outcome=outcome,
+                error_code="",
+                error_retryable=False,
+                error_severity="",
+                latency_ms=latency_ms,
+                cost_usd=0.0,
+                retry_count=0,
+                resource_pressure={"item_count": int(count)},
+            ),
+        ),
+        ctx,
+    )
 
 
 @cli_app.command("ingest")
@@ -96,8 +213,14 @@ def ingest(
         IngestSettingsBuildRequest(schema_version="1.0", app_settings=s),
         ctx,
     )
+    _resolve_cli_workflow_control(
+        intent="ingest new reports",
+        ctx=ctx,
+        requested_side_effects=["pdf", "model"],
+    )
 
     console.print("[cyan]Running ingest pipeline...[/cyan]")
+    started_at = time.perf_counter()
     try:
         outcomes = run_ingest(
             settings,
@@ -116,6 +239,20 @@ def ingest(
             console.print(f"[red]{exc.message}[/red]")
             raise typer.Exit(code=1)
         raise
+    _record_cli_workflow_feedback(
+        state_db=settings.state_db,
+        workflow="report_generation",
+        step_name="ingest",
+        route="cli",
+        outcome=(
+            "succeeded"
+            if any(outcome.status == "processed" for outcome in outcomes)
+            else "completed"
+        ),
+        count=len(outcomes),
+        started_at=started_at,
+        ctx=ctx,
+    )
 
     table = Table(title="Processed Reports", box=box.SIMPLE_HEAVY)
     table.add_column("File")
@@ -223,13 +360,33 @@ def publish_wp(
     settings = load_publish_settings(
         ConfigLoadRequest(schema_version="1.0", path=""), ctx
     )
+    _resolve_cli_workflow_control(
+        intent="publish ready reports",
+        ctx=ctx,
+        requested_side_effects=["wordpress", "publish"],
+    )
 
     console.print("[cyan]Publishing reports to WordPress...[/cyan]")
+    started_at = time.perf_counter()
     outcomes = run_publish(
         settings,
         limit=limit,
         ctx=ctx,
         force_report_cards=force_report_cards,
+    )
+    _record_cli_workflow_feedback(
+        state_db=settings.state_db,
+        workflow="publishing",
+        step_name="wordpress_publish",
+        route="cli",
+        outcome=(
+            "succeeded"
+            if any(outcome.status == "published" for outcome in outcomes)
+            else "completed"
+        ),
+        count=len(outcomes),
+        started_at=started_at,
+        ctx=ctx,
     )
 
     table = Table(title="Published Reports", box=box.SIMPLE_HEAVY)

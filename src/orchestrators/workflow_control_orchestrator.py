@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from dataclasses import asdict
+from typing import Any, Callable, TypeVar, cast
 
 from src.contracts.ingest import IngestSettings
-from src.contracts.pipeline_preflight import PipelinePreflightRequest
+from src.contracts.pipeline_preflight import (
+    PipelinePreflightRequest,
+    PipelinePreflightReport,
+)
 from src.contracts.publish import PublishSettings
 from src.contracts.retry_telemetry import RetryDecisionTelemetryReport
 from src.contracts.run_context import RunContext
@@ -12,12 +17,24 @@ from src.contracts.workflow_control import (
     ConcurrencyDecision,
     ConcurrencyLimit,
     ConcurrencyObservation,
+    ModelCallAuditRecord,
+    ModelCallReplayBundle,
     OperationalMemoryRecommendation,
     OperationalMemoryRecord,
     OperationalObservation,
+    PreLlmDataQualityDecision,
+    PreLlmDataQualityInput,
+    PreflightRemediationAction,
+    PreflightRemediationArtifact,
+    PublishPolicyDecision,
+    PublishPolicyInput,
     ResolvedRetryPolicy,
+    ResolvedRunIntent,
+    RunIntent,
     WorkflowContract,
     WorkflowControlSettings,
+    WorkflowControlObservation,
+    WorkflowGateOutcome,
     WorkflowPreflightProfile,
     WorkflowRetryPolicyConfig,
     WorkflowTransition,
@@ -30,6 +47,61 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.workflow_control_orchestrator")
+_T = TypeVar("_T")
+_SAFE_PREFLIGHT_ACTIONS = {
+    "output_dir_created": ("create_local_path", "file_service"),
+    "cache_dir_created": ("create_local_path", "file_service"),
+    "drive_oauth_credentials_refreshed": (
+        "refresh_available_credentials",
+        "drive_service",
+    ),
+}
+_INTENT_MAP = {
+    "ingest_new_reports": (
+        "report_generation",
+        "safe_default",
+        ["pdf", "model"],
+        "latest_safe",
+    ),
+    "update_existing_report": (
+        "report_generation",
+        "safe_default",
+        ["pdf", "model"],
+        "latest_safe",
+    ),
+    "acquire_missing_pdf": (
+        "report_download",
+        "safe_default",
+        ["network", "browser", "drive"],
+        "",
+    ),
+    "repair_failed_report": (
+        "report_generation",
+        "repair_failed",
+        ["pdf", "model"],
+        "latest_safe",
+    ),
+    "publish_ready_reports": (
+        "publishing",
+        "publish_ready",
+        ["wordpress", "publish"],
+        "",
+    ),
+    "refresh_publisher_inventory": (
+        "publisher_inventory",
+        "safe_default",
+        ["network", "browser", "drive", "model"],
+        "",
+    ),
+    "audit_acquisition": (
+        "browser_acquisition",
+        "safe_default",
+        ["network", "browser"],
+        "",
+    ),
+    "replay_ui_run": ("ui_replay", "safe_default", ["filesystem"], ""),
+}
+_AMBIGUOUS_INTENTS = {"run", "process", "start", "continue", "auto"}
 
 
 def default_workflow_control_settings() -> WorkflowControlSettings:
@@ -66,7 +138,8 @@ def build_workflow_preflight_request(
     prompt_namespaces = list(profile.prompt_namespaces)
     if profile.workflow in {"report_generation", "report_pipeline"}:
         prompt_namespaces = sorted(
-            set(prompt_namespaces) | set(report_pipeline_prompt_namespaces(ingest_settings))
+            set(prompt_namespaces)
+            | set(report_pipeline_prompt_namespaces(ingest_settings))
         )
     if ctx is not None:
         logger.info(
@@ -183,7 +256,9 @@ def build_operational_memory(
     *,
     retry_telemetry: RetryDecisionTelemetryReport | None = None,
 ) -> list[OperationalMemoryRecord]:
-    grouped: dict[tuple[str, str, str], list[OperationalObservation]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str], list[OperationalObservation]] = defaultdict(
+        list
+    )
     for observation in observations:
         grouped[
             (
@@ -353,6 +428,367 @@ def resolve_adaptive_concurrency(
     )
 
 
+def build_preflight_remediation_artifact(
+    report: PipelinePreflightReport,
+    ctx: RunContext,
+) -> PreflightRemediationArtifact:
+    actions: list[PreflightRemediationAction] = []
+    relevant_checks = [
+        *report.auto_fixable_issues,
+        *[item for item in report.checks if item.auto_fix_applied],
+        *[
+            item
+            for item in report.checks
+            if item.status in {"blocker", "warning"} and not item.auto_fix_applied
+        ],
+        *report.blockers,
+        *report.warnings,
+    ]
+    seen: set[tuple[str, str]] = set()
+    for check in relevant_checks:
+        key = (check.check_name, check.code)
+        if key in seen:
+            continue
+        seen.add(key)
+        mapped = _SAFE_PREFLIGHT_ACTIONS.get(check.code)
+        if mapped is not None and check.auto_fix_applied:
+            action_name, boundary = mapped
+            action = PreflightRemediationAction(
+                schema_version="1.0",
+                check_name=check.check_name,
+                action=action_name,
+                result="already_applied",
+                safe_to_auto_apply=True,
+                side_effect_boundary=boundary,
+                before_status="blocker_or_missing",
+                after_status="pass",
+                code=check.code,
+                message=check.message,
+                metadata=dict(check.metadata),
+            )
+        else:
+            action = PreflightRemediationAction(
+                schema_version="1.0",
+                check_name=check.check_name,
+                action="user_action_required",
+                result="blocked",
+                safe_to_auto_apply=False,
+                side_effect_boundary="operator",
+                before_status=str(check.status),
+                after_status=str(check.status),
+                code=check.code,
+                message=check.message,
+                metadata=dict(check.metadata),
+            )
+        actions.append(action)
+    artifact = PreflightRemediationArtifact(
+        schema_version="1.0",
+        workflow=report.workflow,
+        actions=actions,
+        auto_applied_count=sum(
+            1 for item in actions if item.result == "already_applied"
+        ),
+        user_action_required_count=sum(
+            1 for item in actions if item.action == "user_action_required"
+        ),
+        blocked_unsafe_count=sum(1 for item in actions if not item.safe_to_auto_apply),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_preflight_remediation_artifact",
+            module=logger.name,
+            fields={
+                "workflow": artifact.workflow,
+                "action_count": len(artifact.actions),
+                "auto_applied_count": artifact.auto_applied_count,
+                "user_action_required_count": artifact.user_action_required_count,
+                "blocked_unsafe_count": artifact.blocked_unsafe_count,
+                "action_codes": [item.code for item in artifact.actions],
+            },
+        )
+    )
+    return artifact
+
+
+def resolve_run_intent(
+    intent: RunIntent,
+    settings: WorkflowControlSettings,
+    *,
+    ctx: RunContext,
+) -> ResolvedRunIntent:
+    intent_key = _intent_key(intent.intent)
+    if intent_key in _AMBIGUOUS_INTENTS:
+        resolved = ResolvedRunIntent(
+            schema_version="1.0",
+            status="ambiguous",
+            intent_key=intent_key,
+            workflow="",
+            preflight_profile="",
+            budget_profile="",
+            resume_stage="",
+            side_effect_plan=[],
+            alternatives=sorted(_INTENT_MAP),
+            blockers=[],
+            explanation="ambiguous_intent",
+        )
+    elif intent_key not in _INTENT_MAP:
+        resolved = ResolvedRunIntent(
+            schema_version="1.0",
+            status="unsupported",
+            intent_key=intent_key,
+            workflow="",
+            preflight_profile="",
+            budget_profile="",
+            resume_stage="",
+            side_effect_plan=[],
+            alternatives=[],
+            blockers=["unsupported_intent"],
+            explanation="unsupported_intent",
+        )
+    else:
+        workflow_name, budget_profile, side_effects, resume_stage = _INTENT_MAP[
+            intent_key
+        ]
+        blockers: list[str] = []
+        if _key(workflow_name) not in settings.preflight_profiles:
+            blockers.append("preflight_profile_missing")
+        if _key(workflow_name) not in settings.workflow_contracts:
+            blockers.append("workflow_contract_missing")
+        resolved = ResolvedRunIntent(
+            schema_version="1.0",
+            status="blocked" if blockers else "resolved",
+            intent_key=intent_key,
+            workflow=workflow_name if not blockers else "",
+            preflight_profile=workflow_name if not blockers else "",
+            budget_profile=budget_profile,
+            resume_stage=resume_stage,
+            side_effect_plan=list(side_effects),
+            alternatives=[],
+            blockers=blockers,
+            explanation="resolved_from_intent_map"
+            if not blockers
+            else "missing_contract",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_run_intent_resolved",
+            module=logger.name,
+            fields=asdict(resolved),
+        )
+    )
+    return resolved
+
+
+def evaluate_publish_policy(
+    policy_input: PublishPolicyInput,
+    *,
+    ctx: RunContext,
+) -> PublishPolicyDecision:
+    confidences = [float(value) for value in policy_input.family_confidence.values()]
+    min_confidence = min(confidences) if confidences else 0.0
+    if policy_input.override:
+        action = "review_required" if not policy_input.automation_enabled else "draft"
+        reason = "override_requires_audit"
+        override_used = True
+        repair_supported = False
+    elif policy_input.validation_status != "pass":
+        action = "hold"
+        reason = "validation_not_passed"
+        override_used = False
+        repair_supported = False
+    elif policy_input.missing_metadata or policy_input.editorial_risk == "high":
+        action = "review_required"
+        reason = "metadata_or_editorial_risk"
+        override_used = False
+        repair_supported = False
+    elif min_confidence < 0.60:
+        action = "repair"
+        reason = "low_family_confidence"
+        override_used = False
+        repair_supported = True
+    elif policy_input.warnings:
+        action = "draft"
+        reason = "warnings_present"
+        override_used = False
+        repair_supported = False
+    elif not policy_input.automation_enabled:
+        action = "review_required"
+        reason = "automation_disabled"
+        override_used = False
+        repair_supported = False
+    else:
+        action = "publish"
+        reason = "policy_passed"
+        override_used = False
+        repair_supported = False
+    decision = PublishPolicyDecision(
+        schema_version="1.0",
+        action=action,
+        reason=reason,
+        min_confidence=round(min_confidence, 6),
+        repair_supported=repair_supported,
+        override_used=override_used,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_publish_policy_decision",
+            module=logger.name,
+            fields=asdict(decision),
+        )
+    )
+    return decision
+
+
+def build_operational_memory_from_feedback(
+    observations: list[WorkflowControlObservation],
+) -> list[OperationalMemoryRecord]:
+    return build_operational_memory(
+        [
+            OperationalObservation(
+                schema_version="1.0",
+                publisher=item.publisher,
+                workflow=item.workflow,
+                route=item.route,
+                success=item.outcome
+                in {"succeeded", "completed", "processed", "published"},
+                runtime_seconds=round(max(0, int(item.latency_ms)) / 1000.0, 6),
+                cost_usd=float(item.cost_usd),
+                failure_signature=item.error_code,
+                pdf_extractable=item.outcome not in {"unsupported", "non_report"},
+                credential_required=item.outcome == "user_action_required"
+                or item.error_code.endswith("credentials_missing"),
+            )
+            for item in observations
+        ]
+    )
+
+
+def evaluate_pre_llm_data_quality(
+    gate_input: PreLlmDataQualityInput,
+    *,
+    ctx: RunContext,
+) -> PreLlmDataQualityDecision:
+    signals: dict[str, Any] = asdict(gate_input)
+    outcome: WorkflowGateOutcome
+    if gate_input.duplicate_report or (
+        gate_input.already_processed and not gate_input.stale_already_processed
+    ):
+        outcome, reason, remediation = (
+            "skip_duplicate",
+            "duplicate_or_already_processed",
+            "reuse_existing_artifact",
+        )
+    elif not gate_input.supported_file_type:
+        outcome, reason, remediation = (
+            "hold",
+            "unsupported_file_type",
+            "provide_supported_pdf",
+        )
+    elif gate_input.known_gated_lead_form:
+        outcome, reason, remediation = (
+            "user_action_required",
+            "known_gated_lead_form",
+            "provide_credentials_or_skip",
+        )
+    elif gate_input.text_char_count < 1000:
+        outcome, reason, remediation = (
+            "repair",
+            "insufficient_text",
+            "run_ocr_or_source_repair",
+        )
+    elif not gate_input.report_like:
+        outcome, reason, remediation = ("hold", "non_report_content", "review_source")
+    elif not gate_input.publisher_matches:
+        outcome, reason, remediation = (
+            "hold",
+            "publisher_mismatch",
+            "review_publisher_mapping",
+        )
+    elif not gate_input.publication_date_evidence:
+        outcome, reason, remediation = (
+            "defer",
+            "missing_publication_date_evidence",
+            "collect_publication_date_evidence",
+        )
+    elif gate_input.visual_candidate_count <= 0:
+        outcome, reason, remediation = (
+            "defer",
+            "low_value_visual_candidates",
+            "run_candidate_extraction_review",
+        )
+    else:
+        outcome, reason, remediation = (
+            "proceed",
+            "deterministic_gates_passed",
+            "continue",
+        )
+    decision = PreLlmDataQualityDecision(
+        schema_version="1.0",
+        outcome=cast(WorkflowGateOutcome, outcome),
+        expensive_work_allowed=outcome == "proceed",
+        reason=reason,
+        source_signals=signals,
+        remediation=remediation,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_pre_llm_data_quality_decision",
+            module=logger.name,
+            fields=asdict(decision),
+        )
+    )
+    return decision
+
+
+def run_after_pre_llm_gate(
+    decision: PreLlmDataQualityDecision,
+    operation: Callable[[], _T],
+) -> _T | None:
+    if decision.expensive_work_allowed:
+        return operation()
+    if decision.outcome == "user_action_required":
+        raise AppError(
+            code="pre_llm_quality_gate_blocked",
+            message="Pre-LLM quality gate requires user action before expensive work",
+            retryable=False,
+            severity="warning",
+            context={
+                "outcome": decision.outcome,
+                "reason": decision.reason,
+                "remediation": decision.remediation,
+            },
+        )
+    return None
+
+
+def resolve_all_adaptive_concurrency(
+    settings: WorkflowControlSettings,
+    observations: dict[str, ConcurrencyObservation],
+) -> dict[str, ConcurrencyDecision]:
+    decisions: dict[str, ConcurrencyDecision] = {}
+    for resource, limit in sorted(settings.concurrency.items()):
+        observation = observations.get(resource) or ConcurrencyObservation(
+            schema_version="1.0",
+            resource=resource,
+            current_limit=limit.default_limit,
+            retry_rate=0.0,
+            p95_latency_ms=limit.low_latency_ms + 1,
+            sqlite_lock_count=0,
+            browser_failure_rate=0.0,
+            budget_burn_rate=0.75,
+        )
+        decisions[resource] = resolve_adaptive_concurrency(limit, observation)
+    return decisions
+
+
 def _profile(
     settings: WorkflowControlSettings,
     workflow_name: str,
@@ -378,7 +814,10 @@ def _validate_workflow_contract(contract: WorkflowContract) -> None:
             context={"workflow": contract.workflow},
         )
     for transition in contract.transitions:
-        if _key(transition.from_state) not in states or _key(transition.to_state) not in states:
+        if (
+            _key(transition.from_state) not in states
+            or _key(transition.to_state) not in states
+        ):
             raise AppError(
                 code="workflow_contract_invalid",
                 message="Workflow transition references an unknown state",
@@ -486,7 +925,9 @@ def _default_retry_policies() -> dict[str, dict[str, WorkflowRetryPolicyConfig]]
         },
         "publisher_inventory": {
             "discovery": policy("publisher_inventory.discovery.v1", 1),
-            "candidate_screening": policy("publisher_inventory.candidate_screening.v1", 1),
+            "candidate_screening": policy(
+                "publisher_inventory.candidate_screening.v1", 1
+            ),
         },
         "publishing": {
             "wordpress_publish": policy("publishing.wordpress_publish.v1", 1),
@@ -641,6 +1082,23 @@ def _key(value: object) -> str:
     return _stable_text(value).lower().replace("-", "_").replace(" ", "_")
 
 
+def _intent_key(value: object) -> str:
+    token = _key(value)
+    aliases = {
+        "ingest": "ingest_new_reports",
+        "ingest_reports": "ingest_new_reports",
+        "download_report": "acquire_missing_pdf",
+        "download": "acquire_missing_pdf",
+        "publish": "publish_ready_reports",
+        "publish_wp": "publish_ready_reports",
+        "publisher_discovery": "refresh_publisher_inventory",
+        "publisher_inventory": "refresh_publisher_inventory",
+        "ui_replay": "replay_ui_run",
+        "replay": "replay_ui_run",
+    }
+    return aliases.get(token, token)
+
+
 def _bounded(value: int, *, minimum: int, maximum: int) -> int:
     return min(maximum, max(minimum, value))
 
@@ -649,21 +1107,39 @@ __all__ = [
     "ConcurrencyDecision",
     "ConcurrencyLimit",
     "ConcurrencyObservation",
+    "ModelCallAuditRecord",
+    "ModelCallReplayBundle",
     "OperationalMemoryRecommendation",
     "OperationalMemoryRecord",
     "OperationalObservation",
+    "PreLlmDataQualityDecision",
+    "PreLlmDataQualityInput",
+    "PreflightRemediationAction",
+    "PreflightRemediationArtifact",
+    "PublishPolicyDecision",
+    "PublishPolicyInput",
     "ResolvedRetryPolicy",
+    "ResolvedRunIntent",
+    "RunIntent",
     "WorkflowContract",
     "WorkflowControlSettings",
+    "WorkflowControlObservation",
     "WorkflowPreflightProfile",
     "WorkflowRetryPolicyConfig",
     "WorkflowTransition",
+    "build_operational_memory_from_feedback",
     "build_operational_memory",
+    "build_preflight_remediation_artifact",
     "build_workflow_preflight_request",
     "default_workflow_control_settings",
+    "evaluate_pre_llm_data_quality",
+    "evaluate_publish_policy",
     "is_valid_transition",
     "recommend_from_operational_memory",
+    "resolve_all_adaptive_concurrency",
+    "resolve_run_intent",
     "resolve_adaptive_concurrency",
     "resolve_retry_policy",
     "resolve_workflow_contract",
+    "run_after_pre_llm_gate",
 ]

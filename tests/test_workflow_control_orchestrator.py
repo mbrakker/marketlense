@@ -13,8 +13,13 @@ from src.contracts.retry_telemetry import (
     RetryDecisionTelemetryRow,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.pipeline_preflight import (
+    PipelinePreflightCheck,
+    PipelinePreflightReport,
+)
 from src.orchestrators import workflow_control_orchestrator as workflow
 from src.services import config_service
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -103,6 +108,32 @@ workflow_control:
     assert settings.concurrency["model"].max_limit == 4
     assert_no_defaulted_required_fields(report_download)
     assert_no_defaulted_required_fields(retry_policy)
+
+
+def test_project_workflow_control_config_resolves_publish_intent() -> None:
+    settings = config_service.load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path="src/config/app.yaml"),
+        _ctx(),
+    )
+
+    resolved = workflow.resolve_run_intent(
+        workflow.RunIntent(
+            schema_version="1.0",
+            intent="publish ready reports",
+            subject="",
+            publisher="",
+            report_id="",
+            requested_side_effects=["wordpress", "publish"],
+            dry_run=True,
+            allow_automation=False,
+            metadata={},
+        ),
+        settings,
+        ctx=_ctx(),
+    )
+
+    assert resolved.status == "resolved"
+    assert resolved.workflow == "publishing"
 
 
 def test_workflow_preflight_profile_builds_pipeline_request(
@@ -461,7 +492,9 @@ def test_operational_memory_ignores_incomplete_retry_telemetry_rows() -> None:
     assert memory[0].failure_signatures == ["http_403"]
 
 
-def test_adaptive_concurrency_reduces_on_rate_limits_and_increases_on_stable_runs() -> None:
+def test_adaptive_concurrency_reduces_on_rate_limits_and_increases_on_stable_runs() -> (
+    None
+):
     limit = workflow.ConcurrencyLimit(
         schema_version="1.0",
         resource="model",
@@ -506,3 +539,297 @@ def test_adaptive_concurrency_reduces_on_rate_limits_and_increases_on_stable_run
     assert increased.selected_limit == 3
     assert increased.reason == "stable_headroom"
     assert asdict(reduced)["resource"] == "model"
+
+
+def test_preflight_next_actions_are_converted_to_safe_remediation_artifact(
+    caplog,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.workflow_control_orchestrator")
+    report = PipelinePreflightReport(
+        schema_version="1.0",
+        workflow="report_generation",
+        planned_side_effects=["pdf", "model"],
+        passed=True,
+        expensive_side_effects_allowed=True,
+        blocker_count=0,
+        warning_count=1,
+        auto_fixed_count=1,
+        checks=[
+            PipelinePreflightCheck(
+                schema_version="1.0",
+                check_name="path_writable:output_dir",
+                status="auto_fixed",
+                code="output_dir_created",
+                message="Path is writable for output_dir",
+                next_action="continue",
+                auto_fix_applied=True,
+                metadata={"path": "out"},
+            ),
+            PipelinePreflightCheck(
+                schema_version="1.0",
+                check_name="drive_live_preflight",
+                status="warning",
+                code="drive_live_preflight_skipped",
+                message="Drive live endpoint preflight was skipped",
+                next_action="run_live_preflight_before_drive_side_effects",
+                auto_fix_applied=False,
+                metadata={"folder_id": "folder"},
+            ),
+        ],
+        blockers=[],
+        warnings=[],
+        auto_fixable_issues=[],
+        next_actions=[
+            "run_live_preflight_before_drive_side_effects",
+            "continue_pipeline",
+        ],
+    )
+
+    artifact = workflow.build_preflight_remediation_artifact(report, _ctx())
+
+    assert artifact.workflow == "report_generation"
+    assert [action.action for action in artifact.actions] == [
+        "create_local_path",
+        "user_action_required",
+    ]
+    assert artifact.actions[0].result == "already_applied"
+    assert artifact.actions[0].safe_to_auto_apply is True
+    assert artifact.actions[1].result == "blocked"
+    assert artifact.actions[1].safe_to_auto_apply is False
+    assert artifact.user_action_required_count == 1
+    assert _events(caplog)[-1]["event"] == "workflow_preflight_remediation_artifact"
+
+
+def test_run_intent_resolves_workflow_and_reports_ambiguity() -> None:
+    catalog = workflow.default_workflow_control_settings()
+
+    resolved = workflow.resolve_run_intent(
+        workflow.RunIntent(
+            schema_version="1.0",
+            intent="publish ready reports",
+            subject="",
+            publisher="",
+            report_id="",
+            requested_side_effects=["wordpress"],
+            dry_run=True,
+            allow_automation=False,
+            metadata={},
+        ),
+        catalog,
+        ctx=_ctx(),
+    )
+    ambiguous = workflow.resolve_run_intent(
+        workflow.RunIntent(
+            schema_version="1.0",
+            intent="run",
+            subject="",
+            publisher="",
+            report_id="",
+            requested_side_effects=[],
+            dry_run=True,
+            allow_automation=False,
+            metadata={},
+        ),
+        catalog,
+        ctx=_ctx(),
+    )
+
+    assert resolved.status == "resolved"
+    assert resolved.workflow == "publishing"
+    assert resolved.preflight_profile == "publishing"
+    assert "wordpress" in resolved.side_effect_plan
+    assert ambiguous.status == "ambiguous"
+    assert "publish_ready_reports" in ambiguous.alternatives
+    assert ambiguous.workflow == ""
+
+
+def test_publish_policy_fails_closed_with_confidence_gates() -> None:
+    publish = workflow.evaluate_publish_policy(
+        workflow.PublishPolicyInput(
+            schema_version="1.0",
+            validation_status="pass",
+            family_confidence={"summary": 0.94, "quotes": 0.90},
+            warnings=[],
+            missing_metadata=[],
+            editorial_risk="low",
+            override=False,
+            automation_enabled=True,
+        ),
+        ctx=_ctx(),
+    )
+    repair = workflow.evaluate_publish_policy(
+        workflow.PublishPolicyInput(
+            schema_version="1.0",
+            validation_status="pass",
+            family_confidence={"summary": 0.48},
+            warnings=[],
+            missing_metadata=[],
+            editorial_risk="low",
+            override=False,
+            automation_enabled=True,
+        ),
+        ctx=_ctx(),
+    )
+    draft = workflow.evaluate_publish_policy(
+        workflow.PublishPolicyInput(
+            schema_version="1.0",
+            validation_status="pass",
+            family_confidence={"summary": 0.90},
+            warnings=["minor_validation_warning"],
+            missing_metadata=[],
+            editorial_risk="low",
+            override=False,
+            automation_enabled=True,
+        ),
+        ctx=_ctx(),
+    )
+
+    assert publish.action == "publish"
+    assert repair.action == "repair"
+    assert repair.repair_supported is True
+    assert draft.action == "draft"
+
+
+def test_pre_llm_quality_gates_block_expensive_model_call() -> None:
+    calls = {"count": 0}
+
+    def expensive_call() -> str:
+        calls["count"] += 1
+        return "called"
+
+    decision = workflow.evaluate_pre_llm_data_quality(
+        workflow.PreLlmDataQualityInput(
+            schema_version="1.0",
+            file_id="file-1",
+            md5="md5",
+            already_processed=True,
+            duplicate_report=True,
+            text_char_count=20_000,
+            supported_file_type=True,
+            report_like=True,
+            stale_already_processed=False,
+            publisher_matches=True,
+            publication_date_evidence=True,
+            visual_candidate_count=5,
+            known_gated_lead_form=False,
+        ),
+        ctx=_ctx(),
+    )
+
+    result = workflow.run_after_pre_llm_gate(decision, expensive_call)
+
+    assert decision.outcome == "skip_duplicate"
+    assert decision.expensive_work_allowed is False
+    assert result is None
+    assert calls["count"] == 0
+
+
+def test_resolve_all_adaptive_concurrency_covers_all_resource_classes() -> None:
+    catalog = workflow.default_workflow_control_settings()
+
+    decisions = workflow.resolve_all_adaptive_concurrency(
+        catalog,
+        {
+            "model": workflow.ConcurrencyObservation(
+                schema_version="1.0",
+                resource="model",
+                current_limit=2,
+                retry_rate=0.0,
+                p95_latency_ms=700,
+                sqlite_lock_count=0,
+                browser_failure_rate=0.0,
+                budget_burn_rate=0.2,
+            )
+        },
+    )
+
+    assert set(decisions) >= {"model", "pdf", "browser", "drive", "wordpress"}
+    assert decisions["model"].reason == "stable_headroom"
+    assert decisions["pdf"].selected_limit == catalog.concurrency["pdf"].default_limit
+
+
+def test_workflow_feedback_changes_operational_memory_recommendation() -> None:
+    feedback = [
+        workflow.WorkflowControlObservation(
+            schema_version="1.0",
+            observed_at_utc="2026-07-04T00:00:00Z",
+            run_id="run-1",
+            workflow="report_download",
+            step_name="browser_acquisition",
+            route="browser_render",
+            publisher="Example Publisher",
+            report_key="report-a",
+            outcome="failed",
+            error_code="browser_timeout",
+            error_retryable=True,
+            error_severity="warning",
+            latency_ms=9000,
+            cost_usd=0.20,
+            retry_count=1,
+            resource_pressure={"browser_failure_rate": 0.5},
+        ),
+        workflow.WorkflowControlObservation(
+            schema_version="1.0",
+            observed_at_utc="2026-07-04T00:01:00Z",
+            run_id="run-2",
+            workflow="report_download",
+            step_name="http_pdf",
+            route="http_pdf",
+            publisher="Example Publisher",
+            report_key="report-b",
+            outcome="succeeded",
+            error_code="",
+            error_retryable=False,
+            error_severity="",
+            latency_ms=1500,
+            cost_usd=0.01,
+            retry_count=0,
+            resource_pressure={},
+        ),
+        workflow.WorkflowControlObservation(
+            schema_version="1.0",
+            observed_at_utc="2026-07-04T00:02:00Z",
+            run_id="run-3",
+            workflow="report_download",
+            step_name="http_pdf",
+            route="http_pdf",
+            publisher="Example Publisher",
+            report_key="report-c",
+            outcome="succeeded",
+            error_code="",
+            error_retryable=False,
+            error_severity="",
+            latency_ms=1300,
+            cost_usd=0.01,
+            retry_count=0,
+            resource_pressure={},
+        ),
+    ]
+
+    memory = workflow.build_operational_memory_from_feedback(feedback)
+    recommendation = workflow.recommend_from_operational_memory(
+        memory,
+        publisher="Example Publisher",
+        workflow_name="report_download",
+    )
+
+    assert recommendation.recommended_route == "http_pdf"
+    assert recommendation.confidence == 1.0
+    assert "browser_timeout" in recommendation.failure_signatures
+
+
+def test_run_after_pre_llm_gate_raises_typed_error_for_user_action() -> None:
+    decision = workflow.PreLlmDataQualityDecision(
+        schema_version="1.0",
+        outcome="user_action_required",
+        expensive_work_allowed=False,
+        reason="known_gated_lead_form",
+        source_signals={"known_gated_lead_form": True},
+        remediation="provide_credentials_or_skip",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        workflow.run_after_pre_llm_gate(decision, lambda: "called")
+
+    assert exc_info.value.code == "pre_llm_quality_gate_blocked"
+    assert exc_info.value.retryable is False
