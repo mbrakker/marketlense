@@ -63,8 +63,9 @@ Scoring:
 2. Cost and LLM controls.
 3. Analytics projection and embeddings.
 4. Publish durability, WordPress/public entity alignment, and public-site QA.
-5. PDF/performance hotspots.
-6. Architecture, schema compatibility, and observability gates.
+5. User-facing output quality and editorial contracts.
+6. PDF/performance hotspots.
+7. Architecture, schema compatibility, and observability gates.
 
 ---
 
@@ -228,7 +229,64 @@ Scoring:
 
 ## 4. PDF, Dashboard, and Runtime Performance
 
-## 5. Architecture, Schema Compatibility, and Observability
+## 5. User-Facing Output Quality and Editorial Contracts
+
+- **Title:** Tighten report editorial prompt rubrics for executive-grade output [Impact: 5/5, Effort: 2/5]
+  - Problem fixed: Report-facing artifacts can be accurate but still read as generic summaries because prompt rubrics do not consistently require pyramid-principle structure, observation/implication/action separation, contradiction checks, quantified support, or professional copy hygiene.
+  - Why implement: This is the lowest-risk path to sharper user-facing output because it improves existing summary, insight, expert-comment, LinkedIn, taxonomy, and cover-semantics behavior before changing public schemas.
+  - Tradeoffs / risks: Prompt-only changes can shift golden outputs and may make narrow reports feel formulaic if the rubric is too rigid.
+  - Acceptance Criteria:
+    - Prompt copy defects such as `threeshort`, `peges`, and `evedence` are corrected without changing prompt namespaces or adding inline prompt text in code.
+    - Executive summary prompts require top-line answer, supporting evidence, strategic implication, caveat, and recommended reading path while keeping current output fields stable.
+    - Editorial prompts distinguish observation, `so_what`, and `now_what` only where evidence or extracted recommendations support the action layer.
+    - Summary, expert-comment, LinkedIn, and cover-semantics prompts reuse the strongest available metrics and check contradictions when contradiction evidence exists.
+    - Prompt fixture regression records intentional output shifts and proves no unsupported facts, invented recommendations, or hidden schema changes were introduced.
+
+- **Title:** Add optional executive advisory artifacts to the user-facing report contract [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Existing final artifacts surface summaries, insights, quotes, expert comments, and posts, but they do not expose first-class decision briefs, recommendations, risk registers, methodology/limitations, coverage diagnostics, audience variants, or category relevance explanations.
+  - Why implement: These artifacts turn report analysis into a consultancy-grade decision product while making absent source evidence visible instead of silently omitting useful context.
+  - Tradeoffs / risks: Advisory language can overreach if unsupported; optional fields and explicit not-found statuses are required so existing consumers continue to work.
+  - Acceptance Criteria:
+    - A versioned optional `decision_brief` artifact includes strategic context, decision implications, priority moves, watchouts, evidence links, and a confidence note.
+    - Extracted recommendations are surfaced with recommendation, rationale, evidence ID or span, intended actor, priority, implementation horizon, and expected business effect; empty source packs produce `recommendations_not_found` rather than synthesized advice.
+    - Strategic risks, methodology/limitations, coverage diagnostics, audience variants, and category relevance explanations are added as optional schema-backed artifacts or metadata beside current fields.
+    - Current summary, insights, quotes, expert comment, LinkedIn post, category IDs, routing fields, and public rendering paths remain backward-compatible until consumers explicitly adopt the new contract version.
+    - Contract round-trip, schema snapshot, generator, and UI/readback tests cover populated artifacts, not-found states, and required-field completeness without default or sentinel-filled values.
+
+- **Title:** Propagate metric spines and claim-level evidence spans through final editorials [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Later editorial artifacts can become vague or hard to audit because quantified evidence and evidence spans are not consistently carried from extracted packs into final user-facing claims.
+  - Why implement: Stronger metric reuse and claim-level traceability improve trust, validation, debugging, and future source-preview UI features.
+  - Tradeoffs / risks: Richer payloads increase validation and display complexity, and one bad extracted metric could spread unless propagation is guarded.
+  - Acceptance Criteria:
+    - A derived metric spine selects the strongest supported 3-6 metrics with value, unit, timeframe, segment, geography, comparator, baseline, delta, sample size when present, and confidence or missing-context notes.
+    - Summary, final insights, expert comment, LinkedIn post, decision brief, quote selections, and recommendation/risk artifacts consume the metric spine without inventing unsupported comparisons.
+    - Claim-level evidence spans include evidence ID, source pack, section ID, page, offsets where available, and short redacted excerpts while preserving existing `evidence_id` compatibility.
+    - Quote outputs include a role such as proof point, executive voice, customer voice, methodology caveat, strategic tension, or market signal without altering verbatim quote text.
+    - Validation fails or warns when high-impact claims lack evidence links, when metric propagation changes source meaning, or when comparison fields are inferred rather than source-backed.
+
+- **Title:** Improve final insight selection with transparent strategic scoring and coverage roles [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Final insight selection relies too heavily on a single usefulness concept and a generic non-overlap instruction, which can produce repeated or insufficiently strategic insight sets.
+  - Why implement: A visible scoring and coverage rubric makes the final five insights feel curated, balanced, and easier to validate.
+  - Tradeoffs / risks: Scores can look like false precision unless they are calibrated and treated as selection metadata rather than user-visible truth.
+  - Acceptance Criteria:
+    - Insight candidates retain the existing score while adding optional novelty, strategic importance, evidence strength, quantification quality, actionability, and coverage-role dimensions.
+    - Final insights are tagged with supported coverage roles such as market shift, customer behavior, operational implication, commercial signal, technology/channel signal, risk, recommendation, or methodology caveat.
+    - Narrow reports may repeat a coverage role only with a source-backed reason; unsupported roles are not force-fit.
+    - A dominant narrative archetype such as acceleration, inflection, fragmentation, consolidation, resilience, trade-off, substitution, maturity, uncertainty, or system change is derived as optional metadata and does not replace cover semantics.
+    - Tests cover overlap reduction, scoring metadata completeness, narrow-report fallback, narrative-archetype compatibility, and no regression in exactly-five final insight behavior where that contract still applies.
+
+- **Title:** Add editorial contract versioning and quality gates before publishing [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: User-facing output can evolve across prompts and schemas without a single editorial contract version or publish-time gate for generic phrasing, unsupported implications, duplicated insights, missing caveats, weak actionability, forbidden internal references, and tone defects.
+  - Why implement: Explicit versioning and validation let the project raise editorial quality without silently breaking downstream renderers or publishing low-trust prose.
+  - Tradeoffs / risks: Overly strict gates can raise regeneration cost, block acceptable outputs, or create repetitive copy if repair prompts are too narrow.
+  - Acceptance Criteria:
+    - A user-facing editorial artifact contract version governs new final-output fields for decision brief, recommendations, risks, limitations, coverage diagnostics, evidence spans, scoring metadata, metric spine, and audience variants.
+    - Adapters or migration logic preserve existing artifact consumers and public renderers until they opt into the richer version.
+    - Editorial quality validation emits stable rule IDs for generic phrasing, unsupported implications, missing metric support, duplicate insights, missing caveats, weak actionability, forbidden internal references, and tone defects.
+    - New quality rules start as warnings with logged remediation context, then can be promoted to hard failures only after fixture and live-artifact evidence proves stability.
+    - README documents the editorial contract version, rollout sequence, warning-to-error policy, and coexistence behavior with current report artifacts.
+
+## 6. Architecture, Schema Compatibility, and Observability
 
 - **Title:** Publish release evidence reviews into CI job summaries and PR release notes [Impact: 3/5, Effort: 2/5]
   - Problem fixed: Release evidence review Markdown is now generated and archived, but reviewers still need to open the artifact bundle to see the approval surface.
@@ -253,7 +311,7 @@ Scoring:
 
 ---
 
-## 6. Pipeline Autopilot, Resume, and Recovery Interconnections
+## 7. Pipeline Autopilot, Resume, and Recovery Interconnections
 
 - **Title:** Add a single pipeline planning brain before execution [Impact: 5/5, Effort: 4/5]
   - Problem fixed: CLI, UI, ingest, report generation, analysis, publish, and recovery paths currently require the operator or caller to know which entrypoint and flags to use. The system has strong individual orchestrators, but no typed plan that derives the safest next action from repository state, config, credentials, checkpoints, and publish readiness.
@@ -274,6 +332,206 @@ Scoring:
     - The planner can recommend or apply a profile while logging every resolved low-level setting that changes behavior.
     - Profile resolution validates against the existing settings contract and never hides secrets in YAML.
     - Tests cover profile selection, explicit override precedence, invalid profile names, and deterministic resolved settings.
+
+- **Title:** Add an autonomous run supervisor control loop [Impact: 5/5, Effort: 5/5]
+  - Problem fixed: Preflight, retry decisions, idempotency, checkpoints, run registry state, validation repair, and health scorecards exist as separate capabilities, but no single control loop continuously chooses `start`, `resume`, `retry`, `defer`, `repair`, `publish`, `dead-letter`, or `notify` across the full pipeline.
+  - Why implement: Lets the system operate as an unattended agent that chooses safe next actions from state instead of requiring users to invoke the correct entrypoint or resume flag.
+  - Tradeoffs / risks: Must remain a control-plane orchestrator and must not duplicate generator domain logic or service I/O behavior.
+  - Acceptance Criteria:
+    - A typed supervisor plan contract lists selected action, workflow, checkpoint/resume stage, idempotency scope/key, retry/defer decision, health inputs, blockers, and expected side effects.
+    - The supervisor consumes existing preflight reports, run registry records, retry telemetry, validation failures, checkpoints, and idempotency lookups without performing unplanned side effects.
+    - The supervisor can start a new run, resume from the latest safe checkpoint, invoke targeted repair, schedule retry/defer, publish when policy allows, or dead-letter with a remediation reason.
+    - Pipeline tests cover fresh, duplicate, partial-checkpoint, validation-failed, transient-failed, missing-credential, and publish-ready scenarios with structured log assertions.
+
+- **Title:** Convert preflight next actions into safe auto-remediation actions [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Pipeline preflight reports blockers, warnings, auto-fixes, and next actions, but many next actions still require an operator to interpret diagnostics and run follow-up commands.
+  - Why implement: Safe automatic remediation reduces manual setup, avoids wasted model calls, and makes autonomous execution practical.
+  - Tradeoffs / risks: Auto-remediation must be allowlisted, idempotent, logged, and forbidden from inventing credentials, changing business policy, or hiding true blockers.
+  - Acceptance Criteria:
+    - Preflight remediation can create missing local directories, initialize local schema prerequisites through canonical services, validate and refresh available credentials, and write a typed remediation artifact.
+    - Irreducible credential, endpoint, policy, or data blockers remain explicit `user_action_required` outcomes.
+    - Every auto-fix emits structured logs with action, result, before/after status, and side-effect boundary.
+    - Tests cover successful auto-fixes, blocked unsafe fixes, repeated idempotent remediation, and redacted failure reporting.
+
+- **Title:** Make preflight workflow-aware across report, discovery, download, publish, and UI runs [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Current preflight strength is concentrated on report-pipeline prerequisites, while other workflows still risk discovering missing browser, Drive, WordPress, prompt, or artifact prerequisites after work has started.
+  - Why implement: Autonomous runs need to know all required credentials, prompts, side effects, artifact roots, idempotency scopes, and endpoint probes before execution.
+  - Tradeoffs / risks: Workflow profiles must not become a second settings system; they should resolve and validate existing typed settings.
+  - Acceptance Criteria:
+    - Preflight profiles exist for report generation, publisher inventory, report download, cross-report analysis, publishing, UI replay, WordPress sync, and browser acquisition.
+    - Each profile declares required credentials, prompt namespaces, artifact/state DB prerequisites, side-effect boundaries, endpoint probes, idempotency scopes, and budget expectations.
+    - The supervisor/planner selects the correct profile from run intent and logs the resolved profile.
+    - Tests cover profile-specific blockers, optional live endpoint probes, side-effect gating, and prompt namespace validation.
+
+- **Title:** Add a durable autonomous dead-letter queue with typed remediation plans [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Failure classification and UI-run dead-letter concepts exist, but failed autonomous work is not yet represented as a durable queue of remediable work items with retry/defer/repair scheduling.
+  - Why implement: Failed runs should become managed work items that can be retried, resumed, repaired, or escalated without users reconstructing context.
+  - Tradeoffs / risks: Needs attempt budgets and loop prevention so the system does not repeatedly spend on irreparable failures.
+  - Acceptance Criteria:
+    - Dead-letter records include run ID, workflow, failing step, `AppError` taxonomy, retry decision, checkpoint stage, input checksum, artifact refs, remediation code, and runbook link.
+    - A reaper orchestrator retries transient failures after cooldown, resumes from valid checkpoints, invokes targeted repair where available, and escalates only irreducible blockers.
+    - Attempt budgets, terminal states, and duplicate suppression are enforced through idempotency.
+    - Tests cover transient recovery, permanent failure, missing credentials, stale checkpoint, repeated failure loop prevention, and runbook surfacing.
+
+- **Title:** Expand idempotency coverage to every external side effect [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Idempotency protects important publish, report-download, and publisher-inventory paths, but autonomous reruns require every external write or ambiguous side effect to be protected.
+  - Why implement: Safe unattended retries depend on duplicate-proof side effects after crashes, network ambiguity, or deferred resume.
+  - Tradeoffs / risks: Requires a side-effect inventory and careful exemption policy for read-only or naturally idempotent calls.
+  - Acceptance Criteria:
+    - A side-effect registry maps each external write to owning orchestrator/service, idempotency scope, logical key, checksum inputs, and artifact references.
+    - OpenAI/vector-store writes, Drive uploads, WordPress media/posts, report-store mutations, state transitions, cost ledger writes, archive writes, route playbook promotion, and browser identity updates are covered or explicitly waived.
+    - CI fails new unwaived side-effect calls that lack idempotency coverage metadata.
+    - Tests cover duplicate replay, checksum mismatch, partial side-effect recovery, and waiver validation.
+
+- **Title:** Add a run-level budget manager for cost, tokens, time, retries, and external calls [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Cost, retry, latency, worker, browser, and model limits are configured or reported in separate places, but no online budget manager enforces total run/day/publisher constraints before each expensive action.
+  - Why implement: Autonomous execution needs predictable spend, runtime, and call ceilings without operator babysitting.
+  - Tradeoffs / risks: Budget enforcement must distinguish warning, defer, stop, and approved override outcomes without silently dropping work.
+  - Acceptance Criteria:
+    - A typed `RunBudget` contract tracks max USD, model calls, tokens, wall-clock time, retries, browser launches, Drive writes, WordPress writes, and PDFs per batch by run/day/publisher scopes.
+    - Orchestrators check budget before model, browser, OCR, Drive, and WordPress side effects and emit typed budget decisions.
+    - The health scorecard consumes final budget usage and reports avoided calls, budget breaches, and override usage.
+    - Tests cover normal use, warning thresholds, hard stop, defer, override, and structured log fields.
+
+- **Title:** Strengthen checkpoint resume into automatic stage selection and repair [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Semantic checkpoint resume is live, but users or callers still need to know when to resume, which stage is safe, and whether stale or missing artifacts should trigger repair.
+  - Why implement: Autonomous runs should recover from crashes or partial completion by selecting the newest valid checkpoint and repairing only invalid or missing outputs.
+  - Tradeoffs / risks: Automatic invalidation must be conservative so it does not discard valid expensive artifacts or reuse stale artifacts.
+  - Acceptance Criteria:
+    - The supervisor invokes latest-safe checkpoint selection automatically on rerun and records the selected stage and rejected-stage reasons.
+    - Stale/missing/corrupt artifacts are routed to targeted regeneration or stage invalidation with typed non-retryable errors where repair is impossible.
+    - Side effects after resume are replayed only through idempotency-protected steps.
+    - Tests inject missing artifacts, hash mismatches, stale prompt/template hashes, validation failures, and process-interruption scenarios.
+
+- **Title:** Add structured run-intent contracts and automatic workflow resolution [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Users still need to choose between ingest, download, publish, regenerate, replay, sync, audit, and other entrypoints even when repository state indicates the correct next workflow.
+  - Why implement: Users should express intent while the system selects the workflow graph, prerequisites, and safe next action.
+  - Tradeoffs / risks: Intent resolution must be transparent and reviewable; ambiguous intents should produce alternatives instead of guessing.
+  - Acceptance Criteria:
+    - A typed `RunIntent` contract covers intents such as ingest new reports, update existing report, acquire missing PDF, repair failed report, publish ready reports, refresh publisher inventory, audit acquisition, and replay UI run.
+    - An intent resolver maps intent plus current state to workflow, preflight profile, budget profile, checkpoints, and side-effect plan.
+    - CLI/UI expose read-only intent resolution before execution.
+    - Tests cover unambiguous, ambiguous, unsupported, and blocked intents with explicit alternatives and logs.
+
+- **Title:** Add machine-readable workflow DAG and state-machine contracts [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Workflow sequencing is distributed across orchestrators, making autonomous planning, resume, and state validation harder to reason about mechanically.
+  - Why implement: A DAG/state-machine contract gives the supervisor one source of truth for valid transitions, prerequisites, retries, checkpoints, validations, and next actions.
+  - Tradeoffs / risks: The DAG must describe orchestration rather than duplicating business logic or prompt/domain decisions.
+  - Acceptance Criteria:
+    - Each autonomous workflow has a versioned DAG/state-machine contract with states, transitions, prerequisites, side effects, retry policy reference, checkpoint outputs, validation gates, and terminal outcomes.
+    - Orchestrators emit state-transition events that validate against the contract.
+    - CI or tests fail invalid transition definitions, missing terminal states, and undocumented side effects.
+    - Pipeline tests assert retry counts, state transitions, idempotency keys, and final outcomes from the DAG.
+
+- **Title:** Centralize retry policy configuration by workflow and step [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Retry decisions are typed, but retry policy choices still appear in code and workflow-specific settings instead of one auditable policy map.
+  - Why implement: Step-specific YAML retry policy lets operators tune retry/defer behavior without code changes and helps the supervisor explain decisions.
+  - Tradeoffs / risks: Policy must remain bounded and validated so invalid YAML cannot create infinite retries or generator-owned retry behavior.
+  - Acceptance Criteria:
+    - YAML maps workflow steps to retries, delay/backoff/jitter, defer behavior, credential-action codes, and exhaustion policy.
+    - Orchestrators resolve retry policy through typed config and log policy ID/version on every retry decision.
+    - Invalid policies fail config loading with typed non-retryable errors.
+    - Tests cover retry, defer, user-action-required, exhaustion, invalid policy, and precedence with existing defaults.
+
+- **Title:** Add a persistent scheduler for deferred and user-action-required retry decisions [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Retry decisions can classify defer and user-action-required, but there is no durable scheduler that re-enters deferred work when the cooldown expires or prerequisites are fixed.
+  - Why implement: Temporary rate limits, endpoint instability, and credential refresh windows should not require manual reruns.
+  - Tradeoffs / risks: Scheduler must not become a separate deployable boundary without architecture review; start as a modular-monolith orchestrator.
+  - Acceptance Criteria:
+    - Scheduled action records include workflow, step, payload reference, earliest/latest run time, retry decision, blocker code, credential/config dependency, and attempt budget.
+    - A scheduler orchestrator selects due work, validates preflight, and dispatches through existing orchestrators with idempotency.
+    - User-action-required records resume automatically when the required credential/config preflight passes.
+    - Tests cover due/not-due selection, credential blocker clearance, max-attempt exhaustion, duplicate suppression, and structured logs.
+
+- **Title:** Add policy-driven publish automation with confidence gates [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Publish validation can block, but the system does not yet autonomously decide publish, draft, hold, repair, or request review based on validation, confidence, and business policy.
+  - Why implement: End-to-end autonomous operation requires safe publishing decisions without manual inspection for every successful report.
+  - Tradeoffs / risks: Must fail closed and avoid publishing weak or fabricated content; operator override needs an audit trail.
+  - Acceptance Criteria:
+    - Publish policy maps validation status, family confidence, warnings, missing metadata, and editorial risk to `publish`, `draft`, `hold`, `repair`, or `review_required`.
+    - The supervisor invokes targeted repair before holding when a supported deterministic or model-backed repair exists.
+    - Publishing and media uploads remain idempotent and produce readback verification where configured.
+    - Tests cover pass-to-publish, warnings-to-draft, low-confidence repair, policy hold, override audit, duplicate publish, and WordPress failure.
+
+- **Title:** Promote run health scorecards into production run gates [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Health scorecards and retry telemetry are useful release evidence, but production workflows do not consistently use scorecard outcomes as gates for publish, retry, repair, or operator notification.
+  - Why implement: Autonomous execution needs a self-assessment loop that turns run evidence into next actions.
+  - Tradeoffs / risks: Gate thresholds must be calibrated to avoid noisy holds while still catching real quality regressions.
+  - Acceptance Criteria:
+    - Every autonomous workflow writes a run health scorecard artifact with error, retry, validation, latency, cost, benchmark, and retry-telemetry summaries where applicable.
+    - Supervisor policy consumes the scorecard to allow publish, schedule retry, invoke repair, or notify operators.
+    - Scorecard thresholds are configurable and logged with policy version.
+    - Tests cover passing, warning, failing, missing-evidence, and threshold-override scorecards.
+
+- **Title:** Build operational memory from historical failures and successes [Impact: 4/5, Effort: 4/5]
+  - Problem fixed: Route playbooks, publisher recovery cache, telemetry, and promotion settings exist, but planning does not yet use a unified operational memory of successful acquisition methods, failure signatures, cost, latency, and publisher-specific constraints.
+  - Why implement: The system should stop relearning the same publisher/report behavior and should pick the fastest reliable route automatically.
+  - Tradeoffs / risks: Memory must be source-backed and expiring so stale publisher behavior does not create persistent false assumptions.
+  - Acceptance Criteria:
+    - Operational memory records publisher/report route success, failure signature, best acquisition method, browser vs HTTP success rate, average runtime/cost, PDF extractability, credential requirement, and recommended retry/defer policy.
+    - Planner/preflight consult memory and logs the selected recommendation and confidence.
+    - Stale or conflicting memory falls back to deterministic route planning and records a refresh need.
+    - Tests cover memory hit, stale hit, conflict, missing memory, and improvement over deterministic fallback on fixture histories.
+
+- **Title:** Add adaptive concurrency across model, PDF, browser, Drive, and WordPress work [Impact: 4/5, Effort: 4/5]
+  - Problem fixed: Worker and max-in-flight settings are static, so healthy runs may be slower than necessary while degraded external systems may be overloaded.
+  - Why implement: Adaptive concurrency improves throughput while reducing retries, locks, rate limits, and browser instability.
+  - Tradeoffs / risks: Controller must be deterministic enough for tests and must preserve existing bounded limits.
+  - Acceptance Criteria:
+    - A typed concurrency controller adjusts within configured min/max bounds based on rate limits, retry rate, provider latency, SQLite lock contention, CPU/memory pressure, browser failures, and budget burn rate.
+    - Decisions are logged with previous/current limits, signal inputs, and reason.
+    - Controller can be disabled for deterministic benchmark and fixture runs.
+    - Tests cover scale-up, scale-down, disabled mode, budget pressure, rate-limit pressure, and SQLite contention signals.
+
+- **Title:** Make prompt/model execution reproducibility fully auditable [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Prompt hashes, caches, and fixture regression exist, but autonomous debugging needs a single replayable call record for every model invocation.
+  - Why implement: Reproducible model-call bundles let the system and operators distinguish prompt drift, model drift, schema drift, source drift, and validation drift.
+  - Tradeoffs / risks: Prompt logging must preserve redaction and must not leak secrets or sensitive source content beyond approved artifacts.
+  - Acceptance Criteria:
+    - Every model call persists prompt namespace, prompt hash, rendered prompt redaction hash, model, temperature, seed/support status, schema name/version, response ID, token count, cost, cache key, validation result, and provider decision.
+    - A replay command reconstructs the exact call context without making a live provider call by default.
+    - Serialization failures are logged without crashing execution.
+    - Tests cover replay bundle creation, redaction, schema validation, cache-hit records, live-call records with mocked provider metadata, and missing-field failure.
+
+- **Title:** Add model fallback policies by failure class and artifact family [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Model selection is mostly namespace-static, so the system cannot automatically switch to cheaper models for easy work or stronger/different models for repeated schema or validation failures.
+  - Why implement: Policy-driven fallback can reduce cost on easy tasks and rescue difficult artifacts without user intervention.
+  - Tradeoffs / risks: Fallback must preserve reproducibility and must be forbidden when policy requires same-model replay.
+  - Acceptance Criteria:
+    - YAML fallback policy maps artifact family and failure class to model tier, temperature, max attempts, schema compatibility, and reproducibility constraints.
+    - Fallback decisions are orchestrator-visible, bounded, logged, and included in cost/health evidence.
+    - Generators continue to consume one typed LLM response contract.
+    - Tests cover cheap-primary success, schema-failure fallback, validation-failure fallback, fallback exhaustion, reproducibility-forbidden fallback, and cost reporting.
+
+- **Title:** Add stronger deterministic data-quality gates before expensive LLM work [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Text extractability, OCR fallback, DocMap validation, candidate gates, and prompt preflight exist, but duplicate/non-report/unsupported/stale/gated/low-value cases can still reach expensive work.
+  - Why implement: Deterministic quality gates reduce cost, latency, and false failures before model-heavy stages.
+  - Tradeoffs / risks: Gates must fail closed without discarding valid edge-case reports; false positives require auditable remediation.
+  - Acceptance Criteria:
+    - Pre-LLM gates detect duplicate reports, insufficient text, unsupported file type, non-report content, stale already-processed reports, publisher mismatch, missing publication-date evidence, low-value visual candidates, and known gated lead forms.
+    - Each gate produces a typed outcome: `proceed`, `skip_duplicate`, `defer`, `repair`, `hold`, or `user_action_required`.
+    - Gate decisions are logged and persisted in run evidence with source signals.
+    - Tests cover positive/negative examples for each gate and prove no expensive model call occurs for blocked cases.
+
+- **Title:** Generate capability-level observability and architecture maps [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: The repository has many private submodules, compatibility facades, and workflow paths, making it difficult for autonomous agents and maintainers to discover ownership and interconnections mechanically.
+  - Why implement: Generated maps reduce cognitive load and give future agents reliable navigation without scanning hundreds of files.
+  - Tradeoffs / risks: Maps must be generated from code/config where possible and must not become stale hand-maintained diagrams.
+  - Acceptance Criteria:
+    - Generated maps cover external system to canonical service boundary, workflow to orchestrator/generator/service/contracts, artifact family to prompt/schema/generator/validator, state table to owner, side effect to idempotency scope, and failure code to runbook/remediation.
+    - CI fails when generated maps are stale or missing required ownership metadata for changed files.
+    - README links to the generated maps and explains how to refresh them.
+    - Tests cover map generation, stale detection, missing owner metadata, and stable deterministic ordering.
+
+- **Title:** Add production-like autonomous happy-path smoke suites [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: CI has strong unit, coverage, mutation, benchmark, and release evidence gates, but no single non-live smoke proves autonomous planning, preflight, idempotency, checkpoint resume, health gating, and publish policy work together.
+  - Why implement: Autonomous behavior must be tested end-to-end, not inferred from isolated component tests.
+  - Tradeoffs / risks: The suite must use fakes for external systems while still exercising real contracts, SQLite state, idempotency, checkpoints, and supervisor logic.
+  - Acceptance Criteria:
+    - A default non-integration smoke uses fixture PDFs, fake Drive, fake LLM responses, fake WordPress, real SQLite state, real preflight, real checkpoints, real idempotency, real supervisor, and real health scorecards.
+    - The smoke asserts no user action is required, valid state transitions are emitted, reruns produce no duplicate side effects, injected crash resumes safely, and publish/draft/hold policy is deterministic.
+    - CI runs the smoke in the default suite without live credentials.
+    - Tests include failure injection for transient model error, missing artifact, duplicate publish intent, and validation-repair path.
 
 ## Closed or Removed From Active Backlog
 
@@ -322,6 +580,7 @@ Scoring:
 - Semantic evidence preselection benchmark and tuning.
 - Public entity projection coverage for Figures, Regions, and Time Periods, or README narrowing.
 - WordPress render-time intelligence synthesis replacement with approved projections.
+- User-facing editorial prompt tightening, optional advisory artifacts, metric/evidence propagation, insight scoring, and editorial contract versioning.
 - Public-site launch trust hardening, intake flows, content-governance checks, and premium presentation QA.
 
 ### Phase 3: Resilience and Performance
