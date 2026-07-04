@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import replace
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from src.contracts.browser_download import (
     PublisherDownloadRouteMemory,
     PublisherDownloadRoutePolicySignal,
@@ -200,6 +201,7 @@ _TRACKER_QUERY_KEYS = (
     "u",
     "r",
 )
+_EMAIL_QUERY_KEYS = {"email", "e-mail"}
 
 
 def plan_report_download_routes(
@@ -316,12 +318,16 @@ def _build_plan(
             route_kind=remembered_route.route_kind,
             route_family=remembered_route.route_family,
         )
+        remembered_attempt_url = _refresh_remembered_email_query_value(
+            remembered_route.resolved_target_url,
+            delivery_email=request.delivery_email,
+        )
         steps.append(
             ReportDownloadRoutePlanStep(
                 schema_version="1.0",
                 step_name="report_download_with_memory_route",
                 route_family=remembered_route_family,
-                attempt_url=remembered_route.resolved_target_url or None,
+                attempt_url=remembered_attempt_url or None,
                 route_hint=remembered_route.route_summary,
                 route_step_hints=list(remembered_route.route_steps),
                 route_kind_hint=remembered_route.route_kind,
@@ -464,6 +470,39 @@ def _build_plan(
     )
 
 
+def _refresh_remembered_email_query_value(
+    url: str,
+    *,
+    delivery_email: str | None,
+) -> str:
+    target_url = str(url or "").strip()
+    current_delivery_email = str(delivery_email or "").strip()
+    if not target_url or not current_delivery_email:
+        return target_url
+    parsed = urlsplit(target_url)
+    if not parsed.query:
+        return target_url
+    rewritten_pairs: list[tuple[str, str]] = []
+    changed = False
+    for key, value in parse_qsl(parsed.query, keep_blank_values=True):
+        if key.strip().casefold() in _EMAIL_QUERY_KEYS:
+            rewritten_pairs.append((key, current_delivery_email))
+            changed = True
+            continue
+        rewritten_pairs.append((key, value))
+    if not changed:
+        return target_url
+    return urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            urlencode(rewritten_pairs, doseq=True),
+            parsed.fragment,
+        )
+    )
+
+
 def _build_browser_step(
     *,
     normalized_url: str,
@@ -527,6 +566,20 @@ def _build_browser_step(
                 route_family="browser_listing_hub",
                 attempt_url=source_page_url,
                 route_kind_hint=None,
+                source_page_url_hint=source_page_url,
+                uses_memory_route=False,
+                fallback_on_retryable_error=False,
+            )
+        if not redirect_target_url and _tracker_host_url_has_report_detail_signal(
+            normalized_url=normalized_url,
+            candidate_title=candidate_title,
+        ):
+            return ReportDownloadRoutePlanStep(
+                schema_version="1.0",
+                step_name="report_download_browser_email_form",
+                route_family="browser_email_form",
+                attempt_url=normalized_url,
+                route_kind_hint="email_delivery",
                 source_page_url_hint=source_page_url,
                 uses_memory_route=False,
                 fallback_on_retryable_error=False,
@@ -649,6 +702,25 @@ def _build_browser_step(
     )
 
 
+def _tracker_host_url_has_report_detail_signal(
+    *,
+    normalized_url: str,
+    candidate_title: str,
+) -> bool:
+    path = str(urlsplit(str(normalized_url or "").strip()).path or "").strip().lower()
+    title = str(candidate_title or "").strip().lower()
+    if not path or _looks_like_pdf(path):
+        return False
+    path_tokens = {token for token in re.split(r"[^a-z0-9]+", path) if token}
+    title_tokens = {token for token in re.split(r"[^a-z0-9]+", title) if token}
+    report_tokens = path_tokens & _REPORT_DETAIL_SIGNAL_MARKERS
+    if not report_tokens:
+        return False
+    if title_tokens and report_tokens & title_tokens:
+        return True
+    return len(path_tokens) >= 3
+
+
 def _planning_reason(
     *,
     remembered_route: PublisherDownloadRouteMemory | None,
@@ -687,5 +759,6 @@ __all__ = [
     "plan_report_download_routes",
     "_build_plan",
     "_build_browser_step",
+    "_tracker_host_url_has_report_detail_signal",
     "_planning_reason",
 ]

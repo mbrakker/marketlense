@@ -139,7 +139,7 @@ from src._cli.pipeline import (
     recategorize,
     update_wp_categories,
 )
-from src._cli.browser import browser_doctor, download_report
+from src._cli.browser import browser_doctor, download_report, poll_mail_report
 from src._cli.publisher import audit_acquisition_paths, discover_publisher_inventory
 from src._cli.admin import drive_oauth_login, sync_publishers
 

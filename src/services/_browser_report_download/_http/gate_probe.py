@@ -247,6 +247,22 @@ def try_static_email_gate_probe(
         target_url=target_url,
     ):
         return None
+    if str(request.delivery_email or "").strip():
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_static_email_gate_probe_skipped",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                    "route_family": request.route_family_hint or "",
+                    "reason": "delivery_email_available",
+                },
+            )
+        )
+        return None
     logger.info(
         log_event(
             ctx,

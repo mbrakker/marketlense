@@ -1,0 +1,70 @@
+schema_version: '1.0'
+playbook_id: learned-www-bigcommerce-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-04T16:54:44Z'
+stale_after_days: 120
+publisher_pattern: www.bigcommerce.com
+host_patterns:
+- www.bigcommerce.com
+url_path_markers:
+- resources
+- reports
+- global-b2b-buyer-report-cdl-report
+route_family: browser_email_form
+route_kind: email_delivery
+summary: Accepted cookies; filled First name, Last name, Email, and Company; selected
+  Projected Annual Revenue = '***REDACTED***' and Country = '***REDACTED***'; clicked
+  'DOWNLOAD THE REPORT' and received an on-page thank-you confirmation stating the
+  report will be sent by email.
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Load initial report landing page
+  verification: Page loaded with download form visible
+- schema_version: '1.0'
+  action: click
+  target: Accept cookie banner
+  verification: Cookie banner dismissed
+- schema_version: '1.0'
+  action: input
+  target: '***REDACTED***'
+  verification: First name filled with configured identity
+- schema_version: '1.0'
+  action: input
+  target: '***REDACTED***'
+  verification: Last name filled with configured identity
+- schema_version: '1.0'
+  action: input
+  target: '***REDACTED***'
+  verification: Email filled with configured identity
+- schema_version: '1.0'
+  action: input
+  target: '***REDACTED***'
+  verification: Company filled with configured identity
+- schema_version: '1.0'
+  action: select
+  target: '***REDACTED***'
+  verification: Selected '***REDACTED***'
+- schema_version: '1.0'
+  action: select
+  target: '***REDACTED***'
+  verification: Selected '***REDACTED***'
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- submit_observed
+- delivery_text
+- button_state_replaced
+- form_disappeared
+- network_submission_request
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-04T16:54:44Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

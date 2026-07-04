@@ -436,6 +436,132 @@ fields:
   label: Search Engine
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: firstname_name_firstname_text_required
+  label: firstname (name=firstname) - text - required
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: lastname_name_lastname_text_required
+  label: lastname (name=lastname) - text - required
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: company_name_company_text_required
+  label: company (name=company) - text - required
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: email_name_email_email_required_placeholder_your_report_will_be_sent_here
+  label: 'email (name=email) - email - required (placeholder: Your report will be
+    sent here)'
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: organization_type_name_organization_type_select_required_invalid_true
+  label: organization_type (name=organization_type) - select - required (invalid=true)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: legal_consent_subscription_type_9904690_checkbox_consent
+  label: LEGAL_CONSENT.subscription_type_9904690 (checkbox) - consent
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: submit_input_type_submit
+  label: Submit (input type=submit)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: work_email_name_email_required_email
+  label: Work email (name=email) - required - email
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: company_size_name_company_size_legacy_required_select
+  label: Company size (name=company_size_legacy) - required - select
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: country_name_country_dropdown_required_select
+  label: Country (name=country_dropdown) - required - select
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: firstname
+  label: FirstName
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: lastname
+  label: LastName
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: what_is_your_priority_area_of_interest
+  label: What is your priority area of interest?
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: comments
+  label: Comments
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: marketing_opt_in_yes_please_opt_me_in_to_receive_marketing_communications
+  label: Marketing opt-in (Yes, please opt me in to receive marketing communications...)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: zip_code
+  label: Zip Code
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: level
+  label: Level
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: preferred_language
+  label: Preferred Language
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: privacy_terms_agreement
+  label: Privacy / Terms agreement
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: comscore_communications_opt_in_checkbox
+  label: Comscore communications opt-in (checkbox)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: first_name_name_firstname_text_required
+  label: First name (name=firstname) - text - required
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: last_name_name_lastname_text_required
+  label: Last name (name=lastname) - text - required
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: business_email_name_email_email_required
+  label: Business email (name=email) - email - required
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: projected_annual_revenue_select
+  label: Projected Annual Revenue (select)
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: submit_button_download_the_report
+  label: Submit button (DOWNLOAD THE REPORT)
+  value: null
+  aliases: []
 publisher_overrides:
 - schema_version: '1.0'
   host_pattern: centricsoftware.com
@@ -462,9 +588,18 @@ publisher_overrides:
   delivery_emails: []
   field_values:
   - schema_version: '1.0'
+    key: company
+    label: Company
+    value: Market Bearing
+    aliases:
+    - company
+    - organization
+    - business
+    - employer
+  - schema_version: '1.0'
     key: online_annual_revenue
     label: Online Annual Revenue
-    value: 'Building a business: $50K to $250K'
+    value: Less than $250k
     aliases:
     - projected annual revenue
     - projected annual online revenue

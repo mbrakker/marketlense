@@ -10,11 +10,16 @@ from rich import box
 from src.contracts.browser_download import ReportDownloadOrchestratorRequest
 from src.contracts.browser_download import BrowserDeveloperDiagnosticsRequest
 from src.contracts.browser_download import BrowserDownloadSessionReusePolicy
+from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.logging import LoggingSetupRequest
+from src.orchestrators.mail_report_acquisition_orchestrator import (
+    run_mail_report_acquisition,
+)
 from src.orchestrators.report_download_orchestrator import run_report_download
 from src.services.config_service import (
     load_browser_download_settings,
+    load_mailbox_acquisition_settings,
 )
 from src.services.browser_report_download_service import (
     default_browser_doctor_verification_url,
@@ -35,6 +40,7 @@ _CLI_PATCH_POINTS = (
     "execute_ui_run",
     "get_ui_run_record",
     "load_browser_download_settings",
+    "load_mailbox_acquisition_settings",
     "load_publish_settings",
     "load_publisher_inventory_settings",
     "load_settings",
@@ -43,6 +49,7 @@ _CLI_PATCH_POINTS = (
     "replay_ui_run",
     "run_acquisition_audit",
     "run_browser_developer_diagnostics",
+    "run_mail_report_acquisition",
     "run_candidate_extraction",
     "run_cost_reporting",
     "run_cover_image_generation",
@@ -140,6 +147,66 @@ def download_report(
         ),
     )
     table.add_row("Summary", result.route_summary)
+    console.print(table)
+
+
+@cli_app.command("poll-mail-report")
+def poll_mail_report(
+    source_url: str = typer.Argument(
+        ...,
+        help="Original report landing-page URL that requested email delivery",
+    ),
+    report_title: str = typer.Option(
+        "",
+        help="Report title used to identify the delivered email",
+    ),
+    publisher_name: str = typer.Option(
+        "",
+        help="Publisher name used to identify the delivered email",
+    ),
+    delivery_email: str = typer.Option(
+        None,
+        help="Delivery email submitted to the publisher form",
+    ),
+    requested_after_utc: str = typer.Option(
+        None,
+        help="Optional UTC request watermark; older matching emails are ignored",
+    ),
+):
+    _sync_cli_patch_points()
+    ctx = new_run_context(task_id="cli_poll_mail_report")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    browser_settings = load_browser_download_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""),
+        ctx,
+    )
+    mailbox_settings = load_mailbox_acquisition_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""),
+        ctx,
+    )
+    result = run_mail_report_acquisition(
+        MailReportAcquisitionRequest(
+            schema_version="1.0",
+            source_url=source_url,
+            report_title=report_title,
+            publisher_name=publisher_name,
+            delivery_email=delivery_email,
+            reports_db=browser_settings.reports_db,
+            mailbox_settings=mailbox_settings,
+            browser_download_settings=browser_settings,
+            requested_after_utc=requested_after_utc,
+        ),
+        ctx=ctx,
+    )
+    table = Table(title="Mail Report Acquisition", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Source URL", result.source_url)
+    table.add_row("Outcome", result.outcome)
+    table.add_row("Mailbox polls", str(result.mailbox_poll_count))
+    table.add_row("Selected report URL", result.selected_report_url or "")
+    table.add_row("Selected message", result.selected_message_id or "")
+    table.add_row("File", result.downloaded_file_path or "")
     console.print(table)
 
 

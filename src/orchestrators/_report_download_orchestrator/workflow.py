@@ -153,6 +153,7 @@ def run_report_download(
         ReportDownloadRoutePlanRequest(
             schema_version="1.0",
             normalized_url=normalized_url,
+            delivery_email=request.delivery_email,
             remembered_route=_remembered_route_memory(remembered_route),
             candidate_trace=request.candidate_trace,
             publisher_discovery_route_kind=request.publisher_discovery_route_kind,

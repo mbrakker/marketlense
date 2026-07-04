@@ -15,6 +15,10 @@ from src.contracts.run_context import RunContext
 from src.services._browser_report_download.request import (
     resolve_effective_identity_fields,
 )
+from src.services._config_service.identity import (
+    identity_field_match_tokens,
+    normalize_browser_download_identity_key,
+)
 from src.services import prompt_service
 from src.utils.logging import REDACTED, log_event
 from src.utils.browser_route_playbooks import serialize_selected_playbooks_for_prompt
@@ -261,8 +265,11 @@ def _identity_values_for_log_redaction(
 ) -> set[str]:
     values: set[str] = set()
     for field in resolve_effective_identity_fields(request):
-        value = str(field.value or "").strip()
-        if field.key == "work_email" and delivery_email:
+        raw_value = str(field.value or "").strip()
+        if raw_value:
+            values.add(raw_value)
+        value = raw_value
+        if _identity_field_is_email(field) and delivery_email:
             value = delivery_email.strip()
         if value:
             values.add(value)
@@ -293,7 +300,7 @@ def _build_identity_entries(
     for field in resolve_effective_identity_fields(request):
         aliases = ", ".join(field.aliases)
         value = str(field.value or "").strip()
-        if field.key == "work_email" and delivery_email:
+        if _identity_field_is_email(field) and delivery_email:
             value = delivery_email.strip()
         if not value:
             continue
@@ -305,6 +312,13 @@ def _build_identity_entries(
             }
         )
     return entries
+
+
+def _identity_field_is_email(field) -> bool:
+    return any(
+        "email" in normalize_browser_download_identity_key(token)
+        for token in identity_field_match_tokens(field)
+    )
 
 
 def _build_route_step_lines(

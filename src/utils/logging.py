@@ -70,6 +70,15 @@ SENSITIVE_KEYS = {
 _OPENAI_KEY_RX = re.compile(r"sk-[A-Za-z0-9]{20,}")
 _BEARER_RX = re.compile(r"(?i)bearer\s+[A-Za-z0-9._-]+")
 _EMAIL_RX = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_URL_ENCODED_EMAIL_RX = re.compile(
+    r"(?i)[A-Za-z0-9._%+-]+%40[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+)
+_URL_SENSITIVE_QUERY_RX = re.compile(
+    r"(?i)([?&;](?:auth|authorization|email|e-mail|key|mkt_tok|password|secret|sig|signature|token)=)([^&#\s]+)"
+)
+_URL_ENCODED_SENSITIVE_QUERY_RX = re.compile(
+    r"(?i)((?:%3F|%26|%3B)(?:auth|authorization|email|e-mail|key|mkt_tok|password|secret|sig|signature|token)(?:=|%3D))([^%&#\s]+)"
+)
 _PHONE_RX = re.compile(
     r"\b(?:\+?\d{1,3}[-.\s]?)?(?:\(\d{2,4}\)|\d{2,4})[-.\s]?\d{3}[-.\s]?\d{4}\b"
 )
@@ -80,7 +89,13 @@ def _redact_value(value: Any) -> Any:
     if isinstance(value, str):
         v = _OPENAI_KEY_RX.sub(REDACTED, value)
         v = _BEARER_RX.sub(f"Bearer {REDACTED}", v)
+        v = _URL_SENSITIVE_QUERY_RX.sub(lambda match: f"{match.group(1)}{REDACTED}", v)
+        v = _URL_ENCODED_SENSITIVE_QUERY_RX.sub(
+            lambda match: f"{match.group(1)}{REDACTED}",
+            v,
+        )
         v = _EMAIL_RX.sub(REDACTED, v)
+        v = _URL_ENCODED_EMAIL_RX.sub(REDACTED, v)
         v = _PHONE_RX.sub(REDACTED, v)
         v = _SSN_RX.sub(REDACTED, v)
         return v

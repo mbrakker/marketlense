@@ -411,6 +411,10 @@ def _confirmation_evidence_verifies_email_delivery(
     confirmation_evidence: BrowserDownloadConfirmationEvidence,
 ) -> bool:
     signal_labels = set(confirmation_evidence.signal_labels)
+    if _message_indicates_confirmed_email_delivery(
+        confirmation_evidence.visible_confirmation_text
+    ):
+        return True
     if _message_indicates_transient_submit_state(
         confirmation_evidence.visible_confirmation_text
     ) and not (

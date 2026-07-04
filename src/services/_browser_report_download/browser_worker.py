@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import traceback
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 from src.contracts.browser_download import (
     BrowserDownloadIdentity,
@@ -25,9 +27,15 @@ from src.services._browser_report_download.browser import (
     BrowserAgentWorkerResponse,
     run_browser_report_download_agent,
 )
-from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
+from src.services._browser_report_download.prompt import (
+    BrowserDownloadPromptBundle,
+    redact_browser_report_download_prompt_for_log,
+)
 from src.services.logging_service import setup_logging
 from src.utils.errors import AppError
+from src.utils.logging import REDACTED
+
+_EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
 
 
 def _build_identity_field(payload: dict) -> BrowserDownloadIdentityField:
@@ -278,6 +286,32 @@ def _build_ctx(payload: dict) -> RunContext:
     )
 
 
+def _redact_worker_response_for_disk(
+    payload: Any,
+    request: BrowserReportDownloadRequest,
+) -> Any:
+    if isinstance(payload, str):
+        redacted = redact_browser_report_download_prompt_for_log(
+            request=request,
+            text=payload,
+            delivery_email=request.delivery_email,
+        )
+        return _EMAIL_PATTERN.sub(REDACTED, redacted)
+    if isinstance(payload, list):
+        return [
+            _redact_worker_response_for_disk(item, request)
+            for item in payload
+        ]
+    if isinstance(payload, dict):
+        return {
+            str(_redact_worker_response_for_disk(key, request)): (
+                _redact_worker_response_for_disk(value, request)
+            )
+            for key, value in payload.items()
+        }
+    return payload
+
+
 def main() -> int:
     if len(sys.argv) != 3:
         return 2
@@ -288,13 +322,14 @@ def main() -> int:
         raw_payload.get("ctx") if isinstance(raw_payload.get("ctx"), dict) else {}
     )
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    request = _build_request(
+        raw_payload.get("request")
+        if isinstance(raw_payload.get("request"), dict)
+        else {}
+    )
     try:
         result = run_browser_report_download_agent(
-            request=_build_request(
-                raw_payload.get("request")
-                if isinstance(raw_payload.get("request"), dict)
-                else {}
-            ),
+            request=request,
             ctx=ctx,
             normalized_url=str(raw_payload.get("normalized_url") or "").strip(),
             execution_url=str(raw_payload.get("execution_url") or "").strip(),
@@ -338,7 +373,10 @@ def main() -> int:
             },
         )
     response_path.write_text(
-        json.dumps(asdict(response), ensure_ascii=True),
+        json.dumps(
+            _redact_worker_response_for_disk(asdict(response), request),
+            ensure_ascii=True,
+        ),
         encoding="utf-8",
     )
     return 0

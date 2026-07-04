@@ -49,6 +49,13 @@ _PREFLIGHT_ROUTE_FAMILIES = {
     "browser_listing_hub",
 }
 _PDF_URL_PATTERN = re.compile(r"https?://[^\s\"'<>]+?\.pdf(?:[?#][^\s\"'<>]*)?", re.I)
+_NON_REPORT_PDF_MARKERS = {
+    "cookie",
+    "dpa",
+    "legal",
+    "privacy",
+    "terms",
+}
 
 
 def try_browser_preflight_probe(
@@ -482,6 +489,8 @@ def _filter_relevant_candidates(
         if marker in seen:
             continue
         seen.add(marker)
+        if _looks_like_non_report_pdf_url(token):
+            continue
         if title_tokens and not any(title in marker for title in title_tokens):
             if not any(
                 marker.endswith(suffix) for suffix in (".pdf", ".pdf?download=1")
@@ -497,6 +506,18 @@ def _candidate_title_tokens(request: BrowserReportDownloadRequest) -> list[str]:
     raw_title = str(request.candidate_trace.title or "").casefold()
     tokens = [token for token in re.split(r"[^a-z0-9]+", raw_title) if len(token) >= 4]
     return tokens[:5]
+
+
+def _looks_like_non_report_pdf_url(value: str) -> bool:
+    lowered = str(value or "").casefold()
+    if not lowered:
+        return False
+    tokens = {
+        match.group(0)
+        for match in re.finditer(r"[a-z0-9]+", lowered)
+        if len(match.group(0)) >= 3
+    }
+    return bool(tokens & _NON_REPORT_PDF_MARKERS)
 
 
 def _evidence_labels(

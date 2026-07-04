@@ -173,6 +173,21 @@ browser_download:
     backoff_step_seconds: 1.0
     jitter_seconds: 0.25
 
+mailbox_acquisition:
+  provider: "imap"
+  output_dir: "./out/mailbox_acquisition"
+  search_window_minutes: 120
+  max_results: 10
+  poll_timeout_seconds: 900
+  poll_interval_seconds: 60
+  gmail_oauth_client_path: ""
+  gmail_oauth_token_path: ""
+  gmail_user_id: "me"
+  imap_host: ""
+  imap_port: 993
+  imap_user: ""
+  imap_mailbox: "INBOX"
+
 publisher_discovery:
   model: "openai/gpt-5-mini"
   temperature: 0.0

@@ -689,6 +689,67 @@ def test_download_report_with_browser_use_clears_phantom_pdf_metadata_without_fi
     assert response.downloaded_file_path is None
     assert response.downloaded_mime_type is None
 
+
+def test_download_report_with_browser_use_verifies_direct_thank_you_email_delivery(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary=(
+            "Navigate to the remembered thank-you page, observe the terminal "
+            "report email confirmation text, and wait for inbox delivery."
+        ),
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class DirectThankYouAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["final_page_url"] = "https://example.com/report-ty/"
+            payload["resolved_target_url"] = "https://example.com/report-ty/"
+            payload["post_submit_message"] = (
+                "Thank you for downloading the report. A copy of the report "
+                "will be sent to your inbox shortly."
+            )
+            payload["final_page_title"] = "Thank you for downloading the report"
+            payload["terminal_text_excerpt"] = payload["post_submit_message"]
+            payload["encountered_form_fields"] = []
+
+            class DirectThankYouHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return DirectThankYouHistory()
+
+    runtime.Agent = DirectThankYouAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+            attempt_url="https://example.com/report-ty/",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.route_status == "verified"
+    assert "delivery_text" in response.confirmation_evidence.signal_labels
+
 __all__ = [
     "test_download_report_with_browser_use_fetches_relative_observed_pdf_candidate",
     "test_download_report_with_browser_use_fetches_pdf_after_terminal_html_recovery",
@@ -698,4 +759,5 @@ __all__ = [
     "test_download_report_with_browser_use_falls_back_to_history_terminal_state",
     "test_download_report_with_browser_use_stabilizes_transient_submit_state",
     "test_download_report_with_browser_use_clears_phantom_pdf_metadata_without_file",
+    "test_download_report_with_browser_use_verifies_direct_thank_you_email_delivery",
 ]

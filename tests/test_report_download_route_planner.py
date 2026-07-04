@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import parse_qs, urlsplit
+
 from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     PublisherDownloadRouteMemory,
@@ -41,6 +43,40 @@ def test_plan_report_download_routes_prefers_email_form_for_tracker_redirect(
     assert response.steps[0].route_family == "browser_email_form"
     assert response.steps[0].attempt_url == (
         "https://example.com/resources/asset/why-agentic-ai-is-your-next-priority"
+    )
+
+
+def test_plan_report_download_routes_uses_tracker_host_report_detail_directly(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://go.example.com/consumer-trends-2026-website",
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://go.example.com/consumer-trends-2026-website",
+                title="Consumer Trends 2026",
+                discovered_on_page_number=1,
+                source_page_urls=[
+                    "https://www.example.com/resources?filter=report",
+                ],
+                discovery_provenances=["browser_dom"],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind="browser_render",
+            publisher_recommended_discovery_route_kind="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.steps[0].route_family == "browser_email_form"
+    assert response.steps[0].route_kind_hint == "email_delivery"
+    assert response.steps[0].attempt_url == (
+        "https://go.example.com/consumer-trends-2026-website"
     )
 
 
@@ -113,6 +149,48 @@ def test_plan_report_download_routes_uses_learned_policy_to_rank_browser_email_f
         "Publisher route-policy history prefers browser_email_form"
         in response.planning_reason
     )
+
+
+def test_plan_report_download_routes_refreshes_remembered_email_query_value(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/resources/ebooks/market-trends",
+            delivery_email="current.delivery@example.com",
+            remembered_route=PublisherDownloadRouteMemory(
+                schema_version="1.0",
+                route_kind="email_delivery",
+                route_summary="Submit the email form and open the thank-you URL.",
+                outcome="email_requested",
+                route_family="browser_email_form",
+                route_status="verified",
+                resolved_target_url=(
+                    "https://example.com/thank-you?"
+                    "downloadData=resource%7Chttps%3A%2F%2Fcdn.example.com%2Freport.pdf"
+                    "&email=stale%40example.com"
+                ),
+                attempts=2,
+                verified_successes=2,
+                last_n_outcomes=["email_requested"],
+                confidence_score=0.9,
+                browser_had_structured_result=True,
+                onsite_completeness_status=None,
+            ),
+            candidate_trace=None,
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    attempt_url = response.steps[0].attempt_url or ""
+    query = parse_qs(urlsplit(attempt_url).query)
+
+    assert query["email"] == ["current.delivery@example.com"]
+    assert "stale%40example.com" not in attempt_url
+    assert "cdn.example.com%2Freport.pdf" in attempt_url
 
 
 def test_plan_report_download_routes_uses_learned_policy_to_override_browser_first_hint(

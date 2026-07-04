@@ -1,0 +1,70 @@
+schema_version: '1.0'
+playbook_id: learned-sensortower-com-browser-email-form
+version: 1.0.1
+status: active
+updated_at: '2026-07-04T16:23:01Z'
+stale_after_days: 120
+publisher_pattern: sensortower.com
+host_patterns:
+- sensortower.com
+url_path_markers:
+- report
+- q4-2025-market-index
+route_family: browser_email_form
+route_kind: pdf_download
+summary: "Accepted cookies; filled FirstName/LastName/Email; clicked Download \u2192\
+  \ navigated to /download; scrolled to reveal the embedded report Table of Contents;\
+  \ saved the on-site report page as a local PDF artifact."
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Open execution URL
+  verification: Landing page loaded with lead form visible
+- schema_version: '1.0'
+  action: click
+  target: "Accept cookies (\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u0432\u0441\
+    \u0435)"
+  verification: Cookie banner dismissed
+- schema_version: '1.0'
+  action: input
+  target: First name set
+  verification: FirstName input filled with configured value
+- schema_version: '1.0'
+  action: input
+  target: Last name set
+  verification: LastName input filled with configured value
+- schema_version: '1.0'
+  action: input
+  target: Work email set
+  verification: Email input filled with configured value
+- schema_version: '1.0'
+  action: click
+  target: Download
+  verification: Clicked Download; navigated to /download (report page)
+- schema_version: '1.0'
+  action: scroll
+  target: Reveal embedded report
+  verification: Table of Contents and report body visible in page iframe/longread
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Save visible page as PDF
+  verification: Saved on-site report page as local PDF artifact
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- submit_observed
+- form_disappeared
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-04T15:36:32Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-04T16:23:01Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/pdf_download after downloaded evidence.

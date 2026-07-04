@@ -12,6 +12,7 @@ from src.contracts.config import (
     OpenAICredentialResolveRequest,
     OpenAICredentialResolveResponse,
 )
+from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
 from src.contracts.browser_download import BrowserDownloadSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.publisher_inventory import PublisherInventorySettings
@@ -21,6 +22,7 @@ from src.services._config_service import app_settings as _app_settings
 from src.services._config_service import browser_download as _browser_download
 from src.services._config_service import common as _common
 from src.services._config_service import identity_upsert as _identity_upsert
+from src.services._config_service import mailbox_acquisition as _mailbox_acquisition
 from src.services._config_service import publish as _publish
 from src.services._config_service import publisher_discovery as _publisher_discovery
 from src.services._config_service import workflow_control as _workflow_control
@@ -46,6 +48,7 @@ def _sync_runtime_patch_points() -> None:
         _app_settings,
         _publish,
         _browser_download,
+        _mailbox_acquisition,
         _publisher_discovery,
         _workflow_control,
     ):
@@ -70,6 +73,13 @@ def load_browser_download_settings(
 ) -> BrowserDownloadSettings:
     _sync_runtime_patch_points()
     return _browser_download.load_browser_download_settings(request, ctx)
+
+
+def load_mailbox_acquisition_settings(
+    request: ConfigLoadRequest, ctx: RunContext
+) -> MailboxAcquisitionSettings:
+    _sync_runtime_patch_points()
+    return _mailbox_acquisition.load_mailbox_acquisition_settings(request, ctx)
 
 
 def load_publisher_inventory_settings(
@@ -111,6 +121,7 @@ __all__ = [
     "DEFAULT_PUBLISHER_INVENTORY_PROMPT_NAMESPACE",
     "build_ingest_settings",
     "load_browser_download_settings",
+    "load_mailbox_acquisition_settings",
     "load_publish_settings",
     "load_publisher_inventory_settings",
     "load_workflow_control_settings",

@@ -57,3 +57,38 @@ def test_log_event_schema_reports_missing_and_invalid_fields() -> None:
         "trace_id",
     )
     assert result.invalid_fields == ("fields", "role", "run_id")
+
+
+def test_log_event_redacts_sensitive_url_query_values() -> None:
+    ctx = new_run_context(task_id="redaction-test")
+    payload = log_event(
+        ctx,
+        role="service",
+        event="http_request",
+        module="src.services.example",
+        fields={
+            "url": (
+                "https://example.com/thank-you?"
+                "downloadData=report&email=ops%40example.com&token=secret-token"
+            ),
+            "nested": {
+                "final_url": "https://example.com/report?sig=abc123&email=ops@example.com"
+            },
+            "events": [
+                {
+                    "target_url": (
+                        "https://example.com/report?mkt_tok=abc&"
+                        "signature=def&email=ops%40example.com"
+                    )
+                }
+            ],
+        },
+    )
+
+    assert "ops@example.com" not in payload
+    assert "ops%40example.com" not in payload
+    assert "secret-token" not in payload
+    assert "abc123" not in payload
+    assert "email=***REDACTED***" in payload
+    assert "token=***REDACTED***" in payload
+    assert "sig=***REDACTED***" in payload

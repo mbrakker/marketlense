@@ -100,6 +100,54 @@ def test_download_report_with_browser_use_detects_static_provider_email_gate(
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_service_events(caplog))
 
+
+def test_download_report_with_browser_use_does_not_static_gate_when_delivery_email_is_available(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>Annual Marketing Report</title></head>"
+                b"<body><h1>Annual Marketing Report</h1>"
+                b"<a>Download the report</a>"
+                b"<form><label>Business email address</label>"
+                b'<input name="email"><button>Submit</button></form></body></html>'
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    browser_started = {"value": False}
+
+    def fake_import_module(module_name: str) -> Any:
+        browser_started["value"] = True
+        raise AppError(
+            code="browser_runtime_started",
+            message="Browser runtime started after static email gate was bypassed",
+            retryable=False,
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(browser_runtime, "import_module", fake_import_module)
+
+    with pytest.raises(AppError) as exc_info:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/insights/annual-marketing-report",
+                settings=_settings(tmp_path),
+                delivery_email="reports@example.com",
+                route_kind_hint="email_delivery",
+                route_family_hint="browser_email_form",
+            ),
+            run_context,
+        )
+
+    assert exc_info.value.code == "browser_use_unavailable"
+    assert browser_started["value"] is True
+
+
 def test_download_report_with_browser_use_classifies_static_email_timeout(
     tmp_path: Path,
     caplog,

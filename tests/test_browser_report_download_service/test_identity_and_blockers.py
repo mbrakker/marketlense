@@ -120,6 +120,58 @@ def test_resolve_effective_identity_fields_hydrates_semantic_alias_values(
     assert by_key["company_name"].value == "Market Lense"
 
 
+def test_prompt_identity_entries_apply_delivery_email_to_email_aliases(
+    tmp_path: Path,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/form",
+        settings=BrowserDownloadSettings(
+            schema_version="1.0",
+            openrouter_api_key="openrouter-key",
+            model="openai/gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=30.0,
+            max_steps=5,
+            output_dir=str(tmp_path / "downloads"),
+            state_db=str(tmp_path / "state.sqlite"),
+            reports_db=str(tmp_path / "reports.sqlite"),
+            identity_config_path=str(tmp_path / "browser_download_identity.yaml"),
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="work_email",
+                        label="Work email",
+                        value="stale@example.com",
+                        aliases=["email", "business email"],
+                    ),
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="business_email_address",
+                        label="Business Email Address",
+                        value=None,
+                        aliases=[],
+                    ),
+                ],
+            ),
+            headed=False,
+        ),
+        delivery_email="reports@marketbearing.eu",
+    )
+
+    entries = prompt_runtime._build_identity_entries(
+        request=request,
+        delivery_email="reports@marketbearing.eu",
+    )
+
+    by_label = {entry["label"]: entry for entry in entries}
+    assert by_label["Work email"]["value"] == "reports@marketbearing.eu"
+    assert by_label["Business Email Address"]["value"] == "reports@marketbearing.eu"
+    assert "stale@example.com" not in json.dumps(entries)
+
+
 def test_resolve_effective_identity_fields_applies_publisher_override_values(
     tmp_path: Path,
 ) -> None:
@@ -162,14 +214,26 @@ def test_resolve_effective_identity_fields_applies_publisher_override_values(
                         field_values=[
                             BrowserDownloadIdentityField(
                                 schema_version="1.0",
+                                key="company",
+                                label="Company",
+                                value="Market Bearing",
+                                aliases=[
+                                    "company",
+                                    "organization",
+                                    "business",
+                                    "employer",
+                                ],
+                            ),
+                            BrowserDownloadIdentityField(
+                                schema_version="1.0",
                                 key="online_annual_revenue",
                                 label="Online Annual Revenue",
-                                value="Building a business: $50K to $250K",
+                                value="Less than $250k",
                                 aliases=[
                                     "projected annual revenue",
                                     "projected annual online revenue",
                                 ],
-                            )
+                            ),
                         ],
                     )
                 ],
@@ -181,8 +245,9 @@ def test_resolve_effective_identity_fields_applies_publisher_override_values(
     effective = resolve_effective_identity_fields(request)
     by_key = {field.key: field for field in effective}
 
-    assert by_key["online_annual_revenue"].value == "Building a business: $50K to $250K"
+    assert by_key["online_annual_revenue"].value == "Less than $250k"
     assert by_key["country"].value == "Austria"
+    assert by_key["company"].value == "Market Bearing"
 
 
 def test_download_report_with_browser_use_salvages_partial_business_email_blocker(

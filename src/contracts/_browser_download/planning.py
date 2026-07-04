@@ -90,6 +90,12 @@ class ReportDownloadRoutePlanRequest:
     normalized_url: str = field(
         metadata={"doc": "Normalized candidate URL used as the route-memory key."}
     )
+    delivery_email: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Current report-delivery mailbox used to refresh remembered email-gate URL parameters before route reuse."
+        },
+    )
     remembered_route: Optional["PublisherDownloadRouteMemory"] = field(
         default=None,
         metadata={"doc": "Previously remembered download route when available."},

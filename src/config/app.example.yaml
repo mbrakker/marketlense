@@ -31,6 +31,21 @@ browser_download:
   private_api_playbook_min_success_count: 3
   private_api_playbook_min_distinct_source_urls: 2
 
+mailbox_acquisition:
+  provider: "imap"
+  output_dir: "./out/mailbox_acquisition"
+  search_window_minutes: 120
+  max_results: 10
+  poll_timeout_seconds: 900
+  poll_interval_seconds: 60
+  gmail_oauth_client_path: ""
+  gmail_oauth_token_path: ""
+  gmail_user_id: "me"
+  imap_host: ""
+  imap_port: 993
+  imap_user: ""
+  imap_mailbox: "INBOX"
+
 publisher_discovery:
   model: "google/gemini-2.5-flash-lite"
   enable_deferred_candidate_recovery: true

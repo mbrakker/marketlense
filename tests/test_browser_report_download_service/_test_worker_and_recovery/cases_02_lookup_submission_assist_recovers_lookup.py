@@ -259,6 +259,103 @@ def test_browser_worker_main_preserves_candidate_trace(
         candidate_trace.discovery_provenances
     )
 
+def test_browser_worker_main_redacts_identity_values_from_persisted_response(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    delivery_email = "submitted@example.com"
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=_settings(tmp_path, work_email="ops@example.com"),
+        delivery_email=delivery_email,
+    )
+    payload_path = tmp_path / "browser_agent_worker_request.json"
+    response_path = tmp_path / "browser_agent_worker_response.json"
+    payload_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "request": json.loads(
+                    json.dumps(request, default=lambda value: value.__dict__)
+                ),
+                "ctx": run_context.__dict__,
+                "normalized_url": request.url,
+                "execution_url": request.url,
+                "download_dir": str(tmp_path / "worker-download"),
+                "prompt_bundle": {
+                    "schema_version": "1.0",
+                    "namespace": "browser_report_download/browser_route",
+                    "system_prompt_path": "system.yaml",
+                    "user_prompt_path": "user.yaml",
+                    "system_prompt_sha256": "system",
+                    "user_prompt_sha256": "user",
+                    "rendered_system_prompt": "system",
+                    "rendered_user_prompt": "user",
+                    "task_prompt": "task",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_run_browser_report_download_agent(**kwargs):
+        return browser_runtime.BrowserAgentRunResult(
+            schema_version="1.0",
+            raw_model_response=json.dumps(
+                {
+                    "route_kind": "email_delivery",
+                    "target_text": f"Work email -> {delivery_email}",
+                    "observed_evidence": [
+                        f"typed ops@example.com and {delivery_email}"
+                    ],
+                }
+            ),
+            final_page_url="https://example.com/thanks",
+            final_page_title="Thanks",
+            final_page_html=(
+                f'<html><input value="ops@example.com">'
+                f'<a href="https://example.com/download?email={delivery_email}">'
+                "download</a></html>"
+            ),
+            downloaded_files=[],
+            attachment_paths=[],
+            network_resource_urls=[
+                f"https://example.com/pixel?email={delivery_email}",
+            ],
+            network_events=[],
+            html_snapshot_path="",
+            screenshot_path="",
+        )
+
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "run_browser_report_download_agent",
+        fake_run_browser_report_download_agent,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "setup_logging",
+        lambda *args, **kwargs: None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime.sys,
+        "argv",
+        [
+            "browser_worker.py",
+            str(payload_path),
+            str(response_path),
+        ],
+    )
+
+    assert browser_worker_runtime.main() == 0
+
+    persisted = response_path.read_text(encoding="utf-8")
+    assert "ops@example.com" not in persisted
+    assert delivery_email not in persisted
+    assert "***REDACTED***" in persisted
+
 def test_browser_worker_subprocess_forces_utf8_and_captures_output(
     tmp_path: Path,
     run_context,
@@ -705,6 +802,7 @@ def test_download_report_with_browser_use_reuses_bounded_same_publisher_profile(
 __all__ = [
     "test_download_report_with_browser_use_lookup_submission_assist_recovers_lookup_blocked_submit",
     "test_browser_worker_main_preserves_candidate_trace",
+    "test_browser_worker_main_redacts_identity_values_from_persisted_response",
     "test_browser_worker_subprocess_forces_utf8_and_captures_output",
     "test_browser_worker_subprocess_discards_sensitive_request_payload_after_run",
     "test_browser_worker_subprocess_discards_sensitive_request_payload_after_timeout",
