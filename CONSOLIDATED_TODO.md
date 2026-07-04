@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-02
+Last audited: 2026-07-04
 
 This file is the single active backlog for this repository. It supersedes older backlog notes, archived planning docs, and ad hoc audit intake.
 
@@ -42,6 +42,8 @@ Scoring:
 - Pipeline preflight before expensive report work is live through `src/contracts/pipeline_preflight.py` and `src/orchestrators/pipeline_preflight_orchestrator.py`. `run_report_pipeline` now runs a typed preflight before model client construction and blocks expensive side effects with `AppError(code="pipeline_preflight_blocked")` when prerequisites fail. The preflight checks writable output/cache/state/report paths, OpenAI model credentials, required prompt namespaces, optional live Drive write readiness with OAuth refresh remediation, browser readiness, and WordPress publish target readiness through the canonical service boundaries. Live verification on 2026-06-29 loaded the project config and publish settings, checked 19 prerequisites, found 0 blockers and 0 warnings, refreshed Drive OAuth credentials automatically, and allowed expensive work only after preflight passed.
 - Retry-decision telemetry and policy tuning reports are live through `src/contracts/retry_telemetry.py`, `src/orchestrators/retry_telemetry_orchestrator.py`, `scripts/quality/retry_decision_telemetry.py`, and the run health scorecard. A live structured retry-boundary run on 2026-06-29 produced 2 retry decisions, reported a successful-after-retry rate of 1.0, retry-exhaustion rate of 0.0, 1 credential-action avoided-call estimate, and attached the same telemetry to `out/live_retry_health_scorecard_success_20260629.json` with no scorecard warnings.
 - New control-plane interconnection gates cover pipeline preflight and retry telemetry through `scripts/ci/check_coverage.py`, `scripts/ci/run_mutation_gate.py`, and focused tests. Verification on 2026-06-29 showed `src/control-plane` coverage at 94.05% against the new 85% gate, targeted control-plane mutation at 12/12 killed across preflight and retry telemetry, focused control-plane tests at 31 passed, and the full non-integration suite at 3320 passed.
+- Workflow-aware control-plane contracts are live through `src/contracts/workflow_control.py`, `src/orchestrators/workflow_control_orchestrator.py`, and `config_service.load_workflow_control_settings(...)`. YAML under `workflow_control` now defines preflight profiles for report generation, publisher inventory, report download, cross-report analysis, publishing, UI replay, WordPress sync, and browser acquisition; a report-generation DAG/state-machine; workflow/step retry policies; operational-memory controls; and adaptive concurrency bounds for model, PDF, browser, Drive, and WordPress work. `run_report_pipeline(..., auto_resume_from_latest_safe=True)` automatically selects `latest_safe` when no explicit resume stage is supplied, and workflow-control retry resolution logs the policy ID/version. Live verification on 2026-07-04 ran all eight workflow-aware preflight profiles with live endpoint probes enabled, passing 58 checks with 0 blockers and 0 warnings; loaded operational memory from 200 real report-source observations plus retry telemetry; selected adaptive concurrency decisions for all five resource classes; preserved a terminal Capgemini checkpoint validation error without redoing model work in 0.317s; and resumed an existing processed IAS report through automatic `latest_safe` selection in 0.058s versus the earlier 582.003s fresh IAS generation evidence.
+- Control-plane interconnection gates now include workflow control. Verification on 2026-07-04 showed `src/control-plane` coverage at 95.66%, mutation at 18/18 killed across preflight, retry telemetry, and workflow control, focused workflow-control/report-pipeline tests passing, and the full default suite at 3402 passed / 25 deselected.
 - Explicit report-generation client bundles, typed checkpoint artifact registries, and UI-run failure classifications are live. `run_report_pipeline` now passes `ReportGenerationClientBundle` instead of reflecting report-function signatures, checkpoints persist typed artifact refs with hashes and required/optional semantics, resume validates registry entries while preserving legacy checkpoint compatibility, and UI poll/dead-letter paths expose recommended next actions. Verification on 2026-06-29 covered focused red/green tests, contract round trips for 1,368 dataclasses, full default pytest with coverage at 3,345 passed / 25 deselected, coverage gate at 83.59% global and 95.55% control-plane, mutation gate with `report_pipeline_orchestrator.py` at 3/3 killed, and quality non-regression. Live existing-PDF runs with real model/API calls wrote registries for source/selection/analysis/render checkpoints and validated `latest_safe` resume in 0.144s after a 523.947s fresh run and 0.082s after a 501.629s fresh run; live UI worker failure classification persisted an `auto_triaged` dead-letter action with `mark_permanent` recommendation for an invalid report-download payload.
 - The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
@@ -353,16 +355,6 @@ Scoring:
     - Every auto-fix emits structured logs with action, result, before/after status, and side-effect boundary.
     - Tests cover successful auto-fixes, blocked unsafe fixes, repeated idempotent remediation, and redacted failure reporting.
 
-- **Title:** Make preflight workflow-aware across report, discovery, download, publish, and UI runs [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Current preflight strength is concentrated on report-pipeline prerequisites, while other workflows still risk discovering missing browser, Drive, WordPress, prompt, or artifact prerequisites after work has started.
-  - Why implement: Autonomous runs need to know all required credentials, prompts, side effects, artifact roots, idempotency scopes, and endpoint probes before execution.
-  - Tradeoffs / risks: Workflow profiles must not become a second settings system; they should resolve and validate existing typed settings.
-  - Acceptance Criteria:
-    - Preflight profiles exist for report generation, publisher inventory, report download, cross-report analysis, publishing, UI replay, WordPress sync, and browser acquisition.
-    - Each profile declares required credentials, prompt namespaces, artifact/state DB prerequisites, side-effect boundaries, endpoint probes, idempotency scopes, and budget expectations.
-    - The supervisor/planner selects the correct profile from run intent and logs the resolved profile.
-    - Tests cover profile-specific blockers, optional live endpoint probes, side-effect gating, and prompt namespace validation.
-
 - **Title:** Add a durable autonomous dead-letter queue with typed remediation plans [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Failure classification and UI-run dead-letter concepts exist, but failed autonomous work is not yet represented as a durable queue of remediable work items with retry/defer/repair scheduling.
   - Why implement: Failed runs should become managed work items that can be retried, resumed, repaired, or escalated without users reconstructing context.
@@ -393,16 +385,6 @@ Scoring:
     - The health scorecard consumes final budget usage and reports avoided calls, budget breaches, and override usage.
     - Tests cover normal use, warning thresholds, hard stop, defer, override, and structured log fields.
 
-- **Title:** Strengthen checkpoint resume into automatic stage selection and repair [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Semantic checkpoint resume is live, but users or callers still need to know when to resume, which stage is safe, and whether stale or missing artifacts should trigger repair.
-  - Why implement: Autonomous runs should recover from crashes or partial completion by selecting the newest valid checkpoint and repairing only invalid or missing outputs.
-  - Tradeoffs / risks: Automatic invalidation must be conservative so it does not discard valid expensive artifacts or reuse stale artifacts.
-  - Acceptance Criteria:
-    - The supervisor invokes latest-safe checkpoint selection automatically on rerun and records the selected stage and rejected-stage reasons.
-    - Stale/missing/corrupt artifacts are routed to targeted regeneration or stage invalidation with typed non-retryable errors where repair is impossible.
-    - Side effects after resume are replayed only through idempotency-protected steps.
-    - Tests inject missing artifacts, hash mismatches, stale prompt/template hashes, validation failures, and process-interruption scenarios.
-
 - **Title:** Add structured run-intent contracts and automatic workflow resolution [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Users still need to choose between ingest, download, publish, regenerate, replay, sync, audit, and other entrypoints even when repository state indicates the correct next workflow.
   - Why implement: Users should express intent while the system selects the workflow graph, prerequisites, and safe next action.
@@ -412,26 +394,6 @@ Scoring:
     - An intent resolver maps intent plus current state to workflow, preflight profile, budget profile, checkpoints, and side-effect plan.
     - CLI/UI expose read-only intent resolution before execution.
     - Tests cover unambiguous, ambiguous, unsupported, and blocked intents with explicit alternatives and logs.
-
-- **Title:** Add machine-readable workflow DAG and state-machine contracts [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Workflow sequencing is distributed across orchestrators, making autonomous planning, resume, and state validation harder to reason about mechanically.
-  - Why implement: A DAG/state-machine contract gives the supervisor one source of truth for valid transitions, prerequisites, retries, checkpoints, validations, and next actions.
-  - Tradeoffs / risks: The DAG must describe orchestration rather than duplicating business logic or prompt/domain decisions.
-  - Acceptance Criteria:
-    - Each autonomous workflow has a versioned DAG/state-machine contract with states, transitions, prerequisites, side effects, retry policy reference, checkpoint outputs, validation gates, and terminal outcomes.
-    - Orchestrators emit state-transition events that validate against the contract.
-    - CI or tests fail invalid transition definitions, missing terminal states, and undocumented side effects.
-    - Pipeline tests assert retry counts, state transitions, idempotency keys, and final outcomes from the DAG.
-
-- **Title:** Centralize retry policy configuration by workflow and step [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Retry decisions are typed, but retry policy choices still appear in code and workflow-specific settings instead of one auditable policy map.
-  - Why implement: Step-specific YAML retry policy lets operators tune retry/defer behavior without code changes and helps the supervisor explain decisions.
-  - Tradeoffs / risks: Policy must remain bounded and validated so invalid YAML cannot create infinite retries or generator-owned retry behavior.
-  - Acceptance Criteria:
-    - YAML maps workflow steps to retries, delay/backoff/jitter, defer behavior, credential-action codes, and exhaustion policy.
-    - Orchestrators resolve retry policy through typed config and log policy ID/version on every retry decision.
-    - Invalid policies fail config loading with typed non-retryable errors.
-    - Tests cover retry, defer, user-action-required, exhaustion, invalid policy, and precedence with existing defaults.
 
 - **Title:** Add a persistent scheduler for deferred and user-action-required retry decisions [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Retry decisions can classify defer and user-action-required, but there is no durable scheduler that re-enters deferred work when the cooldown expires or prerequisites are fixed.
@@ -463,25 +425,25 @@ Scoring:
     - Scorecard thresholds are configurable and logged with policy version.
     - Tests cover passing, warning, failing, missing-evidence, and threshold-override scorecards.
 
-- **Title:** Build operational memory from historical failures and successes [Impact: 4/5, Effort: 4/5]
-  - Problem fixed: Route playbooks, publisher recovery cache, telemetry, and promotion settings exist, but planning does not yet use a unified operational memory of successful acquisition methods, failure signatures, cost, latency, and publisher-specific constraints.
-  - Why implement: The system should stop relearning the same publisher/report behavior and should pick the fastest reliable route automatically.
-  - Tradeoffs / risks: Memory must be source-backed and expiring so stale publisher behavior does not create persistent false assumptions.
+- **Title:** Wire workflow-control contracts into the default supervisor and UI/CLI execution path [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Workflow profiles, DAG contracts, retry policy lookup, automatic `latest_safe` resume, operational memory, and adaptive concurrency now exist, but users can still bypass them by invoking older workflow-specific entrypoints directly.
+  - Why implement: The new control plane creates the most value when every user-facing run starts from one workflow contract, preflight profile, retry policy, memory recommendation, and concurrency decision.
+  - Tradeoffs / risks: The default path must remain transparent and expose read-only planning output before side effects; legacy direct calls may need compatibility behavior during migration.
   - Acceptance Criteria:
-    - Operational memory records publisher/report route success, failure signature, best acquisition method, browser vs HTTP success rate, average runtime/cost, PDF extractability, credential requirement, and recommended retry/defer policy.
-    - Planner/preflight consult memory and logs the selected recommendation and confidence.
-    - Stale or conflicting memory falls back to deterministic route planning and records a refresh need.
-    - Tests cover memory hit, stale hit, conflict, missing memory, and improvement over deterministic fallback on fixture histories.
+    - CLI and UI run entrypoints resolve workflow-control settings before starting report, discovery, download, publish, replay, WordPress, or browser-acquisition work.
+    - The selected workflow contract, preflight profile, retry policy ID, operational-memory recommendation, concurrency limits, and resume stage are shown or logged before side effects.
+    - Legacy entrypoints either delegate through workflow control or emit a structured compatibility warning with an expiry date.
+    - Live smoke covers at least one UI-triggered run and one CLI-triggered run using workflow control end to end.
 
-- **Title:** Add adaptive concurrency across model, PDF, browser, Drive, and WordPress work [Impact: 4/5, Effort: 4/5]
-  - Problem fixed: Worker and max-in-flight settings are static, so healthy runs may be slower than necessary while degraded external systems may be overloaded.
-  - Why implement: Adaptive concurrency improves throughput while reducing retries, locks, rate limits, and browser instability.
-  - Tradeoffs / risks: Controller must be deterministic enough for tests and must preserve existing bounded limits.
+- **Title:** Persist workflow-control feedback after every run and feed it back into planning [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Operational memory and adaptive concurrency can already consume historical observations and telemetry, but run outcomes are not yet written as a unified feedback stream after every workflow step.
+  - Why implement: Persisted feedback lets route selection, retry tuning, and concurrency decisions improve automatically from real latency, cost, failure, and success evidence instead of relying on ad hoc retained artifacts.
+  - Tradeoffs / risks: Feedback must be compact, redacted, source-backed, and expiring so it does not become an unbounded event log or preserve stale route assumptions.
   - Acceptance Criteria:
-    - A typed concurrency controller adjusts within configured min/max bounds based on rate limits, retry rate, provider latency, SQLite lock contention, CPU/memory pressure, browser failures, and budget burn rate.
-    - Decisions are logged with previous/current limits, signal inputs, and reason.
-    - Controller can be disabled for deterministic benchmark and fixture runs.
-    - Tests cover scale-up, scale-down, disabled mode, budget pressure, rate-limit pressure, and SQLite contention signals.
+    - Each workflow step writes a typed workflow-control observation with workflow, step, route, publisher/report keys where applicable, outcome, error taxonomy, latency, cost, retries, and resource-pressure signals.
+    - Operational-memory recommendation and adaptive-concurrency resolution consume the persisted observations before falling back to existing report-source and retry-telemetry histories.
+    - Run health scorecards summarize the before/after recommendation and concurrency decisions.
+    - Tests cover persistence, redaction, TTL expiry, conflict handling, recommendation change after new evidence, and disabled deterministic benchmark mode.
 
 - **Title:** Make prompt/model execution reproducibility fully auditable [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Prompt hashes, caches, and fixture regression exist, but autonomous debugging needs a single replayable call record for every model invocation.

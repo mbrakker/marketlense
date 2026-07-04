@@ -457,6 +457,18 @@ def _targets() -> Iterable[MutationTarget]:
             max_mutants=6,
             min_score=85.0,
         ),
+        MutationTarget(
+            module_path=ROOT
+            / "src"
+            / "orchestrators"
+            / "workflow_control_orchestrator.py",
+            test_paths=(
+                "tests/test_workflow_control_orchestrator.py",
+                "tests/test_report_pipeline_orchestrator.py",
+            ),
+            max_mutants=6,
+            min_score=85.0,
+        ),
     ]
 
 

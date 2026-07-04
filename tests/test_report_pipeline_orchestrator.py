@@ -16,6 +16,7 @@ from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_context import RunContext
 from src.orchestrators import report_pipeline_orchestrator as orch
 from src.orchestrators import retry_orchestrator as retry_orch
+from src.orchestrators import workflow_control_orchestrator as workflow_control
 from src.contracts.pipeline_preflight import (
     PipelinePreflightReport,
     PipelinePreflightCheck,
@@ -759,6 +760,116 @@ def test_run_report_pipeline_passes_explicit_report_client_bundle() -> None:
     assert bundle.regeneration_client is not None
     assert bundle.figure_caption_client is not None
     assert captured["resume_from_stage"] == "selection_complete"
+
+
+def test_run_report_pipeline_auto_resume_uses_latest_safe_when_stage_not_explicit() -> None:
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    captured: dict[str, str] = {}
+
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle,
+        resume_from_stage=None,
+    ):
+        captured["resume_from_stage"] = str(resume_from_stage or "")
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.name or file.file_id,
+            md5=md5,
+            html_path="./out/a.html",
+            status="processed",
+        )
+
+    response = orch.run_report_pipeline(
+        file,
+        local_pdf_path="./cache/a.pdf",
+        settings=_settings(),
+        md5="md5",
+        ctx=_ctx(),
+        retries=0,
+        generate_report_fn=_gen,
+        auto_resume_from_latest_safe=True,
+    )
+
+    assert response.status == "processed"
+    assert captured["resume_from_stage"] == "latest_safe"
+
+
+def test_run_report_pipeline_uses_workflow_retry_policy(caplog, monkeypatch) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    calls = {"count": 0}
+    sleep_calls: list[float] = []
+    catalog = workflow_control.default_workflow_control_settings()
+
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        client_bundle,
+        resume_from_stage=None,
+    ):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise AppError(
+                code="openai_request_failed",
+                message="retry once",
+                retryable=True,
+            )
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.name or file.file_id,
+            md5=md5,
+            html_path="./out/a.html",
+            status="processed",
+        )
+
+    monkeypatch.setattr(retry_orch.random, "uniform", lambda _a, _b: 0.0)
+    monkeypatch.setattr(
+        orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds))
+    )
+
+    response = orch.run_report_pipeline(
+        file,
+        local_pdf_path="./cache/a.pdf",
+        settings=_settings(),
+        md5="md5",
+        ctx=_ctx(),
+        retries=0,
+        generate_report_fn=_gen,
+        workflow_control_settings=catalog,
+    )
+
+    assert response.status == "processed"
+    assert calls["count"] == 2
+    assert sleep_calls == [1.0]
+    events = _events(caplog)
+    starts = [event for event in events if event["event"] == "report_pipeline_start"]
+    assert starts[-1]["fields"]["retry_policy_id"] == (
+        "report_generation.report_pipeline.v1"
+    )
 
 
 def test_report_pipeline_orchestrator_does_not_use_signature_reflection() -> None:

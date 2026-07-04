@@ -9,10 +9,12 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pipeline_preflight import PipelinePreflightReport
 from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_context import RunContext
+from src.contracts.workflow_control import WorkflowControlSettings
 from src.orchestrators.report_generation_orchestrator import (
     run_report_generation as generate_report_orchestrator,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.orchestrators.workflow_control_orchestrator import resolve_retry_policy
 from src.orchestrators.pipeline_preflight_orchestrator import (
     assert_expensive_side_effects_allowed,
     preflight_report_pipeline,
@@ -91,6 +93,8 @@ def run_report_pipeline(
     openai_client_override=None,
     resume_from_stage: Optional[str] = None,
     preflight_fn: Optional[Callable[..., PipelinePreflightReport]] = None,
+    workflow_control_settings: WorkflowControlSettings | None = None,
+    auto_resume_from_latest_safe: bool = False,
 ) -> IngestOutcome:
     report_fn = generate_report_fn or generate_report_orchestrator
     preflight_report = (
@@ -118,8 +122,28 @@ def run_report_pipeline(
         getattr(settings, "evidence_pack_doc_map_retry_delay_ms", 500), 500, min_value=0
     )
     configured_retries = max(0, int(retries))
-    base_delay_seconds = 1.0
-    jitter_seconds = 0.25
+    retry_policy_id = "report_generation.report_pipeline.legacy_args"
+    retry_policy = RetryPolicy(
+        retries=configured_retries,
+        base_delay_seconds=1.0,
+        backoff_step_seconds=1.0,
+        jitter_seconds=0.25,
+    )
+    if workflow_control_settings is not None:
+        resolved_policy = resolve_retry_policy(
+            workflow_control_settings,
+            workflow_name="report_generation",
+            step_name="report_pipeline",
+            ctx=ctx,
+        )
+        retry_policy = resolved_policy.policy
+        retry_policy_id = resolved_policy.policy_id
+        configured_retries = retry_policy.retries
+    effective_resume_from_stage = (
+        resume_from_stage
+        if resume_from_stage
+        else ("latest_safe" if auto_resume_from_latest_safe else None)
+    )
     evidence_openai_client = llm_service.build_client_for_settings(
         settings,
         scope="evidence_pack",
@@ -193,12 +217,14 @@ def run_report_pipeline(
                 "effective_retries": configured_retries,
                 "doc_map_max_attempts": doc_map_max_attempts,
                 "retry_delay_ms": doc_map_retry_delay_ms,
-                "retry_jitter_seconds": jitter_seconds,
+                "retry_policy_id": retry_policy_id,
+                "retry_jitter_seconds": retry_policy.jitter_seconds,
                 "evidence_pack_global_max_in_flight": evidence_max_in_flight,
                 "evidence_pack_global_min_interval_ms": evidence_min_interval_ms,
                 "artifact_global_max_in_flight": artifact_max_in_flight,
                 "artifact_global_min_interval_ms": artifact_min_interval_ms,
-                "resume_from_stage": resume_from_stage or "",
+                "resume_from_stage": effective_resume_from_stage or "",
+                "auto_resume_from_latest_safe": bool(auto_resume_from_latest_safe),
             },
         )
     )
@@ -216,7 +242,7 @@ def run_report_pipeline(
             md5=md5,
             ctx=ctx,
             client_bundle=client_bundle,
-            resume_from_stage=resume_from_stage,
+            resume_from_stage=effective_resume_from_stage,
         )
         doc_map_reason = _doc_map_reason(outcome)
         should_retry_doc_map = (
@@ -275,12 +301,7 @@ def run_report_pipeline(
         ctx=ctx,
         logger=logger,
         module_name=logger.name,
-        policy=RetryPolicy(
-            retries=configured_retries,
-            base_delay_seconds=base_delay_seconds,
-            backoff_step_seconds=1.0,
-            jitter_seconds=jitter_seconds,
-        ),
+        policy=retry_policy,
         retry_event="report_pipeline_retry",
         retry_fields_builder=lambda exc, attempt: {
             "file_id": file.file_id,

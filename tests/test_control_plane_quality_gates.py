@@ -10,6 +10,8 @@ def test_control_plane_modules_have_stricter_coverage_gate() -> None:
 
     assert "src/orchestrators/pipeline_preflight_orchestrator.py" in source
     assert "src/orchestrators/retry_telemetry_orchestrator.py" in source
+    assert "src/orchestrators/workflow_control_orchestrator.py" in source
+    assert "src/contracts/workflow_control.py" in source
     assert "COVERAGE_CONTROL_PLANE_MIN" in source
     assert check_coverage._threshold("COVERAGE_CONTROL_PLANE_MIN", 85.0) == 85.0
 
@@ -23,4 +25,7 @@ def test_control_plane_modules_are_targeted_by_mutation_gate() -> None:
     )
     assert any(
         path.endswith("retry_telemetry_orchestrator.py") for path in module_paths
+    )
+    assert any(
+        path.endswith("workflow_control_orchestrator.py") for path in module_paths
     )

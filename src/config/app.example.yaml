@@ -44,3 +44,35 @@ publisher_discovery:
     average_weight: 0.50
     confidence_weight: 0.15
     low_score_demotion_threshold: 45.0
+
+workflow_control:
+  preflight_profiles:
+    report_download:
+      workflow: "report_download"
+      planned_side_effects: ["network", "browser", "drive"]
+      require_llm: false
+      require_drive: true
+      require_publish: false
+      require_browser: true
+      prompt_namespaces:
+        - "browser_report_download/browser_route"
+  retry_policies:
+    report_download:
+      browser_acquisition:
+        policy_id: "report_download.browser_acquisition.v1"
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+  concurrency:
+    browser:
+      min_limit: 1
+      max_limit: 2
+      default_limit: 1
+      high_retry_rate: 0.20
+      high_latency_ms: 10000
+      low_retry_rate: 0.02
+      low_latency_ms: 3000
+  operational_memory:
+    ttl_days: 30
+    min_observations: 2

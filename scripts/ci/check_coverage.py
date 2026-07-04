@@ -127,8 +127,10 @@ def main() -> int:
             (
                 "src/orchestrators/pipeline_preflight_orchestrator.py",
                 "src/orchestrators/retry_telemetry_orchestrator.py",
+                "src/orchestrators/workflow_control_orchestrator.py",
                 "src/contracts/pipeline_preflight.py",
                 "src/contracts/retry_telemetry.py",
+                "src/contracts/workflow_control.py",
             ),
         ),
     ]

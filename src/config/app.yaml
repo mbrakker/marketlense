@@ -247,3 +247,227 @@ cross_report_analysis:
 cost:
   daily_path: "./out/cost-daily.json"
   pricing_path: "./src/config/llm-costs.yaml"
+
+workflow_control:
+  schema_version: "1.0"
+  preflight_profiles:
+    report_generation:
+      workflow: "report_generation"
+      planned_side_effects: ["pdf", "model"]
+      require_llm: true
+      require_drive: false
+      require_publish: false
+      require_browser: false
+      prompt_namespaces: []
+    publisher_inventory:
+      workflow: "publisher_inventory"
+      planned_side_effects: ["network", "browser", "drive", "model"]
+      require_llm: true
+      require_drive: true
+      require_publish: false
+      require_browser: true
+      prompt_namespaces:
+        - "publisher_inventory/discovery"
+        - "publisher_inventory/meaningful_candidate_screen"
+    report_download:
+      workflow: "report_download"
+      planned_side_effects: ["network", "browser", "drive"]
+      require_llm: false
+      require_drive: true
+      require_publish: false
+      require_browser: true
+      prompt_namespaces:
+        - "browser_report_download/browser_route"
+    cross_report_analysis:
+      workflow: "cross_report_analysis"
+      planned_side_effects: ["model", "analytics_store"]
+      require_llm: true
+      require_drive: false
+      require_publish: false
+      require_browser: false
+      prompt_namespaces:
+        - "cross_report_analysis/synthesis"
+    publishing:
+      workflow: "publishing"
+      planned_side_effects: ["wordpress", "publish"]
+      require_llm: false
+      require_drive: false
+      require_publish: true
+      require_browser: false
+      prompt_namespaces: []
+    ui_replay:
+      workflow: "ui_replay"
+      planned_side_effects: ["filesystem"]
+      require_llm: false
+      require_drive: false
+      require_publish: false
+      require_browser: false
+      prompt_namespaces: []
+    wordpress_sync:
+      workflow: "wordpress_sync"
+      planned_side_effects: ["wordpress"]
+      require_llm: false
+      require_drive: false
+      require_publish: true
+      require_browser: false
+      prompt_namespaces: []
+    browser_acquisition:
+      workflow: "browser_acquisition"
+      planned_side_effects: ["network", "browser"]
+      require_llm: false
+      require_drive: false
+      require_publish: false
+      require_browser: true
+      prompt_namespaces:
+        - "browser_report_download/browser_route"
+  retry_policies:
+    report_generation:
+      report_pipeline:
+        policy_id: "report_generation.report_pipeline.v1"
+        retries: 2
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+      doc_map:
+        policy_id: "report_generation.doc_map.v1"
+        retries: 2
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+    report_download:
+      http_pdf:
+        policy_id: "report_download.http_pdf.v1"
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+      browser_acquisition:
+        policy_id: "report_download.browser_acquisition.v1"
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+      drive_archive:
+        policy_id: "report_download.drive_archive.v1"
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+    publisher_inventory:
+      discovery:
+        policy_id: "publisher_inventory.discovery.v1"
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+    publishing:
+      wordpress_publish:
+        policy_id: "publishing.wordpress_publish.v1"
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+  workflow_contracts:
+    report_generation:
+      workflow: "report_generation"
+      version: "1.0"
+      states:
+        - "pending"
+        - "preflighted"
+        - "source_prepared"
+        - "selection_complete"
+        - "analysis_complete"
+        - "render_complete"
+        - "processed"
+        - "error"
+      initial_state: "pending"
+      transitions:
+        - from_state: "pending"
+          to_state: "preflighted"
+          step_name: "preflight"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+        - from_state: "preflighted"
+          to_state: "source_prepared"
+          step_name: "source_preparation"
+          retry_policy_ref: "default.v1"
+          side_effects: ["pdf"]
+        - from_state: "source_prepared"
+          to_state: "selection_complete"
+          step_name: "figure_selection"
+          retry_policy_ref: "default.v1"
+          side_effects: ["pdf", "model"]
+        - from_state: "selection_complete"
+          to_state: "analysis_complete"
+          step_name: "report_analysis"
+          retry_policy_ref: "report_generation.report_pipeline.v1"
+          side_effects: ["model"]
+        - from_state: "analysis_complete"
+          to_state: "render_complete"
+          step_name: "render_projection"
+          retry_policy_ref: "default.v1"
+          side_effects: ["filesystem"]
+        - from_state: "render_complete"
+          to_state: "processed"
+          step_name: "finish"
+          retry_policy_ref: "default.v1"
+          side_effects: []
+      prerequisites:
+        preflighted: ["preflight"]
+      checkpoint_outputs:
+        - "source_prepared"
+        - "selection_complete"
+        - "analysis_complete"
+        - "render_complete"
+      validation_gates:
+        - "preflight"
+        - "artifact_integrity"
+        - "report_validation"
+      terminal_outcomes:
+        - "processed"
+        - "skipped"
+        - "error"
+  concurrency:
+    model:
+      min_limit: 1
+      max_limit: 4
+      default_limit: 2
+      high_retry_rate: 0.25
+      high_latency_ms: 5000
+      low_retry_rate: 0.05
+      low_latency_ms: 1500
+    pdf:
+      min_limit: 1
+      max_limit: 4
+      default_limit: 2
+      high_retry_rate: 0.20
+      high_latency_ms: 4000
+      low_retry_rate: 0.02
+      low_latency_ms: 1000
+    browser:
+      min_limit: 1
+      max_limit: 2
+      default_limit: 1
+      high_retry_rate: 0.20
+      high_latency_ms: 10000
+      low_retry_rate: 0.02
+      low_latency_ms: 3000
+    drive:
+      min_limit: 1
+      max_limit: 4
+      default_limit: 2
+      high_retry_rate: 0.20
+      high_latency_ms: 3000
+      low_retry_rate: 0.02
+      low_latency_ms: 800
+    wordpress:
+      min_limit: 1
+      max_limit: 4
+      default_limit: 2
+      high_retry_rate: 0.20
+      high_latency_ms: 3000
+      low_retry_rate: 0.02
+      low_latency_ms: 800
+  operational_memory:
+    ttl_days: 30
+    min_observations: 2

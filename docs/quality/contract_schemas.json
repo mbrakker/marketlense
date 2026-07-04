@@ -11897,8 +11897,26 @@
         "label": {
           "type": "string"
         },
+        "rejected_topic_rules": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "remediation_signal": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
+        },
+        "semantic_rule_status": {
+          "type": "string"
+        },
+        "supported_topic_rules": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "why_fit": {
           "type": "string"
@@ -19349,6 +19367,90 @@
       ],
       "type": "object"
     },
+    "src.contracts.public_site_quality.PublicSitePageQuality": {
+      "additionalProperties": false,
+      "properties": {
+        "dom_complete_ms": {
+          "type": "number"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "missing_metadata": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "page_weight_bytes": {
+          "type": "integer"
+        },
+        "request_count": {
+          "type": "integer"
+        },
+        "response_start_ms": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status_code": {
+          "type": "integer"
+        },
+        "threshold_violations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "url",
+        "status_code",
+        "response_start_ms",
+        "dom_complete_ms",
+        "request_count",
+        "page_weight_bytes",
+        "metadata",
+        "missing_metadata",
+        "threshold_violations"
+      ],
+      "type": "object"
+    },
+    "src.contracts.public_site_quality.PublicSiteQualityReport": {
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "type": "string"
+        },
+        "pages": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.public_site_quality.PublicSitePageQuality"
+          },
+          "type": "array"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "base_url",
+        "pages",
+        "passed"
+      ],
+      "type": "object"
+    },
     "src.contracts.publish.PublishEntityMetadata": {
       "additionalProperties": false,
       "properties": {
@@ -21439,6 +21541,96 @@
       "required": [
         "schema_version",
         "html_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_card_remediation.ReportCardPublicationDateRemediationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_registry": {
+          "$ref": "#/$defs/src.contracts.report_artifacts.ArtifactRegistry"
+        },
+        "artifacts_payload": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "doc_map_payload": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "operator_date": {
+          "type": "string"
+        },
+        "operator_id": {
+          "type": "string"
+        },
+        "operator_reason": {
+          "type": "string"
+        },
+        "rendered_html_path": {
+          "type": "string"
+        },
+        "resume_stage": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation_payload": {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "file_id",
+        "artifact_registry",
+        "artifacts_payload",
+        "doc_map_payload",
+        "validation_payload",
+        "rendered_html_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_card_remediation.ReportCardPublicationDateRemediationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "audit_fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "date_source": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "publication_date": {
+          "type": "string"
+        },
+        "resume_stage": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "file_id",
+        "publication_date",
+        "date_source",
+        "audit_fields",
+        "resume_stage",
+        "idempotency_key"
       ],
       "type": "object"
     },
@@ -29182,6 +29374,552 @@
         "uncertainty",
         "validation_status",
         "card_content"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.ConcurrencyDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "previous_limit": {
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "resource",
+        "previous_limit",
+        "selected_limit",
+        "reason",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.ConcurrencyLimit": {
+      "additionalProperties": false,
+      "properties": {
+        "default_limit": {
+          "type": "integer"
+        },
+        "high_latency_ms": {
+          "type": "integer"
+        },
+        "high_retry_rate": {
+          "type": "number"
+        },
+        "low_latency_ms": {
+          "type": "integer"
+        },
+        "low_retry_rate": {
+          "type": "number"
+        },
+        "max_limit": {
+          "type": "integer"
+        },
+        "min_limit": {
+          "type": "integer"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "resource",
+        "min_limit",
+        "max_limit",
+        "default_limit",
+        "high_retry_rate",
+        "high_latency_ms",
+        "low_retry_rate",
+        "low_latency_ms"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.ConcurrencyObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "browser_failure_rate": {
+          "type": "number"
+        },
+        "budget_burn_rate": {
+          "type": "number"
+        },
+        "current_limit": {
+          "type": "integer"
+        },
+        "p95_latency_ms": {
+          "type": "integer"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "retry_rate": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sqlite_lock_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "resource",
+        "current_limit",
+        "retry_rate",
+        "p95_latency_ms",
+        "sqlite_lock_count",
+        "browser_failure_rate",
+        "budget_burn_rate"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.OperationalMemoryRecommendation": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "type": "number"
+        },
+        "failure_signatures": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "recommended_retry_policy": {
+          "type": "string"
+        },
+        "recommended_route": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher",
+        "workflow",
+        "recommended_route",
+        "confidence",
+        "reason",
+        "failure_signatures",
+        "recommended_retry_policy"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.OperationalMemoryRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "average_cost_usd": {
+          "type": "number"
+        },
+        "average_runtime_seconds": {
+          "type": "number"
+        },
+        "credential_required": {
+          "type": "boolean"
+        },
+        "failure_count": {
+          "type": "integer"
+        },
+        "failure_signatures": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "observation_count": {
+          "type": "integer"
+        },
+        "pdf_extractable_rate": {
+          "type": "number"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "recommended_retry_policy": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "success_count": {
+          "type": "integer"
+        },
+        "success_rate": {
+          "type": "number"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher",
+        "workflow",
+        "route",
+        "observation_count",
+        "success_count",
+        "failure_count",
+        "success_rate",
+        "average_runtime_seconds",
+        "average_cost_usd",
+        "pdf_extractable_rate",
+        "credential_required",
+        "failure_signatures",
+        "recommended_retry_policy"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.OperationalObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "cost_usd": {
+          "type": "number"
+        },
+        "credential_required": {
+          "type": "boolean"
+        },
+        "failure_signature": {
+          "type": "string"
+        },
+        "pdf_extractable": {
+          "type": "boolean"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        },
+        "runtime_seconds": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher",
+        "workflow",
+        "route",
+        "success",
+        "runtime_seconds",
+        "cost_usd",
+        "failure_signature",
+        "pdf_extractable",
+        "credential_required"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.ResolvedRetryPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "policy": {},
+        "policy_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "step_name": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "step_name",
+        "policy_id",
+        "policy"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.WorkflowContract": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_outputs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "initial_state": {
+          "type": "string"
+        },
+        "prerequisites": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "states": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "terminal_outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "transitions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_control.WorkflowTransition"
+          },
+          "type": "array"
+        },
+        "validation_gates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "version",
+        "states",
+        "initial_state",
+        "transitions",
+        "prerequisites",
+        "checkpoint_outputs",
+        "validation_gates",
+        "terminal_outcomes"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.WorkflowControlSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "concurrency": {
+          "additionalProperties": {
+            "$ref": "#/$defs/src.contracts.workflow_control.ConcurrencyLimit"
+          },
+          "type": "object"
+        },
+        "operational_memory_min_observations": {
+          "type": "integer"
+        },
+        "operational_memory_ttl_days": {
+          "type": "integer"
+        },
+        "preflight_profiles": {
+          "additionalProperties": {
+            "$ref": "#/$defs/src.contracts.workflow_control.WorkflowPreflightProfile"
+          },
+          "type": "object"
+        },
+        "retry_policies": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "$ref": "#/$defs/src.contracts.workflow_control.WorkflowRetryPolicyConfig"
+            },
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "workflow_contracts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/src.contracts.workflow_control.WorkflowContract"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "preflight_profiles",
+        "retry_policies",
+        "workflow_contracts",
+        "concurrency",
+        "operational_memory_ttl_days",
+        "operational_memory_min_observations"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.WorkflowPreflightProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "planned_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "prompt_namespaces": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "require_browser": {
+          "type": "boolean"
+        },
+        "require_drive": {
+          "type": "boolean"
+        },
+        "require_llm": {
+          "type": "boolean"
+        },
+        "require_publish": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "planned_side_effects",
+        "require_llm",
+        "require_drive",
+        "require_publish",
+        "require_browser",
+        "prompt_namespaces"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.WorkflowRetryPolicyConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "backoff_step_seconds": {
+          "type": "number"
+        },
+        "base_delay_seconds": {
+          "type": "number"
+        },
+        "jitter_seconds": {
+          "type": "number"
+        },
+        "policy_id": {
+          "type": "string"
+        },
+        "retries": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "policy_id",
+        "retries",
+        "base_delay_seconds",
+        "backoff_step_seconds",
+        "jitter_seconds"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.WorkflowTransition": {
+      "additionalProperties": false,
+      "properties": {
+        "from_state": {
+          "type": "string"
+        },
+        "retry_policy_ref": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "step_name": {
+          "type": "string"
+        },
+        "to_state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "from_state",
+        "to_state",
+        "step_name",
+        "retry_policy_ref",
+        "side_effects"
       ],
       "type": "object"
     }
