@@ -14,7 +14,7 @@ from src.contracts.state import StateBatchCheckItem
 from src.services.sqlite_migration_service import apply_state_db_migrations
 from src.services._sqlite_common import (
     configure_sqlite_connection as _configure_sqlite_connection,
-    is_sqlite_lock_error as _is_lock_error,
+    is_sqlite_lock_error as _is_lock_error,  # noqa: F401
 )
 from src.utils.errors import AppError
 
@@ -58,7 +58,7 @@ def _state_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="state_db",
                     db_path=path,
-                    target_version=6,
+                    target_version=7,
                     ctx=ctx,
                 ),
                 conn,

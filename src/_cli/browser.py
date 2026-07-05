@@ -86,6 +86,14 @@ def download_report(
         None,
         help="Optional publisher Drive folder URL or folder ID for acquired artifacts",
     ),
+    report_title: str = typer.Option(
+        "",
+        help="Optional report title used to match deferred mailbox delivery",
+    ),
+    publisher_name: str = typer.Option(
+        "",
+        help="Optional publisher name used to match deferred mailbox delivery",
+    ),
 ):
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_download_report")
@@ -108,6 +116,10 @@ def download_report(
         ConfigLoadRequest(schema_version="1.0", path=""),
         ctx,
     )
+    mailbox_settings = load_mailbox_acquisition_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""),
+        ctx,
+    )
     result = run_report_download(
         ReportDownloadOrchestratorRequest(
             schema_version="1.0",
@@ -118,6 +130,9 @@ def download_report(
             delivery_email=delivery_email,
             publisher_insights_url=publisher_insights_url,
             publisher_google_folder=publisher_google_folder,
+            report_title=report_title,
+            publisher_name=publisher_name,
+            mailbox_settings=mailbox_settings,
         ),
         ctx=ctx,
     )

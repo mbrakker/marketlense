@@ -518,3 +518,115 @@ class WorkflowControlObservationListResponse:
     observations: List[WorkflowControlObservation] = field(
         metadata={"doc": "Persisted observations sorted newest first."}
     )
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequest:
+    schema_version: str = field(metadata={"doc": "Mail-delivery request schema version."})
+    request_id: int = field(metadata={"doc": "Durable state DB request identifier."})
+    idempotency_key: str = field(
+        metadata={"doc": "Stable key that prevents duplicate deferred mail requests."}
+    )
+    source_url: str = field(metadata={"doc": "Original gated report URL."})
+    report_title: str = field(metadata={"doc": "Report title used for delivery matching."})
+    publisher_name: str = field(metadata={"doc": "Publisher used for delivery matching."})
+    delivery_email: str = field(metadata={"doc": "Mailbox address submitted to the form."})
+    requested_after_utc: str = field(
+        metadata={"doc": "UTC watermark; older matching messages are ignored."}
+    )
+    route_family: str = field(metadata={"doc": "Browser route family that requested mail."})
+    route_history_id: str = field(
+        metadata={"doc": "Optional browser route-history identifier for provenance."}
+    )
+    status: str = field(
+        metadata={"doc": "Request status: pending, succeeded, failed, or abandoned."}
+    )
+    next_attempt_after_utc: str = field(
+        metadata={"doc": "UTC timestamp when the request is eligible for another poll."}
+    )
+    attempt_count: int = field(metadata={"doc": "Mailbox acquisition attempts consumed."})
+    provider_cursor: str = field(
+        metadata={"doc": "Provider-specific incremental cursor or watermark."}
+    )
+    seen_provider_message_ids: List[str] = field(
+        metadata={"doc": "Provider message IDs already inspected for this request."}
+    )
+    outcome: str = field(metadata={"doc": "Last acquisition outcome taxonomy value."})
+    selected_message_id: str = field(
+        metadata={"doc": "Provider message ID that produced a successful acquisition."}
+    )
+    downloaded_file_path: str = field(
+        metadata={"doc": "Local acquired artifact path when successful."}
+    )
+    error_code: str = field(metadata={"doc": "Last typed error code, if any."})
+    created_at_utc: str = field(metadata={"doc": "UTC creation timestamp."})
+    updated_at_utc: str = field(metadata={"doc": "UTC update timestamp."})
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestUpsertRequest:
+    schema_version: str = field(metadata={"doc": "Mail request upsert schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for mail-delivery state."})
+    idempotency_key: str = field(
+        metadata={"doc": "Stable key that prevents duplicate deferred mail requests."}
+    )
+    source_url: str = field(metadata={"doc": "Original gated report URL."})
+    report_title: str = field(metadata={"doc": "Report title used for delivery matching."})
+    publisher_name: str = field(metadata={"doc": "Publisher used for delivery matching."})
+    delivery_email: str = field(metadata={"doc": "Mailbox address submitted to the form."})
+    requested_after_utc: str = field(
+        metadata={"doc": "UTC watermark; older matching messages are ignored."}
+    )
+    route_family: str = field(metadata={"doc": "Browser route family that requested mail."})
+    route_history_id: str = field(
+        default="",
+        metadata={"doc": "Optional browser route-history identifier for provenance."},
+    )
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestUpsertResponse:
+    schema_version: str = field(metadata={"doc": "Mail request upsert response version."})
+    request: MailDeliveryRequest = field(metadata={"doc": "Durable request row."})
+    created: bool = field(metadata={"doc": "True when a new row was inserted."})
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestListDueRequest:
+    schema_version: str = field(metadata={"doc": "Due mail request list schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for mail-delivery state."})
+    now_utc: str = field(metadata={"doc": "UTC timestamp used for due filtering."})
+    limit: int = field(default=50, metadata={"doc": "Maximum due rows to return."})
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestListDueResponse:
+    schema_version: str = field(metadata={"doc": "Due mail request list response version."})
+    requests: List[MailDeliveryRequest] = field(
+        metadata={"doc": "Due pending mail-delivery requests ordered oldest first."}
+    )
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestMarkAttemptRequest:
+    schema_version: str = field(metadata={"doc": "Mail attempt update schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for mail-delivery state."})
+    request_id: int = field(metadata={"doc": "Durable mail request identifier."})
+    status: str = field(metadata={"doc": "Updated request status."})
+    next_attempt_after_utc: str = field(
+        metadata={"doc": "UTC timestamp when the next attempt is eligible."}
+    )
+    provider_cursor: str = field(metadata={"doc": "Provider incremental cursor."})
+    seen_provider_message_ids: List[str] = field(
+        metadata={"doc": "Provider messages inspected by this request."}
+    )
+    outcome: str = field(metadata={"doc": "Last acquisition outcome taxonomy value."})
+    selected_message_id: str = field(metadata={"doc": "Selected mailbox message ID."})
+    downloaded_file_path: str = field(metadata={"doc": "Downloaded artifact path."})
+    error_code: str = field(metadata={"doc": "Last typed error code."})
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestMarkAttemptResponse:
+    schema_version: str = field(metadata={"doc": "Mail attempt update response version."})
+    request: MailDeliveryRequest = field(metadata={"doc": "Updated request row."})

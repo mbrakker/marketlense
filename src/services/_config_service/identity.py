@@ -4,6 +4,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
+    BrowserDownloadConsentPolicy,
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
     BrowserDownloadPublisherOverride,
@@ -160,6 +161,23 @@ def load_browser_download_identity(
         fields=fields,
         delivery_emails=_coerce_string_list(payload.get("delivery_emails")),
         publisher_overrides=publisher_overrides,
+        consent_policy=_parse_consent_policy(payload.get("consent_policy")),
+    )
+
+
+def _parse_consent_policy(raw_value: Any) -> BrowserDownloadConsentPolicy:
+    if not isinstance(raw_value, dict):
+        return BrowserDownloadConsentPolicy(schema_version="1.0")
+    return BrowserDownloadConsentPolicy(
+        schema_version=str(raw_value.get("schema_version") or "1.0"),
+        default_checkbox_policy=str(
+            raw_value.get("default_checkbox_policy")
+            or "mandatory_privacy_terms_only"
+        ).strip(),
+        allow_marketing_opt_in=bool(raw_value.get("allow_marketing_opt_in", False)),
+        allow_optional_newsletter=bool(
+            raw_value.get("allow_optional_newsletter", False)
+        ),
     )
 
 
@@ -231,6 +249,18 @@ def serialize_browser_download_identity(
     }
     if identity_profile.delivery_emails:
         payload["delivery_emails"] = list(identity_profile.delivery_emails)
+    payload["consent_policy"] = {
+        "schema_version": identity_profile.consent_policy.schema_version,
+        "default_checkbox_policy": (
+            identity_profile.consent_policy.default_checkbox_policy
+        ),
+        "allow_marketing_opt_in": (
+            identity_profile.consent_policy.allow_marketing_opt_in
+        ),
+        "allow_optional_newsletter": (
+            identity_profile.consent_policy.allow_optional_newsletter
+        ),
+    }
     if identity_profile.publisher_overrides:
         payload["publisher_overrides"] = [
             {

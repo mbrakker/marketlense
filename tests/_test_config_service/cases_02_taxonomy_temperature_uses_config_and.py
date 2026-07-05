@@ -370,6 +370,37 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
         self.assertEqual("country", override.field_values[0].key)
         self.assertEqual("Austria", override.field_values[0].value)
 
+    def test_browser_download_identity_loads_typed_consent_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=False)
+            identity_path = Path(tmp_dir) / "browser_download_identity.yaml"
+            identity_payload = yaml.safe_load(identity_path.read_text(encoding="utf-8"))
+            identity_payload["consent_policy"] = {
+                "schema_version": "1.0",
+                "default_checkbox_policy": "mandatory_privacy_terms_only",
+                "allow_marketing_opt_in": False,
+                "allow_optional_newsletter": False,
+            }
+            identity_path.write_text(
+                yaml.safe_dump(identity_payload, sort_keys=False),
+                encoding="utf-8",
+            )
+
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+                settings = load_browser_download_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertEqual(
+            "mandatory_privacy_terms_only",
+            settings.identity_profile.consent_policy.default_checkbox_policy,
+        )
+        self.assertFalse(settings.identity_profile.consent_policy.allow_marketing_opt_in)
+        self.assertFalse(settings.identity_profile.consent_policy.allow_optional_newsletter)
+
     def test_browser_download_settings_require_openrouter_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=False)

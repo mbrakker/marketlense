@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
@@ -12,6 +13,12 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorRequest,
     ReportDownloadOrchestratorResult,
 )
+from src.contracts.state import (
+    MailDeliveryRequestUpsertRequest,
+    WorkflowControlObservationWriteRequest,
+)
+from src.contracts.mailbox_acquisition import MailboxSearchRequest
+from src.contracts.workflow_control import WorkflowControlObservation
 from src.contracts.report_store import (
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteResponse,
@@ -27,6 +34,7 @@ from src.orchestrators._report_download_orchestrator.route_planner import (
 )
 from src.utils.logging import log_event
 from src.utils.errors import AppError
+from src.utils.clock import utc_now_seconds_z
 from src.utils.url_utils import normalize_url
 from src.orchestrators._report_download_orchestrator.candidate_readiness import (
     assert_candidate_download_ready,
@@ -64,6 +72,7 @@ def run_report_download(
     dependencies: ReportDownloadDependencies | None = None,
 ) -> ReportDownloadOrchestratorResult:
     deps = dependencies or ReportDownloadDependencies.default()
+    run_started_at_utc = utc_now_seconds_z()
     normalized_url = normalize_url(request.url)
     logger.info(
         log_event(
@@ -160,6 +169,13 @@ def run_report_download(
             publisher_recommended_discovery_route_kind=request.publisher_recommended_discovery_route_kind,
         ),
         ctx,
+    )
+    preflight_mailbox_before_email_form(
+        request=request,
+        normalized_url=normalized_url,
+        ctx=ctx,
+        dependencies=deps,
+        route_families=[step.route_family for step in plan.steps],
     )
     result: BrowserReportDownloadResult | None = None
     last_retryable_error: AppError | None = None
@@ -277,6 +293,13 @@ def run_report_download(
         result=result,
         ctx=ctx,
         dependencies=deps,
+    )
+    record_deferred_mail_delivery_request(
+        request=request,
+        result=result,
+        ctx=ctx,
+        dependencies=deps,
+        run_started_at_utc=run_started_at_utc,
     )
     drive_uploads = archive_successful_report_artifacts(
         request=request,
@@ -532,6 +555,205 @@ def _publisher_scope_url_for_request(
             if token:
                 return token
     return request.url
+
+
+def record_deferred_mail_delivery_request(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    result: BrowserReportDownloadResult,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+    run_started_at_utc: str,
+) -> None:
+    if result.outcome not in {"email_requested", "email_required"}:
+        return
+    if request.mailbox_settings is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_mail_delivery_request_skipped",
+                module=logger.name,
+                fields={
+                    "normalized_url": result.normalized_url,
+                    "reason": "mailbox_settings_missing",
+                    "outcome": result.outcome,
+                },
+            )
+        )
+        return
+    delivery_email = _resolve_deferred_delivery_email(request)
+    if not delivery_email:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_mail_delivery_request_skipped",
+                module=logger.name,
+                fields={
+                    "normalized_url": result.normalized_url,
+                    "reason": "delivery_email_missing",
+                    "outcome": result.outcome,
+                },
+            )
+        )
+        return
+    publisher_name = _mail_delivery_publisher_name(request)
+    report_title = _mail_delivery_report_title(request, result)
+    idempotency_key = "|".join(
+        [
+            "mail_delivery",
+            normalize_url(result.normalized_url or request.url),
+            delivery_email.casefold(),
+        ]
+    )
+    upsert_response = dependencies.upsert_mail_delivery_request(
+        MailDeliveryRequestUpsertRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            idempotency_key=idempotency_key,
+            source_url=request.url,
+            report_title=report_title,
+            publisher_name=publisher_name,
+            delivery_email=delivery_email,
+            requested_after_utc=run_started_at_utc,
+            route_family=result.route_family,
+            route_history_id="",
+        ),
+        ctx,
+    )
+    dependencies.write_workflow_control_observation(
+        WorkflowControlObservationWriteRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            observation=WorkflowControlObservation(
+                schema_version="1.0",
+                observed_at_utc=utc_now_seconds_z(),
+                run_id=ctx.run_id,
+                workflow="mail_acquisition",
+                step_name="defer_mail_delivery_request",
+                route=result.route_family,
+                publisher=publisher_name,
+                report_key=result.normalized_url or request.url,
+                outcome="deferred",
+                error_code="",
+                error_retryable=False,
+                error_severity="",
+                latency_ms=0,
+                cost_usd=0.0,
+                retry_count=0,
+                resource_pressure={
+                    "mail_delivery_request_id": upsert_response.request.request_id,
+                    "created": 1 if upsert_response.created else 0,
+                },
+            ),
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_mail_delivery_request_deferred",
+            module=logger.name,
+            fields={
+                "normalized_url": result.normalized_url,
+                "request_id": upsert_response.request.request_id,
+                "created": upsert_response.created,
+                "publisher_name": publisher_name,
+                "route_family": result.route_family,
+            },
+        )
+    )
+
+
+def _mail_delivery_report_title(
+    request: ReportDownloadOrchestratorRequest,
+    result: BrowserReportDownloadResult,
+) -> str:
+    if request.report_title.strip():
+        return request.report_title.strip()
+    if request.candidate_trace is not None and request.candidate_trace.title.strip():
+        return request.candidate_trace.title.strip()
+    return result.route_summary.strip() or result.normalized_url or request.url
+
+
+def _mail_delivery_publisher_name(request: ReportDownloadOrchestratorRequest) -> str:
+    if request.publisher_name.strip():
+        return request.publisher_name.strip()
+    scope = _publisher_scope_url_for_request(request) or request.url
+    host = str(urlsplit(scope).hostname or "").strip().lower()
+    return host or "unknown_publisher"
+
+
+def _resolve_deferred_delivery_email(
+    request: ReportDownloadOrchestratorRequest,
+) -> str:
+    explicit = str(request.delivery_email or "").strip()
+    if explicit:
+        return explicit
+    for email in request.settings.identity_profile.delivery_emails:
+        token = str(email or "").strip()
+        if token:
+            return token
+    for field in request.settings.identity_profile.fields:
+        if field.key == "work_email" and str(field.value or "").strip():
+            return str(field.value or "").strip()
+    return ""
+
+
+def preflight_mailbox_before_email_form(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    normalized_url: str,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+    route_families: list[str],
+) -> None:
+    if request.mailbox_settings is None:
+        return
+    normalized_families = {str(family or "").strip() for family in route_families}
+    if normalized_families and normalized_families <= {"direct_pdf_probe"}:
+        return
+    delivery_email = _resolve_deferred_delivery_email(request)
+    if not delivery_email:
+        return
+    dependencies.preflight_mailbox_search(
+        MailboxSearchRequest(
+            schema_version="1.0",
+            settings=request.mailbox_settings,
+            delivery_email=delivery_email,
+            source_url=request.url,
+            report_title=_mail_delivery_report_title_for_request(request, normalized_url),
+            publisher_name=_mail_delivery_publisher_name(request),
+            query_terms=[],
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_mailbox_preflight_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "provider": request.mailbox_settings.provider,
+                "has_delivery_email": bool(delivery_email),
+            },
+        )
+    )
+
+
+def _mail_delivery_report_title_for_request(
+    request: ReportDownloadOrchestratorRequest,
+    normalized_url: str,
+) -> str:
+    if request.report_title.strip():
+        return request.report_title.strip()
+    if request.candidate_trace is not None and request.candidate_trace.title.strip():
+        return request.candidate_trace.title.strip()
+    return normalized_url or request.url
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]

@@ -65,6 +65,17 @@ def render_browser_report_download_prompt(
             request=request,
             delivery_email=delivery_email,
         ),
+        "consent_policy": {
+            "default_checkbox_policy": (
+                request.settings.identity_profile.consent_policy.default_checkbox_policy
+            ),
+            "allow_marketing_opt_in": (
+                request.settings.identity_profile.consent_policy.allow_marketing_opt_in
+            ),
+            "allow_optional_newsletter": (
+                request.settings.identity_profile.consent_policy.allow_optional_newsletter
+            ),
+        },
         "delivery_email": str(delivery_email or "").strip(),
         "route_hint": str(request.route_hint or "").strip(),
         "route_kind_hint": str(request.route_kind_hint or "").strip(),
@@ -211,6 +222,7 @@ def render_browser_report_download_prompt(
                     "identity_entries": _redact_identity_entries_for_log(
                         cast(list[dict[str, str]], variables["identity_entries"])
                     ),
+                    "consent_policy": variables["consent_policy"],
                     "delivery_email": (REDACTED if variables["delivery_email"] else ""),
                     "route_hint": variables["route_hint"],
                     "route_kind_hint": variables["route_kind_hint"],

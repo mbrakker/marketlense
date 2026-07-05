@@ -56,6 +56,27 @@ class BrowserDownloadPublisherOverride:
 
 
 @dataclass(frozen=True)
+class BrowserDownloadConsentPolicy:
+    schema_version: str = field(
+        metadata={"doc": "Browser-download consent policy schema version."}
+    )
+    default_checkbox_policy: str = field(
+        default="mandatory_privacy_terms_only",
+        metadata={
+            "doc": "Default checkbox policy for form completion; privacy-first by default."
+        },
+    )
+    allow_marketing_opt_in: bool = field(
+        default=False,
+        metadata={"doc": "Whether optional marketing opt-ins may be checked."},
+    )
+    allow_optional_newsletter: bool = field(
+        default=False,
+        metadata={"doc": "Whether optional newsletter opt-ins may be checked."},
+    )
+
+
+@dataclass(frozen=True)
 class BrowserDownloadIdentity:
     schema_version: str = field(
         metadata={"doc": "Browser download identity schema version."}
@@ -76,6 +97,10 @@ class BrowserDownloadIdentity:
         metadata={
             "doc": "Optional publisher-specific delivery-email and field-value overrides."
         },
+    )
+    consent_policy: BrowserDownloadConsentPolicy = field(
+        default_factory=lambda: BrowserDownloadConsentPolicy(schema_version="1.0"),
+        metadata={"doc": "Typed privacy and consent policy for form completion."},
     )
 
 

@@ -20,6 +20,11 @@ from src.services._state_service.routes import (
     get_report_download_route,
     record_report_download_route,
 )
+from src.services._state_service.mail_delivery import (
+    list_due_mail_delivery_requests,
+    mark_mail_delivery_request_attempt,
+    upsert_mail_delivery_request,
+)
 from src.services._state_service.workflow_control import (
     list_workflow_control_observations,
     write_workflow_control_observation,
@@ -34,12 +39,15 @@ __all__ = [
     "get_ingest_cursor",
     "get_publish",
     "get_report_download_route",
+    "list_due_mail_delivery_requests",
     "list_processed",
     "list_published",
     "list_workflow_control_observations",
+    "mark_mail_delivery_request_attempt",
     "record",
     "record_publish",
     "record_report_download_route",
+    "upsert_mail_delivery_request",
     "write_workflow_control_observation",
     "set_ingest_cursor",
 ]

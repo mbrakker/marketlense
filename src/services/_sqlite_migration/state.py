@@ -76,6 +76,31 @@ CREATE TABLE IF NOT EXISTS workflow_control_observations (
 );
 """
 
+_STATE_MAIL_DELIVERY_REQUESTS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS mail_delivery_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  idempotency_key TEXT NOT NULL UNIQUE,
+  source_url TEXT NOT NULL,
+  report_title TEXT NOT NULL DEFAULT '',
+  publisher_name TEXT NOT NULL DEFAULT '',
+  delivery_email TEXT NOT NULL DEFAULT '',
+  requested_after_utc TEXT NOT NULL,
+  route_family TEXT NOT NULL DEFAULT '',
+  route_history_id TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  next_attempt_after_utc TEXT NOT NULL,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  provider_cursor TEXT NOT NULL DEFAULT '',
+  seen_provider_message_ids_json TEXT NOT NULL DEFAULT '[]',
+  outcome TEXT NOT NULL DEFAULT '',
+  selected_message_id TEXT NOT NULL DEFAULT '',
+  downloaded_file_path TEXT NOT NULL DEFAULT '',
+  error_code TEXT NOT NULL DEFAULT '',
+  created_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL
+);
+"""
+
 
 def _state_db_001_create_base_tables(conn: sqlite3.Connection) -> None:
     conn.execute(_STATE_PROCESSED_TABLE_SQL)
@@ -154,6 +179,18 @@ def _state_db_006_create_workflow_control_observations(
     )
 
 
+def _state_db_007_create_mail_delivery_requests(conn: sqlite3.Connection) -> None:
+    conn.execute(_STATE_MAIL_DELIVERY_REQUESTS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_mail_delivery_requests_due "
+        "ON mail_delivery_requests(status, next_attempt_after_utc, id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_mail_delivery_requests_source "
+        "ON mail_delivery_requests(source_url, delivery_email)"
+    )
+
+
 _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="state_db_001_create_base_tables",
@@ -184,5 +221,10 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_006_create_workflow_control_observations",
         version=6,
         apply_fn=_state_db_006_create_workflow_control_observations,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_007_create_mail_delivery_requests",
+        version=7,
+        apply_fn=_state_db_007_create_mail_delivery_requests,
     ),
 )

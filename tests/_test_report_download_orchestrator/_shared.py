@@ -48,6 +48,7 @@ from src.contracts.drive import (
 from src.contracts.files import FileHashResponse
 
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
+from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings, MailboxSearchResult
 
 from src.contracts.report_store import (
     PublisherPrivateApiCandidateObservationRecordResponse,
@@ -75,6 +76,15 @@ from src.services._browser_report_download import request as request_runtime
 from src.services.report_store_service import (
     get_publisher_download_route,
     record_publisher_download_route,
+)
+from src.contracts.state import (
+    MailDeliveryRequestListDueRequest,
+    WorkflowControlObservationListRequest,
+)
+
+from src.services.state_service import (
+    list_due_mail_delivery_requests,
+    list_workflow_control_observations,
 )
 
 from src.services.config_service import upsert_browser_download_identity_fields

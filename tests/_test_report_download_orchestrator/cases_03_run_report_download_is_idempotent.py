@@ -581,6 +581,188 @@ def test_run_report_download_does_not_record_source_for_email_outcome(
     assert response.outcome == "email_required"
     assert source_record_calls == []
 
+def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    mailbox_settings = MailboxAcquisitionSettings(
+        schema_version="1.0",
+        provider="imap",
+        output_dir=str(tmp_path / "mailbox"),
+        search_window_minutes=120,
+        max_results=10,
+        poll_timeout_seconds=900.0,
+        poll_interval_seconds=60.0,
+        gmail_oauth_client_path="",
+        gmail_oauth_token_path="",
+        gmail_user_id="me",
+        imap_host="imap.example.com",
+        imap_port=993,
+        imap_user="reports@example.com",
+        imap_password="secret",
+        imap_mailbox="INBOX",
+    )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: replace(
+            _result(url="https://example.com/report", used_route_hint=False, path=None),
+            outcome="email_requested",
+            route_status="verified",
+            blocked_reason=None,
+            blocked_reason_detail=None,
+        ),
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="unused",
+        ),
+        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("email-requested flow should not persist a report source")
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        record_report_value_score=lambda req, ctx: None,
+        preflight_mailbox_search=lambda req, ctx: MailboxSearchResult(
+            schema_version="1.0",
+            provider="imap",
+            searched_at_utc="2026-07-04T11:00:00Z",
+            query="preflight",
+            messages=[],
+        ),
+        sleep_fn=lambda seconds: None,
+    )
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+            delivery_email="ops@example.com",
+            report_title="Retail Trends 2026",
+            publisher_name="Example Publisher",
+            mailbox_settings=mailbox_settings,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    due = list_due_mail_delivery_requests(
+        MailDeliveryRequestListDueRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            now_utc="2099-01-01T00:00:00Z",
+            limit=10,
+        ),
+        run_context,
+    )
+    observations = list_workflow_control_observations(
+        WorkflowControlObservationListRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            workflow="mail_acquisition",
+            publisher="Example Publisher",
+            limit=10,
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "email_requested"
+    assert len(due.requests) == 1
+    assert due.requests[0].source_url == "https://example.com/report"
+    assert due.requests[0].report_title == "Retail Trends 2026"
+    assert due.requests[0].delivery_email == "ops@example.com"
+    assert due.requests[0].status == "pending"
+    assert due.requests[0].route_family == "browser_email_form"
+    assert len(observations.observations) == 1
+    assert observations.observations[0].outcome == "deferred"
+    assert observations.observations[0].route == "browser_email_form"
+
+def test_run_report_download_preflights_mailbox_before_email_form_submission(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    mailbox_settings = MailboxAcquisitionSettings(
+        schema_version="1.0",
+        provider="imap",
+        output_dir=str(tmp_path / "mailbox"),
+        search_window_minutes=120,
+        max_results=10,
+        poll_timeout_seconds=900.0,
+        poll_interval_seconds=60.0,
+        gmail_oauth_client_path="",
+        gmail_oauth_token_path="",
+        gmail_user_id="me",
+        imap_host="",
+        imap_port=993,
+        imap_user="",
+        imap_password="",
+        imap_mailbox="INBOX",
+    )
+
+    def _preflight_mailbox(req, ctx):
+        raise AppError(
+            code="mailbox_imap_credentials_missing",
+            message="Mailbox credentials are incomplete",
+            retryable=False,
+            severity="error",
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: pytest.fail(
+            "browser should not run when mailbox preflight fails"
+        ),
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="unused",
+        ),
+        record_report_source=lambda req, ctx: pytest.fail("source should not record"),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        record_report_value_score=lambda req, ctx: None,
+        preflight_mailbox_search=_preflight_mailbox,
+        sleep_fn=lambda seconds: None,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                delivery_email="ops@example.com",
+                mailbox_settings=mailbox_settings,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "mailbox_imap_credentials_missing"
+
 def test_run_report_download_uploads_downloaded_pdf_to_publisher_drive_folder(
     tmp_path: Path,
     caplog,
@@ -682,5 +864,7 @@ __all__ = [
     "test_run_report_download_idempotency_allows_changed_artifact_for_same_url",
     "test_run_report_download_reuses_idempotent_route_record_and_identity_update",
     "test_run_report_download_does_not_record_source_for_email_outcome",
+    "test_run_report_download_enqueues_mail_delivery_request_for_email_outcome",
+    "test_run_report_download_preflights_mailbox_before_email_form_submission",
     "test_run_report_download_uploads_downloaded_pdf_to_publisher_drive_folder",
 ]

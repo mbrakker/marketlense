@@ -562,6 +562,13 @@ fields:
   label: Submit button (DOWNLOAD THE REPORT)
   value: null
   aliases: []
+delivery_emails:
+- dustin.von.richman@proton.me
+consent_policy:
+  schema_version: '1.0'
+  default_checkbox_policy: mandatory_privacy_terms_only
+  allow_marketing_opt_in: false
+  allow_optional_newsletter: false
 publisher_overrides:
 - schema_version: '1.0'
   host_pattern: centricsoftware.com

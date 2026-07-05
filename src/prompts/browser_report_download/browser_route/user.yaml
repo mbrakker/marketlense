@@ -18,6 +18,8 @@ text: |
   If a same-origin modal iframe form is visible but its controls are not indexed or fillable, open the iframe `src` or same-origin popup/form `href` directly in the current tab and continue the form there.
 
   Use the following configured identity values when a matching form field is available. Do not invent missing values.
+  Consent policy is typed configuration, not an inference: default_checkbox_policy={{ consent_policy.default_checkbox_policy }}, allow_marketing_opt_in={{ consent_policy.allow_marketing_opt_in }}, allow_optional_newsletter={{ consent_policy.allow_optional_newsletter }}.
+  Check only mandatory privacy, terms, or report-delivery agreement boxes required to submit the report request. Leave optional marketing, demo, sales-contact, and newsletter consent unchecked unless the typed policy explicitly allows that consent family and a configured identity value also says to check it.
   Treat configured checkbox-like values literally: `true`, `yes`, `checked`, and `1` mean check the matching checkbox; `false`, `no`, `unchecked`, and `0` mean leave it unchecked. Required agreement/privacy/terms/consent checkboxes with a configured true-like value must be checked before submit. Optional marketing/newsletter opt-ins must remain unchecked unless a matching value explicitly says to check them.
   {% for identity in identity_entries %}
   - {{ identity.label }}{% if identity.aliases %} (aliases: {{ identity.aliases }}){% endif %}: {{ identity.value }}

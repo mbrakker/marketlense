@@ -63,6 +63,7 @@ from ._sqlite_migration.state import (
     _STATE_INGEST_STATE_TABLE_SQL,
     _STATE_PUBLISHED_TABLE_SQL,
     _STATE_DOWNLOAD_ROUTES_TABLE_SQL,
+    _STATE_MAIL_DELIVERY_REQUESTS_TABLE_SQL,
     _STATE_WORKFLOW_CONTROL_OBSERVATIONS_TABLE_SQL,
     _state_db_001_create_base_tables,
     _state_db_002_add_processed_vector_columns,
@@ -70,6 +71,7 @@ from ._sqlite_migration.state import (
     _state_db_004_add_published_post_type,
     _state_db_005_add_report_download_final_page_url,
     _state_db_006_create_workflow_control_observations,
+    _state_db_007_create_mail_delivery_requests,
     _STATE_DB_MIGRATIONS,
 )
 from ._sqlite_migration.ui_runs import (

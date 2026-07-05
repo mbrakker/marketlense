@@ -69,6 +69,60 @@ class MailboxMessage:
     attachment_file_names: list[str] = field(
         metadata={"doc": "Attachment file names present on the message."}
     )
+    attachment_artifacts: list["MailboxAttachmentArtifact"] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Materialized PDF artifacts extracted from message attachments."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class MailboxAttachment:
+    schema_version: str = field(metadata={"doc": "Mailbox attachment schema version."})
+    file_name: str = field(metadata={"doc": "Attachment file name from the message."})
+    content_type: str = field(metadata={"doc": "Attachment content type."})
+    payload: bytes = field(metadata={"doc": "Raw attachment bytes."})
+
+
+@dataclass(frozen=True)
+class MailboxAttachmentArtifact:
+    schema_version: str = field(
+        metadata={"doc": "Mailbox attachment artifact schema version."}
+    )
+    file_name: str = field(metadata={"doc": "Materialized PDF file name."})
+    content_type: str = field(metadata={"doc": "Materialized content type."})
+    size_bytes: int = field(metadata={"doc": "Materialized file size in bytes."})
+    path: str = field(metadata={"doc": "Absolute local materialized file path."})
+    source_container_file_name: str = field(
+        metadata={"doc": "ZIP file name when the PDF was extracted from an archive."}
+    )
+
+
+@dataclass(frozen=True)
+class MailboxAttachmentMaterializeRequest:
+    schema_version: str = field(
+        metadata={"doc": "Mailbox attachment materialization request schema version."}
+    )
+    settings: MailboxAcquisitionSettings = field(
+        metadata={"doc": "Mailbox acquisition settings including output directory."}
+    )
+    provider_message_id: str = field(
+        metadata={"doc": "Provider message ID used to namespace local artifacts."}
+    )
+    attachments: list[MailboxAttachment] = field(
+        metadata={"doc": "Raw message attachments to materialize."}
+    )
+
+
+@dataclass(frozen=True)
+class MailboxAttachmentMaterializeResponse:
+    schema_version: str = field(
+        metadata={"doc": "Mailbox attachment materialization response schema version."}
+    )
+    artifacts: list[MailboxAttachmentArtifact] = field(
+        metadata={"doc": "Materialized PDF artifacts."}
+    )
 
 
 @dataclass(frozen=True)
@@ -93,6 +147,10 @@ class MailboxSearchRequest:
     )
     query_terms: list[str] = field(
         metadata={"doc": "Sanitized report/publisher terms used in mailbox search."}
+    )
+    seen_provider_message_ids: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Provider message IDs already inspected for this request."},
     )
 
 
@@ -152,6 +210,10 @@ class MailReportAcquisitionRequest:
             "doc": "Optional UTC request watermark; messages received before this instant are ignored."
         },
     )
+    seen_provider_message_ids: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Provider message IDs already inspected for this request."},
+    )
 
 
 @dataclass(frozen=True)
@@ -177,4 +239,14 @@ class MailReportAcquisitionResult:
     )
     report_download_result: Optional[ReportDownloadOrchestratorResult] = field(
         metadata={"doc": "Follow-up report-download result for the selected URL."}
+    )
+    acquisition_result_taxonomy: str = field(
+        default="",
+        metadata={
+            "doc": "Fine-grained acquisition taxonomy such as mailbox_attachment_pdf or mailbox_body_pdf_link."
+        },
+    )
+    seen_provider_message_ids: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Provider message IDs inspected during this acquisition."},
     )

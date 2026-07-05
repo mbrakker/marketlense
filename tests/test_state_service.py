@@ -12,6 +12,9 @@ from src.contracts.state import (
     StateGetRequest,
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
+    MailDeliveryRequestListDueRequest,
+    MailDeliveryRequestMarkAttemptRequest,
+    MailDeliveryRequestUpsertRequest,
     StateProcessedListRequest,
     StatePublishedListRequest,
     StatePublishRecordRequest,
@@ -29,12 +32,15 @@ from src.services.state_service import (
     get,
     get_ingest_cursor,
     get_report_download_route,
+    list_due_mail_delivery_requests,
     list_processed,
     list_published,
     record,
     record_publish,
     record_report_download_route,
     list_workflow_control_observations,
+    mark_mail_delivery_request_attempt,
+    upsert_mail_delivery_request,
     write_workflow_control_observation,
     set_ingest_cursor,
 )
@@ -106,8 +112,8 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
-    assert schema_version == (6,)
-    assert ledger_count == 6
+    assert schema_version == (7,)
+    assert ledger_count == 7
 
 
 def test_record_and_get_with_defaults(tmp_path: Path) -> None:
@@ -521,3 +527,74 @@ def test_workflow_control_observation_roundtrip_and_ttl(tmp_path: Path) -> None:
 
     assert [item.run_id for item in response.observations] == ["run-fresh"]
     assert response.observations[0].resource_pressure == {"model": 0.0}
+
+
+def test_mail_delivery_request_roundtrip_is_idempotent_and_tracks_incremental_state(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "state.sqlite"
+    upsert = MailDeliveryRequestUpsertRequest(
+        schema_version="1.0",
+        state_db=str(db_path),
+        idempotency_key="mail:https://example.com/report:ops@example.com",
+        source_url="https://example.com/report",
+        report_title="Retail Trends 2026",
+        publisher_name="Example Publisher",
+        delivery_email="ops@example.com",
+        requested_after_utc="2026-07-04T11:08:00Z",
+        route_family="browser_email_form",
+        route_history_id="history-1",
+    )
+
+    first = upsert_mail_delivery_request(upsert, _ctx())
+    second = upsert_mail_delivery_request(upsert, _ctx())
+
+    assert first.request.request_id == second.request.request_id
+    assert first.created is True
+    assert second.created is False
+
+    due = list_due_mail_delivery_requests(
+        MailDeliveryRequestListDueRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            now_utc="2026-07-04T11:09:00Z",
+            limit=10,
+        ),
+        _ctx(),
+    )
+    assert [item.idempotency_key for item in due.requests] == [
+        "mail:https://example.com/report:ops@example.com"
+    ]
+
+    updated = mark_mail_delivery_request_attempt(
+        MailDeliveryRequestMarkAttemptRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            request_id=first.request.request_id,
+            status="pending",
+            next_attempt_after_utc="2026-07-04T11:12:00Z",
+            provider_cursor="imap:105",
+            seen_provider_message_ids=["100", "101"],
+            outcome="not_arrived_yet",
+            selected_message_id="",
+            downloaded_file_path="",
+            error_code="mail_report_not_arrived_yet",
+        ),
+        _ctx(),
+    )
+
+    assert updated.request.attempt_count == 1
+    assert updated.request.provider_cursor == "imap:105"
+    assert updated.request.seen_provider_message_ids == ["100", "101"]
+    assert (
+        list_due_mail_delivery_requests(
+            MailDeliveryRequestListDueRequest(
+                schema_version="1.0",
+                state_db=str(db_path),
+                now_utc="2026-07-04T11:10:00Z",
+                limit=10,
+            ),
+            _ctx(),
+        ).requests
+        == []
+    )

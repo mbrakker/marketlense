@@ -50,6 +50,13 @@ from src.contracts.report_store import (
     ReportValueScoreRequest,
     ReportValueScoreResponse,
 )
+from src.contracts.state import (
+    MailDeliveryRequestUpsertRequest,
+    MailDeliveryRequestUpsertResponse,
+    WorkflowControlObservationWriteRequest,
+    WorkflowControlObservationWriteResponse,
+)
+from src.contracts.mailbox_acquisition import MailboxSearchRequest, MailboxSearchResult
 from src.contracts.run_context import RunContext
 from src.generators.report_value_generator import score_report_value
 from src.services.browser_report_download_service import (
@@ -76,6 +83,11 @@ from src.services.report_store_service import (
     record_report_value_score,
     update_publisher_google_folder,
 )
+from src.services.state_service import (
+    upsert_mail_delivery_request,
+    write_workflow_control_observation,
+)
+from src.services.mailbox_acquisition_service import preflight_mailbox_search
 
 
 @dataclass(frozen=True)
@@ -157,6 +169,18 @@ class ReportDownloadDependencies:
         [PublisherGoogleFolderUpdateRequest, RunContext],
         PublisherGoogleFolderUpdateResponse,
     ] = update_publisher_google_folder
+    upsert_mail_delivery_request: Callable[
+        [MailDeliveryRequestUpsertRequest, RunContext],
+        MailDeliveryRequestUpsertResponse,
+    ] = upsert_mail_delivery_request
+    write_workflow_control_observation: Callable[
+        [WorkflowControlObservationWriteRequest, RunContext],
+        WorkflowControlObservationWriteResponse,
+    ] = write_workflow_control_observation
+    preflight_mailbox_search: Callable[
+        [MailboxSearchRequest, RunContext],
+        MailboxSearchResult,
+    ] = preflight_mailbox_search
 
     @classmethod
     def default(cls) -> "ReportDownloadDependencies":

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from io import BytesIO
+from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 
@@ -12,8 +14,11 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorResult,
 )
 from src.contracts.mailbox_acquisition import (
+    MailboxAttachment,
+    MailboxAttachmentMaterializeRequest,
     MailReportAcquisitionRequest,
     MailboxAcquisitionSettings,
+    MailboxAttachmentArtifact,
     MailboxMessage,
     MailboxSearchResult,
 )
@@ -21,6 +26,7 @@ from src.orchestrators.mail_report_acquisition_orchestrator import (
     MailReportAcquisitionDependencies,
     run_mail_report_acquisition,
 )
+from src.services.mailbox_acquisition_service import materialize_mailbox_attachments
 from src.utils.errors import AppError
 
 
@@ -88,6 +94,35 @@ def _message_received(*, provider_message_id: str, received_at_utc: str, links):
         html_body="",
         links=list(links),
         attachment_file_names=[],
+    )
+
+
+def _message_with_attachment_artifact(
+    *,
+    provider_message_id: str,
+    received_at_utc: str,
+    attachment_path: str,
+):
+    return MailboxMessage(
+        schema_version="1.0",
+        provider_message_id=provider_message_id,
+        subject="Your Retail Trends 2026 report download",
+        sender="reports@example.com",
+        received_at_utc=received_at_utc,
+        text_body="Attached is your requested Retail Trends 2026 report.",
+        html_body="",
+        links=[],
+        attachment_file_names=["retail-trends-2026.pdf"],
+        attachment_artifacts=[
+            MailboxAttachmentArtifact(
+                schema_version="1.0",
+                file_name="retail-trends-2026.pdf",
+                content_type="application/pdf",
+                size_bytes=27,
+                path=attachment_path,
+                source_container_file_name="",
+            )
+        ],
     )
 
 
@@ -348,3 +383,77 @@ def test_mail_report_acquisition_ignores_matching_messages_before_request_waterm
     assert result.selected_message_id == "new-msg"
     assert result.selected_report_url == "https://reports.example.com/new-retail-trends-2026.pdf"
     assert len(downloads) == 1
+
+
+def test_mail_report_acquisition_acquires_matching_pdf_attachment_without_link_followup(
+    tmp_path, run_context
+):
+    attachment_path = tmp_path / "retail-trends-2026.pdf"
+    attachment_path.write_bytes(b"%PDF-1.7 attachment report")
+    deps = MailReportAcquisitionDependencies(
+        search_mailbox_messages=lambda req, ctx: MailboxSearchResult(
+            schema_version="1.0",
+            provider="imap",
+            searched_at_utc="2026-07-04T11:12:00Z",
+            query="",
+            messages=[
+                _message_with_attachment_artifact(
+                    provider_message_id="msg-attachment",
+                    received_at_utc="2026-07-04T11:09:00Z",
+                    attachment_path=str(attachment_path),
+                )
+            ],
+        ),
+        run_report_download=lambda req, ctx: pytest.fail("link download should not run"),
+        sleep_fn=lambda seconds: None,
+    )
+
+    result = run_mail_report_acquisition(
+        MailReportAcquisitionRequest(
+            schema_version="1.0",
+            source_url="https://example.com/report-form",
+            report_title="Retail Trends 2026",
+            publisher_name="Example Reports",
+            delivery_email="reports@example.com",
+            reports_db=str(tmp_path / "reports.sqlite"),
+            mailbox_settings=_mailbox_settings(tmp_path),
+            browser_download_settings=_browser_settings(tmp_path),
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert result.outcome == "downloaded_attachment"
+    assert result.selected_message_id == "msg-attachment"
+    assert result.downloaded_file_path == str(attachment_path)
+    assert result.acquisition_result_taxonomy == "mailbox_attachment_pdf"
+
+
+def test_mailbox_service_materializes_attached_zip_pdfs(tmp_path, run_context):
+    zip_buffer = BytesIO()
+    with ZipFile(zip_buffer, "w") as archive:
+        archive.writestr("nested/retail-trends-2026.pdf", b"%PDF-1.7 zipped report")
+        archive.writestr("nested/readme.txt", b"not a report")
+
+    response = materialize_mailbox_attachments(
+        MailboxAttachmentMaterializeRequest(
+            schema_version="1.0",
+            settings=_mailbox_settings(tmp_path),
+            provider_message_id="zip-msg",
+            attachments=[
+                MailboxAttachment(
+                    schema_version="1.0",
+                    file_name="delivery.zip",
+                    content_type="application/zip",
+                    payload=zip_buffer.getvalue(),
+                )
+            ],
+        ),
+        run_context,
+    )
+
+    assert len(response.artifacts) == 1
+    assert response.artifacts[0].file_name == "retail-trends-2026.pdf"
+    assert response.artifacts[0].source_container_file_name == "delivery.zip"
+    assert response.artifacts[0].path.endswith("retail-trends-2026.pdf")
+    assert Path(response.artifacts[0].path).read_bytes() == b"%PDF-1.7 zipped report"

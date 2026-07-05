@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import base64
+import io
 import imaplib
 import logging
 import re
+import zipfile
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from email import policy
 from email.message import EmailMessage, Message
 from email.parser import BytesParser
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import unquote
 
 from bs4 import BeautifulSoup
@@ -19,6 +22,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from src.contracts.mailbox_acquisition import (
+    MailboxAttachment,
+    MailboxAttachmentArtifact,
+    MailboxAttachmentMaterializeRequest,
+    MailboxAttachmentMaterializeResponse,
     MailboxAcquisitionSettings,
     MailboxMessage,
     MailboxSearchRequest,
@@ -33,6 +40,7 @@ logger = logging.getLogger("market_lense.mailbox_acquisition_service")
 
 _BODY_CHAR_LIMIT = 20000
 _URL_RX = re.compile(r"https?://[^\s<>\"')]+", re.IGNORECASE)
+_SAFE_FILENAME_RX = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 def search_mailbox_messages(
@@ -117,6 +125,80 @@ def search_mailbox_messages(
     return result
 
 
+def materialize_mailbox_attachments(
+    request: MailboxAttachmentMaterializeRequest,
+    ctx: RunContext,
+) -> MailboxAttachmentMaterializeResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="mailbox_attachment_materialization_start",
+            module=logger.name,
+            fields={
+                "provider_message_id": request.provider_message_id,
+                "attachment_count": len(request.attachments),
+            },
+        )
+    )
+    artifacts: list[MailboxAttachmentArtifact] = []
+    for attachment in request.attachments:
+        artifacts.extend(_materialize_attachment(request, attachment))
+    response = MailboxAttachmentMaterializeResponse(
+        schema_version="1.0",
+        artifacts=artifacts,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="mailbox_attachment_materialization_complete",
+            module=logger.name,
+            fields={
+                "provider_message_id": request.provider_message_id,
+                "artifact_count": len(response.artifacts),
+            },
+        )
+    )
+    return response
+
+
+def preflight_mailbox_search(
+    request: MailboxSearchRequest,
+    ctx: RunContext,
+) -> MailboxSearchResult:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="mailbox_search_preflight_start",
+            module=logger.name,
+            fields={
+                "provider": request.settings.provider,
+                "has_delivery_email": bool(request.delivery_email),
+            },
+        )
+    )
+    result = search_mailbox_messages(
+        replace(
+            request,
+            settings=replace(request.settings, max_results=1),
+            seen_provider_message_ids=[],
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="mailbox_search_preflight_complete",
+            module=logger.name,
+            fields={"provider": result.provider, "query": _sanitize_query_for_log(result.query)},
+        )
+    )
+    return result
+
+
 def mailbox_provider_order(settings: MailboxAcquisitionSettings) -> list[str]:
     provider = str(settings.provider or "").strip().lower()
     has_imap = bool(settings.imap_host and settings.imap_user and settings.imap_password)
@@ -171,9 +253,10 @@ def _search_gmail_messages(
         )
         messages_payload = response.get("messages", []) or []
         messages: list[MailboxMessage] = []
+        seen_ids = _seen_message_ids(request)
         for item in messages_payload[: settings.max_results]:
             message_id = str(item.get("id") or "").strip()
-            if not message_id:
+            if not message_id or message_id.casefold() in seen_ids:
                 continue
             full = (
                 service.users()
@@ -185,7 +268,7 @@ def _search_gmail_messages(
                 )
                 .execute()
             )
-            messages.append(_adapt_gmail_message(full))
+            messages.append(_adapt_gmail_message(full, service, settings, ctx))
     except Exception as exc:  # pragma: no cover - provider envelope
         raise AppError(
             code="mailbox_gmail_search_failed",
@@ -231,7 +314,12 @@ def _search_imap_messages(
             if status != "OK":
                 raise RuntimeError(f"IMAP search returned {status}")
             ids = (data[0] or b"").split()
-            selected_ids = list(reversed(ids))[: settings.max_results]
+            seen_ids = _seen_message_ids(request)
+            selected_ids = [
+                item
+                for item in list(reversed(ids))
+                if item.decode("ascii", "ignore").casefold() not in seen_ids
+            ][: settings.max_results]
             messages: list[MailboxMessage] = []
             for raw_id in selected_ids:
                 fetch_status, fetch_data = conn.fetch(raw_id, "(RFC822)")
@@ -245,6 +333,8 @@ def _search_imap_messages(
                         _adapt_email_message(
                             parsed,
                             provider_message_id=raw_id.decode("ascii", "ignore"),
+                            settings=settings,
+                            ctx=ctx,
                         )
                     )
                     break
@@ -325,15 +415,32 @@ def _sanitize_query_for_log(query: str) -> str:
     )
 
 
-def _adapt_gmail_message(payload: dict[str, Any]) -> MailboxMessage:
+def _adapt_gmail_message(
+    payload: dict[str, Any],
+    service,
+    settings: MailboxAcquisitionSettings,
+    ctx: RunContext,
+) -> MailboxMessage:
     message_id = str(payload.get("id") or "").strip()
     headers = _gmail_headers(payload.get("payload", {}).get("headers", []) or [])
-    text_body, html_body, attachment_names = _gmail_message_parts(
-        payload.get("payload", {}) or {}
+    text_body, html_body, attachments = _gmail_message_parts(
+        payload.get("payload", {}) or {},
+        service=service,
+        message_id=message_id,
+        user_id=settings.gmail_user_id or "me",
     )
     internal_ms = int(str(payload.get("internalDate") or "0") or "0")
     received = datetime.fromtimestamp(internal_ms / 1000, tz=timezone.utc)
     links = _extract_links(text_body=text_body, html_body=html_body)
+    artifacts = materialize_mailbox_attachments(
+        MailboxAttachmentMaterializeRequest(
+            schema_version="1.0",
+            settings=settings,
+            provider_message_id=message_id,
+            attachments=attachments,
+        ),
+        ctx,
+    ).artifacts
     return MailboxMessage(
         schema_version="1.0",
         provider_message_id=message_id,
@@ -345,7 +452,8 @@ def _adapt_gmail_message(payload: dict[str, Any]) -> MailboxMessage:
         text_body=text_body[:_BODY_CHAR_LIMIT],
         html_body=html_body[:_BODY_CHAR_LIMIT],
         links=links,
-        attachment_file_names=attachment_names,
+        attachment_file_names=[attachment.file_name for attachment in attachments],
+        attachment_artifacts=artifacts,
     )
 
 
@@ -359,19 +467,54 @@ def _gmail_headers(headers: list[dict[str, Any]]) -> dict[str, str]:
     return result
 
 
-def _gmail_message_parts(payload: dict[str, Any]) -> tuple[str, str, list[str]]:
+def _gmail_message_parts(
+    payload: dict[str, Any],
+    *,
+    service,
+    message_id: str,
+    user_id: str,
+) -> tuple[str, str, list[MailboxAttachment]]:
     text_chunks: list[str] = []
     html_chunks: list[str] = []
-    attachment_names: list[str] = []
+    attachments: list[MailboxAttachment] = []
     stack = [payload]
     while stack:
         part = stack.pop()
         stack.extend(part.get("parts", []) or [])
         filename = str(part.get("filename") or "").strip()
-        if filename:
-            attachment_names.append(filename)
         mime_type = str(part.get("mimeType") or "").lower()
-        data = ((part.get("body") or {}).get("data") or "").strip()
+        body_payload = part.get("body") or {}
+        data = (body_payload.get("data") or "").strip()
+        attachment_id = str(body_payload.get("attachmentId") or "").strip()
+        if filename and attachment_id:
+            raw_payload = (
+                service.users()
+                .messages()
+                .attachments()
+                .get(userId=user_id, messageId=message_id, id=attachment_id)
+                .execute()
+            )
+            attachments.append(
+                MailboxAttachment(
+                    schema_version="1.0",
+                    file_name=filename,
+                    content_type=mime_type,
+                    payload=_decode_gmail_body_bytes(
+                        str(raw_payload.get("data") or "")
+                    ),
+                )
+            )
+            continue
+        if filename and data:
+            attachments.append(
+                MailboxAttachment(
+                    schema_version="1.0",
+                    file_name=filename,
+                    content_type=mime_type,
+                    payload=_decode_gmail_body_bytes(data),
+                )
+            )
+            continue
         if not data:
             continue
         decoded = _decode_gmail_body(data)
@@ -382,7 +525,7 @@ def _gmail_message_parts(payload: dict[str, Any]) -> tuple[str, str, list[str]]:
     return (
         "\n".join(text_chunks)[:_BODY_CHAR_LIMIT],
         "\n".join(html_chunks)[:_BODY_CHAR_LIMIT],
-        _dedupe_strings(attachment_names),
+        attachments,
     )
 
 
@@ -396,31 +539,54 @@ def _decode_gmail_body(data: str) -> str:
         return ""
 
 
+def _decode_gmail_body_bytes(data: str) -> bytes:
+    padded = data + ("=" * (-len(data) % 4))
+    try:
+        return base64.urlsafe_b64decode(padded.encode("ascii"))
+    except Exception:
+        return b""
+
+
 def _adapt_email_message(
     message: Message | EmailMessage,
     *,
     provider_message_id: str,
+    settings: MailboxAcquisitionSettings,
+    ctx: RunContext,
 ) -> MailboxMessage:
     text_chunks: list[str] = []
     html_chunks: list[str] = []
-    attachment_names: list[str] = []
+    attachments: list[MailboxAttachment] = []
     if message.is_multipart():
-        parts = message.walk()
+        parts: list[Any] = list(message.walk())
     else:
-        parts = [message]
+        parts = [cast(Any, message)]
     for part in parts:
         content_disposition = str(part.get_content_disposition() or "").lower()
         filename = str(part.get_filename() or "").strip()
         if filename:
-            attachment_names.append(filename)
+            raw_payload = part.get_payload(decode=True) or b""
+            payload = raw_payload if isinstance(raw_payload, bytes) else b""
+            attachments.append(
+                MailboxAttachment(
+                    schema_version="1.0",
+                    file_name=filename,
+                    content_type=str(part.get_content_type() or ""),
+                    payload=payload,
+                )
+            )
         if content_disposition == "attachment":
             continue
         content_type = str(part.get_content_type() or "").lower()
         try:
             body = part.get_content()
         except Exception:
-            payload = part.get_payload(decode=True) or b""
-            body = payload.decode("utf-8", errors="replace")
+            raw_body = part.get_payload(decode=True) or b""
+            body = (
+                raw_body.decode("utf-8", errors="replace")
+                if isinstance(raw_body, bytes)
+                else str(raw_body)
+            )
         if content_type == "text/plain":
             text_chunks.append(str(body))
         elif content_type == "text/html":
@@ -428,6 +594,15 @@ def _adapt_email_message(
     received_at = _message_date_to_utc(str(message.get("Date") or ""))
     text_body = "\n".join(text_chunks)[:_BODY_CHAR_LIMIT]
     html_body = "\n".join(html_chunks)[:_BODY_CHAR_LIMIT]
+    artifacts = materialize_mailbox_attachments(
+        MailboxAttachmentMaterializeRequest(
+            schema_version="1.0",
+            settings=settings,
+            provider_message_id=provider_message_id,
+            attachments=attachments,
+        ),
+        ctx,
+    ).artifacts
     return MailboxMessage(
         schema_version="1.0",
         provider_message_id=provider_message_id,
@@ -437,8 +612,105 @@ def _adapt_email_message(
         text_body=text_body,
         html_body=html_body,
         links=_extract_links(text_body=text_body, html_body=html_body),
-        attachment_file_names=_dedupe_strings(attachment_names),
+        attachment_file_names=_dedupe_strings(
+            [attachment.file_name for attachment in attachments]
+        ),
+        attachment_artifacts=artifacts,
     )
+
+
+def _materialize_attachment(
+    request: MailboxAttachmentMaterializeRequest,
+    attachment: MailboxAttachment,
+) -> list[MailboxAttachmentArtifact]:
+    file_name = _safe_file_name(attachment.file_name)
+    lower_name = file_name.casefold()
+    content_type = str(attachment.content_type or "").casefold()
+    if lower_name.endswith(".pdf") or content_type == "application/pdf":
+        path = _artifact_path(
+            settings=request.settings,
+            provider_message_id=request.provider_message_id,
+            file_name=file_name if lower_name.endswith(".pdf") else f"{file_name}.pdf",
+        )
+        path.write_bytes(attachment.payload)
+        return [
+            MailboxAttachmentArtifact(
+                schema_version="1.0",
+                file_name=path.name,
+                content_type="application/pdf",
+                size_bytes=path.stat().st_size,
+                path=str(path),
+                source_container_file_name="",
+            )
+        ]
+    if lower_name.endswith(".zip") or "zip" in content_type:
+        return _materialize_zip_pdfs(request, attachment, file_name)
+    return []
+
+
+def _materialize_zip_pdfs(
+    request: MailboxAttachmentMaterializeRequest,
+    attachment: MailboxAttachment,
+    container_file_name: str,
+) -> list[MailboxAttachmentArtifact]:
+    artifacts: list[MailboxAttachmentArtifact] = []
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(attachment.payload))
+    except zipfile.BadZipFile:
+        return []
+    with archive:
+        for member in archive.infolist():
+            if member.is_dir() or not member.filename.casefold().endswith(".pdf"):
+                continue
+            payload = archive.read(member)
+            file_name = _safe_file_name(Path(member.filename).name)
+            path = _artifact_path(
+                settings=request.settings,
+                provider_message_id=request.provider_message_id,
+                file_name=file_name,
+            )
+            path.write_bytes(payload)
+            artifacts.append(
+                MailboxAttachmentArtifact(
+                    schema_version="1.0",
+                    file_name=path.name,
+                    content_type="application/pdf",
+                    size_bytes=path.stat().st_size,
+                    path=str(path),
+                    source_container_file_name=container_file_name,
+                )
+            )
+    return artifacts
+
+
+def _artifact_path(
+    *,
+    settings: MailboxAcquisitionSettings,
+    provider_message_id: str,
+    file_name: str,
+) -> Path:
+    root = Path(settings.output_dir).expanduser().resolve()
+    message_dir = (root / _safe_file_name(provider_message_id or "message")).resolve()
+    if root != message_dir and root not in message_dir.parents:
+        raise AppError(
+            code="mailbox_attachment_output_dir_invalid",
+            message="Mailbox attachment output path escaped the configured root",
+            retryable=False,
+        )
+    message_dir.mkdir(parents=True, exist_ok=True)
+    path = (message_dir / _safe_file_name(file_name)).resolve()
+    if root != path and root not in path.parents:
+        raise AppError(
+            code="mailbox_attachment_output_dir_invalid",
+            message="Mailbox attachment output path escaped the configured root",
+            retryable=False,
+        )
+    return path
+
+
+def _safe_file_name(value: str) -> str:
+    token = _SAFE_FILENAME_RX.sub("_", str(value or "").strip()).strip("._")
+    return token or "attachment"
 
 
 def _message_date_to_utc(value: str) -> str:
@@ -487,4 +759,17 @@ def _dedupe_strings(values: list[str]) -> list[str]:
     return deduped
 
 
-__all__ = ["mailbox_provider_order", "search_mailbox_messages"]
+def _seen_message_ids(request: MailboxSearchRequest) -> set[str]:
+    return {
+        str(item or "").strip().casefold()
+        for item in request.seen_provider_message_ids
+        if str(item or "").strip()
+    }
+
+
+__all__ = [
+    "mailbox_provider_order",
+    "materialize_mailbox_attachments",
+    "preflight_mailbox_search",
+    "search_mailbox_messages",
+]

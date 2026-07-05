@@ -94,6 +94,7 @@ def run_mail_report_acquisition(
                 report_title=request.report_title,
                 publisher_name=request.publisher_name,
                 query_terms=query_terms,
+                seen_provider_message_ids=request.seen_provider_message_ids,
             ),
             ctx,
         )
@@ -102,7 +103,25 @@ def run_mail_report_acquisition(
             requested_after=request_watermark,
             ctx=ctx,
         )
+        messages = _filter_seen_messages(
+            messages=messages,
+            seen_provider_message_ids=request.seen_provider_message_ids,
+            ctx=ctx,
+        )
         last_message_count = len(messages)
+        seen_message_ids = _merge_seen_message_ids(
+            request.seen_provider_message_ids,
+            [message.provider_message_id for message in messages],
+        )
+        attachment_result = _acquire_matching_attachment(
+            request=request,
+            messages=messages,
+            poll_count=poll_count,
+            seen_message_ids=seen_message_ids,
+            ctx=ctx,
+        )
+        if attachment_result is not None:
+            return attachment_result
         candidates = select_mail_report_link_candidates(
             messages=messages,
             source_url=request.source_url,
@@ -163,6 +182,10 @@ def run_mail_report_acquisition(
                     downloaded_file_path=download_result.downloaded_file_path
                     or download_result.onsite_capture_path,
                     report_download_result=download_result,
+                    acquisition_result_taxonomy=_taxonomy_for_download_result(
+                        download_result
+                    ),
+                    seen_provider_message_ids=seen_message_ids,
                 )
                 logger.info(
                     log_event(
@@ -246,6 +269,142 @@ def _filter_messages_after_watermark(
         )
     )
     return selected
+
+
+def _filter_seen_messages(
+    *,
+    messages: list[MailboxMessage],
+    seen_provider_message_ids: list[str],
+    ctx: RunContext,
+) -> list[MailboxMessage]:
+    seen = {
+        str(item or "").strip().casefold()
+        for item in seen_provider_message_ids
+        if str(item or "").strip()
+    }
+    if not seen:
+        return messages
+    selected = [
+        message
+        for message in messages
+        if message.provider_message_id.casefold() not in seen
+    ]
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="mail_report_acquisition_seen_filter_applied",
+            module=logger.name,
+            fields={
+                "input_message_count": len(messages),
+                "selected_message_count": len(selected),
+                "skipped_message_count": len(messages) - len(selected),
+            },
+        )
+    )
+    return selected
+
+
+def _acquire_matching_attachment(
+    *,
+    request: MailReportAcquisitionRequest,
+    messages: list[MailboxMessage],
+    poll_count: int,
+    seen_message_ids: list[str],
+    ctx: RunContext,
+) -> MailReportAcquisitionResult | None:
+    intent_terms = [
+        token
+        for token in [
+            request.publisher_name,
+            request.report_title,
+        ]
+        if len(token.strip()) >= 4
+    ]
+    intent_markers = {
+        token.casefold()
+        for token in build_mailbox_query_terms(
+            publisher_name=request.publisher_name,
+            report_title=request.report_title,
+        )
+        if len(token.strip()) >= 4
+    }
+    for message in messages:
+        if not message.attachment_artifacts:
+            continue
+        message_text = " ".join([message.subject, message.text_body]).casefold()
+        if intent_terms and not any(
+            token.casefold() in message_text for token in intent_terms
+        ):
+            continue
+        if intent_markers and not any(
+            marker in message_text for marker in intent_markers
+        ):
+            continue
+        for artifact in message.attachment_artifacts:
+            if not artifact.path or not artifact.file_name.casefold().endswith(".pdf"):
+                continue
+            response = MailReportAcquisitionResult(
+                schema_version="1.0",
+                source_url=request.source_url,
+                outcome="downloaded_attachment",
+                mailbox_poll_count=poll_count,
+                selected_report_url=None,
+                selected_message_id=message.provider_message_id,
+                downloaded_file_path=artifact.path,
+                report_download_result=None,
+                acquisition_result_taxonomy=(
+                    "mailbox_attachment_zip_pdf"
+                    if artifact.source_container_file_name
+                    else "mailbox_attachment_pdf"
+                ),
+                seen_provider_message_ids=seen_message_ids,
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="mail_report_acquisition_attachment_complete",
+                    module=logger.name,
+                    fields={
+                        "source_url": response.source_url,
+                        "outcome": response.outcome,
+                        "taxonomy": response.acquisition_result_taxonomy,
+                        "selected_message_id": response.selected_message_id or "",
+                        "downloaded_file_path": response.downloaded_file_path or "",
+                    },
+                )
+            )
+            return response
+    return None
+
+
+def _merge_seen_message_ids(
+    existing: list[str],
+    observed: list[str],
+) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for value in [*existing, *observed]:
+        token = str(value or "").strip()
+        marker = token.casefold()
+        if not token or marker in seen:
+            continue
+        seen.add(marker)
+        merged.append(token)
+    return merged
+
+
+def _taxonomy_for_download_result(
+    result: ReportDownloadOrchestratorResult,
+) -> str:
+    if result.outcome == "captured":
+        return "mailbox_inline_html_report"
+    if result.route_family in {"direct_pdf_probe", "http_pdf_probe"}:
+        return "mailbox_body_pdf_link"
+    if "cloud" in result.route_family:
+        return "mailbox_cloud_link"
+    return "mailbox_download_link"
 
 
 def _parse_requested_after_utc(value: str | None) -> datetime | None:

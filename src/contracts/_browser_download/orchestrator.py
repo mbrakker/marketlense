@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 
+if TYPE_CHECKING:
+    from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
+
 from .identity import BrowserDownloadSettings
-from .planning import PublisherDownloadRouteMemory
 from .runtime import BrowserDownloadConfirmationEvidence, BrowserDownloadRouteStep, DownloadTerminalEvidence, ReportDownloadDriveUpload
 
 @dataclass(frozen=True)
@@ -60,6 +62,20 @@ class ReportDownloadOrchestratorRequest:
         default=None,
         metadata={
             "doc": "Optional publisher Google Drive folder URL or folder ID used for acquisition archival."
+        },
+    )
+    report_title: str = field(
+        default="",
+        metadata={"doc": "Optional report title for deferred mail acquisition."},
+    )
+    publisher_name: str = field(
+        default="",
+        metadata={"doc": "Optional publisher name for deferred mail acquisition."},
+    )
+    mailbox_settings: Optional["MailboxAcquisitionSettings"] = field(
+        default=None,
+        metadata={
+            "doc": "Optional mailbox settings enabling autonomous deferred mail acquisition."
         },
     )
 
