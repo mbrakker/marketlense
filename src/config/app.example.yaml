@@ -4,10 +4,10 @@ schema_version: "1.0"
 # referenced by MARKET_LENSE_CONFIG_PATH. Keep secrets in environment variables.
 
 ingest:
-  google_sa_path: "./sa.json"
+  google_sa_path: ""
   gdrive_folder_id: "replace-with-drive-folder-id"
   drive:
-    auth_mode: "service_account"
+    auth_mode: "oauth_user"
     oauth_client_path: "./google_oauth_client.json"
     oauth_token_path: "./google_oauth_token.json"
   candidate_page_gate:

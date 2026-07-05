@@ -16,7 +16,7 @@ ingest:
   google_sa_path: ""
   gdrive_folder_id: ""
   drive:
-    auth_mode: "service_account"
+    auth_mode: "oauth_user"
     oauth_client_path: ""
     oauth_token_path: ""
     supports_all_drives: true

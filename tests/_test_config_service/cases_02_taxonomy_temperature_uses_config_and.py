@@ -597,7 +597,15 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
 
             with patch("src.services.config_service.load_dotenv", return_value=False):
-                with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+                with patch.dict(
+                    os.environ,
+                    {
+                        "OPENROUTER_API_KEY": "key",
+                        "GOOGLE_OAUTH_CLIENT_JSON": "oauth-client.json",
+                        "GOOGLE_OAUTH_TOKEN_JSON": "oauth-token.json",
+                    },
+                    clear=True,
+                ):
                     settings = load_publisher_inventory_settings(
                         ConfigLoadRequest(schema_version="1.0", path=cfg_path),
                         RunContext(

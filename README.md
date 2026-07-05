@@ -1770,7 +1770,7 @@ For Gmail OAuth, set `MAILBOX_PROVIDER=gmail` and configure `gmail_oauth_client_
 
 ### Drive Auth Config
 
-Drive access is configured under `ingest.drive` in `src/config/app.yaml`.
+Drive access is configured under `ingest.drive` in `src/config/app.yaml`. The checked-in local config uses `oauth_user` so browser-download Drive archival writes through a real user quota instead of a service-account quota.
 
 Supported keys:
 
