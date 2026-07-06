@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 
 import typer
 from rich.table import Table
@@ -187,6 +187,14 @@ def poll_mail_report(
         None,
         help="Optional UTC request watermark; older matching emails are ignored",
     ),
+    poll_timeout_seconds: float = typer.Option(
+        None,
+        help="Optional per-run mailbox polling timeout override in seconds",
+    ),
+    poll_interval_seconds: float = typer.Option(
+        None,
+        help="Optional per-run mailbox polling interval override in seconds",
+    ),
 ):
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_poll_mail_report")
@@ -199,6 +207,20 @@ def poll_mail_report(
         ConfigLoadRequest(schema_version="1.0", path=""),
         ctx,
     )
+    if poll_timeout_seconds is not None or poll_interval_seconds is not None:
+        mailbox_settings = replace(
+            mailbox_settings,
+            poll_timeout_seconds=(
+                float(poll_timeout_seconds)
+                if poll_timeout_seconds is not None
+                else mailbox_settings.poll_timeout_seconds
+            ),
+            poll_interval_seconds=(
+                float(poll_interval_seconds)
+                if poll_interval_seconds is not None
+                else mailbox_settings.poll_interval_seconds
+            ),
+        )
     result = run_mail_report_acquisition(
         MailReportAcquisitionRequest(
             schema_version="1.0",

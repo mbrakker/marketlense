@@ -221,6 +221,39 @@ from src.services._browser_report_download._browser_runtime.session_lifecycle im
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
 
+def _mark_lookup_submission_assisted_raw_response(raw_model_response: str) -> str:
+    payload = _parse_raw_model_response(raw_model_response)
+    if not payload:
+        return raw_model_response
+    payload["route_kind"] = str(payload.get("route_kind") or "email_delivery")
+    payload["route_family"] = str(payload.get("route_family") or "browser_email_form")
+    payload["email_submission_completed"] = True
+    payload["blocked_reason"] = None
+    payload["blocked_reason_detail"] = None
+    payload["route_summary"] = (
+        str(payload.get("route_summary") or "").strip()
+        or "Recovered a required lookup field and submitted the report request form."
+    )
+    route_steps = payload.get("route_steps")
+    if not isinstance(route_steps, list):
+        route_steps = []
+    route_steps.append(
+        {
+            "index": len(route_steps) + 1,
+            "action": "submit",
+            "target_text": "Recovered required lookup field",
+            "target_role": "browser_helper_form_autocomplete",
+            "target_url": str(payload.get("final_page_url") or "").strip(),
+            "result": "Selected the required lookup option and submitted the form.",
+            "expected_evidence": ["confirmation_text", "page_info", "network_event"],
+            "observed_evidence": [],
+            "verification_status": "pending_terminal_verification",
+        }
+    )
+    payload["route_steps"] = route_steps
+    return json.dumps(payload, ensure_ascii=True)
+
+
 def run_browser_report_download_agent(
     *,
     request: BrowserReportDownloadRequest,
@@ -377,7 +410,12 @@ def run_browser_report_download_agent(
                 browser=browser,
                 ctx=ctx,
                 normalized_url=normalized_url,
+                raw_model_response=raw_model_response,
             )
+            if lookup_submission_assisted:
+                raw_model_response = _mark_lookup_submission_assisted_raw_response(
+                    raw_model_response
+                )
         if history_result.salvaged_completed_history and not lookup_submission_assisted:
             final_page_url = history_final_page_url
             final_page_title = history_final_page_title
@@ -495,6 +533,7 @@ def run_browser_report_download_agent(
                     browser=browser,
                     ctx=ctx,
                     normalized_url=normalized_url,
+                    raw_model_response=raw_model_response,
                 )
             salvaged_run = _salvage_timed_out_browser_run(
                 request=request,

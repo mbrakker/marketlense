@@ -27,7 +27,7 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
 
-from .common import _normalize_optional_url_key, logger
+from .common import _normalize_optional_url_key, _normalize_publisher_key, logger
 from .connection import _metadata_conn
 
 
@@ -595,6 +595,7 @@ def get_report_download_drive_folder(
         if request.publisher_insights_url and request.publisher_insights_url.strip()
         else None
     )
+    publisher_name = str(request.publisher_name or "").strip()
     if not db_path:
         raise AppError(
             code="report_download_drive_folder_db_missing",
@@ -602,10 +603,10 @@ def get_report_download_drive_folder(
             retryable=False,
             severity="error",
         )
-    if not normalized_landing_page_url and not publisher_insights_url:
+    if not normalized_landing_page_url and not publisher_insights_url and not publisher_name:
         raise AppError(
             code="report_download_drive_folder_lookup_key_missing",
-            message="A normalized landing-page URL or publisher insights URL is required for Drive folder lookup",
+            message="A normalized landing-page URL, publisher insights URL, or publisher name is required for Drive folder lookup",
             retryable=False,
             severity="error",
         )
@@ -619,6 +620,7 @@ def get_report_download_drive_folder(
                 "db_path": db_path,
                 "normalized_landing_page_url": normalized_landing_page_url,
                 "publisher_insights_url": publisher_insights_url or "",
+                "has_publisher_name": bool(publisher_name),
             },
         )
     )
@@ -692,6 +694,96 @@ def get_report_download_drive_folder(
                     )
                 )
                 return response
+        if publisher_name:
+            row = conn.execute(
+                """
+                SELECT name, google_folder
+                FROM publishers
+                WHERE lower(trim(name)) = lower(trim(?))
+                ORDER BY id ASC
+                LIMIT 1
+                """,
+                (publisher_name,),
+            ).fetchone()
+            if row is not None:
+                response = ReportDownloadDriveFolderLookupResponse(
+                    schema_version="1.0",
+                    publisher_name=str(row[0] or "").strip(),
+                    google_folder=str(row[1] or "").strip(),
+                    resolution_source="publisher_name",
+                )
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="report_download_drive_folder_lookup_complete",
+                        module=logger.name,
+                        fields={
+                            "found": True,
+                            "publisher_name": response.publisher_name,
+                            "resolution_source": response.resolution_source,
+                        },
+                    )
+                )
+                return response
+            normalized_publisher_key = _normalize_publisher_key(publisher_name)
+            if normalized_publisher_key:
+                rows = conn.execute(
+                    """
+                    SELECT name, google_folder
+                    FROM publishers
+                    WHERE name IS NOT NULL
+                      AND trim(name) <> ''
+                    ORDER BY id ASC
+                    """
+                ).fetchall()
+                for candidate_row in rows:
+                    if (
+                        _normalize_publisher_key(str(candidate_row[0] or ""))
+                        != normalized_publisher_key
+                    ):
+                        continue
+                    response = ReportDownloadDriveFolderLookupResponse(
+                        schema_version="1.0",
+                        publisher_name=str(candidate_row[0] or "").strip(),
+                        google_folder=str(candidate_row[1] or "").strip(),
+                        resolution_source="publisher_name_normalized",
+                    )
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="service",
+                            event="report_download_drive_folder_lookup_complete",
+                            module=logger.name,
+                            fields={
+                                "found": True,
+                                "publisher_name": response.publisher_name,
+                                "resolution_source": response.resolution_source,
+                            },
+                        )
+                    )
+                    return response
+        if publisher_name:
+            response = ReportDownloadDriveFolderLookupResponse(
+                schema_version="1.0",
+                publisher_name=publisher_name.strip(),
+                google_folder="",
+                resolution_source="request_publisher_name",
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="report_download_drive_folder_lookup_complete",
+                    module=logger.name,
+                    fields={
+                        "found": True,
+                        "publisher_name": response.publisher_name,
+                        "resolution_source": response.resolution_source,
+                    },
+                )
+            )
+            return response
     logger.info(
         log_event(
             ctx,
@@ -702,6 +794,7 @@ def get_report_download_drive_folder(
                 "found": False,
                 "normalized_landing_page_url": normalized_landing_page_url,
                 "publisher_insights_url": publisher_insights_url or "",
+                "has_publisher_name": bool(publisher_name),
             },
         )
     )

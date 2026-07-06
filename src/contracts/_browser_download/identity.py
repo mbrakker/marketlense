@@ -29,6 +29,12 @@ class BrowserDownloadIdentityField:
             "doc": "Additional labels or names that should map to this identity field."
         },
     )
+    option_aliases: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Allowed visible enum/select option labels that represent the configured field value."
+        },
+    )
 
 
 @dataclass(frozen=True)

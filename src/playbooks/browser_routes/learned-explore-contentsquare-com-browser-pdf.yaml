@@ -1,0 +1,65 @@
+schema_version: '1.0'
+playbook_id: learned-explore-contentsquare-com-browser-pdf
+version: 1.0.1
+status: active
+updated_at: '2026-07-06T08:12:09Z'
+stale_after_days: 120
+publisher_pattern: explore.contentsquare.com
+host_patterns:
+- explore.contentsquare.com
+url_path_markers:
+- 2025-digital-experience-benchmark-en
+- 2025-benchmark-data-en
+route_family: browser_pdf
+route_kind: email_delivery
+summary: Filled lead form (FirstName, LastName, Email, Company, Job Title, Country=***REDACTED***)
+  and submitted; submission confirmation 'Your submission has been sent' displayed.
+  Embedded PDF viewer is visible behind the confirmation overlay but no local download
+  was performed in this run.
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Open the execution URL
+  verification: Landing page with gated content and form rendered; embedded PDF viewer
+    present behind form modal.
+- schema_version: '1.0'
+  action: fill_fields
+  target: Filled FirstName, LastName, Email, Company, Job Title
+  verification: Inputs populated with configured identity values and visible in page
+    DOM/screenshot
+- schema_version: '1.0'
+  action: select_dropdown
+  target: Country = ***REDACTED***
+  verification: Country dropdown set to '***REDACTED***' before submission
+- schema_version: '1.0'
+  action: click
+  target: Submit
+  verification: Form submitted; confirmation overlay 'Your submission has been sent'
+    displayed; submit button shows disabled / 'Please Wait' state
+- schema_version: '1.0'
+  action: verify
+  target: Embedded PDF viewer visible (toolbar and PDF pages visible behind confirmation
+    overlay)
+  verification: Viewer content visible in page; viewer download icon present in viewer
+    toolbar but not clicked in this run
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- network_confirmation_request
+- structured_result
+- verified
+- application/pdf
+- submit_observed
+- form_disappeared
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-06T08:05:05Z'
+  source: validated_route_promotion
+  summary: Promoted browser_pdf/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-06T08:12:09Z'
+  source: validated_route_promotion
+  summary: Promoted browser_pdf/email_delivery after email_requested evidence.

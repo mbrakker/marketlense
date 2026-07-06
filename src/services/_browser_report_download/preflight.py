@@ -56,6 +56,20 @@ _NON_REPORT_PDF_MARKERS = {
     "privacy",
     "terms",
 }
+_TITLE_TOKEN_STOPWORDS = {
+    "analysis",
+    "annual",
+    "download",
+    "ebook",
+    "global",
+    "guide",
+    "paper",
+    "report",
+    "reports",
+    "research",
+    "study",
+    "whitepaper",
+}
 
 
 def try_browser_preflight_probe(
@@ -492,20 +506,30 @@ def _filter_relevant_candidates(
         if _looks_like_non_report_pdf_url(token):
             continue
         if title_tokens and not any(title in marker for title in title_tokens):
-            if not any(
-                marker.endswith(suffix) for suffix in (".pdf", ".pdf?download=1")
-            ):
-                continue
+            continue
         normalized.append(token)
     return normalized
 
 
 def _candidate_title_tokens(request: BrowserReportDownloadRequest) -> list[str]:
-    if request.candidate_trace is None:
-        return []
-    raw_title = str(request.candidate_trace.title or "").casefold()
-    tokens = [token for token in re.split(r"[^a-z0-9]+", raw_title) if len(token) >= 4]
-    return tokens[:5]
+    raw_parts = [str(request.report_title or "")]
+    if request.candidate_trace is not None:
+        raw_parts.append(str(request.candidate_trace.title or ""))
+    raw_title = " ".join(raw_parts).casefold()
+    tokens: list[str] = []
+    seen: set[str] = set()
+    for token in re.split(r"[^a-z0-9]+", raw_title):
+        if len(token) < 4:
+            continue
+        if token in _TITLE_TOKEN_STOPWORDS:
+            continue
+        if re.fullmatch(r"20\d{2}", token):
+            continue
+        if token in seen:
+            continue
+        seen.add(token)
+        tokens.append(token)
+    return tokens[:8]
 
 
 def _looks_like_non_report_pdf_url(value: str) -> bool:

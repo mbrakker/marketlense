@@ -1,8 +1,8 @@
 schema_version: '1.0'
 playbook_id: learned-www-bigcommerce-com-browser-email-form
-version: 1.0.1
+version: 1.0.4
 status: active
-updated_at: '2026-07-04T17:52:49Z'
+updated_at: '2026-07-06T18:26:45Z'
 stale_after_days: 120
 publisher_pattern: www.bigcommerce.com
 host_patterns:
@@ -10,49 +10,20 @@ host_patterns:
 url_path_markers:
 - resources
 - reports
-- global-b2b-buyer-report-cdl-report
+- future-commerce-report-cdl-report
 route_family: browser_email_form
-route_kind: email_delivery
-summary: Accepted cookies, filled First name/Last name/Email/Company, selected Projected
-  Annual Revenue='***REDACTED***' and Country='***REDACTED***', clicked 'DOWNLOAD
-  THE REPORT' and received on-page thank-you confirmation that the report will be
-  emailed.
+route_kind: pdf_download
+summary: Opened the report page, filled the email form, but could not verify the required
+  Country lookup selection before submission.
 steps:
 - schema_version: '1.0'
-  action: navigate
-  target: Initial report landing page
-  verification: Page loaded with download form visible
-- schema_version: '1.0'
-  action: click
-  target: Accept All
-  verification: Cookie banner dismissed
-- schema_version: '1.0'
-  action: input
-  target: '***REDACTED***'
-  verification: First name filled with configured identity
-- schema_version: '1.0'
-  action: input
-  target: '***REDACTED***'
-  verification: Last name filled with configured identity
-- schema_version: '1.0'
-  action: input
-  target: '***REDACTED***'
-  verification: Business email filled with configured identity
-- schema_version: '1.0'
-  action: input
-  target: '***REDACTED***'
-  verification: Company filled with configured identity
-- schema_version: '1.0'
-  action: select_dropdown
-  target: '***REDACTED***'
-  verification: Projected Annual Revenue set to '***REDACTED***'
-- schema_version: '1.0'
-  action: select_dropdown
-  target: '***REDACTED***'
-  verification: Country set to '***REDACTED***'
+  action: submit
+  target: Submit
+  verification: Submission was not verified because the required Country lookup field
+    did not resolve to a valid option.
 traps: []
 evidence_notes:
-- Promoted only after verified route evidence with outcome email_requested.
+- Promoted only after verified route evidence with outcome downloaded.
 source_evidence:
 - submit_observed
 - delivery_text
@@ -62,6 +33,7 @@ source_evidence:
 - structured_result
 - verified
 - email_delivery
+- application/pdf
 private_api_evidence: []
 history:
 - schema_version: '1.0'
@@ -72,3 +44,15 @@ history:
   changed_at: '2026-07-04T17:52:49Z'
   source: validated_route_promotion
   summary: Promoted browser_email_form/email_delivery after email_requested evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-05T12:54:17Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-06T06:15:25Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-06T18:26:45Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/pdf_download after downloaded evidence.

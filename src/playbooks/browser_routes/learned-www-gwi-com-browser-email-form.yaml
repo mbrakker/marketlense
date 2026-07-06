@@ -1,8 +1,8 @@
 schema_version: '1.0'
 playbook_id: learned-www-gwi-com-browser-email-form
-version: 1.0.0
+version: 1.0.2
 status: active
-updated_at: '2026-07-04T18:52:23Z'
+updated_at: '2026-07-06T06:06:34Z'
 stale_after_days: 120
 publisher_pattern: www.gwi.com
 host_patterns:
@@ -12,44 +12,44 @@ url_path_markers:
 - new-american-consumer
 route_family: browser_email_form
 route_kind: email_delivery
-summary: Accepted cookie banner, clicked 'Download now' CTA which opened a lead form;
-  filled firstname, lastname, email, company size and country; submitted the form
-  and reached a download-confirmation page instructing that an email with a download
-  link will be sent.
+summary: Accepted cookies -> Clicked 'Download now' CTA -> Filled firstname, lastname,
+  email, company_size (***REDACTED***), country (***REDACTED***) -> Submitted lead
+  form -> Reached download-confirmation page stating an email with a download link
+  will be sent.
 steps:
 - schema_version: '1.0'
   action: click
   target: Accept all
-  verification: Cookie consent accepted; cookie modal dismissed
+  verification: Cookie consent accepted; cookie banner dismissed.
 - schema_version: '1.0'
   action: click
   target: Download now
-  verification: Lead form displayed instead of direct PDF
+  verification: In-page lead form revealed and inputs became visible.
 - schema_version: '1.0'
   action: input
-  target: '***REDACTED***'
-  verification: First name field populated with '***REDACTED***'
+  target: firstname
+  verification: Firstname set to configured identity value '***REDACTED***'.
 - schema_version: '1.0'
   action: input
-  target: '***REDACTED***'
-  verification: Last name field populated with '***REDACTED***'
+  target: lastname
+  verification: Lastname set to configured identity value '***REDACTED***'.
 - schema_version: '1.0'
   action: input
-  target: '***REDACTED***'
-  verification: Email field populated with '***REDACTED***'
+  target: email
+  verification: Email set to configured identity ***REDACTED***.
 - schema_version: '1.0'
   action: select
-  target: '***REDACTED***'
-  verification: Company size set to '***REDACTED***'
+  target: company_size
+  verification: Company size selected as '***REDACTED***'.
 - schema_version: '1.0'
   action: select
-  target: '***REDACTED***'
-  verification: Country set to '***REDACTED***'
+  target: country
+  verification: Country selected as '***REDACTED***'.
 - schema_version: '1.0'
   action: click
   target: Submit
-  verification: Form submitted; navigated to download-confirmation page showing confirmation
-    text
+  verification: Form submitted; navigated to download-confirmation page instructing
+    that an email with a download link will be sent.
 traps: []
 evidence_notes:
 - Promoted only after verified route evidence with outcome email_requested.
@@ -62,9 +62,18 @@ source_evidence:
 - structured_result
 - verified
 - email_delivery
+- button_state_replaced
 private_api_evidence: []
 history:
 - schema_version: '1.0'
   changed_at: '2026-07-04T18:52:23Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-05T13:21:08Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-06T06:06:34Z'
   source: validated_route_promotion
   summary: Promoted browser_email_form/email_delivery after email_requested evidence.

@@ -65,11 +65,15 @@ _ONSITE_CAPTURE_HTML_MARKERS = (
     "investigation",
 )
 _ONSITE_CAPTURE_BLOCKED_MARKERS = (
-    "captcha",
     "cloudflare",
     "access denied",
     "security checkpoint",
     "enable javascript",
+)
+_ONSITE_CAPTURE_HUMAN_VERIFICATION_MARKERS = (
+    "not a robot",
+    "verify you are human",
+    "verify that you are human",
 )
 
 
@@ -173,7 +177,8 @@ def try_direct_onsite_capture(
             )
         )
         return None
-    content_type = str(response.headers.get("content-type", "")).casefold()
+    content_type_header = str(response.content_type or "").strip()
+    content_type = content_type_header.casefold()
     logger.info(
         log_event(
             ctx,
@@ -185,7 +190,7 @@ def try_direct_onsite_capture(
                 "target_url": target_url,
                 "final_url": response.final_url,
                 "status_code": response.status_code,
-                "content_type": response.headers.get("content-type", ""),
+                "content_type": content_type_header,
                 "body_truncated": response.body_truncated,
                 "recovery_class": decision.recovery_class,
                 "recovery_decision": "allowed",
@@ -379,6 +384,20 @@ def _direct_onsite_recovery_decision(
             recovery_class=_DETAIL_CANDIDATE_RECOVERY_CLASS,
             reason="candidate_without_detail_signal",
         )
+    if route_family == "browser_email_form" and route_kind in {"", "email_delivery"}:
+        if _looks_like_report_detail_candidate(request):
+            return DirectOnsiteRecoveryDecision(
+                schema_version="1.0",
+                allowed=True,
+                recovery_class=_DETAIL_CANDIDATE_RECOVERY_CLASS,
+                reason="email_form_report_detail_candidate",
+            )
+        return DirectOnsiteRecoveryDecision(
+            schema_version="1.0",
+            allowed=False,
+            recovery_class=_DETAIL_CANDIDATE_RECOVERY_CLASS,
+            reason="email_form_without_detail_signal",
+        )
     return DirectOnsiteRecoveryDecision(
         schema_version="1.0",
         allowed=False,
@@ -506,8 +525,24 @@ def _looks_like_onsite_capture_html(
     plain_lowered = plain_text.casefold()
     if any(marker in plain_lowered for marker in _ONSITE_CAPTURE_BLOCKED_MARKERS):
         return False
+    if "captcha" in plain_lowered and any(
+        marker in plain_lowered
+        for marker in _ONSITE_CAPTURE_HUMAN_VERIFICATION_MARKERS
+    ):
+        return False
+    if _request_is_planned_email_form(request) and _html_contains_lead_capture_form(
+        token
+    ):
+        return False
     if len(plain_text) < 800:
         return False
+    if _request_is_planned_email_form(request) and _email_form_html_looks_like_full_report(
+        request=request,
+        final_url=final_url,
+        title=_extract_html_title(token),
+        plain_text=plain_text,
+    ):
+        return True
     if "<article" in lowered:
         return True
     strong_non_article_markers = {
@@ -571,3 +606,100 @@ def _route_context_supports_direct_onsite_capture(
         "year-in-review",
     }
     return any(marker in context for marker in positive_markers)
+
+
+def _request_is_planned_email_form(
+    request: BrowserReportDownloadRequest | None,
+) -> bool:
+    if request is None:
+        return False
+    return str(request.route_family_hint or "").strip() == "browser_email_form"
+
+
+def _html_contains_lead_capture_form(html: str) -> bool:
+    token = str(html or "")
+    if not token.strip():
+        return False
+    for match in re.finditer(r"(?is)<form\b[^>]*>(.*?)</form>", token):
+        form_html = match.group(1)
+        form_text = _html_to_text(form_html).casefold()
+        form_lowered = form_html.casefold()
+        has_control = bool(re.search(r"(?is)<(?:input|select|textarea)\b", form_html))
+        if not has_control:
+            continue
+        lead_markers = (
+            "email",
+            "e-mail",
+            "company",
+            "organization",
+            "country",
+            "state",
+            "phone",
+            "job",
+            "role",
+            "first name",
+            "last name",
+            "download",
+            "submit",
+        )
+        if any(marker in form_lowered or marker in form_text for marker in lead_markers):
+            return True
+        has_search_only_marker = (
+            "type=\"search\"" in form_lowered
+            or "type='search'" in form_lowered
+            or "search" in form_text
+        )
+        if not has_search_only_marker and re.search(
+            r"(?is)<(?:select|textarea)\b",
+            form_html,
+        ):
+            return True
+    return False
+
+
+def _email_form_html_looks_like_full_report(
+    *,
+    request: BrowserReportDownloadRequest | None,
+    final_url: str | None,
+    title: str,
+    plain_text: str,
+) -> bool:
+    if request is None or len(str(plain_text or "")) < 2500:
+        return False
+    context = " ".join(
+        [
+            str(final_url or ""),
+            str(request.url or ""),
+            str(request.attempt_url or ""),
+            str(title or ""),
+        ]
+    ).casefold()
+    title_or_path_markers = {
+        "analysis",
+        "benchmark",
+        "findings",
+        "guide",
+        "outlook",
+        "report",
+        "research",
+        "study",
+        "survey",
+        "trend",
+        "whitepaper",
+        "white paper",
+    }
+    if not any(marker in context for marker in title_or_path_markers):
+        return False
+    text = str(plain_text or "").casefold()
+    body_markers = {
+        "analysis",
+        "findings",
+        "key findings",
+        "methodology",
+        "report",
+        "research",
+        "section",
+        "threat",
+    }
+    marker_count = sum(1 for marker in body_markers if marker in text)
+    return marker_count >= 2

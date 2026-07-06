@@ -104,6 +104,8 @@ def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
     assert "click the exact matching option text" in bundle.task_prompt
     assert "configured value is true-like" in bundle.task_prompt
     assert "optional marketing/newsletter opt-in checkboxes unchecked" in bundle.task_prompt
+    assert "first visible enabled non-placeholder option" in bundle.task_prompt
+    assert "Research for business type, industry, department, role, or priority" in bundle.task_prompt
     assert "open the iframe `src` or same-origin popup/form target directly" in bundle.task_prompt
     assert "return `blocked_email_domain` immediately" in bundle.task_prompt
 
@@ -197,16 +199,40 @@ def test_download_report_with_browser_use_redacts_identity_values_from_prompt_lo
         assert forbidden not in request_fields_json
 
     assert prompt_event["fields"]["prompt_variables"]["identity_entries"] == [
-        {"label": "Full name", "aliases": "name", "value": "***REDACTED***"},
-        {"label": "Work email", "aliases": "email", "value": "***REDACTED***"},
-        {"label": "Phone", "aliases": "phone", "value": "***REDACTED***"},
-        {"label": "Company", "aliases": "company", "value": "***REDACTED***"},
+        {
+            "label": "Full name",
+            "aliases": "name",
+            "value": "***REDACTED***",
+            "option_aliases": "",
+        },
+        {
+            "label": "Work email",
+            "aliases": "email",
+            "value": "***REDACTED***",
+            "option_aliases": "",
+        },
+        {
+            "label": "Phone",
+            "aliases": "phone",
+            "value": "***REDACTED***",
+            "option_aliases": "",
+        },
+        {
+            "label": "Company",
+            "aliases": "company",
+            "value": "***REDACTED***",
+            "option_aliases": "",
+        },
     ]
     assert prompt_event["fields"]["prompt_variables"]["delivery_email"] == (
         "***REDACTED***"
     )
     assert "***REDACTED***" in prompt_event["fields"]["rendered_user_prompt"]
     assert "***REDACTED***" in request_event["fields"]["task_prompt"]
+    assert (
+        "Do not navigate to public search engines"
+        in prompt_event["fields"]["rendered_system_prompt"]
+    )
 
 def test_browser_report_download_prompt_templates_fail_on_missing_variables(
     run_context,

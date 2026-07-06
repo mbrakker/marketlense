@@ -162,7 +162,7 @@ def run_report_download(
         ReportDownloadRoutePlanRequest(
             schema_version="1.0",
             normalized_url=normalized_url,
-            delivery_email=request.delivery_email,
+            delivery_email=_resolve_deferred_delivery_email(request),
             remembered_route=_remembered_route_memory(remembered_route),
             candidate_trace=request.candidate_trace,
             publisher_discovery_route_kind=request.publisher_discovery_route_kind,
@@ -373,7 +373,7 @@ def _run_download_attempt(
         schema_version="1.0",
         url=request.url,
         settings=request.settings,
-        delivery_email=request.delivery_email,
+        delivery_email=_resolve_deferred_delivery_email(request),
         route_hint=planned_step.route_hint,
         route_step_hints=list(planned_step.route_step_hints),
         route_kind_hint=planned_step.route_kind_hint,
@@ -383,6 +383,7 @@ def _run_download_attempt(
         attempt_url=planned_step.attempt_url,
         route_family_hint=planned_step.route_family,
         source_page_url_hint=planned_step.source_page_url_hint,
+        report_title=request.report_title,
     )
 
     def _attempt_operation() -> BrowserReportDownloadResult:
@@ -488,10 +489,10 @@ def _is_download_attempt_retryable(
         return False
     if not isinstance(exc, AppError):
         return False
-    if planned_step.route_family.startswith("browser_") and exc.code in {
-        "browser_download_agent_timeout",
-        "browser_download_route_summary_too_weak",
-    }:
+    if (
+        planned_step.route_family.startswith("browser_")
+        and exc.code == "browser_download_route_summary_too_weak"
+    ):
         return False
     return True
 
@@ -565,7 +566,7 @@ def record_deferred_mail_delivery_request(
     dependencies: ReportDownloadDependencies,
     run_started_at_utc: str,
 ) -> None:
-    if result.outcome not in {"email_requested", "email_required"}:
+    if result.outcome != "email_requested":
         return
     if request.mailbox_settings is None:
         logger.info(
@@ -692,6 +693,9 @@ def _resolve_deferred_delivery_email(
     explicit = str(request.delivery_email or "").strip()
     if explicit:
         return explicit
+    mailbox_email = _resolve_mailbox_delivery_email(request)
+    if mailbox_email:
+        return mailbox_email
     for email in request.settings.identity_profile.delivery_emails:
         token = str(email or "").strip()
         if token:
@@ -700,6 +704,36 @@ def _resolve_deferred_delivery_email(
         if field.key == "work_email" and str(field.value or "").strip():
             return str(field.value or "").strip()
     return ""
+
+
+def _resolve_mailbox_delivery_email(request: ReportDownloadOrchestratorRequest) -> str:
+    settings = request.mailbox_settings
+    if settings is None:
+        return ""
+    provider = str(settings.provider or "").strip().casefold()
+    candidates: list[str] = []
+    if provider == "imap":
+        candidates.append(str(settings.imap_user or "").strip())
+    if provider == "gmail":
+        candidates.append(str(settings.gmail_user_id or "").strip())
+    candidates.extend(
+        [
+            str(settings.imap_user or "").strip(),
+            str(settings.gmail_user_id or "").strip(),
+        ]
+    )
+    for candidate in candidates:
+        if _looks_like_email_address(candidate):
+            return candidate
+    return ""
+
+
+def _looks_like_email_address(value: str) -> bool:
+    token = str(value or "").strip()
+    if "@" not in token:
+        return False
+    local, domain = token.rsplit("@", 1)
+    return bool(local.strip() and "." in domain and domain.rsplit(".", 1)[-1].strip())
 
 
 def preflight_mailbox_before_email_form(

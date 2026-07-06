@@ -366,8 +366,9 @@ def update_publisher_google_folder(
     db_path = request.db_path.strip()
     publisher_name = request.publisher_name.strip()
     google_folder = request.google_folder.strip()
+    publisher_insights_url_raw = str(request.publisher_insights_url or "").strip()
     publisher_insights_url = _normalize_optional_url_key(
-        str(request.publisher_insights_url or "").strip()
+        publisher_insights_url_raw
     )
     if not db_path:
         raise AppError(
@@ -430,6 +431,28 @@ def update_publisher_google_folder(
                 )
                 updated_count = int(cursor.rowcount or 0)
                 resolution_source = "publisher_name"
+            if updated_count <= 0 and publisher_name:
+                conn.execute(
+                    """
+                    INSERT INTO publishers (
+                        name,
+                        homepage,
+                        self_presentation,
+                        insights_url,
+                        normalized_insights_url,
+                        google_folder
+                    )
+                    VALUES (?, '', '', ?, ?, ?)
+                    """,
+                    (
+                        publisher_name,
+                        publisher_insights_url_raw,
+                        publisher_insights_url,
+                        google_folder,
+                    ),
+                )
+                updated_count = 1
+                resolution_source = "publisher_name_inserted"
             if updated_count <= 0:
                 raise AppError(
                     code="publisher_google_folder_publisher_not_found",

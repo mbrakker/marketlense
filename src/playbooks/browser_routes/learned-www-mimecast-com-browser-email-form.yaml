@@ -1,0 +1,68 @@
+schema_version: '1.0'
+playbook_id: learned-www-mimecast-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-06T07:40:10Z'
+stale_after_days: 120
+publisher_pattern: www.mimecast.com
+host_patterns:
+- www.mimecast.com
+url_path_markers:
+- resources
+- ebooks
+- state-of-human-risk
+route_family: browser_email_form
+route_kind: email_delivery
+summary: Opened ebook page, filled required fields (FirstName [44], LastName [45],
+  Email [46], Title [47], Company [48]), selected Country '***REDACTED***' (index
+  42), clicked Submit (index 2903). Page redirected to /download/ and displayed download
+  confirmation text; no local PDF path observed in session.
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Open execution URL https://www.mimecast.com/resources/ebooks/state-of-human-risk
+  verification: Page loaded and lead form visible on page
+- schema_version: '1.0'
+  action: input
+  target: FirstName = ***REDACTED***
+  verification: First name input filled
+- schema_version: '1.0'
+  action: input
+  target: LastName = ***REDACTED***
+  verification: Last name input filled
+- schema_version: '1.0'
+  action: input
+  target: Email = ***REDACTED***
+  verification: Email input filled
+- schema_version: '1.0'
+  action: input
+  target: Title / Job Title = ***REDACTED***
+  verification: Job title input filled
+- schema_version: '1.0'
+  action: input
+  target: Company = ***REDACTED***
+  verification: Company input filled
+- schema_version: '1.0'
+  action: select
+  target: Country = ***REDACTED***
+  verification: Country option '***REDACTED***' selected
+- schema_version: '1.0'
+  action: click
+  target: Submit
+  verification: Submit clicked; transient 'PLEASE WAIT' state observed; then redirect
+    to /download/ with confirmation box
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- submit_observed
+- form_disappeared
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-06T07:40:10Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

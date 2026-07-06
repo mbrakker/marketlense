@@ -358,7 +358,7 @@ def test_run_report_download_required_drive_preflight_failure_blocks_acquisition
         excinfo.value, code="drive_preflight_no_write_access", retryable=False
     )
 
-def test_run_report_download_uploads_all_captured_terminal_artifacts(
+def test_run_report_download_uploads_only_report_artifacts(
     tmp_path: Path,
     run_context,
 ) -> None:
@@ -447,19 +447,11 @@ def test_run_report_download_uploads_all_captured_terminal_artifacts(
     )
 
     assert response.outcome == "captured"
-    assert uploaded_paths == [
-        str(onsite_path),
-        str(html_snapshot_path),
-        str(screenshot_path),
-    ]
-    assert [item.status for item in response.drive_uploads] == [
-        "uploaded",
-        "uploaded",
-        "uploaded",
-    ]
+    assert uploaded_paths == [str(onsite_path)]
+    assert [item.status for item in response.drive_uploads] == ["uploaded"]
     assert response.drive_uploads[0].mime_type == "text/html"
-    assert response.drive_uploads[1].mime_type == "text/html"
-    assert response.drive_uploads[2].mime_type == "image/png"
+    assert response.terminal_evidence.html_snapshot_path == str(html_snapshot_path)
+    assert response.terminal_evidence.screenshot_path == str(screenshot_path)
 
 def test_run_report_download_deduplicates_equivalent_drive_artifact_paths(
     tmp_path: Path,
@@ -661,7 +653,7 @@ __all__ = [
     "test_run_report_download_creates_missing_publisher_drive_folder_before_upload",
     "test_run_report_download_missing_publisher_folder_requires_parent_folder",
     "test_run_report_download_required_drive_preflight_failure_blocks_acquisition",
-    "test_run_report_download_uploads_all_captured_terminal_artifacts",
+    "test_run_report_download_uploads_only_report_artifacts",
     "test_run_report_download_deduplicates_equivalent_drive_artifact_paths",
     "test_run_report_download_skips_duplicate_drive_file_by_name_and_md5",
 ]

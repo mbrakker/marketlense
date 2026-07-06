@@ -119,6 +119,12 @@ class ReportDownloadDriveFolderLookupRequest:
             "doc": "Optional publisher insights URL used to find the publisher row directly."
         },
     )
+    publisher_name: str = field(
+        default="",
+        metadata={
+            "doc": "Optional publisher name used when a delivered email or tracker URL cannot be matched by landing-page URL."
+        },
+    )
 
 
 @dataclass(frozen=True)

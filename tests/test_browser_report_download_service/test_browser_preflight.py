@@ -349,3 +349,72 @@ def test_browser_preflight_rejects_rendered_legal_pdf_candidate(
     assert escalation_events[-1]["fields"]["escalation_reason"] == (
         "no_rendered_pdf_candidate"
     )
+
+
+def test_browser_preflight_rejects_title_mismatched_pdf_candidate(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    page_url = "https://example.com/insights/food-and-drink/global-food-and-drink-trends"
+    unrelated_pdf_url = "https://assets.example.com/Mintel_Gender_Pay_Gap_Report_2025.pdf"
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Escalated past unrelated rendered PDF and used the full route.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    full_agent_loaded = {"value": False}
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        if url == unrelated_pdf_url:
+            raise AssertionError("title-mismatched PDF must not be downloaded")
+        return _FakeResponse(
+            content=(
+                b"<html><body><h1>2026 Global Food & Drink Predictions</h1></body></html>"
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            url=page_url,
+        )
+
+    def load_agent_runtime(module_name: str) -> Any:
+        full_agent_loaded["value"] = True
+        return runtime
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        preflight_runtime,
+        "import_module",
+        lambda module_name: _preflight_runtime(pdf_url=unrelated_pdf_url),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        load_agent_runtime,
+    )
+    caplog.set_level(logging.INFO)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=page_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+            report_title="2026 Global Food & Drink Predictions",
+        ),
+        run_context,
+    )
+
+    assert full_agent_loaded["value"] is True
+    assert response.outcome == "downloaded"
+    assert response.route_family != "browser_preflight_js_pdf_probe"
+    events = [json.loads(record.message) for record in caplog.records]
+    escalation_events = [
+        event
+        for event in events
+        if event.get("event") == "browser_report_download_browser_preflight_escalation"
+    ]
+    assert escalation_events
+    assert escalation_events[-1]["fields"]["candidate_pdf_url_count"] == 0

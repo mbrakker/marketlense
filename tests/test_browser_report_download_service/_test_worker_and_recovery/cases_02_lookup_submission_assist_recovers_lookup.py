@@ -2,12 +2,31 @@
 from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
+from src.services._browser_report_download._browser_runtime import timeout_recovery
 
 def test_download_report_with_browser_use_lookup_submission_assist_recovers_lookup_blocked_submit(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
 ) -> None:
+    settings = _settings(tmp_path)
+    settings = replace(
+        settings,
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                *settings.identity_profile.fields,
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="country",
+                    label="Country",
+                    value="Austria",
+                    aliases=["location"],
+                    option_aliases=["Republic of Austria"],
+                ),
+            ],
+        ),
+    )
     runtime = _runtime(
         tmp_path,
         route_kind="email_delivery",
@@ -31,6 +50,8 @@ def test_download_report_with_browser_use_lookup_submission_assist_recovers_look
                         "selected_count" in script_text
                         and ".lookupFormFieldBlock" in script_text
                     ):
+                        assert "option_aliases" in script_text
+                        assert "Republic of Austria" in script_text
                         browser.url = "https://example.com/report#success"
                         browser.title = "Thank you"
                         browser.html = (
@@ -134,7 +155,7 @@ def test_download_report_with_browser_use_lookup_submission_assist_recovers_look
         BrowserReportDownloadRequest(
             schema_version="1.0",
             url="https://example.com/report",
-            settings=_settings(tmp_path),
+            settings=settings,
             route_family_hint="browser_email_form",
         ),
         run_context,
@@ -148,6 +169,124 @@ def test_download_report_with_browser_use_lookup_submission_assist_recovers_look
     assert response.confirmation_evidence.visible_confirmation_text.startswith(
         "Thank you for your interest."
     )
+
+
+def test_lookup_submission_assist_sends_only_lookup_identity_fields(
+    tmp_path: Path,
+) -> None:
+    settings = replace(
+        _settings(tmp_path),
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="full_name",
+                    label="Full name",
+                    value="Dustin Von Richman",
+                    aliases=["name"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="company",
+                    label="Company",
+                    value="Marketlense",
+                    aliases=["company"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="country",
+                    label="Country",
+                    value="Austria",
+                    aliases=["location"],
+                    option_aliases=["Republic of Austria"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="state_region",
+                    label="State or region",
+                    value="California",
+                    aliases=["state", "province"],
+                    option_aliases=["CA"],
+                ),
+            ],
+        ),
+    )
+
+    values = timeout_recovery._browser_form_identity_field_values(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        )
+    )
+
+    assert [item["key"] for item in values] == ["country", "state_region"]
+    assert values[0]["option_aliases"] == ["Republic of Austria"]
+    assert values[1]["option_aliases"] == ["CA"]
+
+
+def test_lookup_submission_assist_targets_blocked_lookup_label(
+    tmp_path: Path,
+) -> None:
+    settings = replace(
+        _settings(tmp_path),
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="country",
+                    label="Country",
+                    value="Austria",
+                    aliases=["location"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="state_region",
+                    label="State or region",
+                    value="California",
+                    aliases=["state", "province"],
+                    option_aliases=["CA"],
+                ),
+            ],
+        ),
+    )
+    lookup_labels = timeout_recovery._lookup_submission_assist_target_labels(
+        {
+            "encountered_form_fields": ["Business Email Address", "State"],
+            "blocked_reason_detail": (
+                "The State field did not resolve to a valid lookup selection."
+            ),
+        }
+    )
+
+    values = timeout_recovery._browser_form_identity_field_values(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        lookup_labels=lookup_labels,
+    )
+
+    assert lookup_labels == ("State",)
+    assert [item["key"] for item in values] == ["state_region"]
+
+    broad_values = timeout_recovery._browser_form_identity_field_values(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        lookup_labels=("Location",),
+    )
+
+    assert [item["key"] for item in broad_values] == ["country", "state_region"]
+
 
 def test_browser_worker_main_preserves_candidate_trace(
     tmp_path: Path,
@@ -258,6 +397,105 @@ def test_browser_worker_main_preserves_candidate_trace(
     assert observed_request.candidate_trace.discovery_provenances == (
         candidate_trace.discovery_provenances
     )
+
+def test_browser_worker_main_preserves_identity_option_aliases(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    settings = _settings(tmp_path)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=replace(
+            settings,
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="state_region",
+                        label="State",
+                        value="AT-9",
+                        aliases=["state", "region"],
+                        option_aliases=["Vienna", "Wien"],
+                    )
+                ],
+            ),
+        ),
+        route_family_hint="browser_email_form",
+    )
+    payload_path = tmp_path / "browser_agent_worker_request.json"
+    response_path = tmp_path / "browser_agent_worker_response.json"
+    payload_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "request": json.loads(
+                    json.dumps(request, default=lambda value: value.__dict__)
+                ),
+                "ctx": run_context.__dict__,
+                "normalized_url": request.url,
+                "execution_url": request.url,
+                "download_dir": str(tmp_path / "worker-download"),
+                "prompt_bundle": {
+                    "schema_version": "1.0",
+                    "namespace": "browser_report_download/browser_route",
+                    "system_prompt_path": "system.yaml",
+                    "user_prompt_path": "user.yaml",
+                    "system_prompt_sha256": "system",
+                    "user_prompt_sha256": "user",
+                    "rendered_system_prompt": "system",
+                    "rendered_user_prompt": "user",
+                    "task_prompt": "task",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    observed_requests: list[BrowserReportDownloadRequest] = []
+
+    def fake_run_browser_report_download_agent(**kwargs):
+        observed_requests.append(kwargs["request"])
+        return browser_runtime.BrowserAgentRunResult(
+            schema_version="1.0",
+            raw_model_response="{}",
+            final_page_url="https://example.com/final",
+            final_page_title="Final",
+            final_page_html="<html></html>",
+            downloaded_files=[],
+            attachment_paths=[],
+            network_resource_urls=[],
+            network_events=[],
+            html_snapshot_path="",
+            screenshot_path="",
+        )
+
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "run_browser_report_download_agent",
+        fake_run_browser_report_download_agent,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "setup_logging",
+        lambda *args, **kwargs: None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime.sys,
+        "argv",
+        [
+            "browser_worker.py",
+            str(payload_path),
+            str(response_path),
+        ],
+    )
+
+    assert browser_worker_runtime.main() == 0
+    assert len(observed_requests) == 1
+    observed_field = observed_requests[0].settings.identity_profile.fields[0]
+    assert observed_field.option_aliases == ["Vienna", "Wien"]
 
 def test_browser_worker_main_redacts_identity_values_from_persisted_response(
     tmp_path: Path,
@@ -802,6 +1040,7 @@ def test_download_report_with_browser_use_reuses_bounded_same_publisher_profile(
 __all__ = [
     "test_download_report_with_browser_use_lookup_submission_assist_recovers_lookup_blocked_submit",
     "test_browser_worker_main_preserves_candidate_trace",
+    "test_browser_worker_main_preserves_identity_option_aliases",
     "test_browser_worker_main_redacts_identity_values_from_persisted_response",
     "test_browser_worker_subprocess_forces_utf8_and_captures_output",
     "test_browser_worker_subprocess_discards_sensitive_request_payload_after_run",

@@ -153,6 +153,8 @@ def run_mail_report_acquisition(
                         state_db=request.browser_download_settings.state_db,
                         reports_db=request.reports_db,
                         delivery_email=None,
+                        report_title=request.report_title,
+                        publisher_name=request.publisher_name,
                     ),
                     ctx,
                 )
@@ -170,6 +172,20 @@ def run_mail_report_acquisition(
                         },
                     )
                 )
+                if exc.retryable:
+                    raise AppError(
+                        code="mail_report_candidate_download_retryable_failed",
+                        message="A selected mailbox report link failed with a retryable acquisition error",
+                        cause=exc,
+                        retryable=True,
+                        severity="warning",
+                        context={
+                            "source_url": request.source_url,
+                            "publisher_name": request.publisher_name,
+                            "candidate_url": candidate.url,
+                            "candidate_error_code": exc.code,
+                        },
+                    ) from exc
                 continue
             if download_result.outcome in {"downloaded", "captured"}:
                 response = MailReportAcquisitionResult(

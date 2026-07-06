@@ -63,6 +63,9 @@ from src.orchestrators.cross_report_analysis_orchestrator import (
 from src.orchestrators.publisher_inventory_orchestrator import (
     run_publisher_inventory_discovery,
 )
+from src.orchestrators.mail_report_acquisition_orchestrator import (
+    run_mail_report_acquisition,
+)
 from src.orchestrators.publisher_sync_orchestrator import run_publisher_sync
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
@@ -77,6 +80,7 @@ from src.generators.trace_generator import build_trace_summary
 from src.services.config_service import (
     build_ingest_settings,
     load_browser_download_settings,
+    load_mailbox_acquisition_settings,
     load_publisher_inventory_settings,
     load_settings,
     load_publish_settings,

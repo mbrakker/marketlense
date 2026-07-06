@@ -17,17 +17,18 @@ text: |
   For selector-hostile visible surfaces such as custom dropdowns, shadow DOM controls, cross-origin iframes, canvas-like controls, and virtualized lists, use visible labels, accessible names, keyboard navigation, and DOM state changes. Remember only visible-target descriptions and verification evidence in `route_summary`, `route_steps`, or remembered guidance.
   If a same-origin modal iframe form is visible but its controls are not indexed or fillable, open the iframe `src` or same-origin popup/form `href` directly in the current tab and continue the form there.
 
-  Use the following configured identity values when a matching form field is available. Do not invent missing values.
+  Use the following configured identity values when a matching form field is available.
   Consent policy is typed configuration, not an inference: default_checkbox_policy={{ consent_policy.default_checkbox_policy }}, allow_marketing_opt_in={{ consent_policy.allow_marketing_opt_in }}, allow_optional_newsletter={{ consent_policy.allow_optional_newsletter }}.
   Check only mandatory privacy, terms, or report-delivery agreement boxes required to submit the report request. Leave optional marketing, demo, sales-contact, and newsletter consent unchecked unless the typed policy explicitly allows that consent family and a configured identity value also says to check it.
   Treat configured checkbox-like values literally: `true`, `yes`, `checked`, and `1` mean check the matching checkbox; `false`, `no`, `unchecked`, and `0` mean leave it unchecked. Required agreement/privacy/terms/consent checkboxes with a configured true-like value must be checked before submit. Optional marketing/newsletter opt-ins must remain unchecked unless a matching value explicitly says to check them.
   {% for identity in identity_entries %}
-  - {{ identity.label }}{% if identity.aliases %} (aliases: {{ identity.aliases }}){% endif %}: {{ identity.value }}
+  - {{ identity.label }}{% if identity.aliases %} (aliases: {{ identity.aliases }}){% endif %}: {{ identity.value }}{% if identity.option_aliases %} (allowed select/enum option labels: {{ identity.option_aliases }}){% endif %}
   {% endfor %}
   {% if not identity_entries %}
   - No non-empty identity values are configured.
   {% endif %}
-  If a required field has no configured value, stop before submission, still report encountered_form_fields, and do not invent replacement values.
+  If a required enum, select, dropdown, or combobox has no configured value or no configured option matches the visible options, choose the first visible enabled non-placeholder option, verify that it persists, and record the selected label in encountered_form_fields or route_steps. Do not apply this fallback to CAPTCHA, optional marketing/newsletter/demo/sales-contact consent, or privacy/terms agreement boxes.
+  If a required free-text field has no configured value, fill it only when the field clearly matches a safe generic business profile: 5 people for company size, 1000 euro for revenue, Research for business type, industry, department, role, or priority, and Austria for country/location. Otherwise stop before submission and report encountered_form_fields.
 
   {% if not route_hint and not route_step_lines %}
   No remembered route summary is available for this URL.
@@ -76,7 +77,7 @@ text: |
   - If the form lives behind an in-page anchor such as `#download`, use that form directly instead of exploring unrelated links.
   - Inspect the form before submission and capture all encountered field labels.
   - If the CTA opens a same-origin modal iframe and the form controls are not accessible, open the iframe `src` or same-origin popup/form target directly in the current tab before declaring a blocker.
-  - Use only configured identity values. If a required field is missing, stop and return the correct blocker code instead of guessing.
+  - Use configured identity values first. If a required enum/select/dropdown has no configured match, use the first visible enabled non-placeholder option and verify it persists before submission.
   - For required agreement/privacy/terms/consent checkboxes, check the matching box when the configured value is true-like (`true`, `yes`, `checked`, or `1`) and verify it is checked before submission.
   - Keep optional marketing/newsletter opt-in checkboxes unchecked unless a matching configured value explicitly says to check them.
   - For searchable dropdowns or comboboxes, do not rely on one-shot input alone: click into the field, type with keyboard events, wait for the suggestion list, click the exact matching option text, and verify the visible/input value persists after blur.

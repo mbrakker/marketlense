@@ -1,0 +1,51 @@
+schema_version: '1.0'
+playbook_id: learned-explore-contentsquare-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-06T08:03:55Z'
+stale_after_days: 120
+publisher_pattern: explore.contentsquare.com
+host_patterns:
+- explore.contentsquare.com
+url_path_markers:
+- guide-quel-avenir-pour-la-cx
+route_family: browser_email_form
+route_kind: email_delivery
+summary: "Opened the provided report URL, filled the visible lead form fields (FirstName,\
+  \ LastName, Email, Company, Title), left marketing opt-in unchecked, clicked the\
+  \ submit button 'Acc\xE9der au contenu' (index=2032). The page showed an on-page\
+  \ thank-you confirmation stating the submission was sent; report delivery is via\
+  \ email."
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Execution URL (initial page)
+  verification: Navigated to the execution URL; lead modal form became visible.
+- schema_version: '1.0'
+  action: fill_form
+  target: Filled fields with configured identity values
+  verification: FirstName, LastName, Email, Company, Title fields were filled with
+    configured values and left marketing opt-in unchecked.
+- schema_version: '1.0'
+  action: click
+  target: "Acc\xE9der au contenu"
+  verification: Submit button clicked; on-page confirmation modal displayed saying
+    submission was sent.
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- submit_observed
+- success_text
+- form_disappeared
+- network_submission_request
+- network_confirmation_request
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-06T08:03:55Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

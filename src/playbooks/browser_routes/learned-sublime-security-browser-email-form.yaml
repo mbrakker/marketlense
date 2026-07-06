@@ -1,0 +1,70 @@
+schema_version: '1.0'
+playbook_id: learned-sublime-security-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-06T06:45:32Z'
+stale_after_days: 120
+publisher_pattern: sublime.security
+host_patterns:
+- sublime.security
+url_path_markers:
+- resources
+- email-threat-research-report-2026
+route_family: browser_email_form
+route_kind: email_delivery
+summary: Accepted cookies, filled form (First name, Last name, Email, Company), selected
+  Country=***REDACTED***, clicked Download now; site navigated to a thank-you page
+  stating the asset will be emailed.
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Open report landing page
+  verification: Page loaded; form and cookie banner present
+- schema_version: '1.0'
+  action: click
+  target: Accept all (cookie consent)
+  verification: Cookie banner closed, page content (form) became interactable
+- schema_version: '1.0'
+  action: input
+  target: First name -> ***REDACTED***
+  verification: First name field filled with configured value
+- schema_version: '1.0'
+  action: input
+  target: Last name -> ***REDACTED***
+  verification: Last name field filled with configured value
+- schema_version: '1.0'
+  action: input
+  target: Email -> ***REDACTED***
+  verification: Email field filled with configured value
+- schema_version: '1.0'
+  action: input
+  target: Company -> ***REDACTED***
+  verification: Company field filled with configured value
+- schema_version: '1.0'
+  action: select
+  target: Country -> ***REDACTED***
+  verification: Country option '***REDACTED***' selected and persisted
+- schema_version: '1.0'
+  action: click
+  target: Download now (submit)
+  verification: Form submitted; transient 'Please Wait' state observed; then navigation
+    to thank-you page
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- submit_observed
+- delivery_text
+- success_url
+- button_state_replaced
+- form_disappeared
+- network_confirmation_request
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-06T06:45:32Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

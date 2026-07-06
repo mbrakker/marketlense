@@ -185,6 +185,7 @@ def _resolve_drive_upload_folder_id(
             db_path=request.reports_db,
             normalized_landing_page_url=normalized_url,
             publisher_insights_url=request.publisher_insights_url,
+            publisher_name=request.publisher_name,
         ),
         ctx,
     )
@@ -583,12 +584,11 @@ def _find_duplicate_drive_file(
 
 
 def _local_terminal_artifact_paths(result: BrowserReportDownloadResult) -> list[str]:
-    candidates = [
-        result.downloaded_file_path,
-        result.onsite_capture_path,
-        result.terminal_evidence.html_snapshot_path,
-        result.terminal_evidence.screenshot_path,
-    ]
+    candidates = (
+        [result.downloaded_file_path]
+        if result.downloaded_file_path
+        else [result.onsite_capture_path]
+    )
     seen: set[str] = set()
     paths: list[str] = []
     for candidate in candidates:

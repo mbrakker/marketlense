@@ -6,7 +6,10 @@ from datetime import datetime, timezone
 
 from src.contracts.browser_download import (
     BrowserDeveloperDiagnosticsRequest,
+    BrowserDownloadConfirmationEvidence,
+    BrowserDownloadRouteStep,
     BrowserDeveloperDiagnosticsResult,
+    DownloadTerminalEvidence,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
     BrowserRoutePrivateApiPromotionRequest,
@@ -64,6 +67,130 @@ from src.utils.browser_route_playbooks import (
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
+
+
+def _remembered_unattended_blocker_result(
+    *,
+    request: BrowserReportDownloadRequest,
+    normalized_url: str,
+    execution_url: str,
+) -> BrowserReportDownloadResult | None:
+    if str(request.route_family_hint or "").strip() != "browser_email_form":
+        return None
+    remembered_text = " ".join(
+        [
+            str(request.route_hint or ""),
+            " ".join(
+                f"{step.action} {step.target_text} {step.result}"
+                for step in request.route_step_hints
+            ),
+        ]
+    ).casefold()
+    is_interactive_captcha = (
+        ("captcha" in remembered_text or "recaptcha" in remembered_text)
+        and any(
+            marker in remembered_text
+            for marker in (
+                "interactive",
+                "challenge",
+                "not a robot",
+                "human verification",
+                "verify you are human",
+            )
+        )
+    )
+    is_access_forbidden = (
+        ("http 403" in remembered_text or "403 forbidden" in remembered_text)
+        and any(
+            marker in remembered_text
+            for marker in ("access", "forbidden", "inaccessible", "prevented")
+        )
+    )
+    if is_interactive_captcha:
+        detail = "Remembered exact route is blocked by an interactive CAPTCHA challenge."
+        target_text = "interactive CAPTCHA"
+        blocker_title = "Interactive CAPTCHA blocker"
+        signal_labels = ["remembered_interactive_captcha"]
+        evidence_labels = [
+            "blocked",
+            "remembered_interactive_captcha",
+            "blocked_captcha",
+        ]
+        blocked_reason = "blocked_captcha"
+    elif is_access_forbidden:
+        detail = "Remembered exact route is blocked by HTTP 403 Forbidden access control."
+        target_text = "HTTP 403 Forbidden"
+        blocker_title = "HTTP 403 access blocker"
+        signal_labels = ["remembered_access_forbidden"]
+        evidence_labels = [
+            "blocked",
+            "remembered_access_forbidden",
+            "blocked_static_archive",
+        ]
+        blocked_reason = "blocked_static_archive"
+    else:
+        return None
+    return BrowserReportDownloadResult(
+        schema_version="1.0",
+        source_url=request.url,
+        normalized_url=normalized_url,
+        route_kind="email_delivery",
+        route_family="browser_email_form",
+        route_status="inferred",
+        outcome="email_required",
+        route_summary=detail,
+        final_page_url=execution_url,
+        resolved_target_url=execution_url,
+        used_route_hint=True,
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="memory_blocker",
+                target_text=target_text,
+                target_role="remembered_route",
+                target_url=execution_url,
+                result=detail,
+            )
+        ],
+        confirmation_evidence=BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=False,
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url=execution_url,
+            confirmation_score=0,
+            signal_labels=signal_labels,
+        ),
+        terminal_evidence=DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url=execution_url,
+            final_page_title=blocker_title,
+            terminal_text_excerpt=detail,
+            artifact_url=execution_url,
+            artifact_kind="email_delivery",
+            artifact_validation_status="blocked",
+            artifact_validation_detail=detail,
+            confirmation_signal_count=0,
+            traversed_page_urls=[execution_url],
+            evidence_labels=evidence_labels,
+        ),
+        browser_had_structured_result=False,
+        used_candidate_pdf_url=False,
+        used_candidate_source_page=False,
+        encountered_form_fields=[],
+        blocked_reason=blocked_reason,
+        blocked_reason_detail=detail,
+        downloaded_file_path=None,
+        downloaded_file_name=None,
+        downloaded_mime_type=None,
+        downloaded_size_bytes=None,
+        onsite_capture_path=None,
+        onsite_capture_format=None,
+        onsite_page_count=None,
+        onsite_completeness_status=None,
+    )
 
 
 def default_browser_doctor_verification_url() -> str:
@@ -480,6 +607,22 @@ def download_report_with_browser_use(
             },
         )
     )
+    remembered_blocker_result = _remembered_unattended_blocker_result(
+        request=request,
+        normalized_url=normalized_url,
+        execution_url=normalized_execution_url,
+    )
+    if remembered_blocker_result is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_remembered_blocker_complete",
+                module=logger.name,
+                fields=asdict(remembered_blocker_result),
+            )
+        )
+        return remembered_blocker_result
     request = attach_browser_route_playbooks(
         request=request,
         ctx=ctx,

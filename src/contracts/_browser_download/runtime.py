@@ -401,6 +401,12 @@ class BrowserReportDownloadRequest:
             "doc": "Optional discovery source page URL to revisit when the candidate URL is thin, gated, or tracker-like."
         },
     )
+    report_title: str = field(
+        default="",
+        metadata={
+            "doc": "Optional expected report title used by route shortcuts to reject unrelated artifacts."
+        },
+    )
     selected_playbooks: list[BrowserRoutePlaybookSelection] = field(
         default_factory=list,
         metadata={

@@ -1,0 +1,55 @@
+schema_version: '1.0'
+playbook_id: learned-hoxhunt-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-06T07:09:39Z'
+stale_after_days: 120
+publisher_pattern: hoxhunt.com
+host_patterns:
+- hoxhunt.com
+url_path_markers:
+- form
+- threat-intelligence-report
+route_family: browser_email_form
+route_kind: email_delivery
+summary: "Accepted cookie banner, filled HubSpot embedded shadow form fields (First\
+  \ Name, Last Name, Work Email, Company Name, Country/Region) and clicked the 'Download\
+  \ now' submit button; no confirmation text, URL change, or downloaded file was observed\
+  \ \u2014 form remained on page."
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: https://hoxhunt.com/form/threat-intelligence-report
+  verification: Landed on the report landing page containing the HubSpot embedded
+    form.
+- schema_version: '1.0'
+  action: click
+  target: Accept (cookie banner)
+  verification: Cookie consent accepted and banner dismissed; form became interactable.
+- schema_version: '1.0'
+  action: input
+  target: Fill inputs at shadow indexes [78]=firstname, [79]=lastname, [80]=email,
+    [81]=company, [82]=country with configured identity values
+  verification: Fields populated and values visible in page state and screenshot prior
+    to submission.
+- schema_version: '1.0'
+  action: click
+  target: Download now (submit)
+  verification: Submit clicked but no post-submit confirmation text, URL change, form
+    disappearance, disabled/replaced button, or downloaded artifact observed; form
+    remained visible.
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- network_submission_request
+- network_confirmation_request
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-06T07:09:39Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

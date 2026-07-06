@@ -59,6 +59,62 @@ class TestReportStoreService05UpdatePublisherGoogleFolder(unittest.TestCase):
                 lookup.google_folder,
             )
 
+    def test_get_report_download_drive_folder_uses_request_publisher_name_for_new_publisher(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_ad_hoc_publisher_folder_lookup")
+
+            lookup = get_report_download_drive_folder(
+                ReportDownloadDriveFolderLookupRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_landing_page_url="https://example.com/report",
+                    publisher_name="Ad Hoc Publisher",
+                ),
+                ctx,
+            )
+
+            assert lookup is not None
+            self.assertEqual("Ad Hoc Publisher", lookup.publisher_name)
+            self.assertEqual("", lookup.google_folder)
+            self.assertEqual("request_publisher_name", lookup.resolution_source)
+
+    def test_update_publisher_google_folder_inserts_ad_hoc_publisher_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_ad_hoc_publisher_folder_insert")
+
+            response = update_publisher_google_folder(
+                PublisherGoogleFolderUpdateRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    publisher_name="Ad Hoc Publisher",
+                    publisher_insights_url="",
+                    google_folder="https://drive.google.com/drive/folders/folder123",
+                ),
+                ctx,
+            )
+            lookup = get_report_download_drive_folder(
+                ReportDownloadDriveFolderLookupRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_landing_page_url="",
+                    publisher_name="Ad Hoc Publisher",
+                ),
+                ctx,
+            )
+
+            self.assertEqual("Ad Hoc Publisher", response.publisher_name)
+            self.assertEqual(1, response.updated_count)
+            self.assertEqual("publisher_name_inserted", response.resolution_source)
+            assert lookup is not None
+            self.assertEqual(
+                "https://drive.google.com/drive/folders/folder123",
+                lookup.google_folder,
+            )
+
     def test_record_discovered_report_source_inserts_pending_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")

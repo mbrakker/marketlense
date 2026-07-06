@@ -1,0 +1,61 @@
+schema_version: '1.0'
+playbook_id: learned-go-contentsquare-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-06T18:45:46Z'
+stale_after_days: 120
+publisher_pattern: go.contentsquare.com
+host_patterns:
+- go.contentsquare.com
+url_path_markers:
+- digital-experience-benchmark
+route_family: browser_email_form
+route_kind: email_delivery
+summary: Filled the gated contact form (First Name, Last Name, Work Email, Company,
+  Job Title, Country=***REDACTED***), left marketing unchecked, submitted the form.
+  The submission led to a redirect to the on-site Data Explorer page (explore.contentsquare.com/2026-digital-experience-benchmark-en?...).
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: https://go.contentsquare.com/en/digital-experience-benchmark
+  verification: Landing page loaded with gated form visible (shadow inputs present)
+    and cookie banner blocking bottom; form controls accessible.
+- schema_version: '1.0'
+  action: dismiss cookie banner
+  target: Decline All / Continue without Accepting (cookie banner)
+  verification: Cookie banner dismissed allowing interaction with the form.
+- schema_version: '1.0'
+  action: fill form fields
+  target: First Name, Last Name, Work Email, Company, Job Title
+  verification: Fields populated with configured identity values (FirstName=***REDACTED***,
+    LastName=***REDACTED***, Email=***REDACTED***, Company=***REDACTED***, JobTitle=***REDACTED***).
+- schema_version: '1.0'
+  action: select dropdown option
+  target: Country = ***REDACTED***
+  verification: Country dropdown opened and ***REDACTED*** selected; selection persisted
+    prior to submit.
+- schema_version: '1.0'
+  action: click
+  target: Submit
+  verification: Submit clicked; button became disabled with label 'Please Wait' and
+    the page redirected to the data explorer.
+- schema_version: '1.0'
+  action: wait/verify terminal state
+  target: '2026 Benchmarks: Data Explorer content'
+  verification: "Terminal page is the on-site Data Explorer (report view) \u2014 submission\
+    \ completed and page loaded."
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- submit_observed
+- form_disappeared
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-06T18:45:46Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

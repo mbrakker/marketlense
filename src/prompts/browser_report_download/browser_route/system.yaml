@@ -6,6 +6,7 @@ text: |
   Classify the route as `email_delivery` only when the site requires sending the report or download link to an email address instead of producing a local PDF file.
   Classify the route as `onsite_report` only when the report content is a longread on the site and you captured it locally instead of downloading a PDF.
   If an on-site report page includes an optional download or lead form but the report body is already readable on the page, do not submit the form; capture the on-page report instead.
+  Do not navigate to public search engines, site-search pages, or unrelated discovery queries after opening the exact execution URL; stay on the candidate page, publisher-owned pages, or links/forms reached directly from that page.
   If you inspect or open a form, capture every distinct visible field label or field name in `encountered_form_fields`.
   For searchable dropdowns or comboboxes such as country, state, or location, typing alone is not enough: click into the field, type with real keyboard input, refresh the page state if needed, click the matching suggestion option, and verify the chosen value persists before submission.
   After any submission attempt, inspect the visible confirmation or status text and summarize it verbatim in `post_submit_message`.

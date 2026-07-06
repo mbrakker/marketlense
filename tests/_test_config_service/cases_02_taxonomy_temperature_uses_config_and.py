@@ -342,6 +342,7 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
                             "label": "Country",
                             "value": "Austria",
                             "aliases": ["country"],
+                            "option_aliases": ["Republic of Austria"],
                         }
                     ],
                 }
@@ -369,6 +370,9 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
         self.assertEqual(["analyst@example.com"], override.delivery_emails)
         self.assertEqual("country", override.field_values[0].key)
         self.assertEqual("Austria", override.field_values[0].value)
+        self.assertEqual(
+            ["Republic of Austria"], override.field_values[0].option_aliases
+        )
 
     def test_browser_download_identity_loads_typed_consent_policy(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

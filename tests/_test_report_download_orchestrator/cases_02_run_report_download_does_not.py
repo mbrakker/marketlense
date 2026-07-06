@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
-def test_run_report_download_does_not_retry_timed_out_browser_step(
+def test_run_report_download_retries_timed_out_browser_step(
     tmp_path: Path,
     caplog,
     run_context,
@@ -86,7 +86,7 @@ def test_run_report_download_does_not_retry_timed_out_browser_step(
         )
 
     assert exc_info.value.code == "browser_download_agent_timeout"
-    assert browser_calls == ["browser_pdf_click"]
+    assert browser_calls == ["browser_pdf_click", "browser_pdf_click"]
     retry_events = [
         event
         for event in _events(caplog, "market_lense.report_download_orchestrator")
@@ -102,10 +102,11 @@ def test_run_report_download_does_not_retry_timed_out_browser_step(
         for event in retry_events
         if event.get("fields", {}).get("step") == "report_download_browser_candidate"
     ]
-    assert browser_retry_events == []
+    assert len(browser_retry_events) == 1
+    assert browser_retry_events[0]["fields"]["error_retryable"] is True
     assert failure_events
     assert failure_events[-1]["fields"]["code"] == "browser_download_agent_timeout"
-    assert failure_events[-1]["fields"]["retryable"] is False
+    assert failure_events[-1]["fields"]["retryable"] is True
 
 def test_run_report_download_does_not_retry_failed_http_probe_before_browser_fallback(
     tmp_path: Path,
@@ -337,7 +338,7 @@ def test_run_report_download_persists_failure_forensics_pack(
         == failure_forensics_policy
     )
 
-def test_run_report_download_does_not_fallback_after_non_retryable_memory_browser_timeout(
+def test_run_report_download_retries_then_falls_back_after_memory_browser_timeout(
     tmp_path: Path,
     caplog,
     run_context,
@@ -482,20 +483,35 @@ def test_run_report_download_does_not_fallback_after_non_retryable_memory_browse
             "browser_onsite_report",
             "Accept cookies and extract the on-site report.",
             2,
-        )
+        ),
+        (
+            "browser_onsite_report",
+            "Accept cookies and extract the on-site report.",
+            2,
+        ),
+        ("http_pdf_probe", None, 0),
+        ("http_pdf_probe", None, 0),
+        ("browser_pdf_click", None, 0),
+        ("browser_pdf_click", None, 0),
     ]
     step_failed_events = [
         event
         for event in _events(caplog, "market_lense.report_download_orchestrator")
         if event.get("event") == "report_download_step_failed"
     ]
-    assert len(step_failed_events) == 1
+    assert len(step_failed_events) == 3
     assert (
         step_failed_events[0]["fields"]["step_name"]
         == "report_download_with_memory_route"
     )
-    assert step_failed_events[0]["fields"]["attempt_retryable"] is False
+    assert step_failed_events[0]["fields"]["attempt_retryable"] is True
     assert step_failed_events[0]["fields"]["fallback_on_retryable_error"] is True
+    assert (
+        step_failed_events[-1]["fields"]["step_name"]
+        == "report_download_browser_candidate"
+    )
+    assert step_failed_events[-1]["fields"]["attempt_retryable"] is True
+    assert step_failed_events[-1]["fields"]["fallback_on_retryable_error"] is False
 
 def test_run_report_download_does_not_retry_weak_browser_route_summary(
     tmp_path: Path,
@@ -700,10 +716,10 @@ def test_run_report_download_does_not_fallback_after_non_retryable_memory_failur
     )
 
 __all__ = [
-    "test_run_report_download_does_not_retry_timed_out_browser_step",
+    "test_run_report_download_retries_timed_out_browser_step",
     "test_run_report_download_does_not_retry_failed_http_probe_before_browser_fallback",
     "test_run_report_download_persists_failure_forensics_pack",
-    "test_run_report_download_does_not_fallback_after_non_retryable_memory_browser_timeout",
+    "test_run_report_download_retries_then_falls_back_after_memory_browser_timeout",
     "test_run_report_download_does_not_retry_weak_browser_route_summary",
     "test_run_report_download_does_not_fallback_after_non_retryable_memory_failure",
 ]

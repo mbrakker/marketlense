@@ -15,6 +15,10 @@ from typing import Any
 
 from src.contracts.browser_download import BrowserHelperJsResult
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.cdp import (
+    _extract_runtime_value,
+    call_browser_download_cdp,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -33,6 +37,7 @@ __all__ = (
     "_JS_SNIPPET_CHARS",
     "_JavaScriptEvaluationError",
     "browser_helper_js",
+    "browser_helper_js_via_cdp",
     "browser_helper_js_async",
     "_js_failure",
     "_adapt_js_result_value",
@@ -136,6 +141,101 @@ def browser_helper_js(
             ctx,
             role="service",
             event="browser_helper_js_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "snippet": snippet,
+                "result_type": result.result_type,
+                "result_serializable": result.result_serializable,
+            },
+        )
+    )
+    return result
+
+
+def browser_helper_js_via_cdp(
+    *,
+    browser: Any,
+    expression: str,
+    ctx: RunContext,
+    normalized_url: str,
+    required: bool = False,
+) -> BrowserHelperJsResult:
+    snippet = _snippet(expression)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_helper_js_cdp_start",
+            module=logger.name,
+            fields={"normalized_url": normalized_url, "snippet": snippet},
+        )
+    )
+    try:
+        call_result = call_browser_download_cdp(
+            browser=browser,
+            method="Runtime.evaluate",
+            params={
+                "expression": f"({_wrap_js_expression(expression)})()",
+                "returnByValue": True,
+                "awaitPromise": True,
+            },
+            ctx=ctx,
+            normalized_url=normalized_url,
+            required=required,
+        )
+        if call_result.status != "ok":
+            return _js_failure(
+                ctx=ctx,
+                normalized_url=normalized_url,
+                snippet=snippet,
+                error="CDP Runtime.evaluate failed",
+                required=required,
+            )
+        raw_result = _extract_runtime_value(
+            result=call_result.result,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            required=required,
+        )
+        result_value, serializable = _adapt_js_result_value(raw_result)
+    except AppError:
+        raise
+    except _JavaScriptEvaluationError as exc:
+        return _js_failure(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            snippet=snippet,
+            error=exc.error,
+            required=required,
+            error_line=exc.error_line,
+            error_column=exc.error_column,
+        )
+    except Exception as exc:
+        error_line, error_column = _extract_error_location(str(exc))
+        return _js_failure(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            snippet=snippet,
+            error=str(exc),
+            required=required,
+            error_line=error_line,
+            error_column=error_column,
+        )
+    result = BrowserHelperJsResult(
+        schema_version=_HELPER_SCHEMA_VERSION,
+        status="ok",
+        result=result_value,
+        result_type=type(result_value).__name__,
+        snippet=snippet,
+        result_serializable=serializable,
+        error="",
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_helper_js_cdp_complete",
             module=logger.name,
             fields={
                 "normalized_url": normalized_url,

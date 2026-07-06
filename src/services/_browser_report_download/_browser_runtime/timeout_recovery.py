@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import json
 import logging
 import os
 import re
@@ -105,7 +104,6 @@ from src.services._browser_report_download._browser_runtime.terminal_assets impo
 )
 from src.services._browser_report_download._browser_runtime.terminal_state import (
     _capture_terminal_snapshot,
-    _stabilize_terminal_snapshot,
 )
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
@@ -398,16 +396,40 @@ def _attempt_lookup_submission_assist(
     browser: Any,
     ctx: RunContext,
     normalized_url: str,
+    raw_model_response: str = "",
 ) -> bool:
     page = _resolve_current_page(browser)
     if page is None:
         return False
+    lookup_labels = _lookup_submission_assist_target_labels(
+        _parse_raw_model_response(raw_model_response)
+    )
+    field_values = _browser_form_identity_field_values(
+        request,
+        lookup_labels=lookup_labels,
+    )
+    if not field_values:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_lookup_submission_assist_skipped",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "reason": "no_matching_identity_fields",
+                    "lookup_labels": list(lookup_labels),
+                },
+            )
+        )
+        return False
     autocomplete_result = browser_helper_form_autocomplete(
         page=page,
-        field_values=_browser_form_identity_field_values(request),
+        field_values=field_values,
         ctx=ctx,
         normalized_url=normalized_url,
         submit=True,
+        browser=browser,
     )
     if autocomplete_result.status == "blocked":
         logger.info(
@@ -427,27 +449,6 @@ def _attempt_lookup_submission_assist(
         return False
     if autocomplete_result.status != "ok" or autocomplete_result.selected_count <= 0:
         return False
-    _stabilize_terminal_snapshot(
-        browser=browser,
-        raw_model_response=json.dumps(
-            {
-                "route_kind": "email_delivery",
-                "route_family": "browser_email_form",
-                "email_submission_completed": autocomplete_result.submitted,
-                "confirmation_url_changed": True,
-            },
-            ensure_ascii=True,
-        ),
-        route_family_hint="browser_email_form",
-        snapshot=_capture_terminal_snapshot(
-            browser,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        ),
-        ctx=ctx,
-        normalized_url=normalized_url,
-        trigger_reason="lookup_submission_assist",
-    )
     logger.info(
         log_event(
             ctx,
@@ -466,13 +467,76 @@ def _attempt_lookup_submission_assist(
     return True
 
 
+def _lookup_submission_assist_target_labels(payload: dict[str, Any]) -> tuple[str, ...]:
+    labels: list[str] = []
+    marker_pattern = re.compile(
+        r"\b(country|location|state|province|region|territory)\b",
+        re.IGNORECASE,
+    )
+    for item in payload.get("encountered_form_fields", []):
+        label = str(item or "").strip()
+        if label and marker_pattern.search(label):
+            labels.append(label)
+    blocked_detail = str(payload.get("blocked_reason_detail") or "").strip()
+    if blocked_detail:
+        for match in re.finditer(
+            r"\b(country|location|state|province|region|territory)\b",
+            blocked_detail,
+            re.IGNORECASE,
+        ):
+            labels.append(match.group(1))
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for label in labels:
+        token = re.sub(r"\s+", " ", label).strip().casefold()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        normalized.append(label)
+    return tuple(normalized)
+
+
 def _browser_form_identity_field_values(
     request: BrowserReportDownloadRequest,
+    *,
+    lookup_labels: tuple[str, ...] = (),
 ) -> list[dict[str, object]]:
     values: list[dict[str, object]] = []
+    lookup_markers = (
+        "country",
+        "location",
+        "state",
+        "province",
+        "region",
+        "territory",
+    )
+    lookup_label_markers = tuple(
+        marker
+        for raw_label in lookup_labels
+        for marker in lookup_markers
+        if marker in str(raw_label or "").strip().casefold()
+    )
     for field in resolve_effective_identity_fields(request):
         token = str(field.value or "").strip()
         if not token:
+            continue
+        searchable_tokens = " ".join(
+            [
+                str(field.key or ""),
+                str(field.label or ""),
+                *(str(alias or "") for alias in field.aliases),
+            ]
+        ).casefold()
+        if not any(
+            marker in searchable_tokens
+            for marker in lookup_markers
+        ):
+            continue
+        if (
+            lookup_label_markers
+            and "location" not in lookup_label_markers
+            and not any(marker in searchable_tokens for marker in lookup_label_markers)
+        ):
             continue
         values.append(
             {
@@ -480,9 +544,10 @@ def _browser_form_identity_field_values(
                 "label": field.label,
                 "value": token,
                 "aliases": list(field.aliases),
+                "option_aliases": list(field.option_aliases),
             }
         )
-    return values
+    return values[:12]
 
 
 def _attempt_lookup_submission_assist_with_timeout(
@@ -491,6 +556,7 @@ def _attempt_lookup_submission_assist_with_timeout(
     browser: Any,
     ctx: RunContext,
     normalized_url: str,
+    raw_model_response: str = "",
 ) -> bool:
     payload: dict[str, bool] = {}
 
@@ -500,6 +566,7 @@ def _attempt_lookup_submission_assist_with_timeout(
             browser=browser,
             ctx=ctx,
             normalized_url=normalized_url,
+            raw_model_response=raw_model_response,
         )
 
     worker = Thread(target=runner, daemon=True)

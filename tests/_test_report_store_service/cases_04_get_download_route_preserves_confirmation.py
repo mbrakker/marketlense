@@ -629,6 +629,124 @@ class TestReportStoreService04GetDownloadRoutePreserves(unittest.TestCase):
             )
             self.assertEqual("report_source_publisher", response.resolution_source)
 
+    def test_get_report_download_drive_folder_resolves_publisher_name_fallback(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_report_download_drive_folder_name")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://notion.local/report-sources",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Strategy consultancy.",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.execute(
+                    "UPDATE publishers SET google_folder=? WHERE name=?",
+                    (
+                        "https://drive.google.com/drive/folders/folder123",
+                        "Activate Consulting",
+                    ),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            response = get_report_download_drive_folder(
+                ReportDownloadDriveFolderLookupRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_landing_page_url="https://tracker.example.com/opaque",
+                    publisher_name="activate consulting",
+                ),
+                ctx,
+            )
+
+            assert response is not None
+            self.assertEqual("Activate Consulting", response.publisher_name)
+            self.assertEqual(
+                "https://drive.google.com/drive/folders/folder123",
+                response.google_folder,
+            )
+            self.assertEqual("publisher_name", response.resolution_source)
+
+    def test_get_report_download_drive_folder_resolves_normalized_publisher_name_fallback(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(
+                task_id="test_report_download_drive_folder_normalized_name"
+            )
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://notion.local/report-sources",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Sensortower",
+                            homepage="https://sensortower.com/",
+                            self_presentation="Mobile app intelligence.",
+                            insights_url="https://sensortower.com/resources",
+                            icon_source="https://cdn.example.com/sensortower.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.execute(
+                    "UPDATE publishers SET google_folder=? WHERE name=?",
+                    (
+                        "https://drive.google.com/drive/folders/folder123",
+                        "Sensortower",
+                    ),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            response = get_report_download_drive_folder(
+                ReportDownloadDriveFolderLookupRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_landing_page_url="https://tracker.example.com/opaque",
+                    publisher_name="Sensor Tower",
+                ),
+                ctx,
+            )
+
+            assert response is not None
+            self.assertEqual("Sensortower", response.publisher_name)
+            self.assertEqual(
+                "https://drive.google.com/drive/folders/folder123",
+                response.google_folder,
+            )
+            self.assertEqual("publisher_name_normalized", response.resolution_source)
+
     def test_get_report_download_drive_folder_returns_publisher_without_folder(
         self,
     ) -> None:

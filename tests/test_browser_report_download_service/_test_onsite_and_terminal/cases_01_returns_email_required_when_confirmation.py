@@ -378,6 +378,113 @@ def test_download_report_with_browser_use_probes_report_detail_candidate_for_dir
     assert capture_path.exists()
     assert "Market adoption insight." in capture_path.read_text(encoding="utf-8")
 
+def test_download_report_with_browser_use_recovers_email_form_report_detail_to_direct_onsite_capture(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/html; charset=utf-8"}
+        url = "https://data.example/reports/2026-threats-report"
+        text = (
+            "<html><head><title>2026 Threats Report</title></head>"
+            "<body><form><input type='search' name='q' /></form>"
+            "<main><h1>2026 Threats Report</h1>"
+            "<h2>Executive summary</h2>"
+            "<p>This page contains the complete report findings.</p>"
+            "<h2>Threat analysis</h2>"
+            "<p>" + ("Market security insight. " * 180) + "</p>"
+            "</main></body></html>"
+        )
+
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError(
+                "browser runtime should not start for report detail onsite capture"
+            )
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://data.example/reports/2026-threats-report",
+            settings=_settings(tmp_path),
+            route_kind_hint="email_delivery",
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.route_family == "browser_onsite_report"
+    assert response.outcome == "captured"
+    assert response.browser_had_structured_result is False
+    assert response.onsite_capture_path is not None
+    assert "Market security insight." in Path(
+        response.onsite_capture_path
+    ).read_text(encoding="utf-8")
+
+def test_download_report_with_browser_use_keeps_email_form_route_when_static_lead_form_exists(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/html; charset=utf-8"}
+        url = "https://data.example/reports/2026-gated-report"
+        text = (
+            "<html><head><title>2026 Gated Report</title></head>"
+            "<body><article><h1>2026 Gated Report</h1>"
+            "<p>" + ("Report preview. " * 100) + "</p>"
+            "</article><form><input name='email' />"
+            "<input name='company' /><select name='country'></select>"
+            "<button type='submit'>Download report</button></form></body></html>"
+        )
+
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Open the report form and submit the configured email.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://data.example/reports/2026-gated-report",
+            settings=_settings(tmp_path),
+            route_kind_hint="email_delivery",
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.route_family == "browser_email_form"
+    assert response.outcome == "email_required"
+    assert response.onsite_capture_path is None
+
 def test_download_report_with_browser_use_blocks_mixed_hub_direct_onsite_recovery(
     tmp_path: Path,
     caplog,
@@ -561,6 +668,92 @@ def test_download_report_with_browser_use_keeps_explicit_onsite_classification_w
     assert response.outcome == "captured"
     assert response.route_status == "verified"
 
+def test_download_report_with_browser_use_prefers_complete_onsite_capture_over_optional_enum_blocker(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary=(
+            "Captured the report body, then saw an optional download form with a "
+            "company-size dropdown blocker."
+        ),
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class OnsiteWithOptionalEnumBlockerAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            self.browser.url = "https://example.com/research/workforce-report"
+            self.browser.title = "Workforce Report"
+            self.browser.html = (
+                "<html><body><article><h1>Workforce Report</h1>"
+                "<p>This page contains the complete report findings.</p>"
+                "<p>" + ("Benchmark research detail. " * 180) + "</p>"
+                "</article><form><select name='company_size'></select></form>"
+                "</body></html>"
+            )
+            payload["route_kind"] = "email_delivery"
+            payload["route_family"] = "browser_onsite_report"
+            payload["encountered_form_fields"] = [
+                "Work Email",
+                "Company size",
+            ]
+            payload["blocked_reason"] = "blocked_unknown_required_enum"
+            payload["blocked_reason_detail"] = (
+                "The optional Company size select had no matching configured value."
+            )
+            payload["terminal_text_excerpt"] = (
+                "Workforce Report. This page contains the complete report findings. "
+                + ("Benchmark research detail. " * 80)
+            )
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "capture",
+                    "target_text": "report article",
+                    "target_role": "onsite report body",
+                    "target_url": "https://example.com/research/workforce-report",
+                    "result": "Captured the complete on-page report body.",
+                    "expected_evidence": ["artifact", "dom_hash", "screenshot"],
+                    "observed_evidence": ["artifact", "dom_hash", "screenshot"],
+                    "verification_status": "verified",
+                }
+            ]
+
+            class OnsiteWithOptionalEnumBlockerHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return OnsiteWithOptionalEnumBlockerHistory()
+
+    runtime.Agent = OnsiteWithOptionalEnumBlockerAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/workforce-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.blocked_reason is None
+    assert response.onsite_capture_path is not None
+    assert Path(str(response.onsite_capture_path)).exists()
+
 def test_download_report_with_browser_use_salvages_empty_result_to_onsite_capture(
     tmp_path: Path,
     run_context,
@@ -678,9 +871,12 @@ __all__ = [
     "test_download_report_with_browser_use_short_circuits_planned_extract_step_without_candidate_trace",
     "test_download_report_with_browser_use_directly_captures_route_confirmed_non_article_longread",
     "test_download_report_with_browser_use_probes_report_detail_candidate_for_direct_onsite_capture",
+    "test_download_report_with_browser_use_recovers_email_form_report_detail_to_direct_onsite_capture",
+    "test_download_report_with_browser_use_keeps_email_form_route_when_static_lead_form_exists",
     "test_download_report_with_browser_use_blocks_mixed_hub_direct_onsite_recovery",
     "test_download_report_with_browser_use_prefers_form_evidence_over_onsite_hint",
     "test_download_report_with_browser_use_keeps_explicit_onsite_classification_when_optional_form_fields_were_seen",
+    "test_download_report_with_browser_use_prefers_complete_onsite_capture_over_optional_enum_blocker",
     "test_download_report_with_browser_use_salvages_empty_result_to_onsite_capture",
     "test_download_report_with_browser_use_records_terminal_snapshot_and_document_urls",
 ]

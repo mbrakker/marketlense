@@ -1,0 +1,42 @@
+schema_version: '1.0'
+playbook_id: learned-gardenmediagroup-com-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-07-05T22:11:59Z'
+stale_after_days: 120
+publisher_pattern: gardenmediagroup.com
+host_patterns:
+- gardenmediagroup.com
+url_path_markers:
+- 2026-garden-trends-report
+route_family: browser_onsite_report
+route_kind: pdf_download
+summary: Opened the execution URL, closed the cookie consent banner, and saved the
+  on-page report as a PDF artifact (no lead-form submission).
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Open execution URL
+  verification: Loaded page containing readable report body and visible download lead
+    form.
+- schema_version: '1.0'
+  action: click (cookie consent close)
+  target: Close cookie consent banner
+  verification: Cookie consent banner closed, page unobstructed for capture.
+- schema_version: '1.0'
+  action: save_as_pdf
+  target: Saved page as PDF artifact
+  verification: On-site report captured and saved as a PDF artifact.
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-05T22:11:59Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.

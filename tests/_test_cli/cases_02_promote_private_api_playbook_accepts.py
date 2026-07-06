@@ -634,4 +634,83 @@ class TestCli02PromotePrivateApiPlaybook(unittest.TestCase):
             self.assertEqual("publisher_inventory_browser_timeout", stored.error_code)
             self.assertTrue(stored.error_retryable)
 
+    def test_poll_mail_report_applies_per_run_poll_overrides(self) -> None:
+        import src.cli as cli
+
+        browser_settings = BrowserDownloadSettings(
+            schema_version="1.0",
+            openrouter_api_key="key",
+            model="openai/gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=45.0,
+            max_steps=12,
+            output_dir="./out/browser_downloads",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            identity_config_path="./src/config/browser_download_identity.yaml",
+            identity_profile=BrowserDownloadIdentity(schema_version="1.0", fields=[]),
+            openrouter_http_referer=None,
+            headed=False,
+            retry_retries=1,
+            retry_base_delay_seconds=1.0,
+            retry_backoff_step_seconds=0.0,
+            retry_jitter_seconds=0.0,
+        )
+        mailbox_settings = MailboxAcquisitionSettings(
+            schema_version="1.0",
+            provider="imap",
+            output_dir="./out/mailbox",
+            search_window_minutes=120,
+            max_results=10,
+            poll_timeout_seconds=900.0,
+            poll_interval_seconds=60.0,
+            gmail_oauth_client_path="",
+            gmail_oauth_token_path="",
+            gmail_user_id="me",
+            imap_host="imap.example.com",
+            imap_port=993,
+            imap_user="ops@example.com",
+            imap_password="secret",
+            imap_mailbox="INBOX",
+        )
+        result = type(
+            "MailReportAcquisitionResult",
+            (),
+            {
+                "source_url": "https://example.com/report",
+                "outcome": "downloaded",
+                "mailbox_poll_count": 1,
+                "selected_report_url": "https://example.com/report.pdf",
+                "selected_message_id": "msg-1",
+                "downloaded_file_path": "./out/report.pdf",
+            },
+        )()
+
+        with patch.object(
+            cli, "load_browser_download_settings", return_value=browser_settings
+        ):
+            with patch.object(
+                cli,
+                "load_mailbox_acquisition_settings",
+                return_value=mailbox_settings,
+            ):
+                with patch.object(
+                    cli, "run_mail_report_acquisition", return_value=result
+                ) as run_mock:
+                    with patch.object(cli.console, "print"):
+                        cli.poll_mail_report(
+                            source_url="https://example.com/report",
+                            report_title="Retail Trends",
+                            publisher_name="Example Publisher",
+                            delivery_email="ops@example.com",
+                            requested_after_utc="2026-07-05T12:00:00Z",
+                            poll_timeout_seconds=5.0,
+                            poll_interval_seconds=1.0,
+                        )
+
+        request = run_mock.call_args.args[0]
+        self.assertEqual(5.0, request.mailbox_settings.poll_timeout_seconds)
+        self.assertEqual(1.0, request.mailbox_settings.poll_interval_seconds)
+        self.assertEqual(900.0, mailbox_settings.poll_timeout_seconds)
+
 __all__ = ["TestCli02PromotePrivateApiPlaybook"]

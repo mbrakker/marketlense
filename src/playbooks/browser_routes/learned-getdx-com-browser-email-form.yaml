@@ -1,0 +1,53 @@
+schema_version: '1.0'
+playbook_id: learned-getdx-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-06T06:34:46Z'
+stale_after_days: 120
+publisher_pattern: getdx.com
+host_patterns:
+- getdx.com
+url_path_markers:
+- report
+- how-efficient-are-engineering-organizations
+route_family: browser_email_form
+route_kind: email_delivery
+summary: On the report page, filled required form fields (first name, last name, email,
+  company) and clicked the Download button; the page navigated to a thank-you page
+  that says a link was sent to the provided email.
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: Execution URL (report landing page)
+  verification: Report landing page with gated form loaded
+- schema_version: '1.0'
+  action: fill
+  target: Populate required fields
+  verification: Typed first name, last name, email, and company into the form fields
+- schema_version: '1.0'
+  action: click
+  target: Download
+  verification: Clicked Download to submit the form
+- schema_version: '1.0'
+  action: observe terminal
+  target: Thank-you / confirmation page
+  verification: Terminal thank-you message visible and URL changed
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- submit_observed
+- delivery_text
+- success_url
+- button_state_replaced
+- form_disappeared
+- network_confirmation_request
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-06T06:34:46Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

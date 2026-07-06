@@ -247,7 +247,7 @@ def try_static_email_gate_probe(
         target_url=target_url,
     ):
         return None
-    if str(request.delivery_email or "").strip():
+    if _request_has_delivery_email(request):
         logger.info(
             log_event(
                 ctx,
@@ -460,6 +460,20 @@ def _route_context_supports_static_email_gate(
         )
     context = " ".join(str(part or "") for part in context_parts).casefold()
     return any(marker in context for marker in _STATIC_REPORT_CONTEXT_MARKERS)
+
+
+def _request_has_delivery_email(request: BrowserReportDownloadRequest) -> bool:
+    if str(request.delivery_email or "").strip():
+        return True
+    for email in request.settings.identity_profile.delivery_emails:
+        if str(email or "").strip():
+            return True
+    for field in request.settings.identity_profile.fields:
+        if str(field.key or "").strip() == "work_email" and str(
+            field.value or ""
+        ).strip():
+            return True
+    return False
 
 
 def _build_static_email_gate_result(

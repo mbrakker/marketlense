@@ -4,6 +4,7 @@ import re
 from dataclasses import replace
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from src.contracts.browser_download import (
+    BrowserDownloadRouteStep,
     PublisherDownloadRouteMemory,
     PublisherDownloadRoutePolicySignal,
     ReportDownloadRoutePlanRequest,
@@ -318,8 +319,10 @@ def _build_plan(
             route_kind=remembered_route.route_kind,
             route_family=remembered_route.route_family,
         )
-        remembered_attempt_url = _refresh_remembered_email_query_value(
-            remembered_route.resolved_target_url,
+        remembered_attempt_url = _remembered_attempt_url(
+            normalized_url=request.normalized_url,
+            remembered_route=remembered_route,
+            remembered_route_family=remembered_route_family,
             delivery_email=request.delivery_email,
         )
         steps.append(
@@ -329,7 +332,10 @@ def _build_plan(
                 route_family=remembered_route_family,
                 attempt_url=remembered_attempt_url or None,
                 route_hint=remembered_route.route_summary,
-                route_step_hints=list(remembered_route.route_steps),
+                route_step_hints=_memory_route_step_hints(
+                    remembered_route=remembered_route,
+                    route_family=remembered_route_family,
+                ),
                 route_kind_hint=remembered_route.route_kind,
                 uses_memory_route=True,
                 fallback_on_retryable_error=True,
@@ -470,6 +476,39 @@ def _build_plan(
     )
 
 
+def _remembered_attempt_url(
+    *,
+    normalized_url: str,
+    remembered_route: PublisherDownloadRouteMemory,
+    remembered_route_family: str,
+    delivery_email: str | None,
+) -> str:
+    target_url = str(remembered_route.resolved_target_url or "").strip()
+    if (
+        str(remembered_route.route_kind or "").strip() == "email_delivery"
+        and remembered_route_family == "browser_email_form"
+        and not _has_email_query_key(target_url)
+    ):
+        return str(normalized_url or "").strip() or target_url
+    return _refresh_remembered_email_query_value(
+        target_url,
+        delivery_email=delivery_email,
+    )
+
+
+def _has_email_query_key(url: str) -> bool:
+    target_url = str(url or "").strip()
+    if not target_url:
+        return False
+    parsed = urlsplit(target_url)
+    if not parsed.query:
+        return False
+    return any(
+        key.strip().casefold() in _EMAIL_QUERY_KEYS
+        for key, _value in parse_qsl(parsed.query, keep_blank_values=True)
+    )
+
+
 def _refresh_remembered_email_query_value(
     url: str,
     *,
@@ -523,7 +562,10 @@ def _build_browser_step(
         else ""
     )
     remembered_route_step_hints = (
-        list(remembered_route.route_steps)
+        _memory_route_step_hints(
+            remembered_route=remembered_route,
+            route_family=remembered_route.route_family,
+        )
         if remembered_route is not None
         and str(remembered_route.outcome or "").strip().lower()
         in {"downloaded", "email_requested", "captured"}
@@ -700,6 +742,44 @@ def _build_browser_step(
         uses_memory_route=False,
         fallback_on_retryable_error=False,
     )
+
+
+def _memory_route_step_hints(
+    *,
+    remembered_route: PublisherDownloadRouteMemory,
+    route_family: str,
+) -> list[BrowserDownloadRouteStep]:
+    if _is_email_memory_route(remembered_route=remembered_route, route_family=route_family):
+        return [
+            step
+            for step in remembered_route.route_steps
+            if not _route_step_enters_remembered_form_value(step)
+        ]
+    return list(remembered_route.route_steps)
+
+
+def _is_email_memory_route(
+    *,
+    remembered_route: PublisherDownloadRouteMemory,
+    route_family: str,
+) -> bool:
+    return (
+        str(remembered_route.route_kind or "").strip() == "email_delivery"
+        or str(route_family or "").strip() == "browser_email_form"
+    )
+
+
+def _route_step_enters_remembered_form_value(step: BrowserDownloadRouteStep) -> bool:
+    action = str(step.action or "").strip().casefold()
+    if action in {"input", "type", "fill", "select", "select_dropdown"}:
+        return True
+    text = " ".join(
+        [
+            str(step.result or ""),
+            str(step.target_role or ""),
+        ]
+    ).casefold()
+    return "typed " in text or "current value" in text or "selected dropdown" in text
 
 
 def _tracker_host_url_has_report_detail_signal(

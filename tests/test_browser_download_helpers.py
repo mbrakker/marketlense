@@ -154,6 +154,10 @@ class NativeSelectSuccessPage(FakePage):
     def evaluate(self, expression: str) -> dict[str, Any]:
         assert "'select'" in expression
         assert "insertReplacementText" in expression
+        assert "option_aliases" in expression
+        assert "optionAliases" in expression
+        assert "passIndex < 1" in expression
+        assert ".slice(0, 120)" in expression
         assert "blur()" in expression
         return {
             "__marketlense_js_helper": True,
@@ -162,6 +166,30 @@ class NativeSelectSuccessPage(FakePage):
                 "attempted_count": 1,
                 "selected_count": 1,
                 "selected_fields": ["Country"],
+                "unresolved_fields": [],
+                "submitted": False,
+                "final_url": "https://publisher.example/form",
+            },
+            "result_type": "object",
+        }
+
+
+class NativeSelectFallbackPage(FakePage):
+    def evaluate(self, expression: str) -> dict[str, Any]:
+        script_text = str(expression)
+        assert "looksLikePlaceholderOption" in script_text
+        assert "exactOption || fallbackOption" in script_text
+        assert 'input[name*="state" i]' in script_text
+        assert "sameOriginDocuments" in script_text
+        assert "frame.contentDocument" in script_text
+        assert "root.querySelectorAll" in script_text
+        return {
+            "__marketlense_js_helper": True,
+            "ok": True,
+            "result": {
+                "attempted_count": 1,
+                "selected_count": 1,
+                "selected_fields": ["State"],
                 "unresolved_fields": [],
                 "submitted": False,
                 "final_url": "https://publisher.example/form",
@@ -208,6 +236,7 @@ def test_form_autocomplete_helper_handles_native_select_controls(
                 "label": "Country",
                 "value": "Austria",
                 "aliases": ["location"],
+                "option_aliases": ["Republic of Austria"],
             }
         ],
         ctx=run_context,
@@ -220,6 +249,31 @@ def test_form_autocomplete_helper_handles_native_select_controls(
     assert result.selected_count == 1
     assert result.submitted is False
     assert result.selected_fields == ("Country",)
+
+
+def test_form_autocomplete_helper_allows_first_non_placeholder_fallback(
+    run_context,
+) -> None:
+    result = browser_helper_form_autocomplete(
+        page=NativeSelectFallbackPage(),
+        field_values=[
+            {
+                "key": "state_region",
+                "label": "State",
+                "value": "California",
+                "aliases": ["state", "province"],
+                "option_aliases": ["CA"],
+            }
+        ],
+        ctx=run_context,
+        normalized_url="https://publisher.example/form",
+        submit=False,
+    )
+
+    assert result.status == "ok"
+    assert result.selected_count == 1
+    assert result.unresolved_fields == ()
+    assert result.selected_fields == ("State",)
 
 
 def test_form_autocomplete_helper_reports_unresolved_enum_blocker(

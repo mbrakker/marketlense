@@ -1,0 +1,46 @@
+schema_version: '1.0'
+playbook_id: learned-merchantriskcouncil-org-browser-onsite-report
+version: 1.0.0
+status: active
+updated_at: '2026-07-06T07:07:51Z'
+stale_after_days: 120
+publisher_pattern: merchantriskcouncil.org
+host_patterns:
+- merchantriskcouncil.org
+url_path_markers:
+- learning
+- mrc-exclusive-reports
+- global-payments-and-fraud-report
+route_family: browser_onsite_report
+route_kind: pdf_download
+summary: Opened the execution URL, dismissed cookie/privacy modal, and saved the on-page
+  report as a local PDF. Did not submit the lead form (HubSpot iframe).
+steps:
+- schema_version: '1.0'
+  action: navigate
+  target: open page
+  verification: Page loaded with readable report content and a HubSpot iframe lead
+    form present
+- schema_version: '1.0'
+  action: dismiss_cookie_modal
+  target: Close cookie/privacy modal
+  verification: Cookie/privacy modal closed, main content accessible
+- schema_version: '1.0'
+  action: capture_pdf
+  target: Save page as PDF (full page longread capture)
+  verification: Saved page to local PDF artifact
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome downloaded.
+source_evidence:
+- network_submission_request
+- network_confirmation_request
+- structured_result
+- verified
+- application/pdf
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-06T07:07:51Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.

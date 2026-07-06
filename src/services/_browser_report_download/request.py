@@ -156,6 +156,7 @@ def _apply_semantic_identity_fallbacks(
                     label=field.label,
                     value=replacement,
                     aliases=list(field.aliases),
+                    option_aliases=list(field.option_aliases),
                 )
             )
             continue

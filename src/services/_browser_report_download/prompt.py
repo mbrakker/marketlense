@@ -320,6 +320,7 @@ def _build_identity_entries(
             {
                 "label": field.label,
                 "aliases": aliases,
+                "option_aliases": ", ".join(field.option_aliases),
                 "value": value,
             }
         )

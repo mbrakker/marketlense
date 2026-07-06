@@ -437,6 +437,7 @@ def _canonical_route_family(*, route_kind: str, route_family: str) -> str:
         return "browser_email_form"
     if route_kind == "onsite_report" and token in {
         "",
+        "browser_email_form",
         "browser_pdf_click",
         "browser_pdf_download",
     }:

@@ -47,6 +47,11 @@ def _build_identity_field(payload: dict) -> BrowserDownloadIdentityField:
         aliases=[
             str(item) for item in payload.get("aliases", []) if str(item or "").strip()
         ],
+        option_aliases=[
+            str(item)
+            for item in payload.get("option_aliases", [])
+            if str(item or "").strip()
+        ],
     )
 
 

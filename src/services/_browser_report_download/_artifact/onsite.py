@@ -360,7 +360,7 @@ def _prefer_onsite_capture_over_optional_form_submission(
             onsite_page_count,
             onsite_completeness_status,
         )
-    if blocked_reason:
+    if blocked_reason and blocked_reason != "blocked_unknown_required_enum":
         return (
             route_kind,
             onsite_capture_path,

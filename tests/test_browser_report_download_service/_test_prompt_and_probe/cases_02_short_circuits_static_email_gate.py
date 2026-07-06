@@ -34,13 +34,13 @@ def test_download_report_with_browser_use_short_circuits_static_email_gate(
     caplog.set_level(logging.INFO, logger=service.logger.name)
 
     response = service.download_report_with_browser_use(
-        BrowserReportDownloadRequest(
-            schema_version="1.0",
-            url="https://example.com/insights/annual-marketing-report",
-            settings=_settings(tmp_path),
-            route_kind_hint="email_delivery",
-            route_family_hint="browser_pdf_click",
-        ),
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/insights/annual-marketing-report",
+                settings=_settings(tmp_path, work_email=None),
+                route_kind_hint="email_delivery",
+                route_family_hint="browser_pdf_click",
+            ),
         run_context,
     )
 
@@ -83,13 +83,13 @@ def test_download_report_with_browser_use_detects_static_provider_email_gate(
     caplog.set_level(logging.INFO, logger=service.logger.name)
 
     response = service.download_report_with_browser_use(
-        BrowserReportDownloadRequest(
-            schema_version="1.0",
-            url="https://example.com/whitepapers/product-lifecycle-management",
-            settings=_settings(tmp_path),
-            route_kind_hint="email_delivery",
-            route_family_hint="browser_email_form",
-        ),
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/whitepapers/product-lifecycle-management",
+                settings=_settings(tmp_path, work_email=None),
+                route_kind_hint="email_delivery",
+                route_family_hint="browser_email_form",
+            ),
         run_context,
     )
 
@@ -148,6 +148,156 @@ def test_download_report_with_browser_use_does_not_static_gate_when_delivery_ema
     assert browser_started["value"] is True
 
 
+def test_download_report_with_browser_use_does_not_static_gate_when_configured_email_is_available(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>Annual Marketing Report</title></head>"
+                b"<body><h1>Annual Marketing Report</h1>"
+                b"<a>Download the report</a>"
+                b"<form><label>Business email address</label>"
+                b'<input name="email"><button>Submit</button></form></body></html>'
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    browser_started = {"value": False}
+
+    def fake_import_module(module_name: str) -> Any:
+        browser_started["value"] = True
+        raise AppError(
+            code="browser_runtime_started",
+            message="Browser runtime started after static email gate was bypassed",
+            retryable=False,
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(browser_runtime, "import_module", fake_import_module)
+
+    with pytest.raises(AppError) as exc_info:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/insights/annual-marketing-report",
+                settings=_settings(tmp_path),
+                route_kind_hint="email_delivery",
+                route_family_hint="browser_email_form",
+            ),
+            run_context,
+        )
+
+    assert exc_info.value.code == "browser_use_unavailable"
+    assert browser_started["value"] is True
+
+
+def test_download_report_with_browser_use_uses_remembered_interactive_captcha_blocker(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_no_defaulted_required_fields,
+) -> None:
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>Guide Download</title></head>"
+                b"<body><h1>Guide Download</h1>"
+                b"<form><label>Business email address</label>"
+                b'<input name="email"><button>Submit</button></form></body></html>'
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for remembered CAPTCHA")
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/guides/product-guide",
+            settings=_settings(tmp_path),
+            delivery_email="reports@example.com",
+            route_hint=(
+                "Filled the form, then the flow was blocked by an interactive "
+                "reCAPTCHA challenge displayed in the modal."
+            ),
+            route_kind_hint="email_delivery",
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.route_family == "browser_email_form"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_captcha"
+    assert response.used_route_hint is True
+    assert response.browser_had_structured_result is False
+    assert "remembered_interactive_captcha" in response.terminal_evidence.evidence_labels
+    assert_no_defaulted_required_fields(response)
+
+
+def test_download_report_with_browser_use_uses_remembered_access_forbidden_blocker(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_no_defaulted_required_fields,
+) -> None:
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>Report Download</title></head>"
+                b"<body><h1>Report Download</h1>"
+                b"<form><label>Business email address</label>"
+                b'<input name="email"><button>Submit</button></form></body></html>'
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for remembered HTTP 403")
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/resources/security-report",
+            settings=_settings(tmp_path),
+            delivery_email="reports@example.com",
+            route_hint=(
+                "Browser route reached the form, but HTTP 403 Forbidden access "
+                "control prevented loading the archive page."
+            ),
+            route_kind_hint="email_delivery",
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.route_family == "browser_email_form"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_static_archive"
+    assert response.used_route_hint is True
+    assert response.browser_had_structured_result is False
+    assert "remembered_access_forbidden" in response.terminal_evidence.evidence_labels
+    assert_no_defaulted_required_fields(response)
+
+
 def test_download_report_with_browser_use_classifies_static_email_timeout(
     tmp_path: Path,
     caplog,
@@ -173,13 +323,13 @@ def test_download_report_with_browser_use_classifies_static_email_timeout(
     caplog.set_level(logging.INFO, logger=service.logger.name)
 
     response = service.download_report_with_browser_use(
-        BrowserReportDownloadRequest(
-            schema_version="1.0",
-            url="https://example.com/resources/reports/annual-marketing-report",
-            settings=_settings(tmp_path),
-            route_kind_hint="email_delivery",
-            route_family_hint="browser_email_form",
-        ),
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/resources/reports/annual-marketing-report",
+                settings=_settings(tmp_path, work_email=None),
+                route_kind_hint="email_delivery",
+                route_family_hint="browser_email_form",
+            ),
         run_context,
     )
 

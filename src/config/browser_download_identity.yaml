@@ -7,6 +7,7 @@ fields:
   aliases:
   - name
   - full name
+  option_aliases: []
 - schema_version: '1.0'
   key: first_name
   label: First name
@@ -14,6 +15,7 @@ fields:
   aliases:
   - first name
   - given name
+  option_aliases: []
 - schema_version: '1.0'
   key: last_name
   label: Last name
@@ -22,15 +24,17 @@ fields:
   - last name
   - surname
   - family name
+  option_aliases: []
 - schema_version: '1.0'
   key: work_email
   label: Work email
-  value: dustin.von.richman@proton.me
+  value: reports@marketbearing.eu
   aliases:
   - email
   - email address
   - business email
   - work email
+  option_aliases: []
 - schema_version: '1.0'
   key: company
   label: Company
@@ -40,6 +44,7 @@ fields:
   - organization
   - business
   - employer
+  option_aliases: []
 - schema_version: '1.0'
   key: job_title
   label: Job title
@@ -49,6 +54,7 @@ fields:
   - role
   - title/role
   - job title
+  option_aliases: []
 - schema_version: '1.0'
   key: phone
   label: Phone
@@ -58,6 +64,7 @@ fields:
   - phone number
   - mobile
   - telephone
+  option_aliases: []
 - schema_version: '1.0'
   key: country
   label: Country
@@ -66,6 +73,9 @@ fields:
   - country
   - country/region
   - country or region
+  option_aliases:
+  - Austria
+  - Republic of Austria
 - schema_version: '1.0'
   key: city
   label: City
@@ -73,10 +83,11 @@ fields:
   aliases:
   - city
   - town
+  option_aliases: []
 - schema_version: '1.0'
   key: state_region
   label: State or region
-  value: Vienna
+  value: California
   aliases:
   - state
   - region
@@ -86,6 +97,9 @@ fields:
   - state/province
   - state or province
   - province/region
+  option_aliases:
+  - California
+  - CA
 - schema_version: '1.0'
   key: website_url
   label: Website URL
@@ -95,6 +109,7 @@ fields:
   - site
   - company website
   - website url
+  option_aliases: []
 - schema_version: '1.0'
   key: linkedin_url
   label: LinkedIn URL
@@ -103,229 +118,294 @@ fields:
   - linkedin
   - linkedin profile
   - linkedin url
+  option_aliases: []
 - schema_version: '1.0'
   key: business_organization
   label: Business / Organization
   value: Secret
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: workplace
   label: Workplace
   value: Secret
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: company_name
   label: Company name
   value: Secret
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: do_you_have_an_app
   label: Do you have an app?
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: termsagreed
   label: termsAgreed
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: newsletter
   label: newsletter
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: professional_email
   label: Professional Email
-  value: dustin.von.richman@proton.me
+  value: reports@marketbearing.eu
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: business_phone
   label: Business Phone
   value: 0378378394
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: privacy_checkbox
   label: Privacy checkbox
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: i_d_like_to_see_a_demo_of_contentsquare
   label: I'd like to see a demo of Contentsquare
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: i_agree_to_receive_marketing_communications
   label: I agree to receive marketing communications
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: how_did_you_hear_about_us
   label: How did you hear about us?
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: receive_our_insights_and_analysis
   label: Receive our insights and analysis
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: industry
   label: Industry
-  value: null
+  value: Research
   aliases: []
+  option_aliases:
+  - Research
+  - Market Research
+  - 'Technology: Advertising / Marketing'
+  - Consumer Electronics
 - schema_version: '1.0'
   key: job_function
   label: Job Function
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: yes_i_d_like_to_receive_more_information_on_algolia_products_events_and_promotions_via_email
   label: Yes, I'd like to receive more information on Algolia products, events and
     promotions via email
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: request_purpose
   label: Request Purpose
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: description
   label: Description
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: preferred_method_of_contact
   label: Preferred Method of Contact
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: online_annual_revenue
   label: Online Annual Revenue
-  value: null
+  value: 1000 euro
   aliases:
   - projected annual revenue
   - projected annual online revenue
+  option_aliases:
+  - Less than $250k
+  - Less than 250k
 - schema_version: '1.0'
   key: do_you_have_a_specific_goal
   label: Do you have a specific goal?
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: how_would_you_like_us_to_respond
   label: How would you like us to respond?
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: please_send_me_updates_about
   label: 'Please send me updates about:'
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: business_type
   label: Business Type
-  value: null
+  value: Research
   aliases: []
+  option_aliases:
+  - B2B
+  - Research
 - schema_version: '1.0'
   key: number_of_employees
   label: Number of Employees
-  value: null
+  value: 5 people
   aliases: []
+  option_aliases:
+  - 1-10
+  - 1-10 employees
 - schema_version: '1.0'
   key: current_platform
   label: Current Platform
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: opt_in_for_marketing_communications_c
   label: Opt_in_for_Marketing_Communications__c
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: newsletter_and_report_releases
   label: Newsletter and report releases
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: company_size
   label: Company size
-  value: null
+  value: 5 people
   aliases: []
+  option_aliases:
+  - 1-10
+  - 1-10 employees
 - schema_version: '1.0'
   key: company_type
   label: Company type
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: business_email_address
   label: Business Email Address
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: department
   label: Department
-  value: null
+  value: Research
   aliases: []
+  option_aliases:
+  - Research
+  - Marketing
 - schema_version: '1.0'
   key: location
   label: Location
-  value: null
+  value: Austria
   aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
 - schema_version: '1.0'
   key: seniority
   label: Seniority
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: marketing_country
   label: Marketing Country
-  value: null
+  value: Austria
   aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
 - schema_version: '1.0'
   key: place_branding_and_soft_power
   label: Place branding and Soft Power
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: employer_branding
   label: Employer branding
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: sports_brands_and_sponsorship
   label: Sports brands and sponsorship
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: sustainability_perceptions_of_brands
   label: Sustainability perceptions of brands
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: save_preferences_cookie_modal
   label: Save Preferences (cookie modal)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: cookie_toggles_privacy_preferences
   label: cookie toggles (privacy preferences)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: country_select
   label: Country (select)
-  value: null
+  value: Austria
   aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
 - schema_version: '1.0'
   key: opt_in_checkbox
   label: Opt-in checkbox
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: submit_button
   label: Submit button
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: optional_i_would_like_to_receive_email_updates_about_sita_products_services_and_events_i_understand_that_i_can_update_my_preferences_or_unsubscribe_at_any_time_via_the_preference_centre_or_by_following_the_link_included_in_our_emails
   label: (Optional) I would like to receive email updates about SITA products, services,
@@ -333,71 +413,89 @@ fields:
     time via the Preference Centre or by following the link included in our emails.
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: type_the_code_from_the_image
   label: Type the code from the image *
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: captcha_input
   label: Captcha (input)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: contact_me_about
   label: Contact me about
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: comment
   label: Comment
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: first_name_name_firstname
   label: First name (name=firstname)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: last_name_name_lastname
   label: Last name (name=lastname)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: work_email_name_email
   label: Work email (name=email)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: company_size_name_company_size_legacy
   label: Company size (name=company_size_legacy)
-  value: null
+  value: 5 people
   aliases: []
+  option_aliases:
+  - 1-10
+  - 1-10 employees
 - schema_version: '1.0'
   key: country_name_country_dropdown
   label: Country (name=country_dropdown)
-  value: null
+  value: Austria
   aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
 - schema_version: '1.0'
   key: first_name_name_firstname_required_text
   label: First name (name=firstname) - required - text
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: last_name_name_lastname_required_text
   label: Last name (name=lastname) - required - text
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: business_email_name_email_required_email
   label: Business email (name=email) - required - email
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: company_name_name_company_required_text
   label: Company name (name=company) - required - text
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: i_work_for_a_n_name_demo_selected_for_required_select_options_please_select_investor_company_consulting_data_company_government_academic_institution_news_media_press
   label: 'I work for a(n) (name=demo_selected_for) - required - select (options: Please
@@ -405,165 +503,717 @@ fields:
     News Media/Press)'
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: any_questions_or_specific_topics_you_d_like_to_see_name_subscribe_comments_optional_textarea
   label: Any questions or specific topics you'd like to see? (name=subscribe_comments)
     - optional - textarea
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: legal_consent_text_legal_consent
   label: Legal / consent text - legal-consent
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: recaptcha_name_recaptcha_token_required_recaptcha
   label: reCAPTCHA (name=recaptcha-token) - required - recaptcha
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: search_term
   label: Search Term
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: language
   label: Language
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: search_engine
   label: Search Engine
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: firstname_name_firstname_text_required
   label: firstname (name=firstname) - text - required
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: lastname_name_lastname_text_required
   label: lastname (name=lastname) - text - required
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: company_name_company_text_required
   label: company (name=company) - text - required
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: email_name_email_email_required_placeholder_your_report_will_be_sent_here
   label: 'email (name=email) - email - required (placeholder: Your report will be
     sent here)'
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: organization_type_name_organization_type_select_required_invalid_true
   label: organization_type (name=organization_type) - select - required (invalid=true)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: legal_consent_subscription_type_9904690_checkbox_consent
   label: LEGAL_CONSENT.subscription_type_9904690 (checkbox) - consent
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: submit_input_type_submit
   label: Submit (input type=submit)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: work_email_name_email_required_email
   label: Work email (name=email) - required - email
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: company_size_name_company_size_legacy_required_select
   label: Company size (name=company_size_legacy) - required - select
-  value: null
+  value: 5 people
   aliases: []
+  option_aliases:
+  - 1-10
+  - 1-10 employees
 - schema_version: '1.0'
   key: country_name_country_dropdown_required_select
   label: Country (name=country_dropdown) - required - select
-  value: null
+  value: Austria
   aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
 - schema_version: '1.0'
   key: firstname
   label: FirstName
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: lastname
   label: LastName
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: what_is_your_priority_area_of_interest
   label: What is your priority area of interest?
-  value: null
+  value: Research
   aliases: []
+  option_aliases:
+  - Research
 - schema_version: '1.0'
   key: comments
   label: Comments
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: marketing_opt_in_yes_please_opt_me_in_to_receive_marketing_communications
   label: Marketing opt-in (Yes, please opt me in to receive marketing communications...)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: zip_code
   label: Zip Code
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: level
   label: Level
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: preferred_language
   label: Preferred Language
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: privacy_terms_agreement
   label: Privacy / Terms agreement
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: comscore_communications_opt_in_checkbox
   label: Comscore communications opt-in (checkbox)
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: first_name_name_firstname_text_required
   label: First name (name=firstname) - text - required
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: last_name_name_lastname_text_required
   label: Last name (name=lastname) - text - required
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: business_email_name_email_email_required
   label: Business email (name=email) - email - required
   value: null
   aliases: []
+  option_aliases: []
 - schema_version: '1.0'
   key: projected_annual_revenue_select
   label: Projected Annual Revenue (select)
-  value: null
+  value: 1000 euro
   aliases: []
+  option_aliases:
+  - Less than $250k
+  - Less than 250k
 - schema_version: '1.0'
   key: submit_button_download_the_report
   label: Submit button (DOWNLOAD THE REPORT)
   value: null
   aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: online_annual_revenue_projected_annual_revenue
+  label: Online Annual Revenue / Projected Annual Revenue
+  value: 1000 euro
+  aliases: []
+  option_aliases:
+  - Less than $250k
+  - Less than 250k
+- schema_version: '1.0'
+  key: first_name_label_first_name_input_id_firstname
+  label: 'First Name (label: First Name; input id=FirstName)'
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: last_name_label_last_name_input_id_lastname
+  label: 'Last Name (label: Last Name; input id=LastName)'
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: work_email_address_label_work_email_address_input_id_email_name_email
+  label: 'Work Email Address (label: Work Email Address; input id=Email name=Email)'
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_name_label_company_name_input_id_company
+  label: 'Company Name (label: Company Name; input id=Company)'
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_size_full_part_time_employees_only_select_id_account_size_c
+  label: Company Size (Full & Part Time Employees Only) (select id=Account_Size__c)
+  value: 5 people
+  aliases: []
+  option_aliases:
+  - 1-10
+  - 1-10 employees
+- schema_version: '1.0'
+  key: country_label_country_select_id_country
+  label: 'Country (label: Country; select id=Country)'
+  value: Austria
+  aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
+- schema_version: '1.0'
+  key: role_dept_label_role_dept_select_id_role_c
+  label: 'Role / Dept (label: Role / Dept; select id=Role__c)'
+  value: Research
+  aliases: []
+  option_aliases:
+  - Research
+  - Executive Team
+- schema_version: '1.0'
+  key: fname_first_name
+  label: fname (first name)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: lname_last_name
+  label: lname (last name)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: email_work_email
+  label: email (work email)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_company_name
+  label: company (company name)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: demo_optional_checkbox
+  label: demo (optional checkbox)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: full_name_input_name_name_required
+  label: Full name (input name=name) - required
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: work_email_input_name_email_required
+  label: Work email (input name=email) - required
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_input_name_company_required
+  label: Company (input name=company) - required
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_size_searchable_select_name_companysize_required
+  label: Company size (searchable/select name=companysize) - required
+  value: 5 people
+  aliases: []
+  option_aliases:
+  - 1-10
+  - 1-10 employees
+- schema_version: '1.0'
+  key: how_did_you_hear_about_profound_textarea_name_message_required
+  label: How did you hear about Profound? (textarea name=message) - required
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: we_re_an_agency_checkbox_name_isagency_optional
+  label: We're an agency (checkbox name=isAgency) - optional
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: first_name_label_input_name_firstname_shadow_dom
+  label: "First name (label) \u2014 input name=firstname (shadow DOM)"
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: last_name_label_input_name_lastname_shadow_dom
+  label: "Last name (label) \u2014 input name=lastname (shadow DOM)"
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: business_email_label_input_name_email_shadow_dom
+  label: "Business Email (label) \u2014 input name=email (shadow DOM)"
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_label_input_name_company_shadow_dom
+  label: "Company (label) \u2014 input name=company (shadow DOM)"
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: job_title_label_input_name_jobtitle_shadow_dom
+  label: "Job title (label) \u2014 input name=jobtitle (shadow DOM)"
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: region_label_select_name_primary_operating_region_c_shadow_dom
+  label: "Region (label) \u2014 select name=primary_operating_region__c (shadow DOM)"
+  value: Austria
+  aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
+- schema_version: '1.0'
+  key: country_of_residence_label_select_name_country_of_residence_c_shadow_dom
+  label: "Country of Residence (label) \u2014 select name=country_of_residence__c\
+    \ (shadow DOM)"
+  value: Austria
+  aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
+- schema_version: '1.0'
+  key: state_of_company_headquarters
+  label: State of Company Headquarters
+  value: California
+  aliases: []
+  option_aliases:
+  - California
+  - CA
+- schema_version: '1.0'
+  key: utm_source_hidden
+  label: UTM Source (hidden)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: utm_medium_hidden
+  label: UTM Medium (hidden)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: utm_campaign_hidden
+  label: UTM Campaign (hidden)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: utm_term_hidden
+  label: UTM Term (hidden)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: utm_content_hidden
+  label: UTM Content (hidden)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: website_url_hidden
+  label: Website URL (hidden)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: business_email_input_id_email_index_2850_placeholder_enter_business_email
+  label: Business Email (input id=email, index=2850, placeholder='Enter business email')
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: country_select_id_country_index_2856
+  label: Country (select id=country, index=2856)
+  value: Austria
+  aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
+- schema_version: '1.0'
+  key: get_the_report_button_id_hly_submit_btn_index_3604
+  label: Get the Report (button id=hly-submit-btn, index=3604)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: jobtitle
+  label: jobtitle
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: firstname_input_index_44
+  label: FirstName (input, index 44)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: lastname_input_index_45
+  label: LastName (input, index 45)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: email_work_email_input_index_46
+  label: Email / Work Email (input, index 46)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: job_title_title_input_index_47
+  label: Job Title / Title (input, index 47)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_company_name_input_index_48
+  label: Company / Company Name (input, index 48)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: country_select_index_42
+  label: Country (select, index 42)
+  value: Austria
+  aliases: []
+  option_aliases:
+  - Austria
+  - Republic of Austria
+- schema_version: '1.0'
+  key: job_level
+  label: Job Level
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: marketing_consent_checkbox_you_agree_to_receive_marketing_messages
+  label: Marketing consent checkbox (You agree to receive marketing messages...)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: download_submit_button
+  label: Download (submit) button
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: first_name_input_firstname
+  label: First Name (input / FirstName)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: last_name_input_lastname
+  label: Last Name (input / LastName)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: work_email_input_email
+  label: Work Email (input / Email)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_input_company
+  label: Company (input / Company)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: job_title_input_title
+  label: Job Title (input / Title)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: "pr\xE9nom_input_id_firstname_required"
+  label: "Pr\xE9nom (input id=FirstName) - required"
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: nom_input_id_lastname_required
+  label: Nom (input id=LastName) - required
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: email_professionnel_input_id_email_name_email_required
+  label: Email professionnel (input id=Email name=Email) - required
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: entreprise_input_id_company_required
+  label: Entreprise (input id=Company) - required
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: fonction_input_id_title_name_title_required
+  label: Fonction (input id=Title name=Title) - required
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: are_you_interested_in_a_demo_optional
+  label: Are you interested in a demo? (optional)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: how_did_you_hear_about_profound
+  label: How did you hear about Profound?
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: job_function_role
+  label: Job Function / Role
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: any_questions_or_specific_topics_you_d_like_to_see_comments_textarea
+  label: Any questions or specific topics you'd like to see? (comments/textarea)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: first_name_input_id_firstname
+  label: First Name (input id=FirstName)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: last_name_input_id_lastname
+  label: Last Name (input id=LastName)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: business_email_input_id_email_name_email
+  label: Business Email (input id=Email name=Email)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_name_input_id_company
+  label: Company Name (input id=Company)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: online_annual_revenue_projected_annual_revenue_select_id_projected_annual_revenue_c
+  label: Online Annual Revenue / Projected Annual Revenue (select id=Projected_Annual_Revenue__c)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: country_select_id_country
+  label: Country (select id=Country)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: i_am_a
+  label: I am a
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: firstname_input_index_32
+  label: firstname (input, index=32)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: lastname_input_index_33
+  label: lastname (input, index=33)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_input_index_34
+  label: company (input, index=34)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: email_input_index_35
+  label: email (input, index=35)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: organization_type_select_index_36
+  label: organization_type (select, index=36)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: c_emailaddress_email
+  label: C_EmailAddress (Email)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: c_firstname_first_name
+  label: C_FirstName (First Name)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: c_lastname_last_name
+  label: C_LastName (Last Name)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: c_title_job_title
+  label: C_Title (Job Title)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: c_company_company
+  label: C_Company (Company)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: c_country_country_select_id_c_country_index_501
+  label: C_Country (Country) - select (id=C_Country, index=501)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: c_industry1_industry_select_id_c_industry1_index_509
+  label: C_Industry1 (Industry) - select (id=C_Industry1, index=509)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: privacy_terms_agreement_checkbox_mandatory
+  label: Privacy/Terms agreement checkbox (mandatory)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: country_visible_value_france
+  label: 'Country * (visible value: France)'
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: industry_placeholder_text_please_make_a_selection
+  label: 'Industry * (placeholder text: Please make a selection)'
+  value: null
+  aliases: []
+  option_aliases: []
 delivery_emails:
-- dustin.von.richman@proton.me
+- reports@marketbearing.eu
 consent_policy:
   schema_version: '1.0'
   default_checkbox_policy: mandatory_privacy_terms_only
@@ -581,15 +1231,19 @@ publisher_overrides:
     aliases:
     - select your industry
     - industry
+    option_aliases: []
   - schema_version: '1.0'
     key: state_region
     label: State or Region
-    value: Wien
+    value: California
     aliases:
     - state
     - state or region
     - region
     - province
+    option_aliases:
+    - California
+    - CA
 - schema_version: '1.0'
   host_pattern: consumeredge.com
   delivery_emails: []
@@ -601,6 +1255,7 @@ publisher_overrides:
     aliases:
     - organization type
     - organization_type
+    option_aliases: []
 - schema_version: '1.0'
   host_pattern: business.adobe.com
   delivery_emails: []
@@ -608,11 +1263,14 @@ publisher_overrides:
   - schema_version: '1.0'
     key: state_region
     label: State
-    value: Vienna
+    value: California
     aliases:
     - state
     - province
     - state or province
+    option_aliases:
+    - California
+    - CA
   - schema_version: '1.0'
     key: country
     label: Country
@@ -620,6 +1278,9 @@ publisher_overrides:
     aliases:
     - country
     - country/region
+    option_aliases:
+    - Austria
+    - Republic of Austria
 - schema_version: '1.0'
   host_pattern: gwi.com
   delivery_emails: []
@@ -631,6 +1292,7 @@ publisher_overrides:
     aliases:
     - company size
     - company_size_legacy
+    option_aliases: []
   - schema_version: '1.0'
     key: company_size_name_company_size_legacy_required_select
     label: Company size (name=company_size_legacy) - required - select
@@ -638,6 +1300,7 @@ publisher_overrides:
     aliases:
     - company size
     - company_size_legacy
+    option_aliases: []
 - schema_version: '1.0'
   host_pattern: bigcommerce.com
   delivery_emails: []
@@ -651,6 +1314,7 @@ publisher_overrides:
     - organization
     - business
     - employer
+    option_aliases: []
   - schema_version: '1.0'
     key: online_annual_revenue
     label: Online Annual Revenue
@@ -658,6 +1322,7 @@ publisher_overrides:
     aliases:
     - projected annual revenue
     - projected annual online revenue
+    option_aliases: []
 - schema_version: '1.0'
   host_pattern: proximic.com
   delivery_emails: []
@@ -668,6 +1333,7 @@ publisher_overrides:
     value: 'Technology: Advertising / Marketing'
     aliases:
     - industry
+    option_aliases: []
   - schema_version: '1.0'
     key: department
     label: Department
@@ -675,6 +1341,7 @@ publisher_overrides:
     aliases:
     - department
     - job function
+    option_aliases: []
   - schema_version: '1.0'
     key: level
     label: Level
@@ -682,6 +1349,7 @@ publisher_overrides:
     aliases:
     - level
     - seniority
+    option_aliases: []
   - schema_version: '1.0'
     key: number_of_employees
     label: Number of Employees
@@ -689,6 +1357,7 @@ publisher_overrides:
     aliases:
     - number of employees
     - employees
+    option_aliases: []
   - schema_version: '1.0'
     key: preferred_language
     label: Preferred Language
@@ -696,6 +1365,7 @@ publisher_overrides:
     aliases:
     - preferred language
     - language
+    option_aliases: []
   - schema_version: '1.0'
     key: state_region
     label: State or Province
@@ -704,6 +1374,9 @@ publisher_overrides:
     - state
     - state or province
     - province
+    option_aliases:
+    - Vienna
+    - Wien
   - schema_version: '1.0'
     key: zip_code
     label: Zip Code
@@ -711,6 +1384,7 @@ publisher_overrides:
     aliases:
     - zip code
     - postal code
+    option_aliases: []
   - schema_version: '1.0'
     key: website_url
     label: Website
@@ -718,6 +1392,7 @@ publisher_overrides:
     aliases:
     - website
     - website url
+    option_aliases: []
   - schema_version: '1.0'
     key: i_have_read_understand_and_agree_to_comscore_s_privacy_policy_terms_of_use_product_terms_comscore_markets_terms_agreement_checkbox
     label: I have read, understand and agree to Comscore's Privacy Policy / Terms
@@ -727,6 +1402,7 @@ publisher_overrides:
     - privacy agreement
     - terms agreement
     - agreement checkbox
+    option_aliases: []
 - schema_version: '1.0'
   host_pattern: mintel.com
   delivery_emails: []
@@ -736,18 +1412,22 @@ publisher_overrides:
     label: Role
     value: Mid-senior
     aliases: []
+    option_aliases: []
   - schema_version: '1.0'
     key: department
     label: Department
     value: Brand Management
     aliases: []
+    option_aliases: []
   - schema_version: '1.0'
     key: industry
     label: Industry
     value: Advertising and Marketing
     aliases: []
+    option_aliases: []
   - schema_version: '1.0'
     key: location
     label: Location
     value: Austria
     aliases: []
+    option_aliases: []

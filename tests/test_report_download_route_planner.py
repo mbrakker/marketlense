@@ -193,6 +193,127 @@ def test_plan_report_download_routes_refreshes_remembered_email_query_value(
     assert "cdn.example.com%2Freport.pdf" in attempt_url
 
 
+def test_plan_report_download_routes_replays_email_memory_from_form_url(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=(
+                "https://example.com/resources/reports/global-b2b-buyer-report"
+            ),
+            delivery_email="current.delivery@example.com",
+            remembered_route=PublisherDownloadRouteMemory(
+                schema_version="1.0",
+                route_kind="email_delivery",
+                route_summary="Submitted the report form and reached a thank-you page.",
+                outcome="email_requested",
+                route_family="browser_email_form",
+                route_status="verified",
+                resolved_target_url=(
+                    "https://example.com/resources/reports/global-b2b-buyer-report-ty/"
+                ),
+                attempts=2,
+                verified_successes=2,
+                last_n_outcomes=["email_requested"],
+                confidence_score=0.9,
+                browser_had_structured_result=True,
+                onsite_completeness_status=None,
+            ),
+            candidate_trace=None,
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[0].route_family == "browser_email_form"
+    assert response.steps[0].route_kind_hint == "email_delivery"
+    assert response.steps[0].attempt_url == (
+        "https://example.com/resources/reports/global-b2b-buyer-report"
+    )
+
+
+def test_plan_report_download_routes_drops_remembered_email_form_values(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/resources/reports/market-study",
+            delivery_email="current.delivery@example.com",
+            remembered_route=PublisherDownloadRouteMemory(
+                schema_version="1.0",
+                route_kind="email_delivery",
+                route_summary="Clicked download, filled the form, and submitted.",
+                outcome="email_requested",
+                route_family="browser_email_form",
+                route_status="verified",
+                resolved_target_url="https://example.com/resources/reports/market-study-ty/",
+                route_steps=[
+                    BrowserDownloadRouteStep(
+                        schema_version="1.0",
+                        index=0,
+                        action="click",
+                        target_text="Download The Report",
+                        target_role="button",
+                        target_url="https://example.com/resources/reports/market-study-ty/",
+                        result="Clicked the report CTA",
+                    ),
+                    BrowserDownloadRouteStep(
+                        schema_version="1.0",
+                        index=1,
+                        action="input",
+                        target_text="stale@proton.me",
+                        target_role="text input with current value stale@proton.me",
+                        target_url="https://example.com/resources/reports/market-study-ty/",
+                        result="Typed 'stale@proton.me'",
+                    ),
+                    BrowserDownloadRouteStep(
+                        schema_version="1.0",
+                        index=2,
+                        action="select_dropdown",
+                        target_text="Less than $250k",
+                        target_role="dropdown with current value Less than $250k",
+                        target_url="https://example.com/resources/reports/market-study-ty/",
+                        result="Selected dropdown option 'Less than $250k'",
+                    ),
+                    BrowserDownloadRouteStep(
+                        schema_version="1.0",
+                        index=3,
+                        action="click",
+                        target_text="Submit",
+                        target_role="button",
+                        target_url="https://example.com/resources/reports/market-study-ty/",
+                        result="Submitted the form",
+                    ),
+                ],
+                attempts=2,
+                verified_successes=2,
+                last_n_outcomes=["email_requested"],
+                confidence_score=0.9,
+                browser_had_structured_result=True,
+                onsite_completeness_status=None,
+            ),
+            candidate_trace=None,
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    step = response.steps[0]
+    assert step.route_family == "browser_email_form"
+    assert step.attempt_url == "https://example.com/resources/reports/market-study"
+    assert [hint.action for hint in step.route_step_hints] == ["click", "click"]
+    serialized_hints = " ".join(
+        f"{hint.target_text} {hint.target_role} {hint.result}"
+        for hint in step.route_step_hints
+    )
+    assert "stale@proton.me" not in serialized_hints
+    assert "Less than $250k" not in serialized_hints
+
+
 def test_plan_report_download_routes_uses_learned_policy_to_override_browser_first_hint(
     run_context,
 ) -> None:

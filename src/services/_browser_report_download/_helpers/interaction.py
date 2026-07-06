@@ -23,7 +23,7 @@ from src.services._browser_report_download.cdp import (
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
-from .inspection import browser_helper_js
+from .inspection import browser_helper_js, browser_helper_js_via_cdp
 from .state import _HELPER_SCHEMA_VERSION, _HTML_EXCERPT_CHARS, _excerpt, _maybe_await
 
 logger = logging.getLogger("market_lense.browser_report_download_service.helpers")
@@ -128,6 +128,7 @@ def browser_helper_form_autocomplete(
     ctx: RunContext,
     normalized_url: str,
     submit: bool = True,
+    browser: Any | None = None,
 ) -> BrowserHelperAutocompleteResult:
     logger.info(
         log_event(
@@ -146,9 +147,7 @@ def browser_helper_form_autocomplete(
         "fields": field_values,
         "submit": bool(submit),
     }
-    js_result = browser_helper_js(
-        page=page,
-        expression=f"""
+    expression = f"""
         return (() => {{
           const payload = {json.dumps(script_payload, ensure_ascii=True)};
           const normalize = (value) =>
@@ -169,13 +168,35 @@ def browser_helper_form_autocomplete(
                 field.label,
                 ...(Array.isArray(field.aliases) ? field.aliases : []),
               ].map(keyToken).filter(Boolean),
+              optionAliases: [
+                field.value,
+                ...(Array.isArray(field.option_aliases) ? field.option_aliases : []),
+              ].map(keyToken).filter(Boolean),
             }}))
             .filter((field) => field.value);
-          const labelsFor = (control) => {{
+          const sameOriginDocuments = () => {{
+            const roots = [document];
+            for (const frame of Array.from(document.querySelectorAll('iframe'))) {{
+              try {{
+                const frameDocument = frame.contentDocument;
+                if (
+                  frameDocument &&
+                  frameDocument.documentElement &&
+                  !roots.includes(frameDocument)
+                ) {{
+                  roots.push(frameDocument);
+                }}
+              }} catch (error) {{
+                // Cross-origin frames are intentionally skipped.
+              }}
+            }}
+            return roots;
+          }};
+          const labelsFor = (control, root = control.ownerDocument || document) => {{
             const values = [];
             const id = control.getAttribute('id') || '';
             if (id) {{
-              const label = document.querySelector(`label[for="${{CSS.escape(id)}}"]`);
+              const label = root.querySelector(`label[for="${{CSS.escape(id)}}"]`);
               if (label) values.push(label.textContent || '');
             }}
             values.push(
@@ -186,7 +207,7 @@ def browser_helper_form_autocomplete(
             );
             const labelledBy = control.getAttribute('aria-labelledby') || '';
             for (const token of labelledBy.split(/\\s+/).filter(Boolean)) {{
-              const node = document.getElementById(token);
+              const node = root.getElementById(token);
               if (node) values.push(node.textContent || '');
             }}
             const wrapper = control.closest(
@@ -198,8 +219,8 @@ def browser_helper_form_autocomplete(
             }}
             return values.map(keyToken).filter(Boolean);
           }};
-          const matchField = (control) => {{
-            const labels = labelsFor(control);
+          const matchField = (control, root = control.ownerDocument || document) => {{
+            const labels = labelsFor(control, root);
             const joined = labels.join(' ');
             for (const field of fieldEntries) {{
               if (field.aliases.some((alias) => joined.includes(alias))) {{
@@ -212,24 +233,41 @@ def browser_helper_form_autocomplete(
             }}
             return null;
           }};
-          const controls = Array.from(document.querySelectorAll([
+          const rootDocuments = sameOriginDocuments();
+          const rootForControl = new WeakMap();
+          const controls = rootDocuments.flatMap((root) =>
+            Array.from(root.querySelectorAll([
             'input[role="combobox"]',
             'input[aria-autocomplete]',
             'input.lookup-behavior',
             '.lookupFormFieldBlock input',
             '[role="combobox"] input',
+            'input[name*="country" i]',
+            'input[id*="country" i]',
+            'input[name*="state" i]',
+            'input[id*="state" i]',
+            'input[name*="province" i]',
+            'input[id*="province" i]',
+            'input[name*="region" i]',
+            'input[id*="region" i]',
             'select',
-          ].join(','))).filter((control, index, collection) =>
+            ].join(','))).map((control) => {{
+              rootForControl.set(control, root);
+              return control;
+            }})
+          ).filter((control, index, collection) =>
             collection.indexOf(control) === index && isVisible(control)
           );
-          const visibleOptions = () => Array.from(document.querySelectorAll([
+          const visibleOptions = (root = document) => Array.from(root.querySelectorAll([
             '[role="option"]',
             '[role="listbox"] [role="option"]',
             '.ui-menu-item-wrapper',
             '.ui-menu-item',
+            'li[role="presentation"]',
+            'li',
             '[data-value]',
             '[data-testid*="option" i]',
-          ].join(','))).filter((node) =>
+          ].join(','))).slice(0, 120).filter((node) =>
             isVisible(node) && normalize(node.innerText || node.textContent)
           );
           const dispatchKey = (control, type, key) => {{
@@ -267,8 +305,39 @@ def browser_helper_form_autocomplete(
             node.dispatchEvent(new MouseEvent('mouseup', {{ bubbles: true }}));
             node.click();
           }};
+          const optionTokensFor = (field) => {{
+            const tokens = [];
+            const seen = new Set();
+            for (const rawToken of [field.value, ...(field.optionAliases || [])]) {{
+              const token = keyToken(rawToken);
+              if (!token || seen.has(token)) continue;
+              seen.add(token);
+              tokens.push(token);
+            }}
+            return tokens;
+          }};
+          const looksLikePlaceholderOption = (value) => {{
+            const token = keyToken(value);
+            if (!token) return true;
+            return token === 'select' ||
+              token === 'please select' ||
+              token === 'select one' ||
+              token === 'choose' ||
+              token === 'choose one' ||
+              token === 'none' ||
+              token.includes('please select') ||
+              token.includes('select...');
+          }};
+          const tokenMatchesAny = (candidate, field) => {{
+            const candidateToken = keyToken(candidate);
+            if (!candidateToken) return false;
+            return optionTokensFor(field).some((wanted) =>
+              candidateToken === wanted ||
+              candidateToken.includes(wanted) ||
+              wanted.includes(candidateToken)
+            );
+          }};
           const selectNativeOption = (control, field) => {{
-            const wanted = keyToken(field.value);
             control.focus();
             control.click();
             for (const char of field.value) {{
@@ -278,13 +347,13 @@ def browser_helper_form_autocomplete(
             const options = Array.from(control.options || []).filter((option) =>
               !option.disabled && keyToken(option.textContent || option.value)
             );
-            const option = options.find((node) =>
-              keyToken(node.textContent || node.value) === wanted
-            ) || options.find((node) =>
-              keyToken(node.textContent || node.value).includes(wanted)
-            ) || options.find((node) =>
-              wanted.includes(keyToken(node.textContent || node.value))
+            const exactOption = options.find((node) =>
+              tokenMatchesAny(node.textContent || node.value, field)
             );
+            const fallbackOption = options.find((node) =>
+              !looksLikePlaceholderOption(node.textContent || node.value)
+            );
+            const option = exactOption || fallbackOption;
             if (option) {{
               control.value = option.value;
               option.selected = true;
@@ -309,67 +378,79 @@ def browser_helper_form_autocomplete(
             const invalid = String(control.getAttribute('aria-invalid') || '')
               .toLowerCase() === 'true';
             return !invalid && persisted && (
-              persisted === wanted ||
-              persisted.includes(wanted) ||
-              wanted.includes(persisted)
+              tokenMatchesAny(persisted, field) || Boolean(option && !exactOption)
             );
           }};
           const selectedFields = [];
           const unresolvedFields = [];
           let attemptedCount = 0;
-          for (const control of controls) {{
-            const field = matchField(control);
-            if (!field || !field.value) continue;
-            const label = normalize(field.label || labelsFor(control)[0] || 'Autocomplete');
-            attemptedCount += 1;
-            if (control.tagName && control.tagName.toLowerCase() === 'select') {{
-              if (selectNativeOption(control, field)) {{
-                selectedFields.push(label);
+          const selectedControls = new Set();
+          let latestUnresolvedFields = [];
+          for (let passIndex = 0; passIndex < 1; passIndex += 1) {{
+            const passUnresolvedFields = [];
+            let passProgress = false;
+            for (const control of controls) {{
+              if (selectedControls.has(control)) continue;
+              const root = rootForControl.get(control) || control.ownerDocument || document;
+              const field = matchField(control, root);
+              if (!field || !field.value) continue;
+              const label = normalize(field.label || labelsFor(control, root)[0] || 'Autocomplete');
+              attemptedCount += 1;
+              let selected = false;
+              if (control.tagName && control.tagName.toLowerCase() === 'select') {{
+                selected = selectNativeOption(control, field);
               }} else {{
-                unresolvedFields.push(label);
+                typeText(control, field.value);
+                const options = visibleOptions(root);
+                const exactOption = options.find((node) =>
+                  tokenMatchesAny(node.innerText || node.textContent, field)
+                );
+                const fallbackOption = options.find((node) =>
+                  !looksLikePlaceholderOption(node.innerText || node.textContent)
+                );
+                const option = exactOption || fallbackOption;
+                if (option) {{
+                  clickOption(option);
+                }} else {{
+                  dispatchKey(control, 'keydown', 'Enter');
+                  dispatchKey(control, 'keyup', 'Enter');
+                }}
+                dispatchKey(control, 'keydown', 'Tab');
+                dispatchKey(control, 'keyup', 'Tab');
+                control.blur();
+                const persisted = keyToken(
+                  control.value ||
+                  control.getAttribute('value') ||
+                  control.getAttribute('aria-label') ||
+                  ''
+                );
+                const invalid = String(control.getAttribute('aria-invalid') || '')
+                  .toLowerCase() === 'true';
+                selected = !invalid && persisted && (
+                  tokenMatchesAny(persisted, field) || Boolean(option && !exactOption)
+                );
               }}
-              continue;
+              if (selected) {{
+                selectedControls.add(control);
+                selectedFields.push(label);
+                passProgress = true;
+              }} else {{
+                passUnresolvedFields.push(label);
+              }}
             }}
-            typeText(control, field.value);
-            const wanted = keyToken(field.value);
-            const options = visibleOptions();
-            const option = options.find((node) =>
-              keyToken(node.innerText || node.textContent) === wanted
-            ) || options.find((node) =>
-              keyToken(node.innerText || node.textContent).includes(wanted)
-            );
-            if (option) {{
-              clickOption(option);
-            }} else {{
-              dispatchKey(control, 'keydown', 'Enter');
-              dispatchKey(control, 'keyup', 'Enter');
-            }}
-            dispatchKey(control, 'keydown', 'Tab');
-            dispatchKey(control, 'keyup', 'Tab');
-            control.blur();
-            const persisted = keyToken(
-              control.value ||
-              control.getAttribute('value') ||
-              control.getAttribute('aria-label') ||
-              ''
-            );
-            const invalid = String(control.getAttribute('aria-invalid') || '')
-              .toLowerCase() === 'true';
-            if (!invalid && persisted && (
-              persisted === wanted ||
-              persisted.includes(wanted) ||
-              wanted.includes(persisted)
-            )) {{
-              selectedFields.push(label);
-            }} else {{
-              unresolvedFields.push(label);
-            }}
+            latestUnresolvedFields = passUnresolvedFields;
+            if (!latestUnresolvedFields.length || !passProgress) break;
+          }}
+          for (const label of latestUnresolvedFields) {{
+            if (!unresolvedFields.includes(label)) unresolvedFields.push(label);
           }}
           let submitted = false;
           if (payload.submit && selectedFields.length > 0 && unresolvedFields.length === 0) {{
-            const submitButton = Array.from(document.querySelectorAll(
-              'button[type="submit"], input[type="submit"], button'
-            )).find((node) => {{
+            const submitButton = rootDocuments.flatMap((root) =>
+              Array.from(root.querySelectorAll(
+                'button[type="submit"], input[type="submit"], button'
+              ))
+            ).find((node) => {{
               const text = keyToken(node.innerText || node.textContent || node.value || '');
               return isVisible(node) && (
                 text === 'submit' ||
@@ -392,10 +473,28 @@ def browser_helper_form_autocomplete(
             final_url: window.location.href || '',
           }};
         }})();
-        """,
-        ctx=ctx,
-        normalized_url=normalized_url,
-    )
+        """
+    if browser is not None:
+        js_result = browser_helper_js_via_cdp(
+            browser=browser,
+            expression=expression,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    else:
+        js_result = browser_helper_js(
+            page=page,
+            expression=expression,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    if browser is not None and not _is_autocomplete_js_payload(js_result.result):
+        js_result = browser_helper_js(
+            page=page,
+            expression=expression,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
     if js_result.status != "ok":
         return _autocomplete_result(
             ctx=ctx,
@@ -428,6 +527,18 @@ def browser_helper_form_autocomplete(
         selected_fields=selected_fields,
         final_url=str(payload.get("final_url") or "").strip(),
         blocker_code=("blocked_unknown_required_enum" if unresolved_fields else None),
+    )
+
+
+def _is_autocomplete_js_payload(value: object) -> bool:
+    return isinstance(value, dict) and any(
+        key in value
+        for key in (
+            "attempted_count",
+            "selected_count",
+            "selected_fields",
+            "unresolved_fields",
+        )
     )
 
 

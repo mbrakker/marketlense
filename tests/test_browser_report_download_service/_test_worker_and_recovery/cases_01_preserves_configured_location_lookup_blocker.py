@@ -109,7 +109,25 @@ def test_download_report_with_browser_use_salvages_completed_history_when_agent_
     external_boundary_mocks_only,
 ) -> None:
     caplog.set_level(logging.INFO, logger=service.logger.name)
-    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    base_settings = _settings(tmp_path)
+    settings = replace(
+        base_settings,
+        timeout_seconds=0.05,
+        max_steps=1,
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                *base_settings.identity_profile.fields,
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="country",
+                    label="Country",
+                    value="Austria",
+                    aliases=["location", "country"],
+                ),
+            ],
+        ),
+    )
     runtime = _runtime(
         tmp_path,
         route_kind="email_delivery",
@@ -217,7 +235,25 @@ def test_download_report_with_browser_use_recovers_lookup_before_completed_histo
     run_context,
     external_boundary_mocks_only,
 ) -> None:
-    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    base_settings = _settings(tmp_path)
+    settings = replace(
+        base_settings,
+        timeout_seconds=0.05,
+        max_steps=1,
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                *base_settings.identity_profile.fields,
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="country",
+                    label="Country",
+                    value="Austria",
+                    aliases=["location", "country"],
+                ),
+            ],
+        ),
+    )
     runtime = _runtime(
         tmp_path,
         route_kind="email_delivery",

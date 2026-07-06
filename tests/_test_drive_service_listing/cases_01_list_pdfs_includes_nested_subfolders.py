@@ -495,6 +495,45 @@ def test_preflight_drive_write_access_rejects_failed_write_probe(
         err.value, code="drive_preflight_write_probe_failed", retryable=True
     )
 
+
+def test_preflight_drive_write_access_tolerates_probe_cleanup_failure(
+    monkeypatch, caplog
+):
+    fake_drive = _FakeDriveClient(
+        {},
+        get_response={
+            "id": "root-folder",
+            "mimeType": "application/vnd.google-apps.folder",
+            "capabilities": {"canAddChildren": True},
+        },
+        delete_error=RuntimeError("cleanup conflict"),
+    )
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(lambda _sa_path, scopes: _FakeAuthorizedUserCredentials()),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    _reset_drive_caches()
+    caplog.set_level("INFO", logger="market_lense.drive_service")
+
+    response = drive_service.preflight_drive_write_access(
+        DriveWritePreflightRequest(
+            schema_version="1.0",
+            folder_id="root-folder",
+            service_account_path="/tmp/fake-sa.json",
+        ),
+        _ctx(),
+    )
+
+    assert response.write_access_verified is True
+    assert fake_drive.files().delete_calls[0]["fileId"] == "uploaded-file"
+    assert any(
+        "drive_write_preflight_probe_cleanup_failed" in record.getMessage()
+        for record in caplog.records
+    )
+
+
 def test_list_pdfs_uses_oauth_user_credentials(monkeypatch, tmp_path):
     responses = {
         "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false": {
@@ -712,6 +751,7 @@ __all__ = [
     "test_preflight_drive_write_access_reports_missing_oauth_token",
     "test_preflight_drive_write_access_rejects_folder_without_write_capability",
     "test_preflight_drive_write_access_rejects_failed_write_probe",
+    "test_preflight_drive_write_access_tolerates_probe_cleanup_failure",
     "test_list_pdfs_uses_oauth_user_credentials",
     "test_authorize_oauth_user_writes_token",
     "test_list_pdfs_wraps_missing_service_account_path_as_typed_error",

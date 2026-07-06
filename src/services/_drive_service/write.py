@@ -288,23 +288,37 @@ def _probe_drive_folder_write_access(
         )
     except HttpError as exc:
         status = int(getattr(getattr(exc, "resp", None), "status", 0) or 0)
-        raise AppError(
-            code="drive_preflight_write_probe_cleanup_failed",
-            message="Drive write preflight could not delete its probe file",
-            cause=exc,
-            retryable=status not in {400, 401, 403, 404},
-            severity="error",
-            context={"folder_id": folder_id, "probe_file_id": probe_file_id},
-        ) from exc
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_write_preflight_probe_cleanup_failed",
+                module=logger.name,
+                fields={
+                    "folder_id": folder_id,
+                    "probe_file_id": probe_file_id,
+                    "status": status,
+                    "retryable": status not in {400, 401, 403, 404},
+                },
+            )
+        )
+        return
     except DRIVE_BOUNDARY_EXCEPTIONS as exc:
-        raise AppError(
-            code="drive_preflight_write_probe_cleanup_failed",
-            message="Drive write preflight could not delete its probe file",
-            cause=exc,
-            retryable=True,
-            severity="error",
-            context={"folder_id": folder_id, "probe_file_id": probe_file_id},
-        ) from exc
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_write_preflight_probe_cleanup_failed",
+                module=logger.name,
+                fields={
+                    "folder_id": folder_id,
+                    "probe_file_id": probe_file_id,
+                    "status": 0,
+                    "retryable": True,
+                },
+            )
+        )
+        return
     logger.info(
         log_event(
             ctx,

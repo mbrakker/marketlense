@@ -1,0 +1,72 @@
+schema_version: '1.0'
+playbook_id: learned-www-sprinklr-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-06T07:51:59Z'
+stale_after_days: 120
+publisher_pattern: www.sprinklr.com
+host_patterns:
+- www.sprinklr.com
+url_path_markers:
+- resources
+- the-state-of-customer-service-in-middle-east
+route_family: browser_email_form
+route_kind: email_delivery
+summary: Report is gated behind an on-page lead form. Located form container and fields;
+  the required select 'Job Function' (name=job_function__c, index=329) does not include
+  the configured value '***REDACTED***' and is marked invalid, blocking submission.
+  No form submission attempted.
+steps:
+- schema_version: '1.0'
+  action: open_page
+  target: page
+  verification: Page loaded; report hero visible and lead form present on the page.
+- schema_version: '1.0'
+  action: inspect_input
+  target: Work Email input
+  verification: Work Email input found (index 1916, name=email, required).
+- schema_version: '1.0'
+  action: inspect_select
+  target: Job Function select (job_function__c)
+  verification: 'Select options observed: ''Please Select'', ''Customer Experience'',
+    ''Marketing'', ''Product Management''. The configured value ''***REDACTED***''
+    is NOT present and the element metadata shows invalid=true.'
+- schema_version: '1.0'
+  action: inspect_select
+  target: Job Level select (role__c)
+  verification: Job Level select present (options include 'Please Select','C Suite','Executive
+    / VP','Director').
+- schema_version: '1.0'
+  action: inspect_select
+  target: Country select (country_dropdown)
+  verification: Country select present with a large list of country options (count=255
+    in metadata).
+- schema_version: '1.0'
+  action: inspect_checkbox
+  target: Marketing consent checkbox
+  verification: Marketing consent checkbox present (not checked by default).
+- schema_version: '1.0'
+  action: inspect_submit
+  target: Download submit input
+  verification: Submit input present with value 'Download'; clicking would attempt
+    to submit the form.
+- schema_version: '1.0'
+  action: decision
+  target: page
+  verification: 'Form submission blocked: required enum/select ''Job Function'' cannot
+    be satisfied by configured identity (''***REDACTED***'' not present in options).'
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- network_submission_request
+- network_confirmation_request
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-06T07:51:59Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.

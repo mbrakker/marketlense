@@ -105,6 +105,9 @@ def _parse_identity_fields(
                 aliases=normalize_browser_download_identity_aliases(
                     entry.get("aliases")
                 ),
+                option_aliases=normalize_browser_download_identity_aliases(
+                    entry.get("option_aliases")
+                ),
             )
         )
     return fields
@@ -243,6 +246,7 @@ def serialize_browser_download_identity(
                 "label": field.label,
                 "value": field.value,
                 "aliases": field.aliases,
+                "option_aliases": field.option_aliases,
             }
             for field in [*identity_profile.fields, *(extra_fields or [])]
         ],
@@ -274,6 +278,7 @@ def serialize_browser_download_identity(
                         "label": field.label,
                         "value": field.value,
                         "aliases": field.aliases,
+                        "option_aliases": field.option_aliases,
                     }
                     for field in override.field_values
                 ],
@@ -384,6 +389,13 @@ def should_upsert_browser_download_identity_field(
         "search",
         "reset",
         "clear",
+        "login",
+        "log in",
+        "sign in",
+        "remember me",
+        "forgot username",
+        "forgot username / password",
+        "forgot password",
         "required",
         "optional",
         "captcha",
@@ -392,14 +404,56 @@ def should_upsert_browser_download_identity_field(
         "terms",
         "i agree",
         "consent",
+        "select",
+        "redacted",
+        "email (business email)",
     }
     if lowered_label in blocked_exact:
+        return False
+    blocked_substrings = (
+        "submit button",
+        "input type=submit",
+        "button type=submit",
+        "download now",
+        "recaptcha",
+        "captcha",
+        "contact_us_form",
+        "privacy policy",
+        "marketing opt-in",
+        "marketing communications",
+        "newsletter",
+        "opt-in",
+        "(index=",
+        "(name=",
+        "(select)",
+        "(textarea)",
+        "(checkbox)",
+        "(c_",
+        "required consent checkbox",
+        "complete the form",
+        "all fields are required",
+        "cta visible",
+        "visible cta",
+        "shadow input",
+        "username",
+        "password",
+        "remember me",
+        "forgot username",
+        "forgot password",
+        "log in",
+        "login",
+        "sign in",
+        "loading",
+        "options shown",
+    )
+    if any(token in lowered_label for token in blocked_substrings):
         return False
     blocked_prefixes = (
         "select ",
         "choose ",
         "option ",
         "click ",
+        "- ",
     )
     if any(lowered_label.startswith(prefix) for prefix in blocked_prefixes):
         return False

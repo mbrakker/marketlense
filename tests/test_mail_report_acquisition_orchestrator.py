@@ -26,6 +26,9 @@ from src.orchestrators.mail_report_acquisition_orchestrator import (
     MailReportAcquisitionDependencies,
     run_mail_report_acquisition,
 )
+from src.generators.mail_report_acquisition_generator import (
+    select_mail_report_link_candidates,
+)
 from src.services.mailbox_acquisition_service import materialize_mailbox_attachments
 from src.utils.errors import AppError
 
@@ -243,6 +246,8 @@ def test_mail_report_acquisition_polls_until_delayed_report_link_arrives(
     assert sleeps == [30.0]
     assert len(downloads) == 1
     assert downloads[0].url == result.selected_report_url
+    assert downloads[0].report_title == "Retail Trends 2026"
+    assert downloads[0].publisher_name == "Example Reports"
     assert searches[0].query_terms[:2] == ["Example Reports", "Retail Trends 2026"]
     assert_logs_have_required_fields(
         [
@@ -291,6 +296,61 @@ def test_mail_report_acquisition_returns_retryable_error_when_mail_is_delayed(
     assert exc_info.value.severity == "warning"
 
 
+def test_mail_report_acquisition_stops_on_retryable_candidate_download_error(
+    tmp_path, run_context
+):
+    downloads = []
+
+    def download(req, ctx):
+        downloads.append(req)
+        raise AppError(
+            code="browser_download_agent_timeout",
+            message="Browser agent timed out",
+            retryable=True,
+            severity="error",
+        )
+
+    deps = MailReportAcquisitionDependencies(
+        search_mailbox_messages=lambda req, ctx: MailboxSearchResult(
+            schema_version="1.0",
+            provider="gmail",
+            searched_at_utc="2026-07-04T11:10:00Z",
+            query="",
+            messages=[
+                _message(
+                    links=[
+                        "https://reports.example.com/retail-trends-2026.pdf",
+                        "https://reports.example.com/retail-trends-2026-backup.pdf",
+                    ]
+                )
+            ],
+        ),
+        run_report_download=download,
+        sleep_fn=lambda seconds: pytest.fail("retryable candidate failure should surface"),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_mail_report_acquisition(
+            MailReportAcquisitionRequest(
+                schema_version="1.0",
+                source_url="https://example.com/report-form",
+                report_title="Retail Trends 2026",
+                publisher_name="Example Reports",
+                delivery_email="reports@example.com",
+                reports_db=str(tmp_path / "reports.sqlite"),
+                mailbox_settings=_mailbox_settings(tmp_path),
+                browser_download_settings=_browser_settings(tmp_path),
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "mail_report_candidate_download_retryable_failed"
+    assert exc_info.value.retryable is True
+    assert exc_info.value.context["candidate_error_code"] == "browser_download_agent_timeout"
+    assert len(downloads) == 1
+
+
 def test_mail_report_acquisition_ignores_unrelated_mail_links(tmp_path, run_context):
     deps = MailReportAcquisitionDependencies(
         search_mailbox_messages=lambda req, ctx: MailboxSearchResult(
@@ -330,6 +390,114 @@ def test_mail_report_acquisition_ignores_unrelated_mail_links(tmp_path, run_cont
         )
 
     assert exc_info.value.code == "mail_report_not_arrived_yet"
+
+
+def test_mail_report_link_candidates_include_opaque_publisher_download_cta(
+    run_context,
+) -> None:
+    webview_url = "https://grow.bigcommerce.com/index.php/email/emailWebview?mkt_tok=token"
+    download_url = "https://about.bigcommerce.com/opaque-token"
+    unsubscribe_url = "https://about.bigcommerce.com/unsubscribe"
+    message = MailboxMessage(
+        schema_version="1.0",
+        provider_message_id="msg-bigcommerce",
+        subject="Your Global B2B Buyer Behavior Report is here.",
+        sender="The BigCommerce Team <sellmore@bigcommerce.com>",
+        received_at_utc="2026-07-05T12:53:18Z",
+        text_body=(
+            f"To view this email as a web page, go to {webview_url}. "
+            "Download your Global B2B Buyer Behavior Report. "
+            f"Download Now <{download_url}>. "
+            "Thank you for requesting a copy of the Global B2B Buyer Behavior Report. "
+            f"Manage preferences at {unsubscribe_url}."
+        ),
+        html_body="",
+        links=[webview_url, download_url, unsubscribe_url],
+        attachment_file_names=[],
+    )
+
+    candidates = select_mail_report_link_candidates(
+        messages=[message],
+        source_url=(
+            "https://www.bigcommerce.com/resources/reports/"
+            "global-b2b-buyer-report-cdl-report/"
+        ),
+        report_title="Global B2B Buyer Behavior Report",
+        publisher_name="BigCommerce",
+        ctx=run_context,
+    )
+
+    assert [candidate.url for candidate in candidates] == [download_url]
+    assert "message_report_delivery_context" in candidates[0].reason
+    assert "link_report_cta_context" in candidates[0].reason
+    assert "publisher_token_match" in candidates[0].reason
+
+
+def test_mail_report_link_candidates_reject_cross_publisher_cta_context(
+    run_context,
+) -> None:
+    download_url = "https://about.bigcommerce.com/opaque-token"
+    message = MailboxMessage(
+        schema_version="1.0",
+        provider_message_id="msg-bigcommerce",
+        subject="Your Global Consumer Report is here.",
+        sender="The BigCommerce Team <sellmore@bigcommerce.com>",
+        received_at_utc="2026-07-05T13:35:25Z",
+        text_body=(
+            "Download your Global Consumer Report. "
+            f"Download Now <{download_url}>. "
+            "Thank you for requesting a copy of the Global Consumer Report."
+        ),
+        html_body="",
+        links=[download_url],
+        attachment_file_names=[],
+    )
+
+    candidates = select_mail_report_link_candidates(
+        messages=[message],
+        source_url="https://www.gwi.com/reports/connecting-the-dots",
+        report_title="Connecting the Dots",
+        publisher_name="GWI",
+        ctx=run_context,
+    )
+
+    assert candidates == []
+
+
+def test_mail_report_link_candidates_reject_unrelated_marketo_report_delivery(
+    run_context,
+) -> None:
+    delivery_url = (
+        "https://explore.contentsquare.com/2025-digital-experience-benchmark-en/"
+        "c/2025-benchmark-data-en?h_f=1&utm_source=marketo"
+    )
+    message = MailboxMessage(
+        schema_version="1.0",
+        provider_message_id="msg-contentsquare",
+        subject="Your Digital Experience Benchmark report is ready",
+        sender="Contentsquare <marketing@contentsquare.com>",
+        received_at_utc="2026-07-06T08:01:00Z",
+        text_body=(
+            "Download the 2025 Digital Experience Benchmark report for customer teams. "
+            f"Access the report <{delivery_url}>."
+        ),
+        html_body="",
+        links=[delivery_url],
+        attachment_file_names=[],
+    )
+
+    candidates = select_mail_report_link_candidates(
+        messages=[message],
+        source_url=(
+            "https://resources.satisfyd.com/"
+            "2026-employee-and-customer-experience-benchmark-report-satisfyd"
+        ),
+        report_title="2026 Employee and Customer Experience Benchmark Report",
+        publisher_name="SATISFYD",
+        ctx=run_context,
+    )
+
+    assert candidates == []
 
 
 def test_mail_report_acquisition_ignores_matching_messages_before_request_watermark(

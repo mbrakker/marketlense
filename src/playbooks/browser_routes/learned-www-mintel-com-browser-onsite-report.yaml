@@ -1,8 +1,8 @@
 schema_version: '1.0'
 playbook_id: learned-www-mintel-com-browser-onsite-report
-version: 1.0.0
+version: 1.0.5
 status: active
-updated_at: '2026-06-03T05:55:04Z'
+updated_at: '2026-07-05T22:07:45Z'
 stale_after_days: 120
 publisher_pattern: www.mintel.com
 host_patterns:
@@ -10,25 +10,26 @@ host_patterns:
 url_path_markers:
 - insights
 - food-and-drink
-- prepare-for-food-and-drink-trends-black-swan
+- global-food-and-drink-trends
 route_family: browser_onsite_report
 route_kind: pdf_download
-summary: Captured the on-site article by saving the article page as a PDF; did not
-  submit the lead/download form.
+summary: Opened the Mintel article page, confirmed the article body is readable and
+  a lead/download form is present but not submitted, and saved the on-site longread
+  to a local PDF artifact.
 steps:
 - schema_version: '1.0'
   action: navigate
-  target: Open article URL
-  verification: Page loaded and article hero + body visible
+  target: 2026 Global Food & Drink Predictions (page hero)
+  verification: Page loaded; hero and intro visible in viewport
 - schema_version: '1.0'
-  action: extract
-  target: Extract full on-page article text, images and visible form field labels
-  verification: Article title, headings, full body text, hero images, related-insight
-    titles and visible lead form fields captured
+  action: detect_readable_body_and_lead_form
+  target: Article hero and intro; 'Download insights' CTA present
+  verification: Article body readable; lead/download form present but not interacted
+    with
 - schema_version: '1.0'
   action: save_as_pdf
-  target: Save current article page as PDF for onsite capture
-  verification: PDF saved locally (on-site capture artifact)
+  target: 'Save page as PDF: 2026 Global Food and Drink Predictions'
+  verification: Page saved locally as PDF artifact
 traps: []
 evidence_notes:
 - Promoted only after verified route evidence with outcome downloaded.
@@ -41,5 +42,25 @@ private_api_evidence: []
 history:
 - schema_version: '1.0'
   changed_at: '2026-06-03T05:55:04Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-05T21:53:45Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-05T21:58:31Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-05T22:02:39Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-05T22:05:20Z'
+  source: validated_route_promotion
+  summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.
+- schema_version: '1.0'
+  changed_at: '2026-07-05T22:07:45Z'
   source: validated_route_promotion
   summary: Promoted browser_onsite_report/pdf_download after downloaded evidence.

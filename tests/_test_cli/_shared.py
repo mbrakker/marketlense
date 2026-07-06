@@ -39,6 +39,8 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorResult,
 )
 
+from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
+
 from src.contracts.ui_run_control import UiRunRecord
 
 from src.contracts.ui_run_replay import (

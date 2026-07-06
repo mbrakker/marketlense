@@ -314,7 +314,7 @@ def fetch_html_from_url(
                 "normalized_url": normalized_url,
                 "page_url": page_url,
                 "status_code": response.status_code,
-                "content_type": response.headers.get("content-type", ""),
+                "content_type": response.content_type,
                 "body_truncated": response.body_truncated,
             },
         )
@@ -330,7 +330,7 @@ def fetch_html_from_url(
                 "status_code": response.status_code,
             },
         )
-    content_type = str(response.headers.get("content-type", "")).casefold()
+    content_type = str(response.content_type or "").casefold()
     if "html" not in content_type and "xml" not in content_type:
         raise AppError(
             code="browser_download_html_fetch_invalid_content_type",
@@ -339,7 +339,7 @@ def fetch_html_from_url(
             context={
                 "normalized_url": normalized_url,
                 "page_url": page_url,
-                "content_type": response.headers.get("content-type", ""),
+                "content_type": response.content_type,
             },
         )
     return str(response.text_body or "")

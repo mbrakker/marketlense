@@ -38,6 +38,7 @@ _NEGATIVE_LINK_MARKERS = {
     "facebook",
     "twitter",
     "instagram",
+    "newsletter",
 }
 
 
@@ -55,7 +56,9 @@ def select_mail_report_link_candidates(
     candidates: list[MailReportLinkCandidate] = []
     seen: set[str] = set()
     for message in messages:
-        message_text = " ".join([message.subject, message.text_body]).lower()
+        message_text = " ".join(
+            [message.subject, message.sender, message.text_body]
+        ).lower()
         for link in message.links:
             url = str(link or "").strip()
             if not _is_absolute_http_url(url):
@@ -67,6 +70,7 @@ def select_mail_report_link_candidates(
             score, reasons, has_report_evidence = _score_link(
                 url=url,
                 message_text=message_text,
+                link_context=_link_context(message_text=message_text, url=url),
                 source_host=source_host,
                 title_tokens=title_tokens,
                 publisher_tokens=publisher_tokens,
@@ -112,6 +116,7 @@ def _score_link(
     *,
     url: str,
     message_text: str,
+    link_context: str,
     source_host: str,
     title_tokens: set[str],
     publisher_tokens: set[str],
@@ -122,9 +127,25 @@ def _score_link(
     haystack = f"{host} {path_query}".lower()
     if any(marker in haystack for marker in _NEGATIVE_LINK_MARKERS):
         return 0.0, ["excluded_non_report_link"], False
+    if "emailwebview" in haystack:
+        return 0.0, ["excluded_email_webview_link"], False
     score = 0.0
     reasons: list[str] = []
     has_report_evidence = False
+    matched_title_in_message = title_tokens & _meaningful_tokens(message_text)
+    message_has_report_delivery_context = (
+        bool(matched_title_in_message)
+        and any(marker in message_text for marker in _REPORT_LINK_MARKERS)
+    )
+    link_is_publisher_related = _host_matches_source(
+        host=host, source_host=source_host
+    ) or bool(publisher_tokens & _meaningful_tokens(f"{host} {path_query}"))
+    matched_title = title_tokens & _meaningful_tokens(haystack)
+    matched_publisher = publisher_tokens & _meaningful_tokens(
+        f"{haystack} {message_text}"
+    )
+    if not (link_is_publisher_related or matched_publisher):
+        return 0.0, ["excluded_cross_publisher_link"], False
     if parsed.path.lower().endswith(".pdf"):
         score += 3.0
         reasons.append("pdf_url")
@@ -133,19 +154,81 @@ def _score_link(
         score += 2.0
         reasons.append("report_marker")
         has_report_evidence = True
-    matched_title = title_tokens & _meaningful_tokens(haystack)
     if matched_title:
         score += min(3.0, float(len(matched_title)))
         reasons.append("title_token_match")
         has_report_evidence = True
-    matched_publisher = publisher_tokens & _meaningful_tokens(f"{haystack} {message_text}")
     if matched_publisher:
         score += min(2.0, float(len(matched_publisher)))
         reasons.append("publisher_token_match")
-    if source_host and (host == source_host or host.endswith(f".{source_host}")):
+    if message_has_report_delivery_context and link_is_publisher_related:
+        score += 2.0
+        reasons.append("message_report_delivery_context")
+        has_report_evidence = True
+    if link_is_publisher_related and _link_context_has_report_cta(
+        link_context=link_context,
+        title_tokens=title_tokens,
+    ):
+        score += 3.0
+        reasons.append("link_report_cta_context")
+        has_report_evidence = True
+    if _host_matches_source(host=host, source_host=source_host):
         score += 1.0
         reasons.append("source_host_match")
     return score, reasons or ["weak_match"], has_report_evidence
+
+
+def _link_context(
+    *,
+    message_text: str,
+    url: str,
+) -> str:
+    text = str(message_text or "").lower()
+    needle = str(url or "").strip().lower()
+    if not text or not needle:
+        return ""
+    index = text.find(needle)
+    if index < 0:
+        return ""
+    start = max(0, index - 180)
+    end = min(len(text), index + len(needle) + 180)
+    return text[start:end]
+
+
+def _link_context_has_report_cta(
+    *,
+    link_context: str,
+    title_tokens: set[str],
+) -> bool:
+    context = str(link_context or "").casefold()
+    if not context:
+        return False
+    cta_markers = {
+        "download now",
+        "download the report",
+        "download your",
+        "get the report",
+        "access the report",
+    }
+    if any(marker in context for marker in cta_markers):
+        return True
+    return bool(
+        title_tokens
+        and title_tokens & _meaningful_tokens(context)
+        and any(marker in context for marker in _REPORT_LINK_MARKERS)
+    )
+
+
+def _host_matches_source(*, host: str, source_host: str) -> bool:
+    normalized_host = str(host or "").strip().lower().removeprefix("www.")
+    normalized_source_host = (
+        str(source_host or "").strip().lower().removeprefix("www.")
+    )
+    if not normalized_host or not normalized_source_host:
+        return False
+    return normalized_host == normalized_source_host or normalized_host.endswith(
+        f".{normalized_source_host}"
+    )
 
 
 def _meaningful_tokens(value: str) -> set[str]:
