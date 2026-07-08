@@ -18,6 +18,18 @@ METRIC_FIELDS = (
     "sample_size",
     "confidence",
 )
+INSIGHT_TEXT_FIELDS = (
+    "coverage_role",
+    "so_what",
+    "now_what",
+    "report_type_lens",
+)
+INSIGHT_SCORE_FIELDS = (
+    "score",
+    "decision_relevance_score",
+    "metric_strength_score",
+    "novelty_score",
+)
 INLINE_REFERENCE_TOKEN_RE = r"[A-Z]{1,4}-\d{1,4}"
 INLINE_REFERENCE_GROUP_RE = re.compile(
     rf"[\(\[]\s*{INLINE_REFERENCE_TOKEN_RE}(?:\s*[/,;|]\s*{INLINE_REFERENCE_TOKEN_RE})*\s*[\)\]]"
@@ -100,7 +112,6 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
         pages_raw = pages_raw_obj if isinstance(pages_raw_obj, list) else []
         pages = [int(p) for p in pages_raw if isinstance(p, int)]
         evidence_id = _s(item.get("evidence_id"))
-        score_val = item.get("score")
         insight: Dict[str, Any] = {
             "id": _s(item.get("id") or f"{prefix}_{idx + 1}"),
             "text": _s(item.get("text")),
@@ -112,8 +123,14 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
             "metric": metric,
             "pages": pages,
         }
-        if isinstance(score_val, (int, float)):
-            insight["score"] = float(score_val)
+        for field_name in INSIGHT_TEXT_FIELDS:
+            value = _s(item.get(field_name)).strip()
+            if value:
+                insight[field_name] = value
+        for field_name in INSIGHT_SCORE_FIELDS:
+            value = item.get(field_name)
+            if isinstance(value, (int, float)):
+                insight[field_name] = float(value)
         normalized.append(insight)
     return normalized
 
@@ -129,7 +146,16 @@ def pad_artifact_insights(
         metric_raw = _to_dict(source.get("metric"))
         source_pages_raw = source.get("pages")
         source_pages = source_pages_raw if isinstance(source_pages_raw, list) else []
-        source_score = source.get("score")
+        text_fields = {
+            field_name: _s(source.get(field_name)).strip()
+            for field_name in INSIGHT_TEXT_FIELDS
+            if _s(source.get(field_name)).strip()
+        }
+        score_fields = {
+            field_name: float(source.get(field_name))
+            for field_name in INSIGHT_SCORE_FIELDS
+            if isinstance(source.get(field_name), (int, float))
+        }
         padded.append(
             {
                 "id": _s(source.get("id") or f"insight_{len(padded) + 1}"),
@@ -138,11 +164,8 @@ def pad_artifact_insights(
                 "evidence": _s(source.get("evidence")),
                 "metric": {key: _s(metric_raw.get(key, "")) for key in METRIC_FIELDS},
                 "pages": [int(p) for p in source_pages if isinstance(p, int)],
-                **(
-                    {"score": float(source_score)}
-                    if isinstance(source_score, (int, float))
-                    else {}
-                ),
+                **text_fields,
+                **score_fields,
             }
         )
         idx += 1

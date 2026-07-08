@@ -6,7 +6,6 @@ the vector-store phase used by the report-analysis orchestrator.
 
 from __future__ import annotations
 
-from math import ceil
 from typing import Optional
 
 from src.contracts.vector_store import VectorStoreStatusRequest
@@ -21,6 +20,7 @@ from src.utils.logging import log_event
 __all__ = [
     "VECTOR_STORE_FAILED_STATUSES",
     "VECTOR_STORE_POLL_INTERVAL_SECONDS",
+    "VECTOR_STORE_POLL_SCHEDULE_SECONDS",
     "VECTOR_STORE_READY_STATUSES",
     "_await_vector_store_indexing",
     "_is_vector_store_ready",
@@ -76,8 +76,12 @@ def _await_vector_store_indexing(
         return state
 
     timeout_seconds = max(1, int(runtime.settings.openai_timeout_seconds))
-    poll_interval_seconds = VECTOR_STORE_POLL_INTERVAL_SECONDS
-    max_attempts = max(1, int(ceil(timeout_seconds / poll_interval_seconds)))
+    poll_schedule_seconds = VECTOR_STORE_POLL_SCHEDULE_SECONDS
+    poll_interval_seconds = poll_schedule_seconds[0]
+    max_attempts = _max_poll_attempts(
+        timeout_seconds=timeout_seconds,
+        poll_schedule_seconds=poll_schedule_seconds,
+    )
     last_status = state.vector_store_status or ""
     last_error = state.last_error
     last_indexed_at = state.indexed_at_utc
@@ -93,6 +97,7 @@ def _await_vector_store_indexing(
                 "status": last_status,
                 "timeout_s": timeout_seconds,
                 "poll_interval_s": poll_interval_seconds,
+                "poll_schedule_s": list(poll_schedule_seconds),
                 "max_attempts": max_attempts,
             },
         )
@@ -151,6 +156,7 @@ def _await_vector_store_indexing(
                 base_delay_seconds=float(poll_interval_seconds),
                 backoff_step_seconds=0.0,
                 jitter_seconds=0.0,
+                delay_schedule_seconds=poll_schedule_seconds,
             ),
             retry_event="vector_store_wait_retry",
             retry_fields_builder=lambda exc, attempt: {
@@ -164,6 +170,7 @@ def _await_vector_store_indexing(
                 ),
                 "timeout_s": timeout_seconds,
                 "poll_interval_s": poll_interval_seconds,
+                "poll_schedule_s": list(poll_schedule_seconds),
             },
             failure_event="vector_store_wait_failed",
             failure_fields_builder=lambda exc, attempt, retryable: {
@@ -194,6 +201,7 @@ def _await_vector_store_indexing(
                         "last_status": last_status,
                         "timeout_s": timeout_seconds,
                         "poll_interval_s": poll_interval_seconds,
+                        "poll_schedule_s": list(poll_schedule_seconds),
                         "max_attempts": max_attempts,
                     },
                 )
@@ -208,6 +216,7 @@ def _await_vector_store_indexing(
                     "last_error": last_error,
                     "timeout_s": timeout_seconds,
                     "poll_interval_s": poll_interval_seconds,
+                    "poll_schedule_s": list(poll_schedule_seconds),
                     "max_attempts": max_attempts,
                 },
             ) from exc
@@ -236,7 +245,27 @@ def _await_vector_store_indexing(
     return ready_state
 
 
-VECTOR_STORE_POLL_INTERVAL_SECONDS = 5
+VECTOR_STORE_POLL_SCHEDULE_SECONDS = (0.5, 1.0, 2.0, 5.0)
+VECTOR_STORE_POLL_INTERVAL_SECONDS = VECTOR_STORE_POLL_SCHEDULE_SECONDS[0]
+
+
+def _max_poll_attempts(
+    *, timeout_seconds: int, poll_schedule_seconds: tuple[float, ...]
+) -> int:
+    elapsed = 0.0
+    retries = 0
+    for delay in poll_schedule_seconds:
+        next_elapsed = elapsed + float(delay)
+        if next_elapsed > float(timeout_seconds):
+            break
+        retries += 1
+        elapsed = next_elapsed
+    if retries == len(poll_schedule_seconds):
+        last_delay = float(poll_schedule_seconds[-1])
+        while elapsed + last_delay <= float(timeout_seconds):
+            elapsed += last_delay
+            retries += 1
+    return max(1, retries + 1)
 
 
 def _is_vector_store_ready(status: Optional[str]) -> bool:

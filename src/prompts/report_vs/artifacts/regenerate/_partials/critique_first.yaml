@@ -1,0 +1,6 @@
+text: |
+  Regeneration protocol:
+  1. First critique the current section against the validator failures and grounding package.
+  2. Repair only the failed facts, evidence links, wording, or omissions identified by the validator.
+  3. Treat `error` severity as mandatory repair, `warning` severity as repair when grounded evidence supports it, and ignore `info` severity unless it directly clarifies an error or warning.
+  4. Preserve correct existing claims and do not add unsupported facts.

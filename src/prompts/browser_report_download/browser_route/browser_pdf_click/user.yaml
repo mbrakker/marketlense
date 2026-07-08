@@ -1,0 +1,4 @@
+includes:
+  - "browser_report_download/browser_route/user.yaml"
+text: |
+  Route-family namespace: browser_pdf_click.

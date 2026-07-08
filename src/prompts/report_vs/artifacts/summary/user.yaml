@@ -1,7 +1,14 @@
+schema_snippets:
+  summary_schema:
+    schema: "artifacts.schema.json"
+    pointer: "/properties/summary"
 text: |
   Context:
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
+
+  Source-of-truth summary schema:
+  {{ summary_schema }}
 
   Task: Return a JSON object with the `summary` field:
   {

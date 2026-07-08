@@ -9,6 +9,7 @@ from src.contracts.state import (
     StateBatchCheckRequest,
     StateBatchCheckResponse,
     StateCheckRequest,
+    StateGetByMd5Request,
     StateGetRequest,
     StateGetResponse,
     StateIngestCursorGetRequest,
@@ -297,6 +298,84 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
             event="state_get_complete",
             module=logger.name,
             fields={"file_id": request.file_id, "found": True},
+        )
+    )
+    return StateGetResponse(
+        schema_version="1.0",
+        file_id=file_id,
+        md5=md5,
+        processed_at=processed_at,
+        openai_file_id=openai_file_id,
+        vector_store_id=vector_store_id,
+        vector_store_status=vector_store_status,
+        indexed_at_utc=indexed_at_utc,
+        last_error=last_error,
+        text_validation_status=text_validation_status,
+        text_validation_reason=text_validation_reason,
+        text_validation_pages=text_validation_pages,
+        doc_map_summary=doc_map_summary,
+        ocr_fallback_used=bool(ocr_fallback_used),
+        ocr_pdf_path=ocr_pdf_path,
+    )
+
+
+def get_by_md5(
+    request: StateGetByMd5Request, ctx: RunContext
+) -> Optional[StateGetResponse]:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_get_by_md5_start",
+            module=logger.name,
+            fields={"md5": request.md5},
+        )
+    )
+    with _state_conn(request.state_db, ctx) as conn:
+        cur = conn.execute(
+            "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
+            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json, "
+            "ocr_fallback_used, ocr_pdf_path "
+            "FROM processed WHERE md5=? ORDER BY processed_at DESC LIMIT 1",
+            (request.md5,),
+        )
+        row = cur.fetchone()
+    if not row:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="state_get_by_md5_complete",
+                module=logger.name,
+                fields={"md5": request.md5, "found": False},
+            )
+        )
+        return None
+    (
+        file_id,
+        md5,
+        processed_at,
+        openai_file_id,
+        vector_store_id,
+        vector_store_status,
+        indexed_at_utc,
+        last_error,
+        text_validation_status,
+        text_validation_reason,
+        text_validation_pages_json,
+        doc_map_summary_json,
+        ocr_fallback_used,
+        ocr_pdf_path,
+    ) = row
+    text_validation_pages = _parse_int_list(text_validation_pages_json)
+    doc_map_summary = _parse_dict(doc_map_summary_json)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_get_by_md5_complete",
+            module=logger.name,
+            fields={"md5": request.md5, "file_id": file_id, "found": True},
         )
     )
     return StateGetResponse(

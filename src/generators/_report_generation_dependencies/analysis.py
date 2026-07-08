@@ -9,7 +9,6 @@ from src.contracts.context_category_fit import (
     ReportCategoryContext,
     ReportContextBuildRequest,
 )
-from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     ArtifactRegenerationResponse,
@@ -19,7 +18,7 @@ from src.contracts.report_analysis import (
     AnalysisStorePackRequest,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.state import StateGetRequest, StateRecordRequest
+from src.contracts.state import StateGetByMd5Request, StateGetRequest, StateRecordRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest
 from src.contracts.validation import ValidationReport
 from src.contracts.vector_store import (
@@ -51,6 +50,7 @@ from .figure_caption import FigureCaptionDependencies
 @dataclass(frozen=True)
 class ReportAnalysisDependencies:
     state_get: Callable[[StateGetRequest, RunContext], Any]
+    state_get_by_md5: Callable[[StateGetByMd5Request, RunContext], Any]
     state_record: Callable[[StateRecordRequest, RunContext], Any]
     vector_store_get_status: Callable[[VectorStoreStatusRequest, RunContext], Any]
     vector_store_create: Callable[[VectorStoreCreateRequest, RunContext], Any]
@@ -81,6 +81,7 @@ class ReportAnalysisDependencies:
     def default(cls) -> "ReportAnalysisDependencies":
         return cls(
             state_get=state_service.get,
+            state_get_by_md5=state_service.get_by_md5,
             state_record=state_service.record,
             vector_store_get_status=vector_store_service.get_vector_store_status,
             vector_store_create=vector_store_service.create_vector_store,

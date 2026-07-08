@@ -107,7 +107,7 @@ fixtures:
     temperature: 0.0
     benchmark: *benchmark_browser_download
     system_variables: {}
-    user_variables:
+    user_variables: &browser_route_user_variables
       normalized_url: "https://example.com/reports/enterprise-payments-outlook-2026"
       execution_url: "https://example.com/reports/enterprise-payments-outlook-2026"
       download_dir: "/tmp/browser-downloads/enterprise-payments-outlook-2026"
@@ -138,6 +138,51 @@ fixtures:
       candidate_discovery_provenances:
         - "browser_render"
       candidate_max_confidence: "0.940"
+  - namespace: "browser_report_download/browser_route/browser_pdf_click"
+    family: "browser_download"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_browser_download
+    system_variables: {}
+    user_variables:
+      <<: *browser_route_user_variables
+      route_family_hint: "browser_pdf_click"
+  - namespace: "browser_report_download/browser_route/browser_email_form"
+    family: "browser_download"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_browser_download
+    system_variables: {}
+    user_variables:
+      <<: *browser_route_user_variables
+      route_family_hint: "browser_email_form"
+  - namespace: "browser_report_download/browser_route/browser_tracker_redirect"
+    family: "browser_download"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_browser_download
+    system_variables: {}
+    user_variables:
+      <<: *browser_route_user_variables
+      route_family_hint: "browser_tracker_redirect"
+  - namespace: "browser_report_download/browser_route/browser_listing_hub"
+    family: "browser_download"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_browser_download
+    system_variables: {}
+    user_variables:
+      <<: *browser_route_user_variables
+      route_family_hint: "browser_listing_hub"
+  - namespace: "browser_report_download/browser_route/browser_onsite_report"
+    family: "browser_download"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_browser_download
+    system_variables: {}
+    user_variables:
+      <<: *browser_route_user_variables
+      route_family_hint: "browser_onsite_report"
   - namespace: "pdf_text/ocr_fallback"
     family: "report"
     model: "openai/gpt-5-mini"

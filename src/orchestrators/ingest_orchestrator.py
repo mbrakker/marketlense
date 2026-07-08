@@ -375,7 +375,7 @@ def _process_file(
         download_pdf_to_path=download_pdf_to_path,
         check_pdf_eof=check_pdf_eof,
         delete_file=delete_file,
-        run_report_pipeline=lambda current_file, local_pdf_path, current_settings, current_md5, current_ctx: (
+        run_report_pipeline=lambda current_file, local_pdf_path, current_settings, current_md5, current_ctx, **kwargs: (
             run_report_pipeline_orchestrator(
                 current_file,
                 local_pdf_path,
@@ -383,6 +383,9 @@ def _process_file(
                 current_md5,
                 current_ctx,
                 retries=2,
+                auto_resume_from_latest_safe=bool(
+                    kwargs.get("auto_resume_from_latest_safe", False)
+                ),
             )
         ),
         state_record=state_record,

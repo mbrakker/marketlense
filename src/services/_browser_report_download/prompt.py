@@ -26,6 +26,13 @@ from src.utils.browser_route_playbooks import serialize_selected_playbooks_for_p
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
 PROMPT_NAMESPACE = "browser_report_download/browser_route"
+ROUTE_FAMILY_PROMPT_NAMESPACES = {
+    "browser_pdf_click": "browser_report_download/browser_route/browser_pdf_click",
+    "browser_email_form": "browser_report_download/browser_route/browser_email_form",
+    "browser_tracker_redirect": "browser_report_download/browser_route/browser_tracker_redirect",
+    "browser_listing_hub": "browser_report_download/browser_route/browser_listing_hub",
+    "browser_onsite_report": "browser_report_download/browser_route/browser_onsite_report",
+}
 
 
 @dataclass(frozen=True)
@@ -50,10 +57,11 @@ def render_browser_report_download_prompt(
     download_dir: Path,
     delivery_email: str | None,
 ) -> BrowserDownloadPromptBundle:
+    prompt_namespace = _prompt_namespace_for_route_family(request.route_family_hint)
     prompt_set = prompt_service.load_prompt_set(
         PromptLoadRequest(
             schema_version="1.0",
-            namespace=PROMPT_NAMESPACE,
+            namespace=prompt_namespace,
         ),
         ctx,
     )
@@ -149,7 +157,7 @@ def render_browser_report_download_prompt(
     ).strip()
     bundle = BrowserDownloadPromptBundle(
         schema_version="1.0",
-        namespace=PROMPT_NAMESPACE,
+        namespace=prompt_namespace,
         system_prompt_path=prompt_set.system.path,
         user_prompt_path=prompt_set.user.path,
         system_prompt_sha256=prompt_set.system.sha256,
@@ -252,6 +260,11 @@ def render_browser_report_download_prompt(
         )
     )
     return bundle
+
+
+def _prompt_namespace_for_route_family(route_family: str | None) -> str:
+    normalized = str(route_family or "").strip()
+    return ROUTE_FAMILY_PROMPT_NAMESPACES.get(normalized, PROMPT_NAMESPACE)
 
 
 def redact_browser_report_download_prompt_for_log(

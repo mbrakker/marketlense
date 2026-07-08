@@ -11,6 +11,7 @@ from src.contracts.state import (
     StateBatchCheckRequest,
     StateCheckRequest,
     StateDbAccessRequest,
+    StateGetByMd5Request,
     StateGetRequest,
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
@@ -32,6 +33,7 @@ from src.services.state_service import (
     already_processed,
     check_state_db_access,
     get,
+    get_by_md5,
     get_ingest_cursor,
     get_report_download_route,
     list_mailbox_candidate_rejections,
@@ -147,6 +149,54 @@ def test_record_and_get_with_defaults(tmp_path: Path) -> None:
     assert resp.indexed_at_utc is None
     assert resp.last_error is None
     assert resp.doc_map_summary is None
+
+
+def test_get_by_md5_returns_latest_processed_vector_store(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="older-file",
+            md5="same-md5",
+            openai_file_id="of_old",
+            vector_store_id="vs_old",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+        ),
+        _ctx(),
+    )
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="newer-file",
+            md5="same-md5",
+            openai_file_id="of_new",
+            vector_store_id="vs_new",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-02T00:00:00Z",
+        ),
+        _ctx(),
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("UPDATE processed SET processed_at=1 WHERE file_id='older-file'")
+        conn.execute("UPDATE processed SET processed_at=2 WHERE file_id='newer-file'")
+
+    response = get_by_md5(
+        StateGetByMd5Request(
+            schema_version="1.0",
+            state_db=str(db_path),
+            md5="same-md5",
+        ),
+        _ctx(),
+    )
+
+    assert response is not None
+    assert response.file_id == "newer-file"
+    assert response.md5 == "same-md5"
+    assert response.vector_store_id == "vs_new"
+    assert response.openai_file_id == "of_new"
 
 
 def test_already_processed_batch_returns_only_matched_pairs(tmp_path: Path) -> None:

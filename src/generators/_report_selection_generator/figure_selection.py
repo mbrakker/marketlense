@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Optional
 
@@ -35,6 +36,89 @@ from .ranking import (
     _split_candidates_by_kind,
     _truncate_prefiltered_candidates,
 )
+
+
+def _rank_candidate_batches(
+    *,
+    table_candidates: list[Candidate],
+    chart_candidates: list[Candidate],
+    runtime: ReportRuntimeState,
+    dependencies: ReportSelectionDependencies,
+) -> tuple[list[Any], dict[str, Optional[int]]]:
+    batches = [
+        ("table", table_candidates),
+        ("chart", chart_candidates),
+    ]
+    active_batches = [(kind, batch) for kind, batch in batches if batch]
+    if not active_batches:
+        return [], {
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            "total_tokens": None,
+        }
+    usage_rows: list[dict[str, Optional[int]]] = []
+    ranked_by_kind: dict[str, list[Any]] = {"table": [], "chart": []}
+    max_workers = min(2, max(1, int(getattr(runtime, "report_worker_limit", 1) or 1)))
+    if len(active_batches) <= 1 or not runtime.parallel_within_file or max_workers <= 1:
+        for kind, batch in active_batches:
+            batch_result = _rank_candidates_batch(
+                candidates=batch,
+                kind=kind,
+                settings=runtime.settings,
+                ctx=runtime.ctx,
+                dependencies=dependencies,
+            )
+            ranked_by_kind[kind] = list(batch_result.ranked)
+            usage_rows.append(batch_result.usage)
+        return ranked_by_kind["table"] + ranked_by_kind["chart"], _merge_rank_usage(
+            usage_rows
+        )
+
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="generator",
+            event="candidate_rank_parallel_start",
+            module=logger.name,
+            fields={
+                "max_workers": max_workers,
+                "table_candidates": len(table_candidates),
+                "chart_candidates": len(chart_candidates),
+            },
+        )
+    )
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(
+                _rank_candidates_batch,
+                candidates=batch,
+                kind=kind,
+                settings=runtime.settings,
+                ctx=runtime.ctx,
+                dependencies=dependencies,
+            ): kind
+            for kind, batch in active_batches
+        }
+        for future, kind in futures.items():
+            batch_result = future.result()
+            ranked_by_kind[kind] = list(batch_result.ranked)
+            usage_rows.append(batch_result.usage)
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="generator",
+            event="candidate_rank_parallel_complete",
+            module=logger.name,
+            fields={
+                "max_workers": max_workers,
+                "ranked_table_count": len(ranked_by_kind["table"]),
+                "ranked_chart_count": len(ranked_by_kind["chart"]),
+            },
+        )
+    )
+    return ranked_by_kind["table"] + ranked_by_kind["chart"], _merge_rank_usage(
+        usage_rows
+    )
 
 
 def _candidate_crop_path_map(
@@ -480,22 +564,13 @@ def select_report_figures(
                     },
                 )
             )
-            usage_rows: list[dict[str, Optional[int]]] = []
             try:
-                for kind, batch in (
-                    ("table", table_candidates),
-                    ("chart", chart_candidates),
-                ):
-                    batch_result = _rank_candidates_batch(
-                        candidates=batch,
-                        kind=kind,
-                        settings=runtime.settings,
-                        ctx=runtime.ctx,
-                        dependencies=dependencies,
-                    )
-                    ranked.extend(batch_result.ranked)
-                    usage_rows.append(batch_result.usage)
-                rank_usage = _merge_rank_usage(usage_rows)
+                ranked, rank_usage = _rank_candidate_batches(
+                    table_candidates=table_candidates,
+                    chart_candidates=chart_candidates,
+                    runtime=runtime,
+                    dependencies=dependencies,
+                )
             except Exception as exc:
                 logger.info(
                     log_event(

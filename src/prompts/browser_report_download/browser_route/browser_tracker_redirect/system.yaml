@@ -1,0 +1,4 @@
+includes:
+  - "browser_report_download/browser_route/system.yaml"
+text: |
+  Route-family namespace: browser_tracker_redirect.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import inspect
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
@@ -17,6 +18,40 @@ from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateRecordRequest
 from src.utils.logging import child_context, log_event
+
+
+def _accepts_keyword(callable_obj: Callable[..., Any], keyword: str) -> bool:
+    try:
+        parameters = inspect.signature(callable_obj).parameters
+    except (TypeError, ValueError):
+        return False
+    return keyword in parameters or any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters.values()
+    )
+
+
+def _run_report_pipeline_latest_safe(
+    dependencies: IngestFileDependencies,
+    file: DriveFile,
+    cache_path: str,
+    settings: IngestSettings,
+    md5: str | None,
+    ctx: RunContext,
+) -> IngestOutcome:
+    if _accepts_keyword(
+        dependencies.run_report_pipeline,
+        "auto_resume_from_latest_safe",
+    ):
+        return dependencies.run_report_pipeline(
+            file,
+            cache_path,
+            settings,
+            md5,
+            ctx,
+            auto_resume_from_latest_safe=True,
+        )
+    return dependencies.run_report_pipeline(file, cache_path, settings, md5, ctx)
 
 
 @dataclass(frozen=True)
@@ -546,7 +581,8 @@ def run_ingest_file(
         outcome = dependencies.run_step_with_retry(
             "generate_report",
             file_ctx,
-            lambda: dependencies.run_report_pipeline(
+            lambda: _run_report_pipeline_latest_safe(
+                dependencies,
                 runtime.file,
                 runtime.cache_path,
                 settings,

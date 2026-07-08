@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import threading
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -96,6 +98,110 @@ def test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_e
     assert crop_calls == [("slices", "chart_strict", ["chart_keep"])]
     assert selection.payload._figure_gallery == ["report/slices/chart_keep.png"]
     assert selection.payload._figure_top == "report/slices/chart_keep.png"
+    assert selection.payload._figure_section_enabled is True
+
+
+def test_select_report_figures_ranks_table_and_chart_batches_concurrently(
+    tmp_path,
+):
+    settings = _settings(
+        tmp_path,
+        crop_refine_enabled=False,
+        crop_refine_mode="off",
+        rank_selected_max=1,
+        rank_max_candidates=4,
+    )
+    table = _candidate(
+        cid="table_keep",
+        kind="table",
+        page=0,
+        preview_text="A | B\n1 | 2\n3 | 4\n5 | 6",
+        meta={
+            "area_frac": 0.2,
+            "rows": 4,
+            "cols": 3,
+            "numeric_ratio": 0.5,
+            "table_confidence": 0.9,
+        },
+    )
+    chart = _candidate(
+        cid="chart_keep",
+        kind="chart",
+        page=1,
+        caption="Figure 1. Strong chart",
+        meta={"area_frac": 0.2, "text_ratio": 0.2, "chart_confidence": 0.9},
+    )
+    lock = threading.Lock()
+    both_started = threading.Event()
+    started: list[str] = []
+
+    def _render_prompt(req, ctx):
+        return SimpleNamespace(text=str(req.variables.get("candidates_json") or ""))
+
+    def _rank_candidates(req, ctx):
+        kind = "table" if '"type":"table"' in req.user_prompt else "chart"
+        with lock:
+            started.append(kind)
+            if len(started) == 2:
+                both_started.set()
+        if not both_started.wait(timeout=0.5):
+            raise AssertionError("table and chart rank batches did not overlap")
+        return SimpleNamespace(
+            results=[
+                RankedCandidate(
+                    id=f"{kind}_keep",
+                    type=kind,
+                    score=98,
+                    quality_score=98,
+                    insight_score=98,
+                    data_score=98,
+                    keep=True,
+                )
+            ],
+            prompt_tokens=None,
+            completion_tokens=None,
+            total_tokens=None,
+            request_id=f"rank-{kind}",
+            raw_content="[]",
+        )
+
+    deps = _deps(
+        collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[table, chart]),
+        render_prompt=_render_prompt,
+        rank_candidates=_rank_candidates,
+        crop_regions=lambda req, ctx: SimpleNamespace(
+            paths=[f"report/{item.id}.png" for item in req.items]
+        ),
+    )
+    payload = ReportPayload(
+        tldr="",
+        title="Report",
+        insights=[],
+        quote=Quote(text="q"),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+        source="",
+    )
+    runtime = SimpleNamespace(
+        local_pdf_path=_pdf_path(tmp_path),
+        settings=settings,
+        report_name="report",
+        file=SimpleNamespace(file_id="file"),
+        md5=None,
+        ctx=_ctx(),
+        report_worker_limit=2,
+        parallel_within_file=True,
+    )
+    source = SimpleNamespace(
+        payload=payload,
+        contents_page_number=0,
+        pdf_context=None,
+        pdf_context_for_tasks=None,
+    )
+
+    selection = rsg.select_report_figures(runtime, source, deps)
+
+    assert sorted(started) == ["chart", "table"]
     assert selection.payload._figure_section_enabled is True
 
 

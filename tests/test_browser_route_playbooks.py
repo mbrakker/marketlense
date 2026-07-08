@@ -138,6 +138,48 @@ def test_prompt_cites_selected_playbook_id_version_and_steps(
     )
 
 
+def test_prompt_uses_route_family_namespace_for_email_form(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/research/report",
+        settings=BrowserDownloadSettings(
+            schema_version="1.0",
+            openrouter_api_key="key",
+            model="openai/gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=30.0,
+            max_steps=5,
+            output_dir=str(tmp_path / "downloads"),
+            state_db=str(tmp_path / "state.sqlite"),
+            reports_db=str(tmp_path / "reports.sqlite"),
+            identity_config_path=str(tmp_path / "identity.yaml"),
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[],
+                delivery_emails=[],
+            ),
+            route_playbook_dir=str(tmp_path / "playbooks"),
+        ),
+        route_family_hint="browser_email_form",
+    )
+
+    bundle = render_browser_report_download_prompt(
+        request=request,
+        ctx=run_context,
+        normalized_url="https://example.com/research/report",
+        execution_url="https://example.com/research/report",
+        download_dir=tmp_path / "downloads",
+        delivery_email="reports@example.com",
+    )
+
+    assert bundle.namespace == "browser_report_download/browser_route/browser_email_form"
+    assert "Route-family guidance for `browser_pdf_click`" not in bundle.task_prompt
+    assert "Route-family guidance for `browser_email_form`" in bundle.task_prompt
+
+
 def test_validated_route_promotion_writes_reviewable_file_and_rejects_unverified(
     tmp_path: Path,
     run_context,

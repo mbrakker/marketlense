@@ -3,7 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from src.contracts.regeneration import (
     RegenerationAttemptResult,
@@ -19,10 +19,7 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.semantic_ids import ReportId
-from src.contracts.validation import (
-    ValidationReport,
-    ValidationRequest,
-)
+from src.contracts.validation import ValidationRequest
 from src.contracts.vector_store import (
     VectorStoreMetadata,
     VectorStoreUpdateMetadataRequest,
@@ -71,6 +68,7 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
 from src.orchestrators._report_analysis_orchestrator.vector_store import (
     VECTOR_STORE_FAILED_STATUSES,
     VECTOR_STORE_POLL_INTERVAL_SECONDS,
+    VECTOR_STORE_POLL_SCHEDULE_SECONDS,
     VECTOR_STORE_READY_STATUSES,
     _await_vector_store_indexing,
     _is_vector_store_ready,
@@ -94,6 +92,7 @@ __all__ = [
     "TARGET_ORDER",
     "VECTOR_STORE_FAILED_STATUSES",
     "VECTOR_STORE_POLL_INTERVAL_SECONDS",
+    "VECTOR_STORE_POLL_SCHEDULE_SECONDS",
     "VECTOR_STORE_READY_STATUSES",
     "_artifact_batch_workers",
     "_attach_payload_analysis_metadata",

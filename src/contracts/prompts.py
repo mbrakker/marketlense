@@ -78,6 +78,22 @@ class PromptTemplate:
     path: str = field(metadata={"doc": "Prompt file path."})
     text: str = field(metadata={"doc": "Prompt template text."})
     sha256: str = field(metadata={"doc": "SHA-256 hash of the prompt text."})
+    include_paths: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Prompt include file paths composed by the prompt service."},
+    )
+    include_sha256s: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "SHA-256 hashes for prompt include text in composition order."},
+    )
+    schema_snippets: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={"doc": "Generated source-schema prompt snippets keyed by variable name."},
+    )
+    schema_snippet_sources: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={"doc": "Source schema references used to generate prompt snippets."},
+    )
 
 
 @dataclass(frozen=True)

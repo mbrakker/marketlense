@@ -1,9 +1,18 @@
+schema_snippets:
+  insights_final_schema:
+    schema: "artifacts.schema.json"
+    pointer: "/properties/insights_final/items"
 text: |
   Context:
   - Candidate insights JSON: {{ insights_candidates_json }}
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
 
-  Task: Choose the five strongest, non-overlapping insights. Preserve and propagate their evidence_id fields as single IDs. Return a JSON object with `insights_final` as an array (exactly five items) matching the candidate shape (id, text, evidence_id, evidence, metric, pages). Tighten wording for executive relevance but do not change the underlying facts.
+  Source-of-truth final insight schema:
+  {{ insights_final_schema }}
+
+  Task: Choose the five strongest, non-overlapping insights. Preserve and propagate their evidence_id fields as single IDs. Return a JSON object with `insights_final` as an array (exactly five items) matching the candidate shape, including scores, coverage_role, so_what, now_what, and report_type_lens.
+  Selection rule: maximize total strategic value by considering decision_relevance_score, metric_strength_score, novelty_score, and coverage_role diversity. Avoid selecting five items with the same role unless the candidate set truly has no other grounded role.
+  Tighten wording for executive relevance but do not change the underlying facts.
   Do not output arrays/comma-separated values inside evidence_id; if uncertain, use an empty string.
   Prefer insights that can carry a clear metric, claim-level evidence, or public-safe proof point into final editorial artifacts.

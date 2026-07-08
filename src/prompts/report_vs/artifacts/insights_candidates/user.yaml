@@ -1,7 +1,14 @@
+schema_snippets:
+  insights_candidates_schema:
+    schema: "artifacts.schema.json"
+    pointer: "/properties/insights_candidates/items"
 text: |
   Context:
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
+
+  Source-of-truth candidate insight schema:
+  {{ insights_candidates_schema }}
 
   Task: Return a JSON object with `insights_candidates` as an array of 6-8 grounded items. Each item must include:
   - id: stable identifier
@@ -11,5 +18,9 @@ text: |
   - evidence: short supporting quote/number
   - metric: object with fields {value, unit, trend, timeframe, geography, segment, sample_size, confidence} (empty strings allowed but keep present)
   - pages: page numbers if available
-  - score: optional numeric usefulness score (0-1)
+  - score, decision_relevance_score, metric_strength_score, novelty_score: numeric scores from 0-1
+  - coverage_role: one of market_context, behavior_shift, strategic_risk, operating_implication, investment_signal, proof_point, counter_signal
+  - so_what: why the insight matters strategically
+  - now_what: concrete action or decision implication
+  - report_type_lens: one of market_size, consumer_behavior, technology_shift, channel_strategy, brand_strategy, investment_outlook, risk_regulation, operations, creative_culture
   Do not hallucinate numbers; lift them from the provided context only.

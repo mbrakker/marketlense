@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
 import yaml
 from jinja2 import (
@@ -38,6 +39,7 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.prompt_service")
 
 PROMPTS_ROOT = Path(__file__).resolve().parents[1] / "prompts"
+SCHEMAS_ROOT = Path(__file__).resolve().parents[1] / "schemas"
 PROMPT_DRY_RUN_FIXTURE_PATH = PROMPTS_ROOT / "_dry_run_fixtures.yaml"
 JINJA_ENV = Environment(
     autoescape=False,
@@ -259,6 +261,16 @@ def render_prompt(
         )
     )
     try:
+        variables = dict(request.variables)
+        for key, snippet in request.template.schema_snippets.items():
+            if key in variables:
+                raise AppError(
+                    code="prompt_render_schema_snippet_variable_conflict",
+                    message="Prompt render variables must not override generated schema snippets",
+                    retryable=False,
+                    context={"template_path": request.template.path, "variable": key},
+                )
+            variables[key] = snippet
         cache_key = (
             str(request.template.path),
             str(request.template.sha256),
@@ -268,7 +280,7 @@ def render_prompt(
         if template is None:
             template = JINJA_ENV.from_string(request.template.text)
             _RENDER_TEMPLATE_CACHE[cache_key] = template
-        text = template.render(**request.variables)
+        text = template.render(**variables)
     except UndefinedError as exc:
         raise AppError(
             code="prompt_render_missing_variable",
@@ -771,10 +783,322 @@ def _load_prompt(path: Path) -> PromptTemplate:
             message=f"Prompt file is empty: {path}",
             retryable=False,
         )
-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    include_templates = _load_prompt_includes(data.get("includes", []), owner_path=path)
+    include_texts = [item.text for item in include_templates]
+    composed_text = "\n\n".join([*include_texts, str(text)]).strip() + "\n"
+    schema_snippets, schema_snippet_sources = _load_prompt_schema_snippets(
+        data.get("schema_snippets", {}),
+        owner_path=path,
+    )
+    digest = hashlib.sha256(composed_text.encode("utf-8")).hexdigest()
     return PromptTemplate(
         schema_version="1.0",
         path=str(path),
+        text=composed_text,
+        sha256=digest,
+        include_paths=[item.path for item in include_templates],
+        include_sha256s=[item.sha256 for item in include_templates],
+        schema_snippets=schema_snippets,
+        schema_snippet_sources=schema_snippet_sources,
+    )
+
+
+def _load_prompt_includes(payload: object, *, owner_path: Path) -> list[PromptTemplate]:
+    if payload in (None, ""):
+        return []
+    if not isinstance(payload, list):
+        raise AppError(
+            code="prompt_include_invalid",
+            message="Prompt includes must be a list of prompt-root relative paths",
+            retryable=False,
+            context={"path": str(owner_path)},
+        )
+    includes: list[PromptTemplate] = []
+    for raw_include in payload:
+        include_path = _resolve_prompt_relative_path(raw_include, owner_path=owner_path)
+        includes.append(_load_prompt_include(include_path))
+    return includes
+
+
+def _load_prompt_include(path: Path) -> PromptTemplate:
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="prompt_include_not_found",
+            message=f"Prompt include file not found: {path}",
+            cause=exc,
+            retryable=False,
+            context={"path": str(path)},
+        ) from exc
+    try:
+        data = yaml.safe_load(raw)
+    except yaml.YAMLError as exc:
+        raise AppError(
+            code="prompt_include_yaml_invalid",
+            message=f"Prompt include YAML invalid: {path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    if data is None:
+        data = {}
+    if not isinstance(data, dict):
+        raise AppError(
+            code="prompt_include_yaml_invalid",
+            message=f"Prompt include YAML root must be a mapping: {path}",
+            retryable=False,
+            context={"path": str(path)},
+        )
+    text = str(data.get("text") or "")
+    if not text:
+        raise AppError(
+            code="prompt_include_empty",
+            message=f"Prompt include file is empty: {path}",
+            retryable=False,
+            context={"path": str(path)},
+        )
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return PromptTemplate(
+        schema_version="1.0",
+        path=str(path.resolve()),
         text=text,
         sha256=digest,
     )
+
+
+def _resolve_prompt_relative_path(raw_path: object, *, owner_path: Path) -> Path:
+    rel = str(raw_path or "").strip()
+    if not rel:
+        raise AppError(
+            code="prompt_include_invalid",
+            message="Prompt include path is required",
+            retryable=False,
+            context={"path": str(owner_path)},
+        )
+    root = PROMPTS_ROOT.resolve()
+    candidate = (root / rel).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise AppError(
+            code="prompt_include_invalid",
+            message="Prompt include path must resolve inside the prompts root",
+            cause=exc,
+            retryable=False,
+            context={"path": str(owner_path), "include": rel},
+        ) from exc
+    return candidate
+
+
+def _load_prompt_schema_snippets(
+    payload: object, *, owner_path: Path
+) -> tuple[dict[str, str], dict[str, str]]:
+    if payload in (None, ""):
+        return {}, {}
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="prompt_schema_snippets_invalid",
+            message="Prompt schema_snippets must be a mapping",
+            retryable=False,
+            context={"path": str(owner_path)},
+        )
+    snippets: dict[str, str] = {}
+    sources: dict[str, str] = {}
+    for raw_key, raw_spec in payload.items():
+        key = str(raw_key or "").strip()
+        if not key:
+            raise AppError(
+                code="prompt_schema_snippets_invalid",
+                message="Prompt schema snippet variable name is required",
+                retryable=False,
+                context={"path": str(owner_path)},
+            )
+        snippet, source = _build_prompt_schema_snippet(raw_spec, owner_path=owner_path)
+        snippets[key] = snippet
+        sources[key] = source
+    return snippets, sources
+
+
+def _build_prompt_schema_snippet(
+    spec: object, *, owner_path: Path
+) -> tuple[str, str]:
+    if isinstance(spec, str):
+        schema_name = spec
+        pointer = ""
+    elif isinstance(spec, dict):
+        schema_name = str(spec.get("schema") or "").strip()
+        pointer = str(spec.get("pointer") or "").strip()
+    else:
+        raise AppError(
+            code="prompt_schema_snippets_invalid",
+            message="Prompt schema snippet spec must be a schema name or mapping",
+            retryable=False,
+            context={"path": str(owner_path)},
+        )
+    schema_path = _resolve_schema_path(schema_name, owner_path=owner_path)
+    try:
+        schema_payload = json.loads(schema_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="prompt_schema_not_found",
+            message=f"Prompt schema source not found: {schema_path}",
+            cause=exc,
+            retryable=False,
+            context={"path": str(owner_path), "schema": schema_name},
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise AppError(
+            code="prompt_schema_invalid_json",
+            message=f"Prompt schema source is invalid JSON: {schema_path}",
+            cause=exc,
+            retryable=False,
+            context={"path": str(owner_path), "schema": schema_name},
+        ) from exc
+    target = _json_pointer_get(schema_payload, pointer)
+    source = f"{schema_name}#{pointer}" if pointer else schema_name
+    lines = [f"Schema source: {source}", *_schema_snippet_lines(target)]
+    return "\n".join(lines), source
+
+
+def _resolve_schema_path(schema_name: str, *, owner_path: Path) -> Path:
+    if not schema_name:
+        raise AppError(
+            code="prompt_schema_snippets_invalid",
+            message="Prompt schema snippet source schema is required",
+            retryable=False,
+            context={"path": str(owner_path)},
+        )
+    root = SCHEMAS_ROOT.resolve()
+    candidate = (root / schema_name).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise AppError(
+            code="prompt_schema_snippets_invalid",
+            message="Prompt schema snippet source must resolve inside the schemas root",
+            cause=exc,
+            retryable=False,
+            context={"path": str(owner_path), "schema": schema_name},
+        ) from exc
+    return candidate
+
+
+def _json_pointer_get(payload: Any, pointer: str) -> Any:
+    if not pointer:
+        return payload
+    if not pointer.startswith("/"):
+        raise AppError(
+            code="prompt_schema_pointer_invalid",
+            message="Prompt schema snippet pointer must be a JSON pointer",
+            retryable=False,
+            context={"pointer": pointer},
+        )
+    current = payload
+    for raw_part in pointer.strip("/").split("/"):
+        part = raw_part.replace("~1", "/").replace("~0", "~")
+        if isinstance(current, dict):
+            current = current.get(part)
+        elif isinstance(current, list):
+            try:
+                current = current[int(part)]
+            except (ValueError, IndexError) as exc:
+                raise AppError(
+                    code="prompt_schema_pointer_invalid",
+                    message="Prompt schema snippet pointer does not resolve",
+                    cause=exc,
+                    retryable=False,
+                    context={"pointer": pointer},
+                ) from exc
+        else:
+            current = None
+        if current is None:
+            raise AppError(
+                code="prompt_schema_pointer_invalid",
+                message="Prompt schema snippet pointer does not resolve",
+                retryable=False,
+                context={"pointer": pointer},
+            )
+    return current
+
+
+def _schema_snippet_lines(schema: Any, *, depth: int = 0, name: str = "") -> list[str]:
+    if not isinstance(schema, dict):
+        return [f"Type: {type(schema).__name__}"]
+    lines: list[str] = []
+    schema_type = _schema_type(schema)
+    if depth == 0:
+        lines.append(f"Type: {schema_type}")
+        required = _required_fields(schema)
+        if required:
+            lines.append(f"Required fields: {', '.join(required)}")
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        if depth == 0:
+            lines.append("Fields:")
+        required = set(_required_fields(schema))
+        for prop_name, prop_schema in properties.items():
+            if not isinstance(prop_schema, dict):
+                continue
+            descriptor = _schema_field_descriptor(
+                prop_schema,
+                required=prop_name in required,
+            )
+            indent = "  " * depth
+            lines.append(f"{indent}- {prop_name}: {descriptor}")
+            if depth < 2 and _schema_type(prop_schema) in {"object", "array"}:
+                lines.extend(
+                    _schema_snippet_lines(
+                        prop_schema,
+                        depth=depth + 1,
+                        name=str(prop_name),
+                    )
+                )
+    elif schema_type == "array" and isinstance(schema.get("items"), dict):
+        descriptor = _schema_field_descriptor(schema["items"], required=False)
+        label = f"{name} items" if name else "Items"
+        lines.append(f"{'  ' * depth}- {label}: {descriptor}")
+        if depth < 2:
+            lines.extend(
+                _schema_snippet_lines(schema["items"], depth=depth + 1, name=label)
+            )
+    return lines or [f"Type: {schema_type}"]
+
+
+def _schema_field_descriptor(schema: dict[str, Any], *, required: bool) -> str:
+    parts = [_schema_type(schema)]
+    if required:
+        parts.append("required")
+    for key in ("enum", "minLength", "maxLength", "minItems", "maxItems", "minimum", "maximum"):
+        if key not in schema:
+            continue
+        value = schema[key]
+        if key == "enum" and isinstance(value, list):
+            parts.append("enum=" + "|".join(str(item) for item in value))
+        else:
+            parts.append(f"{key}={value}")
+    description = str(schema.get("description") or "").strip()
+    if description:
+        parts.append(f"description={description}")
+    return ", ".join(parts)
+
+
+def _schema_type(schema: dict[str, Any]) -> str:
+    raw_type = schema.get("type")
+    if isinstance(raw_type, list):
+        return "|".join(str(item) for item in raw_type)
+    if raw_type:
+        return str(raw_type)
+    if "enum" in schema:
+        return "enum"
+    if "properties" in schema:
+        return "object"
+    if "items" in schema:
+        return "array"
+    return "value"
+
+
+def _required_fields(schema: dict[str, Any]) -> list[str]:
+    required = schema.get("required")
+    if not isinstance(required, list):
+        return []
+    return [str(item) for item in required]

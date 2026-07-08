@@ -69,7 +69,8 @@ def test_run_report_analysis_polls_vector_store_status_until_ready(
     assert any(
         event.get("event") == "vector_store_wait_retry"
         and event.get("fields", {}).get("status") == "in_progress"
-        and event.get("fields", {}).get("poll_interval_s") == 5
+        and event.get("fields", {}).get("poll_interval_s") == 0.5
+        and event.get("fields", {}).get("poll_schedule_s") == [0.5, 1.0, 2.0, 5.0]
         for event in events
     )
 
@@ -118,6 +119,74 @@ def test_run_report_analysis_surfaces_vector_store_timeout(
         severity="error",
     )
     assert exc_info.value.context["last_status"] == "in_progress"
+    assert exc_info.value.context["poll_schedule_s"] == [0.5, 1.0, 2.0, 5.0]
+
+def test_start_vector_store_indexing_reuses_vector_store_by_md5(
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+):
+    caplog.set_level(logging.INFO, logger="market_lense.report_generator")
+    runtime = replace(_runtime(tmp_path), md5="same-md5")
+    source = _source(runtime)
+    lookup_requests = []
+    status_requests = []
+
+    deps = _deps(
+        state_get=lambda req, ctx: None,
+        state_get_by_md5=lambda req, ctx: (
+            lookup_requests.append(req)
+            or SimpleNamespace(
+                schema_version="1.0",
+                file_id="previous-file",
+                md5=req.md5,
+                processed_at=1,
+                openai_file_id="openai-file-1",
+                vector_store_id="vs-md5",
+                vector_store_status="completed",
+                indexed_at_utc="2026-01-01T00:00:00Z",
+                last_error=None,
+            )
+        ),
+        vector_store_get_status=lambda req, ctx: (
+            status_requests.append(req)
+            or SimpleNamespace(
+                status="completed",
+                indexed_at_utc="2026-01-01T00:00:00Z",
+                last_error=None,
+            )
+        ),
+        vector_store_create=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("md5 reuse must not create a new vector store")
+        ),
+        vector_store_upload_file=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("md5 reuse must not upload a duplicate file")
+        ),
+        vector_store_attach_file=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("md5 reuse must not attach a duplicate file")
+        ),
+    )
+
+    state = start_vector_store_indexing(runtime, source, deps)
+
+    assert state.vector_store_id == "vs-md5"
+    assert state.openai_file_id == "openai-file-1"
+    assert state.vector_store_status == "completed"
+    assert [request.md5 for request in lookup_requests] == ["same-md5"]
+    assert [request.vector_store_id for request in status_requests] == ["vs-md5"]
+    events = []
+    for record in caplog.records:
+        try:
+            events.append(json.loads(record.message))
+        except json.JSONDecodeError:
+            continue
+    assert_logs_have_required_fields(events)
+    assert any(
+        event.get("event") == "vector_store_reuse"
+        and event.get("fields", {}).get("reuse_scope") == "md5"
+        and event.get("fields", {}).get("source_file_id") == "previous-file"
+        for event in events
+    )
 
 def test_artifact_render_task_contract_round_trip():
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
@@ -671,6 +740,7 @@ def test_run_report_analysis_fails_on_incomplete_report_payload_contract(
 __all__ = [
     "test_run_report_analysis_polls_vector_store_status_until_ready",
     "test_run_report_analysis_surfaces_vector_store_timeout",
+    "test_start_vector_store_indexing_reuses_vector_store_by_md5",
     "test_artifact_render_task_contract_round_trip",
     "test_run_report_analysis_schedules_artifact_batches_with_orchestrator_budget",
     "test_run_report_analysis_logs_artifact_scheduler_failure_propagation",

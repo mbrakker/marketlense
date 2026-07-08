@@ -99,6 +99,16 @@ Scoring:
     - Regression tests protect evidence retention on a fixed prompt/output corpus.
     - Benchmarks show token/cost reduction without quality regression on that corpus.
 
+- **Title:** Measure md5 vector-store reuse savings and stale-store risk [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: Duplicate-content vector-store reuse now exists, but operators cannot yet see avoided uploads/indexing calls or stale-store candidates across retained state.
+  - Why implement: Quantifies cost and latency savings from md5 reuse and gives retention cleanup a concrete safety signal.
+  - Tradeoffs / risks: The report must read existing state only by default and avoid remote provider calls unless explicitly requested.
+  - Acceptance Criteria:
+    - A quality command reads processed-state rows and reports duplicate md5 groups, reused vector-store count, avoided upload/indexing estimate, and rows missing reusable state.
+    - Optional live validation samples a bounded set of reused vector stores and records status without mutating state.
+    - Retention cleanup can consume the report or equivalent helper to avoid pruning stores still referenced by duplicate aliases.
+    - Tests cover duplicate grouping, missing-vector-store rows, stale status classification, and no-provider-call default behavior.
+
 ---
 
 ## 2. Analytics Projection, Signals, and Embeddings
@@ -207,11 +217,15 @@ Scoring:
 
 ## 5. User-Facing Output Quality and Editorial Contracts
 
-- **Title:** Improve final insight selection with transparent strategic scoring and coverage roles [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Final insight selection relies too heavily on a single usefulness concept and a generic non-overlap instruction, which can produce repeated or insufficiently strategic insight sets.
-  - Why implement: A visible scoring and coverage rubric makes the final five insights feel curated, balanced, and easier to validate.
-  - Tradeoffs / risks: Scores can look like false precision unless they are calibrated and treated as selection metadata rather than user-visible truth.
+- **Title:** Add live strategic insight-quality benchmark for scored insight fields [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Insight prompts now emit strategic scores, coverage roles, `so_what`, `now_what`, and report lenses, but there is no retained-artifact benchmark proving those fields improve diversity and decision usefulness over time.
+  - Why implement: Converts the new contract fields into a measurable quality loop and prevents score/role drift from becoming decorative metadata.
+  - Tradeoffs / risks: The benchmark must evaluate source-grounded structure and diversity without brittle wording expectations.
   - Acceptance Criteria:
+    - A quality command evaluates existing report-analysis artifacts for role diversity, duplicate insight overlap, non-empty `so_what`/`now_what`, supported report lens, metric-backed score calibration, and evidence linkage.
+    - Output compares current artifacts against a saved baseline and reports improvements/regressions by publisher/report family.
+    - The benchmark can run in default read-only mode without model calls and optionally sample live regeneration behind an explicit flag.
+    - Tests cover metric calculation, narrow-report fallback, unsupported-role detection, and unchanged-artifact baseline stability.
 
 - **Title:** Render executive advisory and metric-spine payloads in public report pages [Impact: 5/5, Effort: 3/5]
   - Problem fixed: The artifact contract now emits optional `executive_advisory` and `metric_spine` payloads, but public report pages do not yet expose those higher-value decision artifacts.
@@ -232,11 +246,6 @@ Scoring:
     - Output reports exact-route reuse, publisher-policy reuse, mailbox-promoted route count, stale/conflicting memory count, and verified-success rate.
     - The script can optionally sample a bounded live rerun set when explicitly enabled.
     - Tests cover deterministic metric calculation and stale/conflict classification.
-    - Insight candidates retain the existing score while adding optional novelty, strategic importance, evidence strength, quantification quality, actionability, and coverage-role dimensions.
-    - Final insights are tagged with supported coverage roles such as market shift, customer behavior, operational implication, commercial signal, technology/channel signal, risk, recommendation, or methodology caveat.
-    - Narrow reports may repeat a coverage role only with a source-backed reason; unsupported roles are not force-fit.
-    - A dominant narrative archetype such as acceleration, inflection, fragmentation, consolidation, resilience, trade-off, substitution, maturity, uncertainty, or system change is derived as optional metadata and does not replace cover semantics.
-    - Tests cover overlap reduction, scoring metadata completeness, narrow-report fallback, narrative-archetype compatibility, and no regression in exactly-five final insight behavior where that contract still applies.
 
 - **Title:** Add editorial contract versioning and quality gates before publishing [Impact: 5/5, Effort: 4/5]
   - Problem fixed: User-facing output can evolve across prompts and schemas without a single editorial contract version or publish-time gate for generic phrasing, unsupported implications, duplicated insights, missing caveats, weak actionability, forbidden internal references, and tone defects.

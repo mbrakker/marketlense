@@ -153,3 +153,92 @@ def test_validate_prompt_dry_run_surfaces_missing_variable(
         code="prompt_render_missing_variable",
         retryable=False,
     )
+
+
+def test_prompt_service_composes_shared_include_and_schema_snippet(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+) -> None:
+    prompts_root = tmp_path / "prompts"
+    schemas_root = tmp_path / "schemas"
+    (prompts_root / "_partials").mkdir(parents=True)
+    schemas_root.mkdir(parents=True)
+    (prompts_root / "_partials" / "evidence.yaml").write_text(
+        "text: |\n  Shared evidence rule.\n",
+        encoding="utf-8",
+    )
+    namespace_dir = prompts_root / "alpha"
+    namespace_dir.mkdir(parents=True)
+    (namespace_dir / "system.yaml").write_text(
+        "\n".join(
+            [
+                "includes:",
+                '  - "_partials/evidence.yaml"',
+                "schema_snippets:",
+                "  artifact_schema:",
+                '    schema: "artifact.schema.json"',
+                '    pointer: "/properties/summary"',
+                "text: |",
+                "  Local instruction.",
+                "  {{ artifact_schema }}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (namespace_dir / "user.yaml").write_text("text: User prompt.\n", encoding="utf-8")
+    (schemas_root / "artifact.schema.json").write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "properties": {
+                    "summary": {
+                        "type": "object",
+                        "required": ["tldr", "claim_evidence_map"],
+                        "properties": {
+                            "tldr": {"type": "string", "minLength": 1},
+                            "claim_evidence_map": {
+                                "type": "array",
+                                "minItems": 1,
+                                "items": {
+                                    "type": "object",
+                                    "required": ["claim", "evidence_id"],
+                                    "properties": {
+                                        "claim": {"type": "string"},
+                                        "evidence_id": {"type": "string"},
+                                    },
+                                },
+                            },
+                        },
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    external_boundary_mocks_only.setattr(prompt_service, "PROMPTS_ROOT", prompts_root)
+    external_boundary_mocks_only.setattr(prompt_service, "SCHEMAS_ROOT", schemas_root)
+
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace="alpha", force_reload=True),
+        _ctx(),
+    )
+    rendered = prompt_service.render_prompt(
+        prompt_service.PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.system,
+            variables={},
+        ),
+        _ctx(),
+    )
+
+    assert prompt_set.system.include_paths == [
+        str((prompts_root / "_partials" / "evidence.yaml").resolve())
+    ]
+    assert "Shared evidence rule." in rendered.text
+    assert "Local instruction." in rendered.text
+    assert "Schema source: artifact.schema.json#/properties/summary" in rendered.text
+    assert "- tldr: string, required, minLength=1" in rendered.text
+    assert "- claim_evidence_map: array, required, minItems=1" in rendered.text
+    assert "claim: string, required" in rendered.text

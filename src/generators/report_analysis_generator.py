@@ -19,7 +19,7 @@ from src.contracts.report_generation import (
 )
 from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.semantic_ids import ReportId
-from src.contracts.state import StateGetRequest
+from src.contracts.state import StateGetByMd5Request, StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest
 from src.contracts.vector_store import (
     VectorStoreAttachFileRequest,
@@ -104,8 +104,9 @@ def start_vector_store_indexing(
         )
     )
     existing = None
+    reuse_scope = ""
     try:
-        existing = dependencies.state_get(
+        exact_existing = dependencies.state_get(
             StateGetRequest(
                 schema_version="1.0",
                 state_db=runtime.settings.state_db,
@@ -113,8 +114,31 @@ def start_vector_store_indexing(
             ),
             mode_ctx,
         )
+        if exact_existing and exact_existing.vector_store_id:
+            existing = exact_existing
+            reuse_scope = "file_id"
     except Exception:
         existing = None
+    if (
+        existing is None
+        and runtime.settings.vector_store_keep
+        and runtime.md5
+        and str(runtime.md5).strip()
+    ):
+        try:
+            md5_existing = dependencies.state_get_by_md5(
+                StateGetByMd5Request(
+                    schema_version="1.0",
+                    state_db=runtime.settings.state_db,
+                    md5=str(runtime.md5).strip(),
+                ),
+                mode_ctx,
+            )
+            if md5_existing and md5_existing.vector_store_id:
+                existing = md5_existing
+                reuse_scope = "md5"
+        except Exception:
+            existing = None
     if existing and runtime.settings.vector_store_keep and existing.vector_store_id:
         vector_store_id = existing.vector_store_id
         openai_file_id = existing.openai_file_id
@@ -126,6 +150,8 @@ def start_vector_store_indexing(
                 module=logger.name,
                 fields={
                     "file_id": runtime.file.file_id,
+                    "source_file_id": existing.file_id,
+                    "reuse_scope": reuse_scope,
                     "vector_store_id": vector_store_id,
                 },
             )

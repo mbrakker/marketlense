@@ -173,6 +173,15 @@ class StateGetRequest:
 
 
 @dataclass(frozen=True)
+class StateGetByMd5Request:
+    schema_version: str = field(
+        metadata={"doc": "State get-by-md5 request schema version."}
+    )
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    md5: str = field(metadata={"doc": "MD5 checksum of the PDF."})
+
+
+@dataclass(frozen=True)
 class StateGetResponse:
     schema_version: str = field(metadata={"doc": "State get response schema version."})
     file_id: str = field(metadata={"doc": "Drive file ID."})

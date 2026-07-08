@@ -256,24 +256,6 @@ Scoring:
 
 ## 3. Prompt and Artifact Contract Hardening
 
-- **Title:** Add prompt partials or controlled shared prompt composition [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Grounding, JSON discipline, evidence policy, metric policy, abstention, style, and anti-generic rules can drift across prompt namespaces.
-  - Why implement: Shared prompt fragments make output quality consistent and easier to validate.
-  - Tradeoffs / risks: Composition must remain deterministic and owned by the prompt service, not by generators.
-  - Acceptance Criteria:
-    - Prompt service supports shared includes or controlled pre-render composition with prompt paths, hash, rendered text, and model parameters logged.
-    - Generators request prompts by name and never concatenate prompt text.
-    - Fixture coverage proves shared blocks are included consistently.
-
-- **Title:** Generate prompt schema snippets from source-of-truth contracts [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Loose hand-written schema descriptions in prompts can drift from runtime contracts.
-  - Why implement: Runtime contracts should remain the schema authority and prompt text should reflect them deterministically.
-  - Tradeoffs / risks: Schema snippets must be concise enough for token budgets and stable enough for fixture regression.
-  - Acceptance Criteria:
-    - Prompt schema snippets are generated from canonical contracts or JSON schemas.
-    - Snippets include required fields, allowed null/empty behavior, min/max counts, enums, field descriptions, and valid/invalid examples where useful.
-    - Contract/schema snapshot tests and prompt fixture tests catch schema drift.
-
 - **Title:** Add abstention-first artifact generation rules [Impact: 5/5, Effort: 2/5]
   - Problem fixed: Sparse evidence can produce generic or hallucinated content instead of transparent omission.
   - Why implement: Trust improves when weak artifacts return explicit not-found or limitation states.
@@ -282,24 +264,6 @@ Scoring:
     - Artifact prompts support empty artifact status metadata, missing evidence type, and precise regeneration target when possible.
     - Validators accept correct abstentions and reject unsupported generated filler.
     - Positive and negative tests cover enough-evidence, weak-evidence, and no-evidence cases.
-
-- **Title:** Add scored insight selection and strategic coverage roles [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Accurate insights can still be repetitive, generic, or weakly strategic.
-  - Why implement: Insight selection should surface decision-relevant, specific, non-obvious, well-supported coverage.
-  - Tradeoffs / risks: Scores should improve selection without becoming an unexplained black box.
-  - Acceptance Criteria:
-    - Insight candidates include decision relevance, metric strength, specificity, novelty, ecommerce/digital relevance, evidence strength, non-obviousness, actionability, and non-overlap scores.
-    - Final insights carry coverage roles such as market shift, customer behavior, operational implication, commercial signal, technology/channel signal, risk, recommendation, or methodology caveat.
-    - Tests assert selection diversity, evidence support, and no duplicated low-value insights.
-
-- **Title:** Add `so what` and `now what` fields plus report-type lensing [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Outputs can read as flat summaries rather than decision-support analysis.
-  - Why implement: Readers need what changed, why it matters, operator implication, watchout, and decision question.
-  - Tradeoffs / risks: Action language must remain source-backed and domain lensing must not introduce unsupported extrapolation.
-  - Acceptance Criteria:
-    - Summary, expert comment, LinkedIn post, and cross-report synthesis contracts include analytical fields where appropriate.
-    - Artifact generation accepts structured report lenses such as ecommerce, digital marketing, Amazon marketplaces, retail media, consumer trends, payments, logistics, AI commerce, platform policy, or category intelligence.
-    - Tests cover domain lens selection and unsupported-action abstention.
 
 - **Title:** Create `topics_covered`, `key_figures`, and chart insight card artifacts [Impact: 5/5, Effort: 5/5]
   - Problem fixed: Public pages need scannable topic, figure, and chart modules that are more structured than generic prose.
@@ -346,15 +310,6 @@ Scoring:
     - Validators reject unsupported cross-publisher metric normalization.
     - Fixture tests cover convergence, divergence, and limitation language.
 
-- **Title:** Make regeneration critique-first and validation severity-aware [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Regeneration can rewrite broadly instead of repairing the precise failed claim or field.
-  - Why implement: Critique-first repair and severity routing make validation/remediation targeted and publish-safe.
-  - Tradeoffs / risks: Repair payloads must remain machine-facing and not leak into public HTML.
-  - Acceptance Criteria:
-    - Regeneration output includes diagnosis, sentences to replace, evidence to use, risks removed, and repaired artifact.
-    - Validation output includes severity, repair target namespace, suggested fix instruction, can-publish-with-warning, and affected artifact field.
-    - Tests cover blocker, warning, info, targeted repair, and publish-with-warning routing.
-
 - **Title:** Build golden-output prompt evaluations [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Prompt regression currently protects renderability and costs more than qualitative output quality.
   - Why implement: Golden-output checks catch generic, unsupported, schema-weak, or low-value artifacts.
@@ -377,15 +332,6 @@ Scoring:
     - Fast/default/full profiles are versioned and loaded through config/workflow-control.
     - Logs expose active profile, skipped stages, deferred stages, cache hits/misses, and quality tradeoffs.
 
-- **Title:** Enable automatic latest-safe resume from ingest [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: Reruns can redo work even though the report pipeline supports latest-safe checkpoint resume.
-  - Why implement: Warm reruns should skip directly to the newest valid checkpoint.
-  - Tradeoffs / risks: Operators must still have an explicit clean-run option.
-  - Acceptance Criteria:
-    - Ingest calls report pipeline with `auto_resume_from_latest_safe=True` unless clean run is explicitly requested.
-    - Checkpoint artifact integrity is validated before reuse.
-    - Tests cover warm rerun, corrupt checkpoint, missing artifact, and explicit clean run.
-
 - **Title:** Lazily construct LLM/model clients by reached stage [Impact: 3/5, Effort: 2/5]
   - Problem fixed: Multiple scoped clients can be constructed before the pipeline knows which scopes are needed.
   - Why implement: Lazy construction reduces startup overhead and avoids unnecessary provider setup in skipped stages.
@@ -404,24 +350,6 @@ Scoring:
     - Non-vector-dependent nodes can run while vector indexing is pending.
     - Pipeline tests prove state transitions, retry counts, checkpoint semantics, and idempotency remain unchanged or approved.
 
-- **Title:** Replace fixed vector-store polling with fast-first polling [Impact: 3/5, Effort: 2/5]
-  - Problem fixed: Fixed 5-second polling wastes time when indexing finishes quickly.
-  - Why implement: Fast-first polling reduces latency without changing provider timeout semantics.
-  - Tradeoffs / risks: Polling must remain bounded and must not increase provider load excessively.
-  - Acceptance Criteria:
-    - Poll schedule uses fast-first delays such as 0.5s, 1s, 2s, then 5s capped by existing timeout.
-    - Bulk runs can batch status checks where service support exists.
-    - Tests assert attempt count, delays, timeout, and structured retry/defer logs.
-
-- **Title:** Parallelize independent table and chart ranking under global LLM caps [Impact: 3/5, Effort: 3/5]
-  - Problem fixed: Independent ranking batches can run serially and increase latency.
-  - Why implement: Controlled parallelism can reduce report runtime without increasing total model work.
-  - Tradeoffs / risks: Must respect global model concurrency, retry policy, and deterministic output ordering.
-  - Acceptance Criteria:
-    - Table and chart ranking can run concurrently when workflow-control allows it.
-    - Final candidate ordering remains deterministic.
-    - Tests assert concurrency limits, stable ordering, and retry propagation.
-
 - **Title:** Add deterministic ranking and crop-refine shortcuts [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Strong candidates can still incur ranking and crop-refine model calls.
   - Why implement: Obvious-pass/obvious-reject paths reduce latency and cost while preserving full mode.
@@ -430,24 +358,6 @@ Scoring:
     - Ranking LLM is bypassed when deterministic scoring yields enough strong table/chart candidates.
     - `rank_max_candidates` is adaptive by profile and escalates only when no acceptable figures are found.
     - Fast mode uses one-pass crop refinement or deterministic bbox expansion, and high-confidence candidates can skip crop-refine LLM.
-
-- **Title:** Centralize page-render caching across PDF stages [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Contents previews, crop-refine page renders, final crop renders, and candidate extraction can duplicate page rendering work.
-  - Why implement: A shared render cache improves warm runs and reduces repeated PDF rendering.
-  - Tradeoffs / risks: Cache keys must include enough versioning to avoid stale artifacts.
-  - Acceptance Criteria:
-    - Page render cache is keyed by PDF md5, page number, DPI, render variant, and crop/cache version.
-    - PDF stages use the canonical page-render cache through service boundaries.
-    - Tests cover cache hit/miss, invalidation, artifact hash, and equivalent output.
-
-- **Title:** Reuse native text and add worker-safe PDF contexts [Impact: 3/5, Effort: 3/5]
-  - Problem fixed: Source prep can reload native text and reopen/reparse PDFs across parallel tasks.
-  - Why implement: Reusing parsed state reduces local CPU and I/O overhead.
-  - Tradeoffs / risks: PDF contexts must remain worker-safe and avoid unsafe shared document access.
-  - Acceptance Criteria:
-    - Initial native text response/status are reused unless OCR changed the analysis PDF.
-    - A per-worker PDF context pool or equivalent reduces repeated parsing without shared unsafe state.
-    - Tests cover OCR-change invalidation and parallel worker safety assumptions.
 
 - **Title:** Split Drive/cache prefetch from report-generation workers [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Bulk ingestion can wait on Drive download/cache materialization before keeping downstream workers busy.
@@ -466,15 +376,6 @@ Scoring:
     - Per-folder cursor semantics are default for all modes unless `--rescan` or equivalent is explicit.
     - Batch state query returns processed state, last error, text-validation status, vector-store status, and retryability flags.
     - Tests cover limit overrides, forced report-card runs, rescan, and processed-state skip decisions.
-
-- **Title:** Key vector-store reuse by md5 [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Duplicate or renamed PDFs may not reuse the same indexed vector store if reuse is file-state oriented.
-  - Why implement: md5-keyed reuse avoids repeated indexing for identical content.
-  - Tradeoffs / risks: Alias handling and lifecycle cleanup need clear ownership and idempotency.
-  - Acceptance Criteria:
-    - State stores md5-keyed vector-store cache entries with file aliases and artifact refs.
-    - Duplicate/renamed PDFs reuse existing indexed stores when compatible.
-    - Tests cover alias creation, reuse, stale store handling, and cleanup policy.
 
 - **Title:** Split validation into inline deterministic and deferred LLM grounding [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Validation and regeneration loops can dominate latency for drafts and bulk ingestion.
@@ -569,15 +470,6 @@ Scoring:
     - Agent runtime watches download directory, network PDF/document URLs, visible confirmation text, form disappearance, and known blocker text.
     - Terminal evidence signals agent stop and moves directly to typed artifact finalization or blocker handling.
     - Tests cover valid download, email confirmation, known blocker, and false-positive non-terminal text.
-
-- **Title:** Split browser prompts by route family and minimize playbook payload [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Browser prompts can include broad context, multiple playbooks, route metadata, identity fields, consent policy, and candidate traces even when only one route family matters.
-  - Why implement: Smaller route-specific prompts reduce token cost, latency, and agent confusion without changing the model.
-  - Tradeoffs / risks: Prompt text must stay in prompt namespaces and full playbook YAML must remain outside ad hoc prompt construction.
-  - Acceptance Criteria:
-    - Prompt namespaces exist for `browser_pdf_click`, `browser_email_form`, `browser_onsite_report`, and `browser_listing_hub`.
-    - Prompts include only route-relevant variables, the winning playbook by default, compact trap labels, and alternatives only on low-confidence selection.
-    - Prompt paths, hashes, rendered text, and model parameters are logged through the prompt service.
 
 - **Title:** Run deterministic form autofill before invoking the LLM [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Known identity fields and consent policy can consume LLM steps on email-gated reports.

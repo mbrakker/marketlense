@@ -3,6 +3,48 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
+    _build_regeneration_plan,
+)
+
+
+def test_build_regeneration_plan_skips_info_and_orders_errors_first():
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                message="[summary_warning] Warning issue",
+                severity="warning",
+                affected_section="summary",
+                rule_id="summary_warning",
+            ),
+            ValidationIssue(
+                schema_version="1.0",
+                message="[summary_info] Informational issue",
+                severity="info",
+                affected_section="summary",
+                rule_id="summary_info",
+            ),
+            ValidationIssue(
+                schema_version="1.0",
+                message="[summary_error] Error issue",
+                severity="error",
+                affected_section="summary",
+                rule_id="summary_error",
+            ),
+        ],
+        artifacts={},
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "targeted"
+    assert len(plan.targets) == 1
+    assert [issue.rule_id for issue in plan.targets[0].issues] == [
+        "summary_error",
+        "summary_warning",
+    ]
+
+
 def test_run_report_analysis_rejects_unsupported_repair_target(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -130,6 +172,7 @@ def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_pa
     assert snapshot["_evidence_packs"]["validation"].endswith("validation.json")
 
 __all__ = [
+    "test_build_regeneration_plan_skips_info_and_orders_errors_first",
     "test_run_report_analysis_rejects_unsupported_repair_target",
     "test_run_report_analysis_snapshot_preserves_internal_payload_metadata",
 ]

@@ -1,3 +1,5 @@
+includes:
+  - "report_vs/artifacts/regenerate/_partials/critique_first.yaml"
 text: |
   Context:
   - Attempt index: {{ attempt_index }}

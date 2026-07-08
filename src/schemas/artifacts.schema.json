@@ -188,7 +188,20 @@
             "type": "array",
             "items": { "type": "integer" }
           },
-          "score": { "type": "number" }
+          "score": { "type": "number" },
+          "decision_relevance_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "metric_strength_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "novelty_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "coverage_role": {
+            "type": "string",
+            "enum": ["market_context", "behavior_shift", "strategic_risk", "operating_implication", "investment_signal", "proof_point", "counter_signal"]
+          },
+          "so_what": { "type": "string" },
+          "now_what": { "type": "string" },
+          "report_type_lens": {
+            "type": "string",
+            "enum": ["market_size", "consumer_behavior", "technology_shift", "channel_strategy", "brand_strategy", "investment_outlook", "risk_regulation", "operations", "creative_culture"]
+          }
         }
       }
     },
@@ -234,6 +247,20 @@
           "pages": {
             "type": "array",
             "items": { "type": "integer" }
+          },
+          "score": { "type": "number" },
+          "decision_relevance_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "metric_strength_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "novelty_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "coverage_role": {
+            "type": "string",
+            "enum": ["market_context", "behavior_shift", "strategic_risk", "operating_implication", "investment_signal", "proof_point", "counter_signal"]
+          },
+          "so_what": { "type": "string" },
+          "now_what": { "type": "string" },
+          "report_type_lens": {
+            "type": "string",
+            "enum": ["market_size", "consumer_behavior", "technology_shift", "channel_strategy", "brand_strategy", "investment_outlook", "risk_regulation", "operations", "creative_culture"]
           }
         }
       }

@@ -53,6 +53,7 @@ from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.contracts.validation import ValidationIssue, ValidationReport
 
 from src.generators.report_analysis_generator import (
+    start_vector_store_indexing,
     VectorStoreIndexingState,
 )
 

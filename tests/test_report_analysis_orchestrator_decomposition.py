@@ -18,6 +18,7 @@ VECTOR_STORE_SYMBOLS = {
     "VECTOR_STORE_READY_STATUSES",
     "VECTOR_STORE_FAILED_STATUSES",
     "VECTOR_STORE_POLL_INTERVAL_SECONDS",
+    "VECTOR_STORE_POLL_SCHEDULE_SECONDS",
     "_is_vector_store_ready",
     "_await_vector_store_indexing",
 }

@@ -156,6 +156,55 @@ def test_missing_md5_is_computed_before_pipeline(ingest_settings, run_context):
     assert compute_md5_calls["count"] == 1
 
 
+def test_ingest_file_enables_latest_safe_resume_when_pipeline_accepts_keyword(
+    ingest_settings,
+    run_context,
+):
+    settings = replace(ingest_settings, vector_store_keep=True)
+    file = _drive_file(md5_checksum="drive-md5")
+    captured = {"auto_resume": None}
+
+    def _file_stat(request, _ctx):
+        return FileStatResponse(
+            schema_version="1.0",
+            path=request.path,
+            exists=True,
+            size_bytes=10,
+            mtime_utc=123.0,
+            md5="drive-md5" if request.compute_md5 else None,
+        )
+
+    def _run_report_pipeline(
+        current_file,
+        _cache_path,
+        _settings,
+        md5,
+        _ctx,
+        *,
+        auto_resume_from_latest_safe=False,
+    ):
+        captured["auto_resume"] = auto_resume_from_latest_safe
+        return _outcome(current_file, md5)
+
+    dependencies = _base_dependencies(
+        file_stat_fn=_file_stat,
+        run_report_pipeline_fn=_run_report_pipeline,
+        write_md5_sidecar_fn=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            record=None,
+            written=True,
+            reason="written",
+        ),
+    )
+
+    result = run_ingest_file(file, 0, settings, run_context, dependencies)
+
+    assert result.outcome.status == "processed"
+    assert captured["auto_resume"] is True
+
+
 def test_sidecar_is_written_after_computed_md5(ingest_settings, run_context):
     settings = replace(ingest_settings, vector_store_keep=True)
     file = _drive_file(md5_checksum=None)

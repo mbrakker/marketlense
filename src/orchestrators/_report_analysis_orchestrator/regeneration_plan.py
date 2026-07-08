@@ -198,6 +198,8 @@ BROAD_TARGETS = [
 
 SUPPORTED_TARGETS = set(TARGET_ORDER)
 
+REGENERATION_SEVERITY_ORDER = {"error": 0, "warning": 1}
+
 RULE_TARGETS = {
     "claim_support": ["summary"],
     "metrics": ["insights_bundle"],
@@ -292,11 +294,19 @@ def _build_target(
     target_key: str,
     issues: List[RegenerationIssue],
 ) -> RegenerationTarget:
+    ordered_issues = sorted(
+        issues,
+        key=lambda issue: (
+            REGENERATION_SEVERITY_ORDER.get(str(issue.severity).lower(), 99),
+            issue.rule_id,
+            issue.affected_section,
+        ),
+    )
     return RegenerationTarget(
         target_section=target_key,
         regenerate_steps=_target_steps(target_key),
         prompt_namespaces=_target_prompt_namespaces(target_key),
-        issues=issues,
+        issues=ordered_issues,
     )
 
 
@@ -309,6 +319,8 @@ def _build_regeneration_plan(
     grouped: Dict[str, List[RegenerationIssue]] = {}
     unmappable: List[RegenerationIssue] = []
     for issue in issues:
+        if str(issue.severity or "").strip().lower() not in REGENERATION_SEVERITY_ORDER:
+            continue
         normalized = _normalize_regeneration_issue(issue, artifacts)
         target_keys = _target_keys_for_issue(normalized)
         if target_keys:

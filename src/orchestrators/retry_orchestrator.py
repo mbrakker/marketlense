@@ -34,6 +34,12 @@ class RetryPolicy:
         default=0.0,
         metadata={"doc": "Optional random jitter added to each retry delay."},
     )
+    delay_schedule_seconds: tuple[float, ...] = field(
+        default_factory=tuple,
+        metadata={
+            "doc": "Optional explicit retry delays by zero-based failed attempt."
+        },
+    )
 
 
 def is_retryable_app_error(exc: Exception) -> bool:
@@ -68,6 +74,10 @@ def _default_failure_fields(
 
 
 def _retry_delay_seconds(policy: RetryPolicy, attempt: int) -> float:
+    if policy.delay_schedule_seconds:
+        schedule = tuple(float(item) for item in policy.delay_schedule_seconds)
+        index = min(max(0, int(attempt)), len(schedule) - 1)
+        return max(0.0, schedule[index])
     base = float(policy.base_delay_seconds) + float(
         policy.backoff_step_seconds
     ) * float(attempt)
@@ -217,7 +227,6 @@ def run_with_retry(
     is_retryable: RetryablePredicate = is_retryable_app_error,
     sleep_fn: SleepFn = time.sleep,
 ) -> T:
-    retries = max(0, int(policy.retries))
     attempt = 0
     while True:
         try:
