@@ -408,6 +408,7 @@ def test_openrouter_client_construction_is_owned_by_llm_service(
         openrouter_http_referer="https://marketlense.local",
         temperature=0.0,
         timeout_seconds=30.0,
+        max_tokens=16000,
     )
 
     result = llm_service.build_openrouter_client(
@@ -424,6 +425,7 @@ def test_openrouter_client_construction_is_owned_by_llm_service(
             "http_referer": "https://marketlense.local",
             "temperature": 0.0,
             "timeout": 30.0,
+            "extra_body": {"max_tokens": 12000},
             "max_retries": 0,
         }
     ]
@@ -437,6 +439,40 @@ def test_openrouter_client_construction_is_owned_by_llm_service(
     assert len(relevant) == 2
     assert "secret-key" not in json.dumps(relevant)
     assert_logs_have_required_fields(relevant)
+
+
+def test_openrouter_client_uses_installed_browser_use_openrouter_signature() -> None:
+    import inspect
+
+    from browser_use import ChatOpenRouter
+
+    captured: list[dict[str, object]] = []
+
+    def _factory(**kwargs: object) -> object:
+        unexpected = set(kwargs).difference(
+            set(inspect.signature(ChatOpenRouter).parameters)
+        )
+        assert unexpected == set()
+        captured.append(dict(kwargs))
+        return SimpleNamespace(provider="openrouter")
+
+    settings = SimpleNamespace(
+        openrouter_api_key="secret-key",
+        model="openai/gpt-5-mini",
+        openrouter_http_referer="https://marketlense.local",
+        temperature=0.0,
+        timeout_seconds=30.0,
+        max_tokens=16000,
+    )
+
+    llm_service.build_openrouter_client(
+        settings=settings,
+        ctx=_ctx(),
+        client_factory=_factory,
+    )
+
+    assert captured[0]["extra_body"] == {"max_tokens": 12000}
+    assert "max_tokens" not in captured[0]
 
 
 def test_openrouter_client_missing_key_raises_typed_error(

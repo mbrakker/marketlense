@@ -152,8 +152,12 @@ browser_download:
   temperature: 0.0
   timeout_seconds: 180
   max_steps: 30
+  max_tokens: 12000
   output_dir: "./out/browser_downloads"
   headed: false
+  captcha_handoff:
+    enabled: true
+    timeout_seconds: 120
   route_playbook_dir: "./src/playbooks/browser_routes"
   route_playbook_stale_policy: "fallback"
   route_playbook_promotion_mode: "write"

@@ -30,6 +30,7 @@ def load_browser_download_settings(
     drive_upload_cfg = browser_download.get("drive_upload", {}) or {}
     failure_forensics_cfg = browser_download.get("failure_forensics", {}) or {}
     session_reuse_cfg = browser_download.get("session_reuse", {}) or {}
+    captcha_handoff_cfg = browser_download.get("captcha_handoff", {}) or {}
     retry_cfg = browser_download.get("retry", {}) or {}
     drive_upload_enabled = _to_bool(
         drive_upload_cfg.get("enabled")
@@ -321,6 +322,20 @@ def load_browser_download_settings(
             ),
             1,
         ),
+        max_tokens=max(
+            _to_int(
+                browser_download.get("max_tokens")
+                if not _is_missing(browser_download.get("max_tokens"))
+                else _env_value("BROWSER_DOWNLOAD_MAX_TOKENS"),
+                _to_int(
+                    _default_config_value(
+                        "browser_download", "max_tokens", fallback=12000
+                    ),
+                    12000,
+                ),
+            ),
+            1024,
+        ),
         output_dir=output_dir,
         state_db=state_db,
         reports_db=reports_db,
@@ -423,6 +438,42 @@ def load_browser_download_settings(
             private_api_playbook_min_distinct_source_urls
         ),
         session_reuse_policy=session_reuse_policy,
+        captcha_handoff_policy=BrowserDownloadCaptchaHandoffPolicy(
+            schema_version="1.0",
+            enabled=_to_bool(
+                captcha_handoff_cfg.get("enabled")
+                if not _is_missing(captcha_handoff_cfg.get("enabled"))
+                else _env_value("BROWSER_DOWNLOAD_CAPTCHA_HANDOFF_ENABLED"),
+                _to_bool(
+                    _default_config_value(
+                        "browser_download",
+                        "captcha_handoff",
+                        "enabled",
+                        fallback=False,
+                    ),
+                    False,
+                ),
+            ),
+            timeout_seconds=max(
+                _to_float(
+                    captcha_handoff_cfg.get("timeout_seconds")
+                    if not _is_missing(captcha_handoff_cfg.get("timeout_seconds"))
+                    else _env_value(
+                        "BROWSER_DOWNLOAD_CAPTCHA_HANDOFF_TIMEOUT_SECONDS"
+                    ),
+                    _to_float(
+                        _default_config_value(
+                            "browser_download",
+                            "captcha_handoff",
+                            "timeout_seconds",
+                            fallback=120.0,
+                        ),
+                        120.0,
+                    ),
+                ),
+                1.0,
+            ),
+        ),
     )
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
@@ -444,6 +495,7 @@ def load_browser_download_settings(
                 "temperature": settings.temperature,
                 "timeout_seconds": settings.timeout_seconds,
                 "max_steps": settings.max_steps,
+                "max_tokens": settings.max_tokens,
                 "headed": settings.headed,
                 "retry_retries": settings.retry_retries,
                 "retry_base_delay_seconds": settings.retry_base_delay_seconds,
@@ -481,6 +533,12 @@ def load_browser_download_settings(
                 ),
                 "session_reuse_ttl_seconds": (
                     settings.session_reuse_policy.ttl_seconds
+                ),
+                "captcha_handoff_enabled": (
+                    settings.captcha_handoff_policy.enabled
+                ),
+                "captcha_handoff_timeout_seconds": (
+                    settings.captcha_handoff_policy.timeout_seconds
                 ),
             },
         )

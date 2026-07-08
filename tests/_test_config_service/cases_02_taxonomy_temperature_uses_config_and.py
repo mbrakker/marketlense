@@ -227,8 +227,13 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
                 "temperature": 0.1,
                 "timeout_seconds": 45,
                 "max_steps": 12,
+                "max_tokens": 14000,
                 "output_dir": "./out/browser_downloads",
                 "headed": True,
+                "captcha_handoff": {
+                    "enabled": True,
+                    "timeout_seconds": 120,
+                },
                 "route_playbook_promotion_mode": "dry_run",
                 "private_api_playbook_promotion_mode": "write",
                 "private_api_playbook_min_success_count": 4,
@@ -275,7 +280,10 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
         self.assertEqual(0.1, settings.temperature)
         self.assertEqual(45, settings.timeout_seconds)
         self.assertEqual(12, settings.max_steps)
+        self.assertEqual(14000, settings.max_tokens)
         self.assertTrue(settings.headed)
+        self.assertTrue(settings.captcha_handoff_policy.enabled)
+        self.assertEqual(120.0, settings.captcha_handoff_policy.timeout_seconds)
         self.assertEqual(2, settings.retry_retries)
         self.assertEqual(0.5, settings.retry_base_delay_seconds)
         self.assertEqual(

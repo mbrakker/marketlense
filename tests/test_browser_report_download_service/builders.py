@@ -25,6 +25,7 @@ import pytest
 import requests
 
 from src.contracts.browser_download import (
+    BrowserDownloadCaptchaHandoffPolicy,
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
     BrowserDownloadPublisherOverride,
@@ -112,6 +113,7 @@ def _runtime(
     route_summary: str,
     create_pdf: bool,
     email_submission_completed: bool | None,
+    post_submit_message: str | None = None,
 ):
     payload = {
         "route_kind": route_kind,
@@ -122,7 +124,10 @@ def _runtime(
         "downloaded_file_name": None,
         "downloaded_mime_type": None,
         "encountered_form_fields": [],
-        "post_submit_message": "",
+        "post_submit_message": post_submit_message or "",
+        "confirmation_url_changed": bool(post_submit_message),
+        "submit_button_state": "replaced" if post_submit_message else "",
+        "form_disappeared": bool(post_submit_message),
     }
     history_attachments: list[str] = []
 

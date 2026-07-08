@@ -35,6 +35,7 @@ from src.services._browser_report_download.cdp import (
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
     browser_helper_form_autocomplete,
+    browser_helper_standard_form_submit,
     browser_helper_js,
     browser_helper_page_info,
 )
@@ -390,6 +391,205 @@ def _payload_has_lookup_submission_recovery_signal(payload: dict[str, Any]) -> b
     return any(marker in blocked_text for marker in lookup_fields)
 
 
+def _should_attempt_standard_form_submit_assist(
+    *,
+    request: BrowserReportDownloadRequest,
+    raw_model_response: str,
+) -> bool:
+    if str(request.route_family_hint or "").strip() != "browser_email_form":
+        return False
+    payload = _parse_raw_model_response(raw_model_response)
+    if str(payload.get("route_kind") or "").strip() != "email_delivery":
+        return False
+    if normalize_optional_bool_signal(payload.get("confirmation_url_changed")) is True:
+        return False
+    if normalize_optional_bool_signal(payload.get("form_disappeared")) is True:
+        return False
+    return _payload_has_standard_form_submit_recovery_signal(payload)
+
+
+def _should_attempt_timeout_standard_form_submit_assist(
+    *,
+    request: BrowserReportDownloadRequest,
+    browser: Any,
+    raw_model_response: str,
+) -> bool:
+    if _should_attempt_standard_form_submit_assist(
+        request=request,
+        raw_model_response=raw_model_response,
+    ):
+        return True
+    if str(request.route_family_hint or "").strip() != "browser_email_form":
+        return False
+    html = str(getattr(browser, "html", "") or "").casefold()
+    if not html:
+        return False
+    if any(marker in html for marker in _EMAIL_DOMAIN_FAILURE_MARKERS):
+        return False
+    has_form_control = any(
+        marker in html
+        for marker in ("<form", "<input", "<select", "<textarea", "checkbox")
+    )
+    has_submit_control = any(
+        marker in html
+        for marker in ("type=\"submit\"", "type='submit'", ">submit<", "submit")
+    )
+    return has_form_control and has_submit_control
+
+
+def _payload_has_standard_form_submit_recovery_signal(payload: dict[str, Any]) -> bool:
+    text_parts: list[str] = [
+        str(payload.get("route_summary") or ""),
+        str(payload.get("blocked_reason") or ""),
+        str(payload.get("blocked_reason_detail") or ""),
+    ]
+    for item in payload.get("encountered_form_fields", []):
+        text_parts.append(str(item or ""))
+    submitted = False
+    for step in payload.get("route_steps", []):
+        if not isinstance(step, dict):
+            continue
+        action = str(step.get("action") or "").strip().casefold()
+        target_text = str(step.get("target_text") or "")
+        result = str(step.get("result") or "")
+        text_parts.extend([target_text, result])
+        if action == "click" and "submit" in " ".join([target_text, result]).casefold():
+            submitted = True
+    joined = " ".join(text_parts).casefold()
+    relevant_markers = (
+        "country",
+        "industry",
+        "department",
+        "role",
+        "job title",
+        "company",
+        "email",
+        "privacy",
+        "terms",
+        "policy",
+        "agree",
+        "agreement",
+        "checkbox",
+        "select",
+        "required",
+        "unchecked",
+        "unselected",
+    )
+    blocked_reason = str(payload.get("blocked_reason") or "").strip().casefold()
+    return any(marker in joined for marker in relevant_markers) and (
+        submitted
+        or blocked_reason
+        in {"blocked_unknown_required_enum", "blocked_missing_identity_field"}
+    )
+
+
+def _attempt_standard_form_submit_assist(
+    *,
+    request: BrowserReportDownloadRequest,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+) -> bool:
+    page = _resolve_current_page(browser)
+    if page is None:
+        return False
+    field_values = _browser_standard_form_identity_field_values(request)
+    if not field_values:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_standard_form_assist_skipped",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "reason": "no_identity_fields",
+                },
+            )
+        )
+        return False
+    helper_result = browser_helper_standard_form_submit(
+        page=page,
+        field_values=field_values,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        browser=browser,
+    )
+    if helper_result.status == "blocked":
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_standard_form_assist_blocked",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "blocker_code": helper_result.blocker_code or "",
+                    "unresolved_fields": list(helper_result.unresolved_fields),
+                    "attempted_count": helper_result.attempted_count,
+                },
+            )
+        )
+        return False
+    if helper_result.status != "ok" or not helper_result.submitted:
+        return False
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_standard_form_assist_applied",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "filled_count": helper_result.filled_count,
+                "selected_count": helper_result.selected_count,
+                "mandatory_agreement_checked_count": (
+                    helper_result.mandatory_agreement_checked_count
+                ),
+                "submitted": helper_result.submitted,
+                "final_url": helper_result.final_url,
+                "resolved_fields": list(helper_result.resolved_fields),
+            },
+        )
+    )
+    return True
+
+
+def _browser_standard_form_identity_field_values(
+    request: BrowserReportDownloadRequest,
+) -> list[dict[str, object]]:
+    delivery_email = str(resolve_delivery_email_value(request) or "").strip()
+    values: list[dict[str, object]] = []
+    for field in resolve_effective_identity_fields(request):
+        token = str(field.value or "").strip()
+        if field.key == "work_email" and delivery_email:
+            token = delivery_email
+        if not token:
+            continue
+        values.append(
+            {
+                "key": field.key,
+                "label": field.label,
+                "value": token,
+                "aliases": list(field.aliases),
+                "option_aliases": list(field.option_aliases),
+            }
+        )
+    if delivery_email and not any(
+        str(item.get("key") or "") == "work_email" for item in values
+    ):
+        values.append(
+            {
+                "key": "work_email",
+                "label": "Work email",
+                "value": delivery_email,
+                "aliases": ["email", "email address", "business email", "work email"],
+                "option_aliases": [],
+            }
+        )
+    return values[:40]
+
+
 def _attempt_lookup_submission_assist(
     *,
     request: BrowserReportDownloadRequest,
@@ -408,6 +608,16 @@ def _attempt_lookup_submission_assist(
         request,
         lookup_labels=lookup_labels,
     )
+    if (
+        not field_values
+        and normalize_optional_bool_signal(
+            _parse_raw_model_response(raw_model_response).get(
+                "email_submission_completed"
+            )
+        )
+        is True
+    ):
+        field_values = _browser_standard_form_identity_field_values(request)
     if not field_values:
         logger.info(
             log_event(
@@ -448,6 +658,22 @@ def _attempt_lookup_submission_assist(
         )
         return False
     if autocomplete_result.status != "ok" or autocomplete_result.selected_count <= 0:
+        return False
+    if not autocomplete_result.submitted:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_lookup_submission_assist_incomplete",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "selected_count": autocomplete_result.selected_count,
+                    "submitted": autocomplete_result.submitted,
+                    "final_url": autocomplete_result.final_url,
+                },
+            )
+        )
         return False
     logger.info(
         log_event(
@@ -547,6 +773,16 @@ def _browser_form_identity_field_values(
                 "option_aliases": list(field.option_aliases),
             }
         )
+    if not values and lookup_labels:
+        values.append(
+            {
+                "key": "country",
+                "label": "Country",
+                "value": "Austria",
+                "aliases": ["country", "location", "region"],
+                "option_aliases": ["Austria"],
+            }
+        )
     return values[:12]
 
 
@@ -582,6 +818,44 @@ def _attempt_lookup_submission_assist_with_timeout(
                 fields={
                     "normalized_url": normalized_url,
                     "operation": "lookup_submission_assist",
+                    "timeout_seconds": _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
+                },
+            )
+        )
+        return False
+    return normalize_optional_bool_signal(payload.get("result")) is True
+
+
+def _attempt_standard_form_submit_assist_with_timeout(
+    *,
+    request: BrowserReportDownloadRequest,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+) -> bool:
+    payload: dict[str, bool] = {}
+
+    def runner() -> None:
+        payload["result"] = _attempt_standard_form_submit_assist(
+            request=request,
+            browser=browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+
+    worker = Thread(target=runner, daemon=True)
+    worker.start()
+    worker.join(_TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS)
+    if worker.is_alive():
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_timeout_recovery_timed_out",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "operation": "standard_form_submit_assist",
                     "timeout_seconds": _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
                 },
             )

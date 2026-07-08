@@ -246,6 +246,102 @@ def test_download_report_with_browser_use_uses_remembered_interactive_captcha_bl
     assert_no_defaulted_required_fields(response)
 
 
+def test_download_report_with_browser_use_reruns_remembered_captcha_in_headed_agent(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_no_defaulted_required_fields,
+) -> None:
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>Guide Download</title></head>"
+                b"<body><h1>Guide Download</h1>"
+                b"<form><label>Business email address</label>"
+                b'<input name="email"><button>Submit</button></form></body></html>'
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    captured: dict[str, Any] = {}
+    fake_runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Operator completed CAPTCHA and submitted the form.",
+        create_pdf=False,
+        email_submission_completed=True,
+        post_submit_message=(
+            "Thank you. Your report has been sent to your business email."
+        ),
+    )
+    original_browser = fake_runtime.Browser
+    original_agent = fake_runtime.Agent
+
+    class CapturingBrowser(original_browser):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            captured["headless"] = self.headless
+
+        def start(self) -> None:
+            raise AssertionError("service must not pre-start CAPTCHA handoff browser")
+
+        def new_page(self, url: str) -> None:
+            raise AssertionError(f"service must not pre-open CAPTCHA URL: {url}")
+
+        def get_current_page(self):
+            return None
+
+    class CapturingAgent(original_agent):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            captured["task"] = self.task
+
+    fake_runtime.Browser = CapturingBrowser
+    fake_runtime.Agent = CapturingAgent
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: fake_runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/guides/product-guide",
+            settings=replace(
+                _settings(tmp_path),
+                captcha_handoff_policy=BrowserDownloadCaptchaHandoffPolicy(
+                    schema_version="1.0",
+                    enabled=True,
+                    timeout_seconds=120.0,
+                ),
+            ),
+            delivery_email="reports@example.com",
+            route_hint=(
+                "Filled the form, then the flow was blocked by an interactive "
+                "reCAPTCHA challenge displayed in the modal."
+            ),
+            route_kind_hint="email_delivery",
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert captured["headless"] is False
+    assert "CAPTCHA manual handoff is enabled" in captured["task"]
+    assert "Do not wait on the initial landing page" in captured["task"]
+    assert "Do not solve or bypass CAPTCHA automatically" in captured["task"]
+    assert "Do not finish the task" in captured["task"]
+    assert "full handoff window expires" in captured["task"]
+    assert response.route_kind == "email_delivery"
+    assert response.route_family == "browser_email_form"
+    assert response.outcome == "email_requested"
+    assert response.blocked_reason is None
+    assert_no_defaulted_required_fields(response)
+
+
 def test_download_report_with_browser_use_uses_remembered_access_forbidden_blocker(
     tmp_path: Path,
     run_context,

@@ -22,6 +22,7 @@ from src.contracts.config import (
     OpenAICredentialResolveResponse,
 )
 from src.contracts.browser_download import (
+    BrowserDownloadCaptchaHandoffPolicy,
     BrowserDownloadIdentityFieldUpsertRequest,
     BrowserDownloadIdentityFieldUpsertResponse,
     BrowserDownloadSessionReusePolicy,
@@ -560,6 +561,7 @@ __all__ = [
     "AppConfigWriteResponse",
     "AppError",
     "AppSettings",
+    "BrowserDownloadCaptchaHandoffPolicy",
     "BrowserDownloadIdentityFieldUpsertRequest",
     "BrowserDownloadIdentityFieldUpsertResponse",
     "BrowserDownloadSessionReusePolicy",

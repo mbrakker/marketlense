@@ -148,6 +148,25 @@ class BrowserDownloadIdentityFieldUpsertResponse:
 
 
 @dataclass(frozen=True)
+class BrowserDownloadCaptchaHandoffPolicy:
+    schema_version: str = field(
+        metadata={"doc": "Browser-download CAPTCHA handoff policy schema version."}
+    )
+    enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether CAPTCHA-protected email routes should open a headed browser for operator completion before recording a blocked report."
+        },
+    )
+    timeout_seconds: float = field(
+        default=120.0,
+        metadata={
+            "doc": "Maximum operator handoff window in seconds before the route remains blocked_captcha."
+        },
+    )
+
+
+@dataclass(frozen=True)
 class BrowserDownloadSettings:
     schema_version: str = field(
         metadata={"doc": "Browser download settings schema version."}
@@ -190,6 +209,12 @@ class BrowserDownloadSettings:
         default=None,
         metadata={
             "doc": "Optional HTTP-Referer header sent to OpenRouter for browser-use requests."
+        },
+    )
+    max_tokens: int = field(
+        default=12000,
+        metadata={
+            "doc": "Maximum completion tokens requested from OpenRouter for browser-use agent calls."
         },
     )
     headed: bool = field(
@@ -324,5 +349,13 @@ class BrowserDownloadSettings:
         ),
         metadata={
             "doc": "Opt-in bounded browser profile reuse policy for developer canaries or same-publisher batches."
+        },
+    )
+    captcha_handoff_policy: BrowserDownloadCaptchaHandoffPolicy = field(
+        default_factory=lambda: BrowserDownloadCaptchaHandoffPolicy(
+            schema_version=BROWSER_DOWNLOAD_IDENTITY_SCHEMA_VERSION
+        ),
+        metadata={
+            "doc": "Operator handoff policy for CAPTCHA-protected browser routes."
         },
     )

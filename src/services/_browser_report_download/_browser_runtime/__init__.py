@@ -53,12 +53,12 @@ _BROWSER_USE_TEMP_DIR_PATTERNS = (
 _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS = 15 * 60.0
 _TEMP_CLEANUP_LOG_SAMPLE_LIMIT = 5
 _TIMED_OUT_COMPLETED_HISTORY_GRACE_SECONDS = 2.0
-_TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS = 10.0
+_TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS = 5.0
 _AGENT_COMPLETED_HISTORY_POLL_SECONDS = 0.25
 _BROWSER_AGENT_WORKER_ENV = "MARKET_LENSE_BROWSER_AGENT_WORKER"
 # Let the worker finish its own timeout stop/cleanup path and write a typed
 # response instead of being killed by the outer subprocess envelope mid-exit.
-_BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS = 45.0
+_BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS = 120.0
 _BROWSER_AGENT_WORKER_OUTPUT_MAX_CHARS = 1200
 _ANSI_ESCAPE_PATTERN = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 _BROWSER_AGENT_USE_JUDGE = False
@@ -100,6 +100,8 @@ _EMAIL_DOMAIN_BLOCK_MARKERS = (
 _EMAIL_DOMAIN_FAILURE_MARKERS = (
     "email error",
     "email address error",
+    "valid business email",
+    "please enter a valid business email",
     "invalid email",
     "not a business email",
     "not a work email",

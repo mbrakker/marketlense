@@ -1212,6 +1212,18 @@ fields:
   value: null
   aliases: []
   option_aliases: []
+- schema_version: '1.0'
+  key: yes_send_me_consumer_edge_news_and_updates_checkbox_name_legal_consent_subscription_type_9904690
+  label: Yes, send me Consumer Edge news and updates! (checkbox name=LEGAL_CONSENT.subscription_type_9904690)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: privacy_terms_agreement_required_checkbox
+  label: Privacy/Terms agreement (required checkbox)
+  value: null
+  aliases: []
+  option_aliases: []
 delivery_emails:
 - reports@marketbearing.eu
 consent_policy:

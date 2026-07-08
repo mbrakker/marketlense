@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from dataclasses import asdict, replace
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 from src.contracts.browser_download import (
     BrowserDeveloperDiagnosticsRequest,
@@ -191,6 +193,202 @@ def _remembered_unattended_blocker_result(
         onsite_page_count=None,
         onsite_completeness_status=None,
     )
+
+
+def _captcha_handoff_enabled(request: BrowserReportDownloadRequest) -> bool:
+    policy = request.settings.captcha_handoff_policy
+    return bool(policy.enabled) and float(policy.timeout_seconds) > 0
+
+
+def _result_is_blocked_captcha(result: BrowserReportDownloadResult) -> bool:
+    if str(result.blocked_reason or "").strip() == "blocked_captcha":
+        return True
+    labels = set(result.terminal_evidence.evidence_labels)
+    return "blocked_captcha" in labels
+
+
+def _with_captcha_handoff_request(
+    request: BrowserReportDownloadRequest,
+) -> BrowserReportDownloadRequest:
+    policy = request.settings.captcha_handoff_policy
+    handoff_timeout_seconds = max(float(policy.timeout_seconds), 1.0)
+    runtime_timeout_seconds = max(
+        float(request.settings.timeout_seconds),
+        handoff_timeout_seconds + 60.0,
+    )
+    instruction = (
+        "CAPTCHA manual handoff is enabled for this attempt. Re-run the normal "
+        "report acquisition route in the visible headed browser until a CAPTCHA "
+        "challenge is actually visible. Do not wait on the initial landing page "
+        "or an unsubmitted form. When a CAPTCHA challenge appears, stop "
+        "automation and wait up to "
+        f"{handoff_timeout_seconds:.0f} seconds for the operator to complete it. "
+        "Do not solve or bypass CAPTCHA automatically. Do not finish the task, "
+        "call done, or return blocked_captcha when the CAPTCHA first appears. "
+        "Poll the visible page until the challenge iframe disappears, a verified "
+        "state appears, or the handoff window expires. If the operator completes "
+        "the challenge, continue the report request flow and verify the terminal "
+        "state. Return blocked_captcha only after the full handoff window expires "
+        "without operator completion, with manual_captcha_handoff_timeout "
+        "evidence."
+    )
+    route_hint = str(request.route_hint or "").strip()
+    if route_hint:
+        route_hint = f"{route_hint}\n\n{instruction}"
+    else:
+        route_hint = instruction
+    return replace(
+        request,
+        route_hint=route_hint,
+        route_family_hint=request.route_family_hint or "browser_email_form",
+        settings=replace(
+            request.settings,
+            headed=True,
+            timeout_seconds=runtime_timeout_seconds,
+            captcha_handoff_policy=replace(policy, enabled=False),
+        ),
+    )
+
+
+def _captcha_handoff_timeout_result(
+    *,
+    fallback_result: BrowserReportDownloadResult,
+    timeout_seconds: float,
+    detail: str | None = None,
+) -> BrowserReportDownloadResult:
+    message = detail or (
+        "Manual CAPTCHA handoff timed out after "
+        f"{timeout_seconds:.0f} seconds; no operator completion was observed."
+    )
+    route_steps = list(fallback_result.route_steps)
+    route_steps.append(
+        BrowserDownloadRouteStep(
+            schema_version="1.0",
+            index=len(route_steps),
+            action="manual_handoff",
+            target_text="CAPTCHA challenge",
+            target_role="headed_browser_operator_handoff",
+            target_url=fallback_result.final_page_url,
+            result=message,
+            expected_evidence=["confirmation_text", "page_info"],
+            observed_evidence=["page_info"],
+            verification_status="missing",
+        )
+    )
+    confirmation_labels = [
+        *fallback_result.confirmation_evidence.signal_labels,
+        "manual_captcha_handoff_timeout",
+    ]
+    terminal_labels = [
+        *fallback_result.terminal_evidence.evidence_labels,
+        "manual_captcha_handoff_timeout",
+        "blocked_captcha",
+    ]
+    return replace(
+        fallback_result,
+        route_summary=message,
+        route_steps=route_steps,
+        confirmation_evidence=replace(
+            fallback_result.confirmation_evidence,
+            signal_labels=list(dict.fromkeys(confirmation_labels)),
+        ),
+        terminal_evidence=replace(
+            fallback_result.terminal_evidence,
+            artifact_validation_status="blocked",
+            artifact_validation_detail=message,
+            terminal_text_excerpt=message,
+            evidence_labels=list(dict.fromkeys(terminal_labels)),
+        ),
+        blocked_reason="blocked_captcha",
+        blocked_reason_detail=message,
+        browser_had_structured_result=False,
+    )
+
+
+def _attempt_captcha_manual_handoff(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: Path,
+    delivery_email: str | None,
+    browser_preflight_response: Any,
+    fallback_result: BrowserReportDownloadResult,
+) -> BrowserReportDownloadResult:
+    timeout_seconds = max(float(request.settings.captcha_handoff_policy.timeout_seconds), 1.0)
+    handoff_request = _with_captcha_handoff_request(request)
+    if not handoff_request.selected_playbooks:
+        handoff_request = attach_browser_route_playbooks(
+            request=handoff_request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_captcha_handoff_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "execution_url": execution_url,
+                "timeout_seconds": timeout_seconds,
+                "headed": handoff_request.settings.headed,
+            },
+        )
+    )
+    prompt_bundle = render_browser_report_download_prompt(
+        request=handoff_request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        execution_url=execution_url,
+        download_dir=download_dir,
+        delivery_email=delivery_email,
+    )
+    try:
+        browser_run = run_browser_report_download_agent(
+            request=handoff_request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=execution_url,
+            download_dir=download_dir,
+            prompt_bundle=prompt_bundle,
+        )
+        response = finalize_browser_report_download_result(
+            request=handoff_request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            delivery_email=delivery_email,
+            download_dir=download_dir,
+            browser_run=browser_run,
+        )
+        observe_browser_preflight_agent_outcome(
+            probe=browser_preflight_response.probe,
+            result=response,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    except AppError as exc:
+        response = _captcha_handoff_timeout_result(
+            fallback_result=fallback_result,
+            timeout_seconds=timeout_seconds,
+            detail=(
+                f"Manual CAPTCHA handoff failed before completion: {exc.message}"
+                if exc.code != "browser_download_agent_timeout"
+                else None
+            ),
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_captcha_handoff_complete",
+            module=logger.name,
+            fields=asdict(response),
+        )
+    )
+    return response
 
 
 def default_browser_doctor_verification_url() -> str:
@@ -501,6 +699,26 @@ def download_report_with_browser_use(
         )
         return report_page_pdf_link_result
 
+    static_email_gate_result = None
+    if request.route_family_hint == "browser_email_form" and not delivery_email_value:
+        static_email_gate_result = try_static_email_gate_probe(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            page_url=normalized_execution_url,
+        )
+    if static_email_gate_result is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_complete",
+                module=logger.name,
+                fields=asdict(static_email_gate_result),
+            )
+        )
+        return static_email_gate_result
+
     direct_onsite_result = try_direct_onsite_capture(
         request=request,
         ctx=ctx,
@@ -520,23 +738,24 @@ def download_report_with_browser_use(
         )
         return direct_onsite_result
 
-    static_email_gate_result = try_static_email_gate_probe(
-        request=request,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        page_url=normalized_execution_url,
-    )
-    if static_email_gate_result is not None:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_report_download_complete",
-                module=logger.name,
-                fields=asdict(static_email_gate_result),
-            )
+    if static_email_gate_result is None:
+        static_email_gate_result = try_static_email_gate_probe(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            page_url=normalized_execution_url,
         )
-        return static_email_gate_result
+        if static_email_gate_result is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_complete",
+                    module=logger.name,
+                    fields=asdict(static_email_gate_result),
+                )
+            )
+            return static_email_gate_result
 
     if request.route_family_hint == "browser_email_form":
         access_challenge_result = try_http_access_challenge_probe(
@@ -613,6 +832,29 @@ def download_report_with_browser_use(
         execution_url=normalized_execution_url,
     )
     if remembered_blocker_result is not None:
+        if _result_is_blocked_captcha(
+            remembered_blocker_result
+        ) and _captcha_handoff_enabled(request):
+            response = _attempt_captcha_manual_handoff(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=normalized_execution_url,
+                download_dir=download_dir,
+                delivery_email=delivery_email_value,
+                browser_preflight_response=browser_preflight_response,
+                fallback_result=remembered_blocker_result,
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_complete",
+                    module=logger.name,
+                    fields=asdict(response),
+                )
+            )
+            return response
         logger.info(
             log_event(
                 ctx,
@@ -707,6 +949,17 @@ def download_report_with_browser_use(
             ctx=ctx,
             normalized_url=normalized_url,
         )
+        if _result_is_blocked_captcha(response) and _captcha_handoff_enabled(request):
+            response = _attempt_captcha_manual_handoff(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=normalized_execution_url,
+                download_dir=download_dir,
+                delivery_email=delivery_email_value,
+                browser_preflight_response=browser_preflight_response,
+                fallback_result=response,
+            )
     except AppError as exc:
         raise _with_augmented_error_context(
             exc,

@@ -8,6 +8,18 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 
+_BROWSER_USE_OPENROUTER_MAX_TOKENS_CAP = 12000
+
+
+def _resolve_effective_max_tokens(max_tokens: Any) -> int | None:
+    if max_tokens is None:
+        return None
+    parsed = int(max_tokens)
+    if parsed <= 0:
+        return None
+    return min(parsed, _BROWSER_USE_OPENROUTER_MAX_TOKENS_CAP)
+
+
 def build_openrouter_client(
     *,
     settings: Any,
@@ -23,6 +35,8 @@ def build_openrouter_client(
             retryable=False,
             context={"model": model},
         )
+    max_tokens = getattr(settings, "max_tokens", None)
+    effective_max_tokens = _resolve_effective_max_tokens(max_tokens)
     fields = {
         "provider": "openrouter",
         "model": model,
@@ -31,8 +45,14 @@ def build_openrouter_client(
         ),
         "temperature": getattr(settings, "temperature", None),
         "timeout_seconds": getattr(settings, "timeout_seconds", None),
+        "configured_max_tokens": max_tokens,
+        "effective_max_tokens": effective_max_tokens,
+        "max_tokens_cap": _BROWSER_USE_OPENROUTER_MAX_TOKENS_CAP,
         "max_retries": 0,
     }
+    extra_body = (
+        {"max_tokens": effective_max_tokens} if effective_max_tokens is not None else None
+    )
     logger.info(
         log_event(
             ctx,
@@ -49,6 +69,7 @@ def build_openrouter_client(
             http_referer=getattr(settings, "openrouter_http_referer", None),
             temperature=getattr(settings, "temperature", None),
             timeout=getattr(settings, "timeout_seconds", None),
+            extra_body=extra_body,
             max_retries=0,
         )
     except (RuntimeError, OSError, TypeError, ValueError) as exc:

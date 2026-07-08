@@ -130,3 +130,48 @@ class BrowserHelperAutocompleteResult:
         metadata={"doc": "Sanitized helper failure detail when status is `failed`."},
     )
 
+
+@dataclass(frozen=True)
+class BrowserHelperStandardFormSubmitResult:
+    schema_version: str = field(
+        metadata={"doc": "Browser helper standard-form submit-result schema version."}
+    )
+    status: str = field(
+        metadata={"doc": "Standard form submit status: `ok`, `blocked`, or `failed`."}
+    )
+    attempted_count: int = field(
+        metadata={"doc": "Number of standard form controls inspected for repair."}
+    )
+    filled_count: int = field(
+        metadata={"doc": "Number of text-like controls filled from configured identity."}
+    )
+    selected_count: int = field(
+        metadata={"doc": "Number of native select controls set and verified."}
+    )
+    mandatory_agreement_checked_count: int = field(
+        metadata={"doc": "Number of mandatory legal/report-delivery checkboxes checked."}
+    )
+    submitted: bool = field(
+        metadata={"doc": "Whether the helper clicked a submit control after repair."}
+    )
+    unresolved_fields: tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={"doc": "Labels for required controls that still did not verify."},
+    )
+    resolved_fields: tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata={"doc": "Labels for controls that were repaired and verified."},
+    )
+    final_url: str = field(
+        default="",
+        metadata={"doc": "Page URL after the helper action."},
+    )
+    blocker_code: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Typed blocker code when required controls remain unresolved."},
+    )
+    error: str = field(
+        default="",
+        metadata={"doc": "Sanitized helper failure detail when status is `failed`."},
+    )
+

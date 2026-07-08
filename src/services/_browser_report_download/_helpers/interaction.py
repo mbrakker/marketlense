@@ -15,6 +15,7 @@ from typing import Any
 from src.contracts.browser_download import (
     BrowserHelperAutocompleteResult,
     BrowserHelperScreenshot,
+    BrowserHelperStandardFormSubmitResult,
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.cdp import (
@@ -31,7 +32,9 @@ logger = logging.getLogger("market_lense.browser_report_download_service.helpers
 __all__ = (
     "browser_helper_capture_screenshot",
     "browser_helper_form_autocomplete",
+    "browser_helper_standard_form_submit",
     "_autocomplete_result",
+    "_standard_form_submit_result",
     "_screenshot_result",
     "_try_screenshot_call",
 )
@@ -530,6 +533,347 @@ def browser_helper_form_autocomplete(
     )
 
 
+def browser_helper_standard_form_submit(
+    *,
+    page: Any,
+    field_values: list[dict[str, object]],
+    ctx: RunContext,
+    normalized_url: str,
+    browser: Any | None = None,
+) -> BrowserHelperStandardFormSubmitResult:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_helper_standard_form_submit_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "field_value_count": len(field_values),
+            },
+        )
+    )
+    script_payload = {"fields": field_values}
+    expression = f"""
+        return (() => {{
+          const standardFormSubmit = true;
+          const payload = {json.dumps(script_payload, ensure_ascii=True)};
+          const normalize = (value) =>
+            String(value ?? '').replace(/\\s+/g, ' ').trim();
+          const keyToken = (value) => normalize(value).toLowerCase();
+          const isVisible = (node) => Boolean(
+            node &&
+            !node.hidden &&
+            node.getClientRects &&
+            node.getClientRects().length > 0
+          );
+          const dispatchChanged = (node) => {{
+            node.dispatchEvent(new Event('input', {{ bubbles: true }}));
+            node.dispatchEvent(new Event('change', {{ bubbles: true }}));
+          }};
+          const sameOriginDocuments = () => {{
+            const roots = [document];
+            for (const frame of Array.from(document.querySelectorAll('iframe'))) {{
+              try {{
+                const frameDocument = frame.contentDocument;
+                if (
+                  frameDocument &&
+                  frameDocument.documentElement &&
+                  !roots.includes(frameDocument)
+                ) {{
+                  roots.push(frameDocument);
+                }}
+              }} catch (error) {{
+                // Cross-origin frames are intentionally skipped.
+              }}
+            }}
+            return roots;
+          }};
+          const fieldEntries = (payload.fields || [])
+            .map((field) => ({{
+              key: normalize(field.key || ''),
+              label: normalize(field.label || field.key || ''),
+              value: normalize(field.value || ''),
+              aliases: [
+                field.key,
+                field.label,
+                ...(Array.isArray(field.aliases) ? field.aliases : []),
+              ].map(keyToken).filter(Boolean),
+              optionAliases: [
+                field.value,
+                ...(Array.isArray(field.option_aliases) ? field.option_aliases : []),
+              ].map(keyToken).filter(Boolean),
+            }}))
+            .filter((field) => field.value);
+          const labelsFor = (control, root = control.ownerDocument || document) => {{
+            const values = [];
+            const id = control.getAttribute('id') || '';
+            if (id) {{
+              const label = root.querySelector(`label[for="${{CSS.escape(id)}}"]`);
+              if (label) values.push(label.textContent || '');
+            }}
+            values.push(
+              control.getAttribute('aria-label') || '',
+              control.getAttribute('placeholder') || '',
+              control.getAttribute('name') || '',
+              control.getAttribute('id') || ''
+            );
+            const labelledBy = control.getAttribute('aria-labelledby') || '';
+            for (const token of labelledBy.split(/\\s+/).filter(Boolean)) {{
+              const node = root.getElementById(token);
+              if (node) values.push(node.textContent || '');
+            }}
+            const wrapper = control.closest(
+              '.mktoFormRow, .hs-form-field, .form-field, .field, label, div, li'
+            );
+            if (wrapper) {{
+              const wrapperText = normalize(wrapper.textContent || '');
+              if (wrapperText.length <= 220) values.push(wrapperText);
+            }}
+            return values.map(normalize).filter(Boolean);
+          }};
+          const labelTokenFor = (control, root = control.ownerDocument || document) =>
+            labelsFor(control, root).map(keyToken).join(' ');
+          const matchField = (control, root = control.ownerDocument || document) => {{
+            const joined = labelTokenFor(control, root);
+            for (const field of fieldEntries) {{
+              if (field.aliases.some((alias) => joined.includes(alias))) {{
+                return field;
+              }}
+            }}
+            return null;
+          }};
+          const placeholderOption = (value) => {{
+            const token = keyToken(value);
+            if (!token) return true;
+            return token === 'select' ||
+              token === 'please select' ||
+              token === 'select one' ||
+              token === 'choose' ||
+              token === 'choose one' ||
+              token.includes('please select') ||
+              token.includes('select...');
+          }};
+          const optionMatches = (optionText, field) => {{
+            const token = keyToken(optionText);
+            if (!token || !field) return false;
+            return (field.optionAliases || []).some((wanted) =>
+              token === wanted || token.includes(wanted) || wanted.includes(token)
+            );
+          }};
+          const requiredLike = (control) =>
+            control.required ||
+            String(control.getAttribute('aria-required') || '').toLowerCase() === 'true';
+          const optionalMarketing = (text) =>
+            /\\b(optional|newsletter|marketing|promotion|promotional|demo|sales|contact me|updates?|events?|offers?|communications?)\\b/i.test(text);
+          const mandatoryAgreement = (text) =>
+            /\\b(agree|agreement|privacy|terms|policy|consent)\\b/i.test(text) &&
+            !optionalMarketing(text);
+          const roots = sameOriginDocuments();
+          const resolvedFields = [];
+          const unresolvedFields = [];
+          let attemptedCount = 0;
+          let filledCount = 0;
+          let selectedCount = 0;
+          let mandatoryAgreementCheckedCount = 0;
+          let resolvedControlCount = 0;
+          const rememberResolved = (label) => {{
+            const token = normalize(label || 'Standard form control');
+            if (token && !resolvedFields.includes(token)) resolvedFields.push(token);
+          }};
+          for (const root of roots) {{
+            for (const control of Array.from(root.querySelectorAll(
+              'input:not([type]), input[type="text"], input[type="email"], input[type="tel"], input[type="url"], textarea'
+            ))) {{
+              if (!isVisible(control) || control.disabled || control.readOnly) continue;
+              const field = matchField(control, root);
+              if (!field || !field.value) continue;
+              const current = normalize(control.value || '');
+              const invalid = String(control.getAttribute('aria-invalid') || '').toLowerCase() === 'true';
+              if (current && !invalid) {{
+                resolvedControlCount += 1;
+                rememberResolved(field.label || labelsFor(control, root)[0]);
+                continue;
+              }}
+              attemptedCount += 1;
+              control.focus();
+              control.value = field.value;
+              dispatchChanged(control);
+              control.blur();
+              const verified = normalize(control.value || '') === field.value;
+              if (verified) {{
+                filledCount += 1;
+                rememberResolved(field.label || labelsFor(control, root)[0]);
+              }} else if (requiredLike(control)) {{
+                unresolvedFields.push(field.label || labelsFor(control, root)[0] || 'text field');
+              }}
+            }}
+            for (const control of Array.from(root.querySelectorAll('select'))) {{
+              if (!isVisible(control) || control.disabled) continue;
+              const currentOption = control.selectedOptions && control.selectedOptions[0];
+              const currentText = normalize(
+                (currentOption ? currentOption.textContent || '' : '') || control.value || ''
+              );
+              const field = matchField(control, root);
+              const mustRepair = requiredLike(control) || placeholderOption(currentText) || Boolean(field);
+              if (!mustRepair) continue;
+              const options = Array.from(control.options || []).filter((option) =>
+                !option.disabled && keyToken(option.textContent || option.value)
+              );
+              const exact = field ? options.find((option) =>
+                optionMatches(option.textContent || option.value, field)
+              ) : null;
+              const fallback = options.find((option) =>
+                !placeholderOption(option.textContent || option.value)
+              );
+              const option = exact || fallback;
+              if (!option) {{
+                if (requiredLike(control)) unresolvedFields.push(labelsFor(control, root)[0] || 'select');
+                continue;
+              }}
+              attemptedCount += 1;
+              control.focus();
+              control.value = option.value;
+              option.selected = true;
+              dispatchChanged(control);
+              control.blur();
+              const selectedOption = control.selectedOptions && control.selectedOptions[0];
+              const selectedText = normalize(
+                (selectedOption ? selectedOption.textContent || '' : '') || control.value || ''
+              );
+              if (selectedText && !placeholderOption(selectedText)) {{
+                selectedCount += 1;
+                resolvedControlCount += 1;
+                rememberResolved((field && field.label) || labelsFor(control, root)[0] || selectedText);
+              }} else if (requiredLike(control)) {{
+                unresolvedFields.push((field && field.label) || labelsFor(control, root)[0] || 'select');
+              }}
+            }}
+            for (const control of Array.from(root.querySelectorAll('input[type="checkbox"]'))) {{
+              if (!isVisible(control) || control.disabled) continue;
+              const label = labelsFor(control, root).join(' ');
+              if (!mandatoryAgreement(label)) continue;
+              attemptedCount += 1;
+              if (!control.checked) {{
+                control.checked = true;
+                dispatchChanged(control);
+              }}
+              if (control.checked) {{
+                mandatoryAgreementCheckedCount += 1;
+                resolvedControlCount += 1;
+                rememberResolved(label || 'Privacy agreement');
+              }} else {{
+                unresolvedFields.push(label || 'Privacy agreement');
+              }}
+            }}
+          }}
+          let submitted = false;
+          const progressCount = filledCount + selectedCount + mandatoryAgreementCheckedCount;
+          if ((progressCount > 0 || resolvedControlCount > 0) && unresolvedFields.length === 0) {{
+            const submitButton = roots.flatMap((root) =>
+              Array.from(root.querySelectorAll(
+                'button[type="submit"], input[type="submit"], button'
+              ))
+            ).find((node) => {{
+              const text = keyToken(node.innerText || node.textContent || node.value || '');
+              return isVisible(node) && !node.disabled && (
+                text === 'submit' ||
+                text.includes('submit') ||
+                text.includes('download') ||
+                text.includes('send') ||
+                text.includes('request') ||
+                text.includes('get')
+              );
+            }});
+            if (submitButton) {{
+              submitButton.click();
+              submitted = true;
+            }}
+          }}
+          return {{
+            attempted_count: attemptedCount,
+            filled_count: filledCount,
+            selected_count: selectedCount,
+            mandatory_agreement_checked_count: mandatoryAgreementCheckedCount,
+            mandatoryAgreementCheckedCount,
+            resolved_control_count: resolvedControlCount,
+            submitted,
+            final_url: window.location.href || '',
+            resolved_fields: resolvedFields,
+            unresolved_fields: unresolvedFields,
+          }};
+        }})();
+        """
+    if browser is not None:
+        js_result = browser_helper_js_via_cdp(
+            browser=browser,
+            expression=expression,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    else:
+        js_result = browser_helper_js(
+            page=page,
+            expression=expression,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    if browser is not None and not _is_standard_form_submit_js_payload(
+        js_result.result
+    ):
+        js_result = browser_helper_js(
+            page=page,
+            expression=expression,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    if js_result.status != "ok":
+        return _standard_form_submit_result(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            status="failed",
+            error=js_result.error,
+        )
+    payload = js_result.result if isinstance(js_result.result, dict) else {}
+    unresolved_fields = tuple(
+        normalized
+        for item in payload.get("unresolved_fields", [])
+        if (normalized := str(item or "").strip())
+    )
+    resolved_fields = tuple(
+        normalized
+        for item in payload.get("resolved_fields", [])
+        if (normalized := str(item or "").strip())
+    )
+    progress_count = (
+        int(payload.get("filled_count") or 0)
+        + int(payload.get("selected_count") or 0)
+        + int(payload.get("mandatory_agreement_checked_count") or 0)
+    )
+    resolved_control_count = int(payload.get("resolved_control_count") or 0)
+    status = (
+        "ok"
+        if (progress_count > 0 or resolved_control_count > 0) and not unresolved_fields
+        else "blocked"
+    )
+    return _standard_form_submit_result(
+        ctx=ctx,
+        normalized_url=normalized_url,
+        status=status,
+        attempted_count=int(payload.get("attempted_count") or 0),
+        filled_count=int(payload.get("filled_count") or 0),
+        selected_count=int(payload.get("selected_count") or 0),
+        mandatory_agreement_checked_count=int(
+            payload.get("mandatory_agreement_checked_count") or 0
+        ),
+        submitted=bool(payload.get("submitted")),
+        unresolved_fields=unresolved_fields,
+        resolved_fields=resolved_fields,
+        final_url=str(payload.get("final_url") or "").strip(),
+        blocker_code=("blocked_unknown_required_enum" if unresolved_fields else None),
+    )
+
+
 def _is_autocomplete_js_payload(value: object) -> bool:
     return isinstance(value, dict) and any(
         key in value
@@ -537,6 +881,20 @@ def _is_autocomplete_js_payload(value: object) -> bool:
             "attempted_count",
             "selected_count",
             "selected_fields",
+            "unresolved_fields",
+        )
+    )
+
+
+def _is_standard_form_submit_js_payload(value: object) -> bool:
+    return isinstance(value, dict) and any(
+        key in value
+        for key in (
+            "filled_count",
+            "selected_count",
+            "mandatory_agreement_checked_count",
+            "mandatoryAgreementCheckedCount",
+            "resolved_fields",
             "unresolved_fields",
         )
     )
@@ -582,6 +940,62 @@ def _autocomplete_result(
                 "submitted": result.submitted,
                 "unresolved_fields": list(result.unresolved_fields),
                 "selected_fields": list(result.selected_fields),
+                "blocker_code": result.blocker_code or "",
+                "error": result.error,
+            },
+        )
+    )
+    return result
+
+
+def _standard_form_submit_result(
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+    status: str,
+    attempted_count: int = 0,
+    filled_count: int = 0,
+    selected_count: int = 0,
+    mandatory_agreement_checked_count: int = 0,
+    submitted: bool = False,
+    unresolved_fields: tuple[str, ...] = (),
+    resolved_fields: tuple[str, ...] = (),
+    final_url: str = "",
+    blocker_code: str | None = None,
+    error: str = "",
+) -> BrowserHelperStandardFormSubmitResult:
+    result = BrowserHelperStandardFormSubmitResult(
+        schema_version=_HELPER_SCHEMA_VERSION,
+        status=status,
+        attempted_count=attempted_count,
+        filled_count=filled_count,
+        selected_count=selected_count,
+        mandatory_agreement_checked_count=mandatory_agreement_checked_count,
+        submitted=submitted,
+        unresolved_fields=unresolved_fields,
+        resolved_fields=resolved_fields,
+        final_url=final_url,
+        blocker_code=blocker_code,
+        error=_excerpt(error, _HTML_EXCERPT_CHARS),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_helper_standard_form_submit_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "status": result.status,
+                "attempted_count": result.attempted_count,
+                "filled_count": result.filled_count,
+                "selected_count": result.selected_count,
+                "mandatory_agreement_checked_count": (
+                    result.mandatory_agreement_checked_count
+                ),
+                "submitted": result.submitted,
+                "unresolved_fields": list(result.unresolved_fields),
+                "resolved_fields": list(result.resolved_fields),
                 "blocker_code": result.blocker_code or "",
                 "error": result.error,
             },

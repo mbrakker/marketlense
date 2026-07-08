@@ -439,6 +439,17 @@ Scoring:
     - Live existing-publisher verification demonstrates at least one avoided browser launch or faster route without lowering artifact verification status.
     - Tests cover fresh successful memory, stale memory, conflicting current-page evidence, and no-memory fallback.
 
+- **Title:** Add deterministic lookup/select verification for modal report forms [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: Browser acquisition can now reach headed CAPTCHA/form handoff pages, but modal forms with dependent lookup/select fields can still stop as `blocked_unknown_required_enum` after visible fields are filled.
+  - Why implement: Publisher-agnostic verification for dependent fields such as state, region, country, and industry should increase email-form completion without operator intervention or repeated browser spend.
+  - Tradeoffs / risks: Must not invent values, must preserve the first-enabled-option fallback rules, and must distinguish real CAPTCHA blockers from ordinary lookup/select failures.
+  - Acceptance Criteria:
+    - Browser-form logic verifies dependent lookup/select persistence after country/industry changes and before submit.
+    - If a configured value fails, the first visible enabled non-placeholder option is selected and logged with field label, option text, and verification evidence.
+    - CAPTCHA widgets, optional marketing consent, and privacy/terms agreement boxes remain excluded from generic fallback.
+    - Live rerun on an existing modal-form blocker confirms either `email_requested` or a more specific typed blocker without an unverified submit.
+    - Tests cover same-origin modal iframe fields, dependent country/state fields, searchable comboboxes, first-option fallback, and CAPTCHA exclusion.
+
 - **Title:** Run deferred mailbox-delivery requests from workflow control without operator CLI [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Report-download now persists idempotent `mail_delivery_requests` after `email_requested` / `email_required` outcomes, but due requests still need a first-class workflow-control dispatcher so delayed publisher emails are processed without an operator command.
   - Why implement: Completes unattended gated-report acquisition by turning durable deferred requests into acquired artifacts as soon as delivery mail arrives.

@@ -19,8 +19,9 @@ text: |
 
   Use the following configured identity values when a matching form field is available.
   Consent policy is typed configuration, not an inference: default_checkbox_policy={{ consent_policy.default_checkbox_policy }}, allow_marketing_opt_in={{ consent_policy.allow_marketing_opt_in }}, allow_optional_newsletter={{ consent_policy.allow_optional_newsletter }}.
-  Check only mandatory privacy, terms, or report-delivery agreement boxes required to submit the report request. Leave optional marketing, demo, sales-contact, and newsletter consent unchecked unless the typed policy explicitly allows that consent family and a configured identity value also says to check it.
-  Treat configured checkbox-like values literally: `true`, `yes`, `checked`, and `1` mean check the matching checkbox; `false`, `no`, `unchecked`, and `0` mean leave it unchecked. Required agreement/privacy/terms/consent checkboxes with a configured true-like value must be checked before submit. Optional marketing/newsletter opt-ins must remain unchecked unless a matching value explicitly says to check them.
+  Check mandatory privacy, terms, legal, policy, and report-delivery agreement boxes required to submit the report request even when no publisher-specific configured value exists; this is allowed by the typed consent policy because it is necessary for report delivery. Leave optional marketing, demo, sales-contact, promotional, and newsletter consent unchecked unless the typed policy explicitly allows that consent family and a configured identity value also says to check it.
+  Treat configured checkbox-like values literally for non-mandatory boxes: `true`, `yes`, `checked`, and `1` mean check the matching checkbox; `false`, `no`, `unchecked`, and `0` mean leave it unchecked. Required agreement/privacy/terms/legal/policy checkboxes must be checked before submit and verified checked; optional marketing/newsletter opt-ins must remain unchecked unless a matching value explicitly says to check them.
+  If a submit attempt leaves the same form visible and shows or implies a required privacy/terms/legal checkbox is unchecked, do not finish. Click the mandatory checkbox, verify it is checked, and submit again.
   {% for identity in identity_entries %}
   - {{ identity.label }}{% if identity.aliases %} (aliases: {{ identity.aliases }}){% endif %}: {{ identity.value }}{% if identity.option_aliases %} (allowed select/enum option labels: {{ identity.option_aliases }}){% endif %}
   {% endfor %}
@@ -28,6 +29,8 @@ text: |
   - No non-empty identity values are configured.
   {% endif %}
   If a required enum, select, dropdown, or combobox has no configured value or no configured option matches the visible options, choose the first visible enabled non-placeholder option, verify that it persists, and record the selected label in encountered_form_fields or route_steps. Do not apply this fallback to CAPTCHA, optional marketing/newsletter/demo/sales-contact consent, or privacy/terms agreement boxes.
+  For standard HTML `select` controls and `input[type=checkbox]` controls, do not stop just because visual interaction is awkward. If a required select still shows a placeholder or wrong value after one visible attempt, use a DOM state-changing interaction on that same visible control to choose the configured matching option or first enabled non-placeholder option, dispatch `input` and `change`, and verify the rendered value. If a mandatory agreement checkbox remains unchecked, use the same approach to set it checked, dispatch events, and verify before submit.
+  Invisible reCAPTCHA badges, hidden token fields, scripts, or non-expanded reCAPTCHA iframes are not visible CAPTCHA challenges and are not operator-solvable. Continue the form route unless a real visible checkbox, image-selection, or puzzle challenge is displayed in the viewport.
   If a required free-text field has no configured value, fill it only when the field clearly matches a safe generic business profile: 5 people for company size, 1000 euro for revenue, Research for business type, industry, department, role, or priority, and Austria for country/location. Otherwise stop before submission and report encountered_form_fields.
 
   {% if not route_hint and not route_step_lines %}
@@ -78,13 +81,16 @@ text: |
   - Inspect the form before submission and capture all encountered field labels.
   - If the CTA opens a same-origin modal iframe and the form controls are not accessible, open the iframe `src` or same-origin popup/form target directly in the current tab before declaring a blocker.
   - Use configured identity values first. If a required enum/select/dropdown has no configured match, use the first visible enabled non-placeholder option and verify it persists before submission.
-  - For required agreement/privacy/terms/consent checkboxes, check the matching box when the configured value is true-like (`true`, `yes`, `checked`, or `1`) and verify it is checked before submission.
+  - For required agreement/privacy/terms/legal/policy/report-delivery checkboxes, check the matching box even when no configured value exists and verify it is checked before submission. Add a separate `route_steps` item for each mandatory checkbox you check; the step result must say the box is checked.
+  - If standard HTML select or checkbox controls remain unsatisfied after normal interaction, repair the control state directly on that visible DOM element by setting the select/checkbox value, dispatching `input` and `change`, and verifying the visible state before submit.
   - Keep optional marketing/newsletter opt-in checkboxes unchecked unless a matching configured value explicitly says to check them.
   - For searchable dropdowns or comboboxes, do not rely on one-shot input alone: click into the field, type with keyboard events, wait for the suggestion list, click the exact matching option text, and verify the visible/input value persists after blur.
-  - Before clicking submit, verify that every required field is satisfied and that no required field still shows placeholder text, browser validation UI, or an empty combobox state.
+  - Before clicking submit, verify that every required field is satisfied, every mandatory legal/report-delivery agreement checkbox is checked, and no required field still shows placeholder text, browser validation UI, or an empty combobox state.
+  - If the form remains after submit because a required legal/report-delivery checkbox is unchecked, immediately check it and submit again instead of returning a blocked result.
   - If you cannot verify a required searchable field such as Location or Country, do not report a completed submission.
   - After submission, inspect confirmation text, URL change, button state, whether the form disappeared, and whether the terminal page still looks like the same form.
   - If the page shows a transient submit state such as `Please Wait`, do not stop there; keep waiting for the final confirmation or blocker text.
+  - Treat CAPTCHA as `blocked_captcha` only when a visible operator-solvable checkbox, image-selection, or puzzle challenge is displayed. Do not classify an invisible reCAPTCHA badge, hidden token field, script, or iframe as a visible challenge.
   - Do not keep retrying a field that becomes hidden, detached, or unavailable after a reasonable attempt. If submission is still possible, continue.
   - Reserve `blocked_unknown_required_enum` for real enum/select blockers; treat missing phone, website, or other text fields as identity-data issues instead.
   - A submit click alone is not enough; only classify success when the confirmation evidence is real.

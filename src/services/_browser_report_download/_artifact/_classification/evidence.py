@@ -223,8 +223,15 @@ def _upgrade_confirmation_evidence_from_terminal_html(
         html=token,
         fallback_text=confirmation_evidence.visible_confirmation_text,
     )
+    terminal_text_confirms_delivery = (
+        _message_indicates_confirmed_email_delivery(terminal_confirmation_text)
+        or _message_indicates_email_delivery(terminal_confirmation_text)
+        or _message_indicates_form_success(terminal_confirmation_text)
+    )
     form_disappeared = confirmation_evidence.form_disappeared or (
-        bool(encountered_form_fields) and not _html_contains_form(token)
+        bool(encountered_form_fields)
+        and not _html_contains_form(token)
+        and terminal_text_confirms_delivery
     )
     if (
         terminal_confirmation_text == confirmation_evidence.visible_confirmation_text
@@ -498,6 +505,10 @@ def _message_indicates_email_delivery(message: str | None) -> bool:
 def _message_indicates_transient_submit_state(message: str) -> bool:
     token = str(message or "").strip().casefold()
     if not token:
+        return False
+    if _message_indicates_confirmed_email_delivery(token) or any(
+        marker in token for marker in _FORM_SUCCESS_TEXT_MARKERS
+    ):
         return False
     return any(marker in token for marker in _TRANSIENT_SUBMIT_MESSAGE_MARKERS)
 

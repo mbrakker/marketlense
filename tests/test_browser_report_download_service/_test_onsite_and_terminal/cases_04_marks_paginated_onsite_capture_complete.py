@@ -425,6 +425,7 @@ def test_download_report_with_browser_use_infers_form_disappeared_from_fetched_t
     class SparseTerminalAgent(original_runtime):
         def run_sync(self, max_steps: int):
             history = super().run_sync(max_steps)
+            self.browser.html = ""
             payload = json.loads(history.final_result())
             payload["encountered_form_fields"] = [
                 "First Name",
@@ -478,6 +479,80 @@ def test_download_report_with_browser_use_infers_form_disappeared_from_fetched_t
     assert response.confirmation_evidence.form_disappeared is True
     assert response.confirmation_evidence.confirmation_score >= 2
     assert "form_disappeared" in response.confirmation_evidence.signal_labels
+
+
+def test_download_report_with_browser_use_does_not_verify_email_from_generic_fetched_terminal_html(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form and clicked submit.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class SparseTerminalAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            self.browser.html = ""
+            payload = json.loads(history.final_result())
+            payload["encountered_form_fields"] = [
+                "First Name",
+                "Last Name",
+                "Business Email",
+                "Company Name",
+                "Country",
+                "Industry",
+                "Privacy agreement",
+            ]
+            payload["post_submit_message"] = ""
+            payload["submit_button_state"] = ""
+            payload["form_disappeared"] = None
+            payload["confirmation_url_changed"] = None
+            payload["final_page_title"] = ""
+            payload["terminal_text_excerpt"] = ""
+
+            class SparseTerminalHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return SparseTerminalHistory()
+
+    runtime.Agent = SparseTerminalAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        http_runtime,
+        "fetch_html_from_url",
+        lambda **kwargs: (
+            "<html><body><h1>Research report</h1>"
+            "<p>Complete the form to receive the report.</p>"
+            "</body></html>"
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/resources/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.route_status == "inferred"
+    assert response.confirmation_evidence.form_disappeared is False
+    assert "form_disappeared" not in response.confirmation_evidence.signal_labels
 
 def test_download_report_with_browser_use_prefers_delivery_confirmation_over_conflicting_blocker(
     tmp_path: Path,
@@ -668,6 +743,7 @@ __all__ = [
     "test_download_report_with_browser_use_fetches_onsite_html_when_browser_html_is_missing",
     "test_download_report_with_browser_use_fetches_terminal_html_for_email_delivery_when_browser_html_is_missing",
     "test_download_report_with_browser_use_infers_form_disappeared_from_fetched_terminal_html",
+    "test_download_report_with_browser_use_does_not_verify_email_from_generic_fetched_terminal_html",
     "test_download_report_with_browser_use_prefers_delivery_confirmation_over_conflicting_blocker",
     "test_download_report_with_browser_use_clears_conflicting_blocker_after_verified_pdf",
     "test_download_report_with_browser_use_normalizes_text_field_blocker_to_missing_identity",

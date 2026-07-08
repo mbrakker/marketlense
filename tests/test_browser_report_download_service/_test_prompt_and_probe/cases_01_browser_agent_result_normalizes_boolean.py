@@ -102,8 +102,14 @@ def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
     assert "Previously successful route" not in bundle.task_prompt
     assert "do not click unrelated navigation links" in bundle.task_prompt
     assert "click the exact matching option text" in bundle.task_prompt
-    assert "configured value is true-like" in bundle.task_prompt
+    assert "even when no configured value exists" in bundle.task_prompt
+    assert "every mandatory legal/report-delivery agreement checkbox is checked" in bundle.task_prompt
+    assert "Click the mandatory checkbox, verify it is checked, and submit again" in bundle.task_prompt
+    assert "separate `route_steps` item for each mandatory checkbox" in bundle.task_prompt
+    assert "dispatching `input` and `change`" in bundle.task_prompt
     assert "optional marketing/newsletter opt-in checkboxes unchecked" in bundle.task_prompt
+    assert "Invisible reCAPTCHA badges" in bundle.task_prompt
+    assert "not operator-solvable" in bundle.task_prompt
     assert "first visible enabled non-placeholder option" in bundle.task_prompt
     assert "Research for business type, industry, department, role, or priority" in bundle.task_prompt
     assert "open the iframe `src` or same-origin popup/form target directly" in bundle.task_prompt

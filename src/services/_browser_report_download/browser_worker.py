@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from src.contracts.browser_download import (
+    BrowserDownloadCaptchaHandoffPolicy,
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
     BrowserDownloadPublisherOverride,
@@ -97,6 +98,7 @@ def _build_identity(payload: dict) -> BrowserDownloadIdentity:
 def _build_settings(payload: dict) -> BrowserDownloadSettings:
     identity_payload = payload.get("identity_profile")
     session_reuse_payload = payload.get("session_reuse_policy")
+    captcha_handoff_payload = payload.get("captcha_handoff_policy")
     session_reuse_policy = _build_session_reuse_policy(
         session_reuse_payload if isinstance(session_reuse_payload, dict) else {}
     )
@@ -107,6 +109,7 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         temperature=float(payload.get("temperature", 0.0)),
         timeout_seconds=float(payload.get("timeout_seconds", 1.0)),
         max_steps=int(payload.get("max_steps", 1)),
+        max_tokens=int(payload.get("max_tokens", 12000)),
         output_dir=str(payload.get("output_dir") or ""),
         state_db=str(payload.get("state_db") or ""),
         reports_db=str(payload.get("reports_db") or ""),
@@ -141,6 +144,19 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
             payload.get("private_api_playbook_min_distinct_source_urls") or 2
         ),
         session_reuse_policy=session_reuse_policy,
+        captcha_handoff_policy=_build_captcha_handoff_policy(
+            captcha_handoff_payload
+            if isinstance(captcha_handoff_payload, dict)
+            else {}
+        ),
+    )
+
+
+def _build_captcha_handoff_policy(payload: dict) -> BrowserDownloadCaptchaHandoffPolicy:
+    return BrowserDownloadCaptchaHandoffPolicy(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        enabled=bool(payload.get("enabled", False)),
+        timeout_seconds=max(float(payload.get("timeout_seconds", 120.0)), 1.0),
     )
 
 

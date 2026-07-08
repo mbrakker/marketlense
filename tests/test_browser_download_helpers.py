@@ -11,6 +11,7 @@ from src.services._browser_report_download.helpers import (
     browser_helper_form_autocomplete,
     browser_helper_js,
     browser_helper_page_info,
+    browser_helper_standard_form_submit,
     get_browser_helper_surface,
 )
 
@@ -109,6 +110,7 @@ def test_helper_surface_documents_owned_approved_helpers() -> None:
         "capture_screenshot": "Persist a screenshot through browser, page, or CDP hooks.",
         "js": "Run bounded JavaScript inspection and return structured values.",
         "form_autocomplete": "Recover required form autocompletes with keyboard-style input and verified selection.",
+        "standard_form_submit": "Repair safe standard HTML fields, selects, and mandatory legal/report-delivery checkboxes before resubmitting.",
     }
 
 
@@ -198,6 +200,30 @@ class NativeSelectFallbackPage(FakePage):
         }
 
 
+class StandardFormAlreadyResolvedPage(FakePage):
+    def evaluate(self, expression: str) -> dict[str, Any]:
+        script_text = str(expression)
+        assert "standardFormSubmit" in script_text
+        assert "resolvedControlCount" in script_text
+        assert "progressCount > 0 || resolvedControlCount > 0" in script_text
+        return {
+            "__marketlense_js_helper": True,
+            "ok": True,
+            "result": {
+                "attempted_count": 0,
+                "filled_count": 0,
+                "selected_count": 0,
+                "mandatory_agreement_checked_count": 0,
+                "resolved_control_count": 3,
+                "submitted": True,
+                "final_url": "https://publisher.example/form",
+                "resolved_fields": ["Email", "Country", "Privacy agreement"],
+                "unresolved_fields": [],
+            },
+            "result_type": "object",
+        }
+
+
 def test_form_autocomplete_helper_verifies_selection_and_submission(
     run_context,
     assert_no_defaulted_required_fields,
@@ -274,6 +300,36 @@ def test_form_autocomplete_helper_allows_first_non_placeholder_fallback(
     assert result.selected_count == 1
     assert result.unresolved_fields == ()
     assert result.selected_fields == ("State",)
+
+
+def test_standard_form_submit_helper_submits_when_controls_already_resolved(
+    run_context,
+) -> None:
+    result = browser_helper_standard_form_submit(
+        page=StandardFormAlreadyResolvedPage(),
+        field_values=[
+            {
+                "key": "work_email",
+                "label": "Email",
+                "value": "reports@marketbearing.eu",
+                "aliases": ["email", "business email"],
+            },
+            {
+                "key": "country",
+                "label": "Country",
+                "value": "Austria",
+                "aliases": ["country"],
+                "option_aliases": ["Austria"],
+            },
+        ],
+        ctx=run_context,
+        normalized_url="https://publisher.example/form",
+    )
+
+    assert result.status == "ok"
+    assert result.submitted is True
+    assert result.unresolved_fields == ()
+    assert result.resolved_fields == ("Email", "Country", "Privacy agreement")
 
 
 def test_form_autocomplete_helper_reports_unresolved_enum_blocker(

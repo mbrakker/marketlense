@@ -491,6 +491,8 @@ def _contains_transient_terminal_marker(text: str) -> bool:
     token = str(text or "").strip().casefold()
     if not token:
         return False
+    if any(marker in token for marker in _TERMINAL_SUCCESS_TEXT_MARKERS):
+        return False
     for marker in _TERMINAL_TRANSIENT_MARKERS:
         escaped_marker = re.escape(marker)
         if " " in marker:

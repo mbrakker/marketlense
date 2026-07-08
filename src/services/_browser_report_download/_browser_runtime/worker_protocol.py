@@ -121,10 +121,15 @@ class BrowserAgentWorkerResponse:
     error: dict[str, Any] | None
 
 
-def _should_run_browser_agent_in_subprocess(browser_use: Any) -> bool:
+def _should_run_browser_agent_in_subprocess(
+    browser_use: Any,
+    request: BrowserReportDownloadRequest | None = None,
+) -> bool:
     if os.environ.get(_BROWSER_AGENT_WORKER_ENV) == "1":
         return False
     if os.environ.get("PYTEST_CURRENT_TEST"):
+        return False
+    if request is not None and request.settings.headed:
         return False
     return True
 

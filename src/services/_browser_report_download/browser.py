@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 import json
 import logging
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -173,6 +171,9 @@ from src.services._browser_report_download._browser_runtime.timeout_recovery imp
     _attempt_lookup_submission_assist,
     _browser_form_identity_field_values,
     _attempt_lookup_submission_assist_with_timeout,
+    _should_attempt_standard_form_submit_assist,
+    _should_attempt_timeout_standard_form_submit_assist,
+    _attempt_standard_form_submit_assist_with_timeout,
 )
 from src.services._browser_report_download._browser_runtime.worker_protocol import (
     BrowserAgentWorkerPayload,
@@ -220,7 +221,6 @@ from src.services._browser_report_download._browser_runtime.session_lifecycle im
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
-
 def _mark_lookup_submission_assisted_raw_response(raw_model_response: str) -> str:
     payload = _parse_raw_model_response(raw_model_response)
     if not payload:
@@ -245,6 +245,42 @@ def _mark_lookup_submission_assisted_raw_response(raw_model_response: str) -> st
             "target_role": "browser_helper_form_autocomplete",
             "target_url": str(payload.get("final_page_url") or "").strip(),
             "result": "Selected the required lookup option and submitted the form.",
+            "expected_evidence": ["confirmation_text", "page_info", "network_event"],
+            "observed_evidence": [],
+            "verification_status": "pending_terminal_verification",
+        }
+    )
+    payload["route_steps"] = route_steps
+    return json.dumps(payload, ensure_ascii=True)
+
+
+def _mark_standard_form_submit_assisted_raw_response(raw_model_response: str) -> str:
+    payload = _parse_raw_model_response(raw_model_response)
+    if not payload:
+        return raw_model_response
+    payload["route_kind"] = str(payload.get("route_kind") or "email_delivery")
+    payload["route_family"] = str(payload.get("route_family") or "browser_email_form")
+    payload["email_submission_completed"] = True
+    payload["blocked_reason"] = None
+    payload["blocked_reason_detail"] = None
+    payload["route_summary"] = (
+        str(payload.get("route_summary") or "").strip()
+        or "Recovered standard required form controls and submitted the report request form."
+    )
+    route_steps = payload.get("route_steps")
+    if not isinstance(route_steps, list):
+        route_steps = []
+    route_steps.append(
+        {
+            "index": len(route_steps) + 1,
+            "action": "submit",
+            "target_text": "Recovered standard required form controls",
+            "target_role": "browser_helper_standard_form_submit",
+            "target_url": str(payload.get("final_page_url") or "").strip(),
+            "result": (
+                "Filled safe standard fields, selected required standard dropdowns, "
+                "checked mandatory legal/report-delivery agreements, and submitted."
+            ),
             "expected_evidence": ["confirmation_text", "page_info", "network_event"],
             "observed_evidence": [],
             "verification_status": "pending_terminal_verification",
@@ -284,7 +320,7 @@ def run_browser_report_download_agent(
         )
     )
     browser_use = _load_browser_use_runtime(normalized_url)
-    if _should_run_browser_agent_in_subprocess(browser_use):
+    if _should_run_browser_agent_in_subprocess(browser_use, request=request):
         logger.info(
             log_event(
                 ctx,
@@ -416,7 +452,31 @@ def run_browser_report_download_agent(
                 raw_model_response = _mark_lookup_submission_assisted_raw_response(
                     raw_model_response
                 )
-        if history_result.salvaged_completed_history and not lookup_submission_assisted:
+        standard_form_submit_assisted = False
+        if (
+            not lookup_submission_assisted
+            and _should_attempt_standard_form_submit_assist(
+                request=request,
+                raw_model_response=raw_model_response,
+            )
+        ):
+            standard_form_submit_assisted = (
+                _attempt_standard_form_submit_assist_with_timeout(
+                    request=request,
+                    browser=browser,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                )
+            )
+            if standard_form_submit_assisted:
+                raw_model_response = _mark_standard_form_submit_assisted_raw_response(
+                    raw_model_response
+                )
+        if (
+            history_result.salvaged_completed_history
+            and not lookup_submission_assisted
+            and not standard_form_submit_assisted
+        ):
             final_page_url = history_final_page_url
             final_page_title = history_final_page_title
             screenshot_path = history_screenshot_path
@@ -484,6 +544,15 @@ def run_browser_report_download_agent(
                 snapshot=terminal_snapshot,
                 ctx=ctx,
                 normalized_url=normalized_url,
+                trigger_reason=(
+                    "lookup_submission_assist"
+                    if lookup_submission_assisted
+                    else (
+                        "standard_form_submit_assist"
+                        if standard_form_submit_assisted
+                        else None
+                    )
+                ),
             )
             current_page = terminal_snapshot.page
             final_page_url = terminal_snapshot.url or history_final_page_url
@@ -524,16 +593,34 @@ def run_browser_report_download_agent(
             )
     except AppError as exc:
         if exc.code == "browser_download_agent_timeout" and browser is not None:
+            timed_out_form_assisted = False
             if _should_attempt_lookup_submission_assist(
                 request=request,
                 raw_model_response=raw_model_response,
             ):
-                _attempt_lookup_submission_assist_with_timeout(
+                timed_out_form_assisted = _attempt_lookup_submission_assist_with_timeout(
                     request=request,
                     browser=browser,
                     ctx=ctx,
                     normalized_url=normalized_url,
                     raw_model_response=raw_model_response,
+                )
+            if not timed_out_form_assisted and (
+                _should_attempt_timeout_standard_form_submit_assist(
+                    request=request,
+                    browser=browser,
+                    raw_model_response=raw_model_response,
+                )
+            ):
+                timed_out_form_assisted = _attempt_standard_form_submit_assist_with_timeout(
+                    request=request,
+                    browser=browser,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                )
+            if timed_out_form_assisted and raw_model_response:
+                raw_model_response = _mark_standard_form_submit_assisted_raw_response(
+                    raw_model_response
                 )
             salvaged_run = _salvage_timed_out_browser_run(
                 request=request,

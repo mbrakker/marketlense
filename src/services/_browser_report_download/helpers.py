@@ -30,7 +30,9 @@ from src.services._browser_report_download._helpers.inspection import (
 from src.services._browser_report_download._helpers.interaction import (
     browser_helper_capture_screenshot,
     browser_helper_form_autocomplete,
+    browser_helper_standard_form_submit,
     _autocomplete_result,
+    _standard_form_submit_result,
     _screenshot_result,
     _try_screenshot_call,
 )
@@ -96,7 +98,9 @@ __all__ = (
     "_snippet",
     "browser_helper_capture_screenshot",
     "browser_helper_form_autocomplete",
+    "browser_helper_standard_form_submit",
     "_autocomplete_result",
+    "_standard_form_submit_result",
     "_screenshot_result",
     "_try_screenshot_call",
 )
@@ -108,4 +112,5 @@ def get_browser_helper_surface() -> dict[str, str]:
         "capture_screenshot": "Persist a screenshot through browser, page, or CDP hooks.",
         "js": "Run bounded JavaScript inspection and return structured values.",
         "form_autocomplete": "Recover required form autocompletes with keyboard-style input and verified selection.",
+        "standard_form_submit": "Repair safe standard HTML fields, selects, and mandatory legal/report-delivery checkboxes before resubmitting.",
     }
