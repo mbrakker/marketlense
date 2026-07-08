@@ -361,6 +361,13 @@
           },
           "type": "array"
         },
+        "selection_verification": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
         "status": {
           "type": "string"
         },
@@ -506,9 +513,115 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.helpers.BrowserHelperStandardFormSubmitResult": {
+      "additionalProperties": false,
+      "properties": {
+        "attempted_count": {
+          "type": "integer"
+        },
+        "blocker_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "type": "string"
+        },
+        "filled_count": {
+          "type": "integer"
+        },
+        "final_url": {
+          "type": "string"
+        },
+        "mandatory_agreement_checked_count": {
+          "type": "integer"
+        },
+        "resolved_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_count": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "submitted": {
+          "type": "boolean"
+        },
+        "unresolved_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "attempted_count",
+        "filled_count",
+        "selected_count",
+        "mandatory_agreement_checked_count",
+        "submitted"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.identity.BrowserDownloadCaptchaHandoffPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.identity.BrowserDownloadConsentPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_marketing_opt_in": {
+          "type": "boolean"
+        },
+        "allow_optional_newsletter": {
+          "type": "boolean"
+        },
+        "default_checkbox_policy": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.identity.BrowserDownloadIdentity": {
       "additionalProperties": false,
       "properties": {
+        "consent_policy": {
+          "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadConsentPolicy"
+        },
         "delivery_emails": {
           "items": {
             "type": "string"
@@ -551,6 +664,12 @@
         },
         "label": {
           "type": "string"
+        },
+        "option_aliases": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "schema_version": {
           "type": "string"
@@ -654,6 +773,9 @@
     "src.contracts._browser_download.identity.BrowserDownloadSettings": {
       "additionalProperties": false,
       "properties": {
+        "captcha_handoff_policy": {
+          "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadCaptchaHandoffPolicy"
+        },
         "drive_upload_auth_mode": {
           "type": "string"
         },
@@ -721,6 +843,9 @@
           "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadIdentity"
         },
         "max_steps": {
+          "type": "integer"
+        },
+        "max_tokens": {
           "type": "integer"
         },
         "model": {
@@ -829,6 +954,14 @@
             }
           ]
         },
+        "mailbox_settings": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ]
+        },
         "publisher_discovery_route_kind": {
           "anyOf": [
             {
@@ -859,6 +992,9 @@
             }
           ]
         },
+        "publisher_name": {
+          "type": "string"
+        },
         "publisher_recommended_discovery_route_kind": {
           "anyOf": [
             {
@@ -868,6 +1004,9 @@
               "type": "null"
             }
           ]
+        },
+        "report_title": {
+          "type": "string"
         },
         "reports_db": {
           "type": "string"
@@ -1251,6 +1390,16 @@
           "anyOf": [
             {
               "$ref": "#/$defs/src.contracts._publisher_inventory.snapshot.PublisherInventoryCandidateTrace"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "delivery_email": {
+          "anyOf": [
+            {
+              "type": "string"
             },
             {
               "type": "null"
@@ -2303,6 +2452,9 @@
               "type": "null"
             }
           ]
+        },
+        "report_title": {
+          "type": "string"
         },
         "route_family_hint": {
           "anyOf": [
@@ -8379,6 +8531,9 @@
               "type": "null"
             }
           ]
+        },
+        "publisher_name": {
+          "type": "string"
         },
         "schema_version": {
           "type": "string"
@@ -16644,6 +16799,16 @@
             }
           ]
         },
+        "openrouter_chat_json": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         }
@@ -16899,6 +17064,487 @@
         "log_dir",
         "log_path",
         "use_rich"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailReportAcquisitionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "browser_download_settings": {
+          "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadSettings"
+        },
+        "delivery_email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mailbox_settings": {
+          "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAcquisitionSettings"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "reports_db": {
+          "type": "string"
+        },
+        "requested_after_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seen_provider_message_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "source_url": {
+          "type": "string"
+        },
+        "workflow_request_id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_url",
+        "report_title",
+        "publisher_name",
+        "delivery_email",
+        "reports_db",
+        "mailbox_settings",
+        "browser_download_settings"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailReportAcquisitionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "acquisition_result_taxonomy": {
+          "type": "string"
+        },
+        "downloaded_file_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mailbox_poll_count": {
+          "type": "integer"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "report_download_result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._browser_download.orchestrator.ReportDownloadOrchestratorResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seen_provider_message_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "selected_message_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selected_report_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_url",
+        "outcome",
+        "mailbox_poll_count",
+        "selected_report_url",
+        "selected_message_id",
+        "downloaded_file_path",
+        "report_download_result"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailReportLinkCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "provider_message_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "url",
+        "score",
+        "reason",
+        "provider_message_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailboxAcquisitionSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "gmail_oauth_client_path": {
+          "type": "string"
+        },
+        "gmail_oauth_token_path": {
+          "type": "string"
+        },
+        "gmail_user_id": {
+          "type": "string"
+        },
+        "imap_host": {
+          "type": "string"
+        },
+        "imap_mailbox": {
+          "type": "string"
+        },
+        "imap_password": {
+          "type": "string"
+        },
+        "imap_port": {
+          "type": "integer"
+        },
+        "imap_user": {
+          "type": "string"
+        },
+        "max_results": {
+          "type": "integer"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "poll_interval_seconds": {
+          "type": "number"
+        },
+        "poll_timeout_seconds": {
+          "type": "number"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "search_window_minutes": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "provider",
+        "output_dir",
+        "search_window_minutes",
+        "max_results",
+        "poll_timeout_seconds",
+        "poll_interval_seconds",
+        "gmail_oauth_client_path",
+        "gmail_oauth_token_path",
+        "gmail_user_id",
+        "imap_host",
+        "imap_port",
+        "imap_user",
+        "imap_password",
+        "imap_mailbox"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailboxAttachment": {
+      "additionalProperties": false,
+      "properties": {
+        "content_type": {
+          "type": "string"
+        },
+        "file_name": {
+          "type": "string"
+        },
+        "payload": {
+          "contentEncoding": "base64",
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "file_name",
+        "content_type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailboxAttachmentArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "content_type": {
+          "type": "string"
+        },
+        "file_name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "source_container_file_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "file_name",
+        "content_type",
+        "size_bytes",
+        "path",
+        "source_container_file_name"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailboxAttachmentMaterializeRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "attachments": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAttachment"
+          },
+          "type": "array"
+        },
+        "provider_message_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAcquisitionSettings"
+        }
+      },
+      "required": [
+        "schema_version",
+        "settings",
+        "provider_message_id",
+        "attachments"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailboxAttachmentMaterializeResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAttachmentArtifact"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifacts"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailboxMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "attachment_artifacts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAttachmentArtifact"
+          },
+          "type": "array"
+        },
+        "attachment_file_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "html_body": {
+          "type": "string"
+        },
+        "links": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "provider_message_id": {
+          "type": "string"
+        },
+        "received_at_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sender": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "text_body": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "provider_message_id",
+        "subject",
+        "sender",
+        "received_at_utc",
+        "text_body",
+        "html_body",
+        "links",
+        "attachment_file_names"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailboxSearchRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "delivery_email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "query_terms": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seen_provider_message_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "settings": {
+          "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAcquisitionSettings"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "settings",
+        "delivery_email",
+        "source_url",
+        "report_title",
+        "publisher_name",
+        "query_terms"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailboxSearchResult": {
+      "additionalProperties": false,
+      "properties": {
+        "messages": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxMessage"
+          },
+          "type": "array"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "searched_at_utc": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "provider",
+        "searched_at_utc",
+        "query",
+        "messages"
       ],
       "type": "object"
     },
@@ -23466,6 +24112,435 @@
       ],
       "type": "object"
     },
+    "src.contracts.state.MailDeliveryRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_count": {
+          "type": "integer"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "delivery_email": {
+          "type": "string"
+        },
+        "downloaded_file_path": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "next_attempt_after_utc": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "provider_cursor": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "integer"
+        },
+        "requested_after_utc": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_history_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seen_provider_message_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "selected_message_id": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "updated_at_utc": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request_id",
+        "idempotency_key",
+        "source_url",
+        "report_title",
+        "publisher_name",
+        "delivery_email",
+        "requested_after_utc",
+        "route_family",
+        "route_history_id",
+        "status",
+        "next_attempt_after_utc",
+        "attempt_count",
+        "provider_cursor",
+        "seen_provider_message_ids",
+        "outcome",
+        "selected_message_id",
+        "downloaded_file_path",
+        "error_code",
+        "created_at_utc",
+        "updated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestListDueRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer"
+        },
+        "now_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestListDueResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "requests": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.state.MailDeliveryRequest"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "requests"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestMarkAttemptRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "downloaded_file_path": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "next_attempt_after_utc": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "provider_cursor": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seen_provider_message_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "selected_message_id": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "request_id",
+        "status",
+        "next_attempt_after_utc",
+        "provider_cursor",
+        "seen_provider_message_ids",
+        "outcome",
+        "selected_message_id",
+        "downloaded_file_path",
+        "error_code"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestMarkAttemptResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/src.contracts.state.MailDeliveryRequest"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestUpsertRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "delivery_email": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "requested_after_utc": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_history_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "idempotency_key",
+        "source_url",
+        "report_title",
+        "publisher_name",
+        "delivery_email",
+        "requested_after_utc",
+        "route_family"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestUpsertResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "created": {
+          "type": "boolean"
+        },
+        "request": {
+          "$ref": "#/$defs/src.contracts.state.MailDeliveryRequest"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request",
+        "created"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailboxCandidateRejection": {
+      "additionalProperties": false,
+      "properties": {
+        "created_at_utc": {
+          "type": "string"
+        },
+        "expires_at_utc": {
+          "type": "string"
+        },
+        "link_host": {
+          "type": "string"
+        },
+        "provider_message_id": {
+          "type": "string"
+        },
+        "publisher_affinity": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "rejection_id": {
+          "type": "integer"
+        },
+        "request_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sender": {
+          "type": "string"
+        },
+        "source_host": {
+          "type": "string"
+        },
+        "title_token_overlap": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "rejection_id",
+        "request_id",
+        "provider_message_id",
+        "sender",
+        "source_host",
+        "link_host",
+        "publisher_affinity",
+        "title_token_overlap",
+        "reason_code",
+        "expires_at_utc",
+        "created_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailboxCandidateRejectionListRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer"
+        },
+        "now_utc": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "request_id",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailboxCandidateRejectionListResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "rejections": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.state.MailboxCandidateRejection"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "rejections"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailboxCandidateRejectionRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expires_at_utc": {
+          "type": "string"
+        },
+        "link_host": {
+          "type": "string"
+        },
+        "provider_message_id": {
+          "type": "string"
+        },
+        "publisher_affinity": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sender": {
+          "type": "string"
+        },
+        "source_host": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "title_token_overlap": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "request_id",
+        "provider_message_id",
+        "sender",
+        "source_host",
+        "link_host",
+        "publisher_affinity",
+        "title_token_overlap",
+        "reason_code",
+        "expires_at_utc"
+      ],
+      "type": "object"
+    },
     "src.contracts.state.StateBatchCheckItem": {
       "additionalProperties": false,
       "properties": {
@@ -29586,6 +30661,112 @@
         "sqlite_lock_count",
         "browser_failure_rate",
         "budget_burn_rate"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.MailDeliveryWorkflowItemResult": {
+      "additionalProperties": false,
+      "properties": {
+        "downloaded_file_path": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_message_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request_id",
+        "status",
+        "outcome",
+        "selected_message_id",
+        "downloaded_file_path",
+        "error_code"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.MailDeliveryWorkflowRunRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "browser_download_settings": {
+          "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadSettings"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "mailbox_settings": {
+          "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAcquisitionSettings"
+        },
+        "now_utc": {
+          "type": "string"
+        },
+        "reports_db": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "reports_db",
+        "mailbox_settings",
+        "browser_download_settings",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.MailDeliveryWorkflowRunResult": {
+      "additionalProperties": false,
+      "properties": {
+        "deferred_count": {
+          "type": "integer"
+        },
+        "failed_count": {
+          "type": "integer"
+        },
+        "processed_count": {
+          "type": "integer"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_control.MailDeliveryWorkflowItemResult"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "succeeded_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "processed_count",
+        "succeeded_count",
+        "deferred_count",
+        "failed_count",
+        "results"
       ],
       "type": "object"
     },

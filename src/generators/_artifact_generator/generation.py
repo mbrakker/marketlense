@@ -19,6 +19,7 @@ from src.generators._artifact_generator.storage import (
     _s,
     _validate_cover_semantics,
     assemble_artifacts_payload,
+    derive_metric_spine,
     store_artifacts_payload,
 )
 from src.generators._artifact_generator.toc import build_toc_artifacts
@@ -382,12 +383,15 @@ def generate_artifacts(
                 fields=evidence_span_stats,
             )
         )
+    metric_spine = derive_metric_spine(safe_evidence)
+    metric_spine_json = _dump_json(metric_spine)
 
     expert_ctx = child_context(ctx, task_id=f"{ctx.task_id}:expert_comment")
     expert_vars = {
         "summary_json": _dump_json(summary),
         "insights_final_json": _dump_json(insights_final),
         "quotes_json": _dump_json(quotes_final),
+        "metric_spine_json": metric_spine_json,
         "expert_domain": expert_domain,
     }
 
@@ -395,6 +399,7 @@ def generate_artifacts(
     linkedin_vars = {
         "summary_json": _dump_json(summary),
         "insights_final_json": _dump_json(insights_final),
+        "metric_spine_json": metric_spine_json,
     }
     distribution_results = step_executor(
         [

@@ -21,8 +21,10 @@ from src.services._state_service.routes import (
     record_report_download_route,
 )
 from src.services._state_service.mail_delivery import (
+    list_mailbox_candidate_rejections,
     list_due_mail_delivery_requests,
     mark_mail_delivery_request_attempt,
+    record_mailbox_candidate_rejection,
     upsert_mail_delivery_request,
 )
 from src.services._state_service.workflow_control import (
@@ -40,11 +42,13 @@ __all__ = [
     "get_publish",
     "get_report_download_route",
     "list_due_mail_delivery_requests",
+    "list_mailbox_candidate_rejections",
     "list_processed",
     "list_published",
     "list_workflow_control_observations",
     "mark_mail_delivery_request_attempt",
     "record",
+    "record_mailbox_candidate_rejection",
     "record_publish",
     "record_report_download_route",
     "upsert_mail_delivery_request",

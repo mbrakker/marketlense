@@ -16,6 +16,8 @@ shared:
     {"insights":[{"insight_id":"i1","headline":"Wallets become the default enterprise checkout layer","body":"Payment teams increasingly treat wallet support as core checkout infrastructure rather than an optional channel.","supporting_evidence_ids":["f1","f2"]}]}
   metrics_json: &metrics_json >-
     [{"metric_id":"m1","label":"Wallet share of digital checkout","value":"42%","supporting_evidence_ids":["f1"]}]
+  metric_spine_json: &metric_spine_json >-
+    [{"schema_version":"1.0","metric_id":"m1","label":"Wallet share of digital checkout","value":"42","unit":"percent","timeframe":"2026","segment":"enterprise merchants","geography":"Global","comparator":"","baseline":"","delta":"+7 points","sample_size":"n=500","confidence":"source_backed","missing_context_notes":[],"evidence_id":"f1"}]
   report_json: &report_json >-
     {"title":"Enterprise Payments Outlook 2026","summary":"Digital payments growth is being driven by wallets, orchestration, and fraud controls.","claims":[{"claim_id":"c1","text":"Wallet adoption is increasing across enterprise checkout flows."}]}
   failure_reasons_json: &failure_reasons_json >-
@@ -113,6 +115,11 @@ fixtures:
         - label: "Work email"
           aliases: "email, business email"
           value: "ops@example.com"
+          option_aliases: ""
+      consent_policy:
+        default_checkbox_policy: "required_only"
+        allow_marketing_opt_in: false
+        allow_optional_newsletter: false
       delivery_email: "ops@example.com"
       route_hint: "Click the Download report button and wait for the PDF download."
       route_kind_hint: "pdf_download"
@@ -192,6 +199,7 @@ fixtures:
       summary_json: *summary_json
       insights_final_json: *insights_final_json
       quotes_json: *quotes_json
+      metric_spine_json: *metric_spine_json
   - namespace: "report_vs/artifacts/insights_candidates"
     family: "publishing"
     model: "openai/gpt-5-mini"
@@ -220,6 +228,7 @@ fixtures:
     user_variables:
       summary_json: *summary_json
       insights_final_json: *insights_final_json
+      metric_spine_json: *metric_spine_json
   - namespace: "report_vs/artifacts/quotes"
     family: "publishing"
     model: "openai/gpt-5-mini"

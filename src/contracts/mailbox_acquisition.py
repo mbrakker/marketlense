@@ -50,9 +50,7 @@ class MailboxAcquisitionSettings:
 
 @dataclass(frozen=True)
 class MailboxMessage:
-    schema_version: str = field(
-        metadata={"doc": "Mailbox message schema version."}
-    )
+    schema_version: str = field(metadata={"doc": "Mailbox message schema version."})
     provider_message_id: str = field(
         metadata={"doc": "Provider-specific stable mailbox message ID."}
     )
@@ -213,6 +211,12 @@ class MailReportAcquisitionRequest:
     seen_provider_message_ids: list[str] = field(
         default_factory=list,
         metadata={"doc": "Provider message IDs already inspected for this request."},
+    )
+    workflow_request_id: int = field(
+        default=0,
+        metadata={
+            "doc": "Optional durable workflow-control mail request ID used for request-scoped candidate suppression."
+        },
     )
 
 

@@ -2,6 +2,7 @@ text: |
   Context (authoritative sources only):
   - TLDR + Executive Summary (JSON): {{ summary_json }}
   - Validated Insights (JSON): {{ insights_final_json }}
+  - Metric spine (JSON): {{ metric_spine_json }}
 
   Task:
   Create a single LinkedIn post and return it as a JSON object with the key `linkedin_post`.
@@ -14,14 +15,16 @@ text: |
   - Use a confident, human tone (no AI patterns, no em dashes, no clichés, never use "—")
   - No emojis
   - Avoid hashtags except 2–3 highly relevant industry hashtags as a part of generated text
-  - Use data points from the report to back up claims (no vague generalities) - put them in bulletpoints if needed
+  - Use the strongest metric spine entries as public-facing proof points when they are complete enough to cite
+  - Make the executive takeaway clear before adding supporting detail
+  - Prefer concise bullets only when they make quantified evidence easier to scan
 
   Content constraints (strict):
   - Every statement must be directly supported by the provided JSON artifacts
   - Do not introduce new metrics, benchmarks, projections, or assumptions
   - Do not generalize beyond what the report explicitly supports
   - If something is not clearly supported, omit it
-  - Do not reference report peges, sections, evedence packs, or any internal document structure
+  - Do not reference report pages, sections, evidence packs, evidence IDs, evidence spans, JSON fields, or any internal document structure
 
   Output:
   - Valid JSON only

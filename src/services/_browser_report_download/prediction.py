@@ -92,7 +92,7 @@ def predict_pre_browser_doc_type(
             evidence_labels=["embedded_pdf_target", "query_redirect_pdf"],
         )
 
-    if candidate_pdf_url and not planned_browser_route:
+    if candidate_pdf_url:
         confidence_score = 0.93 if route_family.startswith("browser_") else 0.9
         decision_reason = "Discovery already supplied a candidate PDF URL, so verify that target before browser startup."
         evidence_labels = ["candidate_trace_pdf_url"]

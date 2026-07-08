@@ -33,7 +33,11 @@ def build_model_call_audit_record(
         schema_version="1.0",
         operation=str(operation),
         scope=str(scope),
-        provider_decision="openai_primary",
+        provider_decision=str(
+            getattr(response, "provider_decision", "")
+            or getattr(request, "provider_decision", "")
+            or "openai_primary"
+        ),
         prompt_namespace=str(getattr(request, "prompt_namespace", "") or ""),
         prompt_hash=prompt_hash,
         rendered_prompt_redaction_hash=rendered_hash,

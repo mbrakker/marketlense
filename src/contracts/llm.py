@@ -67,6 +67,12 @@ class LLMProviderOperations:
         default=None,
         metadata={"doc": "Configured JSON chat provider operation."},
     )
+    openrouter_chat_json: Optional[Callable[[Any, RunContext], Any]] = field(
+        default=None,
+        metadata={
+            "doc": "Optional OpenRouter JSON chat fallback operation returning the same response contract."
+        },
+    )
     openai_chat_json_with_images: Optional[Callable[[Any, RunContext], Any]] = field(
         default=None,
         metadata={"doc": "Configured multimodal JSON provider operation."},

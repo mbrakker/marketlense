@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import asdict
+from typing import Mapping
 
 from src.contracts.report_cards import (
     CoverFingerprint,
@@ -10,6 +11,27 @@ from src.contracts.report_cards import (
     ReportCardManifestRequest,
 )
 from src.utils.errors import AppError
+
+_PLACEHOLDER_METADATA = {
+    "",
+    "...",
+    "not extracted",
+    "not specified",
+    "unknown",
+    "unknown publisher",
+    "n/a",
+    "na",
+    "-",
+}
+_LEAKED_FIELD_PREFIXES = {
+    "publisher",
+    "region",
+    "period",
+    "time period",
+    "year",
+    "category",
+    "source",
+}
 
 
 def select_geometry_family(semantics: dict[str, object]) -> str:
@@ -107,6 +129,44 @@ def stable_cover_seed(file_id: str, artifact_hash: str) -> int:
     return int(hashlib.sha256(material).hexdigest()[:8], 16)
 
 
+def validate_public_metadata_governance(
+    values: Mapping[str, object],
+) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    blocked_fields: list[str] = []
+    for field_name, raw_value in values.items():
+        text = " ".join(str(raw_value or "").split())
+        folded = text.casefold()
+        normalized[str(field_name)] = text
+        if folded in _PLACEHOLDER_METADATA:
+            blocked_fields.append(str(field_name))
+            continue
+        prefix, separator, remainder = text.partition(":")
+        if (
+            separator
+            and remainder.strip()
+            and (
+                prefix.strip().casefold() in _LEAKED_FIELD_PREFIXES
+                or any(f" {label}:" in f" {folded}" for label in _LEAKED_FIELD_PREFIXES)
+            )
+        ):
+            blocked_fields.append(str(field_name))
+            continue
+        if str(field_name) in {"region", "covered_period", "period"}:
+            word_count = len(text.split())
+            if word_count > 6 or text.endswith("."):
+                blocked_fields.append(str(field_name))
+    if blocked_fields:
+        raise AppError(
+            code="public_metadata_governance_blocked",
+            message="Public metadata contains placeholder or extraction-leakage values",
+            retryable=False,
+            severity="error",
+            context={"blocked_fields": sorted(set(blocked_fields))},
+        )
+    return normalized
+
+
 def build_cover_fingerprint(
     request: CoverFingerprintProjectionRequest,
 ) -> CoverFingerprint:
@@ -130,6 +190,13 @@ def build_cover_fingerprint(
 def build_report_card_manifest(
     request: ReportCardManifestRequest,
 ) -> ReportCardManifest:
+    governed = validate_public_metadata_governance(
+        {
+            "publisher": request.publisher,
+            "region": request.region,
+            "covered_period": request.covered_period,
+        }
+    )
     insights = tuple(
         " ".join(str(item.get("text") or "").split())
         for item in request.insights_final[:2]
@@ -140,17 +207,17 @@ def build_report_card_manifest(
             message="Exactly two complete card insights are required",
             retryable=False,
         )
-    geography_label, geography_scope = classify_geography(request.region)
+    geography_label, geography_scope = classify_geography(governed["region"])
     return ReportCardManifest.from_dict(
         {
             "schema_version": "1.0",
             "title": " ".join(request.title.split()),
             "title_scale": select_title_scale(request.title),
-            "publisher": " ".join(request.publisher.split()),
+            "publisher": governed["publisher"],
             "published_date": request.published_date,
             "geography_label": geography_label,
             "geography_scope": geography_scope,
-            "covered_period": " ".join(request.covered_period.split()),
+            "covered_period": governed["covered_period"],
             "tldr_compact": " ".join(request.tldr_compact.split()),
             "tldr_standard": " ".join(request.tldr_standard.split()),
             "key_insights": insights,

@@ -3,18 +3,21 @@ text: |
   - TLDR + Executive Summary (JSON): {{ summary_json }}
   - Validated Insights (JSON): {{ insights_final_json }}
   - Extracted Quotes (JSON): {{ quotes_json }}
+  - Metric spine (JSON): {{ metric_spine_json }}
 
   Task:
   Produce an expert comment and return it as a JSON object with the key `expert_comment`.
 
   Writing requirements:
-  - Up to threeshort paragraphs (3–4 sentences each)
+  - Up to three short paragraphs (3-4 sentences each)
   - Strategic, analytical, and interpretive in tone
   - Emphasize relationships, tensions, or reinforcing patterns across insights
   - Focus on implications for decision-making, operating models, or market direction
   - Assume an audience of senior business, ecommerce, digital, or strategy leaders
   - Use a confident, human tone (no AI patterns, no em dashes, no clichés)
-  - Use data points from the report to back up claims (no vague generalities) - put them in bulletpoints if needed
+  - Use metric spine entries and claim-level support from the summary/insights when they strengthen the argument
+  - Frame the comment as observation -> implication -> executive action or watchpoint
+  - If metrics conflict or are too weakly contextualized, state the supported tension instead of smoothing it over
   - No emojis, no hashtags
 
   Content constraints (strict):
@@ -22,6 +25,7 @@ text: |
   - Quotes may inform interpretation but must not be reworded into new claims
   - Do not restate insights verbatim; synthesize across them
   - If an implication is not clearly supported, omit it
+  - Do not expose evidence IDs, evidence spans, report pages, pack names, JSON fields, or internal document structure
 
   Output:
   - Valid JSON only

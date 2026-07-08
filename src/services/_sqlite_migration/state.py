@@ -101,6 +101,23 @@ CREATE TABLE IF NOT EXISTS mail_delivery_requests (
 );
 """
 
+_STATE_MAILBOX_CANDIDATE_REJECTIONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS mailbox_candidate_rejections (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id INTEGER NOT NULL,
+  provider_message_id TEXT NOT NULL,
+  sender TEXT NOT NULL DEFAULT '',
+  source_host TEXT NOT NULL DEFAULT '',
+  link_host TEXT NOT NULL DEFAULT '',
+  publisher_affinity TEXT NOT NULL DEFAULT '',
+  title_token_overlap REAL NOT NULL DEFAULT 0.0,
+  reason_code TEXT NOT NULL,
+  expires_at_utc TEXT NOT NULL,
+  created_at_utc TEXT NOT NULL,
+  UNIQUE(request_id, provider_message_id, link_host, reason_code)
+);
+"""
+
 
 def _state_db_001_create_base_tables(conn: sqlite3.Connection) -> None:
     conn.execute(_STATE_PROCESSED_TABLE_SQL)
@@ -191,6 +208,16 @@ def _state_db_007_create_mail_delivery_requests(conn: sqlite3.Connection) -> Non
     )
 
 
+def _state_db_008_create_mailbox_candidate_rejections(
+    conn: sqlite3.Connection,
+) -> None:
+    conn.execute(_STATE_MAILBOX_CANDIDATE_REJECTIONS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_mailbox_candidate_rejections_request "
+        "ON mailbox_candidate_rejections(request_id, expires_at_utc)"
+    )
+
+
 _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="state_db_001_create_base_tables",
@@ -226,5 +253,10 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_007_create_mail_delivery_requests",
         version=7,
         apply_fn=_state_db_007_create_mail_delivery_requests,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_008_create_mailbox_candidate_rejections",
+        version=8,
+        apply_fn=_state_db_008_create_mailbox_candidate_rejections,
     ),
 )

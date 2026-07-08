@@ -295,6 +295,109 @@ def test_generic_builder_names_preserve_provider_operations_contract() -> None:
     )
 
 
+def test_llm_service_fails_over_to_openrouter_chat_json_contract(
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service")
+    calls: list[str] = []
+
+    operations = LLMProviderOperations(
+        schema_version="1.0",
+        openai_chat_json=lambda req, ctx: (
+            calls.append("openai"),
+            (_ for _ in ()).throw(
+                AppError(
+                    code="openai_chat_failed",
+                    message="primary unavailable",
+                    retryable=True,
+                )
+            ),
+        )[1],
+        openrouter_chat_json=lambda req, ctx: (
+            calls.append("openrouter"),
+            SimpleNamespace(
+                schema_version="1.0",
+                text='{"ok":true}',
+                parsed_json={"ok": True},
+                input_tokens=4,
+                output_tokens=3,
+                total_tokens=7,
+                model="openrouter/openai/gpt-5-mini",
+                request_id="or_req_1",
+                provider_decision="openrouter_fallback",
+            ),
+        )[1],
+    )
+    client = llm_service.build_client(
+        base_client=operations,
+        policy=LLMClientPolicy(schema_version="1.0", scope="llm-failover-test"),
+    )
+
+    result = client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
+
+    assert result.parsed_json == {"ok": True}
+    assert result.provider_decision == "openrouter_fallback"
+    assert calls == ["openai", "openrouter"]
+    events = _events(caplog)
+    failover_events = [
+        event
+        for event in events
+        if event.get("event")
+        in {"llm_provider_failover_start", "llm_provider_failover_complete"}
+    ]
+    assert len(failover_events) == 2
+    assert_logs_have_required_fields(failover_events)
+    audits = [event for event in events if event.get("event") == "llm_model_call_audit"]
+    assert audits[-1]["fields"]["provider_decision"] == "openrouter_fallback"
+
+
+def test_llm_service_failover_exhaustion_propagates_fallback_error(caplog) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service")
+    calls: list[str] = []
+
+    operations = LLMProviderOperations(
+        schema_version="1.0",
+        openai_chat_json=lambda req, ctx: (
+            calls.append("openai"),
+            (_ for _ in ()).throw(
+                AppError(
+                    code="openai_chat_failed",
+                    message="primary unavailable",
+                    retryable=True,
+                )
+            ),
+        )[1],
+        openrouter_chat_json=lambda req, ctx: (
+            calls.append("openrouter"),
+            (_ for _ in ()).throw(
+                AppError(
+                    code="openrouter_chat_failed",
+                    message="fallback unavailable",
+                    retryable=True,
+                )
+            ),
+        )[1],
+    )
+    client = llm_service.build_client(
+        base_client=operations,
+        policy=LLMClientPolicy(schema_version="1.0", scope="llm-failover-exhaustion"),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
+
+    assert exc_info.value.code == "openrouter_chat_failed"
+    assert calls == ["openai", "openrouter"]
+    events = _events(caplog)
+    assert (
+        len([e for e in events if e.get("event") == "llm_provider_failover_start"]) == 1
+    )
+    assert [
+        e for e in events if e.get("event") == "llm_provider_failover_complete"
+    ] == []
+
+
 def test_llm_client_logs_replayable_model_call_audit_record(
     caplog,
     assert_logs_have_required_fields,

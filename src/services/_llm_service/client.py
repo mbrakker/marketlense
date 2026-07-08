@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import time
+from types import SimpleNamespace
 from typing import Any, Callable, Optional, TypeVar
 
 from src.contracts.llm import LLMClientPolicy, LLMProviderOperations
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import ModelCallAuditRecord, ModelCallReplayBundle
-from src.services._llm_service import openai_chat, openai_responses
+from src.services._llm_service import openai_chat, openai_responses, openrouter
 from src.services._llm_service.audit import (
     audit_record_fields,
     build_model_call_audit_record,
     build_model_call_replay_bundle,
 )
 from src.services._llm_service.policy import _execute_with_policy, logger
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 _T = TypeVar("_T")
@@ -22,6 +24,7 @@ def _default_provider_operations() -> LLMProviderOperations:
     return LLMProviderOperations(
         schema_version="1.0",
         openai_chat_json=openai_chat.openai_chat_json,
+        openrouter_chat_json=openrouter.openrouter_chat_json,
         openai_chat_json_with_images=openai_chat.openai_chat_json_with_images,
         openai_ocr_pdf=openai_responses.openai_ocr_pdf,
         openai_respond_with_vector_store=(
@@ -128,12 +131,62 @@ class LLMServiceClient:
         return response
 
     def openai_chat_json(self, req: Any, ctx: RunContext) -> Any:
-        return self._run(
-            "openai_chat_json",
-            ctx,
-            lambda: self._base_client.openai_chat_json(req, ctx),
-            request=req,
-        )
+        try:
+            return self._run(
+                "openai_chat_json",
+                ctx,
+                lambda: self._base_client.openai_chat_json(req, ctx),
+                request=req,
+            )
+        except AppError as exc:
+            fallback = getattr(self._base_client, "openrouter_chat_json", None)
+            if fallback is None or not callable(fallback) or not exc.retryable:
+                raise
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="llm_provider_failover_start",
+                    module=logger.name,
+                    fields={
+                        "operation": "openai_chat_json",
+                        "scope": self._policy.scope,
+                        "primary_provider": "openai",
+                        "fallback_provider": "openrouter",
+                        "primary_error_code": exc.code,
+                        "primary_retryable": exc.retryable,
+                    },
+                )
+            )
+            response = self._run(
+                "openai_chat_json",
+                ctx,
+                lambda: fallback(req, ctx),
+                request=_request_with_provider_decision(req, "openrouter_fallback"),
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="llm_provider_failover_complete",
+                    module=logger.name,
+                    fields={
+                        "operation": "openai_chat_json",
+                        "scope": self._policy.scope,
+                        "primary_provider": "openai",
+                        "fallback_provider": "openrouter",
+                        "primary_error_code": exc.code,
+                        "fallback_model": str(getattr(response, "model", "") or ""),
+                        "fallback_request_id": str(
+                            getattr(response, "request_id", "") or ""
+                        ),
+                    },
+                )
+            )
+            return _response_with_provider_decision(
+                response,
+                "openrouter_fallback",
+            )
 
     def openai_chat_json_with_images(self, req: Any, ctx: RunContext) -> Any:
         return self._run(
@@ -183,6 +236,7 @@ def build_client_from_callables(
     *,
     policy: LLMClientPolicy,
     openai_chat_json: Optional[Callable[[Any, RunContext], Any]] = None,
+    openrouter_chat_json: Optional[Callable[[Any, RunContext], Any]] = None,
     openai_chat_json_with_images: Optional[Callable[[Any, RunContext], Any]] = None,
     openai_ocr_pdf: Optional[Callable[[Any, RunContext], Any]] = None,
     openai_respond_with_vector_store: Optional[Callable[[Any, RunContext], Any]] = None,
@@ -193,6 +247,7 @@ def build_client_from_callables(
         base_client=LLMProviderOperations(
             schema_version="1.0",
             openai_chat_json=openai_chat_json,
+            openrouter_chat_json=openrouter_chat_json,
             openai_chat_json_with_images=openai_chat_json_with_images,
             openai_ocr_pdf=openai_ocr_pdf,
             openai_respond_with_vector_store=openai_respond_with_vector_store,
@@ -257,6 +312,44 @@ default_openai_client_policy = default_client_policy
 build_openai_client_from_callables = build_client_from_callables
 build_openai_client_for_settings = build_client_for_settings
 openai_client_policy_from_settings = client_policy_from_settings
+
+
+def _request_with_provider_decision(request: Any, provider_decision: str) -> Any:
+    try:
+        return type(
+            "LLMProviderDecisionRequest",
+            (),
+            {
+                **{
+                    name: getattr(request, name)
+                    for name in dir(request)
+                    if not name.startswith("_")
+                    and not callable(getattr(request, name, None))
+                },
+                "provider_decision": provider_decision,
+            },
+        )()
+    except Exception:
+        setattr(request, "provider_decision", provider_decision)
+        return request
+
+
+def _response_with_provider_decision(response: Any, provider_decision: str) -> Any:
+    if hasattr(response, "provider_decision"):
+        return response
+    try:
+        setattr(response, "provider_decision", provider_decision)
+        return response
+    except Exception:
+        return SimpleNamespace(
+            **{
+                name: getattr(response, name)
+                for name in dir(response)
+                if not name.startswith("_")
+                and not callable(getattr(response, name, None))
+            },
+            provider_decision=provider_decision,
+        )
 
 
 __all__ = [

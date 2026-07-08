@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-04
+Last audited: 2026-07-08
 
 This file is the single active backlog for this repository. It supersedes older backlog notes, archived planning docs, and ad hoc audit intake.
 
@@ -48,8 +48,9 @@ Scoring:
 - Explicit report-generation client bundles, typed checkpoint artifact registries, and UI-run failure classifications are live. `run_report_pipeline` now passes `ReportGenerationClientBundle` instead of reflecting report-function signatures, checkpoints persist typed artifact refs with hashes and required/optional semantics, resume validates registry entries while preserving legacy checkpoint compatibility, and UI poll/dead-letter paths expose recommended next actions. Verification on 2026-06-29 covered focused red/green tests, contract round trips for 1,368 dataclasses, full default pytest with coverage at 3,345 passed / 25 deselected, coverage gate at 83.59% global and 95.55% control-plane, mutation gate with `report_pipeline_orchestrator.py` at 3/3 killed, and quality non-regression. Live existing-PDF runs with real model/API calls wrote registries for source/selection/analysis/render checkpoints and validated `latest_safe` resume in 0.144s after a 523.947s fresh run and 0.082s after a 501.629s fresh run; live UI worker failure classification persisted an `auto_triaged` dead-letter action with `mark_permanent` recommendation for an invalid report-download payload.
 - Mailbox-backed gated-report acquisition is live through `src/contracts/mailbox_acquisition.py`, `src/services/mailbox_acquisition_service.py`, `src/generators/mail_report_acquisition_generator.py`, `src/orchestrators/mail_report_acquisition_orchestrator.py`, `config_service.load_mailbox_acquisition_settings(...)`, and `python -m src.cli poll-mail-report`. The local mailbox provider is IMAP, credentials resolve from `.env`, delayed delivery exits as retryable `mail_report_not_arrived_yet`, and selected mail links re-enter the existing report-download workflow instead of creating a second downloader. Live verification on 2026-07-04 confirmed the original Gmail-configured path failed with insufficient OAuth scopes, the corrected IMAP path searched the mailbox directly, a zero-timeout delayed-mail run returned retryable `mail_report_not_arrived_yet` after one real poll, and a temp-database route canary covered direct PDF, HTTP PDF, report-page PDF-link, onsite, tracker, email-form, and listing-hub acquisition families with 5 of 7 acquired artifacts and 2 of 7 correctly classified as email-required without browser spend. A database-derived 10-publisher email-route matrix on 2026-07-04 produced 4 verified downloads, 4 `blocked_unknown_required_enum` outcomes, 1 `blocked_captcha`, and 1 stale-process email confirmation that required rerun; a fresh BigCommerce rerun with the IMAP mailbox completed `email_requested` plus mailbox download on the first poll, producing a 3,068,372-byte verified PDF. Live verification on 2026-07-05 added per-run mailbox poll bounds, confirmed cross-publisher mailbox-link rejection on a GWI rerun that ignored BigCommerce and SensorTower deliveries, prevented unconfirmed `email_required` outcomes from creating mailbox requests, tolerated Drive preflight cleanup failures after write access was proven, and completed a second BigCommerce mailbox acquisition on the first poll with a 9,341,114-byte PDF plus Drive upload. A second 20-run publisher set on 2026-07-05/2026-07-06 produced 11 direct PDF downloads, 1 onsite capture, and 7 correctly gated `email_required` outcomes; one initial browser-timeout failure was rerun successfully as `email_required`, and no publisher exceeded three mail-delivered reports.
 - Event-driven mailbox delivery requests are live through the report-download workflow, state schema version 7, workflow-control observations, delivery-intent matching, mailbox preflight, attachment/ZIP-PDF materialization, incremental seen-message tracking, and typed browser identity consent policy in `src/config/browser_download_identity.yaml`. Focused verification covered durable request idempotency, attachment-first acquisition without browser follow-up, ZIP PDF materialization, mailbox preflight before email-form submission, consent-policy config loading, and CLI option wiring.
+- LLM OpenRouter failover, public metadata governance, executive artifact enrichment, metric-spine editorial propagation, workflow-control mailbox dispatch, mailbox candidate suppression, route-memory promotion, capability maps, and autonomous smoke coverage are live. Verification on 2026-07-08 covered 1,620 affected contract/orchestrator/generator/service tests, prompt dry-run validation, contract schema snapshots, formatting, `docs/quality/capability_maps.json`, a fresh autonomous mailbox happy-path smoke with 1 due request processed / 1 succeeded / route memory promoted, an idempotent replay with 0 duplicate requests processed and route memory retained, a live OpenRouter fallback JSON call with provider decision `openrouter_fallback` and 161 total tokens, and a retained real-artifact advisory smoke over 2 existing report-analysis roots with no invented metrics.
 - A 20-publisher live acquisition run on 2026-07-06 used `reports@marketbearing.eu` for delivery, verified ad hoc publisher Drive folder creation, blocked public-search drift after exact execution URLs, preferred complete on-site report captures over optional enum blockers, and tightened mailbox candidate selection so SATISFYD, Mimecast, and Sprinklr rejected unrelated Contentsquare delivery links with `candidate_count=0` while a Contentsquare-owned mailbox delivery still produced 12 eligible publisher-affine candidates.
-- The LLM boundary still logs `provider_decision="openai_primary"` and `budget_decision="not_configured"` in `src/services/llm_service.py`; dynamic provider routing and live spend policy remain open.
+- The LLM boundary now records primary/fallback provider decisions, but `budget_decision="not_configured"` remains; dynamic budget-aware model routing and live spend policy remain open.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
 - Claim-level embedding persistence is live: `claim_embeddings` stores durable vectors/provider metadata/status/error taxonomy linked to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`, and `claim_embedding_orchestrator` owns pending/stale embedding workflow execution.
 - Cross-report Briefing and grounded Signal publish paths now reuse persisted claim embeddings for bounded semantic evidence preselection through `analytics_store_service.read_claim_embeddings`, while falling back to deterministic lexical/category ordering when embeddings are absent or stale. Durable Signal candidate extraction, ingestion-time Signal artifact-pack generation, separate Signal-store persistence, grouping, readback, and publish reuse are landed through `src/contracts/signal_candidates.py`, `src/generators/signal_candidate_generator.py`, `src/generators/report_signal_artifact_generator.py`, `src/orchestrators/signal_candidate_orchestrator.py`, `src/orchestrators/report_generation_orchestrator.py`, and `src/services/analytics_store_service.py`.
@@ -98,16 +99,6 @@ Scoring:
     - Regression tests protect evidence retention on a fixed prompt/output corpus.
     - Benchmarks show token/cost reduction without quality regression on that corpus.
 
-- **Title:** Add provider failover behind the single LLM response contract [Impact: 4/5, Effort: 4/5]
-  - Problem fixed: The canonical LLM boundary exists, but provider choice is still OpenAI-primary with no tested fallback path behind a stable response contract.
-  - Why implement: Improves resilience to provider outages and quota events without adding peer service entrypoints.
-  - Tradeoffs / risks: Requires contract-normalization tests across provider responses.
-  - Acceptance Criteria:
-    - One canonical LLM service boundary owns provider selection and response adaptation.
-    - Failover is policy-driven, bounded, logged, and orchestrator-visible.
-    - Provider-specific responses adapt into one typed contract before generators see them.
-    - Tests cover primary success, retryable provider failure, fallback success, fallback exhaustion, and provider mismatch validation.
-
 ---
 
 ## 2. Analytics Projection, Signals, and Embeddings
@@ -131,16 +122,6 @@ Scoring:
     - Output reports prompt character/token deltas, selected evidence overlap, source-report coverage, and citation coverage by Briefing/Signal run.
     - The benchmark fails or warns when semantic preselection reduces required citation/source coverage below a documented threshold.
     - Tests cover benchmark metric calculation, stale/no-embedding fallback metrics, and deterministic output ordering.
-
-- **Title:** Complete public entity projection coverage or narrow the README entity contract [Impact: 5/5, Effort: 5/5]
-  - Problem fixed: Reports, Briefings, and Signals have local publish paths, but README still describes a broader public entity model including Figures, Regions, and Time Periods. Those surfaces need either durable public projection contracts/routes or explicit README-scoped exclusions.
-  - Why implement: Gives publishing one typed source of truth for every public entity.
-  - Tradeoffs / risks: Broad schema, migration, and publish/readback work if all surfaces remain in scope.
-  - Acceptance Criteria:
-    - Figures, Regions, and Time Periods have documented public projection contracts or explicit README exclusions.
-    - Implemented public entities map to stable WordPress route/template/readback semantics.
-    - Empty-state behavior is deterministic and does not invent content.
-    - Integration tests cover report-to-entity projection and WordPress publish/readback for each implemented entity.
 
 ---
 
@@ -188,17 +169,6 @@ Scoring:
     - Submitted requests are persisted or delivered through an approved service boundary with structured logs and redaction.
     - Tests or hosted smoke checks cover successful submission, validation errors, spam/empty input rejection, and CTA routing.
 
-- **Title:** Add public content-governance checks for metadata and extraction leakage [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Public pages expose pipeline artifacts and polluted metadata, including `Not extracted` as a publisher, publisher labels such as `YouGov Year: 2024`, sentence-length period/region filters, raw generated snippets, and empty/default-looking report-card fields.
-  - Why implement: The visual system is credible, but visible data-governance failures undermine the premium consultancy positioning and can also trigger runtime crashes when required card values are missing.
-  - Tradeoffs / risks: The gate must fail closed without inventing missing metadata; remediation may require source-backed repair or explicit operator approval.
-  - Acceptance Criteria:
-    - Public publish/readiness checks reject placeholder publishers, default/sentinel metadata, and metadata labels containing extracted field names.
-    - Publisher, period, region, and category values are normalized before they reach WordPress filters or cards.
-    - Reports with missing required card values are withheld or routed to remediation instead of rendering partial cards.
-    - The `/publisher/not-extracted/` class of failure has a regression test that proves missing publisher data cannot crash public archives.
-    - README documents the editorial QA gate and operator remediation path for blocked public entities.
-
 - **Title:** Polish mobile search, navigation, and responsive public workflows [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Mobile QA found horizontal overflow on search results, a cramped archive/search control row, an unfinished-looking mobile menu overlay, a stray bullet artifact near the open menu, a very tall hero text stack, and clipped desktop header search placeholder text.
   - Why implement: Search and navigation are primary workflows; responsive defects make the product feel less mature than its content architecture.
@@ -237,44 +207,31 @@ Scoring:
 
 ## 5. User-Facing Output Quality and Editorial Contracts
 
-- **Title:** Tighten report editorial prompt rubrics for executive-grade output [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: Report-facing artifacts can be accurate but still read as generic summaries because prompt rubrics do not consistently require pyramid-principle structure, observation/implication/action separation, contradiction checks, quantified support, or professional copy hygiene.
-  - Why implement: This is the lowest-risk path to sharper user-facing output because it improves existing summary, insight, expert-comment, LinkedIn, taxonomy, and cover-semantics behavior before changing public schemas.
-  - Tradeoffs / risks: Prompt-only changes can shift golden outputs and may make narrow reports feel formulaic if the rubric is too rigid.
-  - Acceptance Criteria:
-    - Prompt copy defects such as `threeshort`, `peges`, and `evedence` are corrected without changing prompt namespaces or adding inline prompt text in code.
-    - Executive summary prompts require top-line answer, supporting evidence, strategic implication, caveat, and recommended reading path while keeping current output fields stable.
-    - Editorial prompts distinguish observation, `so_what`, and `now_what` only where evidence or extracted recommendations support the action layer.
-    - Summary, expert-comment, LinkedIn, and cover-semantics prompts reuse the strongest available metrics and check contradictions when contradiction evidence exists.
-    - Prompt fixture regression records intentional output shifts and proves no unsupported facts, invented recommendations, or hidden schema changes were introduced.
-
-- **Title:** Add optional executive advisory artifacts to the user-facing report contract [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Existing final artifacts surface summaries, insights, quotes, expert comments, and posts, but they do not expose first-class decision briefs, recommendations, risk registers, methodology/limitations, coverage diagnostics, audience variants, or category relevance explanations.
-  - Why implement: These artifacts turn report analysis into a consultancy-grade decision product while making absent source evidence visible instead of silently omitting useful context.
-  - Tradeoffs / risks: Advisory language can overreach if unsupported; optional fields and explicit not-found statuses are required so existing consumers continue to work.
-  - Acceptance Criteria:
-    - A versioned optional `decision_brief` artifact includes strategic context, decision implications, priority moves, watchouts, evidence links, and a confidence note.
-    - Extracted recommendations are surfaced with recommendation, rationale, evidence ID or span, intended actor, priority, implementation horizon, and expected business effect; empty source packs produce `recommendations_not_found` rather than synthesized advice.
-    - Strategic risks, methodology/limitations, coverage diagnostics, audience variants, and category relevance explanations are added as optional schema-backed artifacts or metadata beside current fields.
-    - Current summary, insights, quotes, expert comment, LinkedIn post, category IDs, routing fields, and public rendering paths remain backward-compatible until consumers explicitly adopt the new contract version.
-    - Contract round-trip, schema snapshot, generator, and UI/readback tests cover populated artifacts, not-found states, and required-field completeness without default or sentinel-filled values.
-
-- **Title:** Propagate metric spines and claim-level evidence spans through final editorials [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Later editorial artifacts can become vague or hard to audit because quantified evidence and evidence spans are not consistently carried from extracted packs into final user-facing claims.
-  - Why implement: Stronger metric reuse and claim-level traceability improve trust, validation, debugging, and future source-preview UI features.
-  - Tradeoffs / risks: Richer payloads increase validation and display complexity, and one bad extracted metric could spread unless propagation is guarded.
-  - Acceptance Criteria:
-    - A derived metric spine selects the strongest supported 3-6 metrics with value, unit, timeframe, segment, geography, comparator, baseline, delta, sample size when present, and confidence or missing-context notes.
-    - Summary, final insights, expert comment, LinkedIn post, decision brief, quote selections, and recommendation/risk artifacts consume the metric spine without inventing unsupported comparisons.
-    - Claim-level evidence spans include evidence ID, source pack, section ID, page, offsets where available, and short redacted excerpts while preserving existing `evidence_id` compatibility.
-    - Quote outputs include a role such as proof point, executive voice, customer voice, methodology caveat, strategic tension, or market signal without altering verbatim quote text.
-    - Validation fails or warns when high-impact claims lack evidence links, when metric propagation changes source meaning, or when comparison fields are inferred rather than source-backed.
-
 - **Title:** Improve final insight selection with transparent strategic scoring and coverage roles [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Final insight selection relies too heavily on a single usefulness concept and a generic non-overlap instruction, which can produce repeated or insufficiently strategic insight sets.
   - Why implement: A visible scoring and coverage rubric makes the final five insights feel curated, balanced, and easier to validate.
   - Tradeoffs / risks: Scores can look like false precision unless they are calibrated and treated as selection metadata rather than user-visible truth.
   - Acceptance Criteria:
+
+- **Title:** Render executive advisory and metric-spine payloads in public report pages [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: The artifact contract now emits optional `executive_advisory` and `metric_spine` payloads, but public report pages do not yet expose those higher-value decision artifacts.
+  - Why implement: Turns the new analysis payloads into visible user value: faster executive scanning, clearer proof points, and stronger consultancy-grade differentiation.
+  - Tradeoffs / risks: Rendering must stay fail-closed when optional payloads are absent and must not expose internal evidence IDs, spans, JSON fields, or generated diagnostics as public copy.
+  - Acceptance Criteria:
+    - Report HTML renders decision brief, supported recommendations, risks/watchouts, and strongest metric-spine proof points when present.
+    - Empty/not-found advisory states render neutral omissions or admin diagnostics, not placeholder user-facing content.
+    - Public copy uses source-safe labels and existing citation micro-lines without exposing evidence IDs or internal pack names.
+    - Visual and schema tests cover populated advisory payloads, absent payloads, and mobile layout.
+
+- **Title:** Benchmark route-memory avoided browser spend from mailbox and download outcomes [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: Mailbox successes now promote publisher route memory, but operators need a measured report showing avoided browser launches, avoided model calls, and route-success stability over retained publisher evidence.
+  - Why implement: Quantifies cost/speed gains from the new feedback loop and gives a guardrail if stale route memory starts hurting acquisition quality.
+  - Tradeoffs / risks: The benchmark must use retained report-store/state evidence and avoid rerunning expensive browser flows by default.
+  - Acceptance Criteria:
+    - A quality script reads existing report-store route history and state mail-delivery rows, then estimates avoided browser/model calls by route family and publisher.
+    - Output reports exact-route reuse, publisher-policy reuse, mailbox-promoted route count, stale/conflicting memory count, and verified-success rate.
+    - The script can optionally sample a bounded live rerun set when explicitly enabled.
+    - Tests cover deterministic metric calculation and stale/conflict classification.
     - Insight candidates retain the existing score while adding optional novelty, strategic importance, evidence strength, quantification quality, actionability, and coverage-role dimensions.
     - Final insights are tagged with supported coverage roles such as market shift, customer behavior, operational implication, commercial signal, technology/channel signal, risk, recommendation, or methodology caveat.
     - Narrow reports may repeat a coverage role only with a source-backed reason; unsupported roles are not force-fit.
@@ -359,16 +316,6 @@ Scoring:
     - Attempt budgets, terminal states, and duplicate suppression are enforced through idempotency.
     - Tests cover transient recovery, permanent failure, missing credentials, stale checkpoint, repeated failure loop prevention, and runbook surfacing.
 
-- **Title:** Expand idempotency coverage to every external side effect [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Idempotency protects important publish, report-download, and publisher-inventory paths, but autonomous reruns require every external write or ambiguous side effect to be protected.
-  - Why implement: Safe unattended retries depend on duplicate-proof side effects after crashes, network ambiguity, or deferred resume.
-  - Tradeoffs / risks: Requires a side-effect inventory and careful exemption policy for read-only or naturally idempotent calls.
-  - Acceptance Criteria:
-    - A side-effect registry maps each external write to owning orchestrator/service, idempotency scope, logical key, checksum inputs, and artifact references.
-    - OpenAI/vector-store writes, Drive uploads, WordPress media/posts, report-store mutations, state transitions, cost ledger writes, archive writes, route playbook promotion, and browser identity updates are covered or explicitly waived.
-    - CI fails new unwaived side-effect calls that lack idempotency coverage metadata.
-    - Tests cover duplicate replay, checksum mismatch, partial side-effect recovery, and waiver validation.
-
 - **Title:** Add a run-level budget manager for cost, tokens, time, retries, and external calls [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Cost, retry, latency, worker, browser, and model limits are configured or reported in separate places, but no online budget manager enforces total run/day/publisher constraints before each expensive action.
   - Why implement: Autonomous execution needs predictable spend, runtime, and call ceilings without operator babysitting.
@@ -409,79 +356,6 @@ Scoring:
     - Generators continue to consume one typed LLM response contract.
     - Tests cover cheap-primary success, schema-failure fallback, validation-failure fallback, fallback exhaustion, reproducibility-forbidden fallback, and cost reporting.
 
-- **Title:** Generate capability-level observability and architecture maps [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: The repository has many private submodules, compatibility facades, and workflow paths, making it difficult for autonomous agents and maintainers to discover ownership and interconnections mechanically.
-  - Why implement: Generated maps reduce cognitive load and give future agents reliable navigation without scanning hundreds of files.
-  - Tradeoffs / risks: Maps must be generated from code/config where possible and must not become stale hand-maintained diagrams.
-  - Acceptance Criteria:
-    - Generated maps cover external system to canonical service boundary, workflow to orchestrator/generator/service/contracts, artifact family to prompt/schema/generator/validator, state table to owner, side effect to idempotency scope, and failure code to runbook/remediation.
-    - CI fails when generated maps are stale or missing required ownership metadata for changed files.
-    - README links to the generated maps and explains how to refresh them.
-    - Tests cover map generation, stale detection, missing owner metadata, and stable deterministic ordering.
-
-- **Title:** Add production-like autonomous happy-path smoke suites [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: CI has strong unit, coverage, mutation, benchmark, and release evidence gates, but no single non-live smoke proves autonomous planning, preflight, idempotency, checkpoint resume, health gating, and publish policy work together.
-  - Why implement: Autonomous behavior must be tested end-to-end, not inferred from isolated component tests.
-  - Tradeoffs / risks: The suite must use fakes for external systems while still exercising real contracts, SQLite state, idempotency, checkpoints, and supervisor logic.
-  - Acceptance Criteria:
-    - A default non-integration smoke uses fixture PDFs, fake Drive, fake LLM responses, fake WordPress, real SQLite state, real preflight, real checkpoints, real idempotency, real supervisor, and real health scorecards.
-    - The smoke asserts no user action is required, valid state transitions are emitted, reruns produce no duplicate side effects, injected crash resumes safely, and publish/draft/hold policy is deterministic.
-    - CI runs the smoke in the default suite without live credentials.
-    - Tests include failure injection for transient model error, missing artifact, duplicate publish intent, and validation-repair path.
-
-- **Title:** Use persisted workflow-control feedback to choose acquisition routes before browser launch [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Workflow-control observations are now persisted, but browser/download planning still needs tighter integration so repeated publisher evidence can avoid expensive browser launches when deterministic HTTP or cached routes are better.
-  - Why implement: Route selection from real feedback should cut browser runtime, reduce model/browser costs, and improve unattended acquisition success.
-  - Tradeoffs / risks: Recommendations must remain source-backed, TTL-bounded, and fail closed when evidence is stale or conflicts with current URL signals.
-  - Acceptance Criteria:
-    - Report-download planning reads workflow-control observations before selecting browser, HTTP PDF, onsite capture, or user-action-required routes.
-    - Route decisions log before/after recommendation, confidence, TTL status, and avoided browser/model-call estimate.
-    - Live existing-publisher verification demonstrates at least one avoided browser launch or faster route without lowering artifact verification status.
-    - Tests cover fresh successful memory, stale memory, conflicting current-page evidence, and no-memory fallback.
-
-- **Title:** Add deterministic lookup/select verification for modal report forms [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Browser acquisition can now reach headed CAPTCHA/form handoff pages, but modal forms with dependent lookup/select fields can still stop as `blocked_unknown_required_enum` after visible fields are filled.
-  - Why implement: Publisher-agnostic verification for dependent fields such as state, region, country, and industry should increase email-form completion without operator intervention or repeated browser spend.
-  - Tradeoffs / risks: Must not invent values, must preserve the first-enabled-option fallback rules, and must distinguish real CAPTCHA blockers from ordinary lookup/select failures.
-  - Acceptance Criteria:
-    - Browser-form logic verifies dependent lookup/select persistence after country/industry changes and before submit.
-    - If a configured value fails, the first visible enabled non-placeholder option is selected and logged with field label, option text, and verification evidence.
-    - CAPTCHA widgets, optional marketing consent, and privacy/terms agreement boxes remain excluded from generic fallback.
-    - Live rerun on an existing modal-form blocker confirms either `email_requested` or a more specific typed blocker without an unverified submit.
-    - Tests cover same-origin modal iframe fields, dependent country/state fields, searchable comboboxes, first-option fallback, and CAPTCHA exclusion.
-
-- **Title:** Run deferred mailbox-delivery requests from workflow control without operator CLI [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Report-download now persists idempotent `mail_delivery_requests` after `email_requested` / `email_required` outcomes, but due requests still need a first-class workflow-control dispatcher so delayed publisher emails are processed without an operator command.
-  - Why implement: Completes unattended gated-report acquisition by turning durable deferred requests into acquired artifacts as soon as delivery mail arrives.
-  - Tradeoffs / risks: The worker must preserve request/message correlation, bounded backoff, and idempotent source-row updates so a shared inbox never downloads a report for the wrong request.
-  - Acceptance Criteria:
-    - A workflow-control worker lists due `mail_delivery_requests`, reuses `run_mail_report_acquisition`, and records attempt status, next-attempt time, seen message IDs, and typed taxonomy.
-    - Retryable not-yet-arrived mail transitions to deferred retry with bounded backoff; stale requests fail explicitly with typed `AppError` metadata and workflow observations.
-    - Successful delayed mail acquisition updates the existing `report_sources` row and route history without duplicate report-source records or duplicate mailbox downloads.
-    - Live verification covers one real delayed email request through the worker, no operator command, no duplicate submission on rerun, and one request-mismatched mailbox message being ignored.
-    - Tests cover due-list filtering, enqueue idempotency, retryable not-arrived state, stale expiry, unrelated-mail rejection, successful materialization, required structured logs, and dashboard/count projection for pending due requests.
-
-- **Title:** Persist mailbox candidate rejection and conflict evidence for autonomous suppression [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: Live shared-inbox runs can contain valid report deliveries for other publishers; the selector now rejects cross-publisher candidates, but rejected-message evidence is only visible in logs and cannot yet drive suppression, dashboards, or operator-free conflict analysis.
-  - Why implement: Makes wrong-publisher suppression durable and explainable, reducing repeated mailbox scans and preventing future autonomous workers from rediscovering the same mismatches.
-  - Tradeoffs / risks: Rejection evidence must be sanitized, TTL-bounded, and request-scoped so it does not suppress legitimate future publisher deliveries.
-  - Acceptance Criteria:
-    - Rejected mailbox candidates persist sanitized sender, source host, link host, publisher affinity result, title-token overlap, request ID, and reason code.
-    - Workflow-control and mailbox due-request views expose counts for ignored cross-publisher, stale, unsubscribe/webview, weak-evidence, and already-seen messages.
-    - Repeated known-mismatch candidates are skipped before browser/download planning with logged avoided-work estimates.
-    - Accepted same-publisher candidates still proceed when publisher/source affinity is present, even for opaque delivery links.
-    - Live verification reruns one known cross-publisher mailbox mismatch and one legitimate same-publisher delivery, proving suppression and acceptance without operator intervention.
-    - Tests cover TTL expiry, request scoping, sanitized persistence, dashboard projection, avoided-work logging, and legitimate opaque-link pass-through.
-
-- **Title:** Promote successful mailbox delivery outcomes into publisher route memory [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: Successful browser routes already feed reusable route memory, but mailbox delivery success details are not yet promoted with the same richness for future publisher planning.
-  - Why implement: Lets the planner prefer proven email-delivery paths, attachment-first expectations, and publisher-specific delivery delays instead of relearning them with browser/model spend.
-  - Tradeoffs / risks: Evidence must distinguish body links, PDF attachments, ZIP attachments, cloud links, and inline HTML so route memory does not overgeneralize from one delivery mode.
-  - Acceptance Criteria:
-    - Mailbox outcomes write route evidence with acquisition taxonomy, delivery latency, attachment/link mode, source URL, publisher, and sanitized message metadata.
-    - Planner recommendations can use that evidence to estimate avoided browser/model calls and expected mailbox wait windows.
-    - Conflicting or stale mailbox evidence is TTL-bounded and does not override stronger current-page evidence.
-    - Live verification demonstrates a repeated publisher route using mailbox evidence to avoid at least one browser or model call.
     - Tests cover attachment, ZIP attachment, body-link, stale-evidence, and conflict paths with structured log assertions.
 
 - **Title:** Auto-skip or route business-domain-only gated forms before mailbox polling [Impact: 4/5, Effort: 2/5]
@@ -574,15 +448,13 @@ Scoring:
 ### Phase 2: Intelligence Reuse and Public Entity Alignment
 
 - Semantic evidence preselection benchmark and tuning.
-- Public entity projection coverage for Figures, Regions, and Time Periods, or README narrowing.
 - WordPress render-time intelligence synthesis replacement with approved projections.
-- User-facing editorial prompt tightening, optional advisory artifacts, metric/evidence propagation, insight scoring, and editorial contract versioning.
-- Public-site launch trust hardening, intake flows, content-governance checks, and premium presentation QA.
+- Public rendering adoption for executive advisory and metric-spine payloads, insight scoring, and editorial contract versioning.
+- Public-site launch trust hardening, intake flows, and premium presentation QA.
 
 ### Phase 3: Resilience and Performance
 
 - Normalize retry/defer decisions, add UI-run failure classification, and add typed artifact registry validation.
-- Provider failover behind the canonical LLM service contract.
 - Release evidence review summaries and waiver governance.
 - Contract compatibility matrix.
 - Role-mixing/monolith-growth CI enforcement.

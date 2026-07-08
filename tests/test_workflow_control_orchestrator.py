@@ -7,18 +7,28 @@ from dataclasses import asdict
 
 import pytest
 
+from src.contracts.browser_download import (
+    BrowserDownloadIdentity,
+    BrowserDownloadSettings,
+)
 from src.contracts.config import ConfigLoadRequest
+from src.contracts.mailbox_acquisition import (
+    MailReportAcquisitionResult,
+    MailboxAcquisitionSettings,
+)
 from src.contracts.retry_telemetry import (
     RetryDecisionTelemetryReport,
     RetryDecisionTelemetryRow,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.state import MailDeliveryRequestUpsertRequest
 from src.contracts.pipeline_preflight import (
     PipelinePreflightCheck,
     PipelinePreflightReport,
 )
 from src.orchestrators import workflow_control_orchestrator as workflow
 from src.services import config_service
+from src.services.state_service import upsert_mail_delivery_request
 from src.utils.errors import AppError
 
 
@@ -36,6 +46,45 @@ def _events(caplog) -> list[dict]:
         if payload.get("module") == "market_lense.workflow_control_orchestrator":
             events.append(payload)
     return events
+
+
+def _mailbox_settings(tmp_path) -> MailboxAcquisitionSettings:
+    return MailboxAcquisitionSettings(
+        schema_version="1.0",
+        provider="imap",
+        output_dir=str(tmp_path / "mailbox"),
+        search_window_minutes=120,
+        max_results=10,
+        poll_timeout_seconds=0.0,
+        poll_interval_seconds=0.0,
+        gmail_oauth_client_path="",
+        gmail_oauth_token_path="",
+        gmail_user_id="",
+        imap_host="imap.example.com",
+        imap_port=993,
+        imap_user="reports@example.com",
+        imap_password="secret",
+        imap_mailbox="INBOX",
+    )
+
+
+def _browser_settings(tmp_path) -> BrowserDownloadSettings:
+    return BrowserDownloadSettings(
+        schema_version="1.0",
+        openrouter_api_key="openrouter-key",
+        model="openai/gpt-5-mini",
+        temperature=0.0,
+        timeout_seconds=30.0,
+        max_steps=8,
+        output_dir=str(tmp_path / "downloads"),
+        state_db=str(tmp_path / "state.sqlite"),
+        reports_db=str(tmp_path / "reports.sqlite"),
+        identity_config_path=str(tmp_path / "identity.yaml"),
+        identity_profile=BrowserDownloadIdentity(schema_version="1.0", fields=[]),
+        drive_upload_enabled=False,
+        drive_upload_required=False,
+        retry_retries=0,
+    )
 
 
 def test_workflow_control_config_loads_yaml_profiles_and_policy_map(
@@ -108,6 +157,70 @@ workflow_control:
     assert settings.concurrency["model"].max_limit == 4
     assert_no_defaulted_required_fields(report_download)
     assert_no_defaulted_required_fields(retry_policy)
+
+
+def test_workflow_control_dispatches_due_mail_delivery_requests(
+    tmp_path,
+    caplog,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.workflow_control_orchestrator")
+    state_db = tmp_path / "state.sqlite"
+    reports_db = tmp_path / "reports.sqlite"
+    upsert = upsert_mail_delivery_request(
+        MailDeliveryRequestUpsertRequest(
+            schema_version="1.0",
+            state_db=str(state_db),
+            idempotency_key="mail:https://example.com/report:reports@example.com",
+            source_url="https://example.com/report",
+            report_title="Retail Trends 2026",
+            publisher_name="Example Publisher",
+            delivery_email="reports@example.com",
+            requested_after_utc="2026-07-04T11:08:00Z",
+            route_family="browser_email_form",
+        ),
+        _ctx(),
+    )
+    calls = []
+
+    def acquire(req, ctx):
+        calls.append(req)
+        return MailReportAcquisitionResult(
+            schema_version="1.0",
+            source_url=req.source_url,
+            outcome="downloaded_attachment",
+            mailbox_poll_count=1,
+            selected_report_url=None,
+            selected_message_id="msg-1",
+            downloaded_file_path=str(tmp_path / "report.pdf"),
+            report_download_result=None,
+            acquisition_result_taxonomy="mailbox_attachment_pdf",
+            seen_provider_message_ids=["msg-1"],
+        )
+
+    result = workflow.run_due_mail_delivery_requests(
+        workflow.MailDeliveryWorkflowRunRequest(
+            schema_version="1.0",
+            state_db=str(state_db),
+            reports_db=str(reports_db),
+            mailbox_settings=_mailbox_settings(tmp_path),
+            browser_download_settings=_browser_settings(tmp_path),
+            now_utc="2026-07-04T11:09:00Z",
+            limit=10,
+        ),
+        ctx=_ctx(),
+        run_mail_report_acquisition_fn=acquire,
+    )
+
+    assert result.processed_count == 1
+    assert result.succeeded_count == 1
+    assert result.deferred_count == 0
+    assert result.failed_count == 0
+    assert result.results[0].request_id == upsert.request.request_id
+    assert result.results[0].status == "succeeded"
+    assert calls[0].seen_provider_message_ids == []
+    events = _events(caplog)
+    assert events[-1]["event"] == "workflow_mail_delivery_run_complete"
+    assert events[-1]["fields"]["succeeded_count"] == 1
 
 
 def test_project_workflow_control_config_resolves_publish_intent() -> None:

@@ -154,6 +154,7 @@ def assemble_artifacts_payload(
         "toc_entries": toc_entries,
         "toc_topics": toc_topics,
         "toc_topics_expanded": topic_briefs,
+        "metric_spine": derive_metric_spine(evidence_packs),
         "summary": summary,
         "cover_semantics": _validate_cover_semantics(cover_semantics, ctx=ctx),
         "insights_candidates": insights_candidates,
@@ -164,6 +165,13 @@ def assemble_artifacts_payload(
         "source_status": source_status,
         "family_status": family_status,
     }
+    artifacts_payload["executive_advisory"] = build_executive_advisory_artifacts(
+        summary=summary,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        metric_spine=artifacts_payload["metric_spine"],
+        evidence_packs=evidence_packs,
+    )
     if cache_meta:
         artifacts_payload["_cache"] = dict(cache_meta)
     _log_topic_brief_mapping_audit(
@@ -194,6 +202,152 @@ def assemble_artifacts_payload(
         )
         raise
     return artifacts_payload
+
+
+def derive_metric_spine(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
+    raw_metrics = []
+    key_metrics = (
+        evidence_packs.get("key_metrics") if isinstance(evidence_packs, dict) else {}
+    )
+    if isinstance(key_metrics, dict):
+        raw_metrics = key_metrics.get("metrics") or key_metrics.get("key_metrics") or []
+    if not isinstance(raw_metrics, list):
+        return []
+    spine: List[Dict[str, Any]] = []
+    for raw in raw_metrics:
+        if not isinstance(raw, dict):
+            continue
+        value = _s(raw.get("value") or raw.get("raw_value")).strip()
+        unit = _s(raw.get("unit")).strip()
+        evidence_id = _s(raw.get("evidence_id")).strip()
+        label = _s(raw.get("label") or raw.get("metric")).strip()
+        if not value or not unit or not evidence_id or not label:
+            continue
+        missing_context_notes = [
+            field_name
+            for field_name in ("timeframe", "segment", "geography")
+            if not _s(raw.get(field_name)).strip()
+        ]
+        spine.append(
+            {
+                "schema_version": "1.0",
+                "metric_id": _s(raw.get("metric_id") or evidence_id).strip(),
+                "label": label,
+                "value": value,
+                "unit": unit,
+                "timeframe": _s(raw.get("timeframe")).strip(),
+                "segment": _s(raw.get("segment")).strip(),
+                "geography": _s(raw.get("geography")).strip(),
+                "comparator": _s(raw.get("comparator")).strip(),
+                "baseline": _s(raw.get("baseline")).strip(),
+                "delta": _s(raw.get("delta")).strip(),
+                "sample_size": _s(raw.get("sample_size")).strip(),
+                "confidence": (_s(raw.get("confidence")).strip() or "source_backed"),
+                "missing_context_notes": missing_context_notes,
+                "evidence_id": evidence_id,
+            }
+        )
+    return sorted(
+        spine,
+        key=lambda item: (
+            len(item["missing_context_notes"]),
+            item["metric_id"],
+            item["label"],
+        ),
+    )[:6]
+
+
+def build_executive_advisory_artifacts(
+    *,
+    summary: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+    quotes_final: List[Dict[str, Any]],
+    metric_spine: List[Dict[str, Any]],
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, Any]:
+    recommendations_pack = evidence_packs.get("recommendations", {})
+    risks_pack = evidence_packs.get("risk_register", {})
+    recommendations = (
+        recommendations_pack.get("recommendations")
+        if isinstance(recommendations_pack, dict)
+        else []
+    )
+    risks = risks_pack.get("risks") if isinstance(risks_pack, dict) else []
+    if not isinstance(recommendations, list):
+        recommendations = []
+    if not isinstance(risks, list):
+        risks = []
+    supported_insights = [
+        item
+        for item in insights_final
+        if isinstance(item, dict)
+        and (_s(item.get("evidence_id")).strip() or item.get("evidence_spans"))
+    ]
+    return {
+        "schema_version": "1.0",
+        "decision_brief": {
+            "schema_version": "1.0",
+            "status": "generated"
+            if supported_insights or metric_spine
+            else "not_found",
+            "strategic_context": _s(summary.get("executive_summary")).strip(),
+            "decision_implications": [
+                _s(item.get("text")).strip()
+                for item in supported_insights[:3]
+                if _s(item.get("text")).strip()
+            ],
+            "priority_moves": [
+                _s(item.get("recommendation") or item.get("text")).strip()
+                for item in recommendations[:3]
+                if isinstance(item, dict)
+                and _s(item.get("recommendation") or item.get("text")).strip()
+            ],
+            "watchouts": [
+                _s(item.get("risk") or item.get("text")).strip()
+                for item in risks[:3]
+                if isinstance(item, dict)
+                and _s(item.get("risk") or item.get("text")).strip()
+            ],
+            "evidence_links": sorted(
+                {
+                    _s(item.get("evidence_id")).strip()
+                    for item in [*supported_insights, *quotes_final]
+                    if isinstance(item, dict) and _s(item.get("evidence_id")).strip()
+                }
+            ),
+            "confidence_note": (
+                "Metric spine available"
+                if metric_spine
+                else "Evidence-linked insights available"
+            ),
+        },
+        "recommendations": {
+            "schema_version": "1.0",
+            "status": "generated" if recommendations else "recommendations_not_found",
+            "items": recommendations,
+        },
+        "risks": {
+            "schema_version": "1.0",
+            "status": "generated" if risks else "risks_not_found",
+            "items": risks,
+        },
+        "coverage_diagnostics": {
+            "schema_version": "1.0",
+            "metric_spine_count": len(metric_spine),
+            "evidence_linked_insight_count": len(supported_insights),
+            "quote_count": len(quotes_final),
+        },
+        "audience_variants": {
+            "schema_version": "1.0",
+            "status": "not_requested",
+            "items": [],
+        },
+        "category_relevance": {
+            "schema_version": "1.0",
+            "status": "not_found",
+            "items": [],
+        },
+    }
 
 
 def _log_topic_brief_mapping_audit(

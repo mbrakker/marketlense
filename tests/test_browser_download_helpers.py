@@ -192,6 +192,14 @@ class NativeSelectFallbackPage(FakePage):
                 "attempted_count": 1,
                 "selected_count": 1,
                 "selected_fields": ["State"],
+                "selection_verification": [
+                    {
+                        "field_label": "State",
+                        "option_text": "Ontario",
+                        "mode": "first_enabled_option",
+                        "persisted": True,
+                    }
+                ],
                 "unresolved_fields": [],
                 "submitted": False,
                 "final_url": "https://publisher.example/form",
@@ -300,6 +308,14 @@ def test_form_autocomplete_helper_allows_first_non_placeholder_fallback(
     assert result.selected_count == 1
     assert result.unresolved_fields == ()
     assert result.selected_fields == ("State",)
+    assert result.selection_verification == (
+        {
+            "field_label": "State",
+            "option_text": "Ontario",
+            "mode": "first_enabled_option",
+            "persisted": True,
+        },
+    )
 
 
 def test_standard_form_submit_helper_submits_when_controls_already_resolved(
@@ -495,4 +511,3 @@ def test_js_promise_exception_and_unserializable_values(
     assert_app_error(exc_info.value, code="browser_helper_js_failed", retryable=False)
     assert exc_info.value.context["error_line"] == 7
     assert exc_info.value.context["error_column"] == 19
-

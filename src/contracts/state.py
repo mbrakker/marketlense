@@ -522,19 +522,29 @@ class WorkflowControlObservationListResponse:
 
 @dataclass(frozen=True)
 class MailDeliveryRequest:
-    schema_version: str = field(metadata={"doc": "Mail-delivery request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Mail-delivery request schema version."}
+    )
     request_id: int = field(metadata={"doc": "Durable state DB request identifier."})
     idempotency_key: str = field(
         metadata={"doc": "Stable key that prevents duplicate deferred mail requests."}
     )
     source_url: str = field(metadata={"doc": "Original gated report URL."})
-    report_title: str = field(metadata={"doc": "Report title used for delivery matching."})
-    publisher_name: str = field(metadata={"doc": "Publisher used for delivery matching."})
-    delivery_email: str = field(metadata={"doc": "Mailbox address submitted to the form."})
+    report_title: str = field(
+        metadata={"doc": "Report title used for delivery matching."}
+    )
+    publisher_name: str = field(
+        metadata={"doc": "Publisher used for delivery matching."}
+    )
+    delivery_email: str = field(
+        metadata={"doc": "Mailbox address submitted to the form."}
+    )
     requested_after_utc: str = field(
         metadata={"doc": "UTC watermark; older matching messages are ignored."}
     )
-    route_family: str = field(metadata={"doc": "Browser route family that requested mail."})
+    route_family: str = field(
+        metadata={"doc": "Browser route family that requested mail."}
+    )
     route_history_id: str = field(
         metadata={"doc": "Optional browser route-history identifier for provenance."}
     )
@@ -544,7 +554,9 @@ class MailDeliveryRequest:
     next_attempt_after_utc: str = field(
         metadata={"doc": "UTC timestamp when the request is eligible for another poll."}
     )
-    attempt_count: int = field(metadata={"doc": "Mailbox acquisition attempts consumed."})
+    attempt_count: int = field(
+        metadata={"doc": "Mailbox acquisition attempts consumed."}
+    )
     provider_cursor: str = field(
         metadata={"doc": "Provider-specific incremental cursor or watermark."}
     )
@@ -571,13 +583,21 @@ class MailDeliveryRequestUpsertRequest:
         metadata={"doc": "Stable key that prevents duplicate deferred mail requests."}
     )
     source_url: str = field(metadata={"doc": "Original gated report URL."})
-    report_title: str = field(metadata={"doc": "Report title used for delivery matching."})
-    publisher_name: str = field(metadata={"doc": "Publisher used for delivery matching."})
-    delivery_email: str = field(metadata={"doc": "Mailbox address submitted to the form."})
+    report_title: str = field(
+        metadata={"doc": "Report title used for delivery matching."}
+    )
+    publisher_name: str = field(
+        metadata={"doc": "Publisher used for delivery matching."}
+    )
+    delivery_email: str = field(
+        metadata={"doc": "Mailbox address submitted to the form."}
+    )
     requested_after_utc: str = field(
         metadata={"doc": "UTC watermark; older matching messages are ignored."}
     )
-    route_family: str = field(metadata={"doc": "Browser route family that requested mail."})
+    route_family: str = field(
+        metadata={"doc": "Browser route family that requested mail."}
+    )
     route_history_id: str = field(
         default="",
         metadata={"doc": "Optional browser route-history identifier for provenance."},
@@ -586,14 +606,18 @@ class MailDeliveryRequestUpsertRequest:
 
 @dataclass(frozen=True)
 class MailDeliveryRequestUpsertResponse:
-    schema_version: str = field(metadata={"doc": "Mail request upsert response version."})
+    schema_version: str = field(
+        metadata={"doc": "Mail request upsert response version."}
+    )
     request: MailDeliveryRequest = field(metadata={"doc": "Durable request row."})
     created: bool = field(metadata={"doc": "True when a new row was inserted."})
 
 
 @dataclass(frozen=True)
 class MailDeliveryRequestListDueRequest:
-    schema_version: str = field(metadata={"doc": "Due mail request list schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Due mail request list schema version."}
+    )
     state_db: str = field(metadata={"doc": "SQLite path for mail-delivery state."})
     now_utc: str = field(metadata={"doc": "UTC timestamp used for due filtering."})
     limit: int = field(default=50, metadata={"doc": "Maximum due rows to return."})
@@ -601,7 +625,9 @@ class MailDeliveryRequestListDueRequest:
 
 @dataclass(frozen=True)
 class MailDeliveryRequestListDueResponse:
-    schema_version: str = field(metadata={"doc": "Due mail request list response version."})
+    schema_version: str = field(
+        metadata={"doc": "Due mail request list response version."}
+    )
     requests: List[MailDeliveryRequest] = field(
         metadata={"doc": "Due pending mail-delivery requests ordered oldest first."}
     )
@@ -628,5 +654,57 @@ class MailDeliveryRequestMarkAttemptRequest:
 
 @dataclass(frozen=True)
 class MailDeliveryRequestMarkAttemptResponse:
-    schema_version: str = field(metadata={"doc": "Mail attempt update response version."})
+    schema_version: str = field(
+        metadata={"doc": "Mail attempt update response version."}
+    )
     request: MailDeliveryRequest = field(metadata={"doc": "Updated request row."})
+
+
+@dataclass(frozen=True)
+class MailboxCandidateRejection:
+    schema_version: str = field(
+        metadata={"doc": "Mailbox candidate rejection evidence schema version."}
+    )
+    rejection_id: int = field(metadata={"doc": "Durable rejection row ID."})
+    request_id: int = field(metadata={"doc": "Mail-delivery request scope."})
+    provider_message_id: str = field(metadata={"doc": "Mailbox provider message ID."})
+    sender: str = field(metadata={"doc": "Sanitized sender display."})
+    source_host: str = field(metadata={"doc": "Original request/source host."})
+    link_host: str = field(metadata={"doc": "Rejected candidate link host."})
+    publisher_affinity: str = field(metadata={"doc": "Publisher affinity decision."})
+    title_token_overlap: float = field(metadata={"doc": "Title-token overlap score."})
+    reason_code: str = field(metadata={"doc": "Stable rejection reason code."})
+    expires_at_utc: str = field(metadata={"doc": "TTL expiry timestamp."})
+    created_at_utc: str = field(metadata={"doc": "UTC creation timestamp."})
+
+
+@dataclass(frozen=True)
+class MailboxCandidateRejectionRecordRequest:
+    schema_version: str = field(metadata={"doc": "Rejection record request version."})
+    state_db: str = field(metadata={"doc": "SQLite state DB path."})
+    request_id: int = field(metadata={"doc": "Mail-delivery request scope."})
+    provider_message_id: str = field(metadata={"doc": "Mailbox provider message ID."})
+    sender: str = field(metadata={"doc": "Sanitized or raw sender display."})
+    source_host: str = field(metadata={"doc": "Original request/source host."})
+    link_host: str = field(metadata={"doc": "Rejected candidate link host."})
+    publisher_affinity: str = field(metadata={"doc": "Publisher affinity decision."})
+    title_token_overlap: float = field(metadata={"doc": "Title-token overlap score."})
+    reason_code: str = field(metadata={"doc": "Stable rejection reason code."})
+    expires_at_utc: str = field(metadata={"doc": "TTL expiry timestamp."})
+
+
+@dataclass(frozen=True)
+class MailboxCandidateRejectionListRequest:
+    schema_version: str = field(metadata={"doc": "Rejection list request version."})
+    state_db: str = field(metadata={"doc": "SQLite state DB path."})
+    request_id: int = field(metadata={"doc": "Mail-delivery request scope."})
+    now_utc: str = field(metadata={"doc": "UTC timestamp for TTL filtering."})
+    limit: int = field(default=50, metadata={"doc": "Maximum rows to return."})
+
+
+@dataclass(frozen=True)
+class MailboxCandidateRejectionListResponse:
+    schema_version: str = field(metadata={"doc": "Rejection list response version."})
+    rejections: List[MailboxCandidateRejection] = field(
+        metadata={"doc": "Active request-scoped mailbox candidate rejections."}
+    )

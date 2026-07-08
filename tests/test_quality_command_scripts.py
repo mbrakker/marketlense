@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from scripts.quality.autonomous_happy_path_smoke import (
+    run_autonomous_happy_path_smoke,
+)
 from scripts.ci.run_quality_gate import quality_gate_commands
 from scripts.ci.run_refactor_audit import refactor_audit_commands
+from scripts.quality.capability_maps import build_capability_maps, diff_capability_maps
 from scripts.ci.check_refactor_movement_evidence import validate_movement_evidence
 from scripts.ci.check_role_io_boundaries import scan_additional_role_io
 from scripts.ci.check_service_boundary_map import scan_service_boundary_map
@@ -94,3 +98,52 @@ def test_movement_evidence_requires_symbol_counts_and_facade_ownership() -> None
     )
 
     assert errors == []
+
+
+def test_capability_maps_include_side_effect_idempotency_and_failure_runbooks() -> None:
+    maps = build_capability_maps()
+
+    assert maps["schema_version"] == "1.0"
+    assert (
+        maps["external_systems"]["openai"]["canonical_service"]
+        == "src/services/llm_service.py"
+    )
+    assert (
+        maps["workflows"]["mail_acquisition"]["orchestrator"]
+        == "src/orchestrators/mail_report_acquisition_orchestrator.py"
+    )
+    assert maps["side_effects"]["wordpress_posts"]["idempotency_scope"]
+    assert maps["side_effects"]["mail_delivery_requests"]["idempotency_scope"]
+    assert maps["side_effects"]["mailbox_candidate_rejections"]["idempotency_scope"]
+    assert "mail_report_not_arrived_yet" in maps["failure_codes"]
+    assert "autonomous_happy_path" in maps["smoke_suites"]
+
+    stale = dict(maps)
+    stale["side_effects"] = dict(maps["side_effects"])
+    stale["side_effects"].pop("wordpress_posts")
+
+    assert diff_capability_maps(expected=maps, actual=stale) == [
+        "side_effects.wordpress_posts missing"
+    ]
+
+
+def test_autonomous_happy_path_smoke_runs_mailbox_workflow_and_route_memory(
+    tmp_path,
+) -> None:
+    payload = run_autonomous_happy_path_smoke(tmp_path)
+
+    assert payload["status"] == "passed"
+    assert payload["processed_count"] == 1
+    assert payload["succeeded_count"] == 1
+    assert payload["route_memory_promoted"] is True
+    assert payload["route_kind"] == "email_delivery"
+    assert payload["route_outcome"] == "downloaded"
+    assert payload["downloaded_file_size_bytes"] > 0
+
+    replay_payload = run_autonomous_happy_path_smoke(tmp_path)
+
+    assert replay_payload["status"] == "passed"
+    assert replay_payload["processed_count"] == 0
+    assert replay_payload["succeeded_count"] == 0
+    assert replay_payload["route_memory_promoted"] is True
+    assert replay_payload["idempotent_replay_confirmed"] is True

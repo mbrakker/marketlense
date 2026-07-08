@@ -17,6 +17,9 @@ from src.contracts.workflow_control import (
     ConcurrencyDecision,
     ConcurrencyLimit,
     ConcurrencyObservation,
+    MailDeliveryWorkflowItemResult,
+    MailDeliveryWorkflowRunRequest,
+    MailDeliveryWorkflowRunResult,
     ModelCallAuditRecord,
     ModelCallReplayBundle,
     OperationalMemoryRecommendation,
@@ -39,12 +42,24 @@ from src.contracts.workflow_control import (
     WorkflowRetryPolicyConfig,
     WorkflowTransition,
 )
+from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
+from src.contracts.state import (
+    MailDeliveryRequestListDueRequest,
+    MailDeliveryRequestMarkAttemptRequest,
+)
+from src.orchestrators.mail_report_acquisition_orchestrator import (
+    run_mail_report_acquisition,
+)
 from src.orchestrators.pipeline_preflight_orchestrator import (
     report_pipeline_prompt_namespaces,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.services.state_service import (
+    list_due_mail_delivery_requests,
+    mark_mail_delivery_request_attempt,
+)
 
 logger = logging.getLogger("market_lense.workflow_control_orchestrator")
 _T = TypeVar("_T")
@@ -769,6 +784,117 @@ def run_after_pre_llm_gate(
     return None
 
 
+def run_due_mail_delivery_requests(
+    request: MailDeliveryWorkflowRunRequest,
+    *,
+    ctx: RunContext,
+    run_mail_report_acquisition_fn: Callable[
+        [MailReportAcquisitionRequest, RunContext], Any
+    ] = run_mail_report_acquisition,
+) -> MailDeliveryWorkflowRunResult:
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_mail_delivery_run_start",
+            module=logger.name,
+            fields={
+                "state_db": request.state_db,
+                "now_utc": request.now_utc,
+                "limit": request.limit,
+            },
+        )
+    )
+    due = list_due_mail_delivery_requests(
+        MailDeliveryRequestListDueRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            now_utc=request.now_utc,
+            limit=request.limit,
+        ),
+        ctx,
+    )
+    results: list[MailDeliveryWorkflowItemResult] = []
+    for item in due.requests:
+        try:
+            acquisition = run_mail_report_acquisition_fn(
+                MailReportAcquisitionRequest(
+                    schema_version="1.0",
+                    source_url=item.source_url,
+                    report_title=item.report_title,
+                    publisher_name=item.publisher_name,
+                    delivery_email=item.delivery_email,
+                    reports_db=request.reports_db,
+                    mailbox_settings=request.mailbox_settings,
+                    browser_download_settings=request.browser_download_settings,
+                    requested_after_utc=item.requested_after_utc,
+                    seen_provider_message_ids=item.seen_provider_message_ids,
+                    workflow_request_id=item.request_id,
+                ),
+                ctx,
+            )
+            status = "succeeded"
+            error_code = ""
+            next_attempt = request.now_utc
+            outcome = acquisition.acquisition_result_taxonomy or acquisition.outcome
+            selected_message_id = acquisition.selected_message_id or ""
+            downloaded_file_path = acquisition.downloaded_file_path or ""
+            seen_ids = acquisition.seen_provider_message_ids
+        except AppError as exc:
+            status = "pending" if exc.retryable else "failed"
+            error_code = exc.code
+            next_attempt = request.now_utc if exc.retryable else ""
+            outcome = exc.code
+            selected_message_id = ""
+            downloaded_file_path = ""
+            seen_ids = item.seen_provider_message_ids
+        mark_mail_delivery_request_attempt(
+            MailDeliveryRequestMarkAttemptRequest(
+                schema_version="1.0",
+                state_db=request.state_db,
+                request_id=item.request_id,
+                status=status,
+                next_attempt_after_utc=next_attempt,
+                provider_cursor="",
+                seen_provider_message_ids=seen_ids,
+                outcome=outcome,
+                selected_message_id=selected_message_id,
+                downloaded_file_path=downloaded_file_path,
+                error_code=error_code,
+            ),
+            ctx,
+        )
+        results.append(
+            MailDeliveryWorkflowItemResult(
+                schema_version="1.0",
+                request_id=item.request_id,
+                status=status,
+                outcome=outcome,
+                selected_message_id=selected_message_id,
+                downloaded_file_path=downloaded_file_path,
+                error_code=error_code,
+            )
+        )
+    run_result = MailDeliveryWorkflowRunResult(
+        schema_version="1.0",
+        processed_count=len(results),
+        succeeded_count=sum(1 for item in results if item.status == "succeeded"),
+        deferred_count=sum(1 for item in results if item.status == "pending"),
+        failed_count=sum(1 for item in results if item.status == "failed"),
+        results=results,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_mail_delivery_run_complete",
+            module=logger.name,
+            fields=asdict(run_result),
+        )
+    )
+    return run_result
+
+
 def resolve_all_adaptive_concurrency(
     settings: WorkflowControlSettings,
     observations: dict[str, ConcurrencyObservation],
@@ -1109,6 +1235,9 @@ __all__ = [
     "ConcurrencyObservation",
     "ModelCallAuditRecord",
     "ModelCallReplayBundle",
+    "MailDeliveryWorkflowItemResult",
+    "MailDeliveryWorkflowRunRequest",
+    "MailDeliveryWorkflowRunResult",
     "OperationalMemoryRecommendation",
     "OperationalMemoryRecord",
     "OperationalObservation",
@@ -1142,4 +1271,5 @@ __all__ = [
     "resolve_retry_policy",
     "resolve_workflow_contract",
     "run_after_pre_llm_gate",
+    "run_due_mail_delivery_requests",
 ]

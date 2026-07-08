@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
@@ -30,6 +31,16 @@ from src.generators.mail_report_acquisition_generator import (
     select_mail_report_link_candidates,
 )
 from src.services.mailbox_acquisition_service import materialize_mailbox_attachments
+from src.services.report_store_service import get_publisher_download_route
+from src.contracts.report_store import PublisherDownloadRouteGetRequest
+from src.contracts.state import (
+    MailboxCandidateRejectionListRequest,
+    MailboxCandidateRejectionRecordRequest,
+)
+from src.services.state_service import (
+    list_mailbox_candidate_rejections,
+    record_mailbox_candidate_rejection,
+)
 from src.utils.errors import AppError
 
 
@@ -241,7 +252,10 @@ def test_mail_report_acquisition_polls_until_delayed_report_link_arrives(
 
     assert result.outcome == "downloaded"
     assert result.mailbox_poll_count == 2
-    assert result.selected_report_url == "https://reports.example.com/retail-trends-2026.pdf"
+    assert (
+        result.selected_report_url
+        == "https://reports.example.com/retail-trends-2026.pdf"
+    )
     assert result.downloaded_file_path == str(tmp_path / "report.pdf")
     assert sleeps == [30.0]
     assert len(downloads) == 1
@@ -282,9 +296,7 @@ def test_mail_report_acquisition_returns_retryable_error_when_mail_is_delayed(
                 publisher_name="Example Reports",
                 delivery_email="reports@example.com",
                 reports_db=str(tmp_path / "reports.sqlite"),
-                mailbox_settings=_mailbox_settings(
-                    tmp_path, poll_timeout_seconds=0.0
-                ),
+                mailbox_settings=_mailbox_settings(tmp_path, poll_timeout_seconds=0.0),
                 browser_download_settings=_browser_settings(tmp_path),
             ),
             ctx=run_context,
@@ -326,7 +338,9 @@ def test_mail_report_acquisition_stops_on_retryable_candidate_download_error(
             ],
         ),
         run_report_download=download,
-        sleep_fn=lambda seconds: pytest.fail("retryable candidate failure should surface"),
+        sleep_fn=lambda seconds: pytest.fail(
+            "retryable candidate failure should surface"
+        ),
     )
 
     with pytest.raises(AppError) as exc_info:
@@ -347,8 +361,137 @@ def test_mail_report_acquisition_stops_on_retryable_candidate_download_error(
 
     assert exc_info.value.code == "mail_report_candidate_download_retryable_failed"
     assert exc_info.value.retryable is True
-    assert exc_info.value.context["candidate_error_code"] == "browser_download_agent_timeout"
+    assert (
+        exc_info.value.context["candidate_error_code"]
+        == "browser_download_agent_timeout"
+    )
     assert len(downloads) == 1
+
+
+def test_mail_report_acquisition_suppresses_persisted_rejected_candidates(
+    tmp_path, run_context
+):
+    state_db = str(tmp_path / "state.sqlite")
+    record_mailbox_candidate_rejection(
+        MailboxCandidateRejectionRecordRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            request_id=42,
+            provider_message_id="msg-1",
+            sender="Reports <sender@example.com>",
+            source_host="example.com",
+            link_host="reports.example.com",
+            publisher_affinity="download_failed",
+            title_token_overlap=0.5,
+            reason_code="browser_download_permanent_failure",
+            expires_at_utc="2099-01-01T00:00:00Z",
+        ),
+        run_context,
+    )
+    settings = replace(_browser_settings(tmp_path), state_db=state_db)
+    deps = MailReportAcquisitionDependencies(
+        search_mailbox_messages=lambda req, ctx: MailboxSearchResult(
+            schema_version="1.0",
+            provider="gmail",
+            searched_at_utc="2026-07-04T11:10:00Z",
+            query="",
+            messages=[
+                _message(
+                    links=[
+                        "https://reports.example.com/retail-trends-2026.pdf",
+                    ]
+                )
+            ],
+        ),
+        run_report_download=lambda req, ctx: pytest.fail(
+            "suppressed rejected candidate should not download"
+        ),
+        sleep_fn=lambda seconds: None,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_mail_report_acquisition(
+            MailReportAcquisitionRequest(
+                schema_version="1.0",
+                source_url="https://example.com/report-form",
+                report_title="Retail Trends 2026",
+                publisher_name="Example Reports",
+                delivery_email="reports@example.com",
+                reports_db=str(tmp_path / "reports.sqlite"),
+                mailbox_settings=_mailbox_settings(tmp_path, poll_timeout_seconds=0.0),
+                browser_download_settings=settings,
+                workflow_request_id=42,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "mail_report_not_arrived_yet"
+
+
+def test_mail_report_acquisition_records_permanent_candidate_rejection(
+    tmp_path, run_context
+):
+    state_db = str(tmp_path / "state.sqlite")
+    settings = replace(_browser_settings(tmp_path), state_db=state_db)
+
+    def download(req, ctx):
+        raise AppError(
+            code="browser_download_permanent_failure",
+            message="Candidate link is not a report artifact",
+            retryable=False,
+            severity="warning",
+        )
+
+    deps = MailReportAcquisitionDependencies(
+        search_mailbox_messages=lambda req, ctx: MailboxSearchResult(
+            schema_version="1.0",
+            provider="gmail",
+            searched_at_utc="2026-07-04T11:10:00Z",
+            query="",
+            messages=[
+                _message(
+                    links=[
+                        "https://reports.example.com/retail-trends-2026.pdf",
+                    ]
+                )
+            ],
+        ),
+        run_report_download=download,
+        sleep_fn=lambda seconds: None,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_mail_report_acquisition(
+            MailReportAcquisitionRequest(
+                schema_version="1.0",
+                source_url="https://example.com/report-form",
+                report_title="Retail Trends 2026",
+                publisher_name="Example Reports",
+                delivery_email="reports@example.com",
+                reports_db=str(tmp_path / "reports.sqlite"),
+                mailbox_settings=_mailbox_settings(tmp_path, poll_timeout_seconds=0.0),
+                browser_download_settings=settings,
+                workflow_request_id=42,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "mail_report_not_arrived_yet"
+    rejections = list_mailbox_candidate_rejections(
+        MailboxCandidateRejectionListRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            request_id=42,
+            now_utc="2026-07-08T00:00:00Z",
+            limit=10,
+        ),
+        run_context,
+    )
+    assert len(rejections.rejections) == 1
+    assert rejections.rejections[0].reason_code == "browser_download_permanent_failure"
+    assert rejections.rejections[0].link_host == "reports.example.com"
 
 
 def test_mail_report_acquisition_ignores_unrelated_mail_links(tmp_path, run_context):
@@ -380,9 +523,7 @@ def test_mail_report_acquisition_ignores_unrelated_mail_links(tmp_path, run_cont
                 publisher_name="Example Reports",
                 delivery_email="reports@example.com",
                 reports_db=str(tmp_path / "reports.sqlite"),
-                mailbox_settings=_mailbox_settings(
-                    tmp_path, poll_timeout_seconds=0.0
-                ),
+                mailbox_settings=_mailbox_settings(tmp_path, poll_timeout_seconds=0.0),
                 browser_download_settings=_browser_settings(tmp_path),
             ),
             ctx=run_context,
@@ -395,7 +536,9 @@ def test_mail_report_acquisition_ignores_unrelated_mail_links(tmp_path, run_cont
 def test_mail_report_link_candidates_include_opaque_publisher_download_cta(
     run_context,
 ) -> None:
-    webview_url = "https://grow.bigcommerce.com/index.php/email/emailWebview?mkt_tok=token"
+    webview_url = (
+        "https://grow.bigcommerce.com/index.php/email/emailWebview?mkt_tok=token"
+    )
     download_url = "https://about.bigcommerce.com/opaque-token"
     unsubscribe_url = "https://about.bigcommerce.com/unsubscribe"
     message = MailboxMessage(
@@ -549,7 +692,10 @@ def test_mail_report_acquisition_ignores_matching_messages_before_request_waterm
     )
 
     assert result.selected_message_id == "new-msg"
-    assert result.selected_report_url == "https://reports.example.com/new-retail-trends-2026.pdf"
+    assert (
+        result.selected_report_url
+        == "https://reports.example.com/new-retail-trends-2026.pdf"
+    )
     assert len(downloads) == 1
 
 
@@ -572,7 +718,9 @@ def test_mail_report_acquisition_acquires_matching_pdf_attachment_without_link_f
                 )
             ],
         ),
-        run_report_download=lambda req, ctx: pytest.fail("link download should not run"),
+        run_report_download=lambda req, ctx: pytest.fail(
+            "link download should not run"
+        ),
         sleep_fn=lambda seconds: None,
     )
 
@@ -595,6 +743,65 @@ def test_mail_report_acquisition_acquires_matching_pdf_attachment_without_link_f
     assert result.selected_message_id == "msg-attachment"
     assert result.downloaded_file_path == str(attachment_path)
     assert result.acquisition_result_taxonomy == "mailbox_attachment_pdf"
+
+
+def test_mail_report_acquisition_promotes_attachment_success_to_route_memory(
+    tmp_path, run_context
+):
+    attachment_path = tmp_path / "retail-trends-2026.pdf"
+    attachment_path.write_bytes(b"%PDF-1.7 attachment report")
+    reports_db = str(tmp_path / "reports.sqlite")
+    source_url = "https://example.com/report-form"
+    deps = MailReportAcquisitionDependencies(
+        search_mailbox_messages=lambda req, ctx: MailboxSearchResult(
+            schema_version="1.0",
+            provider="imap",
+            searched_at_utc="2026-07-04T11:12:00Z",
+            query="",
+            messages=[
+                _message_with_attachment_artifact(
+                    provider_message_id="msg-attachment",
+                    received_at_utc="2026-07-04T11:09:00Z",
+                    attachment_path=str(attachment_path),
+                )
+            ],
+        ),
+        run_report_download=lambda req, ctx: pytest.fail(
+            "link download should not run"
+        ),
+        sleep_fn=lambda seconds: None,
+    )
+
+    run_mail_report_acquisition(
+        MailReportAcquisitionRequest(
+            schema_version="1.0",
+            source_url=source_url,
+            report_title="Retail Trends 2026",
+            publisher_name="Example Reports",
+            delivery_email="reports@example.com",
+            reports_db=reports_db,
+            mailbox_settings=_mailbox_settings(tmp_path),
+            browser_download_settings=_browser_settings(tmp_path),
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    route = get_publisher_download_route(
+        PublisherDownloadRouteGetRequest(
+            schema_version="1.0",
+            db_path=reports_db,
+            normalized_url=source_url,
+        ),
+        run_context,
+    )
+
+    assert route is not None
+    assert route.route_kind == "email_delivery"
+    assert route.outcome == "downloaded"
+    assert route.route_status == "verified"
+    assert route.last_downloaded_file_path == str(attachment_path)
+    assert route.terminal_evidence.artifact_kind == "mailbox_attachment_pdf"
 
 
 def test_mailbox_service_materializes_attached_zip_pdfs(tmp_path, run_context):

@@ -89,27 +89,27 @@ def _remembered_unattended_blocker_result(
         ]
     ).casefold()
     is_interactive_captcha = (
-        ("captcha" in remembered_text or "recaptcha" in remembered_text)
-        and any(
-            marker in remembered_text
-            for marker in (
-                "interactive",
-                "challenge",
-                "not a robot",
-                "human verification",
-                "verify you are human",
-            )
+        "captcha" in remembered_text or "recaptcha" in remembered_text
+    ) and any(
+        marker in remembered_text
+        for marker in (
+            "interactive",
+            "challenge",
+            "not a robot",
+            "human verification",
+            "verify you are human",
         )
     )
     is_access_forbidden = (
-        ("http 403" in remembered_text or "403 forbidden" in remembered_text)
-        and any(
-            marker in remembered_text
-            for marker in ("access", "forbidden", "inaccessible", "prevented")
-        )
+        "http 403" in remembered_text or "403 forbidden" in remembered_text
+    ) and any(
+        marker in remembered_text
+        for marker in ("access", "forbidden", "inaccessible", "prevented")
     )
     if is_interactive_captcha:
-        detail = "Remembered exact route is blocked by an interactive CAPTCHA challenge."
+        detail = (
+            "Remembered exact route is blocked by an interactive CAPTCHA challenge."
+        )
         target_text = "interactive CAPTCHA"
         blocker_title = "Interactive CAPTCHA blocker"
         signal_labels = ["remembered_interactive_captcha"]
@@ -120,7 +120,9 @@ def _remembered_unattended_blocker_result(
         ]
         blocked_reason = "blocked_captcha"
     elif is_access_forbidden:
-        detail = "Remembered exact route is blocked by HTTP 403 Forbidden access control."
+        detail = (
+            "Remembered exact route is blocked by HTTP 403 Forbidden access control."
+        )
         target_text = "HTTP 403 Forbidden"
         blocker_title = "HTTP 403 access blocker"
         signal_labels = ["remembered_access_forbidden"]
@@ -316,7 +318,9 @@ def _attempt_captcha_manual_handoff(
     browser_preflight_response: Any,
     fallback_result: BrowserReportDownloadResult,
 ) -> BrowserReportDownloadResult:
-    timeout_seconds = max(float(request.settings.captcha_handoff_policy.timeout_seconds), 1.0)
+    timeout_seconds = max(
+        float(request.settings.captcha_handoff_policy.timeout_seconds), 1.0
+    )
     handoff_request = _with_captcha_handoff_request(request)
     if not handoff_request.selected_playbooks:
         handoff_request = attach_browser_route_playbooks(
@@ -591,10 +595,7 @@ def download_report_with_browser_use(
     should_try_direct_pdf_fetch = (
         request.route_family_hint == "direct_pdf_probe"
         or url_looks_like_direct_pdf(normalized_execution_url)
-        or (
-            doc_type_prediction.predicted_doc_type == "direct_pdf"
-            and not str(request.route_family_hint or "").strip().startswith("browser_")
-        )
+        or doc_type_prediction.predicted_doc_type == "direct_pdf"
     )
     if should_try_direct_pdf_fetch:
         direct_pdf_result = try_direct_pdf_download(

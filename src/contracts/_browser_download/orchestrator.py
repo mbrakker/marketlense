@@ -1,15 +1,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING
 
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 
 if TYPE_CHECKING:
     from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
+else:
+    MailboxAcquisitionSettings = Any
 
 from .identity import BrowserDownloadSettings
-from .runtime import BrowserDownloadConfirmationEvidence, BrowserDownloadRouteStep, DownloadTerminalEvidence, ReportDownloadDriveUpload
+from .runtime import (
+    BrowserDownloadConfirmationEvidence,
+    BrowserDownloadRouteStep,
+    DownloadTerminalEvidence,
+    ReportDownloadDriveUpload,
+)
+
 
 @dataclass(frozen=True)
 class ReportDownloadOrchestratorRequest:
@@ -225,4 +233,3 @@ class ReportDownloadOrchestratorResult:
             "doc": "Drive archival results for successful local terminal artifacts."
         },
     )
-

@@ -52,6 +52,45 @@
         }
       }
     },
+    "metric_spine": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["schema_version", "metric_id", "label", "value", "unit", "evidence_id"],
+        "properties": {
+          "schema_version": { "type": "string" },
+          "metric_id": { "type": "string" },
+          "label": { "type": "string" },
+          "value": { "type": "string" },
+          "unit": { "type": "string" },
+          "timeframe": { "type": "string" },
+          "segment": { "type": "string" },
+          "geography": { "type": "string" },
+          "comparator": { "type": "string" },
+          "baseline": { "type": "string" },
+          "delta": { "type": "string" },
+          "sample_size": { "type": "string" },
+          "confidence": { "type": "string" },
+          "missing_context_notes": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "evidence_id": { "type": "string" }
+        }
+      }
+    },
+    "executive_advisory": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "type": "string" },
+        "decision_brief": { "type": "object" },
+        "recommendations": { "type": "object" },
+        "risks": { "type": "object" },
+        "coverage_diagnostics": { "type": "object" },
+        "audience_variants": { "type": "object" },
+        "category_relevance": { "type": "object" }
+      }
+    },
     "summary": {
       "type": "object",
       "required": ["tldr", "card_tldr_compact", "executive_summary", "claim_evidence_map"],

@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal
 
+from src.contracts.browser_download import BrowserDownloadSettings
+from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
+
 WorkflowGateOutcome = Literal[
     "proceed",
     "skip_duplicate",
@@ -532,6 +535,48 @@ class ModelCallReplayBundle:
         metadata={
             "doc": "False unless an explicit operator override enables live replay."
         }
+    )
+
+
+@dataclass(frozen=True)
+class MailDeliveryWorkflowRunRequest:
+    schema_version: str = field(
+        metadata={"doc": "Mail-delivery workflow run request schema version."}
+    )
+    state_db: str = field(metadata={"doc": "SQLite state DB path."})
+    reports_db: str = field(metadata={"doc": "Report metadata DB path."})
+    mailbox_settings: MailboxAcquisitionSettings = field(
+        metadata={"doc": "Mailbox acquisition settings."}
+    )
+    browser_download_settings: BrowserDownloadSettings = field(
+        metadata={"doc": "Browser-download settings for delivered links."}
+    )
+    now_utc: str = field(metadata={"doc": "UTC due-list timestamp."})
+    limit: int = field(default=20, metadata={"doc": "Maximum due requests to process."})
+
+
+@dataclass(frozen=True)
+class MailDeliveryWorkflowItemResult:
+    schema_version: str = field(metadata={"doc": "Mail-delivery item result version."})
+    request_id: int = field(metadata={"doc": "State DB mail request ID."})
+    status: str = field(metadata={"doc": "Updated status."})
+    outcome: str = field(metadata={"doc": "Acquisition outcome or error taxonomy."})
+    selected_message_id: str = field(metadata={"doc": "Selected mailbox message ID."})
+    downloaded_file_path: str = field(metadata={"doc": "Acquired artifact path."})
+    error_code: str = field(metadata={"doc": "Typed error code, if any."})
+
+
+@dataclass(frozen=True)
+class MailDeliveryWorkflowRunResult:
+    schema_version: str = field(
+        metadata={"doc": "Mail-delivery workflow run result schema version."}
+    )
+    processed_count: int = field(metadata={"doc": "Due rows attempted."})
+    succeeded_count: int = field(metadata={"doc": "Rows that succeeded."})
+    deferred_count: int = field(metadata={"doc": "Rows deferred for retry."})
+    failed_count: int = field(metadata={"doc": "Rows marked failed."})
+    results: list[MailDeliveryWorkflowItemResult] = field(
+        metadata={"doc": "Per-request workflow results."}
     )
 
 

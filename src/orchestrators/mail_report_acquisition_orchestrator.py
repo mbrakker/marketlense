@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Callable
+from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
+    BrowserDownloadRouteStep,
+    DownloadTerminalEvidence,
     ReportDownloadOrchestratorRequest,
     ReportDownloadOrchestratorResult,
 )
@@ -18,12 +23,25 @@ from src.contracts.mailbox_acquisition import (
     MailboxSearchResult,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.report_store import PublisherDownloadRouteRecordRequest
+from src.contracts.state import (
+    MailboxCandidateRejection,
+    MailboxCandidateRejectionListRequest,
+    MailboxCandidateRejectionRecordRequest,
+)
 from src.generators.mail_report_acquisition_generator import (
     build_mailbox_query_terms,
     select_mail_report_link_candidates,
 )
 from src.orchestrators.report_download_orchestrator import run_report_download
 from src.services.mailbox_acquisition_service import search_mailbox_messages
+from src.services.report_store_service import (
+    record_publisher_download_route as record_publisher_download_route_service,
+)
+from src.services.state_service import (
+    list_mailbox_candidate_rejections,
+    record_mailbox_candidate_rejection,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -40,6 +58,15 @@ class MailReportAcquisitionDependencies:
         ReportDownloadOrchestratorResult,
     ]
     sleep_fn: Callable[[float], None]
+    record_publisher_download_route: Callable[
+        [PublisherDownloadRouteRecordRequest, RunContext], object
+    ] = record_publisher_download_route_service
+    list_mailbox_candidate_rejections: Callable[
+        [MailboxCandidateRejectionListRequest, RunContext], object
+    ] = list_mailbox_candidate_rejections
+    record_mailbox_candidate_rejection: Callable[
+        [MailboxCandidateRejectionRecordRequest, RunContext], object
+    ] = record_mailbox_candidate_rejection
 
     @classmethod
     def default(cls) -> "MailReportAcquisitionDependencies":
@@ -47,6 +74,9 @@ class MailReportAcquisitionDependencies:
             search_mailbox_messages=search_mailbox_messages,
             run_report_download=lambda req, ctx: run_report_download(req, ctx=ctx),
             sleep_fn=time.sleep,
+            record_publisher_download_route=record_publisher_download_route_service,
+            list_mailbox_candidate_rejections=list_mailbox_candidate_rejections,
+            record_mailbox_candidate_rejection=record_mailbox_candidate_rejection,
         )
 
 
@@ -121,12 +151,28 @@ def run_mail_report_acquisition(
             ctx=ctx,
         )
         if attachment_result is not None:
+            _promote_mailbox_delivery_route_memory(
+                request=request,
+                response=attachment_result,
+                ctx=ctx,
+                record_route=deps.record_publisher_download_route,
+            )
             return attachment_result
         candidates = select_mail_report_link_candidates(
             messages=messages,
             source_url=request.source_url,
             report_title=request.report_title,
             publisher_name=request.publisher_name,
+            ctx=ctx,
+        )
+        rejections = _active_mailbox_candidate_rejections(
+            request=request,
+            ctx=ctx,
+            list_rejections=deps.list_mailbox_candidate_rejections,
+        )
+        candidates = _suppress_rejected_mailbox_candidates(
+            candidates=candidates,
+            rejections=rejections,
             ctx=ctx,
         )
         last_candidate_count = len(candidates)
@@ -186,6 +232,13 @@ def run_mail_report_acquisition(
                             "candidate_error_code": exc.code,
                         },
                     ) from exc
+                _record_mailbox_candidate_rejection(
+                    request=request,
+                    candidate=candidate,
+                    error_code=exc.code,
+                    ctx=ctx,
+                    record_rejection=deps.record_mailbox_candidate_rejection,
+                )
                 continue
             if download_result.outcome in {"downloaded", "captured"}:
                 response = MailReportAcquisitionResult(
@@ -214,10 +267,15 @@ def run_mail_report_acquisition(
                             "outcome": response.outcome,
                             "mailbox_poll_count": response.mailbox_poll_count,
                             "selected_report_url": response.selected_report_url or "",
-                            "downloaded_file_path": response.downloaded_file_path
-                            or "",
+                            "downloaded_file_path": response.downloaded_file_path or "",
                         },
                     )
+                )
+                _promote_mailbox_delivery_route_memory(
+                    request=request,
+                    response=response,
+                    ctx=ctx,
+                    record_route=deps.record_publisher_download_route,
                 )
                 return response
         remaining = deadline - time.monotonic()
@@ -421,6 +479,287 @@ def _taxonomy_for_download_result(
     if "cloud" in result.route_family:
         return "mailbox_cloud_link"
     return "mailbox_download_link"
+
+
+def _promote_mailbox_delivery_route_memory(
+    *,
+    request: MailReportAcquisitionRequest,
+    response: MailReportAcquisitionResult,
+    ctx: RunContext,
+    record_route: Callable[[PublisherDownloadRouteRecordRequest, RunContext], object],
+) -> None:
+    reports_db = str(request.reports_db or "").strip()
+    source_url = str(request.source_url or "").strip()
+    if not reports_db or not source_url:
+        return
+    download_result = response.report_download_result
+    terminal_kind = response.acquisition_result_taxonomy or "mailbox_delivery"
+    final_page_url = (
+        (download_result.final_page_url if download_result else None)
+        or response.selected_report_url
+        or source_url
+    )
+    resolved_target_url = (
+        (download_result.resolved_target_url if download_result else None)
+        or response.selected_report_url
+        or source_url
+    )
+    downloaded_path = (
+        download_result.downloaded_file_path if download_result else None
+    ) or response.downloaded_file_path
+    route_steps = (
+        list(download_result.route_steps)
+        if download_result is not None
+        else [
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="poll_mailbox",
+                target_text=request.publisher_name or request.report_title,
+                target_role="mailbox",
+                target_url=source_url,
+                result="completed",
+            )
+        ]
+    )
+    confirmation_evidence = (
+        download_result.confirmation_evidence
+        if download_result is not None
+        else BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=False,
+            visible_confirmation_text="Report delivered through configured mailbox.",
+            submit_button_state="submitted",
+            form_disappeared=True,
+            final_page_url=final_page_url,
+            confirmation_score=3,
+            signal_labels=["mailbox_delivery", terminal_kind],
+        )
+    )
+    terminal_evidence = (
+        download_result.terminal_evidence
+        if download_result is not None
+        else DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url=final_page_url,
+            final_page_title="",
+            terminal_text_excerpt="Report delivered through configured mailbox.",
+            artifact_url=downloaded_path or final_page_url,
+            artifact_kind=terminal_kind,
+            artifact_validation_status="confirmed",
+            artifact_validation_detail="Mailbox delivery produced a local report artifact.",
+            confirmation_signal_count=2,
+            traversed_page_urls=[source_url],
+            evidence_labels=["mailbox_delivery", terminal_kind],
+        )
+    )
+    record_route(
+        PublisherDownloadRouteRecordRequest(
+            schema_version="1.0",
+            db_path=reports_db,
+            normalized_url=source_url,
+            source_url=source_url,
+            route_kind="email_delivery",
+            route_summary=(
+                "Use the configured mailbox-delivery workflow before browser launch; "
+                "a previous request delivered the report successfully."
+            ),
+            outcome="downloaded"
+            if response.outcome == "downloaded_attachment"
+            else response.outcome,
+            route_family="mailbox_delivery",
+            route_status="verified",
+            resolved_target_url=resolved_target_url,
+            route_steps=route_steps,
+            confirmation_evidence=confirmation_evidence,
+            terminal_evidence=terminal_evidence,
+            browser_had_structured_result=bool(
+                download_result.browser_had_structured_result
+                if download_result is not None
+                else True
+            ),
+            used_candidate_pdf_url=bool(
+                download_result.used_candidate_pdf_url
+                if download_result is not None
+                else False
+            ),
+            used_candidate_source_page=bool(
+                download_result.used_candidate_source_page
+                if download_result is not None
+                else False
+            ),
+            candidate_pdf_url=response.selected_report_url,
+            candidate_source_page_urls=[source_url],
+            candidate_discovery_provenances=["mailbox_delivery"],
+            blocked_reason=None,
+            blocked_reason_detail=None,
+            last_downloaded_file_path=downloaded_path,
+            last_final_page_url=final_page_url,
+            onsite_capture_path=(
+                download_result.onsite_capture_path
+                if download_result is not None
+                else None
+            ),
+            onsite_capture_format=(
+                download_result.onsite_capture_format
+                if download_result is not None
+                else None
+            ),
+            onsite_page_count=(
+                download_result.onsite_page_count
+                if download_result is not None
+                else None
+            ),
+            onsite_completeness_status=(
+                download_result.onsite_completeness_status
+                if download_result is not None
+                else None
+            ),
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="mail_report_route_memory_promoted",
+            module=logger.name,
+            fields={
+                "source_url": source_url,
+                "outcome": response.outcome,
+                "taxonomy": terminal_kind,
+            },
+        )
+    )
+
+
+def _active_mailbox_candidate_rejections(
+    *,
+    request: MailReportAcquisitionRequest,
+    ctx: RunContext,
+    list_rejections: Callable[
+        [MailboxCandidateRejectionListRequest, RunContext], object
+    ],
+) -> list[MailboxCandidateRejection]:
+    if request.workflow_request_id <= 0:
+        return []
+    state_db = str(request.browser_download_settings.state_db or "").strip()
+    if not state_db:
+        return []
+    response = list_rejections(
+        MailboxCandidateRejectionListRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            request_id=request.workflow_request_id,
+            now_utc=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            limit=50,
+        ),
+        ctx,
+    )
+    return list(getattr(response, "rejections", []) or [])
+
+
+def _suppress_rejected_mailbox_candidates(
+    *,
+    candidates: list,
+    rejections: list[MailboxCandidateRejection],
+    ctx: RunContext,
+) -> list:
+    if not candidates or not rejections:
+        return candidates
+    rejected_keys = {
+        (
+            str(item.provider_message_id or "").casefold(),
+            str(item.link_host or "").casefold(),
+        )
+        for item in rejections
+    }
+    selected = [
+        candidate
+        for candidate in candidates
+        if (
+            candidate.provider_message_id.casefold(),
+            _host(candidate.url).casefold(),
+        )
+        not in rejected_keys
+    ]
+    skipped_count = len(candidates) - len(selected)
+    if skipped_count:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="mail_report_candidate_rejections_suppressed",
+                module=logger.name,
+                fields={
+                    "input_candidate_count": len(candidates),
+                    "selected_candidate_count": len(selected),
+                    "skipped_candidate_count": skipped_count,
+                },
+            )
+        )
+    return selected
+
+
+def _record_mailbox_candidate_rejection(
+    *,
+    request: MailReportAcquisitionRequest,
+    candidate,
+    error_code: str,
+    ctx: RunContext,
+    record_rejection: Callable[
+        [MailboxCandidateRejectionRecordRequest, RunContext], object
+    ],
+) -> None:
+    if request.workflow_request_id <= 0:
+        return
+    state_db = str(request.browser_download_settings.state_db or "").strip()
+    if not state_db:
+        return
+    expires_at = (
+        (datetime.now(timezone.utc) + timedelta(days=7))
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    record_rejection(
+        MailboxCandidateRejectionRecordRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            request_id=request.workflow_request_id,
+            provider_message_id=candidate.provider_message_id,
+            sender="",
+            source_host=_host(request.source_url),
+            link_host=_host(candidate.url),
+            publisher_affinity="download_failed",
+            title_token_overlap=_title_token_overlap(
+                title=request.report_title,
+                value=candidate.url,
+            ),
+            reason_code=error_code,
+            expires_at_utc=expires_at,
+        ),
+        ctx,
+    )
+
+
+def _host(value: str) -> str:
+    return str(urlsplit(str(value or "").strip()).hostname or "").lower()
+
+
+def _title_token_overlap(*, title: str, value: str) -> float:
+    title_tokens = _tokens(title)
+    if not title_tokens:
+        return 0.0
+    value_tokens = _tokens(value)
+    return round(len(title_tokens & value_tokens) / len(title_tokens), 3)
+
+
+def _tokens(value: str) -> set[str]:
+    return {
+        token
+        for token in re.split(r"[^a-z0-9]+", str(value or "").casefold())
+        if len(token) >= 4
+    }
 
 
 def _parse_requested_after_utc(value: str | None) -> datetime | None:

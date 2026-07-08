@@ -109,11 +109,17 @@ class BrowserHelperAutocompleteResult:
         default_factory=tuple,
         metadata={
             "doc": "Labels for required autocomplete fields that still did not verify."
-        }
+        },
     )
     selected_fields: tuple[str, ...] = field(
         default_factory=tuple,
-        metadata={"doc": "Labels for autocomplete fields that verified successfully."}
+        metadata={"doc": "Labels for autocomplete fields that verified successfully."},
+    )
+    selection_verification: tuple[dict[str, object], ...] = field(
+        default_factory=tuple,
+        metadata={
+            "doc": "Per-field verification evidence for selected lookup/select controls."
+        },
     )
     final_url: str = field(
         default="",
@@ -143,13 +149,17 @@ class BrowserHelperStandardFormSubmitResult:
         metadata={"doc": "Number of standard form controls inspected for repair."}
     )
     filled_count: int = field(
-        metadata={"doc": "Number of text-like controls filled from configured identity."}
+        metadata={
+            "doc": "Number of text-like controls filled from configured identity."
+        }
     )
     selected_count: int = field(
         metadata={"doc": "Number of native select controls set and verified."}
     )
     mandatory_agreement_checked_count: int = field(
-        metadata={"doc": "Number of mandatory legal/report-delivery checkboxes checked."}
+        metadata={
+            "doc": "Number of mandatory legal/report-delivery checkboxes checked."
+        }
     )
     submitted: bool = field(
         metadata={"doc": "Whether the helper clicked a submit control after repair."}
@@ -168,10 +178,11 @@ class BrowserHelperStandardFormSubmitResult:
     )
     blocker_code: Optional[str] = field(
         default=None,
-        metadata={"doc": "Typed blocker code when required controls remain unresolved."},
+        metadata={
+            "doc": "Typed blocker code when required controls remain unresolved."
+        },
     )
     error: str = field(
         default="",
         metadata={"doc": "Sanitized helper failure detail when status is `failed`."},
     )
-

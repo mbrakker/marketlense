@@ -8,13 +8,15 @@ text: |
     "summary": {
       "tldr": "<one complete sentence, maximum 45 words>",
       "card_tldr_compact": "<one complete sentence, maximum 18 words>",
-      "executive_summary": "<5-7 sentence executive summary grounded in evidence, include key conclusions and insights>",
+      "executive_summary": "<5-7 sentence executive summary grounded in evidence: lead with the answer, quantify the most important movement, state the executive implication, then name the main caveat or limitation when present>",
       "claim_evidence_map": [
         {"claim": "<concise claim>", "evidence_id": "<single existing evidence id from findings/quotes/doc map>", "evidence": "<supporting excerpt or paraphrase>", "pages": [<page numbers if known>]}
       ]
     }
   }
   - Keep claims specific and tied to evidence identifiers present in the provided context.
+  - Write for executives: answer "so what" before background, prefer decisions and tradeoffs over descriptive recap.
+  - Include no more than one caveat, and only when the evidence explicitly supports it.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.
   - evidence_id must be one ID only (no arrays or comma-separated values); if uncertain, use an empty string.

@@ -1,0 +1,112 @@
+{
+  "artifacts": {
+    "report_artifacts": {
+      "generator": "src/generators/artifact_generator.py",
+      "prompt_root": "src/prompts/report_vs/artifacts/",
+      "schema": "src/schemas/artifacts.schema.json",
+      "validator": "src/services/schema_validator_service.py"
+    }
+  },
+  "external_systems": {
+    "browser": {
+      "canonical_service": "src/services/browser_report_download_service.py",
+      "private_roots": [
+        "src/services/_browser_report_download/"
+      ]
+    },
+    "drive": {
+      "canonical_service": "src/services/drive_service.py"
+    },
+    "mailbox": {
+      "canonical_service": "src/services/mailbox_acquisition_service.py"
+    },
+    "openai": {
+      "canonical_service": "src/services/llm_service.py",
+      "private_roots": [
+        "src/services/_llm_service/"
+      ]
+    },
+    "wordpress": {
+      "canonical_service": "src/services/wordpress_service.py"
+    }
+  },
+  "failure_codes": {
+    "mail_report_not_arrived_yet": "docs/ops/top_failure_runbooks.md",
+    "openai_chat_failed": "docs/ops/top_failure_runbooks.md",
+    "public_metadata_governance_blocked": "README.md"
+  },
+  "schema_version": "1.0",
+  "side_effects": {
+    "browser_identity_updates": {
+      "idempotency_scope": "browser_identity_config",
+      "owner": "report_download_orchestrator"
+    },
+    "drive_uploads": {
+      "idempotency_scope": "drive_archive_upload",
+      "owner": "report_download_orchestrator"
+    },
+    "mail_delivery_requests": {
+      "idempotency_scope": "mail_delivery_request",
+      "owner": "report_download_orchestrator"
+    },
+    "mailbox_candidate_rejections": {
+      "idempotency_scope": "request_id/provider_message_id/link_host/reason_code",
+      "owner": "mail_report_acquisition_orchestrator"
+    },
+    "publisher_route_history": {
+      "idempotency_scope": "publisher_route_history",
+      "owner": "report_download_orchestrator"
+    },
+    "wordpress_posts": {
+      "idempotency_scope": "wordpress_publish",
+      "owner": "publish_orchestrator"
+    }
+  },
+  "smoke_suites": {
+    "autonomous_happy_path": {
+      "command": "python scripts/quality/autonomous_happy_path_smoke.py",
+      "covers": [
+        "mail_delivery_requests",
+        "mailbox_attachment_acquisition",
+        "publisher_route_history"
+      ]
+    }
+  },
+  "state_tables": {
+    "mail_delivery_requests": "src/services/_state_service/mail_delivery.py",
+    "mailbox_candidate_rejections": "src/services/_state_service/mail_delivery.py",
+    "workflow_control_observations": "src/services/_state_service/workflow_control.py"
+  },
+  "workflows": {
+    "mail_acquisition": {
+      "contracts": [
+        "src/contracts/mailbox_acquisition.py"
+      ],
+      "generator": "src/generators/mail_report_acquisition_generator.py",
+      "orchestrator": "src/orchestrators/mail_report_acquisition_orchestrator.py",
+      "services": [
+        "src/services/mailbox_acquisition_service.py",
+        "src/services/state_service.py",
+        "src/services/report_store_service.py"
+      ]
+    },
+    "report_download": {
+      "contracts": [
+        "src/contracts/browser_download.py"
+      ],
+      "orchestrator": "src/orchestrators/report_download_orchestrator.py",
+      "services": [
+        "src/services/browser_report_download_service.py",
+        "src/services/report_store_service.py"
+      ]
+    },
+    "report_generation": {
+      "contracts": [
+        "src/contracts/report_generation.py",
+        "src/contracts/report_artifacts.py"
+      ],
+      "generator": "src/generators/artifact_generator.py",
+      "orchestrator": "src/orchestrators/report_pipeline_orchestrator.py"
+    }
+  }
+}

@@ -12,6 +12,7 @@ from src.generators.report_card_projection import (
     build_cover_fingerprint,
     build_report_card_manifest,
     classify_geography,
+    validate_public_metadata_governance,
     select_title_scale,
     stable_cover_seed,
 )
@@ -221,3 +222,42 @@ def test_build_manifest_rejects_incomplete_card_content(
         build_report_card_manifest(_manifest_request(**{field_name: value}))
 
     assert_app_error(captured.value, code=error_code, retryable=False)
+
+
+def test_public_metadata_governance_rejects_placeholder_and_leaked_labels(
+    assert_app_error,
+) -> None:
+    with pytest.raises(AppError) as captured:
+        validate_public_metadata_governance(
+            {
+                "publisher": "Not extracted",
+                "region": "Region: Europe",
+                "covered_period": "This report discusses a long period sentence.",
+                "category": "Category: Payments",
+            }
+        )
+
+    assert_app_error(
+        captured.value,
+        code="public_metadata_governance_blocked",
+        retryable=False,
+    )
+    assert set(captured.value.context["blocked_fields"]) == {
+        "publisher",
+        "region",
+        "covered_period",
+        "category",
+    }
+
+
+def test_report_card_manifest_applies_public_metadata_governance(
+    assert_app_error,
+) -> None:
+    with pytest.raises(AppError) as captured:
+        build_report_card_manifest(_manifest_request(publisher="YouGov Year: 2024"))
+
+    assert_app_error(
+        captured.value,
+        code="public_metadata_governance_blocked",
+        retryable=False,
+    )

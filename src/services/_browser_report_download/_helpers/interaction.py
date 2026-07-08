@@ -380,11 +380,21 @@ def browser_helper_form_autocomplete(
             );
             const invalid = String(control.getAttribute('aria-invalid') || '')
               .toLowerCase() === 'true';
-            return !invalid && persisted && (
+            const verified = !invalid && persisted && (
               tokenMatchesAny(persisted, field) || Boolean(option && !exactOption)
             );
+            if (verified && option) {{
+              field.selectionVerification = {{
+                field_label: field.label || 'Select',
+                option_text: normalize(option.textContent || option.value),
+                mode: exactOption ? 'configured_match' : 'first_enabled_option',
+                persisted: true,
+              }};
+            }}
+            return verified;
           }};
           const selectedFields = [];
+          const selectionVerification = [];
           const unresolvedFields = [];
           let attemptedCount = 0;
           const selectedControls = new Set();
@@ -432,10 +442,24 @@ def browser_helper_form_autocomplete(
                 selected = !invalid && persisted && (
                   tokenMatchesAny(persisted, field) || Boolean(option && !exactOption)
                 );
+                if (selected && option) {{
+                  field.selectionVerification = {{
+                    field_label: field.label || label,
+                    option_text: normalize(option.innerText || option.textContent),
+                    mode: exactOption ? 'configured_match' : 'first_enabled_option',
+                    persisted: true,
+                  }};
+                }}
               }}
               if (selected) {{
                 selectedControls.add(control);
                 selectedFields.push(label);
+                if (field.selectionVerification) {{
+                  selectionVerification.push({{
+                    ...field.selectionVerification,
+                    field_label: label,
+                  }});
+                }}
                 passProgress = true;
               }} else {{
                 passUnresolvedFields.push(label);
@@ -471,6 +495,7 @@ def browser_helper_form_autocomplete(
             attempted_count: attemptedCount,
             selected_count: selectedFields.length,
             selected_fields: selectedFields,
+            selection_verification: selectionVerification,
             unresolved_fields: unresolvedFields,
             submitted,
             final_url: window.location.href || '',
@@ -516,6 +541,16 @@ def browser_helper_form_autocomplete(
         for item in payload.get("selected_fields", [])
         if (normalize := str(item or "").strip())
     )
+    selection_verification = tuple(
+        {
+            "field_label": str(item.get("field_label") or "").strip(),
+            "option_text": str(item.get("option_text") or "").strip(),
+            "mode": str(item.get("mode") or "").strip(),
+            "persisted": bool(item.get("persisted")),
+        }
+        for item in payload.get("selection_verification", [])
+        if isinstance(item, dict)
+    )
     if not selected_fields and int(payload.get("selected_count") or 0) > 0:
         selected_fields = ("Autocomplete",)
     status = "ok" if selected_fields and not unresolved_fields else "blocked"
@@ -528,6 +563,7 @@ def browser_helper_form_autocomplete(
         submitted=bool(payload.get("submitted")),
         unresolved_fields=unresolved_fields,
         selected_fields=selected_fields,
+        selection_verification=selection_verification,
         final_url=str(payload.get("final_url") or "").strip(),
         blocker_code=("blocked_unknown_required_enum" if unresolved_fields else None),
     )
@@ -910,6 +946,7 @@ def _autocomplete_result(
     submitted: bool = False,
     unresolved_fields: tuple[str, ...] = (),
     selected_fields: tuple[str, ...] = (),
+    selection_verification: tuple[dict[str, object], ...] = (),
     final_url: str = "",
     blocker_code: str | None = None,
     error: str = "",
@@ -922,6 +959,7 @@ def _autocomplete_result(
         submitted=submitted,
         unresolved_fields=unresolved_fields,
         selected_fields=selected_fields,
+        selection_verification=selection_verification,
         final_url=final_url,
         blocker_code=blocker_code,
         error=_excerpt(error, _HTML_EXCERPT_CHARS),
@@ -940,6 +978,7 @@ def _autocomplete_result(
                 "submitted": result.submitted,
                 "unresolved_fields": list(result.unresolved_fields),
                 "selected_fields": list(result.selected_fields),
+                "selection_verification": list(result.selection_verification),
                 "blocker_code": result.blocker_code or "",
                 "error": result.error,
             },

@@ -4,6 +4,10 @@ import json
 
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
+    MailboxCandidateRejection,
+    MailboxCandidateRejectionListRequest,
+    MailboxCandidateRejectionListResponse,
+    MailboxCandidateRejectionRecordRequest,
     MailDeliveryRequest,
     MailDeliveryRequestListDueRequest,
     MailDeliveryRequestListDueResponse,
@@ -233,6 +237,108 @@ def mark_mail_delivery_request_attempt(
     return response
 
 
+def record_mailbox_candidate_rejection(
+    request: MailboxCandidateRejectionRecordRequest,
+    ctx: RunContext,
+) -> None:
+    now = utc_now_seconds_z()
+    sender = _sanitize_sender(request.sender)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="mailbox_candidate_rejection_record_start",
+            module=logger.name,
+            fields={
+                "state_db": request.state_db,
+                "request_id": request.request_id,
+                "provider_message_id": request.provider_message_id,
+                "source_host": request.source_host,
+                "link_host": request.link_host,
+                "reason_code": request.reason_code,
+            },
+        )
+    )
+    with _state_conn(request.state_db, ctx) as conn:
+        conn.execute(
+            """
+            INSERT INTO mailbox_candidate_rejections(
+              request_id, provider_message_id, sender, source_host, link_host,
+              publisher_affinity, title_token_overlap, reason_code, expires_at_utc,
+              created_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(request_id, provider_message_id, link_host, reason_code)
+            DO UPDATE SET
+              sender=excluded.sender,
+              source_host=excluded.source_host,
+              publisher_affinity=excluded.publisher_affinity,
+              title_token_overlap=excluded.title_token_overlap,
+              expires_at_utc=excluded.expires_at_utc
+            """,
+            (
+                int(request.request_id),
+                request.provider_message_id,
+                sender,
+                request.source_host,
+                request.link_host,
+                request.publisher_affinity,
+                float(request.title_token_overlap),
+                request.reason_code,
+                request.expires_at_utc,
+                now,
+            ),
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="mailbox_candidate_rejection_record_complete",
+            module=logger.name,
+            fields={
+                "state_db": request.state_db,
+                "request_id": request.request_id,
+                "reason_code": request.reason_code,
+            },
+        )
+    )
+
+
+def list_mailbox_candidate_rejections(
+    request: MailboxCandidateRejectionListRequest,
+    ctx: RunContext,
+) -> MailboxCandidateRejectionListResponse:
+    limit = max(1, int(request.limit or 50))
+    with _state_conn(request.state_db, ctx) as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM mailbox_candidate_rejections
+            WHERE request_id=? AND expires_at_utc >= ?
+            ORDER BY created_at_utc DESC, id DESC
+            LIMIT ?
+            """,
+            (int(request.request_id), request.now_utc, limit),
+        ).fetchall()
+    response = MailboxCandidateRejectionListResponse(
+        schema_version="1.0",
+        rejections=[_row_to_mailbox_candidate_rejection(row) for row in rows],
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="mailbox_candidate_rejection_list_complete",
+            module=logger.name,
+            fields={
+                "state_db": request.state_db,
+                "request_id": request.request_id,
+                "count": len(response.rejections),
+            },
+        )
+    )
+    return response
+
+
 def _validate_upsert_request(request: MailDeliveryRequestUpsertRequest) -> None:
     missing = []
     if not str(request.idempotency_key or "").strip():
@@ -299,3 +405,29 @@ def _dedupe_strings(values: list[str]) -> list[str]:
         seen.add(marker)
         result.append(token)
     return result
+
+
+def _row_to_mailbox_candidate_rejection(row) -> MailboxCandidateRejection:
+    return MailboxCandidateRejection(
+        schema_version="1.0",
+        rejection_id=int(row[0]),
+        request_id=int(row[1]),
+        provider_message_id=str(row[2] or ""),
+        sender=str(row[3] or ""),
+        source_host=str(row[4] or ""),
+        link_host=str(row[5] or ""),
+        publisher_affinity=str(row[6] or ""),
+        title_token_overlap=float(row[7] or 0.0),
+        reason_code=str(row[8] or ""),
+        expires_at_utc=str(row[9] or ""),
+        created_at_utc=str(row[10] or ""),
+    )
+
+
+def _sanitize_sender(value: str) -> str:
+    text = " ".join(str(value or "").split())
+    if "<" in text and ">" in text:
+        return f"{text.split('<', 1)[0].strip()} <redacted>"
+    if "@" in text:
+        return "<redacted>"
+    return text

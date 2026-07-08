@@ -5,6 +5,8 @@ import pytest
 
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
+    MailboxCandidateRejectionListRequest,
+    MailboxCandidateRejectionRecordRequest,
     StateBatchCheckItem,
     StateBatchCheckRequest,
     StateCheckRequest,
@@ -32,10 +34,12 @@ from src.services.state_service import (
     get,
     get_ingest_cursor,
     get_report_download_route,
+    list_mailbox_candidate_rejections,
     list_due_mail_delivery_requests,
     list_processed,
     list_published,
     record,
+    record_mailbox_candidate_rejection,
     record_publish,
     record_report_download_route,
     list_workflow_control_observations,
@@ -112,8 +116,8 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
-    assert schema_version == (7,)
-    assert ledger_count == 7
+    assert schema_version == (8,)
+    assert ledger_count == 8
 
 
 def test_record_and_get_with_defaults(tmp_path: Path) -> None:
@@ -598,3 +602,70 @@ def test_mail_delivery_request_roundtrip_is_idempotent_and_tracks_incremental_st
         ).requests
         == []
     )
+
+
+def test_mailbox_candidate_rejection_persists_sanitized_request_scoped_evidence(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "state.sqlite"
+
+    record_mailbox_candidate_rejection(
+        MailboxCandidateRejectionRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            request_id=7,
+            provider_message_id="msg-cross-publisher",
+            sender="Reports Team <reports@example.com>",
+            source_host="gwi.com",
+            link_host="about.bigcommerce.com",
+            publisher_affinity="mismatch",
+            title_token_overlap=0.125,
+            reason_code="cross_publisher",
+            expires_at_utc="2026-07-11T00:00:00Z",
+        ),
+        _ctx(),
+    )
+
+    response = list_mailbox_candidate_rejections(
+        MailboxCandidateRejectionListRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            request_id=7,
+            now_utc="2026-07-08T00:00:00Z",
+            limit=20,
+        ),
+        _ctx(),
+    )
+
+    assert len(response.rejections) == 1
+    rejection = response.rejections[0]
+    assert rejection.provider_message_id == "msg-cross-publisher"
+    assert rejection.sender == "Reports Team <redacted>"
+    assert rejection.source_host == "gwi.com"
+    assert rejection.link_host == "about.bigcommerce.com"
+    assert rejection.reason_code == "cross_publisher"
+    assert rejection.title_token_overlap == 0.125
+
+    expired = list_mailbox_candidate_rejections(
+        MailboxCandidateRejectionListRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            request_id=7,
+            now_utc="2026-07-12T00:00:00Z",
+            limit=20,
+        ),
+        _ctx(),
+    )
+    other_request = list_mailbox_candidate_rejections(
+        MailboxCandidateRejectionListRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            request_id=8,
+            now_utc="2026-07-08T00:00:00Z",
+            limit=20,
+        ),
+        _ctx(),
+    )
+
+    assert expired.rejections == []
+    assert other_request.rejections == []
