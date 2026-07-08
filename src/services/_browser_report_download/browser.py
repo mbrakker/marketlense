@@ -34,6 +34,7 @@ from src.services._browser_report_download.cdp import (
 from src.services._browser_report_download.helpers import (
     browser_helper_capture_screenshot,
     browser_helper_form_autocomplete,
+    browser_helper_standard_form_submit,
     browser_helper_js,
     browser_helper_page_info,
 )
@@ -174,6 +175,7 @@ from src.services._browser_report_download._browser_runtime.timeout_recovery imp
     _should_attempt_standard_form_submit_assist,
     _should_attempt_timeout_standard_form_submit_assist,
     _attempt_standard_form_submit_assist_with_timeout,
+    _browser_standard_form_identity_field_values,
 )
 from src.services._browser_report_download._browser_runtime.worker_protocol import (
     BrowserAgentWorkerPayload,
@@ -290,6 +292,199 @@ def _mark_standard_form_submit_assisted_raw_response(raw_model_response: str) ->
     return json.dumps(payload, ensure_ascii=True)
 
 
+def _pre_llm_standard_form_raw_response(
+    *,
+    final_url: str,
+    resolved_fields: list[str],
+) -> str:
+    return json.dumps(
+        {
+            "route_kind": "email_delivery",
+            "route_family": "browser_email_form",
+            "route_summary": (
+                "Filled configured identity fields and submitted the report request "
+                "form before invoking browser-use."
+            ),
+            "final_page_url": final_url,
+            "resolved_target_url": final_url,
+            "email_submission_completed": True,
+            "post_submit_message": "Submitted by deterministic pre-LLM form autofill.",
+            "confirmation_url_changed": True,
+            "submit_button_state": "submitted",
+            "form_disappeared": True,
+            "encountered_form_fields": resolved_fields,
+            "route_steps": [
+                {
+                    "index": 0,
+                    "action": "submit",
+                    "target_text": "Configured identity and consent fields",
+                    "target_role": "browser_helper_standard_form_submit",
+                    "target_url": final_url,
+                    "result": "Submitted deterministically before browser-use.",
+                    "expected_evidence": ["confirmation_text", "page_info"],
+                    "observed_evidence": ["page_info"],
+                    "verification_status": "pending_terminal_verification",
+                }
+            ],
+        },
+        ensure_ascii=True,
+    )
+
+
+def _open_current_page_for_pre_llm_autofill(
+    *,
+    browser: Any,
+    execution_url: str,
+    ctx: RunContext,
+    normalized_url: str,
+) -> Any | None:
+    page = _resolve_current_page(browser)
+    if page is None:
+        return None
+    goto = getattr(page, "goto", None)
+    if callable(goto):
+        try:
+            _run_awaitable(goto(execution_url))
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_pre_llm_autofill_navigation_failed",
+                    module=logger.name,
+                    fields={"normalized_url": normalized_url, "error": str(exc)},
+                )
+            )
+            return page
+        return page
+    try:
+        browser_helper_js(
+            page=page,
+            expression=(
+                "window.location.href = "
+                f"{json.dumps(execution_url, ensure_ascii=True)}; "
+                "return {status: 'navigation_requested'};"
+            ),
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pre_llm_autofill_navigation_failed",
+                module=logger.name,
+                fields={"normalized_url": normalized_url, "error": exc.message},
+            )
+        )
+    return page
+
+
+def _try_pre_llm_standard_form_submit(
+    *,
+    request: BrowserReportDownloadRequest,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+) -> BrowserAgentRunResult | None:
+    if str(request.route_family_hint or "").strip() != "browser_email_form":
+        return None
+    field_values = _browser_standard_form_identity_field_values(request)
+    if not field_values:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pre_llm_autofill_skipped",
+                module=logger.name,
+                fields={"normalized_url": normalized_url, "reason": "no_identity_fields"},
+            )
+        )
+        return None
+    page = _open_current_page_for_pre_llm_autofill(
+        browser=browser,
+        execution_url=execution_url,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    if page is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pre_llm_autofill_escalated",
+                module=logger.name,
+                fields={"normalized_url": normalized_url, "reason": "page_unavailable"},
+            )
+        )
+        return None
+    helper_result = browser_helper_standard_form_submit(
+        page=page,
+        field_values=field_values,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        browser=browser,
+    )
+    if helper_result.status != "ok" or not helper_result.submitted:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pre_llm_autofill_escalated",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "status": helper_result.status,
+                    "submitted": helper_result.submitted,
+                    "unresolved_fields": list(helper_result.unresolved_fields),
+                    "blocker_code": helper_result.blocker_code or "",
+                },
+            )
+        )
+        return None
+    snapshot = _capture_terminal_snapshot(browser, ctx=ctx, normalized_url=normalized_url)
+    final_url = helper_result.final_url or snapshot.url or execution_url
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_pre_llm_autofill_submitted",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "filled_count": helper_result.filled_count,
+                "selected_count": helper_result.selected_count,
+                "mandatory_agreement_checked_count": (
+                    helper_result.mandatory_agreement_checked_count
+                ),
+                "resolved_fields": list(helper_result.resolved_fields),
+                "avoided_llm_call": True,
+            },
+        )
+    )
+    return BrowserAgentRunResult(
+        schema_version="1.0",
+        raw_model_response=_pre_llm_standard_form_raw_response(
+            final_url=final_url,
+            resolved_fields=list(helper_result.resolved_fields),
+        ),
+        final_page_url=final_url,
+        final_page_title=snapshot.title,
+        final_page_html=snapshot.html,
+        downloaded_files=[],
+        attachment_paths=[],
+        network_resource_urls=[],
+        network_events=[],
+        html_snapshot_path="",
+        screenshot_path="",
+        print_pdf_capture_path="",
+        print_pdf_capture_provenance="",
+        dialog_evidence=[],
+    )
+
+
 def run_browser_report_download_agent(
     *,
     request: BrowserReportDownloadRequest,
@@ -382,6 +577,15 @@ def run_browser_report_download_agent(
             auto_download_pdfs=True,
             keep_alive=True,
         )
+        pre_llm_form_result = _try_pre_llm_standard_form_submit(
+            request=request,
+            browser=browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=execution_url,
+        )
+        if pre_llm_form_result is not None:
+            return pre_llm_form_result
         llm = llm_service.build_openrouter_client(
             settings=request.settings,
             ctx=ctx,

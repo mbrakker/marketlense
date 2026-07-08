@@ -475,6 +475,93 @@ class StateReportDownloadRouteResponse:
 
 
 @dataclass(frozen=True)
+class StateArtifactAcquisitionCacheGetRequest:
+    schema_version: str = field(
+        metadata={"doc": "Artifact acquisition-cache get request schema version."}
+    )
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    cache_key: str = field(
+        metadata={
+            "doc": "Deterministic cache key for normalized URL, publisher scope, report title, and cache version."
+        }
+    )
+
+
+@dataclass(frozen=True)
+class StateArtifactAcquisitionCacheRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Artifact acquisition-cache record request schema version."}
+    )
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    cache_key: str = field(
+        metadata={
+            "doc": "Deterministic cache key for normalized URL, publisher scope, report title, and cache version."
+        }
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized report landing-page URL for this artifact."}
+    )
+    publisher_scope: str = field(
+        metadata={"doc": "Normalized publisher host scope used to prevent cross-publisher reuse."}
+    )
+    report_title: str = field(
+        metadata={"doc": "Normalized report title used in the acquisition cache key."}
+    )
+    final_artifact_url: str = field(
+        metadata={"doc": "Resolved final artifact URL observed when the cache was recorded."}
+    )
+    artifact_path: str = field(
+        metadata={"doc": "Local filesystem path of the validated artifact."}
+    )
+    artifact_md5: str = field(metadata={"doc": "MD5 checksum of the artifact bytes."})
+    artifact_sha256: str = field(
+        metadata={"doc": "SHA-256 checksum of the artifact bytes."}
+    )
+    route_kind: str = field(metadata={"doc": "Route kind that acquired the artifact."})
+    route_family: str = field(
+        metadata={"doc": "Route family that acquired the artifact."}
+    )
+    outcome: str = field(metadata={"doc": "Acquisition outcome that produced the artifact."})
+    downloaded_mime_type: str = field(
+        metadata={"doc": "Validated artifact MIME type when known."}
+    )
+    size_bytes: int = field(metadata={"doc": "Artifact size in bytes."})
+    cache_version: str = field(
+        metadata={"doc": "Prompt/schema/cache version used by the cache key."}
+    )
+    expires_at_utc: str = field(
+        metadata={"doc": "UTC timestamp after which this artifact must be revalidated from source."}
+    )
+
+
+@dataclass(frozen=True)
+class StateArtifactAcquisitionCacheResponse:
+    schema_version: str = field(
+        metadata={"doc": "Artifact acquisition-cache response schema version."}
+    )
+    cache_key: str = field(metadata={"doc": "Deterministic artifact cache key."})
+    normalized_url: str = field(metadata={"doc": "Normalized report landing-page URL."})
+    publisher_scope: str = field(metadata={"doc": "Normalized publisher host scope."})
+    report_title: str = field(metadata={"doc": "Normalized report title."})
+    final_artifact_url: str = field(metadata={"doc": "Resolved final artifact URL."})
+    artifact_path: str = field(metadata={"doc": "Local validated artifact path."})
+    artifact_md5: str = field(metadata={"doc": "MD5 checksum of the artifact bytes."})
+    artifact_sha256: str = field(
+        metadata={"doc": "SHA-256 checksum of the artifact bytes."}
+    )
+    route_kind: str = field(metadata={"doc": "Route kind that acquired the artifact."})
+    route_family: str = field(
+        metadata={"doc": "Route family that acquired the artifact."}
+    )
+    outcome: str = field(metadata={"doc": "Acquisition outcome."})
+    downloaded_mime_type: str = field(metadata={"doc": "Artifact MIME type."})
+    size_bytes: int = field(metadata={"doc": "Artifact size in bytes."})
+    cache_version: str = field(metadata={"doc": "Prompt/schema/cache version."})
+    expires_at_utc: str = field(metadata={"doc": "UTC cache expiry timestamp."})
+    updated_at: int = field(metadata={"doc": "Unix timestamp when the cache was stored."})
+
+
+@dataclass(frozen=True)
 class WorkflowControlObservationWriteRequest:
     schema_version: str = field(
         metadata={"doc": "Workflow-control observation write request schema version."}

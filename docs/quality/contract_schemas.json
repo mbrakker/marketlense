@@ -19992,8 +19992,32 @@
     "src.contracts.prompts.PromptTemplate": {
       "additionalProperties": false,
       "properties": {
+        "include_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "include_sha256s": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "path": {
           "type": "string"
+        },
+        "schema_snippet_sources": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "schema_snippets": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "schema_version": {
           "type": "string"
@@ -24541,6 +24565,178 @@
       ],
       "type": "object"
     },
+    "src.contracts.state.StateArtifactAcquisitionCacheGetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "cache_key"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.StateArtifactAcquisitionCacheRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_md5": {
+          "type": "string"
+        },
+        "artifact_path": {
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "type": "string"
+        },
+        "cache_key": {
+          "type": "string"
+        },
+        "cache_version": {
+          "type": "string"
+        },
+        "downloaded_mime_type": {
+          "type": "string"
+        },
+        "expires_at_utc": {
+          "type": "string"
+        },
+        "final_artifact_url": {
+          "type": "string"
+        },
+        "normalized_url": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "publisher_scope": {
+          "type": "string"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "cache_key",
+        "normalized_url",
+        "publisher_scope",
+        "report_title",
+        "final_artifact_url",
+        "artifact_path",
+        "artifact_md5",
+        "artifact_sha256",
+        "route_kind",
+        "route_family",
+        "outcome",
+        "downloaded_mime_type",
+        "size_bytes",
+        "cache_version",
+        "expires_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.StateArtifactAcquisitionCacheResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_md5": {
+          "type": "string"
+        },
+        "artifact_path": {
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "type": "string"
+        },
+        "cache_key": {
+          "type": "string"
+        },
+        "cache_version": {
+          "type": "string"
+        },
+        "downloaded_mime_type": {
+          "type": "string"
+        },
+        "expires_at_utc": {
+          "type": "string"
+        },
+        "final_artifact_url": {
+          "type": "string"
+        },
+        "normalized_url": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "publisher_scope": {
+          "type": "string"
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "updated_at": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "cache_key",
+        "normalized_url",
+        "publisher_scope",
+        "report_title",
+        "final_artifact_url",
+        "artifact_path",
+        "artifact_md5",
+        "artifact_sha256",
+        "route_kind",
+        "route_family",
+        "outcome",
+        "downloaded_mime_type",
+        "size_bytes",
+        "cache_version",
+        "expires_at_utc",
+        "updated_at"
+      ],
+      "type": "object"
+    },
     "src.contracts.state.StateBatchCheckItem": {
       "additionalProperties": false,
       "properties": {
@@ -24674,6 +24870,26 @@
         "state_db",
         "accessible",
         "locked"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.StateGetByMd5Request": {
+      "additionalProperties": false,
+      "properties": {
+        "md5": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "md5"
       ],
       "type": "object"
     },

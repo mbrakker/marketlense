@@ -118,6 +118,27 @@ CREATE TABLE IF NOT EXISTS mailbox_candidate_rejections (
 );
 """
 
+_STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS artifact_acquisition_cache (
+  cache_key TEXT PRIMARY KEY,
+  normalized_url TEXT NOT NULL,
+  publisher_scope TEXT NOT NULL,
+  report_title TEXT NOT NULL,
+  final_artifact_url TEXT NOT NULL,
+  artifact_path TEXT NOT NULL,
+  artifact_md5 TEXT NOT NULL,
+  artifact_sha256 TEXT NOT NULL,
+  route_kind TEXT NOT NULL,
+  route_family TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  downloaded_mime_type TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  cache_version TEXT NOT NULL,
+  expires_at_utc TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+"""
+
 
 def _state_db_001_create_base_tables(conn: sqlite3.Connection) -> None:
     conn.execute(_STATE_PROCESSED_TABLE_SQL)
@@ -218,6 +239,20 @@ def _state_db_008_create_mailbox_candidate_rejections(
     )
 
 
+def _state_db_009_create_artifact_acquisition_cache(
+    conn: sqlite3.Connection,
+) -> None:
+    conn.execute(_STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_artifact_acquisition_cache_url "
+        "ON artifact_acquisition_cache(normalized_url, publisher_scope, report_title)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_artifact_acquisition_cache_expiry "
+        "ON artifact_acquisition_cache(expires_at_utc)"
+    )
+
+
 _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="state_db_001_create_base_tables",
@@ -258,5 +293,10 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_008_create_mailbox_candidate_rejections",
         version=8,
         apply_fn=_state_db_008_create_mailbox_candidate_rejections,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_009_create_artifact_acquisition_cache",
+        version=9,
+        apply_fn=_state_db_009_create_artifact_acquisition_cache,
     ),
 )

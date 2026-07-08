@@ -298,6 +298,52 @@ def test_parallel_executor_uses_real_concurrency(ingest_settings, run_context) -
     assert {row.file_id for row in state_rows} == {"file_a", "file_b"}
 
 
+def test_drive_cache_prefetch_downloads_and_hashes_before_report_workers(
+    ingest_settings,
+    run_context,
+    monkeypatch,
+) -> None:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="prefetch-file",
+        name="Prefetch.pdf",
+        modified_time=None,
+        md5_checksum=None,
+    )
+    download_calls: list[str] = []
+
+    def _download(req, ctx):
+        del ctx
+        payload = _pdf_bytes()
+        out_path = Path(req.output_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(payload)
+        download_calls.append(req.file.file_id)
+        return DriveDownloadToPathResponse(
+            schema_version="1.0",
+            file=req.file,
+            output_path=req.output_path,
+            md5=None,
+            size=len(payload),
+        )
+
+    monkeypatch.setattr(orch, "download_pdf_to_path", _download)
+
+    orch._prefetch_drive_cache_stage(
+        [file],
+        settings=settings,
+        deps=orch.IngestBatchDependencies.default(),
+        root_ctx=run_context,
+    )
+
+    cache_path = Path(settings.cache_dir) / "prefetch-file.pdf"
+    sidecar_path = Path(f"{cache_path}.md5.json")
+    assert download_calls == ["prefetch-file"]
+    assert cache_path.exists()
+    assert sidecar_path.exists()
+
+
 def test_ingest_uses_batch_state_prefilter(ingest_settings) -> None:
     settings = replace(ingest_settings, batch_limit=2, ingest_worker_limit=1)
     files = [

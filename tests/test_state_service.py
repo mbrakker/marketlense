@@ -9,6 +9,8 @@ from src.contracts.state import (
     MailboxCandidateRejectionRecordRequest,
     StateBatchCheckItem,
     StateBatchCheckRequest,
+    StateArtifactAcquisitionCacheGetRequest,
+    StateArtifactAcquisitionCacheRecordRequest,
     StateCheckRequest,
     StateDbAccessRequest,
     StateGetByMd5Request,
@@ -33,6 +35,7 @@ from src.services.state_service import (
     already_processed,
     check_state_db_access,
     get,
+    get_artifact_acquisition_cache,
     get_by_md5,
     get_ingest_cursor,
     get_report_download_route,
@@ -41,6 +44,7 @@ from src.services.state_service import (
     list_processed,
     list_published,
     record,
+    record_artifact_acquisition_cache,
     record_mailbox_candidate_rejection,
     record_publish,
     record_report_download_route,
@@ -509,6 +513,50 @@ def test_report_download_route_roundtrip(tmp_path: Path) -> None:
     assert response.route_summary == "Click the top download button."
     assert response.outcome == "downloaded"
     assert response.last_final_page_url == "https://example.com/report/final"
+
+
+def test_artifact_acquisition_cache_roundtrip(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record_artifact_acquisition_cache(
+        StateArtifactAcquisitionCacheRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            cache_key="cache-key",
+            normalized_url="https://example.com/report",
+            publisher_scope="example.com",
+            report_title="market report",
+            final_artifact_url="https://example.com/report.pdf",
+            artifact_path=str(tmp_path / "report.pdf"),
+            artifact_md5="d41d8cd98f00b204e9800998ecf8427e",
+            artifact_sha256=(
+                "e3b0c44298fc1c149afbf4c8996fb924"
+                "27ae41e4649b934ca495991b7852b855"
+            ),
+            route_kind="pdf_download",
+            route_family="browser_pdf_click",
+            outcome="downloaded",
+            downloaded_mime_type="application/pdf",
+            size_bytes=0,
+            cache_version="browser_artifact_cache_v1",
+            expires_at_utc="2026-08-01T00:00:00Z",
+        ),
+        _ctx(),
+    )
+
+    response = get_artifact_acquisition_cache(
+        StateArtifactAcquisitionCacheGetRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            cache_key="cache-key",
+        ),
+        _ctx(),
+    )
+
+    assert response is not None
+    assert response.normalized_url == "https://example.com/report"
+    assert response.publisher_scope == "example.com"
+    assert response.artifact_md5 == "d41d8cd98f00b204e9800998ecf8427e"
+    assert response.cache_version == "browser_artifact_cache_v1"
 
 
 def test_workflow_control_observation_roundtrip_and_ttl(tmp_path: Path) -> None:

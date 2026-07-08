@@ -11,13 +11,23 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional
 
 from src.services.pdf_service import check_pdf_eof
+from src.contracts.file_cache import (
+    FileCacheMd5SidecarResolveRequest,
+    FileCacheMd5SidecarWriteRequest,
+)
 from src.contracts.drive import (
+    DriveDownloadToPathRequest,
     DriveFileMetadataRequest,
     DriveListRequest,
     DriveFile,
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
-from src.contracts.files import FileExistsRequest, FileStatRequest, ReadTextRequest
+from src.contracts.files import (
+    DeleteFileRequest,
+    FileExistsRequest,
+    FileStatRequest,
+    ReadTextRequest,
+)
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
 from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
@@ -25,6 +35,7 @@ from src.contracts.report_store import (
     ReportMetadataGetRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.generators.report_generation_shared import report_slug
 from src.orchestrators.ingest_file_orchestrator import (
     FileProcessResult as _FileProcessResult,
@@ -782,6 +793,193 @@ def _resolve_worker_limit(
     return worker_limit
 
 
+@dataclass(frozen=True)
+class _DriveCachePrefetchResult:
+    file_id: str
+    cache_path: str
+    md5: str | None
+    status: str
+    reason: str
+
+
+def _should_run_drive_cache_prefetch(deps: IngestBatchDependencies) -> bool:
+    return deps.process_file is _process_file
+
+
+def _prefetch_cached_pdf(
+    file: DriveFile,
+    *,
+    settings: IngestSettings,
+    root_ctx: RunContext,
+) -> _DriveCachePrefetchResult:
+    prefetch_ctx = child_context(root_ctx, task_id=f"prefetch:{file.file_id}")
+    cache_path = _cache_pdf_path(settings, file)
+    drive_md5 = file.md5_checksum.strip() if file.md5_checksum else None
+
+    def _write_sidecar(md5: str | None, stat_resp) -> None:
+        write_md5_sidecar(
+            FileCacheMd5SidecarWriteRequest(
+                schema_version="1.0",
+                cache_path=cache_path,
+                file_id=file.file_id,
+                file_name=file.name,
+                md5=md5,
+                size_bytes=stat_resp.size_bytes,
+                mtime_utc=stat_resp.mtime_utc,
+            ),
+            prefetch_ctx,
+        )
+
+    stat_resp = file_stat(FileStatRequest(schema_version="1.0", path=cache_path), prefetch_ctx)
+    if stat_resp.exists:
+        sidecar = resolve_md5_sidecar(
+            FileCacheMd5SidecarResolveRequest(
+                schema_version="1.0",
+                cache_path=cache_path,
+                file_id=file.file_id,
+                size_bytes=stat_resp.size_bytes,
+                mtime_utc=stat_resp.mtime_utc,
+            ),
+            prefetch_ctx,
+        )
+        if sidecar.resolved_md5 and (
+            not drive_md5 or sidecar.resolved_md5 == drive_md5
+        ):
+            return _DriveCachePrefetchResult(
+                file_id=file.file_id,
+                cache_path=cache_path,
+                md5=sidecar.resolved_md5,
+                status="hit",
+                reason="sidecar",
+            )
+        hashed_stat = file_stat(
+            FileStatRequest(schema_version="1.0", path=cache_path, compute_md5=True),
+            prefetch_ctx,
+        )
+        if hashed_stat.exists and hashed_stat.md5 and (
+            not drive_md5 or hashed_stat.md5 == drive_md5
+        ):
+            _write_sidecar(hashed_stat.md5, hashed_stat)
+            return _DriveCachePrefetchResult(
+                file_id=file.file_id,
+                cache_path=cache_path,
+                md5=hashed_stat.md5,
+                status="hit",
+                reason="hashed",
+            )
+
+    dl_req = DriveDownloadToPathRequest(
+        schema_version="1.0",
+        file=file,
+        service_account_path=settings.google_sa_path,
+        auth_mode=settings.drive_auth_mode,
+        oauth_client_path=settings.google_oauth_client_path,
+        oauth_token_path=settings.google_oauth_token_path,
+        output_path=cache_path,
+    )
+    attempt = 0
+    eof_check = None
+    while True:
+        dl_resp = _run_step_with_retry(
+            "prefetch_download_pdf",
+            prefetch_ctx,
+            lambda: download_pdf_to_path(dl_req, prefetch_ctx),
+            2,
+        )
+        eof_check = check_pdf_eof(
+            PdfEofCheckRequest(schema_version="1.0", path=cache_path),
+            prefetch_ctx,
+        )
+        if eof_check.has_eof or attempt >= EOF_RETRY_LIMIT:
+            break
+        delete_file(
+            DeleteFileRequest(
+                schema_version="1.0",
+                path=cache_path,
+                missing_ok=True,
+            ),
+            prefetch_ctx,
+        )
+        attempt += 1
+    final_stat = file_stat(
+        FileStatRequest(schema_version="1.0", path=cache_path, compute_md5=True),
+        prefetch_ctx,
+    )
+    md5 = final_stat.md5 or dl_resp.md5 or drive_md5
+    _write_sidecar(md5, final_stat)
+    return _DriveCachePrefetchResult(
+        file_id=file.file_id,
+        cache_path=cache_path,
+        md5=md5,
+        status="downloaded",
+        reason="missing_or_stale",
+    )
+
+
+def _prefetch_drive_cache_stage(
+    files_to_process: list[DriveFile],
+    *,
+    settings: IngestSettings,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> None:
+    if not files_to_process or not _should_run_drive_cache_prefetch(deps):
+        return
+    worker_limit = min(
+        max(1, int(settings.ingest_worker_limit or 1)),
+        len(files_to_process),
+    )
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="ingest_drive_cache_prefetch_start",
+            module=logger.name,
+            fields={
+                "file_count": len(files_to_process),
+                "drive_cache_worker_limit": worker_limit,
+                "report_worker_limit": settings.report_worker_limit,
+                "llm_worker_limit": settings.ingest_worker_limit,
+            },
+        )
+    )
+    results: list[_DriveCachePrefetchResult] = []
+    if worker_limit <= 1:
+        for file in files_to_process:
+            results.append(
+                _prefetch_cached_pdf(file, settings=settings, root_ctx=root_ctx)
+            )
+    else:
+        with deps.thread_pool_executor_factory(worker_limit) as executor:
+            futures = {
+                executor.submit(
+                    _prefetch_cached_pdf,
+                    file,
+                    settings=settings,
+                    root_ctx=root_ctx,
+                ): file
+                for file in files_to_process
+            }
+            for future in as_completed(futures):
+                results.append(future.result())
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="ingest_drive_cache_prefetch_complete",
+            module=logger.name,
+            fields={
+                "file_count": len(results),
+                "cache_hits": sum(1 for result in results if result.status == "hit"),
+                "downloaded": sum(
+                    1 for result in results if result.status == "downloaded"
+                ),
+                "md5_available": sum(1 for result in results if result.md5),
+            },
+        )
+    )
+
+
 def _process_ingest_batch(
     files_to_process: list[DriveFile],
     *,
@@ -790,6 +988,12 @@ def _process_ingest_batch(
     root_ctx: RunContext,
     force_report_cards: bool,
 ) -> list[_FileProcessResult]:
+    _prefetch_drive_cache_stage(
+        files_to_process,
+        settings=settings,
+        deps=deps,
+        root_ctx=root_ctx,
+    )
     worker_limit = _resolve_worker_limit(
         settings,
         file_count=len(files_to_process),

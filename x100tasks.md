@@ -359,15 +359,6 @@ Scoring:
     - `rank_max_candidates` is adaptive by profile and escalates only when no acceptable figures are found.
     - Fast mode uses one-pass crop refinement or deterministic bbox expansion, and high-confidence candidates can skip crop-refine LLM.
 
-- **Title:** Split Drive/cache prefetch from report-generation workers [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Bulk ingestion can wait on Drive download/cache materialization before keeping downstream workers busy.
-  - Why implement: Producer/consumer separation improves throughput without increasing LLM rate-limit pressure.
-  - Tradeoffs / risks: Queue semantics must be idempotent and must not create new deployable boundaries without review.
-  - Acceptance Criteria:
-    - Producer lists Drive, prefilters state, downloads/caches PDFs, computes md5, and feeds report-generation consumers.
-    - Workflow-control telemetry manages Drive/PDF/LLM concurrency separately.
-    - Tests cover duplicate suppression, retry/defer behavior, and provider cap preservation.
-
 - **Title:** Make Drive listing cursor-first and batch skip metadata complete [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Large Drive folders can be rescanned, and per-file skip decisions can require extra state checks.
   - Why implement: Cursor-first listing and full batch skip metadata reduce bulk ingest overhead.
@@ -417,15 +408,6 @@ Scoring:
     - Executor runs before full browser-use for eligible playbooks.
     - Drift evidence is persisted and routed back into playbook improvement.
 
-- **Title:** Persist artifact-level acquisition cache [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Route memory can choose a path, but unchanged reports may still rerun acquisition instead of returning a valid existing artifact.
-  - Why implement: Returning a valid cached local/Drive artifact eliminates the entire browser/HTTP acquisition path.
-  - Tradeoffs / risks: Cache keys and invalidation must prevent stale or wrong-publisher artifacts.
-  - Acceptance Criteria:
-    - Cache keys include normalized URL, publisher scope, report title, final artifact URL, artifact md5/sha256, and relevant prompt/schema/cache versions.
-    - Cached artifacts are reused only when local/Drive artifact validation passes.
-    - Revalidation occurs when URL, report title, artifact presence/hash, cache version, or expiry changes.
-
 - **Title:** Strengthen publisher-level route policy before browser escalation [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Planner can spend low-yield probes or browser launches despite stable publisher route history.
   - Why implement: Publisher-level success distributions should schedule dominant routes first and demote repeatedly failing fallbacks.
@@ -470,15 +452,6 @@ Scoring:
     - Agent runtime watches download directory, network PDF/document URLs, visible confirmation text, form disappearance, and known blocker text.
     - Terminal evidence signals agent stop and moves directly to typed artifact finalization or blocker handling.
     - Tests cover valid download, email confirmation, known blocker, and false-positive non-terminal text.
-
-- **Title:** Run deterministic form autofill before invoking the LLM [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Known identity fields and consent policy can consume LLM steps on email-gated reports.
-  - Why implement: DOM-based autofill can submit unambiguous forms without browser-use reasoning.
-  - Tradeoffs / risks: Unknown required fields, ambiguous selects, and consent uncertainty must escalate rather than guess.
-  - Acceptance Criteria:
-    - Visible form fields are detected through DOM inspection and filled with configured identity values when confidence is high.
-    - Consent rules are applied deterministically from `browser_download_identity.yaml`.
-    - LLM/browser-use runs only for unknown required fields, ambiguous select values, route drift, or uncertain consent.
 
 - **Title:** Enable same-publisher session reuse and warm browser worker pools for batches [Impact: 5/5, Effort: 5/5]
   - Problem fixed: Batch acquisition can repeatedly pay profile creation, cookie banner, subprocess startup, payload handoff, and browser setup costs.

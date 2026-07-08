@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+import hashlib
 from dataclasses import asdict, replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
     BrowserDeveloperDiagnosticsRequest,
@@ -16,10 +18,15 @@ from src.contracts.browser_download import (
     BrowserReportDownloadResult,
     BrowserRoutePrivateApiPromotionRequest,
 )
+from src.contracts.state import (
+    StateArtifactAcquisitionCacheGetRequest,
+    StateArtifactAcquisitionCacheRecordRequest,
+)
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.artifact import (
     finalize_browser_report_download_result,
 )
+from src.services._browser_report_download._artifact.pdf import _build_pdf_result
 from src.services._browser_report_download.browser import (
     run_browser_report_download_agent,
 )
@@ -27,6 +34,7 @@ from src.services._browser_report_download.dev_diagnostics import (
     default_browser_doctor_verification_url as _default_browser_doctor_verification_url,
     run_browser_developer_diagnostics as _run_browser_developer_diagnostics,
 )
+from src.services._browser_report_download import http as http_runtime
 from src.services._browser_report_download.http import try_direct_pdf_download
 from src.services._browser_report_download.http import try_direct_onsite_capture
 from src.services._browser_report_download.http import try_http_access_challenge_probe
@@ -44,7 +52,7 @@ from src.services._browser_report_download.private_api import (
     try_private_api_playbook_download,
 )
 from src.services._browser_report_download.private_api_auto_promotion import (
-    detect_private_api_promotion_candidates,
+    detect_private_api_promotion_candidates as _detect_private_api_promotion_candidates,
 )
 from src.services._browser_report_download.preflight import (
     observe_browser_preflight_agent_outcome,
@@ -61,6 +69,10 @@ from src.services._browser_report_download.request import (
     validate_browser_runtime_settings,
     validate_common_request,
 )
+from src.services.state_service import (
+    get_artifact_acquisition_cache,
+    record_artifact_acquisition_cache,
+)
 from src.utils.errors import AppError
 from src.utils.browser_route_playbooks import (
     select_browser_route_playbooks,
@@ -69,6 +81,266 @@ from src.utils.browser_route_playbooks import (
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
+ARTIFACT_ACQUISITION_CACHE_VERSION = "browser_artifact_cache_v1"
+ARTIFACT_ACQUISITION_CACHE_TTL_DAYS = 30
+
+
+def _artifact_cache_key(
+    *,
+    normalized_url: str,
+    publisher_scope: str,
+    report_title: str,
+) -> str:
+    payload = {
+        "schema_version": "1.0",
+        "normalized_url": normalized_url,
+        "publisher_scope": publisher_scope,
+        "report_title": report_title,
+        "cache_version": ARTIFACT_ACQUISITION_CACHE_VERSION,
+    }
+    return hashlib.sha256(
+        repr(sorted(payload.items())).encode("utf-8")
+    ).hexdigest()
+
+
+def _publisher_scope(normalized_url: str) -> str:
+    host = urlsplit(str(normalized_url or "").strip()).netloc.casefold()
+    return host[4:] if host.startswith("www.") else host
+
+
+def _normalized_report_title(request: BrowserReportDownloadRequest) -> str:
+    title = str(request.report_title or "").strip()
+    if not title and request.candidate_trace is not None:
+        title = str(request.candidate_trace.title or "").strip()
+    return " ".join(title.casefold().split())
+
+
+def _hash_file(path: Path) -> tuple[str, str, int]:
+    md5 = hashlib.md5()
+    sha256 = hashlib.sha256()
+    size = 0
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            size += len(chunk)
+            md5.update(chunk)
+            sha256.update(chunk)
+    return md5.hexdigest(), sha256.hexdigest(), size
+
+
+def _try_reuse_artifact_acquisition_cache(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+) -> BrowserReportDownloadResult | None:
+    publisher_scope = _publisher_scope(normalized_url)
+    report_title = _normalized_report_title(request)
+    cache_key = _artifact_cache_key(
+        normalized_url=normalized_url,
+        publisher_scope=publisher_scope,
+        report_title=report_title,
+    )
+    cached = get_artifact_acquisition_cache(
+        StateArtifactAcquisitionCacheGetRequest(
+            schema_version="1.0",
+            state_db=request.settings.state_db,
+            cache_key=cache_key,
+        ),
+        ctx,
+    )
+    if cached is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="artifact_acquisition_cache_miss",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "cache_key": cache_key,
+                    "reason": "missing",
+                },
+            )
+        )
+        return None
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    try:
+        expires_at = datetime.fromisoformat(
+            cached.expires_at_utc.replace("Z", "+00:00")
+        )
+    except ValueError:
+        expires_at = now - timedelta(seconds=1)
+    path = Path(cached.artifact_path)
+    if expires_at < now or not path.exists() or not path.is_file():
+        reason = "expired" if expires_at < now else "artifact_missing"
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="artifact_acquisition_cache_rejected",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "cache_key": cache_key,
+                    "reason": reason,
+                    "artifact_path": str(path),
+                },
+            )
+        )
+        return None
+    md5, sha256, size = _hash_file(path)
+    if (
+        md5 != cached.artifact_md5
+        or sha256 != cached.artifact_sha256
+        or size != cached.size_bytes
+    ):
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="artifact_acquisition_cache_rejected",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "cache_key": cache_key,
+                    "reason": "hash_mismatch",
+                    "artifact_path": str(path),
+                    "cached_md5": cached.artifact_md5,
+                    "observed_md5": md5,
+                },
+            )
+        )
+        return None
+    try:
+        http_runtime.validate_downloaded_pdf_artifact(
+            downloaded_path=path,
+            downloaded_mime_type=cached.downloaded_mime_type,
+            normalized_url=normalized_url,
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="artifact_acquisition_cache_rejected",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "cache_key": cache_key,
+                    "reason": exc.code,
+                    "artifact_path": str(path),
+                },
+            )
+        )
+        return None
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="artifact_acquisition_cache_hit",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "cache_key": cache_key,
+                "artifact_path": str(path),
+                "artifact_md5": md5,
+                "avoided_browser_or_http_acquisition": True,
+            },
+        )
+    )
+    return _build_pdf_result(
+        request=request,
+        normalized_url=normalized_url,
+        final_url=cached.final_artifact_url or normalized_url,
+        resolved_target_url=cached.final_artifact_url or normalized_url,
+        downloaded_path=path,
+        downloaded_mime_type=cached.downloaded_mime_type,
+        browser_had_structured_result=False,
+        used_candidate_pdf_url=False,
+        terminal_text_excerpt="Reused validated artifact acquisition cache.",
+    )
+
+
+def _record_artifact_acquisition_cache(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    result: BrowserReportDownloadResult,
+) -> None:
+    if result.outcome != "downloaded" or not result.downloaded_file_path:
+        return
+    path = Path(result.downloaded_file_path)
+    if not path.exists() or not path.is_file():
+        return
+    try:
+        http_runtime.validate_downloaded_pdf_artifact(
+            downloaded_path=path,
+            downloaded_mime_type=result.downloaded_mime_type,
+            normalized_url=normalized_url,
+        )
+    except AppError:
+        return
+    md5, sha256, size = _hash_file(path)
+    publisher_scope = _publisher_scope(normalized_url)
+    report_title = _normalized_report_title(request)
+    cache_key = _artifact_cache_key(
+        normalized_url=normalized_url,
+        publisher_scope=publisher_scope,
+        report_title=report_title,
+    )
+    expires_at = (
+        datetime.now(timezone.utc).replace(microsecond=0)
+        + timedelta(days=ARTIFACT_ACQUISITION_CACHE_TTL_DAYS)
+    ).isoformat().replace("+00:00", "Z")
+    record_artifact_acquisition_cache(
+        StateArtifactAcquisitionCacheRecordRequest(
+            schema_version="1.0",
+            state_db=request.settings.state_db,
+            cache_key=cache_key,
+            normalized_url=normalized_url,
+            publisher_scope=publisher_scope,
+            report_title=report_title,
+            final_artifact_url=result.resolved_target_url or result.final_page_url,
+            artifact_path=str(path),
+            artifact_md5=md5,
+            artifact_sha256=sha256,
+            route_kind=result.route_kind,
+            route_family=result.route_family,
+            outcome=result.outcome,
+            downloaded_mime_type=result.downloaded_mime_type or "",
+            size_bytes=size,
+            cache_version=ARTIFACT_ACQUISITION_CACHE_VERSION,
+            expires_at_utc=expires_at,
+        ),
+        ctx,
+    )
+
+
+def _complete_browser_download_result(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    result: BrowserReportDownloadResult,
+) -> BrowserReportDownloadResult:
+    _record_artifact_acquisition_cache(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        result=result,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_complete",
+            module=logger.name,
+            fields=asdict(result),
+        )
+    )
+    return result
 
 
 def _remembered_unattended_blocker_result(
@@ -440,6 +712,10 @@ def promote_private_api_evidence_to_browser_playbook(
     )
 
 
+def detect_private_api_promotion_candidates(request, ctx):
+    return _detect_private_api_promotion_candidates(request, ctx)
+
+
 def _with_augmented_error_context(
     exc: AppError,
     *,
@@ -508,6 +784,19 @@ def download_report_with_browser_use(
         root_dir=request.settings.output_dir,
         normalized_url=normalized_url,
     )
+    cached_result = _try_reuse_artifact_acquisition_cache(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        download_dir=download_dir,
+    )
+    if cached_result is not None:
+        return _complete_browser_download_result(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            result=cached_result,
+        )
     logger.info(
         log_event(
             ctx,
@@ -566,16 +855,12 @@ def download_report_with_browser_use(
             page_url=normalized_execution_url,
         )
         if report_page_pdf_link_result is not None:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="browser_report_download_complete",
-                    module=logger.name,
-                    fields=asdict(report_page_pdf_link_result),
-                )
+            return _complete_browser_download_result(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                result=report_page_pdf_link_result,
             )
-            return report_page_pdf_link_result
         raise AppError(
             code="browser_download_http_probe_failed",
             message="The planned HTTP probe did not produce a valid PDF artifact",
@@ -622,16 +907,12 @@ def download_report_with_browser_use(
             ),
         )
         if direct_pdf_result is not None:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="browser_report_download_complete",
-                    module=logger.name,
-                    fields=asdict(direct_pdf_result),
-                )
+            return _complete_browser_download_result(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                result=direct_pdf_result,
             )
-            return direct_pdf_result
         report_page_pdf_link_result = try_report_page_pdf_link_download(
             request=request,
             ctx=ctx,
@@ -640,16 +921,12 @@ def download_report_with_browser_use(
             page_url=normalized_execution_url,
         )
         if report_page_pdf_link_result is not None:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="browser_report_download_complete",
-                    module=logger.name,
-                    fields=asdict(report_page_pdf_link_result),
-                )
+            return _complete_browser_download_result(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                result=report_page_pdf_link_result,
             )
-            return report_page_pdf_link_result
         if request.route_family_hint == "direct_pdf_probe":
             raise AppError(
                 code="browser_download_http_probe_failed",
@@ -689,16 +966,12 @@ def download_report_with_browser_use(
         page_url=normalized_execution_url,
     )
     if report_page_pdf_link_result is not None:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_report_download_complete",
-                module=logger.name,
-                fields=asdict(report_page_pdf_link_result),
-            )
+        return _complete_browser_download_result(
+            request=report_page_link_request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            result=report_page_pdf_link_result,
         )
-        return report_page_pdf_link_result
 
     static_email_gate_result = None
     if request.route_family_hint == "browser_email_form" and not delivery_email_value:
@@ -709,16 +982,12 @@ def download_report_with_browser_use(
             page_url=normalized_execution_url,
         )
     if static_email_gate_result is not None:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_report_download_complete",
-                module=logger.name,
-                fields=asdict(static_email_gate_result),
-            )
+        return _complete_browser_download_result(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            result=static_email_gate_result,
         )
-        return static_email_gate_result
 
     direct_onsite_result = try_direct_onsite_capture(
         request=request,
@@ -728,16 +997,12 @@ def download_report_with_browser_use(
         page_url=normalized_execution_url,
     )
     if direct_onsite_result is not None:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_report_download_complete",
-                module=logger.name,
-                fields=asdict(direct_onsite_result),
-            )
+        return _complete_browser_download_result(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            result=direct_onsite_result,
         )
-        return direct_onsite_result
 
     if static_email_gate_result is None:
         static_email_gate_result = try_static_email_gate_probe(
@@ -747,16 +1012,12 @@ def download_report_with_browser_use(
             page_url=normalized_execution_url,
         )
         if static_email_gate_result is not None:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="browser_report_download_complete",
-                    module=logger.name,
-                    fields=asdict(static_email_gate_result),
-                )
+            return _complete_browser_download_result(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                result=static_email_gate_result,
             )
-            return static_email_gate_result
 
     if request.route_family_hint == "browser_email_form":
         access_challenge_result = try_http_access_challenge_probe(
@@ -767,16 +1028,12 @@ def download_report_with_browser_use(
             preflight=True,
         )
         if access_challenge_result is not None:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="browser_report_download_complete",
-                    module=logger.name,
-                    fields=asdict(access_challenge_result),
-                )
+            return _complete_browser_download_result(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                result=access_challenge_result,
             )
-            return access_challenge_result
 
     validate_browser_runtime_settings(request)
     browser_preflight_response = try_browser_preflight_probe(
@@ -787,16 +1044,12 @@ def download_report_with_browser_use(
         download_dir=download_dir,
     )
     if browser_preflight_response.result is not None:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_report_download_complete",
-                module=logger.name,
-                fields=asdict(browser_preflight_response.result),
-            )
+        return _complete_browser_download_result(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            result=browser_preflight_response.result,
         )
-        return browser_preflight_response.result
     logger.info(
         log_event(
             ctx,
@@ -846,16 +1099,12 @@ def download_report_with_browser_use(
                 browser_preflight_response=browser_preflight_response,
                 fallback_result=remembered_blocker_result,
             )
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="browser_report_download_complete",
-                    module=logger.name,
-                    fields=asdict(response),
-                )
+            return _complete_browser_download_result(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                result=response,
             )
-            return response
         logger.info(
             log_event(
                 ctx,
@@ -879,16 +1128,12 @@ def download_report_with_browser_use(
         download_dir=download_dir,
     )
     if private_api_result is not None:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_report_download_complete",
-                module=logger.name,
-                fields=asdict(private_api_result),
-            )
+        return _complete_browser_download_result(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            result=private_api_result,
         )
-        return private_api_result
     prompt_bundle = render_browser_report_download_prompt(
         request=request,
         ctx=ctx,
@@ -918,16 +1163,12 @@ def download_report_with_browser_use(
                 page_url=normalized_execution_url,
             )
             if access_challenge_result is not None:
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="service",
-                        event="browser_report_download_complete",
-                        module=logger.name,
-                        fields=asdict(access_challenge_result),
-                    )
+                return _complete_browser_download_result(
+                    request=request,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    result=access_challenge_result,
                 )
-                return access_challenge_result
         raise _with_augmented_error_context(
             exc,
             normalized_url=normalized_url,
@@ -970,16 +1211,12 @@ def download_report_with_browser_use(
             route_family_hint=request.route_family_hint,
             browser_run=browser_run,
         ) from exc
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="browser_report_download_complete",
-            module=logger.name,
-            fields=asdict(response),
-        )
+    return _complete_browser_download_result(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        result=response,
     )
-    return response
 
 
 def attach_browser_route_playbooks(

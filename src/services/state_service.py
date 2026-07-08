@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from src.services._state_service.access import check_state_db_access
+from src.services._state_service.artifact_cache import (
+    get_artifact_acquisition_cache,
+    record_artifact_acquisition_cache,
+)
 from src.services._state_service.processed import (
     already_processed,
     already_processed_batch,
@@ -39,6 +43,7 @@ __all__ = [
     "already_published",
     "check_state_db_access",
     "get",
+    "get_artifact_acquisition_cache",
     "get_by_md5",
     "get_ingest_cursor",
     "get_publish",
@@ -50,6 +55,7 @@ __all__ = [
     "list_workflow_control_observations",
     "mark_mail_delivery_request_attempt",
     "record",
+    "record_artifact_acquisition_cache",
     "record_mailbox_candidate_rejection",
     "record_publish",
     "record_report_download_route",
