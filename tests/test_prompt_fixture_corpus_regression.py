@@ -77,8 +77,8 @@ def test_collect_prompt_fixture_corpus_metrics_aggregates_runtime_tokens_and_cos
     )
 
     row = metrics.namespaces["alpha"]
-    expected_input_tokens = estimate_text_tokens("hello Ada") + estimate_text_tokens(
-        "task wallets"
+    expected_input_tokens = estimate_text_tokens("hello Ada\n") + estimate_text_tokens(
+        "task wallets\n"
     )
 
     assert metrics.fixture_count == 1
