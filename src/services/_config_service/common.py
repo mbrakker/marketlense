@@ -25,6 +25,7 @@ from src.contracts.browser_download import (
     BrowserDownloadCaptchaHandoffPolicy,
     BrowserDownloadIdentityFieldUpsertRequest,
     BrowserDownloadIdentityFieldUpsertResponse,
+    BrowserDownloadRouteBudget,
     BrowserDownloadSessionReusePolicy,
     BrowserDownloadSettings,
 )
@@ -564,6 +565,7 @@ __all__ = [
     "BrowserDownloadCaptchaHandoffPolicy",
     "BrowserDownloadIdentityFieldUpsertRequest",
     "BrowserDownloadIdentityFieldUpsertResponse",
+    "BrowserDownloadRouteBudget",
     "BrowserDownloadSessionReusePolicy",
     "BrowserDownloadSettings",
     "CONFIG_PATH",

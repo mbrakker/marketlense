@@ -497,6 +497,9 @@ Scoring:
 - Contract compatibility matrix.
 - Role-mixing/monolith-growth CI enforcement.
 - End-to-end trace read model.
+- Browser route-budget telemetry auto-tuning and warm same-publisher worker-pool rollout, using route-family budget logs, terminal evidence, and session-reuse ledgers to reduce batch browser wall time without cross-publisher leakage.
+- Generate local and CI quality-gate manifests from `docs/quality/architecture_policy.yaml`, with drift tests for workflow commands, artifacts, and waiver metadata.
+- Split the three expiring long-test allowlist modules before 2026-08-31 while preserving public pytest facades and current assertions.
 
 ---
 

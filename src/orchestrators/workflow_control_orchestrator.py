@@ -790,8 +790,15 @@ def run_due_mail_delivery_requests(
     ctx: RunContext,
     run_mail_report_acquisition_fn: Callable[
         [MailReportAcquisitionRequest, RunContext], Any
-    ] = run_mail_report_acquisition,
+    ]
+    | None = None,
 ) -> MailDeliveryWorkflowRunResult:
+    mail_runner = run_mail_report_acquisition_fn or (
+        lambda mail_request, run_ctx: run_mail_report_acquisition(
+            mail_request,
+            ctx=run_ctx,
+        )
+    )
     logger.info(
         log_event(
             ctx,
@@ -817,7 +824,7 @@ def run_due_mail_delivery_requests(
     results: list[MailDeliveryWorkflowItemResult] = []
     for item in due.requests:
         try:
-            acquisition = run_mail_report_acquisition_fn(
+            acquisition = mail_runner(
                 MailReportAcquisitionRequest(
                     schema_version="1.0",
                     source_url=item.source_url,

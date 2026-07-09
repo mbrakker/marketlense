@@ -1,3 +1,4 @@
+# ruff: noqa: F403,F405
 from __future__ import annotations
 
 from src.services._config_service.common import *
@@ -31,6 +32,7 @@ def load_browser_download_settings(
     failure_forensics_cfg = browser_download.get("failure_forensics", {}) or {}
     session_reuse_cfg = browser_download.get("session_reuse", {}) or {}
     captcha_handoff_cfg = browser_download.get("captcha_handoff", {}) or {}
+    route_budgets_cfg = browser_download.get("route_budgets", {}) or {}
     retry_cfg = browser_download.get("retry", {}) or {}
     drive_upload_enabled = _to_bool(
         drive_upload_cfg.get("enabled")
@@ -180,6 +182,7 @@ def load_browser_download_settings(
         or _env_value("BROWSER_PRIVATE_API_PLAYBOOK_MIN_DISTINCT_SOURCE_URLS")
         or 2
     )
+    route_budgets = _load_browser_route_budgets(route_budgets_cfg)
     session_reuse_policy = BrowserDownloadSessionReusePolicy(
         schema_version="1.0",
         enabled=_to_bool(
@@ -458,9 +461,7 @@ def load_browser_download_settings(
                 _to_float(
                     captcha_handoff_cfg.get("timeout_seconds")
                     if not _is_missing(captcha_handoff_cfg.get("timeout_seconds"))
-                    else _env_value(
-                        "BROWSER_DOWNLOAD_CAPTCHA_HANDOFF_TIMEOUT_SECONDS"
-                    ),
+                    else _env_value("BROWSER_DOWNLOAD_CAPTCHA_HANDOFF_TIMEOUT_SECONDS"),
                     _to_float(
                         _default_config_value(
                             "browser_download",
@@ -474,6 +475,7 @@ def load_browser_download_settings(
                 1.0,
             ),
         ),
+        route_budgets=route_budgets,
     )
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
@@ -534,16 +536,76 @@ def load_browser_download_settings(
                 "session_reuse_ttl_seconds": (
                     settings.session_reuse_policy.ttl_seconds
                 ),
-                "captcha_handoff_enabled": (
-                    settings.captcha_handoff_policy.enabled
-                ),
+                "captcha_handoff_enabled": (settings.captcha_handoff_policy.enabled),
                 "captcha_handoff_timeout_seconds": (
                     settings.captcha_handoff_policy.timeout_seconds
                 ),
+                "route_budget_count": len(settings.route_budgets),
             },
         )
     )
     return settings
+
+
+def _load_browser_route_budgets(payload: object) -> list[BrowserDownloadRouteBudget]:
+    raw_items: list[tuple[str, object]] = []
+    if isinstance(payload, dict):
+        raw_items = [
+            (str(route_family), value) for route_family, value in payload.items()
+        ]
+    elif isinstance(payload, list):
+        for item in payload:
+            if not isinstance(item, dict):
+                raise RuntimeError(
+                    "browser_download.route_budgets items must be mappings"
+                )
+            route_family = str(item.get("route_family") or "").strip()
+            raw_items.append((route_family, item))
+    elif payload:
+        raise RuntimeError("browser_download.route_budgets must be a mapping or list")
+
+    budgets: list[BrowserDownloadRouteBudget] = []
+    seen: set[str] = set()
+    for route_family, raw_budget in raw_items:
+        normalized_family = str(route_family or "").strip()
+        if not normalized_family:
+            raise RuntimeError(
+                "browser_download.route_budgets route_family is required"
+            )
+        if normalized_family in seen:
+            raise RuntimeError(
+                f"browser_download.route_budgets duplicates {normalized_family}"
+            )
+        if not isinstance(raw_budget, dict):
+            raise RuntimeError(
+                f"browser_download.route_budgets.{normalized_family} must be a mapping"
+            )
+        raw_max_steps = raw_budget.get("max_steps")
+        raw_timeout_seconds = raw_budget.get("timeout_seconds")
+        max_steps = (
+            max(_to_int(raw_max_steps, 0), 1)
+            if not _is_missing(raw_max_steps)
+            else None
+        )
+        timeout_seconds = (
+            max(_to_float(raw_timeout_seconds, 0.0), 1.0)
+            if not _is_missing(raw_timeout_seconds)
+            else None
+        )
+        if max_steps is None and timeout_seconds is None:
+            raise RuntimeError(
+                f"browser_download.route_budgets.{normalized_family} must set max_steps or timeout_seconds"
+            )
+        budgets.append(
+            BrowserDownloadRouteBudget(
+                schema_version=str(raw_budget.get("schema_version", "1.0")),
+                route_family=normalized_family,
+                max_steps=max_steps,
+                timeout_seconds=timeout_seconds,
+            )
+        )
+        seen.add(normalized_family)
+    return budgets
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]

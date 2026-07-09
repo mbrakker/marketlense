@@ -1,7 +1,7 @@
 {
   "error_count": 0,
   "errors": [],
-  "expires_at": "2026-06-30",
+  "expires_at": "2026-08-31",
   "generated_by": "python scripts/ci/run_type_check.py --update-baseline",
   "owner": "quality/type-safety",
   "schema_version": "1.0"

@@ -14,6 +14,7 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
     BrowserDownloadPublisherOverride,
+    BrowserDownloadRouteBudget,
     BrowserDownloadRouteStep,
     BrowserDownloadSessionReusePolicy,
     BrowserDownloadSettings,
@@ -99,6 +100,7 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
     identity_payload = payload.get("identity_profile")
     session_reuse_payload = payload.get("session_reuse_policy")
     captcha_handoff_payload = payload.get("captcha_handoff_policy")
+    route_budgets_payload = payload.get("route_budgets")
     session_reuse_policy = _build_session_reuse_policy(
         session_reuse_payload if isinstance(session_reuse_payload, dict) else {}
     )
@@ -145,9 +147,27 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         ),
         session_reuse_policy=session_reuse_policy,
         captcha_handoff_policy=_build_captcha_handoff_policy(
-            captcha_handoff_payload
-            if isinstance(captcha_handoff_payload, dict)
-            else {}
+            captcha_handoff_payload if isinstance(captcha_handoff_payload, dict) else {}
+        ),
+        route_budgets=[
+            _build_route_budget(item)
+            for item in route_budgets_payload
+            if isinstance(item, dict)
+        ]
+        if isinstance(route_budgets_payload, list)
+        else [],
+    )
+
+
+def _build_route_budget(payload: dict) -> BrowserDownloadRouteBudget:
+    max_steps = payload.get("max_steps")
+    timeout_seconds = payload.get("timeout_seconds")
+    return BrowserDownloadRouteBudget(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        route_family=str(payload.get("route_family") or "").strip(),
+        max_steps=int(max_steps) if max_steps is not None else None,
+        timeout_seconds=(
+            float(timeout_seconds) if timeout_seconds is not None else None
         ),
     )
 
@@ -319,10 +339,7 @@ def _redact_worker_response_for_disk(
         )
         return _EMAIL_PATTERN.sub(REDACTED, redacted)
     if isinstance(payload, list):
-        return [
-            _redact_worker_response_for_disk(item, request)
-            for item in payload
-        ]
+        return [_redact_worker_response_for_disk(item, request) for item in payload]
     if isinstance(payload, dict):
         return {
             str(_redact_worker_response_for_disk(key, request)): (

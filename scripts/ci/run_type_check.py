@@ -9,12 +9,16 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable
 
-
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.ci.policy import DEFAULT_POLICY_PATH, load_architecture_policy  # noqa: E402
+
 MYPY_CONFIG = ROOT / "mypy.ini"
 DEFAULT_BASELINE_PATH = ROOT / "docs" / "quality" / "mypy_baseline.json"
 BASELINE_OWNER = "quality/type-safety"
-BASELINE_EXPIRES_AT = "2026-06-30"
+BASELINE_EXPIRES_AT = "2026-08-31"
 ERROR_RE = re.compile(
     r"^(?P<path>.+?):(?P<line>\d+): error: (?P<message>.*?)\s+\[(?P<code>[a-zA-Z0-9_-]+)\]$"
 )
@@ -165,6 +169,24 @@ def _load_baseline(path: Path) -> list[dict[str, Any]]:
     return baseline
 
 
+def _validate_baseline_freshness(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    policy = load_architecture_policy(DEFAULT_POLICY_PATH)
+    baseline_policy = policy.get("mypy_baseline")
+    if not isinstance(baseline_policy, dict):
+        return []
+    expected_expiry = str(baseline_policy.get("expires_at") or "")
+    actual_expiry = str(payload.get("expires_at") or "")
+    if expected_expiry and actual_expiry != expected_expiry:
+        return [
+            "mypy baseline expiry "
+            f"{actual_expiry or '<missing>'} does not match policy {expected_expiry}"
+        ]
+    return []
+
+
 def _write_baseline(path: Path, errors: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -257,11 +279,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     baseline_errors = _load_baseline(baseline_path)
+    freshness_errors = _validate_baseline_freshness(baseline_path)
     new_errors, stale_errors = _compare_to_baseline(
         current_errors=current_errors,
         baseline_errors=baseline_errors,
     )
-    if new_errors or stale_errors:
+    if new_errors or stale_errors or freshness_errors:
+        for error in freshness_errors:
+            print(f"Type baseline freshness error: {error}")
         _print_errors("Unbaselined mypy errors:", new_errors)
         _print_errors("Stale mypy baseline entries:", stale_errors)
         print(

@@ -919,9 +919,7 @@ def _load_prompt_schema_snippets(
     return snippets, sources
 
 
-def _build_prompt_schema_snippet(
-    spec: object, *, owner_path: Path
-) -> tuple[str, str]:
+def _build_prompt_schema_snippet(spec: object, *, owner_path: Path) -> tuple[str, str]:
     if isinstance(spec, str):
         schema_name = spec
         pointer = ""
@@ -1035,13 +1033,13 @@ def _schema_snippet_lines(schema: Any, *, depth: int = 0, name: str = "") -> lis
     if isinstance(properties, dict):
         if depth == 0:
             lines.append("Fields:")
-        required = set(_required_fields(schema))
+        required_fields = set(_required_fields(schema))
         for prop_name, prop_schema in properties.items():
             if not isinstance(prop_schema, dict):
                 continue
             descriptor = _schema_field_descriptor(
                 prop_schema,
-                required=prop_name in required,
+                required=prop_name in required_fields,
             )
             indent = "  " * depth
             lines.append(f"{indent}- {prop_name}: {descriptor}")
@@ -1068,7 +1066,15 @@ def _schema_field_descriptor(schema: dict[str, Any], *, required: bool) -> str:
     parts = [_schema_type(schema)]
     if required:
         parts.append("required")
-    for key in ("enum", "minLength", "maxLength", "minItems", "maxItems", "minimum", "maximum"):
+    for key in (
+        "enum",
+        "minLength",
+        "maxLength",
+        "minItems",
+        "maxItems",
+        "minimum",
+        "maximum",
+    ):
         if key not in schema:
             continue
         value = schema[key]

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -28,10 +27,8 @@ from src.contracts.files import (
     FileStatRequest,
     ReadTextRequest,
 )
-from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
 from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
-    ReportMetadataDbAccessRequest,
     ReportMetadataGetRequest,
 )
 from src.contracts.run_context import RunContext
@@ -59,9 +56,7 @@ from src.services.file_cache_service import (
     write_md5_sidecar,
 )
 from src.services.file_service import delete_file, file_exists, file_stat, read_text
-from src.services.lock_service import acquire_lock, release_lock
 from src.services.report_store_service import (
-    check_report_db_access,
     get_metadata as get_report_metadata,
 )
 from src.services.state_service import (
@@ -70,7 +65,6 @@ from src.services.state_service import (
 from src.services.state_service import already_processed as state_already_processed
 from src.services.state_service import get as state_get
 from src.services.state_service import (
-    check_state_db_access,
     get_ingest_cursor,
     set_ingest_cursor,
 )
@@ -79,17 +73,22 @@ from src.contracts.state import (
     StateBatchCheckItem,
     StateBatchCheckRequest,
     StateCheckRequest,
-    StateDbAccessRequest,
     StateGetRequest,
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
+)
+from src.orchestrators._ingest_orchestrator.db_preflight import (
+    verify_ingest_db_access,
+)
+from src.orchestrators._ingest_orchestrator.lock_lifecycle import (
+    acquire_ingest_lock,
+    finalize_ingest_run,
 )
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.errors import AppError
 from src.utils.path_utils import safe_pdf_name
 
 logger = logging.getLogger("market_lense.ingest_orchestrator")
-DB_ACCESS_TIMEOUT_SECONDS = 0.0
 EOF_RETRY_LIMIT = 1
 STATE_PREFILTER_BATCH_SIZE = 200
 DOC_MAP_EMPTY_ERROR_PREFIX = "doc_map_empty:"
@@ -413,137 +412,6 @@ def _process_file(
     )
 
 
-def _acquire_ingest_lock(settings: IngestSettings, lock_ctx: RunContext):
-    lock_resp = acquire_lock(
-        LockAcquireRequest(
-            schema_version="1.0",
-            lock_path=settings.ingest_lock_path,
-            owner_id=f"ingest:{lock_ctx.run_id}",
-            pid=os.getpid(),
-            ttl_seconds=settings.ingest_lock_ttl_seconds,
-        ),
-        lock_ctx,
-    )
-    if lock_resp.acquired:
-        lock_info = lock_resp.lock
-        logger.info(
-            log_event(
-                lock_ctx,
-                role="orchestrator",
-                event="ingest_lock_acquired",
-                module=logger.name,
-                fields={
-                    "lock_path": settings.ingest_lock_path,
-                    "owner_id": lock_info.owner_id if lock_info else "",
-                    "pid": lock_info.pid if lock_info else None,
-                },
-            )
-        )
-        return lock_info
-    conflict = lock_resp.conflict
-    logger.info(
-        log_event(
-            lock_ctx,
-            role="orchestrator",
-            event="ingest_lock_conflict",
-            module=logger.name,
-            fields={
-                "lock_path": settings.ingest_lock_path,
-                "existing_owner": conflict.owner_id if conflict else None,
-                "existing_pid": conflict.pid if conflict else None,
-            },
-        )
-    )
-    raise AppError(
-        code="ingest_locked",
-        message="Another ingest run is already active",
-        retryable=False,
-        context={
-            "lock_path": settings.ingest_lock_path,
-            "owner_id": conflict.owner_id if conflict else None,
-            "pid": conflict.pid if conflict else None,
-        },
-    )
-
-
-def _verify_ingest_db_access(settings: IngestSettings, root_ctx: RunContext) -> None:
-    db_ctx = child_context(root_ctx, task_id="ingest_db_access")
-    logger.info(
-        log_event(
-            db_ctx,
-            role="orchestrator",
-            event="ingest_db_access_start",
-            module=logger.name,
-            fields={
-                "state_db": settings.state_db,
-                "reports_db": settings.reports_db,
-            },
-        )
-    )
-    state_access = check_state_db_access(
-        StateDbAccessRequest(
-            schema_version="1.0",
-            state_db=settings.state_db,
-            timeout_seconds=DB_ACCESS_TIMEOUT_SECONDS,
-        ),
-        db_ctx,
-    )
-    report_access = check_report_db_access(
-        ReportMetadataDbAccessRequest(
-            schema_version="1.0",
-            db_path=settings.reports_db,
-            timeout_seconds=DB_ACCESS_TIMEOUT_SECONDS,
-        ),
-        db_ctx,
-    )
-    if state_access.accessible and report_access.accessible:
-        logger.info(
-            log_event(
-                db_ctx,
-                role="orchestrator",
-                event="ingest_db_access_complete",
-                module=logger.name,
-                fields={
-                    "state_db": settings.state_db,
-                    "reports_db": settings.reports_db,
-                },
-            )
-        )
-        return
-    locked = []
-    if state_access.locked:
-        locked.append(f"state_db={settings.state_db}")
-    if report_access.locked:
-        locked.append(f"reports_db={settings.reports_db}")
-    reason = ", ".join(locked) if locked else "unknown"
-    logger.info(
-        log_event(
-            db_ctx,
-            role="orchestrator",
-            event="ingest_db_access_blocked",
-            module=logger.name,
-            fields={
-                "state_db_accessible": state_access.accessible,
-                "state_db_locked": state_access.locked,
-                "reports_db_accessible": report_access.accessible,
-                "reports_db_locked": report_access.locked,
-                "reason": reason,
-            },
-        )
-    )
-    raise AppError(
-        code="db_locked",
-        message=f"Database locked: {reason}",
-        retryable=False,
-        context={
-            "state_db": settings.state_db,
-            "reports_db": settings.reports_db,
-            "state_db_locked": state_access.locked,
-            "reports_db_locked": report_access.locked,
-        },
-    )
-
-
 def _resolve_modified_after(
     settings: IngestSettings,
     *,
@@ -830,7 +698,9 @@ def _prefetch_cached_pdf(
             prefetch_ctx,
         )
 
-    stat_resp = file_stat(FileStatRequest(schema_version="1.0", path=cache_path), prefetch_ctx)
+    stat_resp = file_stat(
+        FileStatRequest(schema_version="1.0", path=cache_path), prefetch_ctx
+    )
     if stat_resp.exists:
         sidecar = resolve_md5_sidecar(
             FileCacheMd5SidecarResolveRequest(
@@ -856,8 +726,10 @@ def _prefetch_cached_pdf(
             FileStatRequest(schema_version="1.0", path=cache_path, compute_md5=True),
             prefetch_ctx,
         )
-        if hashed_stat.exists and hashed_stat.md5 and (
-            not drive_md5 or hashed_stat.md5 == drive_md5
+        if (
+            hashed_stat.exists
+            and hashed_stat.md5
+            and (not drive_md5 or hashed_stat.md5 == drive_md5)
         ):
             _write_sidecar(hashed_stat.md5, hashed_stat)
             return _DriveCachePrefetchResult(
@@ -1133,47 +1005,6 @@ def _update_ingest_cursor(
     )
 
 
-def _finalize_ingest_run(
-    *,
-    lock_ctx: RunContext,
-    lock_info,
-) -> None:
-    if not lock_info:
-        return
-    try:
-        release_lock(
-            LockReleaseRequest(
-                schema_version="1.0",
-                lock_path=lock_info.lock_path,
-                owner_id=lock_info.owner_id,
-                pid=lock_info.pid,
-            ),
-            lock_ctx,
-        )
-        logger.info(
-            log_event(
-                lock_ctx,
-                role="orchestrator",
-                event="ingest_lock_released",
-                module=logger.name,
-                fields={"lock_path": lock_info.lock_path},
-            )
-        )
-    except AppError as exc:
-        logger.info(
-            log_event(
-                lock_ctx,
-                role="orchestrator",
-                event="ingest_lock_release_failed",
-                module=logger.name,
-                fields={
-                    "lock_path": lock_info.lock_path,
-                    "error": str(exc),
-                },
-            )
-        )
-
-
 def run_ingest(
     settings: IngestSettings,
     *,
@@ -1188,8 +1019,8 @@ def run_ingest(
     lock_ctx = child_context(root_ctx, task_id="ingest_lock")
     lock_info = None
     try:
-        lock_info = _acquire_ingest_lock(settings, lock_ctx)
-        _verify_ingest_db_access(settings, root_ctx)
+        lock_info = acquire_ingest_lock(settings, lock_ctx)
+        verify_ingest_db_access(settings, root_ctx)
 
         logger.info(
             log_event(
@@ -1262,7 +1093,7 @@ def run_ingest(
         )
         return outcomes
     finally:
-        _finalize_ingest_run(
+        finalize_ingest_run(
             lock_ctx=lock_ctx,
             lock_info=lock_info,
         )

@@ -27,6 +27,8 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Format check
         run: python scripts/ci/check_formatting.py
+      - name: Ruff lint check
+        run: python scripts/ci/check_ruff_lint.py
       - name: Classify change risk
         run: python scripts/ci/check_risk_policy.py
       - name: Split symbol-linking gate
@@ -35,6 +37,12 @@ jobs:
         run: python scripts/ci/run_type_check.py
       - name: Architecture import gate
         run: python scripts/ci/check_architecture_imports.py
+      - name: Role I/O boundary gate
+        run: python scripts/ci/check_role_io_boundaries.py
+      - name: Service boundary map gate
+        run: python scripts/ci/check_service_boundary_map.py
+      - name: Refactor movement evidence gate
+        run: python scripts/ci/check_refactor_movement_evidence.py
       - name: Forbidden patching gate
         run: python scripts/ci/check_forbidden_patching.py
       - name: Repository hygiene gate

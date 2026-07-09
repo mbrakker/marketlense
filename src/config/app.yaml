@@ -152,6 +152,22 @@ browser_download:
   temperature: 0.0
   timeout_seconds: 180
   max_steps: 30
+  route_budgets:
+    browser_email_form:
+      timeout_seconds: 120
+      max_steps: 18
+    browser_pdf_click:
+      timeout_seconds: 90
+      max_steps: 12
+    browser_tracker_redirect:
+      timeout_seconds: 90
+      max_steps: 12
+    browser_listing_hub:
+      timeout_seconds: 180
+      max_steps: 30
+    browser_onsite_report:
+      timeout_seconds: 120
+      max_steps: 16
   max_tokens: 12000
   output_dir: "./out/browser_downloads"
   headed: false

@@ -837,6 +837,31 @@ def test_pre_llm_quality_gates_block_expensive_model_call() -> None:
     assert calls["count"] == 0
 
 
+def test_pre_llm_quality_gates_skip_duplicate_even_when_not_already_processed() -> None:
+    decision = workflow.evaluate_pre_llm_data_quality(
+        workflow.PreLlmDataQualityInput(
+            schema_version="1.0",
+            file_id="file-duplicate",
+            md5="md5",
+            already_processed=False,
+            duplicate_report=True,
+            text_char_count=20_000,
+            supported_file_type=True,
+            report_like=True,
+            stale_already_processed=True,
+            publisher_matches=True,
+            publication_date_evidence=True,
+            visual_candidate_count=5,
+            known_gated_lead_form=False,
+        ),
+        ctx=_ctx(),
+    )
+
+    assert decision.outcome == "skip_duplicate"
+    assert decision.reason == "duplicate_or_already_processed"
+    assert decision.expensive_work_allowed is False
+
+
 def test_resolve_all_adaptive_concurrency_covers_all_resource_classes() -> None:
     catalog = workflow.default_workflow_control_settings()
 

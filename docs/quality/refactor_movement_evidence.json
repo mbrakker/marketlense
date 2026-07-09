@@ -48,6 +48,24 @@
       "unchanged_moved_symbol_count": 17,
       "changed_moved_symbol_count": 16,
       "facade_owned_definitions": []
+    },
+    {
+      "original_file": "src/orchestrators/ingest_orchestrator.py",
+      "baseline_ref": "HEAD:src/orchestrators/ingest_orchestrator.py",
+      "moved_symbol_count": 3,
+      "unchanged_moved_symbol_count": 0,
+      "changed_moved_symbol_count": 3,
+      "facade_owned_definitions": [
+        "run_ingest"
+      ]
+    },
+    {
+      "original_file": "tests/test_publish_generator.py",
+      "baseline_ref": "HEAD:tests/test_publish_generator.py",
+      "moved_symbol_count": 15,
+      "unchanged_moved_symbol_count": 15,
+      "changed_moved_symbol_count": 0,
+      "facade_owned_definitions": []
     }
   ]
 }

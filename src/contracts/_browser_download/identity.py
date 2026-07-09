@@ -167,6 +167,30 @@ class BrowserDownloadCaptchaHandoffPolicy:
 
 
 @dataclass(frozen=True)
+class BrowserDownloadRouteBudget:
+    schema_version: str = field(
+        metadata={"doc": "Browser-download route-budget schema version."}
+    )
+    route_family: str = field(
+        metadata={
+            "doc": "Browser route family this budget applies to, such as browser_email_form or browser_listing_hub."
+        }
+    )
+    max_steps: Optional[int] = field(
+        default=None,
+        metadata={
+            "doc": "Optional maximum browser-use agent steps for this route family; capped by the global max_steps setting."
+        },
+    )
+    timeout_seconds: Optional[float] = field(
+        default=None,
+        metadata={
+            "doc": "Optional browser-use agent timeout base for this route family; capped by the global timeout_seconds setting."
+        },
+    )
+
+
+@dataclass(frozen=True)
 class BrowserDownloadSettings:
     schema_version: str = field(
         metadata={"doc": "Browser download settings schema version."}
@@ -357,5 +381,11 @@ class BrowserDownloadSettings:
         ),
         metadata={
             "doc": "Operator handoff policy for CAPTCHA-protected browser routes."
+        },
+    )
+    route_budgets: list[BrowserDownloadRouteBudget] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Optional per-route-family caps for browser-use max_steps and timeout_seconds."
         },
     )

@@ -25,7 +25,7 @@ def test_architecture_import_gate_detects_reverse_dependency(tmp_path) -> None:
             line=1,
             column=1,
             imported="src.generators",
-            rule="services must not import src.generators",
+            rule="services may only import src.contracts, src.services, src.utils",
         )
     ]
 

@@ -12,8 +12,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Iterable, Sequence, cast
 
-
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.ci.policy import DEFAULT_POLICY_PATH, load_architecture_policy  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -83,6 +86,12 @@ def _parse_args() -> argparse.Namespace:
         "--json-out",
         default="mutation_results.json",
         help="Path to write mutation summary JSON.",
+    )
+    parser.add_argument(
+        "--target",
+        action="append",
+        default=[],
+        help="Run only mutation targets whose module path or report module contains this text.",
     )
     return parser.parse_args()
 
@@ -319,6 +328,23 @@ def _run_target(target: MutationTarget) -> MutationResult:
     return MutationResult(target=target, total=len(candidates), killed=killed)
 
 
+def _mutation_policy() -> dict[str, object]:
+    policy = load_architecture_policy(DEFAULT_POLICY_PATH)
+    raw_policy = policy.get("mutation")
+    return raw_policy if isinstance(raw_policy, dict) else {}
+
+
+def _target_min_score(path: str, default: float) -> float:
+    policy = _mutation_policy()
+    raw_scores = policy.get("target_min_scores")
+    scores = raw_scores if isinstance(raw_scores, dict) else {}
+    raw = scores.get(path, default)
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return default
+
+
 def _targets() -> Iterable[MutationTarget]:
     return [
         MutationTarget(
@@ -384,7 +410,7 @@ def _targets() -> Iterable[MutationTarget]:
             module_path=ROOT / "src" / "generators" / "publish_generator.py",
             test_paths=("tests/test_publish_generator.py",),
             max_mutants=4,
-            min_score=75.0,
+            min_score=_target_min_score("src/generators/publish_generator.py", 85.0),
         ),
         MutationTarget(
             module_path=ROOT / "src" / "services" / "_llm_service" / "vector_store.py",
@@ -443,7 +469,9 @@ def _targets() -> Iterable[MutationTarget]:
                 "tests/test_report_pipeline_orchestrator.py",
             ),
             max_mutants=6,
-            min_score=85.0,
+            min_score=_target_min_score(
+                "src/orchestrators/retry_telemetry_orchestrator.py", 90.0
+            ),
         ),
         MutationTarget(
             module_path=ROOT
@@ -455,7 +483,9 @@ def _targets() -> Iterable[MutationTarget]:
                 "tests/test_run_health_scorecard.py",
             ),
             max_mutants=6,
-            min_score=85.0,
+            min_score=_target_min_score(
+                "src/orchestrators/workflow_control_orchestrator.py", 90.0
+            ),
         ),
         MutationTarget(
             module_path=ROOT
@@ -467,16 +497,38 @@ def _targets() -> Iterable[MutationTarget]:
                 "tests/test_report_pipeline_orchestrator.py",
             ),
             max_mutants=6,
-            min_score=85.0,
+            min_score=_target_min_score(
+                "src/orchestrators/pipeline_preflight_orchestrator.py", 90.0
+            ),
         ),
     ]
 
 
 def main() -> int:
     args = _parse_args()
-    min_score = _threshold("MUTATION_MIN_SCORE", 50.0)
+    raw_default = _mutation_policy().get("default_min_score", 60.0)
+    try:
+        default_min_score = float(raw_default)
+    except (TypeError, ValueError):
+        default_min_score = 60.0
+    min_score = _threshold("MUTATION_MIN_SCORE", default_min_score)
     print(f"Mutation gate: min score {min_score:.2f}%")
     targets = list(_targets())
+    if args.target:
+        filters = tuple(str(item) for item in args.target)
+        targets = [
+            target
+            for target in targets
+            if any(
+                item in target.module_path.as_posix()
+                or (target.report_module is not None and item in target.report_module)
+                for item in filters
+            )
+        ]
+        if not targets:
+            raise SystemExit(
+                "No mutation targets matched filters: " + ", ".join(filters)
+            )
     results = [_run_target(target) for target in targets]
 
     failed = []

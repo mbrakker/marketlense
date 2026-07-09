@@ -8,6 +8,11 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.ci.policy import DEFAULT_POLICY_PATH, load_architecture_policy  # noqa: E402
+
 MAP_PATH = ROOT / "docs" / "quality" / "service_boundary_map.json"
 
 
@@ -17,6 +22,14 @@ class ServiceBoundaryViolation:
     line: int
     system: str
     imported: str
+
+
+def load_service_boundary_config(path: Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
+    if path.suffix in {".yaml", ".yml"}:
+        policy = load_architecture_policy(path)
+        systems = policy.get("external_system_ownership")
+        return {"systems": systems if isinstance(systems, dict) else {}}
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def scan_service_boundary_map(
@@ -68,7 +81,7 @@ def _imports(tree: ast.AST) -> list[tuple[str, int]]:
 
 
 def main() -> int:
-    config = json.loads(MAP_PATH.read_text(encoding="utf-8"))
+    config = load_service_boundary_config(DEFAULT_POLICY_PATH)
     violations = scan_service_boundary_map(ROOT, config)
     if violations:
         print("Service boundary map gate failed:")

@@ -584,11 +584,11 @@ def _find_duplicate_drive_file(
 
 
 def _local_terminal_artifact_paths(result: BrowserReportDownloadResult) -> list[str]:
-    candidates = (
-        [result.downloaded_file_path]
-        if result.downloaded_file_path
-        else [result.onsite_capture_path]
-    )
+    candidates: list[str] = []
+    if result.downloaded_file_path:
+        candidates.append(result.downloaded_file_path)
+    elif result.onsite_capture_path:
+        candidates.append(result.onsite_capture_path)
     seen: set[str] = set()
     paths: list[str] = []
     for candidate in candidates:

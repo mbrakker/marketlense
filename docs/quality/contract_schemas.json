@@ -770,6 +770,42 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.identity.BrowserDownloadRouteBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_steps": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "route_family"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.identity.BrowserDownloadSettings": {
       "additionalProperties": false,
       "properties": {
@@ -890,6 +926,12 @@
         },
         "retry_retries": {
           "type": "integer"
+        },
+        "route_budgets": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadRouteBudget"
+          },
+          "type": "array"
         },
         "route_playbook_dir": {
           "type": "string"

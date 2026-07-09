@@ -5,6 +5,13 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.ci.policy import DEFAULT_POLICY_PATH, load_architecture_policy  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -103,13 +110,35 @@ def main() -> int:
     args = _parse_args()
     tree = ET.parse(args.coverage_xml)
     root = tree.getroot()
+    policy = load_architecture_policy(DEFAULT_POLICY_PATH)
+    raw_thresholds = policy.get("coverage_thresholds")
+    policy_thresholds = raw_thresholds if isinstance(raw_thresholds, dict) else {}
+
+    def _policy_threshold(name: str, env_name: str, default: float) -> float:
+        raw = policy_thresholds.get(name, default)
+        try:
+            policy_default = float(raw)
+        except (TypeError, ValueError):
+            policy_default = default
+        return _threshold(env_name, policy_default)
 
     required = {
-        "global": _threshold("COVERAGE_GLOBAL_MIN", 60.0),
-        "src/orchestrators": _threshold("COVERAGE_ORCHESTRATORS_MIN", 60.0),
-        "src/generators": _threshold("COVERAGE_GENERATORS_MIN", 60.0),
-        "src/services": _threshold("COVERAGE_SERVICES_MIN", 44.0),
-        "src/control-plane": _threshold("COVERAGE_CONTROL_PLANE_MIN", 85.0),
+        "global": _policy_threshold("global", "COVERAGE_GLOBAL_MIN", 60.0),
+        "src/contracts": _policy_threshold(
+            "src/contracts", "COVERAGE_CONTRACTS_MIN", 95.0
+        ),
+        "src/orchestrators": _policy_threshold(
+            "src/orchestrators", "COVERAGE_ORCHESTRATORS_MIN", 80.0
+        ),
+        "src/generators": _policy_threshold(
+            "src/generators", "COVERAGE_GENERATORS_MIN", 85.0
+        ),
+        "src/services": _policy_threshold(
+            "src/services", "COVERAGE_SERVICES_MIN", 75.0
+        ),
+        "src/control-plane": _policy_threshold(
+            "src/control-plane", "COVERAGE_CONTROL_PLANE_MIN", 90.0
+        ),
     }
 
     coverage_slices = [
@@ -120,6 +149,7 @@ def main() -> int:
         _collect_package_slice(
             root, "src/generators", ("src/generators", "generators")
         ),
+        _collect_package_slice(root, "src/contracts", ("src/contracts", "contracts")),
         _collect_package_slice(root, "src/services", ("src/services", "services")),
         _collect_file_slice(
             root,

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, cast
 
 import pymupdf as fitz
 from PIL import Image
@@ -422,7 +422,8 @@ def _crop_regions(
                 for repair_index in range(2):
                     if qa_result.get("accepted"):
                         break
-                    defects = set(qa_result.get("defect_labels") or [])
+                    raw_defects = qa_result.get("defect_labels")
+                    defects = set(raw_defects if isinstance(raw_defects, list) else [])
                     repairable = {
                         "neighbor_contamination",
                         "edge_clipped_content",
@@ -440,15 +441,26 @@ def _crop_regions(
                     repaired_qa = verify_crop_image(
                         repaired, crop_type=_qa_crop_type(it.type)
                     )
-                    if float(repaired_qa.get("total_score") or 0.0) <= float(
-                        qa_result.get("total_score") or 0.0
-                    ):
+                    repaired_score_raw = repaired_qa.get("total_score")
+                    qa_score_raw = qa_result.get("total_score")
+                    repaired_score = (
+                        repaired_score_raw
+                        if isinstance(repaired_score_raw, (int, float))
+                        else 0.0
+                    )
+                    qa_score = (
+                        qa_score_raw if isinstance(qa_score_raw, (int, float)) else 0.0
+                    )
+                    if float(repaired_score) <= float(qa_score):
                         break
                     img = repaired
                     qa_result = repaired_qa
-                    trim_amounts = tuple(
-                        int(trim_amounts[index]) + int(repaired_trim[index])
-                        for index in range(4)
+                    trim_amounts = cast(
+                        tuple[int, int, int, int],
+                        tuple(
+                            int(trim_amounts[index]) + int(repaired_trim[index])
+                            for index in range(4)
+                        ),
                     )
                     repair_actions.append(f"content_aware_trim:{repair_index + 1}")
                 _write_crop_diagnostics(
@@ -537,6 +549,8 @@ def _write_crop_diagnostics(
     qa_result: dict[str, object],
     repair_actions: list[str],
 ) -> None:
+    raw_defect_labels = qa_result.get("defect_labels")
+    defect_labels = raw_defect_labels if isinstance(raw_defect_labels, list) else []
     diagnostics = {
         "schema_version": "1.0",
         "candidate_id": str(item.id or ""),
@@ -561,9 +575,7 @@ def _write_crop_diagnostics(
         "qa": qa_result,
         "repair_actions": repair_actions,
         "accepted": bool(qa_result.get("accepted")),
-        "rejection_reason": ",".join(
-            str(label) for label in qa_result.get("defect_labels") or []
-        ),
+        "rejection_reason": ",".join(str(label) for label in defect_labels),
     }
     output_path.with_suffix(output_path.suffix + ".qa.json").write_text(
         json.dumps(diagnostics, ensure_ascii=True, indent=2),

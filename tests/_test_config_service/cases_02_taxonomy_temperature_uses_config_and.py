@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
     def test_taxonomy_temperature_uses_config_and_env_override(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -227,6 +228,16 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
                 "temperature": 0.1,
                 "timeout_seconds": 45,
                 "max_steps": 12,
+                "route_budgets": {
+                    "browser_email_form": {
+                        "timeout_seconds": 20,
+                        "max_steps": 7,
+                    },
+                    "browser_listing_hub": {
+                        "timeout_seconds": 90,
+                        "max_steps": 30,
+                    },
+                },
                 "max_tokens": 14000,
                 "output_dir": "./out/browser_downloads",
                 "headed": True,
@@ -280,6 +291,13 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
         self.assertEqual(0.1, settings.temperature)
         self.assertEqual(45, settings.timeout_seconds)
         self.assertEqual(12, settings.max_steps)
+        self.assertEqual(2, len(settings.route_budgets))
+        self.assertEqual("browser_email_form", settings.route_budgets[0].route_family)
+        self.assertEqual(20.0, settings.route_budgets[0].timeout_seconds)
+        self.assertEqual(7, settings.route_budgets[0].max_steps)
+        self.assertEqual("browser_listing_hub", settings.route_budgets[1].route_family)
+        self.assertEqual(90.0, settings.route_budgets[1].timeout_seconds)
+        self.assertEqual(30, settings.route_budgets[1].max_steps)
         self.assertEqual(14000, settings.max_tokens)
         self.assertTrue(settings.headed)
         self.assertTrue(settings.captcha_handoff_policy.enabled)
@@ -410,8 +428,12 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
             "mandatory_privacy_terms_only",
             settings.identity_profile.consent_policy.default_checkbox_policy,
         )
-        self.assertFalse(settings.identity_profile.consent_policy.allow_marketing_opt_in)
-        self.assertFalse(settings.identity_profile.consent_policy.allow_optional_newsletter)
+        self.assertFalse(
+            settings.identity_profile.consent_policy.allow_marketing_opt_in
+        )
+        self.assertFalse(
+            settings.identity_profile.consent_policy.allow_optional_newsletter
+        )
 
     def test_browser_download_settings_require_openrouter_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -701,5 +723,6 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
                     )
 
         self.assertIn("not found", str(ctx.exception).lower())
+
 
 __all__ = ["TestConfigService02TaxonomyTemperatureUsesConfig"]

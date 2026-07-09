@@ -358,7 +358,7 @@ def build_universal_claim_ledger(
 
 
 def derive_metric_spine(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
-    raw_metrics = []
+    raw_metrics: list[Any] = []
     key_metrics = (
         evidence_packs.get("key_metrics") if isinstance(evidence_packs, dict) else {}
     )

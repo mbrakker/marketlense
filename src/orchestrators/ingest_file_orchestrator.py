@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import logging
 import inspect
+import logging
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Protocol, cast
 
 from src.contracts.file_cache import (
     FileCacheMd5SidecarResolveRequest,
@@ -31,6 +31,19 @@ def _accepts_keyword(callable_obj: Callable[..., Any], keyword: str) -> bool:
     )
 
 
+class _LatestSafeReportPipeline(Protocol):
+    def __call__(
+        self,
+        file: DriveFile,
+        cache_path: str,
+        settings: IngestSettings,
+        md5: str | None,
+        ctx: RunContext,
+        *,
+        auto_resume_from_latest_safe: bool,
+    ) -> IngestOutcome: ...
+
+
 def _run_report_pipeline_latest_safe(
     dependencies: IngestFileDependencies,
     file: DriveFile,
@@ -43,7 +56,11 @@ def _run_report_pipeline_latest_safe(
         dependencies.run_report_pipeline,
         "auto_resume_from_latest_safe",
     ):
-        return dependencies.run_report_pipeline(
+        latest_safe_pipeline = cast(
+            _LatestSafeReportPipeline,
+            dependencies.run_report_pipeline,
+        )
+        return latest_safe_pipeline(
             file,
             cache_path,
             settings,

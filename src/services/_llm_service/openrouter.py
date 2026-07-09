@@ -190,7 +190,10 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
             retryable=False,
             context={"model": model},
         ) from exc
-    usage = response_payload.get("usage") if isinstance(response_payload, dict) else {}
+    usage_payload = (
+        response_payload.get("usage") if isinstance(response_payload, dict) else {}
+    )
+    usage = usage_payload if isinstance(usage_payload, dict) else {}
     result = OpenAIResponseResult(
         schema_version="1.0",
         text=text,
@@ -230,8 +233,10 @@ def _openrouter_model(value: object) -> str:
 
 
 def _optional_int(value: object) -> int | None:
+    if not isinstance(value, (str, bytes, bytearray, int, float)):
+        return None
     try:
-        return int(value) if value is not None else None
+        return int(value)
     except (TypeError, ValueError):
         return None
 

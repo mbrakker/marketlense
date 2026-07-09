@@ -7,6 +7,11 @@ from pathlib import Path
 from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.ci.policy import DEFAULT_POLICY_PATH, load_architecture_policy  # noqa: E402
+
 SRC_ROOT = ROOT / "src"
 
 ROLE_DIRS: dict[str, str] = {
@@ -27,6 +32,30 @@ FORBIDDEN_BY_ROLE: dict[str, tuple[str, ...]] = {
 
 
 @dataclass(frozen=True)
+class ImportPolicy:
+    role_dirs: dict[str, str]
+    allowed_by_role: dict[str, tuple[str, ...]]
+
+
+def load_import_policy(path: Path = DEFAULT_POLICY_PATH) -> ImportPolicy:
+    payload = load_architecture_policy(path)
+    roles_raw = payload.get("roles")
+    allowed_raw = payload.get("allowed_imports_by_role")
+    if not isinstance(roles_raw, dict) or not isinstance(allowed_raw, dict):
+        return ImportPolicy(role_dirs=ROLE_DIRS, allowed_by_role={})
+    role_dirs: dict[str, str] = {}
+    for role, raw_path in roles_raw.items():
+        parts = str(raw_path).replace("\\", "/").strip("/").split("/")
+        if len(parts) >= 2 and parts[0] == "src":
+            role_dirs[str(role)] = parts[1]
+    allowed_by_role: dict[str, tuple[str, ...]] = {}
+    for role, raw_prefixes in allowed_raw.items():
+        if isinstance(raw_prefixes, list):
+            allowed_by_role[str(role)] = tuple(str(item) for item in raw_prefixes)
+    return ImportPolicy(role_dirs=role_dirs, allowed_by_role=allowed_by_role)
+
+
+@dataclass(frozen=True)
 class ImportViolation:
     role: str
     path: Path
@@ -41,7 +70,8 @@ class ImportCycle:
     modules: tuple[str, ...]
 
 
-def _role_for_path(path: Path) -> str | None:
+def _role_for_path(path: Path, role_dirs: dict[str, str] | None = None) -> str | None:
+    dirs = role_dirs or ROLE_DIRS
     try:
         relative = path.relative_to(SRC_ROOT)
     except ValueError:
@@ -52,7 +82,7 @@ def _role_for_path(path: Path) -> str | None:
         first = parts[src_index + 1] if len(parts) > src_index + 1 else ""
     else:
         first = relative.parts[0] if relative.parts else ""
-    for role, dirname in ROLE_DIRS.items():
+    for role, dirname in dirs.items():
         if first == dirname:
             return role
     return None
@@ -190,21 +220,35 @@ def _violates(imported: str, forbidden_prefixes: tuple[str, ...]) -> str | None:
     return None
 
 
-def scan_file(path: Path) -> list[ImportViolation]:
-    role = _role_for_path(path)
+def _violates_policy(imported: str, allowed_prefixes: tuple[str, ...]) -> bool:
+    if not imported.startswith("src."):
+        return False
+    if not allowed_prefixes:
+        return True
+    return not any(
+        imported == prefix or imported.startswith(prefix + ".")
+        for prefix in allowed_prefixes
+    )
+
+
+def scan_file(
+    path: Path, *, policy: ImportPolicy | None = None
+) -> list[ImportViolation]:
+    import_policy = policy or load_import_policy()
+    role = _role_for_path(path, import_policy.role_dirs)
     if role is None:
         return []
-    forbidden = FORBIDDEN_BY_ROLE.get(role, ())
-    if not forbidden:
+    allowed = import_policy.allowed_by_role.get(role)
+    if allowed is None:
         return []
 
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     violations: list[ImportViolation] = []
     for node in ast.walk(tree):
         for imported, line, column in _imported_modules(node):
-            rule = _violates(imported, forbidden)
-            if rule is None:
+            if not _violates_policy(imported, allowed):
                 continue
+            allowed_text = ", ".join(allowed) if allowed else "no src role imports"
             violations.append(
                 ImportViolation(
                     role=role,
@@ -212,16 +256,17 @@ def scan_file(path: Path) -> list[ImportViolation]:
                     line=line,
                     column=column,
                     imported=imported,
-                    rule=f"{role} must not import {rule}",
+                    rule=f"{role} may only import {allowed_text}",
                 )
             )
     return violations
 
 
 def scan_repository() -> list[ImportViolation]:
+    policy = load_import_policy()
     violations: list[ImportViolation] = []
     for path in _iter_python_files():
-        violations.extend(scan_file(path))
+        violations.extend(scan_file(path, policy=policy))
     return violations
 
 

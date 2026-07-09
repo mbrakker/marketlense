@@ -35,6 +35,7 @@ from src.services._browser_report_download.dev_diagnostics import (
     run_browser_developer_diagnostics as _run_browser_developer_diagnostics,
 )
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.budgets import apply_browser_route_budget
 from src.services._browser_report_download.http import try_direct_pdf_download
 from src.services._browser_report_download.http import try_direct_onsite_capture
 from src.services._browser_report_download.http import try_http_access_challenge_probe
@@ -98,9 +99,7 @@ def _artifact_cache_key(
         "report_title": report_title,
         "cache_version": ARTIFACT_ACQUISITION_CACHE_VERSION,
     }
-    return hashlib.sha256(
-        repr(sorted(payload.items())).encode("utf-8")
-    ).hexdigest()
+    return hashlib.sha256(repr(sorted(payload.items())).encode("utf-8")).hexdigest()
 
 
 def _publisher_scope(normalized_url: str) -> str:
@@ -291,9 +290,13 @@ def _record_artifact_acquisition_cache(
         report_title=report_title,
     )
     expires_at = (
-        datetime.now(timezone.utc).replace(microsecond=0)
-        + timedelta(days=ARTIFACT_ACQUISITION_CACHE_TTL_DAYS)
-    ).isoformat().replace("+00:00", "Z")
+        (
+            datetime.now(timezone.utc).replace(microsecond=0)
+            + timedelta(days=ARTIFACT_ACQUISITION_CACHE_TTL_DAYS)
+        )
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
     record_artifact_acquisition_cache(
         StateArtifactAcquisitionCacheRecordRequest(
             schema_version="1.0",
@@ -1035,6 +1038,11 @@ def download_report_with_browser_use(
                 result=access_challenge_result,
             )
 
+    request = apply_browser_route_budget(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     validate_browser_runtime_settings(request)
     browser_preflight_response = try_browser_preflight_probe(
         request=request,

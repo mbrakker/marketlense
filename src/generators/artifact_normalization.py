@@ -128,9 +128,9 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
             if value:
                 insight[field_name] = value
         for field_name in INSIGHT_SCORE_FIELDS:
-            value = item.get(field_name)
-            if isinstance(value, (int, float)):
-                insight[field_name] = float(value)
+            score_value = item.get(field_name)
+            if isinstance(score_value, (int, float)):
+                insight[field_name] = float(score_value)
         normalized.append(insight)
     return normalized
 
@@ -151,11 +151,11 @@ def pad_artifact_insights(
             for field_name in INSIGHT_TEXT_FIELDS
             if _s(source.get(field_name)).strip()
         }
-        score_fields = {
-            field_name: float(source.get(field_name))
-            for field_name in INSIGHT_SCORE_FIELDS
-            if isinstance(source.get(field_name), (int, float))
-        }
+        score_fields: Dict[str, float] = {}
+        for field_name in INSIGHT_SCORE_FIELDS:
+            score_value = source.get(field_name)
+            if isinstance(score_value, (int, float)):
+                score_fields[field_name] = float(score_value)
         padded.append(
             {
                 "id": _s(source.get("id") or f"insight_{len(padded) + 1}"),

@@ -1,6 +1,74 @@
 {
   "schema_version": "1.0",
   "systems": {
+    "browser_runtime": {
+      "canonical_entrypoint": "src/services/browser_report_download_service.py",
+      "import_prefixes": [
+        "browser_use",
+        "playwright",
+        "cdp_use"
+      ],
+      "private_roots": [
+        "src/services/_browser_report_download/"
+      ]
+    },
+    "email_imap": {
+      "canonical_entrypoint": "src/services/mailbox_acquisition_service.py",
+      "import_prefixes": [
+        "imaplib",
+        "email"
+      ],
+      "private_roots": [
+        "src/services/_mailbox_acquisition_service/"
+      ]
+    },
+    "filesystem": {
+      "canonical_entrypoint": "src/services/file_service.py",
+      "import_prefixes": [],
+      "private_roots": [
+        "src/services/file_cache_service.py",
+        "src/services/_file_service/"
+      ]
+    },
+    "google_drive": {
+      "canonical_entrypoint": "src/services/drive_service.py",
+      "import_prefixes": [
+        "googleapiclient",
+        "google.oauth2",
+        "google.auth",
+        "google_auth_httplib2",
+        "google_auth_oauthlib"
+      ],
+      "private_roots": [
+        "src/services/_drive_service/",
+        "src/services/mailbox_acquisition_service.py"
+      ]
+    },
+    "http_network": {
+      "canonical_entrypoint": "src/services/_http_acquisition.py",
+      "import_prefixes": [
+        "requests",
+        "aiohttp",
+        "httpx"
+      ],
+      "private_roots": [
+        "src/services/_browser_report_download/",
+        "src/services/_publisher_inventory_service/",
+        "src/services/_wordpress_service/",
+        "src/services/wordpress_service.py",
+        "src/services/publisher_inventory_service.py",
+        "src/services/browser_report_download_service.py"
+      ]
+    },
+    "llm_providers": {
+      "canonical_entrypoint": "src/services/llm_service.py",
+      "import_prefixes": [
+        "openai"
+      ],
+      "private_roots": [
+        "src/services/_llm_service/"
+      ]
+    },
     "openai": {
       "import_prefixes": [
         "openai"
@@ -8,6 +76,57 @@
       "canonical_entrypoint": "src/services/llm_service.py",
       "private_roots": [
         "src/services/_llm_service/"
+      ]
+    },
+    "pdf_ocr_stack": {
+      "canonical_entrypoint": "src/services/pdf_service.py",
+      "import_prefixes": [
+        "pymupdf",
+        "fitz",
+        "pdfplumber",
+        "pypdf",
+        "PIL"
+      ],
+      "private_roots": [
+        "src/services/_pdf/",
+        "src/services/_render_service/",
+        "src/services/_wordpress_service/media.py",
+        "src/services/cover_image_service.py"
+      ]
+    },
+    "sqlite": {
+      "canonical_entrypoint": "src/services/state_service.py",
+      "import_prefixes": [
+        "sqlite3"
+      ],
+      "private_roots": [
+        "src/services/_state_service/",
+        "src/services/_report_store_service/",
+        "src/services/_analytics_store/",
+        "src/services/_sqlite_common.py",
+        "src/services/_sqlite_migration/",
+        "src/services/sqlite_migration_service.py",
+        "src/services/report_store_service.py",
+        "src/services/analytics_store_service.py",
+        "src/services/run_registry_service.py",
+        "src/services/idempotency_service.py"
+      ]
+    },
+    "vector_store": {
+      "canonical_entrypoint": "src/services/llm_service.py",
+      "import_prefixes": [
+        "openai"
+      ],
+      "private_roots": [
+        "src/services/_llm_service/",
+        "src/services/vector_store_service.py"
+      ]
+    },
+    "wordpress": {
+      "canonical_entrypoint": "src/services/wordpress_service.py",
+      "import_prefixes": [],
+      "private_roots": [
+        "src/services/_wordpress_service/"
       ]
     }
   }

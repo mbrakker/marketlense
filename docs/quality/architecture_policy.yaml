@@ -1,0 +1,146 @@
+schema_version: "1.0"
+roles:
+  contracts: src/contracts
+  services: src/services
+  generators: src/generators
+  orchestrators: src/orchestrators
+  utils: src/utils
+  cli: src/_cli
+  ui: src/ui
+allowed_imports_by_role:
+  contracts: [src.contracts, src.utils]
+  utils: [src.contracts, src.utils]
+  services: [src.contracts, src.services, src.utils]
+  generators: [src.contracts, src.generators, src.services, src.utils]
+  orchestrators: [src.contracts, src.generators, src.orchestrators, src.services, src.utils]
+  cli: [src.contracts, src.orchestrators, src.services, src.utils]
+  ui: [src.contracts, src.orchestrators, src.services, src.ui, src.utils]
+allowed_io_by_role:
+  contracts: []
+  utils: []
+  generators: [service_boundaries]
+  orchestrators: [service_boundaries, generator_boundaries]
+  services: [filesystem, database, network, external_api, browser_runtime, email, pdf_ocr]
+  cli: [argument_parsing, orchestrator_boundaries, service_boundaries]
+  ui: [orchestrator_boundaries, service_boundaries]
+external_system_ownership:
+  llm_providers:
+    import_prefixes: [openai]
+    canonical_entrypoint: src/services/llm_service.py
+    private_roots: [src/services/_llm_service/]
+  google_drive:
+    import_prefixes: [googleapiclient, google.oauth2, google.auth, google_auth_httplib2, google_auth_oauthlib]
+    canonical_entrypoint: src/services/drive_service.py
+    private_roots: [src/services/_drive_service/, src/services/mailbox_acquisition_service.py]
+  wordpress:
+    import_prefixes: []
+    canonical_entrypoint: src/services/wordpress_service.py
+    private_roots: [src/services/_wordpress_service/]
+  filesystem:
+    import_prefixes: []
+    canonical_entrypoint: src/services/file_service.py
+    private_roots: [src/services/file_cache_service.py, src/services/_file_service/]
+  sqlite:
+    import_prefixes: [sqlite3]
+    canonical_entrypoint: src/services/state_service.py
+    private_roots:
+      - src/services/_state_service/
+      - src/services/_report_store_service/
+      - src/services/_analytics_store/
+      - src/services/_sqlite_common.py
+      - src/services/_sqlite_migration/
+      - src/services/sqlite_migration_service.py
+      - src/services/report_store_service.py
+      - src/services/analytics_store_service.py
+      - src/services/run_registry_service.py
+      - src/services/idempotency_service.py
+  browser_runtime:
+    import_prefixes: [browser_use, playwright, cdp_use]
+    canonical_entrypoint: src/services/browser_report_download_service.py
+    private_roots: [src/services/_browser_report_download/]
+  pdf_ocr_stack:
+    import_prefixes: [pymupdf, fitz, pdfplumber, pypdf, PIL]
+    canonical_entrypoint: src/services/pdf_service.py
+    private_roots:
+      - src/services/_pdf/
+      - src/services/_render_service/
+      - src/services/_wordpress_service/media.py
+      - src/services/cover_image_service.py
+  email_imap:
+    import_prefixes: [imaplib, email]
+    canonical_entrypoint: src/services/mailbox_acquisition_service.py
+    private_roots: [src/services/_mailbox_acquisition_service/]
+  http_network:
+    import_prefixes: [requests, aiohttp, httpx]
+    canonical_entrypoint: src/services/_http_acquisition.py
+    private_roots:
+      - src/services/_browser_report_download/
+      - src/services/_publisher_inventory_service/
+      - src/services/_wordpress_service/
+      - src/services/wordpress_service.py
+      - src/services/publisher_inventory_service.py
+      - src/services/browser_report_download_service.py
+  vector_store:
+    import_prefixes: [openai]
+    canonical_entrypoint: src/services/llm_service.py
+    private_roots: [src/services/_llm_service/, src/services/vector_store_service.py]
+forbidden_placeholders:
+  forbidden_comment_tokens: [TODO, FIXME]
+  placeholder_statements: [pass]
+  scan_roots: [src]
+prompt_text_ownership:
+  prompt_root: src/prompts
+  loader_service: src/services/prompt_service.py
+  generators_must_not_read_prompt_files: true
+  inline_prompt_text_outside_prompt_namespace: forbidden
+test_patching_rules:
+  allowed_boundaries: [service module top-level functions, network clients, time, randomness, OS/process boundaries]
+  forbidden: [private helpers, generator internals, orchestrator internals, dataclass constructors]
+architecture_review_triggers:
+  - new top-level package under src
+  - new external system boundary
+  - module split into three or more peer modules
+  - new queue worker process or deployable
+  - duplicated orchestration path for one workflow
+  - second entrypoint for one external interaction
+decomposition_evidence_requirements:
+  required_fields:
+    - original_file
+    - baseline_ref
+    - moved_symbol_count
+    - unchanged_moved_symbol_count
+    - changed_moved_symbol_count
+    - facade_owned_definitions
+coverage_thresholds:
+  global: 60.0
+  src/contracts: 95.0
+  src/generators: 85.0
+  src/orchestrators: 80.0
+  src/services: 75.0
+  src/control-plane: 90.0
+mutation:
+  default_min_score: 60.0
+  critical_min_score: 85.0
+  target_min_scores:
+    src/generators/publish_generator.py: 85.0
+    src/orchestrators/pipeline_preflight_orchestrator.py: 90.0
+    src/orchestrators/retry_telemetry_orchestrator.py: 90.0
+    src/orchestrators/workflow_control_orchestrator.py: 90.0
+mypy_baseline:
+  path: docs/quality/mypy_baseline.json
+  owner: quality/type-safety
+  expires_at: "2026-08-31"
+  strict_packages:
+    contracts: src/contracts
+    services: src/services
+    generators: src/generators
+    orchestrators: src/orchestrators
+    ui: src/ui
+    cli: src/_cli
+ruff:
+  paths: [src, tests, scripts]
+  selected_rules: [E, F, I, B, C4, SIM]
+  initial_enforced_rules: [F]
+repository_hygiene:
+  allowlist_path: docs/quality/repository_hygiene_allowlist.yaml
+  checks: [tracked runtime artifacts, local credentials, oversized generated files, expired allowlists]
