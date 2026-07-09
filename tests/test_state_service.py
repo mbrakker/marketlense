@@ -122,8 +122,8 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
-    assert schema_version == (8,)
-    assert ledger_count == 8
+    assert schema_version == (9,)
+    assert ledger_count == 9
 
 
 def test_record_and_get_with_defaults(tmp_path: Path) -> None:
@@ -529,8 +529,7 @@ def test_artifact_acquisition_cache_roundtrip(tmp_path: Path) -> None:
             artifact_path=str(tmp_path / "report.pdf"),
             artifact_md5="d41d8cd98f00b204e9800998ecf8427e",
             artifact_sha256=(
-                "e3b0c44298fc1c149afbf4c8996fb924"
-                "27ae41e4649b934ca495991b7852b855"
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             ),
             route_kind="pdf_download",
             route_family="browser_pdf_click",

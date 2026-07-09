@@ -84,6 +84,72 @@ def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:
     assert advisory["audience_variants"]["status"] == "not_requested"
 
 
+def test_assemble_artifacts_builds_universal_claim_ledger() -> None:
+    payload = assemble_artifacts_payload(
+        report_id="ledger-report",
+        report_name="Ledger Report",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        toc_bundle={"toc_entries": []},
+        summary={
+            "tldr": "Wallet adoption is rising.",
+            "card_tldr_compact": "Wallet adoption is rising.",
+            "executive_summary": "Wallet adoption is rising among merchants.",
+            "claim_evidence_map": [
+                {
+                    "claim": "Wallet adoption is rising.",
+                    "evidence_id": "f1",
+                    "evidence": "Revenue +10% YoY",
+                    "pages": [2],
+                }
+            ],
+        },
+        cover_semantics=_cover_semantics(),
+        insights_candidates=[],
+        insights_final=[
+            {
+                "id": "i1",
+                "text": "Enterprise merchants are adopting wallets faster.",
+                "evidence_id": "f1",
+                "evidence": "Revenue +10% YoY",
+                "metric": {},
+                "pages": [2],
+            }
+        ],
+        quotes_final=[],
+        expert_comment="Grounded comment.",
+        linkedin_post="Grounded post.",
+        source_status={"not_available": False, "reason": ""},
+        family_status=build_artifact_family_status(
+            summary={
+                "tldr": "Wallet adoption is rising.",
+                "card_tldr_compact": "Wallet adoption is rising.",
+                "executive_summary": "Wallet adoption is rising among merchants.",
+                "claim_evidence_map": [{"claim": "Wallet adoption is rising."}],
+            },
+            insights_candidates=[],
+            insights_final=[
+                {
+                    "id": "i1",
+                    "text": "Enterprise merchants are adopting wallets faster.",
+                    "evidence_id": "f1",
+                }
+            ],
+            quotes_final=[],
+            expert_comment="Grounded comment.",
+            linkedin_post="Grounded post.",
+        ),
+        ctx=_ctx(),
+    )
+
+    ledger = payload["claim_ledgers"]
+    assert ledger[0]["claim_text"] == "Wallet adoption is rising."
+    assert ledger[0]["artifact_section"] == "summary.claim_evidence_map"
+    assert ledger[0]["evidence_ids"] == ["f1"]
+    assert ledger[0]["support_type"] == "direct_evidence_span"
+    assert ledger[1]["canonical_claim_id"] == "ledger-report:insights_final:i1"
+
+
 def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -> None:
     evidence = _evidence_packs()
     evidence["key_metrics"] = {
@@ -178,5 +244,6 @@ def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -
 __all__ = [
     "test_derive_metric_spine_selects_strong_supported_metrics",
     "test_build_executive_advisory_artifacts_surfaces_not_found_states",
+    "test_assemble_artifacts_builds_universal_claim_ledger",
     "test_generate_artifacts_passes_metric_spine_to_editorial_prompts",
 ]

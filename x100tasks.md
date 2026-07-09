@@ -58,33 +58,6 @@ Scoring:
 
 ## 1. Public Trust and Output Sharpness
 
-- **Title:** Add metadata and extraction leakage gates before public rendering [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Public pages can expose placeholder metadata, polluted labels, raw extraction fragments, weak default cards, or internal-looking values.
-  - Why implement: Public trust is the highest visible quality surface and should fail closed before WordPress delivery.
-  - Tradeoffs / risks: Gates must distinguish incomplete-but-valid abstentions from real leakage so they do not block legitimate niche reports.
-  - Acceptance Criteria:
-    - Publish/readiness checks reject placeholder publishers, sentinel metadata, field-name leakage, raw OCR/table fragments, weak card summaries, and invalid archive facets.
-    - Blocked reports emit typed remediation context and structured logs.
-    - Tests cover positive public metadata, placeholder leakage, raw extraction leakage, and abstention/limitation states.
-
-- **Title:** Create a shared Market Lense editorial constitution [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: Artifact prompts define tone and quality rules inconsistently.
-  - Why implement: A reusable house style raises summaries, insights, expert comments, LinkedIn copy, Briefings, and cross-report output together.
-  - Tradeoffs / risks: Shared prompt content must remain repo-owned and must not become hidden prompt text outside prompt-service control.
-  - Acceptance Criteria:
-    - Editorial constitution lives in a prompt namespace or shared prompt block loaded only through the prompt service.
-    - It defines executive, concise, evidence-led output; anti-generic language; abstention; and unsupported-claim rules.
-    - Prompt fixture coverage proves affected artifacts render with the shared block and log prompt paths/hash.
-
-- **Title:** Add universal claim ledgers and canonical evidence IDs [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Claims can be validated only at coarse artifact level, making targeted repair and public citation harder.
-  - Why implement: Claim-level support mapping makes validation, regeneration, rendering, and public trust checks precise.
-  - Tradeoffs / risks: Contract changes must preserve downstream compatibility and avoid exposing internal evidence IDs directly in public HTML.
-  - Acceptance Criteria:
-    - Generated artifacts can include claim ledgers with claim text, artifact section, evidence IDs, support type, confidence, and risk.
-    - Evidence packs use one canonical evidence reference model across findings, metrics, quotes, charts, methods, limitations, recommendations, and risks.
-    - Validation and regeneration tests prove unsupported or weak claims route to targeted repair or abstention.
-
 - **Title:** Add evidence quality grades and source-backed claim policies [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Strong prose can be generated from weak paraphrase or loose section context.
   - Why implement: High-impact claims should prefer direct metrics, direct quotes, chart readouts, explicit findings, or explicit recommendations.
@@ -93,15 +66,6 @@ Scoring:
     - Evidence objects carry quality grades such as direct metric, direct quote, chart readout, explicit finding, explicit recommendation, methodology note, section summary, or weak paraphrase.
     - Artifact prompts and validators prevent strong claims from weak evidence unless explicitly marked as low confidence or omitted.
     - Tests assert both strong-evidence generation and weak-evidence abstention behavior.
-
-- **Title:** Build a metric spine per report [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Key quantified facts can be diluted across summaries, findings, expert comments, social copy, and cards.
-  - Why implement: A metric spine makes pages concrete, consistent, and easier for executives to scan.
-  - Tradeoffs / risks: Metrics must preserve unit, timeframe, segment, geography, comparator, baseline, sample size, and caveats when available.
-  - Acceptance Criteria:
-    - Each qualified report selects 3-6 source-backed metrics with value, unit, timeframe, segment, geography, comparator/baseline/delta where present, evidence ID, and confidence notes.
-    - Summaries, cards, exhibits, and social variants reuse spine metrics without inventing missing context.
-    - Contract, schema, fixture, and rendering tests cover complete and sparse metric packs.
 
 - **Title:** Expose readable public evidence spans for high-impact claims [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Internal evidence IDs are auditable but not useful to public readers.
@@ -120,15 +84,6 @@ Scoring:
     - Report cards include concise analyst-grade summaries, key takeaways, valid covers, and clean metadata.
     - Figure assets include human-readable exhibit title, why-this-matters, source context, confidence, and linked claims when available.
     - Tests reject raw extraction prefixes, OCR fragments, duplicate boilerplate, placeholders, and generic figure labels.
-
-- **Title:** Add decision brief, recommendation, and risk-register artifacts [Impact: 5/5, Effort: 5/5]
-  - Problem fixed: Report pages summarize evidence but do not consistently provide a boardroom-ready decision layer.
-  - Why implement: Executives need decision implications, priority moves, watchouts, risks, confidence, and source-backed recommendations.
-  - Tradeoffs / risks: Advisory content must abstain when unsupported and must not infer advice from weak evidence.
-  - Acceptance Criteria:
-    - Optional `decision_brief`, `recommendations`, and `risk_register` artifacts are typed contracts with schema snapshots and fixture coverage.
-    - Empty or weak source packs produce explicit not-found or abstention states.
-    - Public renderers show source-backed content only and neutral empty states when omitted.
 
 - **Title:** Add a source-quality and methodology trust panel [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Users cannot easily see how a page was generated, validated, constrained, or why a source is high/medium/low value.
@@ -162,51 +117,6 @@ Scoring:
 
 ## 2. Visual Evidence and Crop Acceptance Quality
 
-- **Title:** Add post-render crop QA as the final crop acceptance gate [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: The pipeline validates candidates and bboxes, but the final rendered PNG is not the acceptance object.
-  - Why implement: Public pages should only show crops that are complete, readable, cleanly bounded, and useful as evidence.
-  - Tradeoffs / risks: QA must avoid rejecting valid design variants such as dark slides, shaded cards, and multi-panel reports.
-  - Acceptance Criteria:
-    - `verify_crop_image` or equivalent runs after final PNG render and before acceptance.
-    - Checks cover edge-clipped text, oversized margins, neighbor contamination, readability, suspicious aspect ratio, and missing title/source/legend when present.
-    - Rejected crops are omitted from public HTML or routed to repair with typed defect labels.
-
-- **Title:** Add crop quality scores and diagnostics sidecars [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Crop failures are hard to inspect and benchmark because crop decisions lack a complete diagnostic artifact.
-  - Why implement: Scores and sidecars make selection, fallback ordering, repair, and regression tests observable.
-  - Tradeoffs / risks: Sidecar schema must be stable enough for benchmarks without overfitting to one crop algorithm.
-  - Acceptance Criteria:
-    - Crop metadata includes content completeness, edge integrity, margin balance, neighbor contamination, readability, visual crispness, total score, and defect labels.
-    - Each crop writes a diagnostics JSON sidecar with candidate ID/type, page, original/refined/final bbox, render scale, trims, QA score, defects, repair actions, accepted, and rejection reason.
-    - Tests and benchmarks assert diagnostics presence and meaningful failure labels.
-
-- **Title:** Create `publication_strict` crop mode and remove legacy user-facing fallback [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: User-facing fallback crops can use lower-quality legacy behavior.
-  - Why implement: One production-grade crop mode should own final public visual quality.
-  - Tradeoffs / risks: Compatibility with existing chart/table strict modes must be preserved or migrated explicitly.
-  - Acceptance Criteria:
-    - `publication_strict` runs bbox tightening, optional multimodal refine, edge guard, high-DPI render, content-aware trim, final PNG QA, repair loop, and acceptance scoring.
-    - Table fallbacks use table-strict behavior, chart fallbacks use chart-strict behavior, and mixed/unknown visuals use publication-strict behavior.
-    - Tests prove no final user-facing crop is created by legacy mode except diagnostic-only outputs.
-
-- **Title:** Add final crop-image multimodal QA and bounded auto-repair [Impact: 5/5, Effort: 5/5]
-  - Problem fixed: Bbox refinement can still produce clipped, contaminated, or poorly framed final images.
-  - Why implement: Multimodal crop QA and repair can catch issues only visible in the final PNG.
-  - Tradeoffs / risks: Model-backed QA must be bounded, logged, and optional under explicit speed profiles.
-  - Acceptance Criteria:
-    - Final crop QA returns accept, repair, or reject with defect labels.
-    - Repair can expand clipped sides, trim unrelated fragments, snap to card/table boundaries, and rebalance whitespace.
-    - Repair loops are capped at 2-3 iterations and stop when quality does not improve.
-
-- **Title:** Replace uniform border trim with content-aware crop trim [Impact: 4/5, Effort: 4/5]
-  - Problem fixed: Fixed color/tolerance trimming fails on shaded cards, dark slides, gradients, and colored report panels.
-  - Why implement: Content-aware trimming improves final margin balance without clipping meaningful content.
-  - Tradeoffs / risks: Trim logic must account for text-block edge awareness and intentional card backgrounds.
-  - Acceptance Criteria:
-    - Trimming uses edge density, connected components, text-block edge awareness, background segmentation, and per-side adaptive thresholds.
-    - Adaptive padding varies by table, chart, and infographic card crop type.
-    - Golden crop tests cover dark slides, colored cards, and dense tables.
-
 - **Title:** Render final selected crops at higher quality profiles [Impact: 4/5, Effort: 2/5]
   - Problem fixed: Low-DPI preview renders can cause bbox mistakes and unreadable final images.
   - Why implement: Selected public crops need higher-resolution rendering than discovery previews.
@@ -224,24 +134,6 @@ Scoring:
     - Table crops can snap to high-confidence outer rules using drawings, raster edges, text alignment clusters, and header bands.
     - Chart crops detect axis labels, tick labels, legend blocks, title/caption, source, and notes.
     - Infographic crops detect visible card/container boundaries, shadows, backgrounds, and internal group spacing.
-
-- **Title:** Add neighbor-contamination detection for final crops [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Final crops may include adjacent panel fragments, following headings, footers, page numbers, prose, or decorative images.
-  - Why implement: Even complete visuals lose credibility when unrelated neighboring content appears inside the crop.
-  - Tradeoffs / risks: The detector must tolerate legitimate multi-panel figures and grouped exhibit decks.
-  - Acceptance Criteria:
-    - Detection uses PDF text-block geometry and raster connected components.
-    - Legitimate grouped panels can be accepted with a clear figure-group classification.
-    - Tests cover adjacent headings, footer/page-number contamination, decorative images, and valid multi-panel charts.
-
-- **Title:** Build golden crop fixtures and visual crop benchmarks [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Candidate count/signature benchmarks can pass while final crop visual quality regresses.
-  - Why implement: Crop quality needs rendered-image metrics and difficult fixture coverage.
-  - Tradeoffs / risks: Golden fixtures must be curated, stable, and small enough for CI or split into local/live tiers.
-  - Acceptance Criteria:
-    - A manual golden set covers 50-100 difficult crop examples over dense reports, dark slides, colored cards, multi-panel pages, tables, small footnotes, and decorative-photo layouts.
-    - Benchmarks report golden bbox IoU, final PNG perceptual diff, whitespace percentage, clipped text count, neighbor contamination count, OCR completeness ratio, and minimum readable text height.
-    - Benchmark deltas are attached to release evidence or local quality reports.
 
 - **Title:** Add publisher/style crop profiles and HTML visual smoke tests [Impact: 4/5, Effort: 4/5]
   - Problem fixed: Recurring publisher layouts and final HTML presentation can still regress after crop selection succeeds.
@@ -781,9 +673,9 @@ The scoped backlog above intentionally merges overlapping Notion work. The follo
 
 ## Near-Term Implementation Queue
 
-1. Metadata leakage gate, editorial constitution, claim ledger, and canonical evidence IDs.
-2. Metric spine, readable evidence spans, premium card/exhibit copy, and decision brief.
-3. Post-render crop QA, crop diagnostics sidecars, crop quality score, and `publication_strict` mode.
+1. Evidence quality grades, readable evidence spans, premium card/exhibit copy, and source-quality panels.
+2. Higher-DPI final crop profiles, table/chart boundary detectors, publisher crop profiles, and HTML visual smoke tests.
+3. Artifact-level public evidence rendering for metric spine, claim ledgers, recommendations, and risk registers.
 4. `fast_ingest`, latest-safe ingest resume, deferred grounding validation, and deterministic ranking/crop shortcuts.
 5. Browser private-API/playbook promotion, artifact-level acquisition cache, HTTP-only static DOM scan, and route-specific agent budgets.
 6. Autonomous supervisor, PipelinePlan, scheduler, and durable dead letters.

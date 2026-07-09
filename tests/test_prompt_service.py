@@ -46,6 +46,25 @@ def test_load_prompt_set_hashes(caplog):
     assert loaded_logs, "expected load logs"
 
 
+def test_artifact_prompts_include_shared_editorial_constitution() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/expert_comment",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "Market Lense editorial constitution" in prompt_set.user.text
+    assert any(
+        path.replace("\\", "/").endswith(
+            "report_vs/artifacts/_partials/editorial_constitution.yaml"
+        )
+        for path in prompt_set.user.include_paths
+    )
+
+
 def test_list_prompt_namespaces_returns_hashes() -> None:
     response = list_prompt_namespaces(
         PromptNamespaceListRequest(

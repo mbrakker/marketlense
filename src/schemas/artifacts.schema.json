@@ -79,6 +79,36 @@
         }
       }
     },
+    "claim_ledgers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "canonical_claim_id",
+          "claim_text",
+          "artifact_section",
+          "evidence_ids",
+          "support_type",
+          "confidence",
+          "risk"
+        ],
+        "properties": {
+          "schema_version": { "type": "string" },
+          "canonical_claim_id": { "type": "string" },
+          "claim_text": { "type": "string" },
+          "artifact_section": { "type": "string" },
+          "evidence_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "support_type": { "type": "string" },
+          "confidence": { "type": "string" },
+          "risk": { "type": "string" },
+          "evidence_span_count": { "type": "integer" }
+        }
+      }
+    },
     "executive_advisory": {
       "type": "object",
       "properties": {

@@ -234,6 +234,16 @@ Scoring:
 
 ## 4. PDF, Dashboard, and Runtime Performance
 
+- **Title:** Add low-confidence model-backed crop QA escalation from `publication_strict` sidecars [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: `publication_strict` now produces deterministic final-PNG QA sidecars, but borderline crops are still accepted or rejected by heuristics only.
+  - Why implement: A bounded multimodal second opinion on low-score or high-contamination sidecars can improve public crop quality without adding model spend to every crop.
+  - Tradeoffs / risks: The model-backed pass must stay outside the PDF service boundary, run only under an explicit quality profile, and never replace deterministic diagnostics or benchmark gates.
+  - Acceptance Criteria:
+    - An orchestrator/generator-level escalation reads existing `.qa.json` sidecars and sends only configured low-confidence crops to the canonical LLM/image boundary.
+    - Escalation returns accept, repair, or reject with typed defect labels, provider request metadata, cost accounting, and a capped repair budget.
+    - Default runs remain deterministic and no-model; live profile benchmarks report escalation rate, accepted/rejected deltas, model-call count, and qualitative before/after examples from existing benchmark artifacts.
+    - Tests cover no-escalation default behavior, bounded low-confidence escalation, no PDF-service model calls, and preserved deterministic sidecar fields.
+
 ## 5. User-Facing Output Quality and Editorial Contracts
 
 - **Title:** Add live strategic insight-quality benchmark for scored insight fields [Impact: 4/5, Effort: 3/5]
@@ -246,15 +256,15 @@ Scoring:
     - The benchmark can run in default read-only mode without model calls and optionally sample live regeneration behind an explicit flag.
     - Tests cover metric calculation, narrow-report fallback, unsupported-role detection, and unchanged-artifact baseline stability.
 
-- **Title:** Render executive advisory and metric-spine payloads in public report pages [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: The artifact contract now emits optional `executive_advisory` and `metric_spine` payloads, but public report pages do not yet expose those higher-value decision artifacts.
-  - Why implement: Turns the new analysis payloads into visible user value: faster executive scanning, clearer proof points, and stronger consultancy-grade differentiation.
+- **Title:** Render executive advisory, metric-spine, and claim-ledger payloads in public report pages [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: The artifact contract now emits optional `executive_advisory`, `metric_spine`, and `claim_ledgers` payloads, but public report pages do not yet expose those higher-value decision artifacts as readable evidence-backed sections.
+  - Why implement: Turns the new analysis payloads into visible user value: faster executive scanning, clearer proof points, stronger consultancy-grade differentiation, and traceable claim support.
   - Tradeoffs / risks: Rendering must stay fail-closed when optional payloads are absent and must not expose internal evidence IDs, spans, JSON fields, or generated diagnostics as public copy.
   - Acceptance Criteria:
-    - Report HTML renders decision brief, supported recommendations, risks/watchouts, and strongest metric-spine proof points when present.
+    - Report HTML renders decision brief, supported recommendations, risks/watchouts, strongest metric-spine proof points, and claim support labels when present.
     - Empty/not-found advisory states render neutral omissions or admin diagnostics, not placeholder user-facing content.
-    - Public copy uses source-safe labels and existing citation micro-lines without exposing evidence IDs or internal pack names.
-    - Visual and schema tests cover populated advisory payloads, absent payloads, and mobile layout.
+    - Public copy uses source-safe labels and existing citation micro-lines without exposing canonical claim IDs, evidence IDs, internal pack names, or raw ledger JSON.
+    - Visual and schema tests cover populated advisory/metric/claim-ledger payloads, absent payloads, and mobile layout.
 
 - **Title:** Benchmark route-memory avoided browser spend from mailbox and download outcomes [Impact: 4/5, Effort: 2/5]
   - Problem fixed: Mailbox successes now promote publisher route memory, but operators need a measured report showing avoided browser launches, avoided model calls, and route-success stability over retained publisher evidence.

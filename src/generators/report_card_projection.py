@@ -31,6 +31,17 @@ _LEAKED_FIELD_PREFIXES = {
     "year",
     "category",
     "source",
+    "raw_page_text",
+}
+_EXTRACTION_LEAKAGE_MARKERS = {
+    "ocr text block",
+    "table row",
+    "table ",
+    "row:",
+    "cell_",
+    "raw_page_text",
+    "extracted_text",
+    "text block",
 }
 
 
@@ -139,6 +150,9 @@ def validate_public_metadata_governance(
         folded = text.casefold()
         normalized[str(field_name)] = text
         if folded in _PLACEHOLDER_METADATA:
+            blocked_fields.append(str(field_name))
+            continue
+        if any(marker in folded for marker in _EXTRACTION_LEAKAGE_MARKERS):
             blocked_fields.append(str(field_name))
             continue
         prefix, separator, remainder = text.partition(":")

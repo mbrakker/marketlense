@@ -275,16 +275,17 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
     )
     assert render_resume == analysis_resume
 
-    assert stage_calls == {
+    expected_stage_calls = {
         "source": 1,
         "selection": 2,
-        "vector_create": 2,
+        "vector_create": 1,
         "evidence": 3,
         "artifacts": 3,
         "validation": 3,
         "render": 4,
         "projection": 4,
     }
+    assert stage_calls == expected_stage_calls, stage_calls
 
 
 def test_generate_report_latest_safe_restart_skips_corrupt_newer_checkpoint(

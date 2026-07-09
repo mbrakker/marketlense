@@ -239,7 +239,9 @@ class CropRequest:
     pad: int = field(default=8, metadata={"doc": "Padding applied around crop boxes."})
     mode: str = field(
         default="legacy",
-        metadata={"doc": "Crop mode: legacy|figure_strict|table_strict|chart_strict."},
+        metadata={
+            "doc": "Crop mode: legacy|figure_strict|table_strict|chart_strict|publication_strict."
+        },
     )
     pdf_context: Optional[PdfContext] = field(
         default=None,

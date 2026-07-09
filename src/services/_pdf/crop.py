@@ -53,6 +53,8 @@ from src.services._pdf._crop.image_ops import (
     _row_is_bg,
     _col_is_bg,
     _trim_uniform_border,
+    _content_aware_trim,
+    verify_crop_image,
     _uniform_border_trim_amounts,
     _stack_crop_images,
     _render_clip_image,
@@ -71,6 +73,7 @@ from src.services._pdf._crop.regions import (
     _crop_output_filename,
     crop_regions,
     _crop_regions,
+    _effective_crop_mode,
 )
 from src.services._pdf._crop.table_continuation import (
     TABLE_CONTINUATION_MIN_WIDTH_FRAC,
@@ -113,6 +116,8 @@ __all__ = [
     "_row_is_bg",
     "_col_is_bg",
     "_trim_uniform_border",
+    "_content_aware_trim",
+    "verify_crop_image",
     "_uniform_border_trim_amounts",
     "_stack_crop_images",
     "_render_clip_image",
@@ -177,6 +182,7 @@ __all__ = [
     "_crop_output_filename",
     "crop_regions",
     "_crop_regions",
+    "_effective_crop_mode",
     "render_page_for_crop_refine",
     "apply_crop_refine_bbox",
     "render_preview",

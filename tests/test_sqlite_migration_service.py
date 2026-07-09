@@ -35,7 +35,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
                 schema_version="1.0",
                 database_key="state_db",
                 db_path=str(db_path),
-                target_version=8,
+                target_version=9,
                 ctx=_ctx(),
             ),
             conn,
@@ -74,8 +74,15 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
             WHERE type='table' AND name='mailbox_candidate_rejections'
             """
         ).fetchone()
+        artifact_cache_table = conn.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='artifact_acquisition_cache'
+            """
+        ).fetchone()
 
-    assert response.current_version == 8
+    assert response.current_version == 9
     assert [step.migration_id for step in response.applied_steps] == [
         "state_db_001_create_base_tables",
         "state_db_002_add_processed_vector_columns",
@@ -85,6 +92,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         "state_db_006_create_workflow_control_observations",
         "state_db_007_create_mail_delivery_requests",
         "state_db_008_create_mailbox_candidate_rejections",
+        "state_db_009_create_artifact_acquisition_cache",
     ]
     assert ledger_rows == [
         ("state_db_001_create_base_tables", 1),
@@ -95,11 +103,13 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         ("state_db_006_create_workflow_control_observations", 6),
         ("state_db_007_create_mail_delivery_requests", 7),
         ("state_db_008_create_mailbox_candidate_rejections", 8),
+        ("state_db_009_create_artifact_acquisition_cache", 9),
     ]
-    assert version_row == (8,)
+    assert version_row == (9,)
     assert workflow_table == ("workflow_control_observations",)
     assert mail_table == ("mail_delivery_requests",)
     assert rejection_table == ("mailbox_candidate_rejections",)
+    assert artifact_cache_table == ("artifact_acquisition_cache",)
     assert_logs_have_required_fields(caplog.records)
 
 

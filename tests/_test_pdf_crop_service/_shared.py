@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_pdf_crop_service.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent / "test_pdf_crop_service.py"
+)
 
 import json
 
@@ -30,10 +33,12 @@ from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
 
 from src.services._pdf.crop import (
+    _content_aware_trim,
     _dominant_border_color,
     _legacy_chart_border_trim,
     _tighten_chart_crop_rect,
     _tighten_table_crop_rect,
+    verify_crop_image,
 )
 
 from src.services.pdf_service import (
@@ -45,10 +50,12 @@ from src.services.pdf_service import (
 
 from src.utils.errors import AppError
 
+
 def _ctx() -> RunContext:
     return RunContext(
         schema_version="1.0", run_id="run", task_id="task", span_id="span"
     )
+
 
 def _events(caplog, logger_name: str) -> list[dict[str, object]]:
     events: list[dict[str, object]] = []
@@ -60,6 +67,7 @@ def _events(caplog, logger_name: str) -> list[dict[str, object]]:
             events.append(payload)
     return events
 
+
 def _build_basic_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=420, height=560)
@@ -70,7 +78,10 @@ def _build_basic_pdf(path: Path) -> None:
     doc.save(path.as_posix())
     doc.close()
 
-def _build_partial_change_pdf(path: Path, *, first_page_label: str, second_page_label: str) -> None:
+
+def _build_partial_change_pdf(
+    path: Path, *, first_page_label: str, second_page_label: str
+) -> None:
     doc = fitz.open()
     first_page = doc.new_page(width=420, height=560)
     first_page.insert_text((40, 40), first_page_label, fontsize=14)
@@ -84,6 +95,7 @@ def _build_partial_change_pdf(path: Path, *, first_page_label: str, second_page_
     )
     doc.save(path.as_posix())
     doc.close()
+
 
 def _build_pdf_with_bottom_body_text(path: Path) -> None:
     doc = fitz.open()
@@ -100,6 +112,7 @@ def _build_pdf_with_bottom_body_text(path: Path) -> None:
     )
     doc.save(path.as_posix())
     doc.close()
+
 
 def _build_pdf_with_long_line_crossing_crop_edge(path: Path) -> None:
     doc = fitz.open()
@@ -118,6 +131,7 @@ def _build_pdf_with_long_line_crossing_crop_edge(path: Path) -> None:
     )
     doc.save(path.as_posix())
     doc.close()
+
 
 def _build_pdf_with_table_note_and_spillover(path: Path) -> None:
     doc = fitz.open()
@@ -142,6 +156,7 @@ def _build_pdf_with_table_note_and_spillover(path: Path) -> None:
     doc.save(path.as_posix())
     doc.close()
 
+
 def _build_pdf_with_mid_statlink_and_spillover(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=620, height=820)
@@ -158,6 +173,7 @@ def _build_pdf_with_mid_statlink_and_spillover(path: Path) -> None:
     )
     doc.save(path.as_posix())
     doc.close()
+
 
 def _build_pdf_with_partial_note_overlap(path: Path) -> None:
     doc = fitz.open()
@@ -183,6 +199,7 @@ def _build_pdf_with_partial_note_overlap(path: Path) -> None:
     )
     doc.save(path.as_posix())
     doc.close()
+
 
 def _build_pdf_with_top_chart_spillover(path: Path) -> None:
     doc = fitz.open()
@@ -219,6 +236,7 @@ def _build_pdf_with_top_chart_spillover(path: Path) -> None:
     doc.save(path.as_posix())
     doc.close()
 
+
 def _build_pdf_with_internal_heading_card(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=720, height=540)
@@ -238,6 +256,7 @@ def _build_pdf_with_internal_heading_card(path: Path) -> None:
     )
     doc.save(path.as_posix())
     doc.close()
+
 
 def _build_pdf_with_internal_sentence_card(path: Path) -> None:
     doc = fitz.open()
@@ -260,6 +279,7 @@ def _build_pdf_with_internal_sentence_card(path: Path) -> None:
     doc.save(path.as_posix())
     doc.close()
 
+
 def _build_pdf_with_bottom_edge_chart_text(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=520, height=620)
@@ -281,6 +301,7 @@ def _build_pdf_with_bottom_edge_chart_text(path: Path) -> None:
     page.insert_text((184, 410), "23%", fontsize=24)
     doc.save(path.as_posix())
     doc.close()
+
 
 def _build_pdf_with_table_header_band_and_page_number(path: Path) -> None:
     doc = fitz.open()
@@ -313,6 +334,7 @@ def _build_pdf_with_table_header_band_and_page_number(path: Path) -> None:
     page.insert_text((539, 120), "62", fontsize=8.5)
     doc.save(path.as_posix())
     doc.close()
+
 
 def _build_pdf_with_split_table_title_and_note(path: Path) -> None:
     doc = fitz.open()
@@ -404,14 +426,20 @@ def _build_pdf_with_split_table_title_and_note(path: Path) -> None:
     doc.close()
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

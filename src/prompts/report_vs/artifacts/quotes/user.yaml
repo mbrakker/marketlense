@@ -1,3 +1,5 @@
+includes:
+  - "report_vs/artifacts/_partials/editorial_constitution.yaml"
 text: |
   Context:
   - Quote candidates JSON (may be empty): {{ quote_candidates_json }}

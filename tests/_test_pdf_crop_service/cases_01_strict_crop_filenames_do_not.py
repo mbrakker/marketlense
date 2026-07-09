@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_strict_crop_filenames_do_not_collide_across_table_and_chart_calls(tmp_path):
     pdf_path = tmp_path / "sample.pdf"
     _build_basic_pdf(pdf_path)
@@ -58,6 +59,7 @@ def test_strict_crop_filenames_do_not_collide_across_table_and_chart_calls(tmp_p
     assert "report-table-1-0.png" in files
     assert "report-chart-1-0.png" in files
 
+
 def test_crop_regions_compacts_filename_for_long_report_slug(tmp_path):
     pdf_path = tmp_path / "sample.pdf"
     _build_basic_pdf(pdf_path)
@@ -92,6 +94,7 @@ def test_crop_regions_compacts_filename_for_long_report_slug(tmp_path):
     assert artifact_path.is_file()
     assert artifact_path.name.startswith("chart-4-1-")
     assert len(artifact_path.name) <= 96
+
 
 def test_chart_strict_tightens_partial_bottom_text_spillover(tmp_path):
     pdf_path = tmp_path / "spillover.pdf"
@@ -138,6 +141,7 @@ def test_chart_strict_tightens_partial_bottom_text_spillover(tmp_path):
         assert strict_img.height < legacy_img.height
         assert strict_img.height > int(legacy_img.height * 0.65)
 
+
 def test_tighten_chart_crop_rect_reclamps_padded_top_to_caption(tmp_path):
     pdf_path = tmp_path / "top_chart_spillover.pdf"
     _build_pdf_with_top_chart_spillover(pdf_path)
@@ -153,6 +157,7 @@ def test_tighten_chart_crop_rect_reclamps_padded_top_to_caption(tmp_path):
     assert tightened.y0 > 186.0
     assert tightened.y0 < 187.0
     assert tightened.y1 == pytest.approx(padded_rect.y1)
+
 
 def test_tighten_chart_crop_rect_leaves_plain_chart_without_context_unchanged(tmp_path):
     pdf_path = tmp_path / "plain_chart.pdf"
@@ -170,6 +175,7 @@ def test_tighten_chart_crop_rect_leaves_plain_chart_without_context_unchanged(tm
     assert tightened.y0 == pytest.approx(rect.y0)
     assert tightened.x1 == pytest.approx(rect.x1)
     assert tightened.y1 == pytest.approx(rect.y1)
+
 
 def test_tighten_chart_crop_rect_does_not_trim_internal_panel_label_block(tmp_path):
     pdf_path = tmp_path / "internal-panel-side-labels.pdf"
@@ -190,6 +196,7 @@ def test_tighten_chart_crop_rect_does_not_trim_internal_panel_label_block(tmp_pa
     assert tightened.y0 <= 130.0
     assert tightened.y1 >= 470.0
 
+
 def test_tighten_chart_crop_rect_keeps_draw_backed_internal_heading_band(tmp_path):
     pdf_path = tmp_path / "internal-heading-card.pdf"
     _build_pdf_with_internal_heading_card(pdf_path)
@@ -205,6 +212,7 @@ def test_tighten_chart_crop_rect_keeps_draw_backed_internal_heading_band(tmp_pat
     assert tightened.y0 <= 188.5
     assert tightened.y0 >= 176.0
     assert tightened.y1 == pytest.approx(rect.y1)
+
 
 def test_tighten_chart_crop_rect_expands_to_fill_top_when_internal_sentence_is_not_heading(
     tmp_path,
@@ -224,6 +232,7 @@ def test_tighten_chart_crop_rect_expands_to_fill_top_when_internal_sentence_is_n
     assert tightened.y0 <= 180.5
     assert tightened.y0 >= 176.0
     assert tightened.y1 == pytest.approx(rect.y1)
+
 
 def test_legacy_chart_border_trim_keeps_extra_bottom_padding_for_bottom_edge_text(
     tmp_path,
@@ -258,6 +267,7 @@ def test_legacy_chart_border_trim_keeps_extra_bottom_padding_for_bottom_edge_tex
     assert bottommost >= 0
     assert height - 1 - bottommost >= 16
 
+
 def test_tighten_table_crop_rect_trims_top_page_number_but_keeps_header_band(tmp_path):
     pdf_path = tmp_path / "table_header_page_number.pdf"
     _build_pdf_with_table_header_band_and_page_number(pdf_path)
@@ -273,6 +283,7 @@ def test_tighten_table_crop_rect_trims_top_page_number_but_keeps_header_band(tmp
     assert tightened.y0 > 53.4
     assert tightened.y0 < 61.0
     assert tightened.y1 == pytest.approx(padded_rect.y1)
+
 
 def test_table_crop_regions_stitch_split_table_title_and_note_for_adjacent_pages(
     tmp_path,
@@ -350,6 +361,7 @@ def test_table_crop_regions_stitch_split_table_title_and_note_for_adjacent_pages
         assert paired_first.width >= first_single.width
         assert paired_second.width >= second_single.width
 
+
 def test_table_strict_clamps_after_note_and_avoids_section_spillover(tmp_path):
     pdf_path = tmp_path / "table_spillover.pdf"
     _build_pdf_with_table_note_and_spillover(pdf_path)
@@ -395,6 +407,7 @@ def test_table_strict_clamps_after_note_and_avoids_section_spillover(tmp_path):
         assert strict_img.height < legacy_img.height
         assert strict_img.height < 940
         assert strict_img.height > 760
+
 
 def test_table_strict_detects_mid_statlink_for_bottom_clamp(tmp_path):
     pdf_path = tmp_path / "table_mid_statlink.pdf"
@@ -442,6 +455,7 @@ def test_table_strict_detects_mid_statlink_for_bottom_clamp(tmp_path):
         assert strict_img.height < 620
         assert strict_img.height > 420
 
+
 def test_chart_strict_keeps_note_that_crosses_bbox_bottom(tmp_path):
     pdf_path = tmp_path / "chart_partial_note_overlap.pdf"
     _build_pdf_with_partial_note_overlap(pdf_path)
@@ -487,6 +501,77 @@ def test_chart_strict_keeps_note_that_crosses_bbox_bottom(tmp_path):
         assert strict_img.height > legacy_img.height
         assert strict_img.height < 760
 
+
+def test_publication_strict_writes_final_crop_diagnostics(tmp_path):
+    pdf_path = tmp_path / "publication-strict.pdf"
+    _build_basic_pdf(pdf_path)
+    out_dir = tmp_path / "out"
+    item = CropItem(
+        id="visual-0-0",
+        type="figure",
+        score=90.0,
+        page=0,
+        bbox=(45.0, 75.0, 375.0, 305.0),
+    )
+
+    response = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="report",
+            items=[item],
+            subdir="slices",
+            pad=0,
+            mode="publication_strict",
+        ),
+        _ctx(),
+    )
+
+    artifact_path = out_dir / response.paths[0]
+    diagnostics_path = artifact_path.with_suffix(artifact_path.suffix + ".qa.json")
+    diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+
+    assert artifact_path.is_file()
+    assert diagnostics["mode"] == "publication_strict"
+    assert diagnostics["accepted"] is True
+    assert diagnostics["qa"]["total_score"] >= 0.75
+    assert diagnostics["qa"]["defect_labels"] == []
+
+
+def test_verify_crop_image_rejects_neighbor_contamination() -> None:
+    img = Image.new("RGB", (220, 120), (255, 255, 255))
+    for x in range(30, 170):
+        for y in range(25, 95):
+            img.putpixel((x, y), (40, 90, 200))
+    for x in range(2):
+        for y in range(20, 100):
+            img.putpixel((x, y), (20, 20, 20))
+
+    result = verify_crop_image(img, crop_type="figure")
+
+    assert result["accepted"] is False
+    assert "neighbor_contamination" in result["defect_labels"]
+
+
+def test_content_aware_trim_handles_gradient_margin_without_clipping_card() -> None:
+    img = Image.new("RGB", (180, 120), (255, 255, 255))
+    for x in range(180):
+        shade = 240 - int(x / 180 * 20)
+        for y in range(120):
+            img.putpixel((x, y), (shade, shade, 248))
+    for x in range(35, 145):
+        for y in range(28, 92):
+            img.putpixel((x, y), (80, 120, 210))
+
+    trimmed, amounts = _content_aware_trim(img, crop_type="figure")
+
+    assert trimmed.width < img.width
+    assert trimmed.height < img.height
+    assert amounts[0] < 28
+    assert amounts[2] < 35
+
+
 def test_render_preview_and_crop_refine_page_render_create_assets(tmp_path):
     pdf_path = tmp_path / "preview.pdf"
     _build_basic_pdf(pdf_path)
@@ -527,6 +612,7 @@ def test_render_preview_and_crop_refine_page_render_create_assets(tmp_path):
     assert page_render_response.scale_y > 0
     assert (out_dir / page_render_response.image_path).exists()
 
+
 def test_render_preview_compacts_filename_for_long_report_slug(tmp_path):
     pdf_path = tmp_path / "preview.pdf"
     _build_basic_pdf(pdf_path)
@@ -555,6 +641,7 @@ def test_render_preview_compacts_filename_for_long_report_slug(tmp_path):
     assert artifact_path.name.startswith("preview-contents-")
     assert len(artifact_path.name) <= 96
 
+
 def test_apply_crop_refine_bbox_clamps_to_page_bounds(tmp_path):
     pdf_path = tmp_path / "bbox.pdf"
     _build_basic_pdf(pdf_path)
@@ -573,6 +660,7 @@ def test_apply_crop_refine_bbox_clamps_to_page_bounds(tmp_path):
     assert response.page == 0
     assert 0.0 <= x0 < x1 <= 420.0
     assert 0.0 <= y0 < y1 <= 560.0
+
 
 def test_apply_crop_refine_bbox_rejects_page_out_of_range(tmp_path, assert_app_error):
     pdf_path = tmp_path / "bbox_oob.pdf"
@@ -595,6 +683,7 @@ def test_apply_crop_refine_bbox_rejects_page_out_of_range(tmp_path, assert_app_e
         retryable=False,
     )
 
+
 def test_apply_crop_refine_bbox_does_not_over_trim_for_long_crossing_text(tmp_path):
     pdf_path = tmp_path / "edge-trim-guard.pdf"
     _build_pdf_with_long_line_crossing_crop_edge(pdf_path)
@@ -609,6 +698,7 @@ def test_apply_crop_refine_bbox_does_not_over_trim_for_long_crossing_text(tmp_pa
     )
 
     assert response.bbox[2] >= 348.0
+
 
 def test_crop_and_preview_sanitize_report_and_subdir_segments(tmp_path):
     pdf_path = tmp_path / "preview_escape.pdf"
@@ -652,6 +742,7 @@ def test_crop_and_preview_sanitize_report_and_subdir_segments(tmp_path):
     assert (out_dir / crop_response.paths[0]).exists()
     assert (out_dir / preview_response.image_path).exists()
 
+
 __all__ = [
     "test_strict_crop_filenames_do_not_collide_across_table_and_chart_calls",
     "test_crop_regions_compacts_filename_for_long_report_slug",
@@ -667,6 +758,9 @@ __all__ = [
     "test_table_strict_clamps_after_note_and_avoids_section_spillover",
     "test_table_strict_detects_mid_statlink_for_bottom_clamp",
     "test_chart_strict_keeps_note_that_crosses_bbox_bottom",
+    "test_publication_strict_writes_final_crop_diagnostics",
+    "test_verify_crop_image_rejects_neighbor_contamination",
+    "test_content_aware_trim_handles_gradient_margin_without_clipping_card",
     "test_render_preview_and_crop_refine_page_render_create_assets",
     "test_render_preview_compacts_filename_for_long_report_slug",
     "test_apply_crop_refine_bbox_clamps_to_page_bounds",

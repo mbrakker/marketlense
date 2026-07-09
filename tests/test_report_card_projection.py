@@ -250,6 +250,32 @@ def test_public_metadata_governance_rejects_placeholder_and_leaked_labels(
     }
 
 
+def test_public_metadata_governance_rejects_raw_extraction_fragments(
+    assert_app_error,
+) -> None:
+    with pytest.raises(AppError) as captured:
+        validate_public_metadata_governance(
+            {
+                "publisher": "OCR text block 17",
+                "region": "Table 4 row: Europe",
+                "covered_period": "raw_page_text: 2025 outlook",
+                "archive_facet": "cell_2_3",
+            }
+        )
+
+    assert_app_error(
+        captured.value,
+        code="public_metadata_governance_blocked",
+        retryable=False,
+    )
+    assert set(captured.value.context["blocked_fields"]) == {
+        "archive_facet",
+        "covered_period",
+        "publisher",
+        "region",
+    }
+
+
 def test_report_card_manifest_applies_public_metadata_governance(
     assert_app_error,
 ) -> None:

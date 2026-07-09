@@ -26,9 +26,11 @@ from src.services._pdf._crop.geometry import (
 )
 from src.services._pdf._crop.image_ops import (
     PDF_CROP_EXCEPTIONS,
+    _content_aware_trim,
     _render_clip_image,
     _stack_crop_images,
     _trim_uniform_border,
+    verify_crop_image,
 )
 from src.services._pdf._crop.table_continuation import (
     _build_table_continuation_augments,
@@ -150,15 +152,21 @@ def _crop_regions(
             x0, y0, x1, y1 = it.bbox
             page = local_doc[pno]
             rect = fitz.Rect(x0 - pad, y0 - pad, x1 + pad, y1 + pad) & page.rect
-            if mode == "chart_strict" or it.type == "chart":
+            effective_mode = _effective_crop_mode(mode, it.type)
+            if effective_mode == "chart_strict" or it.type == "chart":
                 rect = _tighten_chart_crop_rect(page, rect)
-            elif mode == "table_strict" or it.type == "table":
+            elif effective_mode == "table_strict" or it.type == "table":
                 rect = _tighten_table_crop_rect(page, rect)
-            if mode in {"table_strict", "chart_strict", "figure_strict"}:
+            if effective_mode in {
+                "table_strict",
+                "chart_strict",
+                "figure_strict",
+                "publication_strict",
+            }:
                 rect = _tighten_crop_rect_for_strict_mode(
                     page,
                     rect,
-                    mode=mode,
+                    mode=effective_mode,
                 )
             if rect.is_empty:
                 continue
@@ -229,6 +237,7 @@ def _crop_regions(
                 ).hexdigest(),
                 settings_payload={
                     "mode": str(mode or ""),
+                    "effective_mode": _effective_crop_mode(mode, it.type),
                     "pad": int(pad),
                     "subdir": safe_subdir,
                     "resolved_rect": [
@@ -294,7 +303,10 @@ def _crop_regions(
                 matrix=fitz.Matrix(2, 2), clip=region.rect, alpha=False
             )
             img: Optional[Image.Image] = None
-            if mode == "figure_strict":
+            effective_mode = _effective_crop_mode(mode, it.type)
+            trim_amounts = (0, 0, 0, 0)
+            repair_actions: list[str] = []
+            if effective_mode == "figure_strict":
                 try:
                     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
                     img = _trim_uniform_border(
@@ -306,29 +318,49 @@ def _crop_regions(
                     )
                 except PDF_CROP_EXCEPTIONS:
                     img = None
-            elif mode == "table_strict":
+            elif effective_mode == "table_strict":
                 try:
                     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-                    img = _trim_uniform_border(
-                        img,
-                        allow_top=False,
-                        allow_bottom=True,
-                        allow_left=True,
-                        allow_right=True,
-                    )
-                except PDF_CROP_EXCEPTIONS:
-                    img = None
-            elif mode == "chart_strict" or it.type == "chart":
-                try:
-                    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-                    if mode == "chart_strict":
-                        img = _trim_uniform_border(
+                    if mode == "publication_strict":
+                        img, trim_amounts = _content_aware_trim(
                             img,
-                            allow_top=True,
+                            crop_type="table",
+                            allow_top=False,
                             allow_bottom=True,
                             allow_left=True,
                             allow_right=True,
                         )
+                    else:
+                        img = _trim_uniform_border(
+                            img,
+                            allow_top=False,
+                            allow_bottom=True,
+                            allow_left=True,
+                            allow_right=True,
+                        )
+                except PDF_CROP_EXCEPTIONS:
+                    img = None
+            elif effective_mode == "chart_strict" or it.type == "chart":
+                try:
+                    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                    if effective_mode == "chart_strict":
+                        if mode == "publication_strict":
+                            img, trim_amounts = _content_aware_trim(
+                                img,
+                                crop_type="chart",
+                                allow_top=True,
+                                allow_bottom=True,
+                                allow_left=True,
+                                allow_right=True,
+                            )
+                        else:
+                            img = _trim_uniform_border(
+                                img,
+                                allow_top=True,
+                                allow_bottom=True,
+                                allow_left=True,
+                                allow_right=True,
+                            )
                     else:
                         img = _legacy_chart_border_trim(
                             page,
@@ -336,6 +368,19 @@ def _crop_regions(
                             img,
                             artifact_cache=artifact_cache,
                         )
+                except PDF_CROP_EXCEPTIONS:
+                    img = None
+            elif mode == "publication_strict":
+                try:
+                    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                    img, trim_amounts = _content_aware_trim(
+                        img,
+                        crop_type="figure",
+                        allow_top=True,
+                        allow_bottom=True,
+                        allow_left=True,
+                        allow_right=True,
+                    )
                 except PDF_CROP_EXCEPTIONS:
                     img = None
             if it.type == "table" and augment is not None:
@@ -369,6 +414,72 @@ def _crop_regions(
                         "RGB", (pix.width, pix.height), pix.samples
                     )
 
+            qa_result = None
+            if mode == "publication_strict":
+                if img is None:
+                    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                qa_result = verify_crop_image(img, crop_type=_qa_crop_type(it.type))
+                for repair_index in range(2):
+                    if qa_result.get("accepted"):
+                        break
+                    defects = set(qa_result.get("defect_labels") or [])
+                    repairable = {
+                        "neighbor_contamination",
+                        "edge_clipped_content",
+                    }
+                    if not defects.intersection(repairable):
+                        break
+                    repaired, repaired_trim = _content_aware_trim(
+                        img,
+                        crop_type=_qa_crop_type(it.type),
+                        allow_top=True,
+                        allow_bottom=True,
+                        allow_left=True,
+                        allow_right=True,
+                    )
+                    repaired_qa = verify_crop_image(
+                        repaired, crop_type=_qa_crop_type(it.type)
+                    )
+                    if float(repaired_qa.get("total_score") or 0.0) <= float(
+                        qa_result.get("total_score") or 0.0
+                    ):
+                        break
+                    img = repaired
+                    qa_result = repaired_qa
+                    trim_amounts = tuple(
+                        int(trim_amounts[index]) + int(repaired_trim[index])
+                        for index in range(4)
+                    )
+                    repair_actions.append(f"content_aware_trim:{repair_index + 1}")
+                _write_crop_diagnostics(
+                    output_path=output_path,
+                    mode=mode,
+                    effective_mode=effective_mode,
+                    item=it,
+                    region=region,
+                    trim_amounts=trim_amounts,
+                    qa_result=qa_result,
+                    repair_actions=repair_actions,
+                )
+                if not qa_result.get("accepted"):
+                    if ctx is not None:
+                        crop_logger.info(
+                            log_event(
+                                ctx,
+                                role="service",
+                                event="crop_region_publication_rejected",
+                                module=crop_logger.name,
+                                fields={
+                                    "source_artifact": rel.as_posix(),
+                                    "page": int(it.page),
+                                    "item_id": str(it.id or ""),
+                                    "defect_labels": qa_result.get("defect_labels"),
+                                    "total_score": qa_result.get("total_score"),
+                                },
+                            )
+                        )
+                    continue
+
             if img is not None:
                 img.save(output_path.as_posix())
             else:
@@ -397,6 +508,69 @@ def _crop_regions(
     return paths
 
 
+def _effective_crop_mode(mode: str, item_type: str) -> str:
+    if mode != "publication_strict":
+        return mode
+    if item_type == "table":
+        return "table_strict"
+    if item_type == "chart":
+        return "chart_strict"
+    return "publication_strict"
+
+
+def _qa_crop_type(item_type: str) -> str:
+    if item_type == "table":
+        return "table"
+    if item_type == "chart":
+        return "chart"
+    return "figure"
+
+
+def _write_crop_diagnostics(
+    *,
+    output_path: Path,
+    mode: str,
+    effective_mode: str,
+    item: CropItem,
+    region: _ResolvedCropRegion,
+    trim_amounts: tuple[int, int, int, int],
+    qa_result: dict[str, object],
+    repair_actions: list[str],
+) -> None:
+    diagnostics = {
+        "schema_version": "1.0",
+        "candidate_id": str(item.id or ""),
+        "candidate_type": str(item.type or ""),
+        "page": int(item.page),
+        "mode": mode,
+        "effective_mode": effective_mode,
+        "original_bbox": [round(float(value), 3) for value in item.bbox],
+        "final_bbox": [
+            round(float(region.rect.x0), 3),
+            round(float(region.rect.y0), 3),
+            round(float(region.rect.x1), 3),
+            round(float(region.rect.y1), 3),
+        ],
+        "render_scale": 2,
+        "trims": {
+            "top": int(trim_amounts[0]),
+            "bottom": int(trim_amounts[1]),
+            "left": int(trim_amounts[2]),
+            "right": int(trim_amounts[3]),
+        },
+        "qa": qa_result,
+        "repair_actions": repair_actions,
+        "accepted": bool(qa_result.get("accepted")),
+        "rejection_reason": ",".join(
+            str(label) for label in qa_result.get("defect_labels") or []
+        ),
+    }
+    output_path.with_suffix(output_path.suffix + ".qa.json").write_text(
+        json.dumps(diagnostics, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+
+
 __all__ = [
     "CROP_FILENAME_ID_MAX_LEN",
     "CROP_FILENAME_MAX_LEN",
@@ -404,4 +578,6 @@ __all__ = [
     "_crop_output_filename",
     "crop_regions",
     "_crop_regions",
+    "_effective_crop_mode",
+    "_write_crop_diagnostics",
 ]

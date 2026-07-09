@@ -52,11 +52,15 @@ from src.utils.analysis_family import family_is_abstained
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.coercion import string_value as _s
-from src.utils.json_utils import dump_json_text as _dump_json
+from src.utils.json_utils import dump_json_text
 from src.utils.logging import log_event
 from src.utils.model_resolver import resolve_model
 
 logger = logging.getLogger("market_lense.artifact_generator")
+
+
+def _dump_json(value: Any) -> str:
+    return dump_json_text(value)
 
 
 def assemble_artifacts_payload(
@@ -78,7 +82,7 @@ def assemble_artifacts_payload(
     ctx: RunContext,
     cache_meta: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    del report_id, report_name
+    del report_name
     toc_entries = normalize_artifact_toc_entries(toc_bundle.get("toc_entries"))
     toc_topics = [
         _s(entry.get("display_title")).strip()
@@ -149,12 +153,13 @@ def assemble_artifacts_payload(
                 fields=evidence_span_stats,
             )
         )
+    metric_spine = derive_metric_spine(evidence_packs)
     artifacts_payload: Dict[str, Any] = {
         "schema_version": "3.0",
         "toc_entries": toc_entries,
         "toc_topics": toc_topics,
         "toc_topics_expanded": topic_briefs,
-        "metric_spine": derive_metric_spine(evidence_packs),
+        "metric_spine": metric_spine,
         "summary": summary,
         "cover_semantics": _validate_cover_semantics(cover_semantics, ctx=ctx),
         "insights_candidates": insights_candidates,
@@ -169,8 +174,16 @@ def assemble_artifacts_payload(
         summary=summary,
         insights_final=insights_final,
         quotes_final=quotes_final,
-        metric_spine=artifacts_payload["metric_spine"],
+        metric_spine=metric_spine,
         evidence_packs=evidence_packs,
+    )
+    artifacts_payload["claim_ledgers"] = build_universal_claim_ledger(
+        report_id=report_id,
+        summary=summary,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        metric_spine=metric_spine,
+        executive_advisory=artifacts_payload["executive_advisory"],
     )
     if cache_meta:
         artifacts_payload["_cache"] = dict(cache_meta)
@@ -202,6 +215,146 @@ def assemble_artifacts_payload(
         )
         raise
     return artifacts_payload
+
+
+def build_universal_claim_ledger(
+    *,
+    report_id: str,
+    summary: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+    quotes_final: List[Dict[str, Any]],
+    metric_spine: List[Dict[str, Any]],
+    executive_advisory: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    ledger: List[Dict[str, Any]] = []
+
+    def _evidence_ids(*values: Any) -> List[str]:
+        ids: List[str] = []
+        for value in values:
+            if isinstance(value, str):
+                text = value.strip()
+                if text:
+                    ids.append(text)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, str) and item.strip():
+                        ids.append(item.strip())
+                    elif isinstance(item, dict):
+                        evidence_id = _s(item.get("evidence_id")).strip()
+                        if evidence_id:
+                            ids.append(evidence_id)
+        return sorted(dict.fromkeys(ids))
+
+    def _append(
+        *,
+        artifact_section: str,
+        local_id: str,
+        claim_text: str,
+        evidence_ids: List[str],
+        spans: Any = None,
+        support_type: str = "",
+        confidence: str = "source_backed",
+        risk: str = "low",
+    ) -> None:
+        text = " ".join(_s(claim_text).split())
+        if not text or not evidence_ids:
+            return
+        span_count = len(spans) if isinstance(spans, list) else 0
+        resolved_support = support_type or (
+            "direct_evidence_span" if span_count else "canonical_evidence_id"
+        )
+        ledger.append(
+            {
+                "schema_version": "1.0",
+                "canonical_claim_id": f"{report_id}:{artifact_section}:{local_id}",
+                "claim_text": text,
+                "artifact_section": artifact_section,
+                "evidence_ids": evidence_ids,
+                "support_type": resolved_support,
+                "confidence": confidence,
+                "risk": risk,
+                "evidence_span_count": span_count,
+            }
+        )
+
+    for index, claim in enumerate(summary.get("claim_evidence_map") or [], start=1):
+        if not isinstance(claim, dict):
+            continue
+        spans = claim.get("evidence_spans")
+        _append(
+            artifact_section="summary.claim_evidence_map",
+            local_id=str(index),
+            claim_text=_s(claim.get("claim")),
+            evidence_ids=_evidence_ids(claim.get("evidence_id"), spans),
+            spans=spans,
+        )
+    for item in insights_final:
+        if not isinstance(item, dict):
+            continue
+        spans = item.get("evidence_spans")
+        _append(
+            artifact_section="insights_final",
+            local_id=_s(item.get("id")).strip() or str(len(ledger) + 1),
+            claim_text=_s(item.get("text")),
+            evidence_ids=_evidence_ids(item.get("evidence_id"), spans),
+            spans=spans,
+        )
+    for item in metric_spine:
+        if not isinstance(item, dict):
+            continue
+        label = _s(item.get("label")).strip()
+        value = _s(item.get("value")).strip()
+        unit = _s(item.get("unit")).strip()
+        claim_text = " ".join(part for part in (label, value, unit) if part)
+        _append(
+            artifact_section="metric_spine",
+            local_id=_s(item.get("metric_id")).strip() or str(len(ledger) + 1),
+            claim_text=claim_text,
+            evidence_ids=_evidence_ids(item.get("evidence_id")),
+            support_type="direct_metric",
+            confidence=_s(item.get("confidence")).strip() or "source_backed",
+            risk="medium" if item.get("missing_context_notes") else "low",
+        )
+    advisory = executive_advisory if isinstance(executive_advisory, dict) else {}
+    recommendations = advisory.get("recommendations")
+    if isinstance(recommendations, dict):
+        for index, item in enumerate(recommendations.get("items") or [], start=1):
+            if not isinstance(item, dict):
+                continue
+            _append(
+                artifact_section="executive_advisory.recommendations",
+                local_id=_s(item.get("id")).strip() or str(index),
+                claim_text=_s(item.get("recommendation") or item.get("text")),
+                evidence_ids=_evidence_ids(item.get("evidence_id")),
+                support_type="explicit_recommendation",
+                risk="medium",
+            )
+    risks = advisory.get("risks")
+    if isinstance(risks, dict):
+        for index, item in enumerate(risks.get("items") or [], start=1):
+            if not isinstance(item, dict):
+                continue
+            _append(
+                artifact_section="executive_advisory.risks",
+                local_id=_s(item.get("id")).strip() or str(index),
+                claim_text=_s(item.get("risk") or item.get("text")),
+                evidence_ids=_evidence_ids(item.get("evidence_id")),
+                support_type="explicit_risk",
+                risk="medium",
+            )
+    for index, quote in enumerate(quotes_final, start=1):
+        if not isinstance(quote, dict):
+            continue
+        spans = quote.get("evidence_spans")
+        _append(
+            artifact_section="quotes_final",
+            local_id=_s(quote.get("id")).strip() or str(index),
+            claim_text=_s(quote.get("text")),
+            evidence_ids=_evidence_ids(quote.get("evidence_id"), spans),
+            spans=spans,
+            support_type="direct_quote",
+        )
+    return ledger
 
 
 def derive_metric_spine(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
