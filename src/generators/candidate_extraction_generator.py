@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from src.contracts.candidate_extraction import (
     CandidateExtractOutcome,
@@ -23,9 +23,32 @@ from src.utils.validation import validate_candidate
 logger = logging.getLogger("market_lense.candidate_extraction_generator")
 
 
-def _candidate_payload(candidates, crop_map: Dict[str, str]) -> List[dict]:
+def _outcome_value(outcome: object, field_name: str, default: Any = "") -> Any:
+    if isinstance(outcome, dict):
+        return outcome.get(field_name, default)
+    return getattr(outcome, field_name, default)
+
+
+def _outcomes_by_candidate_id(outcomes: object) -> Dict[str, object]:
+    if not isinstance(outcomes, list):
+        return {}
+    mapped: Dict[str, object] = {}
+    for outcome in outcomes:
+        candidate_id = str(_outcome_value(outcome, "candidate_id", "") or "").strip()
+        if candidate_id:
+            mapped[candidate_id] = outcome
+    return mapped
+
+
+def _candidate_payload(
+    candidates, crop_map: Dict[str, str], crop_outcomes: Dict[str, object]
+) -> List[dict]:
     payload = []
     for cand in candidates:
+        outcome = crop_outcomes.get(str(cand.id or "").strip())
+        defects = _outcome_value(outcome, "defects", []) if outcome is not None else []
+        if not isinstance(defects, list):
+            defects = []
         payload.append(
             {
                 "schema_version": cand.schema_version,
@@ -38,6 +61,30 @@ def _candidate_payload(candidates, crop_map: Dict[str, str]) -> List[dict]:
                 "caption": cand.caption or "",
                 "thumb_path": cand.thumb_path or "",
                 "crop_path": crop_map.get(cand.id, ""),
+                "crop_qa_accepted": bool(
+                    _outcome_value(outcome, "accepted", False)
+                )
+                if outcome is not None
+                else False,
+                "crop_qa_score": float(_outcome_value(outcome, "score", 0.0) or 0.0)
+                if outcome is not None
+                else 0.0,
+                "crop_qa_defects": [str(item) for item in defects],
+                "crop_qa_sidecar_path": str(
+                    _outcome_value(outcome, "qa_sidecar_path", "") or ""
+                )
+                if outcome is not None
+                else "",
+                "crop_quality_profile": str(
+                    _outcome_value(outcome, "quality_profile", "") or ""
+                )
+                if outcome is not None
+                else "",
+                "crop_rejection_reason": str(
+                    _outcome_value(outcome, "rejection_reason", "") or ""
+                )
+                if outcome is not None
+                else "",
                 "meta": cand.meta or {},
                 "features": candidate_features_payload(cand),
             }
@@ -125,6 +172,7 @@ def generate_candidate_pack(
 
         crop_paths: List[str] = []
         crop_map: Dict[str, str] = {}
+        crop_outcomes: Dict[str, object] = {}
         if request.save_crops and candidates_resp.candidates:
             items = [
                 CropItem(
@@ -144,12 +192,26 @@ def generate_candidate_pack(
                     report_name=request.report_name,
                     subdir=request.subdir,
                     items=items,
+                    mode="publication_strict",
                     pdf_context=pdf_context,
                 ),
                 ctx,
             )
             crop_paths = crop_resp.paths
-            crop_map = {item.id: path for item, path in zip(items, crop_paths)}
+            crop_outcomes = _outcomes_by_candidate_id(
+                getattr(crop_resp, "outcomes", [])
+            )
+            if crop_outcomes:
+                crop_map = {
+                    candidate_id: str(_outcome_value(outcome, "path", "") or "")
+                    for candidate_id, outcome in crop_outcomes.items()
+                    if bool(_outcome_value(outcome, "accepted", False))
+                    and str(_outcome_value(outcome, "path", "") or "").strip()
+                }
+            else:
+                crop_map = {
+                    item.id: path for item, path in zip(items, crop_paths, strict=False)
+                }
             logger.info(
                 log_event(
                     ctx,
@@ -178,7 +240,9 @@ def generate_candidate_pack(
                 }
                 for item in candidates_resp.stats.degraded_pages
             ],
-            "candidates": _candidate_payload(candidates_resp.candidates, crop_map),
+            "candidates": _candidate_payload(
+                candidates_resp.candidates, crop_map, crop_outcomes
+            ),
         }
         output_path = _candidates_path(
             request.output_dir, request.report_name, request.subdir

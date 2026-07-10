@@ -185,6 +185,7 @@
             "items": { "type": "string" }
           },
           "support_type": { "type": "string" },
+          "evidence_quality_grade": { "type": "string" },
           "confidence": { "type": "string" },
           "risk": { "type": "string" },
           "evidence_span_count": { "type": "integer" }

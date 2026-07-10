@@ -108,8 +108,10 @@ def test_render_includes_artifact_sections(tmp_path):
     assert 'id="overview"' in html
     assert 'class="summary-panel summary-panel-executive"' in html
     assert 'class="claim-strip"' in html
-    assert "f1 · report page 4" in html
-    assert "q1 · report page 2 · Report" in html
+    assert "Sample Report, page 4" in html
+    assert "Sample Report, page 2 · Report" in html
+    assert "f1 · report page" not in html
+    assert "q1 · report page" not in html
     assert 'data-market-lense-publish-entity="true"' in html
     assert '"entity_type":"report"' in html
     assert '"canonical_route_intent":"wordpress:ml_report"' in html
@@ -503,7 +505,8 @@ def test_render_relabels_unknown_quote_speakers_and_shows_citation_micro_lines(
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
     assert "Artlist expert team" in html
-    assert "q1 · report page 7" in html
+    assert "Unknown speaker report, page 7" in html
+    assert "q1 · report page" not in html
 
 
 def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):

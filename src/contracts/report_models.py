@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from typing import List, Tuple
 
 
@@ -64,6 +64,30 @@ class ReportFigureAsset:
         metadata={
             "doc": "Caption source used for display: generated|legacy|detected|placeholder."
         },
+    )
+    crop_qa_score: float = field(
+        default=0.0,
+        metadata={"doc": "Final crop QA score for accepted public figure crops."},
+    )
+    crop_qa_defects: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Final crop QA defect labels for this figure crop."},
+    )
+    crop_qa_accepted: bool = field(
+        default=False,
+        metadata={"doc": "Whether final crop QA accepted this figure crop."},
+    )
+    crop_qa_sidecar_path: str = field(
+        default="",
+        metadata={"doc": "Relative path to final crop QA diagnostics sidecar."},
+    )
+    crop_quality_profile: str = field(
+        default="",
+        metadata={"doc": "Crop quality profile used to produce this figure asset."},
+    )
+    crop_rejection_reason: str = field(
+        default="",
+        metadata={"doc": "Rejection reason if the crop was not accepted."},
     )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Figure asset schema version."}

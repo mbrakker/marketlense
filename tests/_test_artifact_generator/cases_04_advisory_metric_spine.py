@@ -189,6 +189,7 @@ def test_assemble_artifacts_builds_universal_claim_ledger() -> None:
     assert ledger[0]["artifact_section"] == "summary.claim_evidence_map"
     assert ledger[0]["evidence_ids"] == ["f1"]
     assert ledger[0]["support_type"] == "direct_evidence_span"
+    assert ledger[0]["evidence_quality_grade"] == "direct_evidence_span"
     assert ledger[1]["canonical_claim_id"] == "ledger-report:insights_final:i1"
 
 

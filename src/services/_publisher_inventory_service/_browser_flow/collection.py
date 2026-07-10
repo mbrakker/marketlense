@@ -4,24 +4,37 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+
 from src.contracts.publisher_inventory import (
     PublisherInventoryPage,
     PublisherInventoryRawCandidate,
     PublisherInventoryServiceRequest,
 )
 from src.contracts.run_context import RunContext
+from src.services._publisher_inventory_service._browser_flow.interactions import (
+    _browser_wait_for_settle,
+    _click_load_more,
+    _click_pagination_next,
+    _extract_rendered_inventory_state,
+    _prime_browser_inventory_surface,
+    _record_browser_scroll_probe_metrics,
+    _reset_empty_results_filters,
+    _wait_for_inventory_growth,
+    _wait_for_inventory_growth_probe,
+    _wait_for_inventory_transition,
+)
 from src.services._publisher_inventory_service.browser_scripts import (
     _browser_rendered_html_script,
 )
 from src.services._publisher_inventory_service.browser_traversal_state import (
     _BrowserTraversalMetrics,
-    _RenderedInventoryState,
     _increment_browser_traversal_metrics,
+    _RenderedInventoryState,
 )
 from src.services._publisher_inventory_service.discovery_activity import (
     _candidate_url_signature,
-    _extract_component_link_anchors,
     _extract_candidates_from_html,
+    _extract_component_link_anchors,
     _is_archive_surface,
     _is_exhausted_inert_load_more,
     _is_terminal_results_page,
@@ -36,18 +49,6 @@ from src.services._publisher_inventory_service.fetch_service import (
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from src.services._publisher_inventory_service._browser_flow.interactions import (
-    _browser_wait_for_settle,
-    _click_load_more,
-    _click_pagination_next,
-    _extract_rendered_inventory_state,
-    _prime_browser_inventory_surface,
-    _record_browser_scroll_probe_metrics,
-    _reset_empty_results_filters,
-    _wait_for_inventory_growth,
-    _wait_for_inventory_growth_probe,
-    _wait_for_inventory_transition,
-)
 
 logger = logging.getLogger("market_lense.publisher_inventory_service")
 
@@ -620,7 +621,7 @@ async def _collect_browser_inventory_pages(
                 metrics,
                 next_page_visits=1,
             )
-            await _browser_wait_for_settle()
+            await _browser_wait_for_settle(page=page)
             await _close_unexpected_blank_pages(
                 browser=browser,
                 active_page=page,

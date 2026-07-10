@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "src" / "services" / "_publisher_inventory_service" / "_browser_flow"
 FACADE = PACKAGE.parent / "browser_flow.py"
@@ -98,3 +97,20 @@ def test_browser_flow_facade_imports_owners_in_dependency_order() -> None:
         "supplement",
         "traversal",
     ]
+
+
+def test_browser_inventory_settle_calls_pass_page_context() -> None:
+    module = ast.parse((PACKAGE / "collection.py").read_text(encoding="utf-8"))
+    no_context_calls: list[int] = []
+    for node in ast.walk(module):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name):
+            continue
+        if node.func.id != "_browser_wait_for_settle":
+            continue
+        has_page_keyword = any(keyword.arg == "page" for keyword in node.keywords)
+        if not has_page_keyword:
+            no_context_calls.append(node.lineno)
+
+    assert no_context_calls == []

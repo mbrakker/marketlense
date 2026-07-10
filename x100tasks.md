@@ -59,24 +59,6 @@ Scoring:
 
 ## 1. Public Trust and Output Sharpness
 
-- **Title:** Render landed advisory, metric-spine, and claim-support payloads publicly [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: The backend now produces `executive_advisory`, decision brief, recommendations, risks, `metric_spine`, claim ledgers, evidence spans, `so_what`, and `now_what`, but much of this intelligence is not yet exposed in public report rendering.
-  - Why implement: The highest-value remaining output work is productizing already-generated intelligence instead of generating more hidden artifacts.
-  - Tradeoffs / risks: Public rendering must fail closed and must not expose canonical claim IDs, evidence IDs, internal pack names, raw ledger JSON, spans, or implementation terms.
-  - Acceptance Criteria:
-    - Report HTML and WordPress public views render decision brief, strongest metric-spine entries, supported recommendations, supported risks/watchouts, readable claim-support labels, and `so_what`/`now_what` where present.
-    - Missing optional advisory content renders neutral omission states, not placeholder copy.
-    - Visual/mobile tests cover populated, partially populated, and absent payload states.
-
-- **Title:** Add editorial contract versioning and publish-time rule IDs [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Artifact schema versioning exists, but there is no dedicated public editorial contract version or stable publish-time editorial rule set.
-  - Why implement: Public output quality needs measurable warnings and blockers for generic phrasing, unsupported implications, duplicated insights, missing caveats, weak actionability, metric-support gaps, and internal-reference leakage.
-  - Tradeoffs / risks: New rules should start as measured warnings and become blockers only after retained fixture/live evidence proves stability.
-  - Acceptance Criteria:
-    - User-facing artifacts carry an `editorial_contract_version` distinct from the generic artifact schema version.
-    - Publish/readiness validation emits stable rule IDs, affected fields, severity, and remediation context.
-    - Rule promotion from warning to failure is documented with retained-artifact evidence.
-
 - **Title:** Add retained-artifact strategic insight and editorial quality benchmarks [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Strategic insight fields are generated, but retained real artifacts do not yet benchmark role diversity, duplicated insight overlap, `so_what`/`now_what` quality, metric calibration, evidence linkage, caveats, and generic phrasing.
   - Why implement: The system needs output-quality regression evidence over real generated artifacts, not only prompt renderability and schema validity.
@@ -85,15 +67,6 @@ Scoring:
     - A retained-artifact benchmark reports insight diversity, coverage-role balance, duplicate-overlap warnings, evidence-link completeness, metric support, caveat quality, and banned/generic phrasing.
     - The benchmark emits JSON/Markdown evidence suitable for release review.
     - Failures include artifact ID, field path, rule ID, and suggested remediation.
-
-- **Title:** Add evidence quality grades and source-backed claim policies [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Strong prose can be generated from weak paraphrase or loose section context.
-  - Why implement: High-impact claims should prefer direct metrics, direct quotes, chart readouts, explicit findings, or explicit recommendations.
-  - Tradeoffs / risks: Some reports have sparse evidence, so the policy must allow transparent omissions instead of forcing generic content.
-  - Acceptance Criteria:
-    - Evidence objects carry quality grades such as direct metric, direct quote, chart readout, explicit finding, explicit recommendation, methodology note, section summary, or weak paraphrase.
-    - Artifact prompts and validators prevent strong claims from weak evidence unless explicitly marked as low confidence or omitted.
-    - Tests assert both strong-evidence generation and weak-evidence abstention behavior.
 
 - **Title:** Expose readable public evidence spans for high-impact claims [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Internal evidence IDs are auditable but not useful to public readers.
@@ -172,33 +145,6 @@ Scoring:
 
 ## 2. Visual Evidence and Crop Acceptance Quality
 
-- **Title:** Return typed per-candidate crop outcomes before enabling strict QA broadly [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: `crop_regions()` returns only accepted paths, and some callers map paths back to candidates with positional `zip(items, paths)`, so a rejected early strict crop can shift later accepted images onto the wrong candidate.
-  - Why implement: This integration blocker must be fixed before `publication_strict` becomes the canonical user-facing crop path.
-  - Tradeoffs / risks: Contract changes must preserve existing callers or migrate them with compatibility coverage.
-  - Acceptance Criteria:
-    - Crop output uses typed per-item outcomes containing candidate ID, path, accepted status, QA sidecar path, score, defects, and rejection reason; or preserves positional placeholders for rejected items.
-    - Selected and fallback figure mapping keys strictly by candidate ID, not returned path position.
-    - Regression tests cover first item rejected, second item accepted, and no candidate/image misassignment.
-
-- **Title:** Make `publication_strict` the canonical user-facing crop path [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: `publication_strict` exists, but normal selected figures still use `table_strict`/`chart_strict`, fallback crops still request `legacy`, and candidate-pack crops inherit the `legacy` default.
-  - Why implement: Final-image QA only protects public output when every user-facing figure requires an accepted strict QA outcome.
-  - Tradeoffs / risks: Strict rejection can reduce figure availability, so rendering must handle omitted figures cleanly.
-  - Acceptance Criteria:
-    - Selected table, chart, and mixed visual crops route through `publication_strict` or an equivalent strict public mode.
-    - Fallback and candidate-reuse paths never use `legacy` for user-facing images.
-    - Report HTML only uses crops with accepted QA outcomes, and omitted/rejected figures produce safe empty states.
-
-- **Title:** Propagate crop QA score, defects, and sidecar paths into figure assets [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Crop quality scores currently live in QA sidecars but are not carried into `Candidate`, `ReportFigureAsset`, selection ordering, fallback ordering, or report evidence.
-  - Why implement: Public figures need measurable quality metadata for selection, review, benchmark evidence, and future fallback ranking.
-  - Tradeoffs / risks: Public rendering should not expose raw diagnostic internals; QA metadata is machine-facing unless curated.
-  - Acceptance Criteria:
-    - Figure asset contracts carry crop quality score, defect labels, accepted/rejected status, QA sidecar path, quality profile, and rejection reason when applicable.
-    - Selection and fallback ordering can prefer higher accepted QA scores when candidates are otherwise comparable.
-    - Tests assert no default/sentinel QA values for user-facing accepted figures.
-
 - **Title:** Add bounded multimodal final-crop QA escalation outside the PDF service [Impact: 4/5, Effort: 4/5]
   - Problem fixed: Low-confidence `.qa.json` sidecars are not escalated to a canonical multimodal boundary for accept/repair/reject decisions.
   - Why implement: Deterministic QA should handle clear cases, while ambiguous final crops can be checked by a bounded model-backed generator/orchestrator path without putting model calls inside the PDF service.
@@ -229,15 +175,6 @@ Scoring:
 ---
 
 ## 3. Prompt and Artifact Contract Hardening
-
-- **Title:** Add abstention-first artifact generation rules [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: Sparse evidence can produce generic or hallucinated content instead of transparent omission.
-  - Why implement: Trust improves when weak artifacts return explicit not-found or limitation states.
-  - Tradeoffs / risks: Public rendering must handle empty artifacts gracefully.
-  - Acceptance Criteria:
-    - Artifact prompts support empty artifact status metadata, missing evidence type, and precise regeneration target when possible.
-    - Validators accept correct abstentions and reject unsupported generated filler.
-    - Positive and negative tests cover enough-evidence, weak-evidence, and no-evidence cases.
 
 - **Title:** Make visual ranking editorial as well as visual-quality based [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Selected charts can be visually dense but not the most useful evidence for the page.
@@ -288,15 +225,6 @@ Scoring:
     - Fast/default/full profiles are versioned and loaded through config/workflow-control.
     - Logs expose active profile, skipped stages, deferred stages, cache hits/misses, and quality tradeoffs.
 
-- **Title:** Split validation into inline deterministic and deferred grounding tiers [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Report analysis still invokes full validation and regeneration inline, which can dominate draft and bulk-ingest latency.
-  - Why implement: Fast mode needs deterministic inline checks while expensive evidence grounding/regeneration becomes a durable obligation before final publication.
-  - Tradeoffs / risks: Draft output must be clearly marked and blocked from final publish until required validation obligations pass.
-  - Acceptance Criteria:
-    - Inline validation covers schema, required fields, references, artifact completeness, and contract consistency.
-    - Expensive grounding/regeneration is recorded as a durable deferred obligation with status and retry policy.
-    - Publish gates prevent final publication until required validation tiers pass.
-
 - **Title:** Lazily construct LLM/model clients by reached stage [Impact: 3/5, Effort: 2/5]
   - Problem fixed: Multiple scoped clients can be constructed before the pipeline knows which scopes are needed.
   - Why implement: Lazy construction reduces startup overhead and avoids unnecessary provider setup in skipped stages.
@@ -323,15 +251,6 @@ Scoring:
     - Ranking LLM is bypassed when deterministic scoring yields enough strong table/chart candidates.
     - `rank_max_candidates` is adaptive by profile and escalates only when no acceptable figures are found.
     - Fast mode uses one-pass crop refinement or deterministic bbox expansion, and high-confidence candidates can skip crop-refine LLM.
-
-- **Title:** Make Drive listing cursor-first and batch skip metadata complete [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Cursor use is still skipped for some limited/report-card runs, and batch prefiltering still performs per-file state lookups for skip decisions.
-  - Why implement: Cursor-first listing and full skip projections reduce Drive/database work in bulk runs.
-  - Tradeoffs / risks: Operators still need an explicit rescan/backfill path.
-  - Acceptance Criteria:
-    - Limited runs use per-folder cursors by default unless an explicit rescan/backfill option is supplied.
-    - Batch state query returns processed state, last error, text-validation status, vector-store status, retryability, and recovery classification.
-    - Tests cover limit overrides, report-card regeneration policy, cursor updates, and batch skip decisions without per-file lookups.
 
 - **Title:** Convert Drive prefetch from stage barrier to streaming queue [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Drive cache-prefetch exists but completes the full selected batch before report processing starts.
@@ -462,15 +381,6 @@ Scoring:
     - Worker timeout buffer is resolved by route family and terminal-salvage policy.
     - Known impossible routes fail fast with typed blocker outcomes.
     - Tests assert route-specific outer timeout calculation and salvage-before-timeout behavior.
-
-- **Title:** Persist publisher inventory scroll strategy and fix fixed-settle waits [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Inventory traversal still performs default multi-ratio scrolling and one next-page path calls settle without page context, causing blind fixed sleep.
-  - Why implement: Publisher inventory should avoid unnecessary scroll/wait loops and record which surfaces need virtualization/nested scrolling.
-  - Tradeoffs / risks: Reduced scrolling must not miss virtualized or nested report lists for publishers that require it.
-  - Acceptance Criteria:
-    - Per-publisher scroll strategy records whether nested/virtualized scrolling is needed, candidate growth per scroll, no-growth fingerprints, and wait reasons.
-    - Next-page settle calls pass page context consistently and use readiness/fingerprint waits where possible.
-    - Telemetry reports wait latency by reason and candidate growth by surface.
 
 - **Title:** Add browser acquisition avoided-spend benchmark [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Operational memory and cache features exist, but there is no read-only benchmark quantifying avoided browser launches, model calls, runtime, retries, and cost.
@@ -701,12 +611,11 @@ The scoped backlog above intentionally merges overlapping Notion work. The follo
 
 ## Near-Term Implementation Queue
 
-1. Render landed intelligence payloads publicly: `executive_advisory`, decision brief, supported recommendations, risks/watchouts, strongest `metric_spine` entries, and readable claim-support labels.
-2. Add editorial contract versioning and retained-artifact quality benchmarks for insight diversity, role coverage, `so_what`/`now_what`, metric calibration, evidence linkage, generic phrasing, duplicated insights, and caveat quality.
-3. Close public product trust gaps: remove WordPress runtime intelligence synthesis, fix hosted trust surface, add real intake flows, complete mobile/search polish, clean card/exhibit leakage, and reduce hosted latency.
-4. Build the missing autonomous control loop: typed `PipelinePlan`, autopilot profiles, supervisor, generic scheduler, durable dead letters, and remediation re-entry through existing orchestrators.
-5. Add durable publishing and online budget authority: publish jobs/outbox, `RunBudget` enforcement before costly side effects, and broader budget-aware model routing/context compaction rollout.
-6. Package speed primitives into explicit execution modes: `fast_ingest`/`fast_cached`/`high_quality`, two-tier validation, DAG scheduling, draft-first enrichment, adaptive prefetch, and live adaptive concurrency.
-7. Finish crop-quality production wiring and evidence: typed per-candidate crop outcomes, canonical `publication_strict`, QA metadata propagation, low-confidence multimodal escalation, golden crops, and retained HTML visual smoke evidence.
-8. Close code-hygiene enforcement gaps: root pre-commit, one local/CI gate manifest, strict mypy/Ruff rollout, publish/ingest decomposition, changed-critical mutation targeting, import/facade reports, repo-entropy checks, and hygiene scorecards.
-9. Measure browser acquisition savings: avoided browser launches/model calls from exact-route reuse, publisher-policy reuse, mailbox-promoted memory, artifact caching, deterministic autofill, static DOM scan, session reuse, and warm-worker execution.
+1. Add retained-artifact quality benchmarks for insight diversity, role coverage, `so_what`/`now_what`, metric calibration, evidence linkage, generic phrasing, duplicated insights, and caveat quality.
+2. Close public product trust gaps: remove WordPress runtime intelligence synthesis, fix hosted trust surface, add real intake flows, complete mobile/search polish, clean card/exhibit leakage, and reduce hosted latency.
+3. Build the missing autonomous control loop: typed `PipelinePlan`, autopilot profiles, supervisor, generic scheduler, durable dead letters, and remediation re-entry through existing orchestrators.
+4. Add durable publishing and online budget authority: publish jobs/outbox, `RunBudget` enforcement before costly side effects, and broader budget-aware model routing/context compaction rollout.
+5. Package speed primitives into explicit execution modes: `fast_ingest`/`fast_cached`/`high_quality`, DAG scheduling, draft-first enrichment, adaptive prefetch, and live adaptive concurrency.
+6. Finish crop-quality release evidence: low-confidence multimodal escalation, golden crops, final-crop QA scorecard ingestion, and retained HTML visual smoke evidence.
+7. Close code-hygiene enforcement gaps: root pre-commit, one local/CI gate manifest, strict mypy/Ruff rollout, publish/ingest decomposition, changed-critical mutation targeting, import/facade reports, repo-entropy checks, and hygiene scorecards.
+8. Measure browser acquisition savings: avoided browser launches/model calls from exact-route reuse, publisher-policy reuse, mailbox-promoted memory, artifact caching, deterministic autofill, static DOM scan, session reuse, and warm-worker execution.

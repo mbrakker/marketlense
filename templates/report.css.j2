@@ -540,6 +540,87 @@ a:hover{text-decoration:underline}
   margin-top:8px;
   color:var(--muted);
 }
+.advisory-suite{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:16px;
+  margin-top:24px;
+}
+.advisory-panel{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:22px;
+  box-shadow:0 8px 26px rgba(8,43,82,.045);
+}
+.advisory-panel-brief{
+  grid-column:1 / -1;
+  border-left:6px solid var(--blue);
+}
+.advisory-panel-head{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px 12px;
+  margin-bottom:14px;
+}
+.advisory-panel h3{
+  color:var(--navy);
+  font-size:1.2rem;
+  line-height:1.18;
+  margin:0;
+}
+.advisory-panel p{
+  color:#26394f;
+  margin:0;
+}
+.advisory-panel small{
+  display:block;
+  color:var(--muted);
+  margin-top:10px;
+}
+.advisory-list{
+  display:grid;
+  gap:10px;
+  margin:12px 0 0;
+  padding-left:18px;
+  color:#26394f;
+}
+.metric-spine-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+.metric-spine-card{
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:14px;
+  background:#f8fbff;
+}
+.metric-spine-card strong{
+  display:block;
+  color:var(--navy);
+  font-size:1.7rem;
+  line-height:1;
+  margin-bottom:8px;
+}
+.metric-spine-card span{
+  display:block;
+  color:#26394f;
+  font-weight:720;
+}
+.claim-support-list{
+  display:grid;
+  gap:12px;
+}
+.claim-support-list article{
+  border-top:1px solid var(--line);
+  padding-top:12px;
+}
+.claim-support-list article:first-child{
+  border-top:0;
+  padding-top:0;
+}
 .finding-list{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -578,6 +659,26 @@ a:hover{text-decoration:underline}
   font-size:1.12rem;
   line-height:1.22;
   margin:0;
+}
+.insight-implications{
+  display:grid;
+  gap:10px;
+  margin:16px 0 0;
+}
+.insight-implications div{
+  border-top:1px solid var(--line);
+  padding-top:10px;
+}
+.insight-implications dt{
+  color:var(--blue);
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  font-size:.7rem;
+  font-weight:790;
+}
+.insight-implications dd{
+  color:#34475a;
+  margin:4px 0 0;
 }
 .candidate-toolbar{
   display:flex;
@@ -937,6 +1038,7 @@ summary{
   .quote-board,
   .summary-panel,
   .claim-strip,
+  .advisory-suite,
   .expert-panel,
   .source-layout{grid-template-columns:1fr}
   .toc{
@@ -993,6 +1095,7 @@ summary{
     border-bottom:1px solid var(--line);
   }
   .score-dimensions{grid-template-columns:1fr}
+  .metric-spine-grid{grid-template-columns:1fr}
   .signal-stat{
     border-right:0;
     border-bottom:1px solid var(--line);

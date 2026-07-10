@@ -89,6 +89,53 @@ def test_publish_html_injects_hidden_file_id_marker_when_missing(
     assert "<p hidden>Drive fileId: file123</p>" in post_call.json_data["content"]
 
 
+def test_publish_html_blocks_editorial_contract_failures_with_rule_ids(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+) -> None:
+    settings = publish_settings_factory(validation_policy="block")
+    write_report_card_fixture(settings, "out/report.html")
+    add_card_media_responses(wordpress_http)
+    html_text = (
+        "<html><head><title>Report</title>"
+        '<meta name="editorial-contract-version" content="public-report-editorial-v1">'
+        "</head><body>"
+        "Drive fileId: file123"
+        "<article>Overall, this report provides valuable insights from "
+        "report:executive_advisory.recommendations:r1.</article>"
+        "</body></html>"
+    )
+
+    outcome = pg.publish_html(
+        PublishRequest(
+            schema_version="1.0",
+            html_path="out/report.html",
+            auth_header="Bearer token",
+            file_id="file123",
+            html_text=html_text,
+        ),
+        settings,
+        run_context,
+    )
+
+    assert outcome.status == "skipped"
+    assert outcome.error == "publish_editorial_contract_failed"
+    assert outcome.validation_status == "fail"
+    assert any(
+        "editorial.generic_phrasing" in issue
+        for issue in outcome.validation_issues
+    )
+    assert any(
+        "editorial.internal_reference" in issue
+        for issue in outcome.validation_issues
+    )
+    assert (
+        wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")
+        == []
+    )
+
+
 def test_publish_html_uses_filename_for_nonreport_when_document_title_is_missing(
     publish_settings_factory,
     run_context,

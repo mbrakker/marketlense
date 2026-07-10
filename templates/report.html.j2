@@ -8,6 +8,7 @@
 <meta name="description" content="{{ view.seo.description }}">
 <meta name="robots" content="{{ view.seo.robots }}">
 <meta name="drive-file-id" content="{{ file_id }}">
+<meta name="editorial-contract-version" content="{{ view.editorial_contract_version }}">
 {{ publish_entity_metadata_script|safe }}
 <meta name="theme-color" content="#082b52">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23082b52'/%3E%3Ccircle cx='43' cy='43' r='7' fill='%23005cc8'/%3E%3Cpath d='M13 38h30v4H13z' fill='white'/%3E%3C/svg%3E">
@@ -141,6 +142,102 @@
           {% endfor %}
         </div>
         {% endif %}
+
+        {% if view.display.has_advisory %}
+        <div class="advisory-suite" aria-label="Decision advisory and source-backed claim support">
+          {% if view.advisory.decision.available %}
+          <article class="advisory-panel advisory-panel-brief">
+            <div class="advisory-panel-head">
+              <span class="badge green">Source-backed</span>
+              <h3>Decision brief</h3>
+            </div>
+            {% if view.advisory.decision.strategic_context %}
+            <p>{{ view.advisory.decision.strategic_context }}</p>
+            {% endif %}
+            {% if view.advisory.decision.decision_implications %}
+            <ul class="advisory-list">
+              {% for item in view.advisory.decision.decision_implications %}
+              <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+            {% if view.advisory.decision.confidence_note %}
+            <small>{{ view.advisory.decision.confidence_note }}</small>
+            {% endif %}
+          </article>
+          {% endif %}
+
+          {% if view.advisory.metric_spine %}
+          <section class="advisory-panel">
+            <div class="advisory-panel-head">
+              <span class="badge">Quantified proof</span>
+              <h3>Metric spine</h3>
+            </div>
+            <div class="metric-spine-grid">
+              {% for metric in view.advisory.metric_spine %}
+              <article class="metric-spine-card">
+                <strong>{{ metric.value }}</strong>
+                <span>{{ metric.label }}</span>
+                {% if metric.context %}<small>{{ metric.context }}</small>{% endif %}
+                {% if metric.confidence_label %}<small>{{ metric.confidence_label }}</small>{% endif %}
+              </article>
+              {% endfor %}
+            </div>
+          </section>
+          {% endif %}
+
+          {% if view.advisory.recommendations or view.advisory.decision.priority_moves %}
+          <section class="advisory-panel">
+            <div class="advisory-panel-head">
+              <span class="badge green">Actionable</span>
+              <h3>Priority moves</h3>
+            </div>
+            <ul class="advisory-list">
+              {% for item in view.advisory.recommendations %}
+              <li>{{ item.text }}</li>
+              {% endfor %}
+              {% for item in view.advisory.decision.priority_moves %}
+              <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </section>
+          {% endif %}
+
+          {% if view.advisory.risks or view.advisory.decision.watchouts %}
+          <section class="advisory-panel">
+            <div class="advisory-panel-head">
+              <span class="badge">Caveat-aware</span>
+              <h3>Watchouts</h3>
+            </div>
+            <ul class="advisory-list">
+              {% for item in view.advisory.risks %}
+              <li>{{ item.text }}</li>
+              {% endfor %}
+              {% for item in view.advisory.decision.watchouts %}
+              <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </section>
+          {% endif %}
+
+          {% if view.advisory.claim_support %}
+          <section class="advisory-panel">
+            <div class="advisory-panel-head">
+              <span class="badge green">Traceable</span>
+              <h3>Claim support</h3>
+            </div>
+            <div class="claim-support-list">
+              {% for claim in view.advisory.claim_support %}
+              <article>
+                <p>{{ claim.claim }}</p>
+                <small>{{ claim.support_label }}</small>
+              </article>
+              {% endfor %}
+            </div>
+          </section>
+          {% endif %}
+        </div>
+        {% endif %}
       </section>
 
       <section class="section" id="findings" data-section>
@@ -157,6 +254,16 @@
           <article class="finding-card">
             <div class="card-meta"><span class="badge green">Report-supported</span>{% if insight.citation_line %}<span class="badge">{{ insight.citation_line }}</span>{% endif %}</div>
             <h3>{{ insight.text }}</h3>
+            {% if insight.so_what or insight.now_what %}
+            <dl class="insight-implications">
+              {% if insight.so_what %}
+              <div><dt>So what</dt><dd>{{ insight.so_what }}</dd></div>
+              {% endif %}
+              {% if insight.now_what %}
+              <div><dt>Now what</dt><dd>{{ insight.now_what }}</dd></div>
+              {% endif %}
+            </dl>
+            {% endif %}
           </article>
           {% endfor %}
         </div>

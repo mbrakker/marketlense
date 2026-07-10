@@ -5,16 +5,16 @@ from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.prompts import PromptLoadRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.report_cards import (
     DIRECTIONS,
     DOMAIN_LAYERS,
     EVIDENCE_DENSITIES,
     EVIDENCE_SHAPES,
     GEOGRAPHY_SCOPES,
-)
-from src.contracts.report_analysis import (
-    AnalysisPackPathRequest,
-    AnalysisStorePackRequest,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
@@ -50,13 +50,22 @@ from src.services.schema_validator_service import (
 )
 from src.utils.analysis_family import family_is_abstained
 from src.utils.cache_utils import sha256_json
-from src.utils.errors import AppError
 from src.utils.coercion import string_value as _s
+from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_text
 from src.utils.logging import log_event
 from src.utils.model_resolver import resolve_model
 
 logger = logging.getLogger("market_lense.artifact_generator")
+EVIDENCE_QUALITY_BY_SUPPORT_TYPE = {
+    "direct_evidence_span": "direct_evidence_span",
+    "direct_metric": "direct_metric",
+    "direct_quote": "direct_quote",
+    "chart_readout": "chart_readout",
+    "explicit_recommendation": "explicit_recommendation",
+    "explicit_risk": "explicit_risk",
+    "canonical_evidence_id": "source_backed",
+}
 
 
 def _dump_json(value: Any) -> str:
@@ -278,6 +287,7 @@ def build_universal_claim_ledger(
         support_type: str = "",
         confidence: str = "source_backed",
         risk: str = "low",
+        evidence_quality_grade: str = "",
     ) -> None:
         text = " ".join(_s(claim_text).split())
         if not text or not evidence_ids:
@@ -294,6 +304,12 @@ def build_universal_claim_ledger(
                 "artifact_section": artifact_section,
                 "evidence_ids": evidence_ids,
                 "support_type": resolved_support,
+                "evidence_quality_grade": (
+                    _s(evidence_quality_grade).strip()
+                    or EVIDENCE_QUALITY_BY_SUPPORT_TYPE.get(
+                        resolved_support, "source_backed"
+                    )
+                ),
                 "confidence": confidence,
                 "risk": risk,
                 "evidence_span_count": span_count,

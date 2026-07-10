@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_validation_flags_metric_and_quote_mismatches(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
@@ -215,7 +216,73 @@ def test_inline_validation_records_deferred_grounding_without_model_client(tmp_p
     assert any(
         issue.rule_id == "deferred_grounding_required" for issue in result.issues
     )
-    assert not analysis_store.stored[0][3]["issues"] == []
+    assert analysis_store.stored[0][3]["issues"] != []
+
+
+def test_claim_support_rejects_strong_claims_backed_only_by_weak_evidence(tmp_path):
+    settings = _settings(tmp_path)
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="quality-claim-r1",
+            report=_report(),
+            artifacts={
+                "summary": {
+                    "tldr": "Growth reached 42%.",
+                    "card_tldr_compact": "Growth reached 42%.",
+                    "executive_summary": (
+                        "Growth reached 42% and proves durable demand."
+                    ),
+                    "claim_evidence_map": [
+                        {
+                            "claim": "Growth reached 42% and proves durable demand.",
+                            "evidence_id": "f1",
+                            "evidence_spans": [
+                                {
+                                    "evidence_id": "f1",
+                                    "source_pack": "findings",
+                                    "text": "Analyst commentary suggests growth.",
+                                }
+                            ],
+                        }
+                    ],
+                },
+                "insights_final": [],
+                "quotes_final": [],
+                "expert_comment": "",
+                "linkedin_post": "",
+            },
+            evidence_packs={
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "f1",
+                            "evidence": "Analyst commentary suggests growth.",
+                            "quality_grade": "weak_paraphrase",
+                        }
+                    ]
+                }
+            },
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=None,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "fail"
+    issue = next(
+        issue
+        for issue in result.issues
+        if "weak_evidence_strong_claim" in issue.message
+    )
+    assert issue.rule_id == "claim_support"
+    assert issue.severity == "error"
+    assert issue.repair_target == "summary"
+    assert issue.entity_id == "f1"
 
 
 def test_artifact_quality_flags_banned_generic_copy_and_allows_technical_terms(
@@ -808,6 +875,7 @@ __all__ = [
     "test_number_validation_ignores_soft_planning_timeframes",
     "test_validation_accepts_paraphrased_metrics_and_quotes",
     "test_validation_detects_new_numbers_and_grounding",
+    "test_claim_support_rejects_strong_claims_backed_only_by_weak_evidence",
     "test_commentary_numbers_allowed_when_in_report_or_evidence",
     "test_validation_allows_interpretation_and_recommendation_in_allowed_sections",
     "test_validation_fails_on_report_directive_misattribution",

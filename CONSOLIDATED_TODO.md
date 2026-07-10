@@ -52,6 +52,7 @@ Scoring:
 - Prompt/resume/acquisition speed work on 2026-07-08 is live: prompt partials and schema snippets, scored insight fields, critique-first severity-aware regeneration, latest-safe ingest resume, fast-first vector-store polling, parallel table/chart ranking, md5 vector-store reuse, Drive/cache prefetch before report workers, artifact-level acquisition cache, route-family browser prompts, and deterministic pre-LLM form autofill. Verification covered focused regression tests, prompt fixture-corpus regression, Ruff on changed Python, artifact-cache/pre-LLM/prefetch tests, and a live existing IAS checkpoint resume returning `processed` in 0.005s with zero model/API calls.
 - A 20-publisher live acquisition run on 2026-07-06 used `reports@marketbearing.eu` for delivery, verified ad hoc publisher Drive folder creation, blocked public-search drift after exact execution URLs, preferred complete on-site report captures over optional enum blockers, and tightened mailbox candidate selection so SATISFYD, Mimecast, and Sprinklr rejected unrelated Contentsquare delivery links with `candidate_count=0` while a Contentsquare-owned mailbox delivery still produced 12 eligible publisher-affine candidates.
 - The LLM boundary now records primary/fallback provider decisions and supports deterministic over-budget context compaction for JSON chat request contracts, retaining metric/quote/claim/citation/evidence/validation anchors and logging avoided input tokens/cost. `budget_decision="not_configured"` remains in the wrapper; dynamic budget-aware model routing and live spend policy remain open.
+- Public report rendering now exposes `executive_advisory`, strongest `metric_spine` entries, readable claim-support labels, and `so_what`/`now_what` without leaking canonical claim IDs or raw evidence IDs; rendered HTML carries `editorial_contract_version=public-report-editorial-v1`, and publish-time editorial checks emit stable rule IDs/remediation for generic phrasing and internal-reference leakage before WordPress side effects. Crop output now includes typed per-candidate outcomes keyed by candidate ID, `publication_strict` is the canonical user-facing crop path for selected/fallback/candidate-pack crops, and accepted figure assets carry crop QA score, defects, sidecar path, quality profile, and rejection reason. Live verification on 2026-07-10 rendered an existing Worldpanel artifact with 5 metric-spine entries and 18 claim-ledger entries, visually confirmed the advisory block in Playwright, and ran a real existing-PDF candidate extraction with 3 candidates, 2 accepted public crops, QA scores 0.883 and 0.8064, and sidecars persisted into the candidate payload.
 - `src/orchestrators/publish_queue_orchestrator.py` still builds a read-only publish snapshot. It does not enqueue durable publish jobs or a transactional outbox.
 - Claim-level embedding persistence is live: `claim_embeddings` stores durable vectors/provider metadata/status/error taxonomy linked to `report_claims.claim_uid` and `vector_projection_queue.entity_uid`, and `claim_embedding_orchestrator` owns pending/stale embedding workflow execution.
 - Cross-report Briefing and grounded Signal publish paths now reuse persisted claim embeddings for bounded semantic evidence preselection through `analytics_store_service.read_claim_embeddings`, while falling back to deterministic lexical/category ordering when embeddings are absent or stale. Durable Signal candidate extraction, ingestion-time Signal artifact-pack generation, separate Signal-store persistence, grouping, readback, and publish reuse are landed through `src/contracts/signal_candidates.py`, `src/generators/signal_candidate_generator.py`, `src/generators/report_signal_artifact_generator.py`, `src/orchestrators/signal_candidate_orchestrator.py`, `src/orchestrators/report_generation_orchestrator.py`, and `src/services/analytics_store_service.py`.
@@ -266,16 +267,6 @@ Scoring:
     - The benchmark can run in default read-only mode without model calls and optionally sample live regeneration behind an explicit flag.
     - Tests cover metric calculation, narrow-report fallback, unsupported-role detection, and unchanged-artifact baseline stability.
 
-- **Title:** Render executive advisory, metric-spine, and claim-ledger payloads in public report pages [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: The artifact contract now emits optional `executive_advisory`, `metric_spine`, and `claim_ledgers` payloads, but public report pages do not yet expose those higher-value decision artifacts as readable evidence-backed sections.
-  - Why implement: Turns the new analysis payloads into visible user value: faster executive scanning, clearer proof points, stronger consultancy-grade differentiation, and traceable claim support.
-  - Tradeoffs / risks: Rendering must stay fail-closed when optional payloads are absent and must not expose internal evidence IDs, spans, JSON fields, or generated diagnostics as public copy.
-  - Acceptance Criteria:
-    - Report HTML renders decision brief, supported recommendations, risks/watchouts, strongest metric-spine proof points, and claim support labels when present.
-    - Empty/not-found advisory states render neutral omissions or admin diagnostics, not placeholder user-facing content.
-    - Public copy uses source-safe labels and existing citation micro-lines without exposing canonical claim IDs, evidence IDs, internal pack names, or raw ledger JSON.
-    - Visual and schema tests cover populated advisory/metric/claim-ledger payloads, absent payloads, and mobile layout.
-
 - **Title:** Render topics, key figures, and chart insight cards in public report pages [Impact: 5/5, Effort: 3/5]
   - Problem fixed: `topics_covered`, `key_figures`, and `chart_insight_cards` are now generated in artifact payloads, but public report pages do not yet turn them into scan-friendly modules.
   - Why implement: These artifacts can materially improve page usefulness by surfacing the report's topic map, quantified proof points, and visual implications without forcing readers through long prose.
@@ -296,16 +287,23 @@ Scoring:
     - The script can optionally sample a bounded live rerun set when explicitly enabled.
     - Tests cover deterministic metric calculation and stale/conflict classification.
 
-- **Title:** Add editorial contract versioning and quality gates before publishing [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: User-facing output can evolve across prompts and schemas without a single editorial contract version or publish-time gate for generic phrasing, unsupported implications, duplicated insights, missing caveats, weak actionability, forbidden internal references, and tone defects.
-  - Why implement: Explicit versioning and validation let the project raise editorial quality without silently breaking downstream renderers or publishing low-trust prose.
+- **Title:** Expand editorial contract quality rules beyond the initial publish gate [Impact: 5/5, Effort: 4/5]
+  - Problem fixed: Public HTML now carries an editorial contract version and publish blocks generic phrasing/internal-reference leakage, but unsupported implications, duplicated insights, missing caveats, weak actionability, missing metric support, and tone defects are not yet all covered by stable rule IDs.
+  - Why implement: The initial gate gives a stable contract surface; expanding rule coverage turns it into a fuller editorial quality firewall without silently changing public rendering.
   - Tradeoffs / risks: Overly strict gates can raise regeneration cost, block acceptable outputs, or create repetitive copy if repair prompts are too narrow.
   - Acceptance Criteria:
-    - A user-facing editorial artifact contract version governs new final-output fields for decision brief, recommendations, risks, limitations, coverage diagnostics, evidence spans, scoring metadata, metric spine, and audience variants.
-    - Adapters or migration logic preserve existing artifact consumers and public renderers until they opt into the richer version.
-    - Editorial quality validation emits stable rule IDs for generic phrasing, unsupported implications, missing metric support, duplicate insights, missing caveats, weak actionability, forbidden internal references, and tone defects.
+    - Editorial quality validation emits stable rule IDs for unsupported implications, missing metric support, duplicate insights, missing caveats, weak actionability, and tone defects.
     - New quality rules start as warnings with logged remediation context, then can be promoted to hard failures only after fixture and live-artifact evidence proves stability.
-    - README documents the editorial contract version, rollout sequence, warning-to-error policy, and coexistence behavior with current report artifacts.
+    - README documents the rule rollout sequence, warning-to-error policy, and coexistence behavior with the current `public-report-editorial-v1` contract.
+
+- **Title:** Add retained public-advisory render benchmark and screenshot gate [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Public advisory, metric-spine, and claim-support rendering is now live, but release evidence does not yet quantify retained-artifact coverage, leakage prevention, or visual integration across report families.
+  - Why implement: The new public advisory surface should become a measurable quality loop, not a one-off template addition.
+  - Tradeoffs / risks: The benchmark must use existing retained artifacts by default, avoid brittle text snapshots, and keep screenshots as evidence rather than fixtures that force copy stagnation.
+  - Acceptance Criteria:
+    - A quality command renders retained report-analysis artifacts and reports advisory coverage, metric-spine count, claim-support count, `so_what`/`now_what` coverage, public-label coverage, and internal-ID leakage failures.
+    - Optional Playwright screenshots cover representative populated, partial, and absent advisory states with no overlap/overflow findings.
+    - Release evidence records benchmark JSON plus screenshot paths, and failures include report ID, field path, rule ID, and remediation target.
 
 - **Title:** Promote inline artifact-quality warnings into publish remediation workflow [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Inline deterministic validation can now flag generic wording and deferred grounding obligations quickly, but publish and operator workflows do not yet turn those warnings into repair queues, hold decisions, or quality trend reports.

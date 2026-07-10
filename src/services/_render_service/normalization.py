@@ -1,8 +1,10 @@
 from __future__ import annotations
-import re
+
 import logging
+import re
 from pathlib import Path
 from typing import Any
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image
 
@@ -346,21 +348,165 @@ def _coerce_claim_map(
     return items
 
 
+def _public_label_from_token(value: object) -> str:
+    label = _s(value)
+    if not label:
+        return ""
+    normalized = label.replace("_", " ").replace("-", " ").strip()
+    words = [word for word in normalized.split() if word]
+    if not words:
+        return ""
+    lowered = " ".join(word.lower() for word in words)
+    return lowered[:1].upper() + lowered[1:]
+
+
+def _coerce_text_items(value: object, limit: int = 4) -> list[str]:
+    items: list[str] = []
+    for raw_item in _coerce_list(value):
+        text = _s(raw_item)
+        if text and text not in items:
+            items.append(text)
+        if len(items) >= limit:
+            break
+    return items
+
+
+def _coerce_advisory_items(
+    advisory_section: object,
+    *,
+    text_keys: tuple[str, ...],
+    limit: int = 4,
+) -> list[dict[str, str]]:
+    section = _coerce_dict(advisory_section)
+    rows: list[dict[str, str]] = []
+    for raw_item in _coerce_list(section.get("items")):
+        item = _coerce_dict(raw_item)
+        text = _pick_first_text(*(item.get(key) for key in text_keys), raw_item)
+        if not text:
+            continue
+        rows.append(
+            {
+                "text": text,
+                "support_label": "Source-backed",
+            }
+        )
+        if len(rows) >= limit:
+            break
+    return rows
+
+
+def _coerce_public_metric_spine(
+    artifacts: dict[str, Any], *, limit: int = 4
+) -> list[dict[str, str]]:
+    metrics: list[dict[str, str]] = []
+    for raw_item in _coerce_list(artifacts.get("metric_spine")):
+        item = _coerce_dict(raw_item)
+        label = _s(item.get("label"))
+        value = _s(item.get("value"))
+        unit = _s(item.get("unit"))
+        if not label or not value:
+            continue
+        metric_value = f"{value}{unit}" if unit in {"%", "pp"} else " ".join(
+            part for part in (value, unit) if part
+        )
+        context = ", ".join(
+            part
+            for part in (
+                _s(item.get("segment")),
+                _s(item.get("geography")),
+                _s(item.get("timeframe")),
+            )
+            if part
+        )
+        metrics.append(
+            {
+                "label": label,
+                "value": metric_value,
+                "context": context,
+                "confidence_label": _public_label_from_token(
+                    item.get("confidence")
+                )
+                or "Source-backed",
+            }
+        )
+        if len(metrics) >= limit:
+            break
+    return metrics
+
+
+def _coerce_public_claim_support(
+    artifacts: dict[str, Any], *, limit: int = 4
+) -> list[dict[str, str]]:
+    claims: list[dict[str, str]] = []
+    for raw_item in _coerce_list(artifacts.get("claim_ledgers")):
+        item = _coerce_dict(raw_item)
+        claim_text = _s(item.get("claim_text"))
+        if not claim_text:
+            continue
+        support_type = _public_label_from_token(item.get("support_type"))
+        confidence = _public_label_from_token(item.get("confidence"))
+        risk = _public_label_from_token(item.get("risk"))
+        labels = [label for label in (support_type, confidence, risk) if label]
+        claims.append(
+            {
+                "claim": claim_text,
+                "support_label": " · ".join(labels) if labels else "Source-backed",
+            }
+        )
+        if len(claims) >= limit:
+            break
+    return claims
+
+
+def _coerce_public_advisory(artifacts: dict[str, Any]) -> dict[str, Any]:
+    advisory = _coerce_dict(artifacts.get("executive_advisory"))
+    decision_brief = _coerce_dict(advisory.get("decision_brief"))
+    status = _s(decision_brief.get("status")).casefold()
+    decision = {
+        "available": status == "generated",
+        "strategic_context": _s(decision_brief.get("strategic_context")),
+        "decision_implications": _coerce_text_items(
+            decision_brief.get("decision_implications"), limit=4
+        ),
+        "priority_moves": _coerce_text_items(
+            decision_brief.get("priority_moves"), limit=4
+        ),
+        "watchouts": _coerce_text_items(decision_brief.get("watchouts"), limit=4),
+        "confidence_note": _s(decision_brief.get("confidence_note")),
+    }
+    recommendations = _coerce_advisory_items(
+        advisory.get("recommendations"),
+        text_keys=("recommendation", "text"),
+        limit=4,
+    )
+    risks = _coerce_advisory_items(
+        advisory.get("risks"),
+        text_keys=("risk", "text"),
+        limit=4,
+    )
+    return {
+        "decision": decision,
+        "recommendations": recommendations,
+        "risks": risks,
+        "metric_spine": _coerce_public_metric_spine(artifacts),
+        "claim_support": _coerce_public_claim_support(artifacts),
+    }
+
+
 def _coerce_insights(
     raw_insights: object, *, report_title: str
 ) -> list[dict[str, str]]:
     insights: list[dict[str, str]] = []
     for raw_item in _coerce_list(raw_insights):
         item = _coerce_dict(raw_item)
-        if item:
-            text = _s(item.get("text"))
-        else:
-            text = _s(raw_item)
+        text = _s(item.get("text")) if item else _s(raw_item)
         if not text:
             continue
         insights.append(
             {
                 "text": text,
+                "so_what": _s(item.get("so_what")),
+                "now_what": _s(item.get("now_what")),
                 "citation_line": _build_citation_micro_line(
                     report_title=report_title,
                     evidence_id=_s(item.get("evidence_id")),
@@ -518,6 +664,10 @@ def _public_citation_label(value: str) -> str:
     if ":" in label and len(label) >= 2 and label[1] == ":":
         return ""
     if lowered.endswith((".json", ".jsonl", ".txt", ".sqlite", ".db")):
+        return ""
+    if re.fullmatch(r"[a-z]{1,4}[-_]?\d{1,5}", lowered):
+        return ""
+    if "internal" in lowered or "canonical" in lowered:
         return ""
     return label
 
@@ -796,6 +946,7 @@ __all__ = [
     "_unwrap_doc_map",
     "_build_report_identity_items",
     "_coerce_claim_map",
+    "_coerce_public_advisory",
     "_coerce_insights",
     "_coerce_quotes",
     "_display_quote_author",

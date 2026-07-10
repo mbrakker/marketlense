@@ -95,7 +95,7 @@ def test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_e
     selection = rsg.select_report_figures(runtime, source, deps)
 
     assert figure_calls == []
-    assert crop_calls == [("slices", "chart_strict", ["chart_keep"])]
+    assert crop_calls == [("slices", "publication_strict", ["chart_keep"])]
     assert selection.payload._figure_gallery == ["report/slices/chart_keep.png"]
     assert selection.payload._figure_top == "report/slices/chart_keep.png"
     assert selection.payload._figure_section_enabled is True
@@ -203,13 +203,140 @@ def test_select_report_figures_uses_configured_final_crop_dpi_for_selected_galle
     selection = rsg.select_report_figures(runtime, source, deps)
 
     assert crop_calls == [
-        ("table_strict", 216, ["table_keep"]),
-        ("chart_strict", 216, ["chart_keep"]),
+        ("publication_strict", 216, ["table_keep", "chart_keep"]),
     ]
     assert selection.payload._figure_gallery == [
         "report/slices/table_keep-216.png",
         "report/slices/chart_keep-216.png",
     ]
+
+
+def test_select_report_figures_maps_publication_strict_outcomes_by_candidate_id(
+    tmp_path,
+):
+    settings = _settings(
+        tmp_path,
+        crop_refine_enabled=False,
+        crop_refine_mode="off",
+        final_crop_dpi=216,
+        rank_selected_max=2,
+        rank_max_candidates=4,
+    )
+    first = _candidate(
+        cid="chart_rejected",
+        kind="chart",
+        page=0,
+        caption="Figure 1. Rejected chart",
+        meta={"area_frac": 0.2, "text_ratio": 0.2},
+    )
+    second = _candidate(
+        cid="chart_accepted",
+        kind="chart",
+        page=1,
+        caption="Figure 2. Accepted chart",
+        meta={"area_frac": 0.2, "text_ratio": 0.2},
+    )
+    crop_modes: list[str] = []
+
+    def _crop_regions(req, ctx):
+        crop_modes.append(str(req.mode or ""))
+        return SimpleNamespace(
+            paths=["report/slices/chart_accepted.png"],
+            outcomes=[
+                SimpleNamespace(
+                    candidate_id="chart_rejected",
+                    path="",
+                    accepted=False,
+                    qa_sidecar_path="report/slices/chart_rejected.png.qa.json",
+                    score=52.0,
+                    defects=["neighbor_contamination"],
+                    rejection_reason="neighbor_contamination",
+                    quality_profile="publication_strict",
+                ),
+                SimpleNamespace(
+                    candidate_id="chart_accepted",
+                    path="report/slices/chart_accepted.png",
+                    accepted=True,
+                    qa_sidecar_path="report/slices/chart_accepted.png.qa.json",
+                    score=96.0,
+                    defects=[],
+                    rejection_reason="",
+                    quality_profile="publication_strict",
+                ),
+            ],
+        )
+
+    deps = _deps(
+        collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[first, second]),
+        extract_best_figure=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("legacy best-figure fallback should not run")
+        ),
+        rank_candidates=lambda req, ctx: SimpleNamespace(
+            results=[
+                RankedCandidate(
+                    id="chart_rejected",
+                    type="chart",
+                    score=99,
+                    quality_score=99,
+                    insight_score=99,
+                    data_score=99,
+                    keep=True,
+                ),
+                RankedCandidate(
+                    id="chart_accepted",
+                    type="chart",
+                    score=98,
+                    quality_score=98,
+                    insight_score=98,
+                    data_score=98,
+                    keep=True,
+                ),
+            ],
+            prompt_tokens=None,
+            completion_tokens=None,
+            total_tokens=None,
+            request_id="rank",
+            raw_content="[]",
+        ),
+        crop_regions=_crop_regions,
+    )
+    payload = ReportPayload(
+        tldr="",
+        title="Report",
+        insights=[],
+        quote=Quote(text="q"),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+        source="",
+    )
+    runtime = SimpleNamespace(
+        local_pdf_path=_pdf_path(tmp_path),
+        settings=settings,
+        report_name="report",
+        file=SimpleNamespace(file_id="file"),
+        md5=None,
+        ctx=_ctx(),
+        report_worker_limit=1,
+        parallel_within_file=False,
+    )
+    source = SimpleNamespace(
+        payload=payload,
+        contents_page_number=0,
+        pdf_context=None,
+        pdf_context_for_tasks=None,
+    )
+
+    selection = rsg.select_report_figures(runtime, source, deps)
+
+    assert crop_modes == ["publication_strict"]
+    assert selection.payload._figure_gallery == ["report/slices/chart_accepted.png"]
+    assert selection.payload._figure_assets[0].candidate_id == "chart_accepted"
+    assert selection.payload._figure_assets[0].crop_qa_score == 96.0
+    assert selection.payload._figure_assets[0].crop_qa_accepted is True
+    assert (
+        selection.payload._figure_assets[0].crop_qa_sidecar_path
+        == "report/slices/chart_accepted.png.qa.json"
+    )
 
 
 def test_select_report_figures_ranks_table_and_chart_batches_concurrently(
@@ -492,7 +619,7 @@ def test_select_report_figures_crops_only_missing_fallback_candidates_after_reus
 
     selection = rsg.select_report_figures(runtime, source, deps)
 
-    assert crop_calls == [("candidates", "legacy", ["table_keep"])]
+    assert crop_calls == [("candidates", "publication_strict", ["table_keep"])]
     assert selection.payload._figure_gallery == [
         "report/candidates/table_keep.png",
         "report/candidates/chart_keep.png",

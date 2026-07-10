@@ -115,6 +115,80 @@ def test_generate_candidate_pack_success_with_crops(
     assert pdf_ctx.closed is True
 
 
+def test_generate_candidate_pack_maps_crop_outcomes_by_candidate_id(
+    tmp_path,
+    external_boundary_mocks_only,
+):
+    written: dict[str, object] = {}
+
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "build_pdf_context",
+        lambda req, ctx: SimpleNamespace(context=None),
+    )
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "collect_candidates",
+        lambda req, ctx: ExtractCandidatesResponse(
+            schema_version="1.0",
+            candidates=_candidates(),
+        ),
+    )
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "crop_regions",
+        lambda req, ctx: CropResponse(
+            schema_version="1.0",
+            paths=["candidates/c2.png"],
+            outcomes=[
+                SimpleNamespace(
+                    candidate_id="c1",
+                    path="",
+                    accepted=False,
+                    qa_sidecar_path="candidates/c1.png.qa.json",
+                    score=41.0,
+                    defects=["low_information"],
+                    rejection_reason="low_information",
+                    quality_profile="publication_strict",
+                ),
+                SimpleNamespace(
+                    candidate_id="c2",
+                    path="candidates/c2.png",
+                    accepted=True,
+                    qa_sidecar_path="candidates/c2.png.qa.json",
+                    score=94.0,
+                    defects=[],
+                    rejection_reason="",
+                    quality_profile="publication_strict",
+                ),
+            ],
+        ),
+    )
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
+        "write_bytes",
+        lambda req, ctx: (
+            written.update({"path": req.path, "content": req.content})
+            or SimpleNamespace(path=req.path)
+        ),
+    )
+
+    outcome = gen.generate_candidate_pack(_request(tmp_path, save_crops=True), _ctx())
+
+    assert outcome.crop_paths == ["candidates/c2.png"]
+    payload = json.loads((written.get("content") or b"{}").decode("utf-8"))
+    assert payload["candidates"][0]["crop_path"] == ""
+    assert payload["candidates"][0]["crop_qa_accepted"] is False
+    assert payload["candidates"][0]["crop_qa_score"] == 41.0
+    assert payload["candidates"][0]["crop_qa_defects"] == ["low_information"]
+    assert payload["candidates"][1]["crop_path"] == "candidates/c2.png"
+    assert payload["candidates"][1]["crop_qa_accepted"] is True
+    assert (
+        payload["candidates"][1]["crop_qa_sidecar_path"]
+        == "candidates/c2.png.qa.json"
+    )
+
+
 def test_generate_candidate_pack_persists_degraded_page_reasons(
     tmp_path,
     external_boundary_mocks_only,

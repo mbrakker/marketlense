@@ -126,12 +126,75 @@ def _candidate_crop_path_map(
     candidate_paths: list[str],
 ) -> dict[str, str]:
     mapping: dict[str, str] = {}
-    for candidate, path in zip(candidates, candidate_paths):
+    for candidate, path in zip(candidates, candidate_paths, strict=False):
         candidate_id = str(candidate.id or "").strip()
         normalized_path = str(path or "").strip()
         if candidate_id and normalized_path:
             mapping[candidate_id] = normalized_path
     return mapping
+
+
+def _outcome_value(outcome: object, field_name: str, default: Any = "") -> Any:
+    if isinstance(outcome, dict):
+        return outcome.get(field_name, default)
+    return getattr(outcome, field_name, default)
+
+
+def _crop_outcomes_by_candidate_id(crop_response: object) -> dict[str, object]:
+    raw_outcomes = getattr(crop_response, "outcomes", [])
+    if not isinstance(raw_outcomes, list):
+        return {}
+    outcomes: dict[str, object] = {}
+    for outcome in raw_outcomes:
+        candidate_id = str(_outcome_value(outcome, "candidate_id", "") or "").strip()
+        if candidate_id:
+            outcomes[candidate_id] = outcome
+    return outcomes
+
+
+def _accepted_crop_path_by_id(
+    *,
+    crop_response: object,
+    items: list[CropItem],
+) -> dict[str, str]:
+    outcomes = _crop_outcomes_by_candidate_id(crop_response)
+    if outcomes:
+        return {
+            candidate_id: str(_outcome_value(outcome, "path", "") or "").strip()
+            for candidate_id, outcome in outcomes.items()
+            if bool(_outcome_value(outcome, "accepted", False))
+            and str(_outcome_value(outcome, "path", "") or "").strip()
+        }
+    return {
+        item.id: str(path or "").strip()
+        for item, path in zip(
+            items, getattr(crop_response, "paths", []), strict=False
+        )
+        if str(path or "").strip()
+    }
+
+
+def _crop_metadata_by_id(crop_response: object) -> dict[str, dict[str, Any]]:
+    metadata: dict[str, dict[str, Any]] = {}
+    for candidate_id, outcome in _crop_outcomes_by_candidate_id(crop_response).items():
+        defects = _outcome_value(outcome, "defects", [])
+        if not isinstance(defects, list):
+            defects = []
+        metadata[candidate_id] = {
+            "crop_qa_score": float(_outcome_value(outcome, "score", 0.0) or 0.0),
+            "crop_qa_defects": [str(item) for item in defects],
+            "crop_qa_accepted": bool(_outcome_value(outcome, "accepted", False)),
+            "crop_qa_sidecar_path": str(
+                _outcome_value(outcome, "qa_sidecar_path", "") or ""
+            ),
+            "crop_quality_profile": str(
+                _outcome_value(outcome, "quality_profile", "") or ""
+            ),
+            "crop_rejection_reason": str(
+                _outcome_value(outcome, "rejection_reason", "") or ""
+            ),
+        }
+    return metadata
 
 
 def _candidate_extraction_output_path(
@@ -351,6 +414,7 @@ def _asset_from_candidate(
     is_primary: bool,
     index: int,
     primary_display_caption: str,
+    crop_metadata: Optional[dict[str, Any]] = None,
 ) -> ReportFigureAsset:
     detected_caption = str(getattr(candidate, "caption", "") or "").strip()
     preview_text = str(getattr(candidate, "preview_text", "") or "").strip()
@@ -369,6 +433,18 @@ def _asset_from_candidate(
         generated_caption="",
         display_caption=display_caption,
         caption_source=caption_source,
+        crop_qa_score=float((crop_metadata or {}).get("crop_qa_score") or 0.0),
+        crop_qa_defects=list((crop_metadata or {}).get("crop_qa_defects") or []),
+        crop_qa_accepted=bool((crop_metadata or {}).get("crop_qa_accepted") or False),
+        crop_qa_sidecar_path=str(
+            (crop_metadata or {}).get("crop_qa_sidecar_path") or ""
+        ),
+        crop_quality_profile=str(
+            (crop_metadata or {}).get("crop_quality_profile") or ""
+        ),
+        crop_rejection_reason=str(
+            (crop_metadata or {}).get("crop_rejection_reason") or ""
+        ),
     )
 
 
@@ -379,6 +455,7 @@ def _build_figure_assets(
     primary_figure_path: str,
     primary_caption: str,
     fig_resp: Any,
+    crop_metadata_by_id: Optional[dict[str, dict[str, Any]]] = None,
 ) -> list[ReportFigureAsset]:
     assets: list[ReportFigureAsset] = []
     for index, image_path in enumerate(gallery_paths, start=1):
@@ -395,6 +472,11 @@ def _build_figure_assets(
                 is_primary=index == 1,
                 index=index,
                 primary_display_caption=primary_caption,
+                crop_metadata=(crop_metadata_by_id or {}).get(
+                    str(getattr(candidate, "id", "") or "").strip()
+                )
+                if candidate is not None
+                else None,
             )
         )
     if assets:
@@ -487,6 +569,7 @@ def select_report_figures(
     }
     sliced_paths: list[str] = []
     figure_candidates: list[Candidate] = []
+    figure_crop_metadata_by_id: dict[str, dict[str, Any]] = {}
     data._figure_section_enabled = False
     if cands_resp.candidates:
         for candidate in cands_resp.candidates:
@@ -610,57 +693,41 @@ def select_report_figures(
             dependencies=dependencies,
         )
         if selected_items:
-            table_items = [item for item in selected_items if item.type == "table"]
-            chart_items = [item for item in selected_items if item.type == "chart"]
-            selected_path_by_id: dict[str, str] = {}
-            if table_items:
-                table_paths = dependencies.crop_regions(
-                    CropRequest(
-                        schema_version="1.0",
-                        pdf_path=runtime.local_pdf_path,
-                        out_dir=runtime.settings.output_dir,
-                        report_name=runtime.report_name,
-                        items=table_items,
-                        mode="table_strict",
-                        dpi=int(runtime.settings.final_crop_dpi),
-                        pdf_context=source.pdf_context,
-                    ),
-                    runtime.ctx,
-                ).paths
-                selected_path_by_id.update(
-                    {
-                        item.id: str(path or "").strip()
-                        for item, path in zip(table_items, table_paths)
-                        if str(path or "").strip()
-                    }
-                )
-            if chart_items:
-                chart_paths = dependencies.crop_regions(
-                    CropRequest(
-                        schema_version="1.0",
-                        pdf_path=runtime.local_pdf_path,
-                        out_dir=runtime.settings.output_dir,
-                        report_name=runtime.report_name,
-                        items=chart_items,
-                        mode="chart_strict",
-                        dpi=int(runtime.settings.final_crop_dpi),
-                        pdf_context=source.pdf_context,
-                    ),
-                    runtime.ctx,
-                ).paths
-                selected_path_by_id.update(
-                    {
-                        item.id: str(path or "").strip()
-                        for item, path in zip(chart_items, chart_paths)
-                        if str(path or "").strip()
-                    }
-                )
+            crop_response = dependencies.crop_regions(
+                CropRequest(
+                    schema_version="1.0",
+                    pdf_path=runtime.local_pdf_path,
+                    out_dir=runtime.settings.output_dir,
+                    report_name=runtime.report_name,
+                    items=selected_items,
+                    mode="publication_strict",
+                    dpi=int(runtime.settings.final_crop_dpi),
+                    pdf_context=source.pdf_context,
+                ),
+                runtime.ctx,
+            )
+            selected_path_by_id = _accepted_crop_path_by_id(
+                crop_response=crop_response,
+                items=selected_items,
+            )
+            figure_crop_metadata_by_id.update(_crop_metadata_by_id(crop_response))
             sliced_paths = [
                 str(selected_path_by_id.get(item.id) or "").strip()
                 for item in selected_items
                 if str(selected_path_by_id.get(item.id) or "").strip()
             ]
-        figure_candidates = selected_candidates
+            selected_candidate_by_id = {
+                str(candidate.id or "").strip(): candidate
+                for candidate in selected_candidates
+            }
+            figure_candidates = [
+                selected_candidate_by_id[item.id]
+                for item in selected_items
+                if str(selected_path_by_id.get(item.id) or "").strip()
+                and item.id in selected_candidate_by_id
+            ]
+        else:
+            figure_candidates = selected_candidates
         if not sliced_paths:
             fallback_candidates, fallback_stats = _select_fallback_candidates(
                 ranked_rows=ranked,
@@ -744,16 +811,19 @@ def select_report_figures(
                                 report_name=runtime.report_name,
                                 subdir="candidates",
                                 items=fallback_items,
-                                mode="legacy",
+                                mode="publication_strict",
                                 pdf_context=source.pdf_context,
                             ),
                             runtime.ctx,
                         )
                         fallback_path_by_id.update(
-                            _candidate_crop_path_map(
-                                missing_fallback_candidates,
-                                fallback_crop_resp.paths,
+                            _accepted_crop_path_by_id(
+                                crop_response=fallback_crop_resp,
+                                items=fallback_items,
                             )
+                        )
+                        figure_crop_metadata_by_id.update(
+                            _crop_metadata_by_id(fallback_crop_resp)
                         )
                         newly_cropped_count = sum(
                             1
@@ -858,6 +928,7 @@ def select_report_figures(
             detected_caption=str(getattr(fig_resp, "caption", "") or "").strip(),
         ),
         fig_resp=fig_resp,
+        crop_metadata_by_id=figure_crop_metadata_by_id,
     )
     data._figure_section_enabled = figure_section_enabled
     if data._figure_section_enabled and not figure_gallery and figure_top:

@@ -257,6 +257,39 @@ class CropRequest:
 class CropResponse:
     schema_version: str = field(metadata={"doc": "Crop response schema version."})
     paths: List[str] = field(metadata={"doc": "Relative paths to cropped images."})
+    outcomes: List["CropOutcome"] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Per-request crop outcomes keyed by candidate ID, including rejected strict crops."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class CropOutcome:
+    schema_version: str = field(metadata={"doc": "Crop outcome schema version."})
+    candidate_id: str = field(metadata={"doc": "Candidate identifier."})
+    path: str = field(
+        default="", metadata={"doc": "Relative crop path when accepted."}
+    )
+    accepted: bool = field(
+        default=False, metadata={"doc": "Whether the crop is accepted for use."}
+    )
+    qa_sidecar_path: str = field(
+        default="", metadata={"doc": "Relative final-crop QA sidecar path, if any."}
+    )
+    score: float = field(
+        default=0.0, metadata={"doc": "Final crop QA score, if available."}
+    )
+    defects: List[str] = field(
+        default_factory=list, metadata={"doc": "Final crop QA defect labels."}
+    )
+    quality_profile: str = field(
+        default="", metadata={"doc": "Crop quality profile or request mode."}
+    )
+    rejection_reason: str = field(
+        default="", metadata={"doc": "Typed rejection reason for rejected crops."}
+    )
 
 
 @dataclass(frozen=True)

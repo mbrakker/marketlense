@@ -1,9 +1,12 @@
 from __future__ import annotations
-import re
+
 import logging
+import re
 from pathlib import Path
 from typing import Any
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
 from src.contracts.report_assets import RenderRequest
 
 from .normalization import (
@@ -23,6 +26,7 @@ from .normalization import (
     _coerce_limitations,
     _coerce_list,
     _coerce_methodology,
+    _coerce_public_advisory,
     _coerce_quotes,
     _coerce_topic_briefs,
     _extract_fieldwork_dates,
@@ -35,6 +39,7 @@ from .normalization import (
 )
 
 logger = logging.getLogger("market_lense.render_service")
+PUBLIC_EDITORIAL_CONTRACT_VERSION = "public-report-editorial-v1"
 TEMPLATES_DIR = Path(__file__).resolve().parents[3] / "templates"
 JINJA_ENV = Environment(
     loader=FileSystemLoader(str(TEMPLATES_DIR)),
@@ -257,6 +262,7 @@ def _build_render_view(
     expert_status = _coerce_family_status(artifacts, "expert_comment")
     linkedin_status = _coerce_family_status(artifacts, "linkedin_post")
     report_quality_score = _build_report_quality_score(data)
+    advisory = _coerce_public_advisory(artifacts)
     core_signal = _build_core_signal(
         tldr_text=tldr_text,
         executive_summary=executive_summary,
@@ -292,6 +298,7 @@ def _build_render_view(
     chapters = _coerce_chapters(artifacts, doc_map)
     return {
         "report_title": report_title,
+        "editorial_contract_version": PUBLIC_EDITORIAL_CONTRACT_VERSION,
         "publisher": publisher,
         "region": region,
         "focus_year": focus_year,
@@ -335,6 +342,7 @@ def _build_render_view(
             "executive_bullets": _split_summary_bullets(executive_summary, max_items=6),
             "claim_map": _coerce_claim_map(summary, report_title=report_title),
         },
+        "advisory": advisory,
         "snapshot": {
             "facts": [
                 item
@@ -403,6 +411,13 @@ def _build_render_view(
                     topics=topics, topic_briefs=topic_briefs, tags=snapshot_tags
                 )
             ),
+            "has_advisory": bool(
+                advisory["decision"]["available"]
+                or advisory["recommendations"]
+                or advisory["risks"]
+                or advisory["metric_spine"]
+                or advisory["claim_support"]
+            ),
         },
         "seo": {
             "description": _pick_first_text(
@@ -436,7 +451,8 @@ def _build_seo_title(report_title: str, focus_year: str, publisher: str) -> str:
     if focus_year:
         base_title = f"{base_title} {focus_year}"
     publisher_short = publisher[:40] + ("..." if len(publisher) > 40 else "")
-    return f"{base_title}{' | ' + publisher_short if publisher_short else ''} | MarketBearing"
+    publisher_segment = f" | {publisher_short}" if publisher_short else ""
+    return f"{base_title}{publisher_segment} | MarketBearing"
 
 
 __all__ = [

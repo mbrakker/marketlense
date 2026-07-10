@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
 import html
 import json
 import logging
 import mimetypes
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 from urllib.parse import unquote, urlparse
 
+from src.contracts.categories import CategoryMappingLoadRequest
 from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
 from src.contracts.publish import (
     PublishHtmlSnapshot,
@@ -18,19 +20,18 @@ from src.contracts.publish import (
     PublishResolvedTerms,
     PublishSettings,
 )
-from src.contracts.report_store import ReportMetadataGetRequest
 from src.contracts.report_cards import ReportCardManifest
+from src.contracts.report_store import ReportMetadataGetRequest
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
+    WordPressCardUpdateRequest,
     WordPressMediaPrepareRequest,
     WordPressMediaUploadRequest,
     WordPressPostCreateRequest,
-    WordPressCardUpdateRequest,
     WordPressTagEnsureRequest,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyTerm,
 )
-from src.contracts.categories import CategoryMappingLoadRequest
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
 )
@@ -38,11 +39,11 @@ from src.services.file_service import file_exists, read_bytes, read_text
 from src.services.report_store_service import get_metadata
 from src.services.wordpress_service import (
     create_post,
-    ensure_taxonomy_terms,
     ensure_tags,
+    ensure_taxonomy_terms,
     prepare_media_upload,
-    upload_media,
     update_card,
+    upload_media,
 )
 from src.utils.errors import AppError
 from src.utils.html_utils import (
@@ -55,6 +56,7 @@ from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.publish_generator")
+EDITORIAL_CONTRACT_VERSION = "public-report-editorial-v1"
 
 
 @dataclass(frozen=True)
@@ -125,6 +127,40 @@ def publish_html(
             message="Publish request must include a resolved WordPress auth header",
             retryable=False,
         )
+    editorial_issues = _validate_publish_editorial_contract(html_snapshot.html_text)
+    blocking_editorial_issues = _blocking_editorial_issues(editorial_issues)
+    if editorial_issues:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event=(
+                    "publish_editorial_contract_failed"
+                    if blocking_editorial_issues
+                    else "publish_editorial_contract_warned"
+                ),
+                module=logger.name,
+                fields={
+                    "html_path": request.html_path,
+                    "policy": settings.validation_policy,
+                    "rule_ids": [
+                        issue.split("|", 1)[0]
+                        for issue in editorial_issues
+                        if issue
+                    ],
+                },
+            )
+        )
+        if settings.validation_policy == "block" and blocking_editorial_issues:
+            return PublishOutcome(
+                schema_version="1.0",
+                html_path=request.html_path,
+                file_id=file_id,
+                status="skipped",
+                error="publish_editorial_contract_failed",
+                validation_status="fail",
+                validation_issues=editorial_issues,
+            )
     base_url = settings.wp.site_url.rstrip("/")
     card_manifest = None
     if settings.wp.post_type in {
@@ -377,7 +413,78 @@ def publish_html(
         status="published",
         post_id=post_id,
         post_url=post_url,
+        validation_status="fail" if editorial_issues else "pass",
+        validation_issues=editorial_issues,
     )
+
+
+def _editorial_issue(
+    *,
+    rule_id: str,
+    field: str,
+    severity: str,
+    remediation: str,
+) -> str:
+    return (
+        f"{rule_id}|field={field}|severity={severity}|remediation={remediation}"
+    )
+
+
+def _blocking_editorial_issues(issues: list[str]) -> list[str]:
+    return [issue for issue in issues if "|severity=blocker|" in f"{issue}|"]
+
+
+def _validate_publish_editorial_contract(html_text: str) -> list[str]:
+    issues: list[str] = []
+    if (
+        f'name="editorial-contract-version" content="{EDITORIAL_CONTRACT_VERSION}"'
+        not in html_text
+    ):
+        issues.append(
+            _editorial_issue(
+                rule_id="editorial.contract_version_missing",
+                field="head.meta.editorial-contract-version",
+                severity="warning",
+                remediation=(
+                    "Regenerate the public HTML with the current editorial contract."
+                ),
+            )
+        )
+    generic_patterns = (
+        "valuable insights",
+        "in today's rapidly evolving",
+        "it is important to note",
+        "overall, this report",
+    )
+    lowered = html_text.casefold()
+    if any(pattern in lowered for pattern in generic_patterns):
+        issues.append(
+            _editorial_issue(
+                rule_id="editorial.generic_phrasing",
+                field="body",
+                severity="blocker",
+                remediation=(
+                    "Regenerate the affected public copy with source-specific wording."
+                ),
+            )
+        )
+    if re.search(
+        r"\b(?:canonical_claim_id|report:[a-z0-9_.:-]+|[a-z]+-internal-\d+)\b",
+        html_text,
+        flags=re.IGNORECASE,
+    ):
+        issues.append(
+            _editorial_issue(
+                rule_id="editorial.internal_reference",
+                field="body",
+                severity="blocker",
+                remediation=(
+                    "Render public source labels instead of internal claim or "
+                    "evidence identifiers."
+                ),
+            )
+        )
+    return issues
 
 
 def _load_report_card_manifest(

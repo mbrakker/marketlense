@@ -6,16 +6,16 @@ artifact writes while delegating geometry and image operations to siblings.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Optional, cast
 
 import pymupdf as fitz
 from PIL import Image
 
-from src.contracts.report_assets import CropRequest, CropResponse
+from src.contracts.report_assets import CropOutcome, CropRequest, CropResponse
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
 from src.services._pdf._crop.geometry import (
@@ -99,7 +99,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
             },
         )
     )
-    paths = _crop_regions(
+    paths, outcomes = _crop_regions(
         request.pdf_path,
         request.out_dir,
         request.report_name,
@@ -124,7 +124,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
             },
         )
     )
-    return CropResponse(schema_version="1.0", paths=paths)
+    return CropResponse(schema_version="1.0", paths=paths, outcomes=outcomes)
 
 
 def _crop_regions(
@@ -139,12 +139,13 @@ def _crop_regions(
     doc: Optional[fitz.Document] = None,
     artifact_cache=None,
     ctx: RunContext | None = None,
-) -> List[str]:
+) -> tuple[List[str], List[CropOutcome]]:
     safe_report_name = safe_path_segment(report_name, fallback="report")
     safe_subdir = safe_path_segment(subdir or "slices", fallback="slices")
     output_dir = Path(out_dir) / safe_report_name / safe_subdir
     output_dir.mkdir(parents=True, exist_ok=True)
-    paths = []
+    paths: list[str] = []
+    outcomes: list[CropOutcome] = []
     items_list = list(items)
     page_fingerprint_cache: dict[int, str] = {}
     render_dpi = max(72, int(dpi or 144))
@@ -174,6 +175,15 @@ def _crop_regions(
                     mode=effective_mode,
                 )
             if rect.is_empty:
+                outcomes.append(
+                    CropOutcome(
+                        schema_version="1.0",
+                        candidate_id=str(it.id or ""),
+                        accepted=False,
+                        quality_profile=str(mode or ""),
+                        rejection_reason="empty_crop_rect",
+                    )
+                )
                 continue
             regions.append(
                 _ResolvedCropRegion(
@@ -287,6 +297,21 @@ def _crop_regions(
             )
             cache_status = resolve_artifact_cache(descriptor, output_path)
             if cache_status.hit:
+                qa_sidecar_path = _qa_sidecar_rel_path(rel)
+                qa_result = _read_crop_diagnostics(output_path)
+                outcomes.append(
+                    _crop_outcome(
+                        item=it,
+                        path=rel.as_posix(),
+                        accepted=True,
+                        quality_profile=str(mode or ""),
+                        qa_sidecar_path=qa_sidecar_path
+                        if qa_result is not None
+                        else "",
+                        qa_result=qa_result,
+                        rejection_reason="",
+                    )
+                )
                 if ctx is not None:
                     crop_logger.info(
                         log_event(
@@ -488,6 +513,17 @@ def _crop_regions(
                     render_scale=render_scale,
                 )
                 if not qa_result.get("accepted"):
+                    outcomes.append(
+                        _crop_outcome(
+                            item=it,
+                            path="",
+                            accepted=False,
+                            quality_profile=str(mode or ""),
+                            qa_sidecar_path=_qa_sidecar_rel_path(rel),
+                            qa_result=qa_result,
+                            rejection_reason=_rejection_reason(qa_result),
+                        )
+                    )
                     if ctx is not None:
                         crop_logger.info(
                             log_event(
@@ -528,10 +564,23 @@ def _crop_regions(
                     )
                 )
             paths.append(rel.as_posix())
+            outcomes.append(
+                _crop_outcome(
+                    item=it,
+                    path=rel.as_posix(),
+                    accepted=True,
+                    quality_profile=str(mode or ""),
+                    qa_sidecar_path=_qa_sidecar_rel_path(rel)
+                    if qa_result is not None
+                    else "",
+                    qa_result=qa_result,
+                    rejection_reason="",
+                )
+            )
     finally:
         if doc is None:
             local_doc.close()
-    return paths
+    return paths, outcomes
 
 
 def _effective_crop_mode(mode: str, item_type: str) -> str:
@@ -597,6 +646,69 @@ def _write_crop_diagnostics(
     output_path.with_suffix(output_path.suffix + ".qa.json").write_text(
         json.dumps(diagnostics, ensure_ascii=True, indent=2),
         encoding="utf-8",
+    )
+
+
+def _qa_sidecar_rel_path(rel: Path) -> str:
+    return rel.with_suffix(rel.suffix + ".qa.json").as_posix()
+
+
+def _read_crop_diagnostics(output_path: Path) -> dict[str, object] | None:
+    sidecar_path = output_path.with_suffix(output_path.suffix + ".qa.json")
+    if not sidecar_path.exists():
+        return None
+    try:
+        payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _qa_payload(qa_result: dict[str, object] | None) -> dict[str, object]:
+    if not isinstance(qa_result, dict):
+        return {}
+    nested = qa_result.get("qa")
+    if isinstance(nested, dict):
+        return nested
+    return qa_result
+
+
+def _rejection_reason(qa_result: dict[str, object] | None) -> str:
+    qa = _qa_payload(qa_result)
+    raw_defects = qa.get("defect_labels")
+    defects = raw_defects if isinstance(raw_defects, list) else []
+    return ",".join(str(label) for label in defects if str(label))
+
+
+def _crop_outcome(
+    *,
+    item: CropItem,
+    path: str,
+    accepted: bool,
+    quality_profile: str,
+    qa_sidecar_path: str,
+    qa_result: dict[str, object] | None,
+    rejection_reason: str,
+) -> CropOutcome:
+    qa = _qa_payload(qa_result)
+    raw_score = qa.get("total_score")
+    score = float(raw_score) if isinstance(raw_score, (int, float)) else 0.0
+    raw_defects = qa.get("defect_labels")
+    defects = [
+        str(label)
+        for label in (raw_defects if isinstance(raw_defects, list) else [])
+        if str(label)
+    ]
+    return CropOutcome(
+        schema_version="1.0",
+        candidate_id=str(item.id or ""),
+        path=str(path or ""),
+        accepted=bool(accepted),
+        qa_sidecar_path=str(qa_sidecar_path or ""),
+        score=score,
+        defects=defects,
+        quality_profile=str(quality_profile or ""),
+        rejection_reason=str(rejection_reason or ""),
     )
 
 
