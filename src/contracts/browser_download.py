@@ -17,3 +17,4 @@ from ._browser_download.preflight import *  # noqa: F403
 from ._browser_download.runtime import *  # noqa: F403
 from ._browser_download.private_api_auto_promotion import *  # noqa: F403
 from ._browser_download.session_reuse import *  # noqa: F403
+from ._browser_download.worker_pool import *  # noqa: F403

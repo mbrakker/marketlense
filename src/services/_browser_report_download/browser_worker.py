@@ -18,6 +18,7 @@ from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserDownloadSessionReusePolicy,
     BrowserDownloadSettings,
+    BrowserDownloadWarmWorkerPoolPolicy,
     BrowserReportDownloadRequest,
     BrowserRoutePlaybookSelection,
 )
@@ -99,6 +100,7 @@ def _build_identity(payload: dict) -> BrowserDownloadIdentity:
 def _build_settings(payload: dict) -> BrowserDownloadSettings:
     identity_payload = payload.get("identity_profile")
     session_reuse_payload = payload.get("session_reuse_policy")
+    warm_worker_pool_payload = payload.get("warm_worker_pool_policy")
     captcha_handoff_payload = payload.get("captcha_handoff_policy")
     route_budgets_payload = payload.get("route_budgets")
     session_reuse_policy = _build_session_reuse_policy(
@@ -146,6 +148,11 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
             payload.get("private_api_playbook_min_distinct_source_urls") or 2
         ),
         session_reuse_policy=session_reuse_policy,
+        warm_worker_pool_policy=_build_warm_worker_pool_policy(
+            warm_worker_pool_payload
+            if isinstance(warm_worker_pool_payload, dict)
+            else {}
+        ),
         captcha_handoff_policy=_build_captcha_handoff_policy(
             captcha_handoff_payload if isinstance(captcha_handoff_payload, dict) else {}
         ),
@@ -191,6 +198,22 @@ def _build_session_reuse_policy(payload: dict) -> BrowserDownloadSessionReusePol
         base_dir=str(payload.get("base_dir") or "").strip(),
         cleanup_expired=bool(payload.get("cleanup_expired", True)),
         allow_cross_publisher=bool(payload.get("allow_cross_publisher", False)),
+    )
+
+
+def _build_warm_worker_pool_policy(
+    payload: dict,
+) -> BrowserDownloadWarmWorkerPoolPolicy:
+    return BrowserDownloadWarmWorkerPoolPolicy(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        enabled=bool(payload.get("enabled", False)),
+        max_workers=max(int(payload.get("max_workers", 1) or 1), 1),
+        max_runs_per_worker=max(int(payload.get("max_runs_per_worker", 3) or 3), 1),
+        max_memory_mb=max(int(payload.get("max_memory_mb", 768) or 768), 128),
+        idle_ttl_seconds=max(
+            float(payload.get("idle_ttl_seconds", 300.0) or 300.0), 1.0
+        ),
+        fallback_to_subprocess=bool(payload.get("fallback_to_subprocess", True)),
     )
 
 
@@ -350,11 +373,7 @@ def _redact_worker_response_for_disk(
     return payload
 
 
-def main() -> int:
-    if len(sys.argv) != 3:
-        return 2
-    payload_path = Path(sys.argv[1]).resolve()
-    response_path = Path(sys.argv[2]).resolve()
+def _process_payload(payload_path: Path, response_path: Path) -> int:
     raw_payload = json.loads(payload_path.read_text(encoding="utf-8"))
     ctx = _build_ctx(
         raw_payload.get("ctx") if isinstance(raw_payload.get("ctx"), dict) else {}
@@ -418,6 +437,29 @@ def main() -> int:
         encoding="utf-8",
     )
     return 0
+
+
+def _serve() -> int:
+    for raw_line in sys.stdin:
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            command = json.loads(line)
+            payload_path = Path(str(command.get("payload_path") or "")).resolve()
+            response_path = Path(str(command.get("response_path") or "")).resolve()
+        except (json.JSONDecodeError, OSError, TypeError, ValueError):
+            continue
+        _process_payload(payload_path, response_path)
+    return 0
+
+
+def main() -> int:
+    if len(sys.argv) == 2 and sys.argv[1] == "--serve":
+        return _serve()
+    if len(sys.argv) != 3:
+        return 2
+    return _process_payload(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve())
 
 
 if __name__ == "__main__":

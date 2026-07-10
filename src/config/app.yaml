@@ -171,6 +171,13 @@ browser_download:
   max_tokens: 12000
   output_dir: "./out/browser_downloads"
   headed: false
+  warm_worker_pool:
+    enabled: false
+    max_workers: 1
+    max_runs_per_worker: 3
+    max_memory_mb: 768
+    idle_ttl_seconds: 300
+    fallback_to_subprocess: true
   captcha_handoff:
     enabled: true
     timeout_seconds: 120

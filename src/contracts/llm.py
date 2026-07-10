@@ -7,6 +7,92 @@ from src.contracts.run_context import RunContext
 
 
 @dataclass(frozen=True)
+class LLMContextCompactionPolicy:
+    schema_version: str = field(
+        metadata={"doc": "LLM context-compaction policy schema version."}
+    )
+    enabled: bool = field(
+        default=False,
+        metadata={"doc": "Whether deterministic prompt context compaction is enabled."},
+    )
+    max_input_tokens: Optional[int] = field(
+        default=None,
+        metadata={
+            "doc": "Estimated input-token ceiling that triggers compaction when exceeded."
+        },
+    )
+    max_estimated_input_cost_usd: Optional[float] = field(
+        default=None,
+        metadata={
+            "doc": "Estimated total prompt-call cost ceiling that triggers compaction when exceeded."
+        },
+    )
+    expected_output_tokens: int = field(
+        default=0,
+        metadata={
+            "doc": "Expected output-token budget used only for pre-call cost estimation."
+        },
+    )
+    strategy: str = field(
+        default="anchor_preserving_head_tail",
+        metadata={
+            "doc": "Deterministic compaction strategy; currently anchor_preserving_head_tail."
+        },
+    )
+    max_anchor_lines: int = field(
+        default=40,
+        metadata={
+            "doc": "Maximum anchor lines retained before head/tail context is added."
+        },
+    )
+    min_tail_lines: int = field(
+        default=8,
+        metadata={
+            "doc": "Minimum tail-context lines preferred when compaction has remaining budget."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class LLMContextCompactionResult:
+    schema_version: str = field(
+        metadata={"doc": "LLM context-compaction result schema version."}
+    )
+    compacted: bool = field(metadata={"doc": "Whether the user prompt was compacted."})
+    strategy: str = field(metadata={"doc": "Compaction strategy applied."})
+    trigger_reason: str = field(
+        metadata={"doc": "Budget trigger reason or skip reason."}
+    )
+    original_input_tokens_est: int = field(
+        metadata={"doc": "Estimated system + user input tokens before compaction."}
+    )
+    compacted_input_tokens_est: int = field(
+        metadata={"doc": "Estimated system + user input tokens after compaction."}
+    )
+    avoided_input_tokens_est: int = field(
+        metadata={"doc": "Estimated input tokens avoided by compaction."}
+    )
+    estimated_original_cost_usd: float = field(
+        metadata={"doc": "Estimated pre-compaction model-call cost."}
+    )
+    estimated_compacted_cost_usd: float = field(
+        metadata={"doc": "Estimated compacted model-call cost."}
+    )
+    estimated_avoided_cost_usd: float = field(
+        metadata={"doc": "Estimated cost avoided by compaction."}
+    )
+    retained_anchor_count: int = field(
+        metadata={"doc": "Number of required anchor lines retained."}
+    )
+    original_user_chars: int = field(
+        metadata={"doc": "Original user-prompt character count."}
+    )
+    compacted_user_chars: int = field(
+        metadata={"doc": "Compacted user-prompt character count."}
+    )
+
+
+@dataclass(frozen=True)
 class LLMClientPolicy:
     schema_version: str = field(metadata={"doc": "LLM client policy schema version."})
     scope: str = field(

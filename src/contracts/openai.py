@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from src.contracts.llm import LLMContextCompactionPolicy
 from src.contracts.pdf_ocr import PdfOcrPageText
 from src.contracts.report_models import ReportPayload
 
@@ -29,6 +30,10 @@ class OpenAIEmbeddingRequest:
     model_pricing: dict = field(
         default_factory=dict,
         metadata={"doc": "Per-model pricing table for cost estimation."},
+    )
+    context_compaction_policy: LLMContextCompactionPolicy = field(
+        default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
+        metadata={"doc": "Optional deterministic pre-call context compaction policy."},
     )
 
 
@@ -228,6 +233,10 @@ class OpenAIResponseRequest:
             "doc": "Semantic response cache TTL in seconds; None disables expiry."
         },
     )
+    context_compaction_policy: LLMContextCompactionPolicy = field(
+        default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
+        metadata={"doc": "Optional deterministic pre-call context compaction policy."},
+    )
 
 
 @dataclass(frozen=True)
@@ -302,6 +311,10 @@ class OpenAIJSONPromptRequest:
             "doc": "Semantic response cache TTL in seconds; None disables expiry."
         },
     )
+    context_compaction_policy: LLMContextCompactionPolicy = field(
+        default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
+        metadata={"doc": "Optional deterministic pre-call context compaction policy."},
+    )
 
 
 @dataclass(frozen=True)
@@ -351,6 +364,10 @@ class OpenAIJSONImagePromptRequest:
             "doc": "Semantic response cache TTL in seconds; None disables expiry."
         },
     )
+    context_compaction_policy: LLMContextCompactionPolicy = field(
+        default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
+        metadata={"doc": "Optional deterministic pre-call context compaction policy."},
+    )
 
 
 @dataclass(frozen=True)
@@ -396,6 +413,10 @@ class OpenAIPdfOcrRequest:
         metadata={
             "doc": "Semantic response cache TTL in seconds; None disables expiry."
         },
+    )
+    context_compaction_policy: LLMContextCompactionPolicy = field(
+        default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
+        metadata={"doc": "Optional deterministic pre-call context compaction policy."},
     )
 
 

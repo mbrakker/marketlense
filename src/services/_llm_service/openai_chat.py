@@ -1,3 +1,4 @@
+# ruff: noqa: F403,F405
 from __future__ import annotations
 
 from typing import Any, cast
@@ -5,6 +6,9 @@ from typing import Any, cast
 from src.services._llm_service.audit import (
     audit_record_fields,
     build_model_call_audit_record,
+)
+from src.services._llm_service.context_compaction import (
+    compact_prompt_request_if_needed,
 )
 from src.services._llm_service.openai_shared import *
 from src.services._llm_service.openai_client import *
@@ -334,6 +338,12 @@ def analyze_report(
 def openai_chat_json(
     request: OpenAIJSONPromptRequest, ctx: RunContext
 ) -> OpenAIResponseResult:
+    request, _compaction_result = compact_prompt_request_if_needed(
+        request=request,
+        ctx=ctx,
+        operation="openai_chat_json",
+        logger=logger,
+    )
     logger.info(
         log_event(
             ctx,

@@ -956,6 +956,9 @@
         },
         "timeout_seconds": {
           "type": "number"
+        },
+        "warm_worker_pool_policy": {
+          "$ref": "#/$defs/src.contracts._browser_download.worker_pool.BrowserDownloadWarmWorkerPoolPolicy"
         }
       },
       "required": [
@@ -3018,6 +3021,75 @@
         },
         "ttl_seconds": {
           "type": "number"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.worker_pool.BrowserDownloadWarmWorkerPoolDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "max_memory_mb": {
+          "type": "integer"
+        },
+        "max_runs_per_worker": {
+          "type": "integer"
+        },
+        "pool_key_hash": {
+          "type": "string"
+        },
+        "publisher_scope": {
+          "type": "string"
+        },
+        "rejection_reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "enabled",
+        "accepted",
+        "publisher_scope",
+        "pool_key_hash",
+        "max_runs_per_worker",
+        "max_memory_mb"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.worker_pool.BrowserDownloadWarmWorkerPoolPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "fallback_to_subprocess": {
+          "type": "boolean"
+        },
+        "idle_ttl_seconds": {
+          "type": "number"
+        },
+        "max_memory_mb": {
+          "type": "integer"
+        },
+        "max_runs_per_worker": {
+          "type": "integer"
+        },
+        "max_workers": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
         }
       },
       "required": [
@@ -16798,6 +16870,113 @@
       ],
       "type": "object"
     },
+    "src.contracts.llm.LLMContextCompactionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "expected_output_tokens": {
+          "type": "integer"
+        },
+        "max_anchor_lines": {
+          "type": "integer"
+        },
+        "max_estimated_input_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "min_tail_lines": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "strategy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.LLMContextCompactionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "avoided_input_tokens_est": {
+          "type": "integer"
+        },
+        "compacted": {
+          "type": "boolean"
+        },
+        "compacted_input_tokens_est": {
+          "type": "integer"
+        },
+        "compacted_user_chars": {
+          "type": "integer"
+        },
+        "estimated_avoided_cost_usd": {
+          "type": "number"
+        },
+        "estimated_compacted_cost_usd": {
+          "type": "number"
+        },
+        "estimated_original_cost_usd": {
+          "type": "number"
+        },
+        "original_input_tokens_est": {
+          "type": "integer"
+        },
+        "original_user_chars": {
+          "type": "integer"
+        },
+        "retained_anchor_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "strategy": {
+          "type": "string"
+        },
+        "trigger_reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "compacted",
+        "strategy",
+        "trigger_reason",
+        "original_input_tokens_est",
+        "compacted_input_tokens_est",
+        "avoided_input_tokens_est",
+        "estimated_original_cost_usd",
+        "estimated_compacted_cost_usd",
+        "estimated_avoided_cost_usd",
+        "retained_anchor_count",
+        "original_user_chars",
+        "compacted_user_chars"
+      ],
+      "type": "object"
+    },
     "src.contracts.llm.LLMProviderOperations": {
       "additionalProperties": false,
       "properties": {
@@ -17754,6 +17933,9 @@
         "api_key": {
           "type": "string"
         },
+        "context_compaction_policy": {
+          "$ref": "#/$defs/src.contracts.llm.LLMContextCompactionPolicy"
+        },
         "cost_daily_path": {
           "type": "string"
         },
@@ -17863,6 +18045,9 @@
         "api_key": {
           "type": "string"
         },
+        "context_compaction_policy": {
+          "$ref": "#/$defs/src.contracts.llm.LLMContextCompactionPolicy"
+        },
         "cost_daily_path": {
           "type": "string"
         },
@@ -17947,6 +18132,9 @@
         "api_key": {
           "type": "string"
         },
+        "context_compaction_policy": {
+          "$ref": "#/$defs/src.contracts.llm.LLMContextCompactionPolicy"
+        },
         "cost_daily_path": {
           "type": "string"
         },
@@ -18023,6 +18211,9 @@
       "properties": {
         "api_key": {
           "type": "string"
+        },
+        "context_compaction_policy": {
+          "$ref": "#/$defs/src.contracts.llm.LLMContextCompactionPolicy"
         },
         "cost_daily_path": {
           "type": "string"
@@ -18157,6 +18348,9 @@
       "properties": {
         "api_key": {
           "type": "string"
+        },
+        "context_compaction_policy": {
+          "$ref": "#/$defs/src.contracts.llm.LLMContextCompactionPolicy"
         },
         "cost_daily_path": {
           "type": "string"

@@ -8,6 +8,9 @@ from typing import Any, Callable
 
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.run_context import RunContext
+from src.services._llm_service.context_compaction import (
+    compact_prompt_request_if_needed,
+)
 from src.services._llm_service.policy import logger
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -110,6 +113,12 @@ def build_openrouter_client(
 
 
 def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
+    request, _compaction_result = compact_prompt_request_if_needed(
+        request=request,
+        ctx=ctx,
+        operation="openrouter_chat_json",
+        logger=logger,
+    )
     api_key = (
         str(getattr(request, "openrouter_api_key", "") or "").strip()
         or os.getenv("OPENROUTER_API_KEY", "").strip()

@@ -327,15 +327,6 @@ Scoring:
     - Preflight browser/page can remain alive when escalation is likely and pass cookies, local storage, current URL, and downloaded-candidate context to the full agent path.
     - Failure cleanup is deterministic and tests cover skip, reuse, and cleanup paths.
 
-- **Title:** Enable same-publisher session reuse and warm browser worker pools for batches [Impact: 5/5, Effort: 5/5]
-  - Problem fixed: Batch acquisition can repeatedly pay profile creation, cookie banner, subprocess startup, payload handoff, and browser setup costs.
-  - Why implement: Warm same-publisher sessions and workers reduce startup overhead for batches while preserving crash isolation fallback.
-  - Tradeoffs / risks: Cross-publisher leakage is unacceptable; workers need restart limits and memory-pressure handling.
-  - Acceptance Criteria:
-    - Session reuse is enabled only for batch acquisition, scoped by publisher host, uses short TTLs, and disables cross-publisher reuse unless explicitly safe.
-    - Warm isolated workers can process batch/publisher jobs through IPC or equivalent while the subprocess path remains a fallback.
-    - Workers restart after N runs or memory pressure, and telemetry records reuse outcomes.
-
 - **Title:** Make browser evidence and failure forensics conditional [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Success and expected-blocker paths can capture heavy screenshots, HTML snapshots, assets, network resources, copied artifacts, and detailed logs unnecessarily.
   - Why implement: Known verified routes and repeated expected blockers should be cheap to record.
@@ -420,15 +411,6 @@ Scoring:
     - Provider-specific responses normalize into the stable typed LLM response contract.
     - Failover is bounded, logged, retry-policy aware, and orchestrator-visible.
     - Tests cover primary success, fallback success, fallback exhaustion, provider mismatch validation, and non-retryable contract failures.
-
-- **Title:** Add deterministic autonomous context compaction [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Oversized contexts can exceed token/cost budgets without a reproducible reduction strategy.
-  - Why implement: Compaction should preserve required metrics, quotes, claims, citations, and validation anchors.
-  - Tradeoffs / risks: Compaction must be deterministic and quality-tested on fixed corpora.
-  - Acceptance Criteria:
-    - Compaction is triggered before model calls when token or cost budgets are exceeded.
-    - Regression tests compare evidence retention on fixed prompt/output corpora.
-    - Run ledger records avoided tokens and estimated avoided cost.
 
 - **Title:** Promote health scorecards and public-site trust checks into autonomous gates [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Scorecards and smoke checks exist but should directly drive publish, repair, retry, hold, and notification decisions.

@@ -1,3 +1,4 @@
+# ruff: noqa: F401
 from __future__ import annotations
 
 import asyncio
@@ -143,6 +144,43 @@ def _run_browser_report_download_agent_subprocess(
     download_dir: Path,
     prompt_bundle: BrowserDownloadPromptBundle,
 ) -> BrowserAgentRunResult:
+    warm_pool_policy = request.settings.warm_worker_pool_policy
+    if warm_pool_policy.enabled:
+        from src.services._browser_report_download.worker_pool import (
+            default_warm_worker_pool,
+        )
+
+        try:
+            pooled_result = default_warm_worker_pool().run(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                execution_url=execution_url,
+                download_dir=download_dir,
+                prompt_bundle=prompt_bundle,
+            )
+        except AppError as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_warm_worker_pool_failed",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "error_code": exc.code,
+                        "fallback_to_subprocess": (
+                            warm_pool_policy.fallback_to_subprocess
+                        ),
+                    },
+                )
+            )
+            if not warm_pool_policy.fallback_to_subprocess:
+                raise
+        else:
+            if pooled_result is not None:
+                return pooled_result
+
     download_dir.mkdir(parents=True, exist_ok=True)
     payload = BrowserAgentWorkerPayload(
         schema_version="1.0",

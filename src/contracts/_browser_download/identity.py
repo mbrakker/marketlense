@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from .session_reuse import BrowserDownloadSessionReusePolicy
+from .worker_pool import BrowserDownloadWarmWorkerPoolPolicy
 
 BROWSER_DOWNLOAD_IDENTITY_SCHEMA_VERSION = "1.0"
 
@@ -373,6 +374,14 @@ class BrowserDownloadSettings:
         ),
         metadata={
             "doc": "Opt-in bounded browser profile reuse policy for developer canaries or same-publisher batches."
+        },
+    )
+    warm_worker_pool_policy: BrowserDownloadWarmWorkerPoolPolicy = field(
+        default_factory=lambda: BrowserDownloadWarmWorkerPoolPolicy(
+            schema_version=BROWSER_DOWNLOAD_IDENTITY_SCHEMA_VERSION
+        ),
+        metadata={
+            "doc": "Opt-in warm isolated browser worker pool policy for same-publisher batches."
         },
     )
     captcha_handoff_policy: BrowserDownloadCaptchaHandoffPolicy = field(

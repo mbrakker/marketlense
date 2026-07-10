@@ -11,6 +11,7 @@ from src.contracts.openai import (
     OpenAIJSONPromptRequest,
     OpenAIUsageAccountingResponse,
 )
+from src.contracts.llm import LLMContextCompactionPolicy
 from src.contracts.run_context import RunContext
 from src.services import llm_service as svc, openai_accounting_service
 from src.utils.errors import AppError
@@ -259,6 +260,96 @@ def test_openai_chat_json_semantic_response_cache_skips_repeated_provider_call(
     ]
     assert cache_events[0]["fields"]["reason"] == "missing"
     assert_logs_have_required_fields(cache_events)
+
+
+def test_openai_chat_json_compacts_over_budget_prompt_before_provider_call(
+    external_boundary_mocks_only,
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service.openai")
+    captured_payloads: list[dict] = []
+    noise = "\n".join(f"background filler row {index}" for index in range(120))
+    user_prompt = "\n".join(
+        [
+            "METRIC: 87% of leaders named digital video a 2026 priority.",
+            'QUOTE: "Trust controls determine whether AI commerce scales."',
+            "CLAIM: Retail media investment is shifting toward measured attention.",
+            "CITATION: IAS-2026-page-12",
+            noise,
+            "VALIDATION_ANCHOR: source-table-4",
+        ]
+    )
+
+    class _FakeChatCompletions:
+        def create(self, **kwargs):
+            captured_payloads.append(dict(kwargs))
+            usage = SimpleNamespace(
+                prompt_tokens=48,
+                completion_tokens=5,
+                total_tokens=53,
+            )
+            message = SimpleNamespace(content=json.dumps({"ok": True}))
+            choice = SimpleNamespace(message=message)
+            return SimpleNamespace(id="chat_compacted", choices=[choice], usage=usage)
+
+    class _FakeClient:
+        def __init__(self, **kwargs):
+            self.chat = SimpleNamespace(completions=_FakeChatCompletions())
+
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
+    request = OpenAIJSONPromptRequest(
+        **{
+            **_chat_request(tmp_path).__dict__,
+            "user_prompt": user_prompt,
+            "model_pricing": {
+                "gpt-4.1-mini": {
+                    "input_tokens_per_1k_usd": 0.1,
+                    "output_tokens_per_1k_usd": 0.2,
+                }
+            },
+            "context_compaction_policy": LLMContextCompactionPolicy(
+                schema_version="1.0",
+                enabled=True,
+                max_input_tokens=90,
+                max_estimated_input_cost_usd=0.009,
+                expected_output_tokens=16,
+                strategy="anchor_preserving_head_tail",
+            ),
+        }
+    )
+
+    result = svc.openai_chat_json(request, _ctx())
+
+    assert result.parsed_json == {"ok": True}
+    sent_user_prompt = captured_payloads[0]["messages"][1]["content"]
+    assert len(sent_user_prompt) < len(user_prompt)
+    assert "METRIC: 87%" in sent_user_prompt
+    assert "QUOTE:" in sent_user_prompt
+    assert "CLAIM:" in sent_user_prompt
+    assert "CITATION:" in sent_user_prompt
+    assert "VALIDATION_ANCHOR:" in sent_user_prompt
+    assert "background filler row 119" in sent_user_prompt
+    assert "background filler row 60" not in sent_user_prompt
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.llm_service.openai"
+    ]
+    compaction_events = [
+        event
+        for event in events
+        if event.get("event") == "llm_context_compaction_applied"
+    ]
+    assert len(compaction_events) == 1
+    assert_logs_have_required_fields(compaction_events)
+    fields = compaction_events[0]["fields"]
+    assert fields["operation"] == "openai_chat_json"
+    assert fields["strategy"] == "anchor_preserving_head_tail"
+    assert fields["original_input_tokens_est"] > fields["compacted_input_tokens_est"]
+    assert fields["avoided_input_tokens_est"] > 0
+    assert fields["estimated_avoided_cost_usd"] > 0
 
 
 def test_analyze_report_falls_back_to_legacy_chat_completion(

@@ -263,6 +263,14 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
                     "cleanup_expired": True,
                     "allow_cross_publisher": False,
                 },
+                "warm_worker_pool": {
+                    "enabled": True,
+                    "max_workers": 2,
+                    "max_runs_per_worker": 5,
+                    "max_memory_mb": 512,
+                    "idle_ttl_seconds": 180,
+                    "fallback_to_subprocess": True,
+                },
                 "retry": {
                     "retries": 2,
                     "base_delay_seconds": 0.5,
@@ -341,6 +349,12 @@ class TestConfigService02TaxonomyTemperatureUsesConfig(_TestConfigServiceBase):
         )
         self.assertTrue(settings.session_reuse_policy.cleanup_expired)
         self.assertFalse(settings.session_reuse_policy.allow_cross_publisher)
+        self.assertTrue(settings.warm_worker_pool_policy.enabled)
+        self.assertEqual(2, settings.warm_worker_pool_policy.max_workers)
+        self.assertEqual(5, settings.warm_worker_pool_policy.max_runs_per_worker)
+        self.assertEqual(512, settings.warm_worker_pool_policy.max_memory_mb)
+        self.assertEqual(180.0, settings.warm_worker_pool_policy.idle_ttl_seconds)
+        self.assertTrue(settings.warm_worker_pool_policy.fallback_to_subprocess)
         self.assertEqual(
             Path(tmp_dir, "sa.json").resolve(),
             Path(settings.drive_upload_google_sa_path).resolve(),

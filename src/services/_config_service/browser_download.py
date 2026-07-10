@@ -31,6 +31,7 @@ def load_browser_download_settings(
     drive_upload_cfg = browser_download.get("drive_upload", {}) or {}
     failure_forensics_cfg = browser_download.get("failure_forensics", {}) or {}
     session_reuse_cfg = browser_download.get("session_reuse", {}) or {}
+    warm_worker_pool_cfg = browser_download.get("warm_worker_pool", {}) or {}
     captcha_handoff_cfg = browser_download.get("captcha_handoff", {}) or {}
     route_budgets_cfg = browser_download.get("route_budgets", {}) or {}
     retry_cfg = browser_download.get("retry", {}) or {}
@@ -231,6 +232,57 @@ def load_browser_download_settings(
             if not _is_missing(session_reuse_cfg.get("allow_cross_publisher"))
             else _env_value("BROWSER_SESSION_REUSE_ALLOW_CROSS_PUBLISHER"),
             False,
+        ),
+    )
+    warm_worker_pool_policy = BrowserDownloadWarmWorkerPoolPolicy(
+        schema_version=str(warm_worker_pool_cfg.get("schema_version", "1.0")),
+        enabled=_to_bool(
+            warm_worker_pool_cfg.get("enabled")
+            if not _is_missing(warm_worker_pool_cfg.get("enabled"))
+            else _env_value("BROWSER_WARM_WORKER_POOL_ENABLED"),
+            False,
+        ),
+        max_workers=max(
+            _to_int(
+                warm_worker_pool_cfg.get("max_workers")
+                if not _is_missing(warm_worker_pool_cfg.get("max_workers"))
+                else _env_value("BROWSER_WARM_WORKER_POOL_MAX_WORKERS"),
+                1,
+            ),
+            1,
+        ),
+        max_runs_per_worker=max(
+            _to_int(
+                warm_worker_pool_cfg.get("max_runs_per_worker")
+                if not _is_missing(warm_worker_pool_cfg.get("max_runs_per_worker"))
+                else _env_value("BROWSER_WARM_WORKER_POOL_MAX_RUNS"),
+                3,
+            ),
+            1,
+        ),
+        max_memory_mb=max(
+            _to_int(
+                warm_worker_pool_cfg.get("max_memory_mb")
+                if not _is_missing(warm_worker_pool_cfg.get("max_memory_mb"))
+                else _env_value("BROWSER_WARM_WORKER_POOL_MAX_MEMORY_MB"),
+                768,
+            ),
+            128,
+        ),
+        idle_ttl_seconds=max(
+            _to_float(
+                warm_worker_pool_cfg.get("idle_ttl_seconds")
+                if not _is_missing(warm_worker_pool_cfg.get("idle_ttl_seconds"))
+                else _env_value("BROWSER_WARM_WORKER_POOL_IDLE_TTL_SECONDS"),
+                300.0,
+            ),
+            1.0,
+        ),
+        fallback_to_subprocess=_to_bool(
+            warm_worker_pool_cfg.get("fallback_to_subprocess")
+            if not _is_missing(warm_worker_pool_cfg.get("fallback_to_subprocess"))
+            else _env_value("BROWSER_WARM_WORKER_POOL_FALLBACK_TO_SUBPROCESS"),
+            True,
         ),
     )
     drive_auth_settings: dict[str, str | None] = {
@@ -441,6 +493,7 @@ def load_browser_download_settings(
             private_api_playbook_min_distinct_source_urls
         ),
         session_reuse_policy=session_reuse_policy,
+        warm_worker_pool_policy=warm_worker_pool_policy,
         captcha_handoff_policy=BrowserDownloadCaptchaHandoffPolicy(
             schema_version="1.0",
             enabled=_to_bool(
@@ -535,6 +588,16 @@ def load_browser_download_settings(
                 ),
                 "session_reuse_ttl_seconds": (
                     settings.session_reuse_policy.ttl_seconds
+                ),
+                "warm_worker_pool_enabled": (settings.warm_worker_pool_policy.enabled),
+                "warm_worker_pool_max_workers": (
+                    settings.warm_worker_pool_policy.max_workers
+                ),
+                "warm_worker_pool_max_runs_per_worker": (
+                    settings.warm_worker_pool_policy.max_runs_per_worker
+                ),
+                "warm_worker_pool_max_memory_mb": (
+                    settings.warm_worker_pool_policy.max_memory_mb
                 ),
                 "captcha_handoff_enabled": (settings.captcha_handoff_policy.enabled),
                 "captcha_handoff_timeout_seconds": (

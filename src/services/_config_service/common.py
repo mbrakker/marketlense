@@ -28,6 +28,7 @@ from src.contracts.browser_download import (
     BrowserDownloadRouteBudget,
     BrowserDownloadSessionReusePolicy,
     BrowserDownloadSettings,
+    BrowserDownloadWarmWorkerPoolPolicy,
 )
 from src.contracts.publisher_inventory import PublisherInventorySettings
 from src.contracts.ingest import IngestSettings
@@ -568,6 +569,7 @@ __all__ = [
     "BrowserDownloadRouteBudget",
     "BrowserDownloadSessionReusePolicy",
     "BrowserDownloadSettings",
+    "BrowserDownloadWarmWorkerPoolPolicy",
     "CONFIG_PATH",
     "DEFAULT_LLM_COSTS_PATH",
     "CONFIG_PATH_ENV_KEY",
