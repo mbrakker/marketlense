@@ -45,7 +45,17 @@ def validate_report(
     md5: Optional[str] = None,
 ) -> ValidationReport:
     ctx = ctx or new_run_context(task_id=f"validation:{request.report_id}")
-    openai_client = require_injected_model_client(openai_client, scope="validation")
+    validation_mode = str(request.validation_mode or "full").strip()
+    if validation_mode not in {"full", "inline_deterministic", "deferred_grounding"}:
+        raise AppError(
+            code="validation_mode_invalid",
+            message="Validation mode must be full, inline_deterministic, or deferred_grounding",
+            retryable=False,
+            severity="error",
+            context={"validation_mode": validation_mode},
+        )
+    if validation_mode != "inline_deterministic":
+        openai_client = require_injected_model_client(openai_client, scope="validation")
     logger.info(
         log_event(
             ctx,
@@ -57,6 +67,7 @@ def validate_report(
                 "has_artifacts": bool(request.artifacts),
                 "has_evidence_packs": bool(request.evidence_packs),
                 "vector_store_id": request.vector_store_id or "",
+                "validation_mode": validation_mode,
             },
         )
     )
@@ -135,6 +146,21 @@ def validate_report(
         runtime,
         parallel_workers=validation_parallel_workers(settings),
     )
+    if validation_mode == "inline_deterministic":
+        issues.append(
+            ValidationReportDeferredGroundingIssue(
+                report_id=request.report_id,
+            ).to_issue()
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="validation_deferred_grounding_recorded",
+                module=LOGGER_NAME,
+                fields={"report_id": request.report_id},
+            )
+        )
 
     if (
         has_data_gap(request.artifacts)
@@ -205,7 +231,26 @@ def validate_report(
                 "severity": severity,
                 "issue_count": len(issues),
                 "path": stored_path,
+                "validation_mode": validation_mode,
             },
         )
     )
     return report
+
+
+class ValidationReportDeferredGroundingIssue:
+    def __init__(self, *, report_id: str) -> None:
+        self.report_id = str(report_id)
+
+    def to_issue(self):
+        from src.contracts.validation import ValidationIssue
+
+        return ValidationIssue(
+            schema_version="1.0",
+            message="LLM grounding validation is deferred and must run before final publish.",
+            severity="info",
+            affected_section="validation",
+            rule_id="deferred_grounding_required",
+            repair_target="validation_grounding",
+            entity_id=self.report_id,
+        )

@@ -17,6 +17,9 @@ from src.contracts.browser_download import (
     BrowserRoutePrivateApiEvidence,
     BrowserRoutePrivateApiPromotionRequest,
     BrowserRoutePlaybook,
+    BrowserRoutePlaybookExecutionRequest,
+    BrowserRoutePlaybookExecutionResponse,
+    BrowserRoutePlaybookStepExecution,
     BrowserRoutePlaybookHistoryEntry,
     BrowserRoutePlaybookPromotionRequest,
     BrowserRoutePlaybookPromotionResponse,
@@ -407,6 +410,13 @@ def _build_playbook(*, payload: dict[str, Any], path: Path) -> BrowserRoutePlayb
                 action=str(item.get("action") or "").strip(),
                 target=str(item.get("target") or "").strip(),
                 verification=str(item.get("verification") or "").strip(),
+                selector_type=str(item.get("selector_type") or "").strip(),
+                selector=str(item.get("selector") or "").strip(),
+                value=str(item.get("value") or "").strip(),
+                expected_url_contains=str(
+                    item.get("expected_url_contains") or ""
+                ).strip(),
+                expected_text=str(item.get("expected_text") or "").strip(),
             )
             for item in steps_payload
             if isinstance(item, dict)
@@ -454,6 +464,155 @@ def _build_playbook(*, payload: dict[str, Any], path: Path) -> BrowserRoutePlayb
             if isinstance(item, dict)
         ],
     )
+
+
+def execute_browser_route_playbook(
+    request: BrowserRoutePlaybookExecutionRequest,
+    ctx: RunContext,
+) -> BrowserRoutePlaybookExecutionResponse:
+    playbook = request.playbook
+    step_results: list[BrowserRoutePlaybookStepExecution] = []
+    drift_reasons: list[str] = []
+    if playbook.private_api_evidence:
+        return BrowserRoutePlaybookExecutionResponse(
+            schema_version="1.0",
+            status="skipped",
+            playbook_id=playbook.playbook_id,
+            step_results=[],
+            drift_reasons=["private_api_playbook_uses_http_executor"],
+        )
+    for index, step in enumerate(playbook.steps):
+        if not step.selector and step.action not in {"open", "navigate"}:
+            reason = f"step_{index}_missing_deterministic_selector"
+            drift_reasons.append(reason)
+            step_results.append(
+                BrowserRoutePlaybookStepExecution(
+                    schema_version="1.0",
+                    index=index,
+                    action=step.action,
+                    target=step.target,
+                    status="skipped",
+                    evidence="",
+                    drift_reason=reason,
+                )
+            )
+            continue
+        result = _execute_playbook_step(
+            step=step,
+            index=index,
+            normalized_url=request.normalized_url,
+            page_driver=request.page_driver,
+        )
+        step_results.append(result)
+        if result.status == "drifted":
+            drift_reasons.append(result.drift_reason)
+            break
+    status = "completed"
+    if drift_reasons:
+        status = "drifted" if any(
+            result.status == "drifted" for result in step_results
+        ) else "skipped"
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_route_playbook_deterministic_execution_complete",
+            module=logger.name,
+            fields={
+                "playbook_id": playbook.playbook_id,
+                "status": status,
+                "step_count": len(step_results),
+                "drift_reasons": drift_reasons,
+            },
+        )
+    )
+    return BrowserRoutePlaybookExecutionResponse(
+        schema_version="1.0",
+        status=status,
+        playbook_id=playbook.playbook_id,
+        step_results=step_results,
+        drift_reasons=drift_reasons,
+    )
+
+
+def _execute_playbook_step(
+    *,
+    step: BrowserRoutePlaybookStep,
+    index: int,
+    normalized_url: str,
+    page_driver,
+) -> BrowserRoutePlaybookStepExecution:
+    try:
+        evidence = _dispatch_playbook_action(
+            step=step,
+            normalized_url=normalized_url,
+            page_driver=page_driver,
+        )
+        drift_reason = _verify_playbook_step(step=step, page_driver=page_driver)
+    except Exception as exc:
+        return BrowserRoutePlaybookStepExecution(
+            schema_version="1.0",
+            index=index,
+            action=step.action,
+            target=step.target,
+            status="drifted",
+            evidence="",
+            drift_reason=f"executor_error:{type(exc).__name__}",
+        )
+    if drift_reason:
+        return BrowserRoutePlaybookStepExecution(
+            schema_version="1.0",
+            index=index,
+            action=step.action,
+            target=step.target,
+            status="drifted",
+            evidence=evidence,
+            drift_reason=drift_reason,
+        )
+    return BrowserRoutePlaybookStepExecution(
+        schema_version="1.0",
+        index=index,
+        action=step.action,
+        target=step.target,
+        status="executed",
+        evidence=evidence,
+        drift_reason="",
+    )
+
+
+def _dispatch_playbook_action(
+    *,
+    step: BrowserRoutePlaybookStep,
+    normalized_url: str,
+    page_driver,
+) -> str:
+    action = step.action.strip().lower()
+    selector_type = step.selector_type.strip().lower()
+    selector = step.selector.strip()
+    if action in {"open", "navigate"}:
+        target_url = selector or step.target or normalized_url
+        return str(page_driver.open(target_url))
+    if action in {"click", "click_cta", "submit"}:
+        if selector_type == "text":
+            return str(page_driver.click_text(selector))
+        return str(page_driver.click_css(selector))
+    if action in {"fill", "type"}:
+        return str(page_driver.fill_css(selector, step.value))
+    if action == "select":
+        return str(page_driver.select_css(selector, step.value))
+    if action == "verify":
+        return "verified"
+    raise ValueError(f"unsupported_action:{step.action}")
+
+
+def _verify_playbook_step(*, step: BrowserRoutePlaybookStep, page_driver) -> str:
+    expected_url = step.expected_url_contains.strip()
+    if expected_url and expected_url not in str(page_driver.current_url()):
+        return "expected_url_not_observed"
+    expected_text = step.expected_text.strip()
+    if expected_text and not bool(page_driver.contains_text(expected_text)):
+        return "expected_text_not_observed"
+    return ""
 
 
 def _load_existing_for_promotion(path: Path) -> BrowserRoutePlaybook:
@@ -715,6 +874,37 @@ def _validate_private_api_promotion_request(
             message="Private-API promotion requires expected status codes",
             retryable=False,
             context={"source_url": request.source_url},
+        )
+    if not [
+        marker for marker in request.required_response_markers if str(marker).strip()
+    ]:
+        raise AppError(
+            code="browser_route_private_api_promotion_markers_missing",
+            message="Private-API promotion requires response-shape markers",
+            retryable=False,
+            context={"source_url": request.source_url},
+        )
+    labels = {str(label).strip() for label in request.evidence_labels if str(label).strip()}
+    if not labels.intersection(
+        {"network_document_request", "browser_network_private_api", "private_api_pdf_pointer"}
+    ):
+        raise AppError(
+            code="browser_route_private_api_promotion_evidence_labels_missing",
+            message="Private-API promotion requires durable browser network evidence labels",
+            retryable=False,
+            context={"source_url": request.source_url},
+        )
+    source_host = urlsplit(request.source_url).netloc.lower()
+    endpoint_host = urlsplit(request.endpoint_pattern).netloc.lower()
+    if endpoint_host and endpoint_host != source_host:
+        raise AppError(
+            code="browser_route_private_api_promotion_host_mismatch",
+            message="Private-API endpoint host must match the source publisher host",
+            retryable=False,
+            context={
+                "source_host": source_host,
+                "endpoint_host": endpoint_host,
+            },
         )
 
 

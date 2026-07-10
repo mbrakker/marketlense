@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,28 @@ class BrowserRoutePlaybookStep:
         metadata={
             "doc": "Evidence expected after this playbook step, such as artifact, confirmation text, URL change, or capture hash."
         }
+    )
+    selector_type: str = field(
+        default="",
+        metadata={
+            "doc": "Optional deterministic selector type: css, text, url, or none."
+        },
+    )
+    selector: str = field(
+        default="",
+        metadata={"doc": "Optional deterministic selector value for executor use."},
+    )
+    value: str = field(
+        default="",
+        metadata={"doc": "Optional fill/select value for deterministic executor use."},
+    )
+    expected_url_contains: str = field(
+        default="",
+        metadata={"doc": "Optional URL substring expected after the step."},
+    )
+    expected_text: str = field(
+        default="",
+        metadata={"doc": "Optional page text expected after the step."},
     )
 
 
@@ -232,6 +255,55 @@ class BrowserRoutePlaybookSelectionResult:
         metadata={
             "doc": "Whether normal route discovery should proceed because no fresh playbook was selected."
         },
+    )
+
+
+@dataclass(frozen=True)
+class BrowserRoutePlaybookExecutionRequest:
+    schema_version: str = field(
+        metadata={"doc": "Deterministic playbook execution request schema version."}
+    )
+    playbook: BrowserRoutePlaybook = field(
+        metadata={"doc": "Normal browser route playbook to execute deterministically."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized report URL used as execution context."}
+    )
+    page_driver: Any = field(
+        metadata={
+            "doc": "Injected browser page-driver boundary implementing deterministic open/click/fill/verify methods."
+        }
+    )
+
+
+@dataclass(frozen=True)
+class BrowserRoutePlaybookStepExecution:
+    schema_version: str = field(
+        metadata={"doc": "Deterministic playbook step execution schema version."}
+    )
+    index: int = field(metadata={"doc": "Zero-based step index."})
+    action: str = field(metadata={"doc": "Executed playbook action."})
+    target: str = field(metadata={"doc": "Executed target."})
+    status: str = field(metadata={"doc": "executed, skipped, or drifted."})
+    evidence: str = field(metadata={"doc": "Observed verification evidence."})
+    drift_reason: str = field(
+        default="", metadata={"doc": "Reason execution drifted, if any."}
+    )
+
+
+@dataclass(frozen=True)
+class BrowserRoutePlaybookExecutionResponse:
+    schema_version: str = field(
+        metadata={"doc": "Deterministic playbook execution response schema version."}
+    )
+    status: str = field(metadata={"doc": "completed, skipped, or drifted."})
+    playbook_id: str = field(metadata={"doc": "Executed playbook ID."})
+    step_results: list[BrowserRoutePlaybookStepExecution] = field(
+        metadata={"doc": "Ordered deterministic step results."}
+    )
+    drift_reasons: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Reasons a route playbook drifted from deterministic execution."},
     )
 
 

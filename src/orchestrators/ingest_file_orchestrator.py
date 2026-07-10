@@ -17,6 +17,7 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateRecordRequest
+from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
 
@@ -401,9 +402,19 @@ def _download_pdf_for_processing(
                 fields={
                     "file_id": runtime.file.file_id,
                     "path": runtime.cache_path,
-                    "proceeding": True,
+                    "proceeding": False,
                 },
             )
+        )
+        raise AppError(
+            code="pdf_download_missing_eof",
+            message=f"Downloaded PDF is missing EOF marker: {runtime.cache_path}",
+            retryable=False,
+            context={
+                "file_id": runtime.file.file_id,
+                "path": runtime.cache_path,
+                "attempts": attempt + 1,
+            },
         )
     stat_resp = dependencies.file_stat(
         FileStatRequest(schema_version="1.0", path=runtime.cache_path),
@@ -420,6 +431,50 @@ def _download_pdf_for_processing(
             mtime_utc=stat_resp.mtime_utc,
         ),
         file_ctx,
+    )
+
+
+def _refresh_cached_pdf_when_invalid(
+    runtime: _IngestFileRuntime,
+    *,
+    settings: IngestSettings,
+    dependencies: IngestFileDependencies,
+    file_ctx: RunContext,
+    logger_name: str,
+) -> None:
+    eof_check = dependencies.check_pdf_eof(
+        PdfEofCheckRequest(schema_version="1.0", path=runtime.cache_path),
+        file_ctx,
+    )
+    if eof_check.has_eof:
+        return
+    logging.getLogger(logger_name).info(
+        log_event(
+            file_ctx,
+            role="orchestrator",
+            event="pdf_cache_invalid_redownload",
+            module=logger_name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "path": runtime.cache_path,
+                "reason": "missing_eof",
+            },
+        )
+    )
+    dependencies.delete_file(
+        DeleteFileRequest(
+            schema_version="1.0",
+            path=runtime.cache_path,
+            missing_ok=True,
+        ),
+        file_ctx,
+    )
+    _download_pdf_for_processing(
+        runtime,
+        settings=settings,
+        dependencies=dependencies,
+        file_ctx=file_ctx,
+        logger_name=logger_name,
     )
 
 
@@ -514,6 +569,14 @@ def run_ingest_file(
         )
         if not cache_hit:
             _download_pdf_for_processing(
+                runtime,
+                settings=settings,
+                dependencies=dependencies,
+                file_ctx=file_ctx,
+                logger_name=logger_name,
+            )
+        else:
+            _refresh_cached_pdf_when_invalid(
                 runtime,
                 settings=settings,
                 dependencies=dependencies,

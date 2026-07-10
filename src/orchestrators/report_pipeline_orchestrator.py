@@ -234,16 +234,47 @@ def run_report_pipeline(
     def _report_attempt() -> IngestOutcome:
         current_attempt = attempt_state["value"]
         attempt_state["value"] += 1
-        outcome = _invoke_report_fn(
-            report_fn,
-            file=file,
-            local_pdf_path=local_pdf_path,
-            settings=settings,
-            md5=md5,
-            ctx=ctx,
-            client_bundle=client_bundle,
-            resume_from_stage=effective_resume_from_stage,
-        )
+        try:
+            outcome = _invoke_report_fn(
+                report_fn,
+                file=file,
+                local_pdf_path=local_pdf_path,
+                settings=settings,
+                md5=md5,
+                ctx=ctx,
+                client_bundle=client_bundle,
+                resume_from_stage=effective_resume_from_stage,
+            )
+        except AppError as exc:
+            if (
+                auto_resume_from_latest_safe
+                and effective_resume_from_stage == "latest_safe"
+                and exc.code == "report_pipeline_checkpoint_missing"
+            ):
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="orchestrator",
+                        event="report_pipeline_latest_safe_fresh_fallback",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "error_code": exc.code,
+                        },
+                    )
+                )
+                outcome = _invoke_report_fn(
+                    report_fn,
+                    file=file,
+                    local_pdf_path=local_pdf_path,
+                    settings=settings,
+                    md5=md5,
+                    ctx=ctx,
+                    client_bundle=client_bundle,
+                    resume_from_stage=None,
+                )
+            else:
+                raise
         doc_map_reason = _doc_map_reason(outcome)
         should_retry_doc_map = (
             outcome.status == "error"

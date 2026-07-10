@@ -19,10 +19,12 @@ from src.contracts.browser_download import (
 )
 from src.contracts.http_acquisition import (
     HttpAcquisitionRequest,
+    HttpAcquisitionResponse,
     HttpAcquisitionResponsePolicy,
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download._http.config import (
+    _PDF_FETCH_FALLBACK_HEADERS,
     _HTML_FETCH_HEADERS,
     _HTML_FETCH_MAX_BYTES,
     _PDF_FETCH_HEADERS,
@@ -446,58 +448,118 @@ def download_pdf_from_url(
         )
     )
     temp_path = destination_path.with_suffix(destination_path.suffix + ".part")
+    response: HttpAcquisitionResponse | None = None
     try:
-        response = execute_http_acquisition(
-            request=HttpAcquisitionRequest(
-                schema_version="1.0",
-                purpose="browser_report_download_pdf_fetch",
-                method="GET",
-                url=pdf_url,
-                headers=_PDF_FETCH_HEADERS,
-                timeout_seconds=timeout_seconds,
-                response_policy=HttpAcquisitionResponsePolicy(
-                    schema_version="1.0",
-                    require_success_status=True,
-                    capture_text=False,
-                    stream_to_path=str(temp_path),
-                    max_stream_bytes=_PDF_FETCH_MAX_BYTES,
-                ),
-                error_code="browser_download_pdf_fetch_failed",
-                error_message="Failed to fetch the real PDF from the wrapper page",
-                context_fields={
+        for attempt_index, headers in enumerate(
+            (_PDF_FETCH_HEADERS, _PDF_FETCH_FALLBACK_HEADERS)
+        ):
+            try:
+                response = _execute_pdf_fetch(
+                    pdf_url=pdf_url,
+                    temp_path=temp_path,
+                    timeout_seconds=timeout_seconds,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    destination_path=destination_path,
+                    headers=headers,
+                )
+                break
+            except AppError as exc:
+                temp_path.unlink(missing_ok=True)
+                if (
+                    attempt_index == 0
+                    and exc.code == "browser_download_pdf_fetch_failed"
+                ):
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="service",
+                            event="browser_report_download_pdf_fetch_header_fallback",
+                            module=logger.name,
+                            fields={
+                                "normalized_url": normalized_url,
+                                "pdf_url": pdf_url,
+                                "error_code": exc.code,
+                            },
+                        )
+                    )
+                    continue
+                raise
+        if response is None:
+            raise AppError(
+                code="browser_download_pdf_fetch_failed",
+                message="Failed to fetch the real PDF from the wrapper page",
+                retryable=True,
+                context={
                     "normalized_url": normalized_url,
                     "pdf_url": pdf_url,
                     "destination_path": str(destination_path),
                 },
-                body_too_large_code="browser_download_pdf_fetch_failed",
-                body_too_large_message="Fetched PDF exceeded the configured size cap",
-                write_error_code="browser_download_pdf_write_failed",
-                write_error_message="Failed to write the fetched PDF to disk",
-            ),
-            ctx=ctx,
-            requests_module=requests,
-        )
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_report_download_pdf_fetch_response",
-                module=logger.name,
-                fields={
-                    "normalized_url": normalized_url,
-                    "pdf_url": pdf_url,
-                    "status_code": response.status_code,
-                    "content_type": response.content_type,
-                    "streamed_bytes": response.streamed_bytes,
-                    "used_pooled_session": response.used_pooled_session,
-                },
             )
-        )
         temp_path.replace(destination_path)
     except AppError as exc:
-        if temp_path.exists():
-            temp_path.unlink(missing_ok=True)
+        temp_path.unlink(missing_ok=True)
         raise exc
+
+
+def _execute_pdf_fetch(
+    *,
+    pdf_url: str,
+    temp_path: Path,
+    timeout_seconds: float,
+    ctx: RunContext,
+    normalized_url: str,
+    destination_path: Path,
+    headers: dict[str, str],
+) -> HttpAcquisitionResponse:
+    response = execute_http_acquisition(
+        request=HttpAcquisitionRequest(
+            schema_version="1.0",
+            purpose="browser_report_download_pdf_fetch",
+            method="GET",
+            url=pdf_url,
+            headers=headers,
+            timeout_seconds=timeout_seconds,
+            response_policy=HttpAcquisitionResponsePolicy(
+                schema_version="1.0",
+                require_success_status=True,
+                capture_text=False,
+                stream_to_path=str(temp_path),
+                max_stream_bytes=_PDF_FETCH_MAX_BYTES,
+            ),
+            error_code="browser_download_pdf_fetch_failed",
+            error_message="Failed to fetch the real PDF from the wrapper page",
+            context_fields={
+                "normalized_url": normalized_url,
+                "pdf_url": pdf_url,
+                "destination_path": str(destination_path),
+            },
+            body_too_large_code="browser_download_pdf_fetch_failed",
+            body_too_large_message="Fetched PDF exceeded the configured size cap",
+            write_error_code="browser_download_pdf_write_failed",
+            write_error_message="Failed to write the fetched PDF to disk",
+        ),
+        ctx=ctx,
+        requests_module=requests,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_pdf_fetch_response",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "pdf_url": pdf_url,
+                "status_code": response.status_code,
+                "content_type": response.content_type,
+                "streamed_bytes": response.streamed_bytes,
+                "used_pooled_session": response.used_pooled_session,
+                "used_header_fallback": headers == _PDF_FETCH_FALLBACK_HEADERS,
+            },
+        )
+    )
+    return response
 
 
 def _guess_mime_type(downloaded_path: Path | None) -> str | None:

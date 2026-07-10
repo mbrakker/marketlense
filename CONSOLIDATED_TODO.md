@@ -266,6 +266,16 @@ Scoring:
     - Public copy uses source-safe labels and existing citation micro-lines without exposing canonical claim IDs, evidence IDs, internal pack names, or raw ledger JSON.
     - Visual and schema tests cover populated advisory/metric/claim-ledger payloads, absent payloads, and mobile layout.
 
+- **Title:** Render topics, key figures, and chart insight cards in public report pages [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: `topics_covered`, `key_figures`, and `chart_insight_cards` are now generated in artifact payloads, but public report pages do not yet turn them into scan-friendly modules.
+  - Why implement: These artifacts can materially improve page usefulness by surfacing the report's topic map, quantified proof points, and visual implications without forcing readers through long prose.
+  - Tradeoffs / risks: Rendering must preserve evidence confidence, handle weak or absent chart links gracefully, and avoid turning weak-evidence card metadata into public claims.
+  - Acceptance Criteria:
+    - Report HTML renders topic modules, key-figure tiles, and chart insight cards from approved artifacts when present.
+    - Weak chart cards render limitation/avoidance text or admin diagnostics without overstating evidence strength.
+    - Archive/search facets can filter by key-figure and chart-card availability using persisted artifact fields.
+    - Visual, schema, and mobile tests cover populated, partial, weak-evidence, and absent artifact states.
+
 - **Title:** Benchmark route-memory avoided browser spend from mailbox and download outcomes [Impact: 4/5, Effort: 2/5]
   - Problem fixed: Mailbox successes now promote publisher route memory, but operators need a measured report showing avoided browser launches, avoided model calls, and route-success stability over retained publisher evidence.
   - Why implement: Quantifies cost/speed gains from the new feedback loop and gives a guardrail if stale route memory starts hurting acquisition quality.
@@ -286,6 +296,16 @@ Scoring:
     - Editorial quality validation emits stable rule IDs for generic phrasing, unsupported implications, missing metric support, duplicate insights, missing caveats, weak actionability, forbidden internal references, and tone defects.
     - New quality rules start as warnings with logged remediation context, then can be promoted to hard failures only after fixture and live-artifact evidence proves stability.
     - README documents the editorial contract version, rollout sequence, warning-to-error policy, and coexistence behavior with current report artifacts.
+
+- **Title:** Promote inline artifact-quality warnings into publish remediation workflow [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Inline deterministic validation can now flag generic wording and deferred grounding obligations quickly, but publish and operator workflows do not yet turn those warnings into repair queues, hold decisions, or quality trend reports.
+  - Why implement: The live validation check caught a real banned-pattern issue in an existing Capgemini artifact, proving the signal is useful only if it routes to remediation before public release.
+  - Tradeoffs / risks: Initial rollout should warn/hold based on severity and artifact family, then promote to hard failures only after live-artifact stability is measured.
+  - Acceptance Criteria:
+    - Publish readiness consumes inline validation reports and records artifact-quality warnings, deferred-grounding obligations, and remediation targets.
+    - Operator/UI views show affected artifact path, rule ID, severity, sample text, and recommended repair action without exposing internal evidence IDs publicly.
+    - Policy supports warn, hold, and hard-fail modes by rule severity and report value band.
+    - Tests cover publish warn/hold decisions, remediation payload shape, and no-public-leak rendering.
 
 ## 6. Architecture, Schema Compatibility, and Observability
 
@@ -313,6 +333,16 @@ Scoring:
 ---
 
 ## 7. Pipeline Autopilot, Resume, and Recovery Interconnections
+
+- **Title:** Quarantine malformed Drive PDFs after bounded redownload attempts [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: Live ingest found a Drive PDF source that remained missing its EOF marker after cache invalidation and redownload; the pipeline now stops before expensive report work, but operators still need durable quarantine/remediation state.
+  - Why implement: Repeated malformed-source retries waste Drive/API time and hide source-quality problems from batch operators.
+  - Tradeoffs / risks: Quarantine must be reversible after the source file is replaced and must not suppress transient download failures that recover on retry.
+  - Acceptance Criteria:
+    - After bounded redownload attempts fail PDF integrity checks, the state DB records a typed malformed-source quarantine with file ID, md5/size, error taxonomy, and next action.
+    - Future ingest skips quarantined sources by default, with an explicit `--rescan` or repair command to clear or revalidate quarantine after source replacement.
+    - Dashboard/CLI output lists quarantined Drive files and recommended remediation.
+    - Tests cover quarantine write, default skip, explicit revalidation, and clearing after a valid replacement PDF.
 
 - **Title:** Add a single pipeline planning brain before execution [Impact: 5/5, Effort: 4/5]
   - Problem fixed: CLI, UI, ingest, report generation, analysis, publish, and recovery paths currently require the operator or caller to know which entrypoint and flags to use. The system has strong individual orchestrators, but no typed plan that derives the safest next action from repository state, config, credentials, checkpoints, and publish readiness.

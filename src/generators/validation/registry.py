@@ -13,6 +13,7 @@ from .family_confidence import run_family_confidence_rule
 from .metrics import run_metric_rule
 from .models import ValidationRuntime
 from .numbers import run_number_rule
+from .quality import run_artifact_quality_rule
 from .quotes import run_quote_rule
 from .semantic import run_semantic_rule
 from .shared import LOGGER_NAME, logger
@@ -44,6 +45,11 @@ def build_validation_rule_registry() -> tuple[ValidationRule, ...]:
             execute=run_claim_support_rule,
         ),
         ValidationRule(
+            rule_id="artifact_quality",
+            stage="bootstrap",
+            execute=run_artifact_quality_rule,
+        ),
+        ValidationRule(
             rule_id="semantic", stage="bootstrap", execute=run_semantic_rule
         ),
         ValidationRule(rule_id="metrics", stage="dependent", execute=run_metric_rule),
@@ -62,7 +68,10 @@ def run_validation_rule_registry(
     *,
     parallel_workers: int,
 ) -> List[ValidationIssue]:
-    registry = build_validation_rule_registry()
+    registry = rules_for_validation_mode(
+        build_validation_rule_registry(),
+        mode=str(getattr(runtime.request, "validation_mode", "full") or "full"),
+    )
     if parallel_workers > 1:
         run_validation_rules_in_parallel(
             runtime=runtime,
@@ -76,6 +85,21 @@ def run_validation_rule_registry(
     for rule in registry:
         ordered_issues.extend(runtime.issues_by_rule.get(rule.rule_id, []))
     return ordered_issues
+
+
+def rules_for_validation_mode(
+    registry: Sequence[ValidationRule], *, mode: str
+) -> tuple[ValidationRule, ...]:
+    normalized = str(mode or "full").strip()
+    if normalized == "inline_deterministic":
+        return tuple(
+            rule
+            for rule in registry
+            if rule.rule_id not in {"semantic", "grounding"}
+        )
+    if normalized == "deferred_grounding":
+        return tuple(rule for rule in registry if rule.rule_id == "grounding")
+    return tuple(registry)
 
 
 def run_validation_rules_in_parallel(

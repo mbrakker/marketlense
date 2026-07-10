@@ -9,6 +9,9 @@ _PDF_FETCH_HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
     ),
 }
+_PDF_FETCH_FALLBACK_HEADERS = {
+    "Accept": _PDF_FETCH_HEADERS["Accept"],
+}
 _HTML_FETCH_HEADERS = {
     "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
     "User-Agent": _PDF_FETCH_HEADERS["User-Agent"],

@@ -73,6 +73,7 @@ from src.contracts.state import (
     StateBatchCheckItem,
     StateBatchCheckRequest,
     StateCheckRequest,
+    StateGetResponse,
     StateGetRequest,
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
@@ -153,6 +154,15 @@ def _processed_state_should_skip(
     )
     if record is None or record.md5 != md5:
         return False
+    return _processed_record_should_skip(record, ctx)
+
+
+def _processed_record_should_skip(
+    record: StateGetResponse,
+    ctx: RunContext,
+) -> bool:
+    file_id = record.file_id
+    md5 = record.md5
     last_error = str(record.last_error or "").strip()
     text_validation_status = str(record.text_validation_status or "").strip().lower()
     if not last_error and text_validation_status not in {"pass", "fail"}:
@@ -216,6 +226,10 @@ def _batch_should_skip(
         ctx,
     )
     processed = {(item.file_id, item.md5) for item in response.processed_items}
+    records_by_key = {
+        (record.file_id, record.md5): record
+        for record in getattr(response, "processed_records", [])
+    }
     lookup: dict[tuple[str, str], bool] = {}
     retryable_matches = 0
     for item in items:
@@ -223,11 +237,11 @@ def _batch_should_skip(
         if key not in processed:
             lookup[key] = False
             continue
-        should_skip = _processed_state_should_skip(
-            item.file_id,
-            item.md5,
-            state_db,
-            ctx,
+        record = records_by_key.get(key)
+        should_skip = (
+            _processed_record_should_skip(record, ctx)
+            if record is not None
+            else _processed_state_should_skip(item.file_id, item.md5, state_db, ctx)
         )
         if not should_skip:
             retryable_matches += 1
@@ -417,8 +431,21 @@ def _resolve_modified_after(
     *,
     limit: Optional[int],
     force_report_cards: bool,
+    rescan: bool,
     root_ctx: RunContext,
 ) -> Optional[str]:
+    del limit
+    if rescan:
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_modified_after_ignored",
+                module=logger.name,
+                fields={"reason": "rescan"},
+            )
+        )
+        return None
     if force_report_cards:
         logger.info(
             log_event(
@@ -427,17 +454,6 @@ def _resolve_modified_after(
                 event="ingest_modified_after_ignored",
                 module=logger.name,
                 fields={"reason": "force_report_cards"},
-            )
-        )
-        return None
-    if limit is not None:
-        logger.info(
-            log_event(
-                root_ctx,
-                role="orchestrator",
-                event="ingest_modified_after_ignored",
-                module=logger.name,
-                fields={"reason": "limit_override", "limit": limit},
             )
         )
         return None
@@ -1013,6 +1029,7 @@ def run_ingest(
     ctx: Optional[RunContext] = None,
     dependencies: Optional[IngestBatchDependencies] = None,
     force_report_cards: bool = False,
+    rescan: bool = False,
 ) -> List[IngestOutcome]:
     deps = dependencies or IngestBatchDependencies.default()
     root_ctx = ctx or new_run_context()
@@ -1032,6 +1049,7 @@ def run_ingest(
                     "folder_id": folder_id or settings.gdrive_folder_id,
                     "limit": limit,
                     "force_report_cards": force_report_cards,
+                    "rescan": rescan,
                 },
             )
         )
@@ -1040,6 +1058,7 @@ def run_ingest(
             settings,
             limit=limit,
             force_report_cards=force_report_cards,
+            rescan=rescan,
             root_ctx=root_ctx,
         )
         max_n = limit if limit is not None else settings.batch_limit

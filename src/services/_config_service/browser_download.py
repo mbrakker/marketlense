@@ -155,10 +155,15 @@ def load_browser_download_settings(
         ).strip()
         or "disabled"
     )
-    if route_playbook_promotion_mode not in {"disabled", "dry_run", "write"}:
+    if route_playbook_promotion_mode not in {
+        "disabled",
+        "dry_run",
+        "canary",
+        "write",
+    }:
         raise RuntimeError(
             "browser_download.route_playbook_promotion_mode must be one of "
-            "`disabled`, `dry_run`, or `write`"
+            "`disabled`, `dry_run`, `canary`, or `write`"
         )
     private_api_playbook_promotion_mode = (
         str(
@@ -168,10 +173,15 @@ def load_browser_download_settings(
         ).strip()
         or "disabled"
     )
-    if private_api_playbook_promotion_mode not in {"disabled", "dry_run", "write"}:
+    if private_api_playbook_promotion_mode not in {
+        "disabled",
+        "dry_run",
+        "canary",
+        "write",
+    }:
         raise RuntimeError(
             "browser_download.private_api_playbook_promotion_mode must be one of "
-            "`disabled`, `dry_run`, or `write`"
+            "`disabled`, `dry_run`, `canary`, or `write`"
         )
     private_api_playbook_min_success_count = int(
         browser_download.get("private_api_playbook_min_success_count")

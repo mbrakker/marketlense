@@ -157,15 +157,6 @@ Scoring:
     - Validators accept correct abstentions and reject unsupported generated filler.
     - Positive and negative tests cover enough-evidence, weak-evidence, and no-evidence cases.
 
-- **Title:** Create `topics_covered`, `key_figures`, and chart insight card artifacts [Impact: 5/5, Effort: 5/5]
-  - Problem fixed: Public pages need scannable topic, figure, and chart modules that are more structured than generic prose.
-  - Why implement: These artifacts make report pages more useful and connect prompt output to public rendering.
-  - Tradeoffs / risks: New artifacts require contracts, fixtures, validators, renderers, and migration-safe optional handling.
-  - Acceptance Criteria:
-    - `topics_covered` includes topic, subtopics, why it matters, evidence IDs, and pages.
-    - `key_figures` includes figure, unit, segment, geography, timeframe, source page, why it matters, caveat, evidence ID, and related chart candidate when available.
-    - Chart insight cards include caption, chart takeaway, business implication, metric mentions, evidence confidence, and avoid reason if weak.
-
 - **Title:** Make visual ranking editorial as well as visual-quality based [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Selected charts can be visually dense but not the most useful evidence for the page.
   - Why implement: Figures should support the report thesis, standalone usefulness, executive readability, social usefulness, and summary/insight relevance.
@@ -183,15 +174,6 @@ Scoring:
     - LinkedIn output includes executive insight, operator practical, and data-led variants with hook, body, optional bullets, hashtags, evidence ledger, and unsupported-claim risk flag.
     - Banned-pattern and claim-ledger checks apply to every variant.
     - Tests reject unsupported hooks and generic first sentences.
-
-- **Title:** Add anti-generic banned-pattern checks [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: AI-sounding phrases lower perceived quality even when content is accurate.
-  - Why implement: Banned-pattern checks provide fast, deterministic quality feedback.
-  - Tradeoffs / risks: Phrase checks must not become overbroad false positives for legitimate source quotes.
-  - Acceptance Criteria:
-    - Checks cover phrases such as rapidly evolving landscape, game changer, unlock, leverage, delve, robust, seamless, crucial, it is important to note, and this report highlights.
-    - First sentences must include a concrete noun, metric, category, market actor, or implication unless quoting source text.
-    - Tests cover generated copy, source quotes, and allowed technical terms.
 
 - **Title:** Add safe comparative positioning for cross-report synthesis [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Multi-report output needs useful comparison without unsafe metric normalization.
@@ -251,24 +233,6 @@ Scoring:
     - `rank_max_candidates` is adaptive by profile and escalates only when no acceptable figures are found.
     - Fast mode uses one-pass crop refinement or deterministic bbox expansion, and high-confidence candidates can skip crop-refine LLM.
 
-- **Title:** Make Drive listing cursor-first and batch skip metadata complete [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Large Drive folders can be rescanned, and per-file skip decisions can require extra state checks.
-  - Why implement: Cursor-first listing and full batch skip metadata reduce bulk ingest overhead.
-  - Tradeoffs / risks: Operators need an explicit rescan path for intentional full scans.
-  - Acceptance Criteria:
-    - Per-folder cursor semantics are default for all modes unless `--rescan` or equivalent is explicit.
-    - Batch state query returns processed state, last error, text-validation status, vector-store status, and retryability flags.
-    - Tests cover limit overrides, forced report-card runs, rescan, and processed-state skip decisions.
-
-- **Title:** Split validation into inline deterministic and deferred LLM grounding [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Validation and regeneration loops can dominate latency for drafts and bulk ingestion.
-  - Why implement: Deterministic schema/completeness checks can run inline while expensive evidence grounding is deferred to publish or high-value paths.
-  - Tradeoffs / risks: Draft outputs must be clearly marked and blocked from final publish until required grounding completes.
-  - Acceptance Criteria:
-    - Inline validation covers schema, required fields, artifact completeness, and references.
-    - Deferred validation covers expensive grounding and regeneration before final publish or high-value reports.
-    - Workflow-control records deferred validation obligations and publish gates consume them.
-
 - **Title:** Publish draft HTML first and enrich later [Impact: 4/5, Effort: 4/5]
   - Problem fixed: Report publication waits for every enrichment module even when a useful draft page could exist sooner.
   - Why implement: Draft-first output improves time-to-value while preserving full editorial mode.
@@ -282,33 +246,6 @@ Scoring:
 
 ## 5. Browser-Use Speed and Cost
 
-- **Title:** Enable private-API and route-playbook promotion through canary rollout [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Repeated browser routes can remain expensive manual agent runs even when network evidence reveals deterministic HTTP or private-API replay paths.
-  - Why implement: The largest cost reduction comes from converting browser-use routes into direct replay routes.
-  - Tradeoffs / risks: Promotion thresholds must stay conservative globally and stricter validation must protect low-threshold trusted-publisher overrides.
-  - Acceptance Criteria:
-    - Route and private-API promotion can run in `dry_run` for trusted publishers, then `write` after reviewed candidate fingerprints and verified PDF artifacts.
-    - Publisher-scoped threshold overrides can lower required successes/source diversity only with same-host, expected-status, required-marker, and artifact-validation checks.
-    - Private-API replay falls back to the original browser route when endpoint validation fails and logs promotion decisions.
-
-- **Title:** Add a deterministic executor for normal route playbooks [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Selected route playbooks guide the LLM instead of executing known steps directly.
-  - Why implement: DOM-level execution can avoid LLM calls for recurring gated forms and PDF-click routes.
-  - Tradeoffs / risks: Executor drift must fall back to browser-use and persist evidence rather than silently failing.
-  - Acceptance Criteria:
-    - Playbook steps support deterministic open, click, fill, select, submit, and verify actions with CSS/text/role selectors and confidence scoring.
-    - Executor runs before full browser-use for eligible playbooks.
-    - Drift evidence is persisted and routed back into playbook improvement.
-
-- **Title:** Strengthen publisher-level route policy before browser escalation [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Planner can spend low-yield probes or browser launches despite stable publisher route history.
-  - Why implement: Publisher-level success distributions should schedule dominant routes first and demote repeatedly failing fallbacks.
-  - Tradeoffs / risks: Stale or conflicting policy evidence must fail closed and preserve safe recovery classes.
-  - Acceptance Criteria:
-    - Per-publisher route success distribution, failure distribution, TTL, and route-family confidence are persisted.
-    - Dominant route families run first and repeatedly failing fallback routes are demoted.
-    - Route decisions log selected family, confidence, TTL status, avoided browser/model-call estimate, and recovery class.
-
 - **Title:** Add HTTP-only static DOM scan before browser preflight [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Bounded browser preflight still launches a browser for pages where static HTML/scripts/meta tags may reveal PDF candidates.
   - Why implement: Static extraction can find many report assets before any browser startup.
@@ -317,24 +254,6 @@ Scoring:
     - HTTP scan extracts PDF/document candidates from anchors, scripts, JSON, JSON-LD, meta tags, OpenGraph tags, canonical URLs, and embedded `.pdf` strings.
     - Candidates are validated by response status, MIME/type, file signature, and publisher/report scope.
     - Browser preflight runs only when static extraction is inconclusive.
-
-- **Title:** Narrow browser preflight eligibility and reuse preflight state on escalation [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Browser preflight can spend 10-24 seconds on low-yield pages and then full browser-use can double-launch from scratch.
-  - Why implement: Preflight should run only when likely to find rendered assets, and escalation should reuse page/session state.
-  - Tradeoffs / risks: Session reuse must remain scoped, deterministic, and cleaned up on failure.
-  - Acceptance Criteria:
-    - Preflight is skipped for known email gates, listing hubs, and publishers with poor rendered-PDF history unless static/candidate evidence suggests value.
-    - Preflight browser/page can remain alive when escalation is likely and pass cookies, local storage, current URL, and downloaded-candidate context to the full agent path.
-    - Failure cleanup is deterministic and tests cover skip, reuse, and cleanup paths.
-
-- **Title:** Make browser evidence and failure forensics conditional [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Success and expected-blocker paths can capture heavy screenshots, HTML snapshots, assets, network resources, copied artifacts, and detailed logs unnecessarily.
-  - Why implement: Known verified routes and repeated expected blockers should be cheap to record.
-  - Tradeoffs / risks: Novel failures and sampled audits still need rich forensic packs for route improvement.
-  - Acceptance Criteria:
-    - Known verified success paths store minimal evidence: artifact hash, artifact URL, route ID, validation status, and final URL.
-    - Full evidence is retained for new publishers, new routes, failed runs, sampled audits, route drift, parser errors, and suspected regressions.
-    - Expected blockers such as CAPTCHA, 403, static archive blocks, business-email rejection, and remembered blockers default to metadata-only forensics.
 
 ---
 
@@ -487,7 +406,7 @@ The scoped backlog above intentionally merges overlapping Notion work. The follo
 1. Evidence quality grades, readable evidence spans, premium card/exhibit copy, and source-quality panels.
 2. Higher-DPI final crop profiles, table/chart boundary detectors, publisher crop profiles, and HTML visual smoke tests.
 3. Artifact-level public evidence rendering for metric spine, claim ledgers, recommendations, and risk registers.
-4. `fast_ingest`, latest-safe ingest resume, deferred grounding validation, and deterministic ranking/crop shortcuts.
-5. Browser private-API/playbook promotion, artifact-level acquisition cache, HTTP-only static DOM scan, and route-specific agent budgets.
+4. `fast_ingest`, lazy model clients, DAG scheduling, draft-first publishing, and deterministic ranking/crop shortcuts.
+5. HTTP-only static DOM scan, route-specific agent budgets, session reuse, warm worker pool, and terminal-evidence early stop.
 6. Autonomous supervisor, PipelinePlan, scheduler, and durable dead letters.
 7. Root tool manifest, lockfile, shared quality-gate manifest, mypy baseline cleanup, and boundary enforcement.

@@ -79,6 +79,88 @@
         }
       }
     },
+    "topics_covered": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["schema_version", "topic_id", "topic", "subtopics", "why_it_matters", "evidence_ids", "pages", "status"],
+        "properties": {
+          "schema_version": { "type": "string" },
+          "topic_id": { "type": "string" },
+          "topic": { "type": "string" },
+          "subtopics": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "why_it_matters": { "type": "string" },
+          "evidence_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "pages": {
+            "type": "array",
+            "items": { "type": "integer" }
+          },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    "key_figures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["schema_version", "figure_id", "figure", "label", "unit", "why_it_matters", "evidence_id"],
+        "properties": {
+          "schema_version": { "type": "string" },
+          "figure_id": { "type": "string" },
+          "figure": { "type": "string" },
+          "label": { "type": "string" },
+          "unit": { "type": "string" },
+          "segment": { "type": "string" },
+          "geography": { "type": "string" },
+          "timeframe": { "type": "string" },
+          "source_page": { "type": ["integer", "null"] },
+          "why_it_matters": { "type": "string" },
+          "caveat": { "type": "string" },
+          "evidence_id": { "type": "string" },
+          "related_chart_candidate": { "type": "string" }
+        }
+      }
+    },
+    "chart_insight_cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "card_id",
+          "status",
+          "caption",
+          "takeaway",
+          "business_implication",
+          "metric_mentions",
+          "evidence_confidence",
+          "evidence_id",
+          "avoid_reason_if_weak"
+        ],
+        "properties": {
+          "schema_version": { "type": "string" },
+          "card_id": { "type": "string" },
+          "status": { "type": "string" },
+          "caption": { "type": "string" },
+          "takeaway": { "type": "string" },
+          "business_implication": { "type": "string" },
+          "metric_mentions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "evidence_confidence": { "type": "string" },
+          "evidence_id": { "type": "string" },
+          "source_page": { "type": ["integer", "null"] },
+          "avoid_reason_if_weak": { "type": "string" }
+        }
+      }
+    },
     "claim_ledgers": {
       "type": "array",
       "items": {

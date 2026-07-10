@@ -111,3 +111,9 @@ class ValidationRequest(SemanticIdContract):
             "doc": "Vector store ID for retrieval-grounded checks, if available."
         },
     )
+    validation_mode: str = field(
+        default="full",
+        metadata={
+            "doc": "Validation execution mode: full, inline_deterministic, or deferred_grounding."
+        },
+    )

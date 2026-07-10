@@ -245,6 +245,51 @@ def test_already_processed_batch_returns_only_matched_pairs(tmp_path: Path) -> N
     assert {(item.file_id, item.md5) for item in response.processed_items} == {
         ("file-1", "md5-1")
     }
+    assert response.processed_records[0].file_id == "file-1"
+    assert response.processed_records[0].md5 == "md5-1"
+
+
+def test_already_processed_batch_returns_complete_skip_metadata(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-meta",
+            md5="md5-meta",
+            vector_store_status="completed",
+            last_error="doc_map_empty: no headings",
+            text_validation_status="pass",
+            text_validation_reason="sampled pages contained extractable text",
+            text_validation_pages=[1, 2],
+            doc_map_summary={"sections_count": 0},
+            ocr_fallback_used=True,
+            ocr_pdf_path="/tmp/ocr.pdf",
+        ),
+        _ctx(),
+    )
+
+    response = already_processed_batch(
+        StateBatchCheckRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            items=[
+                StateBatchCheckItem(
+                    schema_version="1.0", file_id="file-meta", md5="md5-meta"
+                )
+            ],
+        ),
+        _ctx(),
+    )
+
+    record_meta = response.processed_records[0]
+    assert record_meta.vector_store_status == "completed"
+    assert record_meta.last_error == "doc_map_empty: no headings"
+    assert record_meta.text_validation_status == "pass"
+    assert record_meta.text_validation_pages == [1, 2]
+    assert record_meta.doc_map_summary == {"sections_count": 0}
+    assert record_meta.ocr_fallback_used is True
+    assert record_meta.ocr_pdf_path == "/tmp/ocr.pdf"
 
 
 def test_record_and_get_doc_map_summary(tmp_path: Path) -> None:

@@ -211,6 +211,7 @@ def _preferred_publisher_policy_signal(
         str(candidate.title or "").strip() if candidate is not None else ""
     )
     for signal in remembered_route.publisher_route_policy:
+        route_family = str(signal.route_family or "").strip()
         if signal.attempts < 3:
             continue
         if signal.verified_successes < 2:
@@ -220,6 +221,14 @@ def _preferred_publisher_policy_signal(
         if signal.rank_score < 0.65:
             continue
         if signal.confidence_score < 0.65:
+            continue
+        if route_family.startswith("browser_") and (
+            signal.attempts < 5
+            or signal.verified_successes < 3
+            or signal.success_rate < 0.75
+            or signal.rank_score < 0.72
+            or signal.confidence_score < 0.72
+        ):
             continue
         if (
             signal.blocked_attempts

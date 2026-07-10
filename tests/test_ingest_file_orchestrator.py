@@ -43,6 +43,8 @@ def _base_dependencies(
     file_stat_fn,
     run_report_pipeline_fn,
     write_md5_sidecar_fn,
+    check_pdf_eof_fn=None,
+    download_pdf_to_path_fn=None,
 ):
     return IngestFileDependencies(
         should_skip=lambda *_args, **_kwargs: False,
@@ -64,15 +66,21 @@ def _base_dependencies(
         existing_report_html=lambda *_args, **_kwargs: None,
         run_step_with_retry=lambda _name, _ctx, fn, _retries: fn(),
         file_stat=file_stat_fn,
-        download_pdf_to_path=lambda req, _ctx: DriveDownloadToPathResponse(
-            schema_version="1.0",
-            file=req.file,
-            output_path=req.output_path,
-            md5=None,
-            size=10,
+        download_pdf_to_path=download_pdf_to_path_fn
+        or (
+            lambda req, _ctx: DriveDownloadToPathResponse(
+                schema_version="1.0",
+                file=req.file,
+                output_path=req.output_path,
+                md5=None,
+                size=10,
+            )
         ),
-        check_pdf_eof=lambda req, _ctx: PdfEofCheckResponse(
-            schema_version="1.0", path=req.path, has_eof=True
+        check_pdf_eof=check_pdf_eof_fn
+        or (
+            lambda req, _ctx: PdfEofCheckResponse(
+                schema_version="1.0", path=req.path, has_eof=True
+            )
         ),
         delete_file=lambda req, _ctx: DeleteFileResponse(
             schema_version="1.0", path=req.path, deleted=True
@@ -154,6 +162,66 @@ def test_missing_md5_is_computed_before_pipeline(ingest_settings, run_context):
     assert result.outcome.status == "processed"
     assert pipeline_md5["value"] == "computed-md5"
     assert compute_md5_calls["count"] == 1
+
+
+def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
+    ingest_settings,
+    run_context,
+):
+    file = _drive_file(md5_checksum=None)
+    download_calls = {"count": 0}
+    pipeline_calls = {"count": 0}
+
+    def _file_stat(request, _ctx):
+        return FileStatResponse(
+            schema_version="1.0",
+            path=request.path,
+            exists=False,
+            size_bytes=None,
+            mtime_utc=None,
+            md5=None,
+        )
+
+    def _download(req, _ctx):
+        download_calls["count"] += 1
+        return DriveDownloadToPathResponse(
+            schema_version="1.0",
+            file=req.file,
+            output_path=req.output_path,
+            md5=None,
+            size=10,
+        )
+
+    def _run_report_pipeline(current_file, _cache_path, _settings, md5, _ctx):
+        del current_file, md5
+        pipeline_calls["count"] += 1
+        raise AssertionError("report pipeline should not run for malformed PDF")
+
+    dependencies = _base_dependencies(
+        file_stat_fn=_file_stat,
+        run_report_pipeline_fn=_run_report_pipeline,
+        write_md5_sidecar_fn=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            record=None,
+            written=False,
+            reason="not_called",
+        ),
+        check_pdf_eof_fn=lambda req, _ctx: PdfEofCheckResponse(
+            schema_version="1.0", path=req.path, has_eof=False
+        ),
+        download_pdf_to_path_fn=_download,
+    )
+
+    result = run_ingest_file(file, 0, ingest_settings, run_context, dependencies)
+
+    assert result.outcome.status == "error"
+    assert result.outcome.error == (
+        f"Downloaded PDF is missing EOF marker: {ingest_settings.cache_dir}/file-1.pdf"
+    )
+    assert download_calls["count"] == 2
+    assert pipeline_calls["count"] == 0
 
 
 def test_ingest_file_enables_latest_safe_resume_when_pipeline_accepts_keyword(

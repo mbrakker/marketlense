@@ -21,6 +21,19 @@ from src.utils.errors import AppError
 from src.utils.url_utils import normalize_url
 
 _MAX_FORENSICS_CONTEXT_CHARS = 500
+_METADATA_ONLY_BLOCKER_CODES = {
+    "browser_download_captcha_required",
+    "browser_download_access_forbidden",
+    "browser_download_business_email_rejected",
+    "browser_download_static_email_gate",
+    "browser_download_access_challenge",
+}
+_METADATA_ONLY_BLOCKED_REASONS = {
+    "captcha",
+    "forbidden",
+    "business_email_rejected",
+    "access_challenge",
+}
 
 
 def failure_error_class(exc: Exception) -> str:
@@ -278,7 +291,10 @@ def persist_failed_attempt_forensics_pack(
         normalized_url=normalized_url,
     )
     forensics_dir = download_dir.parent / f"{download_dir.name}__failure_forensics"
-    artifact_policy = str(request.settings.failure_forensics_policy or "copy_artifacts")
+    artifact_policy = _failure_forensics_artifact_policy(
+        configured_policy=str(request.settings.failure_forensics_policy or "copy_artifacts"),
+        exc=exc,
+    )
     terminal_evidence = terminal_evidence_from_error_context(
         exc=exc,
         request=request,
@@ -343,3 +359,18 @@ def persist_failed_attempt_forensics_pack(
         ctx,
     )
     return pack
+
+
+def _failure_forensics_artifact_policy(
+    *,
+    configured_policy: str,
+    exc: AppError,
+) -> str:
+    if configured_policy == "metadata_only":
+        return "metadata_only"
+    blocked_reason = str((exc.context or {}).get("blocked_reason") or "").strip()
+    if exc.code in _METADATA_ONLY_BLOCKER_CODES:
+        return "metadata_only"
+    if blocked_reason in _METADATA_ONLY_BLOCKED_REASONS:
+        return "metadata_only"
+    return "copy_artifacts"

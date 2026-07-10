@@ -171,6 +171,103 @@ def test_validation_detects_new_numbers_and_grounding(tmp_path):
     assert any("No evidence" in issue.message for issue in result.issues)
     assert any("Number" in issue.message for issue in result.issues)
 
+
+def test_inline_validation_records_deferred_grounding_without_model_client(tmp_path):
+    settings = _settings(tmp_path)
+    analysis_store = FakeAnalysisStore()
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="inline-r1",
+            report=_report(),
+            artifacts={
+                "summary": {
+                    "tldr": "Revenue growth reached 10%.",
+                    "card_tldr_compact": "Revenue growth reached 10%.",
+                    "executive_summary": "Revenue growth reached 10% in 2026.",
+                    "claim_evidence_map": [],
+                },
+                "insights_final": [],
+                "quotes_final": [],
+                "expert_comment": "Revenue growth reached 10% in 2026.",
+                "linkedin_post": "Revenue growth reached 10% in 2026.",
+            },
+            evidence_packs={
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "f1",
+                            "evidence": "Revenue growth reached 10% in 2026.",
+                        }
+                    ]
+                }
+            },
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=None,
+        analysis_store=analysis_store,
+    )
+
+    assert any(
+        issue.rule_id == "deferred_grounding_required" for issue in result.issues
+    )
+    assert not analysis_store.stored[0][3]["issues"] == []
+
+
+def test_artifact_quality_flags_banned_generic_copy_and_allows_technical_terms(
+    tmp_path,
+):
+    settings = _settings(tmp_path)
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="quality-r1",
+            report=_report(),
+            artifacts={
+                "summary": {
+                    "tldr": "This report highlights a rapidly evolving landscape.",
+                    "card_tldr_compact": "Revenue growth reached 10%.",
+                    "executive_summary": (
+                        "Financial leverage and robust standard errors frame the "
+                        "market risk estimate."
+                    ),
+                    "claim_evidence_map": [],
+                },
+                "insights_final": [
+                    {
+                        "id": "i1",
+                        "text": "This report highlights a game changer for markets.",
+                        "evidence_id": "f1",
+                    }
+                ],
+                "quotes_final": [],
+                "expert_comment": (
+                    "Financial leverage and robust standard errors frame the "
+                    "market risk estimate."
+                ),
+                "linkedin_post": "Revenue growth reached 10% in 2026.",
+            },
+            evidence_packs={},
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=None,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    messages = [issue.message for issue in result.issues]
+    assert any("rapidly evolving landscape" in message for message in messages)
+    assert any("game changer" in message for message in messages)
+    assert not any("financial leverage" in message.lower() for message in messages)
+
+
 def test_commentary_numbers_allowed_when_in_report_or_evidence(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {

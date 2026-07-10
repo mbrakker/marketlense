@@ -43,6 +43,12 @@ class StateBatchCheckResponse:
     processed_items: List[StateBatchCheckItem] = field(
         metadata={"doc": "Pairs found in processed state."}
     )
+    processed_records: List["StateGetResponse"] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Complete processed-state rows for matched pairs, used by batch skip decisions."
+        },
+    )
 
 
 @dataclass(frozen=True)

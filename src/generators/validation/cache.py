@@ -32,7 +32,7 @@ from src.utils.model_resolver import resolve_model
 
 from .shared import LOGGER_NAME, logger
 
-VALIDATION_RULESET_VERSION = "3"
+VALIDATION_RULESET_VERSION = "4"
 
 
 def validation_cache_meta(
@@ -66,6 +66,7 @@ def validation_cache_meta(
             "artifacts": request.artifacts,
             "evidence_packs": request.evidence_packs,
             "vector_store_id": request.vector_store_id or "",
+            "validation_mode": request.validation_mode,
             "data_gap_policy": getattr(settings, "validation_data_gap_policy", "warn"),
         }
     )
@@ -79,6 +80,7 @@ def validation_cache_meta(
         "seed": settings.openai_seed,
         "use_vector_store": bool(request.vector_store_id),
         "grounding_retrieval_mode": grounding_retrieval_mode,
+        "validation_mode": request.validation_mode,
     }
 
 

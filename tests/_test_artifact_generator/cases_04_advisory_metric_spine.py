@@ -55,6 +55,48 @@ def test_derive_metric_spine_selects_strong_supported_metrics() -> None:
     ]
 
 
+def test_derive_metric_spine_from_insights_uses_embedded_metric_contract() -> None:
+    spine = derive_metric_spine_from_insights(
+        [
+            {
+                "id": "insight_ai_purchases",
+                "text": (
+                    "AI recommendations already drive purchases: "
+                    "46% of shoppers make purchases based on AI recommendations."
+                ),
+                "evidence_id": "q5",
+                "metric": {
+                    "value": "46",
+                    "unit": "percent",
+                    "timeframe": "2026",
+                    "segment": "shoppers",
+                    "confidence": "high",
+                },
+            }
+        ]
+    )
+
+    assert spine == [
+        {
+            "schema_version": "1.0",
+            "metric_id": "insight_ai_purchases",
+            "label": "AI recommendations already drive purchases",
+            "value": "46",
+            "unit": "percent",
+            "timeframe": "2026",
+            "segment": "shoppers",
+            "geography": "",
+            "comparator": "",
+            "baseline": "",
+            "delta": "",
+            "sample_size": "",
+            "confidence": "high",
+            "missing_context_notes": ["geography"],
+            "evidence_id": "q5",
+        }
+    ]
+
+
 def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:
     advisory = build_executive_advisory_artifacts(
         summary={
@@ -148,6 +190,120 @@ def test_assemble_artifacts_builds_universal_claim_ledger() -> None:
     assert ledger[0]["evidence_ids"] == ["f1"]
     assert ledger[0]["support_type"] == "direct_evidence_span"
     assert ledger[1]["canonical_claim_id"] == "ledger-report:insights_final:i1"
+
+
+def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
+    evidence = _evidence_packs()
+    evidence["key_metrics"] = {
+        "metrics": [
+            {
+                "metric_id": "m1",
+                "label": "Wallet adoption",
+                "value": "42",
+                "unit": "percent",
+                "timeframe": "2026",
+                "segment": "enterprise merchants",
+                "geography": "Global",
+                "delta": "+7 points",
+                "evidence_id": "f1",
+            }
+        ]
+    }
+    evidence["visual_candidates"] = {
+        "chart_candidates": [
+            {
+                "chart_id": "chart-1",
+                "evidence_id": "f1",
+                "caption": "Wallet adoption rose to 42 percent.",
+                "confidence": "high",
+            }
+        ]
+    }
+
+    payload = assemble_artifacts_payload(
+        report_id="artifact-cards",
+        report_name="Artifact Cards",
+        doc_map=_doc_map(),
+        evidence_packs=evidence,
+        toc_bundle={
+            "toc_entries": [
+                {
+                    "section_id": "s1",
+                    "section_title": "Adoption Signals",
+                    "display_title": "Adoption Signals",
+                    "summary": "Enterprise wallet adoption is rising in 2026.",
+                    "key_points": ["Enterprise merchant adoption", "Global demand"],
+                    "pages": [2],
+                    "order": 1,
+                }
+            ]
+        },
+        summary={
+            "tldr": "Wallet adoption is rising.",
+            "card_tldr_compact": "Wallet adoption is rising.",
+            "executive_summary": "Wallet adoption is rising among merchants.",
+            "claim_evidence_map": [
+                {
+                    "claim": "Wallet adoption is rising.",
+                    "evidence_id": "f1",
+                    "evidence": "Revenue +10% YoY",
+                    "pages": [2],
+                    "evidence_spans": [
+                        {
+                            "evidence_id": "f1",
+                            "source_pack": "findings",
+                            "page": 2,
+                            "text": "Revenue +10% YoY",
+                        }
+                    ],
+                }
+            ],
+        },
+        cover_semantics=_cover_semantics(),
+        insights_candidates=[],
+        insights_final=[
+            {
+                "id": "i1",
+                "text": "Enterprise merchants are adopting wallets faster.",
+                "evidence_id": "f1",
+                "evidence": "Revenue +10% YoY",
+                "metric": {},
+                "pages": [2],
+            }
+        ],
+        quotes_final=[],
+        expert_comment="Grounded comment.",
+        linkedin_post="Grounded post.",
+        source_status={"not_available": False, "reason": ""},
+        family_status=build_artifact_family_status(
+            summary={
+                "tldr": "Wallet adoption is rising.",
+                "card_tldr_compact": "Wallet adoption is rising.",
+                "executive_summary": "Wallet adoption is rising among merchants.",
+                "claim_evidence_map": [{"claim": "Wallet adoption is rising."}],
+            },
+            insights_candidates=[],
+            insights_final=[
+                {
+                    "id": "i1",
+                    "text": "Enterprise merchants are adopting wallets faster.",
+                    "evidence_id": "f1",
+                }
+            ],
+            quotes_final=[],
+            expert_comment="Grounded comment.",
+            linkedin_post="Grounded post.",
+        ),
+        ctx=_ctx(),
+    )
+
+    assert payload["topics_covered"][0]["topic"] == "Adoption Signals"
+    assert payload["topics_covered"][0]["evidence_ids"] == ["f1"]
+    assert payload["key_figures"][0]["figure"] == "42 percent"
+    assert payload["key_figures"][0]["source_page"] == 2
+    assert payload["chart_insight_cards"][0]["card_id"] == "chart-1"
+    assert payload["chart_insight_cards"][0]["status"] == "generated"
+    assert payload["chart_insight_cards"][0]["avoid_reason_if_weak"] == ""
 
 
 def test_generate_artifacts_passes_metric_spine_to_editorial_prompts(tmp_path) -> None:
@@ -245,5 +401,6 @@ __all__ = [
     "test_derive_metric_spine_selects_strong_supported_metrics",
     "test_build_executive_advisory_artifacts_surfaces_not_found_states",
     "test_assemble_artifacts_builds_universal_claim_ledger",
+    "test_assemble_artifacts_builds_topics_key_figures_and_chart_cards",
     "test_generate_artifacts_passes_metric_spine_to_editorial_prompts",
 ]

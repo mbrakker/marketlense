@@ -281,6 +281,7 @@ def test_validation_rule_registry_is_deterministic():
         "toc_integrity",
         "family_confidence",
         "claim_support",
+        "artifact_quality",
         "semantic",
         "metrics",
         "quotes",
@@ -288,6 +289,7 @@ def test_validation_rule_registry_is_deterministic():
         "grounding",
     ]
     assert [rule.stage for rule in registry] == [
+        "bootstrap",
         "bootstrap",
         "bootstrap",
         "bootstrap",

@@ -152,14 +152,37 @@ def assemble_artifacts_payload(
                 module=logger.name,
                 fields=evidence_span_stats,
             )
-        )
-    metric_spine = derive_metric_spine(evidence_packs)
+    )
+    metric_spine = _merge_metric_spines(
+        derive_metric_spine(evidence_packs),
+        derive_metric_spine_from_insights(insights_final),
+    )
+    topics_covered = build_topics_covered(
+        toc_entries=toc_entries,
+        evidence_packs=evidence_packs,
+        summary=summary,
+        insights_final=insights_final,
+    )
+    key_figures = build_key_figures(
+        metric_spine=metric_spine,
+        evidence_packs=evidence_packs,
+        summary=summary,
+        insights_final=insights_final,
+    )
+    chart_insight_cards = build_chart_insight_cards(
+        key_figures=key_figures,
+        evidence_packs=evidence_packs,
+        insights_final=insights_final,
+    )
     artifacts_payload: Dict[str, Any] = {
         "schema_version": "3.0",
         "toc_entries": toc_entries,
         "toc_topics": toc_topics,
         "toc_topics_expanded": topic_briefs,
         "metric_spine": metric_spine,
+        "topics_covered": topics_covered,
+        "key_figures": key_figures,
+        "chart_insight_cards": chart_insight_cards,
         "summary": summary,
         "cover_semantics": _validate_cover_semantics(cover_semantics, ctx=ctx),
         "insights_candidates": insights_candidates,
@@ -408,6 +431,449 @@ def derive_metric_spine(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
             item["label"],
         ),
     )[:6]
+
+
+def derive_metric_spine_from_insights(
+    insights_final: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    spine: List[Dict[str, Any]] = []
+    for index, insight in enumerate(insights_final, start=1):
+        if not isinstance(insight, dict):
+            continue
+        metric = insight.get("metric")
+        if not isinstance(metric, dict):
+            continue
+        value = _s(metric.get("value") or metric.get("raw_value")).strip()
+        unit = _s(metric.get("unit")).strip()
+        evidence_id = _s(insight.get("evidence_id") or metric.get("evidence_id")).strip()
+        label = _s(metric.get("label") or metric.get("metric")).strip()
+        if not label:
+            label = _metric_label_from_insight_text(_s(insight.get("text")).strip())
+        if not value or not unit or not evidence_id or not label:
+            continue
+        missing_context_notes = [
+            field_name
+            for field_name in ("timeframe", "segment", "geography")
+            if not _s(metric.get(field_name)).strip()
+        ]
+        spine.append(
+            {
+                "schema_version": "1.0",
+                "metric_id": _s(insight.get("id") or metric.get("metric_id")).strip()
+                or f"insight_metric_{index}",
+                "label": label,
+                "value": value,
+                "unit": unit,
+                "timeframe": _s(metric.get("timeframe")).strip(),
+                "segment": _s(metric.get("segment")).strip(),
+                "geography": _s(metric.get("geography")).strip(),
+                "comparator": _s(metric.get("comparator")).strip(),
+                "baseline": _s(metric.get("baseline")).strip(),
+                "delta": _s(metric.get("delta") or metric.get("trend")).strip(),
+                "sample_size": _s(metric.get("sample_size")).strip(),
+                "confidence": _s(metric.get("confidence")).strip() or "source_backed",
+                "missing_context_notes": missing_context_notes,
+                "evidence_id": evidence_id,
+            }
+        )
+    return sorted(
+        spine,
+        key=lambda item: (
+            len(item["missing_context_notes"]),
+            item["metric_id"],
+            item["label"],
+        ),
+    )[:6]
+
+
+def _merge_metric_spines(
+    primary: List[Dict[str, Any]],
+    secondary: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    merged: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in [*primary, *secondary]:
+        evidence_id = _s(item.get("evidence_id")).strip()
+        label = _s(item.get("label")).strip().lower()
+        value = _s(item.get("value")).strip().lower()
+        unit = _s(item.get("unit")).strip().lower()
+        key = "|".join([evidence_id, label, value, unit])
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(item)
+    return sorted(
+        merged,
+        key=lambda item: (
+            len(item.get("missing_context_notes") or []),
+            _s(item.get("metric_id")).strip(),
+            _s(item.get("label")).strip(),
+        ),
+    )[:6]
+
+
+def _metric_label_from_insight_text(text: str) -> str:
+    token = _s(text).strip()
+    if not token:
+        return ""
+    if ":" in token:
+        token = token.split(":", 1)[0]
+    if "." in token:
+        token = token.split(".", 1)[0]
+    return token.strip()[:120]
+
+
+def build_topics_covered(
+    *,
+    toc_entries: List[Dict[str, Any]],
+    evidence_packs: Dict[str, Any],
+    summary: Dict[str, Any] | None = None,
+    insights_final: List[Dict[str, Any]] | None = None,
+) -> List[Dict[str, Any]]:
+    evidence_by_page = _evidence_ids_by_page(evidence_packs)
+    for page, evidence_ids in _artifact_evidence_ids_by_page(
+        summary=summary or {},
+        insights_final=insights_final or [],
+    ).items():
+        current = evidence_by_page.setdefault(page, [])
+        for evidence_id in evidence_ids:
+            if evidence_id not in current:
+                current.append(evidence_id)
+    topics: List[Dict[str, Any]] = []
+    for index, entry in enumerate(toc_entries, start=1):
+        if not isinstance(entry, dict):
+            continue
+        topic = _s(entry.get("display_title") or entry.get("section_title")).strip()
+        if not topic:
+            continue
+        pages = _int_list(entry.get("pages"))
+        evidence_ids = sorted(
+            {
+                evidence_id
+                for page in pages
+                for evidence_id in evidence_by_page.get(page, [])
+            }
+        )
+        subtopics = [
+            _s(item).strip()
+            for item in (entry.get("key_points") or [])
+            if _s(item).strip()
+        ][:5]
+        why_it_matters = _s(entry.get("summary")).strip()
+        if not why_it_matters and subtopics:
+            why_it_matters = subtopics[0]
+        if not why_it_matters:
+            why_it_matters = f"{topic} is covered in the source structure."
+        topics.append(
+            {
+                "schema_version": "1.0",
+                "topic_id": _s(entry.get("section_id")).strip() or f"topic-{index}",
+                "topic": topic,
+                "subtopics": subtopics,
+                "why_it_matters": why_it_matters,
+                "evidence_ids": evidence_ids,
+                "pages": pages,
+                "status": "source_backed" if evidence_ids else "toc_only",
+            }
+        )
+    return topics
+
+
+def _artifact_evidence_ids_by_page(
+    *,
+    summary: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+) -> Dict[int, List[str]]:
+    ids_by_page: Dict[int, List[str]] = {}
+
+    def register(evidence_id: str, pages: List[int]) -> None:
+        if not evidence_id:
+            return
+        for page in pages:
+            ids_by_page.setdefault(page, [])
+            if evidence_id not in ids_by_page[page]:
+                ids_by_page[page].append(evidence_id)
+
+    for claim in summary.get("claim_evidence_map") or []:
+        if not isinstance(claim, dict):
+            continue
+        register(_s(claim.get("evidence_id")).strip(), _int_list(claim.get("pages")))
+        for span in claim.get("evidence_spans") or []:
+            if isinstance(span, dict):
+                register(_s(span.get("evidence_id")).strip(), _int_list([span.get("page")]))
+    for insight in insights_final:
+        if not isinstance(insight, dict):
+            continue
+        register(_s(insight.get("evidence_id")).strip(), _int_list(insight.get("pages")))
+        for span in insight.get("evidence_spans") or []:
+            if isinstance(span, dict):
+                register(_s(span.get("evidence_id")).strip(), _int_list([span.get("page")]))
+    return ids_by_page
+
+
+def build_key_figures(
+    *,
+    metric_spine: List[Dict[str, Any]],
+    evidence_packs: Dict[str, Any],
+    summary: Dict[str, Any] | None = None,
+    insights_final: List[Dict[str, Any]] | None = None,
+) -> List[Dict[str, Any]]:
+    evidence_pages = _evidence_pages(evidence_packs)
+    artifact_pages = _artifact_pages_by_evidence_id(
+        summary=summary or {},
+        insights_final=insights_final or [],
+    )
+    figures: List[Dict[str, Any]] = []
+    for metric in metric_spine:
+        evidence_id = _s(metric.get("evidence_id")).strip()
+        label = _s(metric.get("label")).strip()
+        value = _s(metric.get("value")).strip()
+        unit = _s(metric.get("unit")).strip()
+        if not label or not value or not unit or not evidence_id:
+            continue
+        page_values = evidence_pages.get(evidence_id, []) or artifact_pages.get(
+            evidence_id, []
+        )
+        missing = [
+            _s(item).strip()
+            for item in (metric.get("missing_context_notes") or [])
+            if _s(item).strip()
+        ]
+        figure = f"{value} {unit}".strip()
+        figures.append(
+            {
+                "schema_version": "1.0",
+                "figure_id": _s(metric.get("metric_id")).strip() or evidence_id,
+                "figure": figure,
+                "label": label,
+                "unit": unit,
+                "segment": _s(metric.get("segment")).strip(),
+                "geography": _s(metric.get("geography")).strip(),
+                "timeframe": _s(metric.get("timeframe")).strip(),
+                "source_page": page_values[0] if page_values else None,
+                "why_it_matters": _key_figure_why_it_matters(metric),
+                "caveat": (
+                    "Missing context: " + ", ".join(missing) if missing else ""
+                ),
+                "evidence_id": evidence_id,
+                "related_chart_candidate": _related_chart_candidate_id(
+                    evidence_packs=evidence_packs,
+                    evidence_id=evidence_id,
+                ),
+            }
+        )
+    return figures
+
+
+def _artifact_pages_by_evidence_id(
+    *,
+    summary: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+) -> Dict[str, List[int]]:
+    pages_by_id: Dict[str, List[int]] = {}
+    for page, evidence_ids in _artifact_evidence_ids_by_page(
+        summary=summary,
+        insights_final=insights_final,
+    ).items():
+        for evidence_id in evidence_ids:
+            pages_by_id.setdefault(evidence_id, [])
+            if page not in pages_by_id[evidence_id]:
+                pages_by_id[evidence_id].append(page)
+    return pages_by_id
+
+
+def build_chart_insight_cards(
+    *,
+    key_figures: List[Dict[str, Any]],
+    evidence_packs: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    chart_candidates = _chart_candidates(evidence_packs)
+    insights_by_evidence = {
+        _s(item.get("evidence_id")).strip(): _s(item.get("text")).strip()
+        for item in insights_final
+        if isinstance(item, dict) and _s(item.get("evidence_id")).strip()
+    }
+    cards: List[Dict[str, Any]] = []
+    for index, figure in enumerate(key_figures, start=1):
+        evidence_id = _s(figure.get("evidence_id")).strip()
+        chart = _chart_candidate_for_evidence(chart_candidates, evidence_id)
+        confidence = _s((chart or {}).get("confidence")).strip() or "medium"
+        chart_id = _s((chart or {}).get("chart_id") or (chart or {}).get("id")).strip()
+        caption = _s((chart or {}).get("caption") or figure.get("label")).strip()
+        metric_mentions = _metric_mentions_for_figure(figure)
+        weak_reason = ""
+        if not chart:
+            weak_reason = "No chart candidate was linked to the metric evidence."
+        elif confidence.lower() in {"low", "weak"}:
+            weak_reason = "Chart candidate confidence is below source-backed threshold."
+        cards.append(
+            {
+                "schema_version": "1.0",
+                "card_id": chart_id or f"chart-card-{index}",
+                "status": "generated" if not weak_reason else "weak_evidence",
+                "caption": caption,
+                "takeaway": _chart_takeaway(figure, insights_by_evidence),
+                "business_implication": _business_implication(
+                    figure, insights_by_evidence
+                ),
+                "metric_mentions": metric_mentions,
+                "evidence_confidence": confidence,
+                "evidence_id": evidence_id,
+                "source_page": figure.get("source_page"),
+                "avoid_reason_if_weak": weak_reason,
+            }
+        )
+    return cards
+
+
+def _int_list(value: Any) -> List[int]:
+    if not isinstance(value, list):
+        return []
+    numbers: List[int] = []
+    for item in value:
+        try:
+            number = int(item)
+        except (TypeError, ValueError):
+            continue
+        if number not in numbers:
+            numbers.append(number)
+    return numbers
+
+
+def _evidence_items(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    if not isinstance(evidence_packs, dict):
+        return items
+    for pack_name, pack in evidence_packs.items():
+        if not isinstance(pack, dict):
+            continue
+        for key in ("findings", "quotes", "metrics", "key_metrics", "items"):
+            raw_items = pack.get(key)
+            if not isinstance(raw_items, list):
+                continue
+            for item in raw_items:
+                if isinstance(item, dict):
+                    copied = dict(item)
+                    copied.setdefault("source_pack", pack_name)
+                    items.append(copied)
+    return items
+
+
+def _evidence_pages(evidence_packs: Dict[str, Any]) -> Dict[str, List[int]]:
+    pages_by_id: Dict[str, List[int]] = {}
+    for item in _evidence_items(evidence_packs):
+        evidence_id = _s(
+            item.get("evidence_id") or item.get("id") or item.get("metric_id")
+        ).strip()
+        if not evidence_id:
+            continue
+        pages = _int_list(item.get("pages"))
+        page = item.get("page")
+        if page is not None:
+            pages = _int_list([*pages, page])
+        pages_by_id[evidence_id] = pages
+    return pages_by_id
+
+
+def _evidence_ids_by_page(evidence_packs: Dict[str, Any]) -> Dict[int, List[str]]:
+    ids_by_page: Dict[int, List[str]] = {}
+    for evidence_id, pages in _evidence_pages(evidence_packs).items():
+        for page in pages:
+            ids_by_page.setdefault(page, [])
+            if evidence_id not in ids_by_page[page]:
+                ids_by_page[page].append(evidence_id)
+    return ids_by_page
+
+
+def _key_figure_why_it_matters(metric: Dict[str, Any]) -> str:
+    label = _s(metric.get("label")).strip()
+    segment = _s(metric.get("segment")).strip()
+    geography = _s(metric.get("geography")).strip()
+    timeframe = _s(metric.get("timeframe")).strip()
+    parts = [label]
+    context = ", ".join([item for item in (segment, geography, timeframe) if item])
+    if context:
+        parts.append(context)
+    delta = _s(metric.get("delta")).strip()
+    if delta:
+        parts.append(f"change: {delta}")
+    return "; ".join(parts)
+
+
+def _chart_candidates(evidence_packs: Dict[str, Any]) -> List[Dict[str, Any]]:
+    candidates: List[Dict[str, Any]] = []
+    if not isinstance(evidence_packs, dict):
+        return candidates
+    for pack in evidence_packs.values():
+        if not isinstance(pack, dict):
+            continue
+        for key in ("chart_candidates", "charts", "figures", "visual_candidates"):
+            raw_items = pack.get(key)
+            if not isinstance(raw_items, list):
+                continue
+            candidates.extend([item for item in raw_items if isinstance(item, dict)])
+    return candidates
+
+
+def _related_chart_candidate_id(
+    *, evidence_packs: Dict[str, Any], evidence_id: str
+) -> str:
+    chart = _chart_candidate_for_evidence(_chart_candidates(evidence_packs), evidence_id)
+    if not chart:
+        return ""
+    return _s(chart.get("chart_id") or chart.get("id")).strip()
+
+
+def _chart_candidate_for_evidence(
+    chart_candidates: List[Dict[str, Any]], evidence_id: str
+) -> Dict[str, Any]:
+    for chart in chart_candidates:
+        candidate_evidence_id = _s(
+            chart.get("evidence_id") or chart.get("source_evidence_id")
+        ).strip()
+        if candidate_evidence_id == evidence_id:
+            return chart
+        evidence_ids = [
+            _s(item).strip()
+            for item in (chart.get("evidence_ids") or [])
+            if _s(item).strip()
+        ]
+        if evidence_id in evidence_ids:
+            return chart
+    return {}
+
+
+def _metric_mentions_for_figure(figure: Dict[str, Any]) -> List[str]:
+    mentions = [
+        _s(figure.get("figure")).strip(),
+        _s(figure.get("label")).strip(),
+        _s(figure.get("segment")).strip(),
+        _s(figure.get("geography")).strip(),
+        _s(figure.get("timeframe")).strip(),
+    ]
+    return [item for item in mentions if item]
+
+
+def _chart_takeaway(
+    figure: Dict[str, Any], insights_by_evidence: Dict[str, str]
+) -> str:
+    evidence_id = _s(figure.get("evidence_id")).strip()
+    insight = insights_by_evidence.get(evidence_id, "")
+    if insight:
+        return insight
+    return f"{_s(figure.get('label')).strip()} is reported at {_s(figure.get('figure')).strip()}."
+
+
+def _business_implication(
+    figure: Dict[str, Any], insights_by_evidence: Dict[str, str]
+) -> str:
+    evidence_id = _s(figure.get("evidence_id")).strip()
+    insight = insights_by_evidence.get(evidence_id, "")
+    if insight:
+        return insight
+    context = _s(figure.get("why_it_matters")).strip()
+    return context or _s(figure.get("label")).strip()
 
 
 def build_executive_advisory_artifacts(
@@ -759,7 +1225,7 @@ def _adapt_cached_artifacts_payload(
 def _adapt_cached_artifact_schema(payload: Dict[str, Any]) -> Dict[str, Any]:
     version = _s(payload.get("schema_version")).strip()
     if version == "3.0":
-        return payload
+        return _ensure_cached_derived_artifact_fields(dict(payload))
     if version not in {"1.0", "2.0"}:
         raise AppError(
             code="artifact_schema_migration_required",
@@ -790,7 +1256,14 @@ def _adapt_cached_artifact_schema(payload: Dict[str, Any]) -> Dict[str, Any]:
             context={"schema_version": version},
         )
     adapted["schema_version"] = "3.0"
-    return adapted
+    return _ensure_cached_derived_artifact_fields(adapted)
+
+
+def _ensure_cached_derived_artifact_fields(payload: Dict[str, Any]) -> Dict[str, Any]:
+    payload.setdefault("topics_covered", [])
+    payload.setdefault("key_figures", [])
+    payload.setdefault("chart_insight_cards", [])
+    return payload
 
 
 def _validate_cover_semantics(

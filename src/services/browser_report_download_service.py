@@ -13,6 +13,7 @@ from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadRouteStep,
     BrowserDeveloperDiagnosticsResult,
+    BrowserRoutePlaybookExecutionRequest,
     DownloadTerminalEvidence,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
@@ -45,6 +46,7 @@ from src.services._browser_report_download.prediction import (
     predict_pre_browser_doc_type,
 )
 from src.services._browser_report_download.playbooks import (
+    execute_browser_route_playbook as _execute_browser_route_playbook,
     load_browser_route_playbooks,
     promote_private_api_evidence_to_browser_playbook as _promote_private_api_evidence_to_browser_playbook,
     promote_validated_browser_route_result_to_playbook as _promote_validated_browser_route_result_to_playbook,
@@ -717,6 +719,13 @@ def promote_private_api_evidence_to_browser_playbook(
 
 def detect_private_api_promotion_candidates(request, ctx):
     return _detect_private_api_promotion_candidates(request, ctx)
+
+
+def execute_browser_route_playbook(
+    request: BrowserRoutePlaybookExecutionRequest,
+    ctx: RunContext,
+):
+    return _execute_browser_route_playbook(request, ctx)
 
 
 def _with_augmented_error_context(

@@ -16,10 +16,14 @@ from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
     BrowserRoutePrivateApiPromotionRequest,
+    BrowserRoutePlaybook,
+    BrowserRoutePlaybookExecutionRequest,
+    BrowserRoutePlaybookStep,
     DownloadTerminalEvidence,
 )
 from src.services import browser_report_download_service
 from src.services._browser_report_download.playbooks import (
+    execute_browser_route_playbook,
     load_browser_route_playbooks,
     promote_private_api_evidence_to_browser_playbook,
     promote_validated_browser_route_result_to_playbook,
@@ -297,6 +301,155 @@ def test_private_api_promotion_writes_dedicated_playbook_and_requires_repeated_s
         "browser_route_private_api_promotion_insufficient_evidence"
     )
     assert excinfo.value.retryable is False
+
+
+def test_private_api_promotion_rejects_missing_markers_and_cross_host_endpoint(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    with pytest.raises(AppError) as missing_markers:
+        promote_private_api_evidence_to_browser_playbook(
+            request=BrowserRoutePrivateApiPromotionRequest(
+                schema_version="1.0",
+                playbook_dir=str(tmp_path / "playbooks"),
+                source_url="https://example.com/research/report-2026",
+                route_family="browser_pdf_click",
+                route_kind="pdf_download",
+                endpoint_pattern="/api/reports/{last_path_segment}",
+                method="GET",
+                request_shape_summary="GET with report slug path parameter.",
+                response_pdf_url_json_pointer="/asset/pdfUrl",
+                validated_success_count=2,
+                fallback_route_family="browser_pdf_click",
+                evidence_labels=["network_document_request"],
+            ),
+            ctx=run_context,
+        )
+    assert missing_markers.value.code == (
+        "browser_route_private_api_promotion_markers_missing"
+    )
+
+    with pytest.raises(AppError) as host_mismatch:
+        promote_private_api_evidence_to_browser_playbook(
+            request=BrowserRoutePrivateApiPromotionRequest(
+                schema_version="1.0",
+                playbook_dir=str(tmp_path / "playbooks"),
+                source_url="https://example.com/research/report-2026",
+                route_family="browser_pdf_click",
+                route_kind="pdf_download",
+                endpoint_pattern="https://other.example/api/reports/report-2026",
+                method="GET",
+                request_shape_summary="GET with report slug path parameter.",
+                response_pdf_url_json_pointer="/asset/pdfUrl",
+                validated_success_count=2,
+                fallback_route_family="browser_pdf_click",
+                required_response_markers=["pdfUrl"],
+                evidence_labels=["network_document_request"],
+            ),
+            ctx=run_context,
+        )
+    assert host_mismatch.value.code == (
+        "browser_route_private_api_promotion_host_mismatch"
+    )
+
+
+def test_deterministic_route_playbook_executor_runs_selectors_and_reports_drift(
+    run_context,
+) -> None:
+    playbook = BrowserRoutePlaybook(
+        schema_version="1.0",
+        playbook_id="local-deterministic",
+        version="1.0.0",
+        status="active",
+        updated_at="2026-05-06T00:00:00+00:00",
+        stale_after_days=180,
+        publisher_pattern="example.com",
+        host_patterns=["example.com"],
+        url_path_markers=["report"],
+        route_family="browser_pdf_click",
+        route_kind="pdf_download",
+        summary="Open page and click download.",
+        steps=[
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="open",
+                target="https://example.com/report",
+                verification="page loaded",
+                selector_type="url",
+                selector="https://example.com/report",
+                expected_url_contains="/report",
+            ),
+            BrowserRoutePlaybookStep(
+                schema_version="1.0",
+                action="click",
+                target="Download report",
+                verification="PDF link visible",
+                selector_type="css",
+                selector="a.download",
+                expected_text="PDF ready",
+            ),
+        ],
+    )
+    driver = _FakePageDriver(texts={"PDF ready"})
+
+    response = execute_browser_route_playbook(
+        BrowserRoutePlaybookExecutionRequest(
+            schema_version="1.0",
+            playbook=playbook,
+            normalized_url="https://example.com/report",
+            page_driver=driver,
+        ),
+        run_context,
+    )
+
+    assert response.status == "completed"
+    assert [call[0] for call in driver.calls] == ["open", "click_css"]
+
+    drift_response = execute_browser_route_playbook(
+        BrowserRoutePlaybookExecutionRequest(
+            schema_version="1.0",
+            playbook=playbook,
+            normalized_url="https://example.com/report",
+            page_driver=_FakePageDriver(texts=set()),
+        ),
+        run_context,
+    )
+    assert drift_response.status == "drifted"
+    assert drift_response.drift_reasons == ["expected_text_not_observed"]
+
+
+class _FakePageDriver:
+    def __init__(self, *, texts):
+        self.calls = []
+        self._url = ""
+        self._texts = set(texts)
+
+    def open(self, url):
+        self.calls.append(("open", url))
+        self._url = url
+        return url
+
+    def click_css(self, selector):
+        self.calls.append(("click_css", selector))
+        return selector
+
+    def click_text(self, text):
+        self.calls.append(("click_text", text))
+        return text
+
+    def fill_css(self, selector, value):
+        self.calls.append(("fill_css", selector, value))
+        return selector
+
+    def select_css(self, selector, value):
+        self.calls.append(("select_css", selector, value))
+        return selector
+
+    def current_url(self):
+        return self._url
+
+    def contains_text(self, text):
+        return text in self._texts
 
 
 def _request(

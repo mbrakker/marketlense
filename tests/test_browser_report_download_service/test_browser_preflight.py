@@ -52,6 +52,8 @@ class _PreflightPage:
             "location_href": self.url,
             "title": "Rendered publisher report",
             "html_size": len(self.content()),
+            "cookie_names": ["session"],
+            "local_storage_keys": ["publisherConsent"],
         }
 
 
@@ -131,6 +133,39 @@ def test_browser_preflight_contract_round_trip() -> None:
     assert restored_response.probe.avoided_agent_call is True
 
 
+def test_browser_preflight_skips_email_route_without_positive_evidence(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        preflight_runtime,
+        "import_module",
+        lambda module_name: _preflight_runtime(pdf_url=None),
+    )
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=_settings(tmp_path),
+        route_family_hint="browser_email_form",
+    )
+
+    response = preflight_runtime.try_browser_preflight_probe(
+        request=request,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        execution_url="https://example.com/report",
+        download_dir=tmp_path / "downloads",
+    )
+
+    assert response.probe.status == "escalated"
+    assert response.probe.escalation_reason == (
+        "preflight_evidence_insufficient_for_route_family"
+    )
+    assert response.probe.reuse_state is not None
+    assert response.probe.reuse_state.status == "skipped"
+
+
 def test_browser_preflight_confirms_js_rendered_pdf_without_full_agent(
     tmp_path: Path,
     caplog,
@@ -189,6 +224,7 @@ def test_browser_preflight_confirms_js_rendered_pdf_without_full_agent(
     assert (
         "browser_preflight_js_pdf_probe" in response.terminal_evidence.evidence_labels
     )
+    assert "preflight_reuse_state_available" in response.terminal_evidence.evidence_labels
     assert_no_defaulted_required_fields(response)
     events = [
         json.loads(record.message)

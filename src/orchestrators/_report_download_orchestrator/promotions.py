@@ -22,7 +22,7 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.report_download_orchestrator")
 
-_ROUTE_PLAYBOOK_PROMOTION_MODES = {"disabled", "dry_run", "write"}
+_ROUTE_PLAYBOOK_PROMOTION_MODES = {"disabled", "dry_run", "canary", "write"}
 _ROUTE_PLAYBOOK_SUCCESS_OUTCOMES = {"downloaded", "email_requested", "captured"}
 _ROUTE_PLAYBOOK_VERIFIED_STATUSES = {"verified", "recovered"}
 
@@ -105,6 +105,7 @@ def evaluate_route_playbook_promotion(
                 "playbook_version": response.version,
                 "promotion_status": response.status,
                 "review_diff_line_count": len(response.review_diff.splitlines()),
+                "canary_review_required": mode == "canary",
             },
         )
     )
@@ -333,6 +334,7 @@ def evaluate_private_api_playbook_auto_promotion(
                 "playbook_version": response.version,
                 "promotion_status": response.status,
                 "review_diff_line_count": len(response.review_diff.splitlines()),
+                "canary_review_required": mode == "canary",
             },
         )
 

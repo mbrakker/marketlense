@@ -314,7 +314,13 @@ def _build_plan(
     redirect_target_url = _extract_tracker_target_url(request.normalized_url)
     redirect_target_kind = _classify_redirect_target(redirect_target_url)
 
-    if remembered_route is not None and _should_reuse_memory_route(remembered_route):
+    direct_pdf_request = _looks_like_pdf(request.normalized_url)
+
+    if (
+        remembered_route is not None
+        and _should_reuse_memory_route(remembered_route)
+        and not direct_pdf_request
+    ):
         remembered_route_family = _canonical_memory_route_family(
             route_kind=remembered_route.route_kind,
             route_family=remembered_route.route_family,
@@ -372,7 +378,7 @@ def _build_plan(
                 recovery_decision="primary",
             )
         )
-    elif _looks_like_pdf(request.normalized_url):
+    elif direct_pdf_request:
         steps.append(
             ReportDownloadRoutePlanStep(
                 schema_version="1.0",
@@ -459,6 +465,11 @@ def _build_plan(
         steps.append(http_step)
         steps.append(browser_step)
 
+    if direct_pdf_request:
+        steps = _pdf_route_steps_only(
+            steps=steps,
+            blocked_recovery_classes=blocked_recovery_classes,
+        )
     deduped_steps = _dedupe_steps(_annotate_recovery_steps(steps))
     planning_reason = _planning_reason(
         remembered_route=remembered_route,
@@ -474,6 +485,36 @@ def _build_plan(
         planning_reason=planning_reason,
         blocked_recovery_classes=blocked_recovery_classes,
     )
+
+
+def _prioritize_direct_pdf_steps(
+    steps: list[ReportDownloadRoutePlanStep],
+) -> list[ReportDownloadRoutePlanStep]:
+    direct_steps = [step for step in steps if step.route_family == "direct_pdf_probe"]
+    other_steps = [step for step in steps if step.route_family != "direct_pdf_probe"]
+    return [*direct_steps, *other_steps]
+
+
+def _pdf_route_steps_only(
+    *,
+    steps: list[ReportDownloadRoutePlanStep],
+    blocked_recovery_classes: list[str],
+) -> list[ReportDownloadRoutePlanStep]:
+    pdf_steps = [
+        step
+        for step in _prioritize_direct_pdf_steps(steps)
+        if step.route_family in {"direct_pdf_probe", "http_pdf_probe"}
+    ]
+    blocked_browser_families = [
+        step.route_family
+        for step in steps
+        if step.route_family.startswith("browser_")
+    ]
+    blocked_recovery_classes.extend(
+        f"{route_family}:blocked:direct_pdf_request"
+        for route_family in blocked_browser_families
+    )
+    return pdf_steps
 
 
 def _remembered_attempt_url(

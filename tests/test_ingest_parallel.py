@@ -13,13 +13,18 @@ from src.contracts.file_cache import (
 )
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.ingest import IngestOutcome
-from src.contracts.state import StateProcessedListRequest, StateRecordRequest
+from src.contracts.state import (
+    StateIngestCursorSetRequest,
+    StateProcessedListRequest,
+    StateRecordRequest,
+)
 from src.orchestrators import ingest_orchestrator as orch
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
 )
-from src.services.file_service import file_stat
+from src.services.file_service import delete_file, file_stat
+from src.services.pdf_service import check_pdf_eof
 from src.services.state_service import list_processed, record as state_record
 
 
@@ -344,6 +349,99 @@ def test_drive_cache_prefetch_downloads_and_hashes_before_report_workers(
     assert sidecar_path.exists()
 
 
+def test_ingest_file_refreshes_cached_pdf_without_eof_before_generation(
+    ingest_settings,
+    run_context,
+) -> None:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="corrupt-cache-file",
+        name="Corrupt cache.pdf",
+        modified_time=None,
+        md5_checksum=None,
+    )
+    cache_path = Path(settings.cache_dir) / f"{file.file_id}.pdf"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_bytes(b"%PDF-1.4\ntruncated body without trailer\n")
+    download_calls: list[str] = []
+
+    def _download(req, ctx):
+        del ctx
+        payload = _pdf_bytes()
+        Path(req.output_path).write_bytes(payload)
+        download_calls.append(req.file.file_id)
+        return DriveDownloadToPathResponse(
+            schema_version="1.0",
+            file=req.file,
+            output_path=req.output_path,
+            md5=None,
+            size=len(payload),
+        )
+
+    def _generate_report(current_file, current_cache_path, current_settings, md5, ctx):
+        del current_settings, ctx
+        assert current_file.file_id == file.file_id
+        assert current_cache_path == str(cache_path)
+        assert download_calls == [file.file_id]
+        assert Path(current_cache_path).read_bytes().endswith(b"%%EOF\n")
+        assert md5
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=current_file.file_id,
+            name=current_file.name or current_file.file_id,
+            md5=md5,
+            html_path=str(Path(settings.output_dir) / "corrupt-cache-file.html"),
+            status="processed",
+        )
+
+    dependencies = IngestFileDependencies(
+        should_skip=lambda *_args: False,
+        cache_pdf_path=lambda _settings, _file: str(cache_path),
+        resolve_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarResolveResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            sidecar_exists=False,
+            record=None,
+            resolved_md5=None,
+            hit=False,
+            reason="missing",
+        ),
+        ensure_file_name=lambda current_file, _settings, _ctx: current_file,
+        write_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            record=None,
+            written=bool(request.md5),
+            reason="written" if request.md5 else "incomplete_metadata",
+        ),
+        existing_report_html=lambda *_args: None,
+        run_step_with_retry=lambda _step, _ctx, operation, _retries: operation(),
+        file_stat=file_stat,
+        download_pdf_to_path=_download,
+        check_pdf_eof=check_pdf_eof,
+        delete_file=delete_file,
+        run_report_pipeline=_generate_report,
+        state_record=state_record,
+        eof_retry_limit=0,
+    )
+
+    result = run_ingest_file(
+        file=file,
+        index=0,
+        settings=settings,
+        root_ctx=run_context,
+        dependencies=dependencies,
+        logger_name=orch.logger.name,
+    )
+
+    assert result.outcome.status == "processed"
+    assert result.processed == 1
+    assert result.had_error is False
+
+
 def test_ingest_uses_batch_state_prefilter(ingest_settings) -> None:
     settings = replace(ingest_settings, batch_limit=2, ingest_worker_limit=1)
     files = [
@@ -409,6 +507,37 @@ def test_ingest_uses_batch_state_prefilter(ingest_settings) -> None:
 
     assert batch_calls["count"] == 1
     assert [row.file_id for row in results] == ["file_b", "file_c"]
+
+
+def test_ingest_limit_uses_cursor_unless_rescan_requested(ingest_settings) -> None:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    cursor = "2026-06-15T12:00:00Z"
+    orch.set_ingest_cursor(
+        StateIngestCursorSetRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            last_successful_ingest_utc=cursor,
+        ),
+        orch.new_run_context(),
+    )
+
+    modified_after = orch._resolve_modified_after(
+        settings,
+        limit=1,
+        force_report_cards=False,
+        rescan=False,
+        root_ctx=orch.new_run_context(),
+    )
+    rescan_modified_after = orch._resolve_modified_after(
+        settings,
+        limit=1,
+        force_report_cards=False,
+        rescan=True,
+        root_ctx=orch.new_run_context(),
+    )
+
+    assert modified_after == cursor
+    assert rescan_modified_after is None
 
 
 def test_ingest_retries_doc_map_empty_state_when_text_validation_passed(

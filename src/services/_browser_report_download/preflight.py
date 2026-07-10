@@ -25,6 +25,7 @@ from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserPreflightProbeResponse,
     BrowserPreflightProbeResult,
+    BrowserPreflightReuseState,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
 )
@@ -82,13 +83,20 @@ def try_browser_preflight_probe(
 ) -> BrowserPreflightProbeResponse:
     started = time.monotonic()
     target_url = str(execution_url or request.attempt_url or request.url).strip()
-    if not _should_run_browser_preflight(request):
+    skip_reason = _preflight_skip_reason(request)
+    if skip_reason:
         probe = _probe_result(
             status="escalated",
             started_url=target_url,
             duration_seconds=0.0,
-            escalation_reason="route_family_not_eligible",
-            evidence_labels=["preflight_skipped_route_family"],
+            escalation_reason=skip_reason,
+            evidence_labels=["preflight_skipped", skip_reason],
+            reuse_state=BrowserPreflightReuseState(
+                schema_version="1.0",
+                status="skipped",
+                final_url=target_url,
+                candidate_pdf_urls=[],
+            ),
         )
         _log_probe_complete(ctx=ctx, normalized_url=normalized_url, probe=probe)
         return BrowserPreflightProbeResponse(schema_version="1.0", probe=probe)
@@ -142,6 +150,10 @@ def try_browser_preflight_probe(
             ),
             escalation_reason="" if selected_pdf_url else "no_rendered_pdf_candidate",
             avoided_agent_call=bool(selected_pdf_url),
+            reuse_state=_reuse_state_from_runtime(
+                runtime_evidence=runtime_evidence,
+                candidate_pdf_urls=candidate_urls,
+            ),
         )
         if not selected_pdf_url:
             _log_probe_complete(ctx=ctx, normalized_url=normalized_url, probe=probe)
@@ -287,6 +299,11 @@ def _preflight_result(
             evidence_labels=[
                 "browser_preflight_js_pdf_probe",
                 *probe.evidence_labels,
+                *(
+                    ["preflight_reuse_state_available"]
+                    if probe.reuse_state is not None
+                    else []
+                ),
                 "verified",
                 "application/pdf",
             ],
@@ -379,6 +396,8 @@ async def _run_preflight_session_async(
             "html_size": int(rendered.get("html_size") or len(html or "")),
             "pdf_candidates": rendered.get("pdf_candidates") or [],
             "event_urls": event_urls,
+            "cookie_names": rendered.get("cookie_names") or [],
+            "local_storage_keys": rendered.get("local_storage_keys") or [],
         }
     finally:
         await _stop_browser(browser)
@@ -413,6 +432,14 @@ async def _inspect_rendered_page(
         location_href: window.location.href,
         title: document.title,
         html_size: html.length,
+        cookie_names: document.cookie ? document.cookie.split(';').map((item) => item.split('=')[0].trim()).filter(Boolean) : [],
+        local_storage_keys: (() => {
+          try {
+            return Object.keys(window.localStorage || {});
+          } catch (_err) {
+            return [];
+          }
+        })(),
       };
     }
     """
@@ -600,6 +627,7 @@ def _probe_result(
     evidence_labels: list[str] | None = None,
     escalation_reason: str = "",
     avoided_agent_call: bool = False,
+    reuse_state: BrowserPreflightReuseState | None = None,
 ) -> BrowserPreflightProbeResult:
     return BrowserPreflightProbeResult(
         schema_version=_PREFLIGHT_SCHEMA_VERSION,
@@ -618,20 +646,62 @@ def _probe_result(
         escalation_reason=escalation_reason,
         avoided_agent_call=avoided_agent_call,
         false_negative_rate_sample=0.0,
+        reuse_state=reuse_state,
     )
 
 
-def _should_run_browser_preflight(request: BrowserReportDownloadRequest) -> bool:
+def _preflight_skip_reason(request: BrowserReportDownloadRequest) -> str:
     if (
         os.environ.get("PYTEST_CURRENT_TEST")
         and getattr(import_module, "__module__", "") == "importlib"
     ):
-        return False
+        return "pytest_importlib_guard"
     route_family = str(request.route_family_hint or "").strip()
     if route_family not in _PREFLIGHT_ROUTE_FAMILIES:
-        return False
-    return (
-        not str(request.attempt_url or request.url).strip().casefold().endswith(".pdf")
+        return "route_family_not_eligible"
+    if str(request.attempt_url or request.url).strip().casefold().endswith(".pdf"):
+        return "direct_pdf_url"
+    if route_family in {"browser_email_form", "browser_listing_hub"} and not (
+        _has_preflight_positive_evidence(request)
+    ):
+        return "preflight_evidence_insufficient_for_route_family"
+    return ""
+
+
+def _should_run_browser_preflight(request: BrowserReportDownloadRequest) -> bool:
+    return not _preflight_skip_reason(request)
+
+
+def _has_preflight_positive_evidence(request: BrowserReportDownloadRequest) -> bool:
+    if str(request.source_page_url_hint or "").strip():
+        return True
+    candidate_trace = request.candidate_trace
+    if candidate_trace is not None:
+        for attr in ("pdf_url", "source_page_url", "url"):
+            value = str(getattr(candidate_trace, attr, "") or "").strip().casefold()
+            if value.endswith(".pdf") or ".pdf?" in value:
+                return True
+    for playbook in request.selected_playbooks:
+        if getattr(playbook, "private_api_evidence", None):
+            return True
+    return False
+
+
+def _reuse_state_from_runtime(
+    *,
+    runtime_evidence: dict[str, Any],
+    candidate_pdf_urls: list[str],
+) -> BrowserPreflightReuseState:
+    return BrowserPreflightReuseState(
+        schema_version="1.0",
+        status="available",
+        final_url=str(runtime_evidence.get("final_url") or "").strip(),
+        cookie_names=_normalize_labels(runtime_evidence.get("cookie_names") or []),
+        local_storage_keys=_normalize_labels(
+            runtime_evidence.get("local_storage_keys") or []
+        ),
+        candidate_pdf_urls=_normalize_urls(candidate_pdf_urls),
+        cleanup_required=False,
     )
 
 

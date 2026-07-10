@@ -36,8 +36,12 @@ from src.generators.artifact_normalization import normalize_artifact_quotes
 from src.generators.artifact_generator import (
     _load_cached_artifacts,
     assemble_artifacts_payload,
+    build_chart_insight_cards,
     build_executive_advisory_artifacts,
+    build_key_figures,
+    build_topics_covered,
     derive_metric_spine,
+    derive_metric_spine_from_insights,
     build_topic_briefs,
     generate_artifacts,
 )

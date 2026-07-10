@@ -7,6 +7,33 @@ from .runtime import BrowserReportDownloadResult
 
 
 @dataclass(frozen=True)
+class BrowserPreflightReuseState:
+    schema_version: str = field(
+        metadata={"doc": "Browser preflight reuse-state schema version."}
+    )
+    status: str = field(
+        metadata={"doc": "available, unavailable, or skipped."}
+    )
+    final_url: str = field(metadata={"doc": "Final page URL captured by preflight."})
+    cookie_names: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Cookie names available for same-session escalation."},
+    )
+    local_storage_keys: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Local-storage keys available for same-session escalation."},
+    )
+    candidate_pdf_urls: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "PDF candidates that escalation can reuse."},
+    )
+    cleanup_required: bool = field(
+        default=False,
+        metadata={"doc": "Whether a live browser session must be cleaned up."},
+    )
+
+
+@dataclass(frozen=True)
 class BrowserPreflightProbeResult:
     schema_version: str = field(
         metadata={"doc": "Browser preflight probe-result schema version."}
@@ -65,6 +92,10 @@ class BrowserPreflightProbeResult:
         metadata={
             "doc": "Per-run false-negative metric sample: 0.0 for confirmed/verified preflight outcomes, 1.0 when later full-agent evidence shows the probe missed an avoidable direct route, else 0.0."
         }
+    )
+    reuse_state: Optional[BrowserPreflightReuseState] = field(
+        default=None,
+        metadata={"doc": "Reusable preflight state available to browser escalation."},
     )
 
 

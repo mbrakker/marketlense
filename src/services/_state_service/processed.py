@@ -145,6 +145,7 @@ def already_processed_batch(
             schema_version="1.0",
             state_db=request.state_db,
             processed_items=[],
+            processed_records=[],
         )
         logger.info(
             log_event(
@@ -158,6 +159,7 @@ def already_processed_batch(
         return response
 
     matched: list[StateBatchCheckItem] = []
+    matched_records: list[StateGetResponse] = []
     with _state_conn(request.state_db, ctx) as conn:
         for idx in range(0, len(items), BATCH_STATE_CHECK_MAX_PAIRS):
             chunk = items[idx : idx + BATCH_STATE_CHECK_MAX_PAIRS]
@@ -166,18 +168,29 @@ def already_processed_batch(
             for item in chunk:
                 params.extend((item.file_id, item.md5))
             cur = conn.execute(
-                f"SELECT file_id, md5 FROM processed WHERE {where}",
+                "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, "
+                "vector_store_status, indexed_at_utc, last_error, "
+                "text_validation_status, text_validation_reason, "
+                "text_validation_pages_json, doc_map_summary_json, "
+                f"ocr_fallback_used, ocr_pdf_path FROM processed WHERE {where}",
                 params,
             )
-            for file_id, md5 in cur.fetchall():
+            for row in cur.fetchall():
+                record = _state_get_response_from_row(row)
                 matched.append(
-                    StateBatchCheckItem(schema_version="1.0", file_id=file_id, md5=md5)
+                    StateBatchCheckItem(
+                        schema_version="1.0",
+                        file_id=record.file_id,
+                        md5=record.md5,
+                    )
                 )
+                matched_records.append(record)
 
     response = StateBatchCheckResponse(
         schema_version="1.0",
         state_db=request.state_db,
         processed_items=matched,
+        processed_records=matched_records,
     )
     logger.info(
         log_event(
@@ -193,6 +206,42 @@ def already_processed_batch(
         )
     )
     return response
+
+
+def _state_get_response_from_row(row) -> StateGetResponse:
+    (
+        file_id,
+        md5,
+        processed_at,
+        openai_file_id,
+        vector_store_id,
+        vector_store_status,
+        indexed_at_utc,
+        last_error,
+        text_validation_status,
+        text_validation_reason,
+        text_validation_pages_json,
+        doc_map_summary_json,
+        ocr_fallback_used,
+        ocr_pdf_path,
+    ) = row
+    return StateGetResponse(
+        schema_version="1.0",
+        file_id=file_id,
+        md5=md5,
+        processed_at=processed_at,
+        openai_file_id=openai_file_id,
+        vector_store_id=vector_store_id,
+        vector_store_status=vector_store_status,
+        indexed_at_utc=indexed_at_utc,
+        last_error=last_error,
+        text_validation_status=text_validation_status,
+        text_validation_reason=text_validation_reason,
+        text_validation_pages=_parse_int_list(text_validation_pages_json),
+        doc_map_summary=_parse_dict(doc_map_summary_json),
+        ocr_fallback_used=bool(ocr_fallback_used),
+        ocr_pdf_path=ocr_pdf_path,
+    )
 
 
 def record(request: StateRecordRequest, ctx: RunContext) -> None:

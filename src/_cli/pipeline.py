@@ -194,6 +194,11 @@ def ingest(
         "--force-report-cards",
         help="Reprocess reports whose report-card manifest is missing or invalid",
     ),
+    rescan: bool = typer.Option(
+        False,
+        "--rescan",
+        help="Ignore the ingest cursor and list Drive from the current folder scope",
+    ),
 ):
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_ingest")
@@ -228,6 +233,7 @@ def ingest(
             limit=limit,
             ctx=ctx,
             force_report_cards=force_report_cards,
+            rescan=rescan,
         )
     except AppError as exc:
         if exc.code == "ingest_locked":
