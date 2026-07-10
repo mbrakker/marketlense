@@ -1706,6 +1706,61 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybookExecutionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "normalized_url": {
+          "type": "string"
+        },
+        "page_driver": {},
+        "playbook": {
+          "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePlaybook"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "playbook",
+        "normalized_url",
+        "page_driver"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybookExecutionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "drift_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "playbook_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "step_results": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.playbooks.BrowserRoutePlaybookStepExecution"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "playbook_id",
+        "step_results"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.playbooks.BrowserRoutePlaybookHistoryEntry": {
       "additionalProperties": false,
       "properties": {
@@ -1910,10 +1965,25 @@
         "action": {
           "type": "string"
         },
+        "expected_text": {
+          "type": "string"
+        },
+        "expected_url_contains": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
+        "selector": {
+          "type": "string"
+        },
+        "selector_type": {
+          "type": "string"
+        },
         "target": {
+          "type": "string"
+        },
+        "value": {
           "type": "string"
         },
         "verification": {
@@ -1925,6 +1995,41 @@
         "action",
         "target",
         "verification"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.playbooks.BrowserRoutePlaybookStepExecution": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "drift_reason": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "index",
+        "action",
+        "target",
+        "status",
+        "evidence"
       ],
       "type": "object"
     },
@@ -2209,6 +2314,16 @@
           },
           "type": "array"
         },
+        "reuse_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._browser_download.preflight.BrowserPreflightReuseState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -2239,6 +2354,47 @@
         "escalation_reason",
         "avoided_agent_call",
         "false_negative_rate_sample"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.preflight.BrowserPreflightReuseState": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_pdf_urls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cleanup_required": {
+          "type": "boolean"
+        },
+        "cookie_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "final_url": {
+          "type": "string"
+        },
+        "local_storage_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "final_url"
       ],
       "type": "object"
     },
@@ -11686,6 +11842,9 @@
         "figure_caption_timeout_seconds": {
           "type": "number"
         },
+        "final_crop_dpi": {
+          "type": "integer"
+        },
         "gdrive_folder_id": {
           "type": "string"
         },
@@ -16598,6 +16757,9 @@
         },
         "figure_caption_timeout_seconds": {
           "type": "number"
+        },
+        "final_crop_dpi": {
+          "type": "integer"
         },
         "gdrive_folder_id": {
           "type": "string"
@@ -21835,6 +21997,9 @@
     "src.contracts.report_assets.CropRequest": {
       "additionalProperties": false,
       "properties": {
+        "dpi": {
+          "type": "integer"
+        },
         "items": {
           "items": {
             "$ref": "#/$defs/src.contracts.report_models.CropItem"
@@ -25022,6 +25187,12 @@
         "processed_items": {
           "items": {
             "$ref": "#/$defs/src.contracts.state.StateBatchCheckItem"
+          },
+          "type": "array"
+        },
+        "processed_records": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.state.StateGetResponse"
           },
           "type": "array"
         },
@@ -29362,6 +29533,9 @@
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "validation_mode": {
           "type": "string"
         },
         "vector_store_id": {

@@ -1,7 +1,44 @@
 from __future__ import annotations
 
-from src.services._config_service.common import *
-from src.services._config_service.settings_resolvers import *
+from dataclasses import asdict, fields
+from pathlib import Path
+from typing import Any
+
+from dotenv import find_dotenv, load_dotenv
+
+from src.contracts.config import (
+    AppSettings,
+    ConfigLoadRequest,
+    IngestSettingsBuildRequest,
+)
+from src.contracts.ingest import IngestSettings
+from src.contracts.run_context import RunContext
+from src.services._config_service.common import (
+    CONFIG_PATH,
+    _default_config_value,
+    _env_value,
+    _load_config_sections,
+    _normalize_openai_models,
+    log_event,
+    logger,
+)
+from src.services._config_service.settings_resolvers import (
+    _resolve_analysis_settings,
+    _resolve_artifact_settings,
+    _resolve_candidate_page_gate_settings,
+    _resolve_contents_settings,
+    _resolve_cross_report_analysis_settings,
+    _resolve_drive_auth_settings,
+    _resolve_drive_settings,
+    _resolve_evidence_pack_settings,
+    _resolve_figure_caption_settings,
+    _resolve_ingest_runtime_settings,
+    _resolve_llm_runtime_settings,
+    _resolve_paths_settings,
+    _resolve_pdf_text_settings,
+    _resolve_rank_settings,
+    _resolve_validation_settings,
+)
 
 
 def _to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
@@ -91,6 +128,7 @@ def _config_load_complete_fields(
         "crop_refine_enabled": settings.crop_refine_enabled,
         "crop_refine_mode": settings.crop_refine_mode,
         "crop_refine_page_dpi": settings.crop_refine_page_dpi,
+        "final_crop_dpi": settings.final_crop_dpi,
         "crop_refine_temperature": settings.crop_refine_temperature,
         "crop_refine_timeout_seconds": settings.crop_refine_timeout_seconds,
         "figure_caption_enabled": settings.figure_caption_enabled,
@@ -314,6 +352,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         crop_refine_enabled=rank_settings["crop_refine_enabled"],
         crop_refine_mode=rank_settings["crop_refine_mode"],
         crop_refine_page_dpi=rank_settings["crop_refine_page_dpi"],
+        final_crop_dpi=rank_settings["final_crop_dpi"],
         crop_refine_temperature=rank_settings["crop_refine_temperature"],
         crop_refine_timeout_seconds=rank_settings["crop_refine_timeout_seconds"],
         figure_caption_enabled=figure_caption_settings["figure_caption_enabled"],

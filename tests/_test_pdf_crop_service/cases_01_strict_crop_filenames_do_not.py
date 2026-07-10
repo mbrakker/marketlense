@@ -285,6 +285,24 @@ def test_tighten_table_crop_rect_trims_top_page_number_but_keeps_header_band(tmp
     assert tightened.y1 == pytest.approx(padded_rect.y1)
 
 
+def test_tighten_table_crop_rect_snaps_to_high_confidence_outer_rules(tmp_path):
+    pdf_path = tmp_path / "table_outer_rules.pdf"
+    _build_pdf_with_table_outer_rules(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        clipped_rect = fitz.Rect(92.0, 130.0, 526.0, 336.0)
+        tightened = _tighten_table_crop_rect(page, clipped_rect)
+    finally:
+        doc.close()
+
+    assert tightened.x0 <= 70.5
+    assert tightened.y0 <= 115.5
+    assert tightened.x1 >= 549.5
+    assert tightened.y1 >= 354.5
+
+
 def test_table_crop_regions_stitch_split_table_title_and_note_for_adjacent_pages(
     tmp_path,
 ):
@@ -554,6 +572,44 @@ def test_verify_crop_image_rejects_neighbor_contamination() -> None:
     assert "neighbor_contamination" in result["defect_labels"]
 
 
+def test_verify_crop_image_rejects_chart_with_axis_clipped_at_edges() -> None:
+    img = Image.new("RGB", (320, 180), (255, 255, 255))
+    for x in range(0, 285):
+        img.putpixel((x, 179), (0, 0, 0))
+        img.putpixel((x, 178), (0, 0, 0))
+    for y in range(20, 180):
+        img.putpixel((0, y), (0, 0, 0))
+        img.putpixel((1, y), (0, 0, 0))
+    for x in range(42, 280):
+        y = 145 - ((x - 42) // 4)
+        img.putpixel((x, y), (20, 80, 190))
+        img.putpixel((x, min(179, y + 1)), (20, 80, 190))
+
+    result = verify_crop_image(img, crop_type="chart")
+
+    assert result["accepted"] is False
+    assert "chart_axis_or_label_clipped" in result["defect_labels"]
+    assert result["detectors"]["chart_completeness"]["accepted"] is False
+
+
+def test_verify_crop_image_rejects_card_container_clipped_at_boundary() -> None:
+    img = Image.new("RGB", (260, 160), (255, 255, 255))
+    for x in range(0, 242):
+        for y in range(12, 148):
+            img.putpixel((x, y), (228, 236, 252))
+    for x in range(16, 226):
+        img.putpixel((x, 28), (55, 90, 160))
+    for y in range(42, 128):
+        img.putpixel((54, y), (55, 90, 160))
+        img.putpixel((55, y), (55, 90, 160))
+
+    result = verify_crop_image(img, crop_type="figure")
+
+    assert result["accepted"] is False
+    assert "visual_card_boundary_clipped" in result["defect_labels"]
+    assert result["detectors"]["visual_card_boundary"]["accepted"] is False
+
+
 def test_content_aware_trim_handles_gradient_margin_without_clipping_card() -> None:
     img = Image.new("RGB", (180, 120), (255, 255, 255))
     for x in range(180):
@@ -754,12 +810,15 @@ __all__ = [
     "test_tighten_chart_crop_rect_expands_to_fill_top_when_internal_sentence_is_not_heading",
     "test_legacy_chart_border_trim_keeps_extra_bottom_padding_for_bottom_edge_text",
     "test_tighten_table_crop_rect_trims_top_page_number_but_keeps_header_band",
+    "test_tighten_table_crop_rect_snaps_to_high_confidence_outer_rules",
     "test_table_crop_regions_stitch_split_table_title_and_note_for_adjacent_pages",
     "test_table_strict_clamps_after_note_and_avoids_section_spillover",
     "test_table_strict_detects_mid_statlink_for_bottom_clamp",
     "test_chart_strict_keeps_note_that_crosses_bbox_bottom",
     "test_publication_strict_writes_final_crop_diagnostics",
     "test_verify_crop_image_rejects_neighbor_contamination",
+    "test_verify_crop_image_rejects_chart_with_axis_clipped_at_edges",
+    "test_verify_crop_image_rejects_card_container_clipped_at_boundary",
     "test_content_aware_trim_handles_gradient_margin_without_clipping_card",
     "test_render_preview_and_crop_refine_page_render_create_assets",
     "test_render_preview_compacts_filename_for_long_report_slug",

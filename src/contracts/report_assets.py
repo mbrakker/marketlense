@@ -243,6 +243,10 @@ class CropRequest:
             "doc": "Crop mode: legacy|figure_strict|table_strict|chart_strict|publication_strict."
         },
     )
+    dpi: int = field(
+        default=144,
+        metadata={"doc": "Render DPI for final cropped PNG assets."},
+    )
     pdf_context: Optional[PdfContext] = field(
         default=None,
         metadata={"doc": "Optional pre-opened PDF context to reuse handles."},

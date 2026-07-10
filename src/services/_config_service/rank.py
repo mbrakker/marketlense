@@ -1,6 +1,18 @@
 from __future__ import annotations
 
-from src.services._config_service.common import *
+from typing import Any
+
+from src.services._config_service.common import (
+    _SettingSpec,
+    _default_config_value,
+    _opt_int,
+    _resolve_allowed_string,
+    _resolve_scalar_settings,
+    _to_config_bool,
+    _to_float,
+    _to_int,
+)
+
 
 def _resolve_rank_settings(
     rank: dict[str, Any],
@@ -88,6 +100,15 @@ def _resolve_rank_settings(
                 coerce=_to_int,
             ),
             _SettingSpec(
+                field_name="final_crop_dpi",
+                config_key="final_crop_dpi",
+                default=_to_int(
+                    _default_config_value("rank", "final_crop_dpi", fallback=216),
+                    216,
+                ),
+                coerce=_to_int,
+            ),
+            _SettingSpec(
                 field_name="crop_refine_temperature",
                 config_key="crop_refine_temperature",
                 default=_to_float(
@@ -127,5 +148,6 @@ def _resolve_rank_settings(
         resolved["rank_timeout_seconds"],
     )
     return resolved
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

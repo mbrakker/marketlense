@@ -11,6 +11,9 @@ from typing import List
 import pymupdf as fitz
 from PIL import Image
 
+from src.services._pdf._crop.boundary_detectors import (
+    detect_rendered_crop_boundaries,
+)
 from src.utils.errors import AppError
 
 PDF_CROP_EXCEPTIONS = (RuntimeError, ValueError, TypeError, AttributeError, OSError)
@@ -251,6 +254,13 @@ def verify_crop_image(
         and (width < 160 or height < 100)
     ):
         defect_labels.append("low_information")
+    detector_defects, detector_results = detect_rendered_crop_boundaries(
+        img,
+        crop_type=crop_type,
+    )
+    for defect in detector_defects:
+        if defect not in defect_labels:
+            defect_labels.append(defect)
     total_score = round(
         (
             completeness * 0.25
@@ -278,6 +288,7 @@ def verify_crop_image(
         "defect_labels": defect_labels,
         "edge_density": {key: round(value, 4) for key, value in edge_density.items()},
         "edge_leakage": {key: round(value, 4) for key, value in edge_leakage.items()},
+        "detectors": detector_results,
     }
 
 
@@ -512,8 +523,14 @@ def _stack_crop_images(images: list[Image.Image]) -> Image.Image:
     return canvas
 
 
-def _render_clip_image(page: fitz.Page, rect: fitz.Rect) -> Image.Image:
-    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), clip=rect, alpha=False)
+def _render_clip_image(
+    page: fitz.Page, rect: fitz.Rect, *, render_scale: float = 2.0
+) -> Image.Image:
+    pix = page.get_pixmap(
+        matrix=fitz.Matrix(render_scale, render_scale),
+        clip=rect,
+        alpha=False,
+    )
     return Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
 
 

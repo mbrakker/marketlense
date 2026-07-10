@@ -242,6 +242,14 @@ class IngestSettings:
             "doc": "DPI used when rendering page context images for crop refinement."
         },
     )
+    final_crop_dpi: int = field(
+        default=216,
+        metadata={
+            "doc": (
+                "DPI used when rendering final selected table/chart PNG crops for HTML."
+            )
+        },
+    )
     crop_refine_temperature: float = field(
         default=0.0,
         metadata={"doc": "Sampling temperature for crop refinement model calls."},

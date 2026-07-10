@@ -336,6 +336,38 @@ def _build_pdf_with_table_header_band_and_page_number(path: Path) -> None:
     doc.close()
 
 
+def _build_pdf_with_table_outer_rules(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=520)
+    table_rect = fitz.Rect(70, 115, 550, 355)
+    page.insert_text((70, 88), "Table 4. Boundary snap test", fontsize=14)
+    page.draw_rect(table_rect, color=(0, 0, 0), width=1)
+    for y in [155, 195, 235, 275, 315]:
+        page.draw_line(
+            (table_rect.x0, y),
+            (table_rect.x1, y),
+            color=(0.7, 0.7, 0.7),
+            width=0.5,
+        )
+    for x in [190, 310, 430]:
+        page.draw_line(
+            (x, table_rect.y0),
+            (x, table_rect.y1),
+            color=(0.7, 0.7, 0.7),
+            width=0.5,
+        )
+    page.insert_text((88, 142), "Region", fontsize=9)
+    page.insert_text((220, 142), "2025", fontsize=9)
+    page.insert_text((340, 142), "2026", fontsize=9)
+    page.insert_text((458, 142), "Delta", fontsize=9)
+    page.insert_text((88, 182), "North", fontsize=9)
+    page.insert_text((220, 182), "31", fontsize=9)
+    page.insert_text((340, 182), "39", fontsize=9)
+    page.insert_text((458, 182), "+8", fontsize=9)
+    doc.save(path.as_posix())
+    doc.close()
+
+
 def _build_pdf_with_split_table_title_and_note(path: Path) -> None:
     doc = fitz.open()
 

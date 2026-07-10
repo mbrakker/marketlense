@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-08
+Last audited: 2026-07-10
 
 This file is the single active backlog for this repository. It supersedes older backlog notes, archived planning docs, and ad hoc audit intake.
 
@@ -243,6 +243,16 @@ Scoring:
     - Escalation returns accept, repair, or reject with typed defect labels, provider request metadata, cost accounting, and a capped repair budget.
     - Default runs remain deterministic and no-model; live profile benchmarks report escalation rate, accepted/rejected deltas, model-call count, and qualitative before/after examples from existing benchmark artifacts.
     - Tests cover no-escalation default behavior, bounded low-confidence escalation, no PDF-service model calls, and preserved deterministic sidecar fields.
+
+- **Title:** Promote final-crop QA sidecars into release scorecards and selection telemetry [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Final crop QA now emits DPI, quality score, defect labels, and table/chart/card detector diagnostics, but release evidence and selection summaries still rely mostly on candidate/crop signatures and manual visual review.
+  - Why implement: Makes the new deterministic detectors operational: regressions become visible by report, candidate type, publisher, and crop profile, and selection can prioritize high-quality accepted crops without waiting for manual review.
+  - Tradeoffs / risks: Metrics must remain diagnostic until retained real-artifact baselines prove stable, and public rendering must not expose raw QA internals.
+  - Acceptance Criteria:
+    - Run health scorecards and release evidence manifests can ingest final crop `.qa.json` sidecars and report accepted/rejected counts, mean/min quality score, defect-label counts, detector confidence bands, render DPI, and artifact-size deltas.
+    - Figure selection telemetry records the selected crop profile, QA sidecar path, total score, defect labels, and detector summary for each accepted user-facing crop.
+    - Benchmarks compare the same existing report artifacts before/after profile changes and flag quality-score drops, clipped-boundary increases, or unexpected storage/runtime growth.
+    - Tests cover sidecar aggregation, missing-sidecar failure reporting, redaction of diagnostics from public output, and no change to default no-model crop behavior.
 
 ## 5. User-Facing Output Quality and Editorial Contracts
 

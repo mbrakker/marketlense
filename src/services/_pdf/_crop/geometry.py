@@ -11,6 +11,7 @@ from typing import Optional
 import pymupdf as fitz
 from PIL import Image
 
+from src.services._pdf._crop.boundary_detectors import snap_table_rect_to_outer_rules
 from src.services._pdf._crop.image_ops import (
     CROP_TRIM_KEEP_PX,
     CROP_TRIM_MIN_PX,
@@ -427,6 +428,7 @@ def _tighten_table_crop_rect(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     if adjusted.is_empty:
         return adjusted
     adjusted = _trim_top_page_number(adjusted, page, None) & page.rect
+    adjusted = snap_table_rect_to_outer_rules(page, adjusted) & page.rect
     if adjusted.width < 1 or adjusted.height < 1:
         return rect & page.rect
     return adjusted

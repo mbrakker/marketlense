@@ -92,6 +92,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
                 "count": len(request.items),
                 "subdir": request.subdir,
                 "mode": request.mode,
+                "dpi": request.dpi,
                 "using_context": bool(
                     request.pdf_context and request.pdf_context.fitz_doc
                 ),
@@ -106,6 +107,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
         request.items,
         pad=request.pad,
         mode=request.mode,
+        dpi=request.dpi,
         doc=request.pdf_context.fitz_doc if request.pdf_context else None,
         artifact_cache=artifact_cache,
         ctx=ctx,
@@ -133,6 +135,7 @@ def _crop_regions(
     items: Iterable[CropItem],
     pad: int = 8,
     mode: str = "legacy",
+    dpi: int = 144,
     doc: Optional[fitz.Document] = None,
     artifact_cache=None,
     ctx: RunContext | None = None,
@@ -144,6 +147,8 @@ def _crop_regions(
     paths = []
     items_list = list(items)
     page_fingerprint_cache: dict[int, str] = {}
+    render_dpi = max(72, int(dpi or 144))
+    render_scale = render_dpi / 72.0
     local_doc = doc or fitz.open(pdf_path)
     try:
         regions: list[_ResolvedCropRegion] = []
@@ -239,6 +244,7 @@ def _crop_regions(
                     "mode": str(mode or ""),
                     "effective_mode": _effective_crop_mode(mode, it.type),
                     "pad": int(pad),
+                    "dpi": int(render_dpi),
                     "subdir": safe_subdir,
                     "resolved_rect": [
                         round(float(region.rect.x0), 3),
@@ -300,7 +306,9 @@ def _crop_regions(
                 paths.append(rel.as_posix())
                 continue
             pix = page.get_pixmap(
-                matrix=fitz.Matrix(2, 2), clip=region.rect, alpha=False
+                matrix=fitz.Matrix(render_scale, render_scale),
+                clip=region.rect,
+                alpha=False,
             )
             img: Optional[Image.Image] = None
             effective_mode = _effective_crop_mode(mode, it.type)
@@ -395,7 +403,9 @@ def _crop_regions(
                     ):
                         stack.append(
                             _render_clip_image(
-                                local_doc[augment.prepend_page], augment.prepend_rect
+                                local_doc[augment.prepend_page],
+                                augment.prepend_rect,
+                                render_scale=render_scale,
                             )
                         )
                     stack.append(base_img)
@@ -405,7 +415,9 @@ def _crop_regions(
                     ):
                         stack.append(
                             _render_clip_image(
-                                local_doc[augment.append_page], augment.append_rect
+                                local_doc[augment.append_page],
+                                augment.append_rect,
+                                render_scale=render_scale,
                             )
                         )
                     img = _stack_crop_images(stack)
@@ -472,6 +484,8 @@ def _crop_regions(
                     trim_amounts=trim_amounts,
                     qa_result=qa_result,
                     repair_actions=repair_actions,
+                    render_dpi=render_dpi,
+                    render_scale=render_scale,
                 )
                 if not qa_result.get("accepted"):
                     if ctx is not None:
@@ -548,6 +562,8 @@ def _write_crop_diagnostics(
     trim_amounts: tuple[int, int, int, int],
     qa_result: dict[str, object],
     repair_actions: list[str],
+    render_dpi: int,
+    render_scale: float,
 ) -> None:
     raw_defect_labels = qa_result.get("defect_labels")
     defect_labels = raw_defect_labels if isinstance(raw_defect_labels, list) else []
@@ -565,7 +581,8 @@ def _write_crop_diagnostics(
             round(float(region.rect.x1), 3),
             round(float(region.rect.y1), 3),
         ],
-        "render_scale": 2,
+        "render_dpi": int(render_dpi),
+        "render_scale": round(float(render_scale), 4),
         "trims": {
             "top": int(trim_amounts[0]),
             "bottom": int(trim_amounts[1]),

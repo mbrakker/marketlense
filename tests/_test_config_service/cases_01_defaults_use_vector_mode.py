@@ -657,6 +657,7 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
                 "crop_refine_enabled": True,
                 "crop_refine_mode": "invalid-mode",
                 "crop_refine_page_dpi": 111,
+                "final_crop_dpi": 222,
                 "crop_refine_temperature": 0.0,
             }
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
@@ -678,6 +679,7 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
         self.assertTrue(settings.crop_refine_enabled)
         self.assertEqual("adaptive", settings.crop_refine_mode)
         self.assertEqual(111, settings.crop_refine_page_dpi)
+        self.assertEqual(222, settings.final_crop_dpi)
         self.assertEqual(0.0, settings.crop_refine_temperature)
         self.assertEqual(
             settings.rank_timeout_seconds, settings.crop_refine_timeout_seconds

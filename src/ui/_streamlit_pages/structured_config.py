@@ -454,6 +454,12 @@ def render_structured_config_form(
                     min_value=72,
                     step=1,
                 )
+                rank_final_crop_dpi = st.number_input(
+                    "Final Crop DPI",
+                    value=_as_int(rank.get("final_crop_dpi"), 216),
+                    min_value=72,
+                    step=1,
+                )
                 rank_crop_refine_temperature = st.number_input(
                     "Crop Refine Temperature",
                     value=_as_float(rank.get("crop_refine_temperature"), 0.0),
@@ -652,6 +658,7 @@ def render_structured_config_form(
     rank["crop_refine_enabled"] = bool(rank_crop_refine_enabled)
     rank["crop_refine_mode"] = rank_crop_refine_mode
     rank["crop_refine_page_dpi"] = int(rank_crop_refine_page_dpi)
+    rank["final_crop_dpi"] = int(rank_final_crop_dpi)
     rank["crop_refine_temperature"] = float(rank_crop_refine_temperature)
     rank["crop_refine_timeout_seconds"] = float(rank_crop_refine_timeout_seconds)
     working["rank"] = rank

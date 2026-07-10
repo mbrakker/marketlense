@@ -132,6 +132,7 @@ rank:
   crop_refine_enabled: true
   crop_refine_mode: "adaptive"
   crop_refine_page_dpi: 110
+  final_crop_dpi: 216
   crop_refine_temperature: 0.0
   crop_refine_timeout_seconds: 7200
 

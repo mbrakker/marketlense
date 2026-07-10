@@ -101,6 +101,117 @@ def test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_e
     assert selection.payload._figure_section_enabled is True
 
 
+def test_select_report_figures_uses_configured_final_crop_dpi_for_selected_gallery(
+    tmp_path,
+):
+    settings = _settings(
+        tmp_path,
+        crop_refine_enabled=False,
+        crop_refine_mode="off",
+        final_crop_dpi=216,
+        rank_selected_max=1,
+        rank_max_candidates=4,
+    )
+    table = _candidate(
+        cid="table_keep",
+        kind="table",
+        page=0,
+        preview_text="A | B\n1 | 2\n3 | 4\n5 | 6",
+        meta={"rows": 5, "cols": 3, "numeric_ratio": 0.4, "area_frac": 0.18},
+    )
+    chart = _candidate(
+        cid="chart_keep",
+        kind="chart",
+        page=1,
+        caption="Figure 2. Strong chart",
+        meta={"area_frac": 0.2, "text_ratio": 0.2},
+    )
+    crop_calls: list[tuple[str, int, list[str]]] = []
+
+    def _crop_regions(req, ctx):
+        crop_calls.append(
+            (
+                str(req.mode or ""),
+                int(req.dpi),
+                [str(item.id or "") for item in req.items],
+            )
+        )
+        return SimpleNamespace(
+            paths=[f"report/slices/{item.id}-{int(req.dpi)}.png" for item in req.items]
+        )
+
+    deps = _deps(
+        collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[table, chart]),
+        extract_best_figure=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("legacy best-figure fallback should not run")
+        ),
+        rank_candidates=lambda req, ctx: SimpleNamespace(
+            results=[
+                RankedCandidate(
+                    id="table_keep",
+                    type="table",
+                    score=99,
+                    quality_score=99,
+                    insight_score=99,
+                    data_score=99,
+                    keep=True,
+                ),
+                RankedCandidate(
+                    id="chart_keep",
+                    type="chart",
+                    score=98,
+                    quality_score=98,
+                    insight_score=98,
+                    data_score=98,
+                    keep=True,
+                ),
+            ],
+            prompt_tokens=None,
+            completion_tokens=None,
+            total_tokens=None,
+            request_id="rank",
+            raw_content="[]",
+        ),
+        crop_regions=_crop_regions,
+    )
+    payload = ReportPayload(
+        tldr="",
+        title="Report",
+        insights=[],
+        quote=Quote(text="q"),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+        source="",
+    )
+    runtime = SimpleNamespace(
+        local_pdf_path=_pdf_path(tmp_path),
+        settings=settings,
+        report_name="report",
+        file=SimpleNamespace(file_id="file"),
+        md5=None,
+        ctx=_ctx(),
+        report_worker_limit=1,
+        parallel_within_file=False,
+    )
+    source = SimpleNamespace(
+        payload=payload,
+        contents_page_number=0,
+        pdf_context=None,
+        pdf_context_for_tasks=None,
+    )
+
+    selection = rsg.select_report_figures(runtime, source, deps)
+
+    assert crop_calls == [
+        ("table_strict", 216, ["table_keep"]),
+        ("chart_strict", 216, ["chart_keep"]),
+    ]
+    assert selection.payload._figure_gallery == [
+        "report/slices/table_keep-216.png",
+        "report/slices/chart_keep-216.png",
+    ]
+
+
 def test_select_report_figures_ranks_table_and_chart_batches_concurrently(
     tmp_path,
 ):
@@ -392,6 +503,8 @@ def test_select_report_figures_crops_only_missing_fallback_candidates_after_reus
 
 __all__ = [
     "test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_exists",
+    "test_select_report_figures_uses_configured_final_crop_dpi_for_selected_gallery",
+    "test_select_report_figures_ranks_table_and_chart_batches_concurrently",
     "test_select_report_figures_reuses_existing_candidate_crops_for_fallback_gallery",
     "test_select_report_figures_crops_only_missing_fallback_candidates_after_reuse",
 ]
