@@ -188,7 +188,7 @@ def _browser_settings(
     return BrowserDownloadSettings(
         schema_version="1.0",
         openrouter_api_key="",
-        model="openai/gpt-5-mini",
+        model="gpt-5-mini",
         temperature=0.0,
         timeout_seconds=30.0,
         max_steps=8,
@@ -197,6 +197,8 @@ def _browser_settings(
         reports_db=str(reports_db),
         identity_config_path=str(work_dir / "identity.yaml"),
         identity_profile=BrowserDownloadIdentity(schema_version="1.0", fields=[]),
+        openai_api_key="",
+        openrouter_model="openai/gpt-5-mini",
         drive_upload_enabled=False,
         drive_upload_required=False,
         retry_retries=0,

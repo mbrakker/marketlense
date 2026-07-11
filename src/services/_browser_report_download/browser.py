@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -586,18 +587,25 @@ def run_browser_report_download_agent(
         )
         if pre_llm_form_result is not None:
             return pre_llm_form_result
-        llm = llm_service.build_openrouter_client(
+        llm_clients = llm_service.build_browser_use_llm_clients(
             settings=request.settings,
             ctx=ctx,
-            client_factory=browser_use.ChatOpenRouter,
+            openai_client_factory=getattr(browser_use, "ChatOpenAI", None),
+            openrouter_client_factory=getattr(browser_use, "ChatOpenRouter", None),
         )
-        agent = browser_use.Agent(
-            task=prompt_bundle.task_prompt,
-            llm=llm,
-            browser=browser,
-            output_model_schema=BrowserUseAgentResult,
-            use_judge=_BROWSER_AGENT_USE_JUDGE,
-        )
+        agent_kwargs = {
+            "task": prompt_bundle.task_prompt,
+            "llm": llm_clients.primary_llm,
+            "browser": browser,
+            "output_model_schema": BrowserUseAgentResult,
+            "use_judge": _BROWSER_AGENT_USE_JUDGE,
+        }
+        if (
+            llm_clients.fallback_llm is not None
+            and "fallback_llm" in inspect.signature(browser_use.Agent).parameters
+        ):
+            agent_kwargs["fallback_llm"] = llm_clients.fallback_llm
+        agent = browser_use.Agent(**agent_kwargs)
         history_result = _run_agent_history_with_timeout(
             agent=agent,
             browser=browser,

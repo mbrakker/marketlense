@@ -4,9 +4,12 @@ import time
 from types import SimpleNamespace
 from typing import Any, Callable, Optional, TypeVar
 
-from src.contracts.llm import LLMClientPolicy, LLMProviderOperations
+from src.contracts.llm import (
+    BrowserUseLLMClients,
+    LLMClientPolicy,
+    LLMProviderOperations,
+)
 from src.contracts.run_context import RunContext
-from src.contracts.workflow_control import ModelCallAuditRecord, ModelCallReplayBundle
 from src.services._llm_service import openai_chat, openai_responses, openrouter
 from src.services._llm_service.audit import (
     audit_record_fields,
@@ -18,6 +21,7 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 _T = TypeVar("_T")
+_BROWSER_USE_OPENAI_MODEL_DEFAULT = "gpt-5-mini"
 
 
 def _default_provider_operations() -> LLMProviderOperations:
@@ -314,6 +318,228 @@ build_openai_client_for_settings = build_client_for_settings
 openai_client_policy_from_settings = client_policy_from_settings
 
 
+def build_openai_browser_use_client(
+    *,
+    settings: Any,
+    ctx: RunContext,
+    client_factory: Callable[..., Any],
+) -> Any:
+    api_key = str(getattr(settings, "openai_api_key", "") or "").strip()
+    model = _openai_browser_use_model(getattr(settings, "model", ""))
+    if not api_key:
+        raise AppError(
+            code="openai_missing_api_key",
+            message="OPENAI_API_KEY is required for browser-use OpenAI primary",
+            retryable=False,
+            context={"model": model},
+        )
+    max_tokens = getattr(settings, "max_tokens", None)
+    effective_max_tokens = openrouter._resolve_effective_max_tokens(max_tokens)
+    fields = {
+        "provider": "openai",
+        "model": model,
+        "temperature": getattr(settings, "temperature", None),
+        "timeout_seconds": getattr(settings, "timeout_seconds", None),
+        "configured_max_tokens": max_tokens,
+        "effective_max_tokens": effective_max_tokens,
+        "max_retries": 0,
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_browser_use_openai_client_start",
+            module=logger.name,
+            fields=fields,
+        )
+    )
+    try:
+        client = client_factory(
+            model=model,
+            api_key=api_key,
+            temperature=getattr(settings, "temperature", None),
+            timeout=getattr(settings, "timeout_seconds", None),
+            max_retries=0,
+            max_completion_tokens=effective_max_tokens,
+        )
+    except (RuntimeError, OSError, TypeError, ValueError) as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="llm_browser_use_openai_client_failed",
+                module=logger.name,
+                fields={**fields, "error_type": type(exc).__name__},
+            )
+        )
+        raise AppError(
+            code="openai_browser_use_client_init_failed",
+            message="Failed to initialize browser-use OpenAI client",
+            cause=exc,
+            retryable=True,
+            context={"model": model, "provider_error_type": type(exc).__name__},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_browser_use_openai_client_complete",
+            module=logger.name,
+            fields=fields,
+        )
+    )
+    return client
+
+
+def build_browser_use_llm_clients(
+    *,
+    settings: Any,
+    ctx: RunContext,
+    openai_client_factory: Callable[..., Any] | None,
+    openrouter_client_factory: Callable[..., Any] | None,
+) -> BrowserUseLLMClients:
+    primary_llm: Any = None
+    primary_provider = ""
+    primary_model = ""
+    fallback_llm: Any = None
+    fallback_provider: str | None = None
+    fallback_model: str | None = None
+    primary_error: AppError | None = None
+
+    if (
+        openai_client_factory is not None
+        and str(getattr(settings, "openai_api_key", "") or "").strip()
+    ):
+        try:
+            primary_llm = build_openai_browser_use_client(
+                settings=settings,
+                ctx=ctx,
+                client_factory=openai_client_factory,
+            )
+            primary_provider = "openai"
+            primary_model = _openai_browser_use_model(getattr(settings, "model", ""))
+        except AppError as exc:
+            primary_error = exc
+
+    if (
+        openrouter_client_factory is not None
+        and str(getattr(settings, "openrouter_api_key", "") or "").strip()
+    ):
+        openrouter_settings = _browser_use_openrouter_settings(settings)
+        try:
+            openrouter_llm = openrouter.build_openrouter_client(
+                settings=openrouter_settings,
+                ctx=ctx,
+                client_factory=openrouter_client_factory,
+            )
+        except AppError as exc:
+            if primary_llm is None:
+                raise
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="llm_browser_use_fallback_unavailable",
+                    module=logger.name,
+                    fields={
+                        "primary_provider": primary_provider,
+                        "fallback_provider": "openrouter",
+                        "fallback_model": str(
+                            getattr(openrouter_settings, "model", "") or ""
+                        ),
+                        "error_code": exc.code,
+                        "retryable": exc.retryable,
+                    },
+                )
+            )
+        else:
+            if primary_llm is None:
+                primary_llm = openrouter_llm
+                primary_provider = "openrouter"
+                primary_model = str(getattr(openrouter_settings, "model", "") or "")
+            else:
+                fallback_llm = openrouter_llm
+                fallback_provider = "openrouter"
+                fallback_model = str(getattr(openrouter_settings, "model", "") or "")
+
+    if primary_llm is None:
+        if (
+            primary_error is not None
+            and not str(getattr(settings, "openrouter_api_key", "") or "").strip()
+        ):
+            raise primary_error
+        raise AppError(
+            code="browser_use_llm_provider_missing",
+            message="OPENAI_API_KEY or OPENROUTER_API_KEY is required for browser-use",
+            retryable=False,
+            context={
+                "openai_key_present": bool(
+                    str(getattr(settings, "openai_api_key", "") or "").strip()
+                ),
+                "openrouter_key_present": bool(
+                    str(getattr(settings, "openrouter_api_key", "") or "").strip()
+                ),
+            },
+        )
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_browser_use_clients_resolved",
+            module=logger.name,
+            fields={
+                "primary_provider": primary_provider,
+                "primary_model": primary_model,
+                "fallback_provider": fallback_provider or "",
+                "fallback_model": fallback_model or "",
+                "openai_key_present": bool(
+                    str(getattr(settings, "openai_api_key", "") or "").strip()
+                ),
+                "openrouter_key_present": bool(
+                    str(getattr(settings, "openrouter_api_key", "") or "").strip()
+                ),
+            },
+        )
+    )
+    return BrowserUseLLMClients(
+        schema_version="1.0",
+        primary_provider=primary_provider,
+        primary_model=primary_model,
+        primary_llm=primary_llm,
+        fallback_provider=fallback_provider,
+        fallback_model=fallback_model,
+        fallback_llm=fallback_llm,
+    )
+
+
+def _openai_browser_use_model(value: object) -> str:
+    model = str(value or "").strip() or _BROWSER_USE_OPENAI_MODEL_DEFAULT
+    if model.startswith("openai/"):
+        model = model.split("/", 1)[1].strip()
+    return model or _BROWSER_USE_OPENAI_MODEL_DEFAULT
+
+
+def _browser_use_openrouter_settings(settings: Any) -> Any:
+    model = str(getattr(settings, "openrouter_model", "") or "").strip()
+    if not model:
+        model = str(getattr(settings, "model", "") or "").strip()
+    if model and "/" not in model:
+        model = f"openai/{model}"
+    if not model:
+        model = f"openai/{_BROWSER_USE_OPENAI_MODEL_DEFAULT}"
+    return SimpleNamespace(
+        **{
+            name: getattr(settings, name)
+            for name in dir(settings)
+            if not name.startswith("_")
+            and not callable(getattr(settings, name, None))
+            and name != "model"
+        },
+        model=model,
+    )
+
+
 def _request_with_provider_decision(request: Any, provider_decision: str) -> Any:
     try:
         return type(
@@ -330,7 +556,7 @@ def _request_with_provider_decision(request: Any, provider_decision: str) -> Any
             },
         )()
     except Exception:
-        setattr(request, "provider_decision", provider_decision)
+        request.provider_decision = provider_decision
         return request
 
 
@@ -338,7 +564,7 @@ def _response_with_provider_decision(response: Any, provider_decision: str) -> A
     if hasattr(response, "provider_decision"):
         return response
     try:
-        setattr(response, "provider_decision", provider_decision)
+        response.provider_decision = provider_decision
         return response
     except Exception:
         return SimpleNamespace(
@@ -359,6 +585,8 @@ __all__ = [
     "build_client_from_callables",
     "build_model_call_audit_record",
     "build_model_call_replay_bundle",
+    "build_browser_use_llm_clients",
+    "build_openai_browser_use_client",
     "build_openai_client",
     "build_openai_client_for_settings",
     "build_openai_client_from_callables",

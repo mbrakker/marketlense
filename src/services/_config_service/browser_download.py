@@ -310,23 +310,31 @@ def load_browser_download_settings(
             resolver=resolver,
         )
 
-    api_key = _env_value("OPENROUTER_API_KEY")
-    if _is_missing(api_key):
-        resolver.missing.append("env:OPENROUTER_API_KEY")
+    openai_api_key = _env_value("OPENAI_API_KEY")
+    openrouter_api_key = _env_value("OPENROUTER_API_KEY")
+    if _is_missing(openai_api_key) and _is_missing(openrouter_api_key):
+        resolver.missing.append("env:OPENAI_API_KEY or env:OPENROUTER_API_KEY")
 
     http_referer: str | None = _env_value("OPENROUTER_HTTP_REFERER")
     if _is_missing(http_referer):
         http_referer = None
 
-    model = str(
+    model = _normalize_openai_browser_model(
         browser_download.get("model")
         or _env_value("BROWSER_DOWNLOAD_MODEL")
-        or _default_config_value(
-            "browser_download", "model", fallback="openai/gpt-5-mini"
-        )
-    ).strip()
+        or _default_config_value("browser_download", "model", fallback="gpt-5-mini")
+    )
     if not model:
         resolver.missing.append("browser_download.model|env:BROWSER_DOWNLOAD_MODEL")
+    openrouter_model = _normalize_openrouter_browser_model(
+        browser_download.get("openrouter_model")
+        or _env_value("BROWSER_DOWNLOAD_OPENROUTER_MODEL")
+        or browser_download.get("model")
+        or _env_value("BROWSER_DOWNLOAD_MODEL")
+        or _default_config_value(
+            "browser_download", "openrouter_model", fallback="openai/gpt-5-mini"
+        )
+    )
 
     if resolver.missing:
         logger.info(
@@ -350,7 +358,7 @@ def load_browser_download_settings(
 
     settings = BrowserDownloadSettings(
         schema_version=str(data.get("schema_version", "1.0")),
-        openrouter_api_key=api_key,
+        openrouter_api_key=openrouter_api_key,
         model=model,
         temperature=_to_float(
             browser_download.get("temperature")
@@ -407,6 +415,8 @@ def load_browser_download_settings(
         identity_config_path=identity_config_path,
         identity_profile=identity_profile,
         openrouter_http_referer=http_referer,
+        openai_api_key=openai_api_key,
+        openrouter_model=openrouter_model,
         headed=_to_bool(
             browser_download.get("headed")
             if not _is_missing(browser_download.get("headed"))
@@ -557,6 +567,9 @@ def load_browser_download_settings(
                 "identity_config_path": settings.identity_config_path,
                 "identity_field_count": len(settings.identity_profile.fields),
                 "model": settings.model,
+                "openai_api_key_present": bool(settings.openai_api_key),
+                "openrouter_api_key_present": bool(settings.openrouter_api_key),
+                "openrouter_model": settings.openrouter_model,
                 "temperature": settings.temperature,
                 "timeout_seconds": settings.timeout_seconds,
                 "max_steps": settings.max_steps,
@@ -679,6 +692,22 @@ def _load_browser_route_budgets(payload: object) -> list[BrowserDownloadRouteBud
         )
         seen.add(normalized_family)
     return budgets
+
+
+def _normalize_openai_browser_model(value: object) -> str:
+    model = str(value or "").strip()
+    if model.startswith("openai/"):
+        model = model.split("/", 1)[1].strip()
+    return model
+
+
+def _normalize_openrouter_browser_model(value: object) -> str:
+    model = str(value or "").strip()
+    if not model:
+        return ""
+    if "/" in model:
+        return model
+    return f"openai/{model}"
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]

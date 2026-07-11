@@ -274,10 +274,10 @@ class BrowserDownloadSettings:
         metadata={"doc": "Browser download settings schema version."}
     )
     openrouter_api_key: str = field(
-        metadata={"doc": "OpenRouter API key used by the local browser-use agent."}
+        metadata={"doc": "OpenRouter API key used as browser-use fallback."}
     )
     model: str = field(
-        metadata={"doc": "Model ID used by the local browser-use agent."}
+        metadata={"doc": "OpenAI model ID used by the local browser-use agent."}
     )
     temperature: float = field(
         metadata={"doc": "Sampling temperature for the browser-use agent."}
@@ -310,13 +310,21 @@ class BrowserDownloadSettings:
     openrouter_http_referer: Optional[str] = field(
         default=None,
         metadata={
-            "doc": "Optional HTTP-Referer header sent to OpenRouter for browser-use requests."
+            "doc": "Optional HTTP-Referer header sent to OpenRouter fallback requests."
         },
+    )
+    openai_api_key: str = field(
+        default="",
+        metadata={"doc": "OpenAI API key used by the browser-use primary LLM."},
+    )
+    openrouter_model: str = field(
+        default="openai/gpt-5-mini",
+        metadata={"doc": "OpenRouter model slug used by the browser-use fallback LLM."},
     )
     max_tokens: int = field(
         default=12000,
         metadata={
-            "doc": "Maximum completion tokens requested from OpenRouter for browser-use agent calls."
+            "doc": "Maximum completion tokens requested from browser-use LLM calls."
         },
     )
     headed: bool = field(

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from src.services._llm_service.client import (
     LLMServiceClient,
+    build_browser_use_llm_clients,
     build_client,
     build_client_for_settings,
     build_client_from_callables,
     build_model_call_audit_record,
     build_model_call_replay_bundle,
+    build_openai_browser_use_client,
     build_openai_client,
     build_openai_client_for_settings,
     build_openai_client_from_callables,
@@ -15,12 +17,12 @@ from src.services._llm_service.client import (
     default_openai_client_policy,
     openai_client_policy_from_settings,
 )
+from src.services._llm_service.embeddings import openai_create_embeddings
 from src.services._llm_service.openai_chat import (
     analyze_report,
     openai_chat_json,
     openai_chat_json_with_images,
 )
-from src.services._llm_service.embeddings import openai_create_embeddings
 from src.services._llm_service.openai_responses import (
     openai_ocr_pdf,
     openai_respond_with_vector_store,
@@ -53,8 +55,10 @@ __all__ = [
     "build_client",
     "build_client_for_settings",
     "build_client_from_callables",
+    "build_browser_use_llm_clients",
     "build_model_call_audit_record",
     "build_model_call_replay_bundle",
+    "build_openai_browser_use_client",
     "build_openai_client",
     "build_openai_client_for_settings",
     "build_openai_client_from_callables",

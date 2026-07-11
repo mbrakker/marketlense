@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from errno import EACCES
-from errno import EBUSY
-from errno import EPERM
+from errno import EACCES, EBUSY, EPERM
 from hashlib import sha1
 from pathlib import Path
 from shutil import rmtree
@@ -59,13 +57,13 @@ def validate_common_request(
 def validate_browser_runtime_settings(
     request: BrowserReportDownloadRequest,
 ) -> None:
-    if (
-        not request.settings.openrouter_api_key
-        or not request.settings.openrouter_api_key.strip()
+    if not (
+        str(getattr(request.settings, "openai_api_key", "") or "").strip()
+        or str(request.settings.openrouter_api_key or "").strip()
     ):
         raise AppError(
             code="browser_download_api_key_missing",
-            message="OPENROUTER_API_KEY is required for local browser-use downloads",
+            message="OPENAI_API_KEY or OPENROUTER_API_KEY is required for local browser-use downloads",
             retryable=False,
         )
     if not request.settings.model or not request.settings.model.strip():

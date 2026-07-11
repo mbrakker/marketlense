@@ -63,6 +63,7 @@ from src.services import prompt_service
 
 from src.utils.errors import AppError
 
+
 def _settings(
     tmp_path: Path,
     *,
@@ -99,12 +100,14 @@ def _settings(
             ],
         ),
         openrouter_http_referer="https://marketlense.local",
+        openai_api_key="openai-key",
         headed=False,
         retry_retries=1,
         retry_base_delay_seconds=0.1,
         retry_backoff_step_seconds=0.0,
         retry_jitter_seconds=0.0,
     )
+
 
 def _runtime(
     tmp_path: Path,
@@ -236,6 +239,7 @@ def _runtime(
         Agent=FakeAgent,
     )
 
+
 def _service_events(caplog) -> list[dict[str, object]]:
     events: list[dict[str, object]] = []
     for record in caplog.records:
@@ -245,6 +249,7 @@ def _service_events(caplog) -> list[dict[str, object]]:
         if isinstance(payload, dict):
             events.append(payload)
     return events
+
 
 class _FakeResponse:
     def __init__(
@@ -278,5 +283,20 @@ class _FakeResponse:
         if self.status_code >= 400:
             raise requests.HTTPError(f"status={self.status_code}")
 
-__all__ = [name for name in globals() if name not in {'__name__', '__annotations__', '__doc__', '__spec__', '__file__', '__package__', '__loader__', '__cached__', '__builtins__'}]
 
+__all__ = [
+    name
+    for name in globals()
+    if name
+    not in {
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+    }
+]

@@ -85,9 +85,10 @@ def test_browser_report_download_service_local_guarded(
         pytest.skip(
             "Set RUN_BROWSER_DOWNLOAD_INTEGRATION=1 to run the local browser-use integration."
         )
-    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        pytest.skip("OPENROUTER_API_KEY is required.")
+    openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    openrouter_api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not openai_api_key and not openrouter_api_key:
+        pytest.skip("OPENAI_API_KEY or OPENROUTER_API_KEY is required.")
     try:
         __import__("browser_use")
     except Exception:
@@ -107,8 +108,8 @@ def test_browser_report_download_service_local_guarded(
     try:
         settings = BrowserDownloadSettings(
             schema_version="1.0",
-            openrouter_api_key=api_key,
-            model=os.getenv("BROWSER_DOWNLOAD_MODEL", "openai/gpt-5-mini"),
+            openrouter_api_key=openrouter_api_key,
+            model=os.getenv("BROWSER_DOWNLOAD_MODEL", "gpt-5-mini"),
             temperature=0.0,
             timeout_seconds=60.0,
             max_steps=10,
@@ -129,6 +130,10 @@ def test_browser_report_download_service_local_guarded(
                 ],
             ),
             openrouter_http_referer=os.getenv("OPENROUTER_HTTP_REFERER"),
+            openai_api_key=openai_api_key,
+            openrouter_model=os.getenv(
+                "BROWSER_DOWNLOAD_OPENROUTER_MODEL", "openai/gpt-5-mini"
+            ),
             headed=False,
             retry_retries=0,
             retry_base_delay_seconds=0.0,

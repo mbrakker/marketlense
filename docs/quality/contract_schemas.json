@@ -770,6 +770,154 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.identity.BrowserDownloadRequiredSelectEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "classifier_confidence": {
+          "type": "number"
+        },
+        "field_label": {
+          "type": "string"
+        },
+        "field_name": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "host",
+        "url",
+        "field_label"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.identity.BrowserDownloadRequiredSelectOverrideProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "field_key": {
+          "type": "string"
+        },
+        "field_label": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "match_source": {
+          "type": "string"
+        },
+        "option_alias": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_value": {
+          "type": "string"
+        },
+        "semantic_family": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "host",
+        "field_key",
+        "field_label",
+        "selected_value",
+        "option_alias",
+        "semantic_family",
+        "match_source",
+        "status",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.identity.BrowserDownloadRequiredSelectOverrideRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "approved_defaults": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadRequiredSelectEvidence"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.identity.BrowserDownloadRequiredSelectOverrideResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "applied_count": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "proposals": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadRequiredSelectOverrideProposal"
+          },
+          "type": "array"
+        },
+        "refused_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "unchanged_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "proposals",
+        "applied_count",
+        "refused_count",
+        "unchanged_count"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.identity.BrowserDownloadRouteBudget": {
       "additionalProperties": false,
       "properties": {
@@ -887,6 +1035,9 @@
         "model": {
           "type": "string"
         },
+        "openai_api_key": {
+          "type": "string"
+        },
         "openrouter_api_key": {
           "type": "string"
         },
@@ -899,6 +1050,9 @@
               "type": "null"
             }
           ]
+        },
+        "openrouter_model": {
+          "type": "string"
         },
         "output_dir": {
           "type": "string"
@@ -13438,6 +13592,260 @@
       ],
       "type": "object"
     },
+    "src.contracts.crop_qa_escalation.CropQaEscalationDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "defects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "deterministic_defects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "deterministic_score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "image_path": {
+          "type": "string"
+        },
+        "input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model_confidence": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider_request_id": {
+          "type": "string"
+        },
+        "qa_sidecar_path": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "repair_instruction": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "total_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "candidate_id",
+        "image_path",
+        "qa_sidecar_path",
+        "deterministic_score",
+        "deterministic_defects",
+        "decision",
+        "reason",
+        "model_confidence",
+        "defects",
+        "repair_instruction",
+        "provider_request_id",
+        "input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "estimated_cost_usd"
+      ],
+      "type": "object"
+    },
+    "src.contracts.crop_qa_escalation.CropQaEscalationPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "cost_daily_path": {
+          "type": "string"
+        },
+        "cost_ledger_path": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "high_risk_defects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "low_confidence_max_score": {
+          "type": "number"
+        },
+        "low_confidence_min_score": {
+          "type": "number"
+        },
+        "max_escalations": {
+          "type": "integer"
+        },
+        "max_repairs": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "model_pricing": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "quality_profile": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "temperature": {
+          "type": "number"
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.crop_qa_escalation.CropQaEscalationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "crops": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/src.contracts.crop_qa_escalation.CropQaEscalationPolicy"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_dir",
+        "crops",
+        "policy"
+      ],
+      "type": "object"
+    },
+    "src.contracts.crop_qa_escalation.CropQaEscalationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "decisions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.crop_qa_escalation.CropQaEscalationDecision"
+          },
+          "type": "array"
+        },
+        "eligible_count": {
+          "type": "integer"
+        },
+        "escalation_rate": {
+          "type": "number"
+        },
+        "model_call_count": {
+          "type": "integer"
+        },
+        "reject_count": {
+          "type": "integer"
+        },
+        "repair_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "decisions",
+        "eligible_count",
+        "model_call_count",
+        "repair_count",
+        "reject_count",
+        "escalation_rate"
+      ],
+      "type": "object"
+    },
     "src.contracts.docpacks.ContradictionEntry": {
       "additionalProperties": false,
       "properties": {
@@ -16982,6 +17390,49 @@
         "cover_style_path",
         "ingest_lock_path",
         "temperature"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.BrowserUseLLMClients": {
+      "additionalProperties": false,
+      "properties": {
+        "fallback_llm": {},
+        "fallback_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fallback_provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "primary_llm": {},
+        "primary_model": {
+          "type": "string"
+        },
+        "primary_provider": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "primary_provider",
+        "primary_model",
+        "primary_llm"
       ],
       "type": "object"
     },
@@ -21530,6 +21981,46 @@
       ],
       "type": "object"
     },
+    "src.contracts.report_assets.CropOutcome": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "candidate_id": {
+          "type": "string"
+        },
+        "defects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "qa_sidecar_path": {
+          "type": "string"
+        },
+        "quality_profile": {
+          "type": "string"
+        },
+        "rejection_reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "candidate_id"
+      ],
+      "type": "object"
+    },
     "src.contracts.report_assets.CropRefineBBoxApplyRequest": {
       "additionalProperties": false,
       "properties": {
@@ -22050,6 +22541,12 @@
     "src.contracts.report_assets.CropResponse": {
       "additionalProperties": false,
       "properties": {
+        "outcomes": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.report_assets.CropOutcome"
+          },
+          "type": "array"
+        },
         "paths": {
           "items": {
             "type": "string"
@@ -23481,6 +23978,27 @@
           "type": "string"
         },
         "caption_source": {
+          "type": "string"
+        },
+        "crop_qa_accepted": {
+          "type": "boolean"
+        },
+        "crop_qa_defects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "crop_qa_score": {
+          "type": "number"
+        },
+        "crop_qa_sidecar_path": {
+          "type": "string"
+        },
+        "crop_quality_profile": {
+          "type": "string"
+        },
+        "crop_rejection_reason": {
           "type": "string"
         },
         "detected_caption": {
@@ -31161,6 +31679,138 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.AutonomousRunSupervisorInput": {
+      "additionalProperties": false,
+      "properties": {
+        "blockers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "current_state": {
+          "type": "string"
+        },
+        "duplicate": {
+          "type": "boolean"
+        },
+        "duplicate_side_effect_detected": {
+          "type": "boolean"
+        },
+        "health_gate": {
+          "$ref": "#/$defs/src.contracts.workflow_control.RunHealthGateDecision"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "idempotency_scope": {
+          "type": "string"
+        },
+        "latest_safe_checkpoint": {
+          "type": "string"
+        },
+        "preflight_passed": {
+          "type": "boolean"
+        },
+        "publish_allowed": {
+          "type": "boolean"
+        },
+        "retry_action": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "run_id",
+        "current_state",
+        "latest_safe_checkpoint",
+        "idempotency_scope",
+        "idempotency_key",
+        "preflight_passed",
+        "validation_status",
+        "health_gate"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.AutonomousRunSupervisorPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "blockers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expected_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "health_gate_outcome": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "idempotency_scope": {
+          "type": "string"
+        },
+        "preflight_passed": {
+          "type": "boolean"
+        },
+        "resume_stage": {
+          "type": "string"
+        },
+        "retry_action": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_action": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "selected_action",
+        "workflow",
+        "run_id",
+        "resume_stage",
+        "idempotency_scope",
+        "idempotency_key",
+        "retry_action",
+        "health_gate_outcome",
+        "blockers",
+        "expected_side_effects",
+        "preflight_passed",
+        "validation_status"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.ConcurrencyDecision": {
       "additionalProperties": false,
       "properties": {
@@ -31975,6 +32625,85 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.PublishRemediationTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_section": {
+          "type": "string"
+        },
+        "repair_action": {
+          "type": "string"
+        },
+        "repair_target": {
+          "type": "string"
+        },
+        "rule_id": {
+          "type": "string"
+        },
+        "sample_text": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "rule_id",
+        "severity",
+        "affected_section",
+        "repair_target",
+        "repair_action",
+        "sample_text"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.PublishRemediationWorkflow": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "type": "string"
+        },
+        "deferred_grounding_count": {
+          "type": "integer"
+        },
+        "hard_fail_count": {
+          "type": "integer"
+        },
+        "policy_mode": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.workflow_control.PublishRemediationTarget"
+          },
+          "type": "array"
+        },
+        "value_band": {
+          "type": "string"
+        },
+        "warning_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "decision",
+        "policy_mode",
+        "value_band",
+        "warning_count",
+        "deferred_grounding_count",
+        "hard_fail_count",
+        "targets"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.ResolvedRetryPolicy": {
       "additionalProperties": false,
       "properties": {
@@ -32059,6 +32788,87 @@
         "alternatives",
         "blockers",
         "explanation"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.RunHealthGateDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "blockers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "policy_version": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scorecard_run_id": {
+          "type": "string"
+        },
+        "threshold_override_used": {
+          "type": "boolean"
+        },
+        "warning_count": {
+          "type": "integer"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "outcome",
+        "action",
+        "reason",
+        "warning_count",
+        "blockers",
+        "policy_version",
+        "threshold_override_used",
+        "scorecard_run_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.RunHealthGateInput": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_threshold_override": {
+          "type": "boolean"
+        },
+        "max_warnings": {
+          "type": "integer"
+        },
+        "policy_version": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scorecard": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "scorecard"
       ],
       "type": "object"
     },

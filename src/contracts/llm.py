@@ -173,3 +173,33 @@ class LLMProviderOperations:
             metadata={"doc": "Configured vector-store response provider operation."},
         )
     )
+
+
+@dataclass(frozen=True)
+class BrowserUseLLMClients:
+    schema_version: str = field(
+        metadata={"doc": "Browser-use LLM client bundle schema version."}
+    )
+    primary_provider: str = field(
+        metadata={"doc": "Provider selected as the browser-use primary LLM."}
+    )
+    primary_model: str = field(
+        metadata={"doc": "Model ID selected for the browser-use primary LLM."}
+    )
+    primary_llm: Any = field(
+        metadata={"doc": "Constructed browser-use primary chat client object."}
+    )
+    fallback_provider: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Provider selected as browser-use fallback LLM, if any."},
+    )
+    fallback_model: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Model ID selected for the browser-use fallback LLM, if any."},
+    )
+    fallback_llm: Any = field(
+        default=None,
+        metadata={
+            "doc": "Constructed browser-use fallback chat client object, if any."
+        },
+    )

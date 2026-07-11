@@ -122,6 +122,8 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
             identity_payload if isinstance(identity_payload, dict) else {}
         ),
         openrouter_http_referer=payload.get("openrouter_http_referer"),
+        openai_api_key=str(payload.get("openai_api_key") or ""),
+        openrouter_model=str(payload.get("openrouter_model") or "openai/gpt-5-mini"),
         headed=bool(payload.get("headed", False)),
         retry_retries=int(payload.get("retry_retries", 0)),
         retry_base_delay_seconds=float(payload.get("retry_base_delay_seconds", 1.0)),

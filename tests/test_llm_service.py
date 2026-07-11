@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -547,6 +549,9 @@ def test_openrouter_client_construction_is_owned_by_llm_service(
 def test_openrouter_client_uses_installed_browser_use_openrouter_signature() -> None:
     import inspect
 
+    vendored_browser_use = Path(__file__).resolve().parents[1] / "tools" / "browser-use"
+    if str(vendored_browser_use) not in sys.path:
+        sys.path.insert(0, str(vendored_browser_use))
     from browser_use import ChatOpenRouter
 
     captured: list[dict[str, object]] = []
@@ -629,3 +634,115 @@ def test_openrouter_client_provider_failure_is_typed(
         code="openrouter_client_init_failed",
         retryable=True,
     )
+
+
+def test_browser_use_llm_clients_prefer_openai_with_openrouter_fallback(
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service")
+    captured_openai: list[dict[str, object]] = []
+    captured_openrouter: list[dict[str, object]] = []
+
+    def _openai_factory(**kwargs: object) -> object:
+        captured_openai.append(dict(kwargs))
+        return SimpleNamespace(provider="openai", model=kwargs["model"])
+
+    def _openrouter_factory(**kwargs: object) -> object:
+        captured_openrouter.append(dict(kwargs))
+        return SimpleNamespace(provider="openrouter", model=kwargs["model"])
+
+    settings = SimpleNamespace(
+        openai_api_key="openai-secret",
+        openrouter_api_key="openrouter-secret",
+        model="gpt-5-mini",
+        openrouter_model="openai/gpt-5-mini",
+        openrouter_http_referer="https://marketlense.local",
+        temperature=0.0,
+        timeout_seconds=30.0,
+        max_tokens=16000,
+    )
+
+    result = llm_service.build_browser_use_llm_clients(
+        settings=settings,
+        ctx=_ctx(),
+        openai_client_factory=_openai_factory,
+        openrouter_client_factory=_openrouter_factory,
+    )
+
+    assert result.primary_provider == "openai"
+    assert result.fallback_provider == "openrouter"
+    assert result.primary_llm.provider == "openai"
+    assert result.fallback_llm.provider == "openrouter"
+    assert captured_openai == [
+        {
+            "model": "gpt-5-mini",
+            "api_key": "openai-secret",
+            "temperature": 0.0,
+            "timeout": 30.0,
+            "max_retries": 0,
+            "max_completion_tokens": 12000,
+        }
+    ]
+    assert captured_openrouter[0]["model"] == "openai/gpt-5-mini"
+    assert captured_openrouter[0]["extra_body"] == {"max_tokens": 12000}
+    events = _events(caplog)
+    relevant = [
+        event
+        for event in events
+        if event.get("event")
+        in {
+            "llm_browser_use_openai_client_start",
+            "llm_browser_use_openai_client_complete",
+            "llm_browser_use_clients_resolved",
+        }
+    ]
+    assert len(relevant) == 3
+    assert "openai-secret" not in json.dumps(relevant)
+    assert "openrouter-secret" not in json.dumps(relevant)
+    assert_logs_have_required_fields(relevant)
+
+
+def test_browser_use_llm_clients_fall_back_to_openrouter_when_openai_key_missing(
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service")
+
+    def _openrouter_factory(**kwargs: object) -> object:
+        return SimpleNamespace(provider="openrouter", model=kwargs["model"])
+
+    settings = SimpleNamespace(
+        openai_api_key="",
+        openrouter_api_key="openrouter-secret",
+        model="gpt-5-mini",
+        openrouter_model="openai/gpt-5-mini",
+        openrouter_http_referer=None,
+        temperature=0.0,
+        timeout_seconds=30.0,
+        max_tokens=12000,
+    )
+
+    result = llm_service.build_browser_use_llm_clients(
+        settings=settings,
+        ctx=_ctx(),
+        openai_client_factory=lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError("OpenAI client should not be constructed without a key")
+        ),
+        openrouter_client_factory=_openrouter_factory,
+    )
+
+    assert result.primary_provider == "openrouter"
+    assert result.fallback_provider is None
+    assert result.primary_llm.provider == "openrouter"
+    assert result.fallback_llm is None
+    events = _events(caplog)
+    resolved = [
+        event
+        for event in events
+        if event.get("event") == "llm_browser_use_clients_resolved"
+    ]
+    assert len(resolved) == 1
+    assert resolved[0]["fields"]["primary_provider"] == "openrouter"
+    assert resolved[0]["fields"]["fallback_provider"] == ""
+    assert_logs_have_required_fields(resolved)
