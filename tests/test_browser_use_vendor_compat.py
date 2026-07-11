@@ -85,6 +85,13 @@ def test_browser_use_usage_callback_records_each_provider_response(
                 schema_version="1.0",
                 fields=[],
             ),
+            model_pricing={
+                "gpt-5-mini": {
+                    "input_tokens_per_1k_usd": 0.001,
+                    "output_tokens_per_1k_usd": 0.002,
+                    "tool_call_usd": 0.0,
+                }
+            },
         ),
         report_title="Market Outlook",
         publisher_name="Example Research",
@@ -145,7 +152,7 @@ def test_browser_use_usage_callback_records_each_provider_response(
             """
             select provider, action, model, request_id, publisher_name, report_name,
                    source_url, input_tokens, output_tokens, total_tokens,
-                   cached_input_tokens, provider_decision
+                   cached_input_tokens, estimated_cost_usd, provider_decision
             from llm_usage_events
             order by id
             """
@@ -164,6 +171,7 @@ def test_browser_use_usage_callback_records_each_provider_response(
             30,
             150,
             20,
+            0.00018,
             "openai_primary",
         ),
         (
@@ -178,6 +186,7 @@ def test_browser_use_usage_callback_records_each_provider_response(
             20,
             100,
             None,
+            0.00012,
             "openrouter_fallback",
         ),
     ]

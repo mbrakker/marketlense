@@ -202,8 +202,8 @@ Scoring:
 
 ### 5. User-Facing Output Quality and Editorial Contracts
 
-- **Title:** Add live strategic insight-quality benchmark for scored insight fields [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Insight prompts now emit strategic scores, coverage roles, `so_what`, `now_what`, and report lenses, but there is no retained-artifact benchmark proving those fields improve diversity and decision usefulness over time.
+- **Title:** Extend the retained public-advisory benchmark to scored insight quality [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: `public_advisory_render_benchmark.py` already measures public claim support and `so_what`/`now_what` availability, but it does not yet measure role diversity, duplicate overlap, report-lens support, or metric-backed score calibration.
   - Why implement: Converts the new contract fields into a measurable quality loop and prevents score/role drift from becoming decorative metadata.
   - Tradeoffs / risks: The benchmark must evaluate source-grounded structure and diversity without brittle wording expectations.
   - Acceptance Criteria:
@@ -212,8 +212,8 @@ Scoring:
     - The benchmark can run in default read-only mode without model calls and optionally sample live regeneration behind an explicit flag.
     - Tests cover metric calculation, narrow-report fallback, unsupported-role detection, and unchanged-artifact baseline stability.
 
-- **Title:** Add concise public evidence, methodology, and related-content surfaces [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Public report pages need clearer source grounding and discovery paths without exposing internal evidence IDs or pipeline-processing details.
+- **Title:** Complete concise public evidence, methodology, and related-content surfaces [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Rendering already exposes readable claim-support labels, methodology material, and public-intelligence cards while redacting canonical IDs; the remaining gap is a compact public source/excerpt/limitation contract and the first useful related-content links.
   - Why implement: Readers need a compact, decision-useful way to verify a claim and discover relevant research.
   - Tradeoffs / risks: Public output must remain source-grounded and concise; OCR/model/crop/vector diagnostics remain operator-only.
   - Acceptance Criteria:
@@ -289,18 +289,18 @@ Scoring:
     - Dashboard/CLI output lists quarantined Drive files and recommended remediation.
     - Tests cover quarantine write, default skip, explicit revalidation, and clearing after a valid replacement PDF.
 
-- **Title:** Add a single pipeline planning brain before execution [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: CLI, UI, ingest, report generation, analysis, publish, and recovery paths currently require the operator or caller to know which entrypoint and flags to use. The system has strong individual orchestrators, but no typed plan that derives the safest next action from repository state, config, credentials, checkpoints, and publish readiness.
+- **Title:** Expose existing supervisor planning as a single pipeline plan before execution [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: `AutonomousRunSupervisorPlan` already produces typed workflow-control decisions, but CLI/UI callers cannot yet use one explicit plan contract to inspect and approve the safest next action across entrypoints.
   - Why implement: A plan-first control layer lets the pipeline need less user direction: users can request an intent such as `process ready reports`, `repair failed runs`, or `publish ready artifacts`, while the system decides which steps to run, skip, resume, or block.
   - Tradeoffs / risks: Requires careful scope control so the planner does not become a second orchestration implementation or embed domain logic.
   - Acceptance Criteria:
-    - A typed `PipelinePlan` contract lists ordered steps, skipped steps, blockers, required credentials, side-effect boundaries, resume points, idempotency keys, and expected outputs.
+    - The public `PipelinePlan` contract adapts the existing `AutonomousRunSupervisorPlan` and lists ordered steps, skipped steps, blockers, required credentials, side-effect boundaries, resume points, idempotency keys, and expected outputs.
     - A planner uses existing services/read models to inspect current state without performing side effects.
     - CLI/UI can run a read-only plan mode before execution and can execute an approved plan through existing orchestrators.
     - Tests cover ready, partially complete, failed, missing-credential, and publish-only states with plan contract and log assertions.
 
-- **Title:** Add config-driven autopilot profiles for common pipeline intents [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: The settings model exposes many low-level knobs for workers, Drive listing, OCR, model scopes, ranking, caching, and publishing, so users still need operational knowledge to choose a safe run mode.
+- **Title:** Complete config-driven autopilot profiles for common pipeline intents [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: Workflow control already resolves intent maps and preflight profiles such as `safe_default`, `repair_failed`, `publish_ready`, and `browser_acquisition`, but operators cannot yet select a complete, documented run profile that resolves all approved low-level settings.
   - Why implement: Profiles let users choose intent, not implementation details, and let the planner select safe defaults based on current state.
   - Tradeoffs / risks: Profiles must be thin presets over existing typed settings, not a parallel configuration system.
   - Acceptance Criteria:
@@ -309,8 +309,8 @@ Scoring:
     - Profile resolution validates against the existing settings contract and never hides secrets in YAML.
     - Tests cover profile selection, explicit override precedence, invalid profile names, and deterministic resolved settings.
 
-- **Title:** Add a durable autonomous dead-letter queue with typed remediation plans [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Failure classification and UI-run dead-letter concepts exist, but failed autonomous work is not yet represented as a durable queue of remediable work items with retry/defer/repair scheduling.
+- **Title:** Promote existing UI dead letters into durable autonomous remediation records [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: UI-run dead letters and typed failure classifications exist, but failed autonomous work is not yet represented as durable, workflow-wide remediation records.
   - Why implement: Failed runs should become managed work items that can be retried, resumed, repaired, or escalated without users reconstructing context.
   - Tradeoffs / risks: Needs attempt budgets and loop prevention so the system does not repeatedly spend on irreparable failures.
   - Acceptance Criteria:
@@ -340,8 +340,6 @@ Scoring:
     - Generators continue to consume one typed LLM response contract.
     - Tests cover cheap-primary success, schema-failure fallback, validation-failure fallback, fallback exhaustion, reproducibility-forbidden fallback, and cost reporting.
 
-    - Tests cover attachment, ZIP attachment, body-link, stale-evidence, and conflict paths with structured log assertions.
-
 - **Title:** Auto-skip or route business-domain-only gated forms before mailbox polling [Impact: 4/5, Effort: 2/5]
   - Problem fixed: Several live gated publishers reject non-business delivery addresses before a report email can be requested, and a 2026-07-06 BigCommerce rerun proved browser identity email drift from the IMAP mailbox can turn a deliverable route into `blocked_email_domain` until corrected.
   - Why implement: Converts repeated external constraints and local identity/mailbox drift into fast, unattended route policy so the system avoids doomed submissions and spends browser budget on publishers where delivery is possible.
@@ -366,8 +364,8 @@ Scoring:
     - Live verification covers one exact-URL fast-fail, one alternate-route success or attempted discovery rerank, and one TTL-expired retry.
     - Tests cover policy scoping, TTL expiry, avoided browser/model logging, and preservation of current behavior when no blocker evidence exists.
 
-- **Title:** Add model-call audit replay and drift comparison command [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: Model-call audit records are now emitted, but operators still need a first-class command to reconstruct replay bundles and compare prompt/model/schema/cache drift without making provider calls by default.
+- **Title:** Expose existing model-call replay bundles through a drift-comparison command [Impact: 4/5, Effort: 2/5]
+  - Problem fixed: `llm_service.build_model_call_replay_bundle(...)` already produces a typed replay bundle, but operators still need a first-class command to select retained calls and compare prompt/model/schema/cache drift without making provider calls by default.
   - Why implement: Replayable audit review shortens debugging of model regressions and makes prompt or schema drift visible before costly reruns.
   - Tradeoffs / risks: Replay output must preserve redaction and must require explicit opt-in before any live provider call.
   - Acceptance Criteria:
@@ -446,15 +444,6 @@ Scoring:
     - Shared view-model logic moves to existing builder classes where appropriate.
     - Runtime tests prove current shortcode output remains compatible.
 
-- **Title:** Stop WordPress render-time intelligence synthesis where Python projections should own claims [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: WordPress still derives some intelligence/freshness/authority-style UI claims from local content state.
-  - Why implement: Keeps analytical claims reproducible from approved pipeline artifacts.
-  - Tradeoffs / risks: Requires projection contracts and neutral empty states.
-  - Acceptance Criteria:
-    - WordPress modules render approved projection data instead of deriving analytical claims from post counts or dates.
-    - Missing projections fail closed with neutral UI or admin diagnostics.
-    - Tests prove no intelligence claim is invented by WordPress runtime logic alone.
-
 ## Backlog Decision Register
 
 This register governs promotion from the migrated intake archive. A proposal is not active work until current behavior is revalidated, a baseline is measured, and the proposal is added to the active backlog with an owner and review date.
@@ -494,6 +483,7 @@ Supervisor workflows may start, resume, retry, repair, validate, render, create 
 
 ## Current-State Evidence
 
+- Active-backlog revalidation on 2026-07-11 checked all 37 active items against the current checkout, including README change evidence, implementation/test surfaces, CI configuration, and the current WordPress theme/plugin source. No active item met all of its acceptance criteria. Partially landed foundations were narrowed in place: public-advisory rendering/benchmarking, crop-QA sidecars, workflow-control intent/preflight profiles, supervisor plans, model-call replay bundles, release-evidence review, public-intelligence metadata, and LLM-usage medians.
 - CI currently runs formatting, risk classification, split-symbol linking, typing, architecture import, forbidden patching, repository hygiene, quality ledger, remediation runbook, backlog source, contract schema snapshot, WordPress subproject, default pytest with coverage, coverage gate, mutation gate, quality non-regression, prompt fixture corpus regression, and release evidence manifest archival/freshness gates through `.github/workflows/ci.yml`.
 - Durable LLM usage accounting now atomically rebuilds `state/llm_usage_medians.sqlite` after every source-ledger write. The derived `llm_usage_medians` table records exact input/output/total-token medians and sample counts per provider/action/model/prompt namespace, preserving the `llm_usage.sqlite` ledger as the source of truth. A live OpenAI JSON call on 2026-07-11 recorded 19 input and 5 output tokens with a provider request ID; its real historical group contained 27 samples and an exact median total of 17 tokens.
 - Prompt dry-run validation and fixture-corpus regression are landed through `src/contracts/prompts.py`, `src/services/prompt_service.py`, `scripts/ci/check_prompt_fixture_regression.py`, `tests/test_prompt_dry_run_validation.py`, and `tests/test_prompt_fixture_corpus_regression.py`.

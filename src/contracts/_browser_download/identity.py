@@ -483,3 +483,9 @@ class BrowserDownloadSettings:
             "doc": "Optional per-route-family caps for browser-use max_steps and timeout_seconds."
         },
     )
+    model_pricing: dict = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Per-model token pricing used to estimate Browser Use LLM call cost."
+        },
+    )

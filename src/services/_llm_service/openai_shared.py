@@ -729,6 +729,18 @@ def _adapt_responses_metadata(
     )
 
 
+def _semantic_usage_action(*, step_name: str, source_request: Any | None) -> str:
+    prompt_namespace = str(
+        getattr(source_request, "prompt_namespace", "") or ""
+    ).strip()
+    if not prompt_namespace:
+        return step_name
+    namespace_parts = [part for part in prompt_namespace.split("/") if part]
+    if namespace_parts[:1] == ["report_vs"]:
+        namespace_parts = namespace_parts[1:]
+    return ":".join(namespace_parts) or step_name
+
+
 def _record_usage_accounting(
     *,
     ctx: RunContext,
@@ -770,7 +782,9 @@ def _record_usage_accounting(
             model_pricing=model_pricing or {},
             request_id=request_id,
             provider=provider,
-            action=action or step_name,
+            action=action or _semantic_usage_action(
+                step_name=step_name, source_request=source
+            ),
             usage_db_path=str(
                 getattr(source, "usage_db_path", "") or "./state/llm_usage.sqlite"
             ),

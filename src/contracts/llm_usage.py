@@ -125,3 +125,27 @@ class LLMUsageLedgerAppendResponse:
             "doc": "Number of per-call-family median rows rebuilt from the ledger."
         }
     )
+
+
+@dataclass(frozen=True)
+class LLMUsageMedianRebuildRequest:
+    schema_version: str = field(
+        metadata={"doc": "LLM usage median rebuild request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "SQLite database path for the source LLM usage ledger."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageMedianRebuildResponse:
+    schema_version: str = field(
+        metadata={"doc": "LLM usage median rebuild response schema version."}
+    )
+    db_path: str = field(metadata={"doc": "SQLite usage ledger path read."})
+    median_db_path: str = field(
+        metadata={"doc": "SQLite median database path rewritten from the ledger."}
+    )
+    median_row_count: int = field(
+        metadata={"doc": "Number of median rows rebuilt from source usage records."}
+    )

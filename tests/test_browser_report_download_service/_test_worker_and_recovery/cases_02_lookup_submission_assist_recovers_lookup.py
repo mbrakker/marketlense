@@ -860,10 +860,19 @@ def test_browser_worker_main_preserves_candidate_trace(
         published_at_text="April 2026",
         max_confidence=0.92,
     )
+    settings = replace(
+        _settings(tmp_path),
+        model_pricing={
+            "gpt-5-mini": {
+                "input_tokens_per_1k_usd": 0.00025,
+                "output_tokens_per_1k_usd": 0.002,
+            }
+        },
+    )
     request = BrowserReportDownloadRequest(
         schema_version="1.0",
         url=candidate_trace.canonical_url,
-        settings=_settings(tmp_path),
+        settings=settings,
         candidate_trace=candidate_trace,
         attempt_url="https://example.com/report?download=1",
         route_family_hint="browser_pdf_click",
@@ -950,6 +959,7 @@ def test_browser_worker_main_preserves_candidate_trace(
     assert observed_request.candidate_trace.discovery_provenances == (
         candidate_trace.discovery_provenances
     )
+    assert observed_request.settings.model_pricing == settings.model_pricing
 
 def test_browser_worker_main_preserves_identity_option_aliases(
     tmp_path: Path,

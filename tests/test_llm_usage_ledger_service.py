@@ -8,7 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from src.contracts.llm_usage import LLMUsageLedgerAppendRequest, LLMUsageLedgerEntry
+from src.contracts.llm_usage import (
+    LLMUsageLedgerAppendRequest,
+    LLMUsageLedgerEntry,
+    LLMUsageMedianRebuildRequest,
+)
 from src.contracts.run_context import RunContext
 from src.services import llm_usage_ledger_service as svc
 from src.utils.errors import AppError
@@ -150,6 +154,68 @@ def test_llm_usage_ledger_rebuilds_exact_medians_after_each_append(
                 """
             ).fetchone()
         assert row == expected
+
+
+def test_llm_usage_ledger_rebuilds_median_database_from_existing_source(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0", db_path=str(db_path), entry=_entry()
+        ),
+        _ctx(),
+    )
+    with sqlite3.connect(tmp_path / "usage_medians.sqlite") as conn:
+        conn.execute("delete from llm_usage_medians")
+
+    response = svc.rebuild_usage_medians(
+        LLMUsageMedianRebuildRequest(schema_version="1.0", db_path=str(db_path)),
+        _ctx(),
+    )
+
+    assert response.db_path == str(db_path)
+    assert response.median_db_path == str(tmp_path / "usage_medians.sqlite")
+    assert response.median_row_count == 1
+    with sqlite3.connect(response.median_db_path) as conn:
+        row = conn.execute(
+            "select sample_count, median_total_tokens from llm_usage_medians"
+        ).fetchone()
+    assert row == (1, 15.0)
+
+
+def test_llm_usage_ledger_groups_vector_store_records_by_semantic_task(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    for input_tokens, output_tokens, cost in ((100, 10, 0.001), (300, 30, 0.003)):
+        svc.append_usage(
+            LLMUsageLedgerAppendRequest(
+                schema_version="1.0",
+                db_path=str(db_path),
+                entry=replace(
+                    _entry(),
+                    task_id=(
+                        "run-id:vector_store:artifacts:insights_final"
+                    ),
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    total_tokens=input_tokens + output_tokens,
+                    estimated_cost_usd=cost,
+                ),
+            ),
+            _ctx(),
+        )
+
+    with sqlite3.connect(tmp_path / "usage_medians.sqlite") as conn:
+        row = conn.execute(
+            """
+            select task, sample_count, median_input_tokens, median_output_tokens,
+                   median_total_tokens, median_estimated_cost_usd
+            from llm_usage_medians
+            """
+        ).fetchone()
+    assert row == ("artifacts:insights_final", 2, 200.0, 20.0, 220.0, 0.002)
 
 
 def test_llm_usage_ledger_rolls_back_usage_write_when_median_rebuild_fails(

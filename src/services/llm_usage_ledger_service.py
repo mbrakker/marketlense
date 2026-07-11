@@ -5,7 +5,6 @@ import logging
 import sqlite3
 import threading
 from collections import defaultdict
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import median
@@ -14,6 +13,8 @@ from typing import Any
 from src.contracts.llm_usage import (
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerAppendResponse,
+    LLMUsageMedianRebuildRequest,
+    LLMUsageMedianRebuildResponse,
 )
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
@@ -21,14 +22,6 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.llm_usage_ledger_service")
 _LOCK = threading.Lock()
-
-
-@dataclass(frozen=True)
-class _MedianRebuildResult:
-    """Internal result of rebuilding the derived LLM usage median database."""
-
-    median_db_path: str
-    median_row_count: int
 
 
 def _validate_request(request: LLMUsageLedgerAppendRequest) -> None:
@@ -61,6 +54,22 @@ def _validate_request(request: LLMUsageLedgerAppendRequest) -> None:
                 "provider": request.entry.provider,
                 "action": request.entry.action,
             },
+        )
+
+
+def _validate_median_rebuild_request(request: LLMUsageMedianRebuildRequest) -> None:
+    if request.schema_version != "1.0":
+        raise AppError(
+            code="llm_usage_median_rebuild_schema_version_invalid",
+            message="LLM usage median rebuild request schema version is unsupported",
+            retryable=False,
+            context={"schema_version": request.schema_version},
+        )
+    if not str(request.db_path or "").strip():
+        raise AppError(
+            code="llm_usage_median_rebuild_path_missing",
+            message="LLM usage ledger database path is required",
+            retryable=False,
         )
 
 
@@ -133,11 +142,34 @@ def _median_db_path(usage_db_path: Path) -> Path:
 
 
 def _ensure_median_schema(conn: sqlite3.Connection) -> None:
+    existing_columns = {
+        str(row[1])
+        for row in conn.execute(
+            "pragma llm_usage_medians.table_info(llm_usage_medians)"
+        ).fetchall()
+    }
+    required_columns = {
+        "schema_version",
+        "provider",
+        "task",
+        "action",
+        "model",
+        "prompt_namespace",
+        "sample_count",
+        "median_input_tokens",
+        "median_output_tokens",
+        "median_total_tokens",
+        "median_estimated_cost_usd",
+        "recalculated_at_utc",
+    }
+    if existing_columns and not required_columns.issubset(existing_columns):
+        conn.execute("drop table llm_usage_medians.llm_usage_medians")
     conn.execute(
         """
         create table if not exists llm_usage_medians.llm_usage_medians (
             schema_version text not null,
             provider text not null,
+            task text not null,
             action text not null,
             model text not null,
             prompt_namespace text not null,
@@ -145,67 +177,159 @@ def _ensure_median_schema(conn: sqlite3.Connection) -> None:
             median_input_tokens real not null,
             median_output_tokens real not null,
             median_total_tokens real not null,
+            median_estimated_cost_usd real not null,
             recalculated_at_utc text not null,
-            primary key (provider, action, model, prompt_namespace)
+            primary key (provider, task, action, model, prompt_namespace)
         )
         """
     )
 
 
+def _semantic_task(task_id: str, action: str) -> str:
+    _, marker, semantic_task = task_id.rpartition(":vector_store:")
+    return semantic_task if marker and semantic_task else action
+
+
 def _rebuild_usage_medians(
-    conn: sqlite3.Connection, median_db_path: Path
-) -> _MedianRebuildResult:
+    conn: sqlite3.Connection, source_db_path: Path, median_db_path: Path
+) -> LLMUsageMedianRebuildResponse:
     conn.execute("attach database ? as llm_usage_medians", (str(median_db_path),))
     _ensure_median_schema(conn)
     rows = conn.execute(
         """
-        select provider, action, model, prompt_namespace,
-               input_tokens, output_tokens, total_tokens
+        select provider, task_id, action, model, prompt_namespace,
+               input_tokens, output_tokens, total_tokens, estimated_cost_usd
         from llm_usage_events
         """
     ).fetchall()
-    grouped_tokens: dict[tuple[str, str, str, str], list[tuple[int, int, int]]] = (
-        defaultdict(list)
-    )
+    grouped_usage: dict[
+        tuple[str, str, str, str, str], list[tuple[int, int, int, float]]
+    ] = defaultdict(list)
     for row in rows:
-        key = (str(row[0]), str(row[1]), str(row[2]), str(row[3]))
-        grouped_tokens[key].append((int(row[4]), int(row[5]), int(row[6])))
+        provider = str(row[0])
+        task_id = str(row[1])
+        action = str(row[2])
+        key = (
+            provider,
+            _semantic_task(task_id, action),
+            action,
+            str(row[3]),
+            str(row[4]),
+        )
+        grouped_usage[key].append(
+            (int(row[5]), int(row[6]), int(row[7]), float(row[8]))
+        )
 
     recalculated_at_utc = datetime.now(timezone.utc).isoformat()
     conn.execute("delete from llm_usage_medians.llm_usage_medians")
     conn.executemany(
         """
         insert into llm_usage_medians.llm_usage_medians (
-            schema_version, provider, action, model, prompt_namespace,
+            schema_version, provider, task, action, model, prompt_namespace,
             sample_count, median_input_tokens, median_output_tokens,
-            median_total_tokens, recalculated_at_utc
-        ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            median_total_tokens, median_estimated_cost_usd, recalculated_at_utc
+        ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
             (
-                "1.0",
+                "1.2",
                 provider,
+                task,
                 action,
                 model,
                 prompt_namespace,
-                len(token_samples),
-                float(median(sample[0] for sample in token_samples)),
-                float(median(sample[1] for sample in token_samples)),
-                float(median(sample[2] for sample in token_samples)),
+                len(usage_samples),
+                float(median(sample[0] for sample in usage_samples)),
+                float(median(sample[1] for sample in usage_samples)),
+                float(median(sample[2] for sample in usage_samples)),
+                float(median(sample[3] for sample in usage_samples)),
                 recalculated_at_utc,
             )
             for (
                 provider,
+                task,
                 action,
                 model,
                 prompt_namespace,
-            ), token_samples in grouped_tokens.items()
+            ), usage_samples in grouped_usage.items()
         ],
     )
-    return _MedianRebuildResult(
+    return LLMUsageMedianRebuildResponse(
+        schema_version="1.0",
+        db_path=str(source_db_path),
         median_db_path=str(median_db_path),
-        median_row_count=len(grouped_tokens),
+        median_row_count=len(grouped_usage),
     )
+
+
+def rebuild_usage_medians(
+    request: LLMUsageMedianRebuildRequest, ctx: RunContext
+) -> LLMUsageMedianRebuildResponse:
+    _validate_median_rebuild_request(request)
+    path = Path(request.db_path)
+    median_path = _median_db_path(path)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_usage_ledger_median_rebuild_start",
+            module=logger.name,
+            fields={"db_path": str(path), "median_db_path": str(median_path)},
+        )
+    )
+    try:
+        if not path.is_file():
+            raise AppError(
+                code="llm_usage_median_rebuild_source_missing",
+                message="LLM usage ledger database is missing",
+                retryable=False,
+                context={"db_path": str(path)},
+            )
+        with _LOCK, sqlite3.connect(path) as conn:
+            table_exists = conn.execute(
+                """
+                select 1 from sqlite_master
+                where type = 'table' and name = 'llm_usage_events'
+                """
+            ).fetchone()
+            if table_exists is None:
+                raise AppError(
+                    code="llm_usage_median_rebuild_source_missing",
+                    message="LLM usage ledger table is missing",
+                    retryable=False,
+                    context={"db_path": str(path)},
+                )
+            rebuilt = _rebuild_usage_medians(conn, path, median_path)
+    except AppError:
+        raise
+    except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
+        raise AppError(
+            code="llm_usage_median_rebuild_failed",
+            message=f"Failed to rebuild LLM usage medians from {path}",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path)},
+        ) from exc
+    response = LLMUsageMedianRebuildResponse(
+        schema_version="1.0",
+        db_path=str(path),
+        median_db_path=rebuilt.median_db_path,
+        median_row_count=rebuilt.median_row_count,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_usage_ledger_median_rebuild_complete",
+            module=logger.name,
+            fields={
+                "db_path": response.db_path,
+                "median_db_path": response.median_db_path,
+                "median_row_count": response.median_row_count,
+            },
+        )
+    )
+    return response
 
 
 def append_usage(
@@ -285,7 +409,7 @@ def append_usage(
                 ),
             )
             row_id = int(cursor.lastrowid or 0)
-            median_result = _rebuild_usage_medians(conn, median_path)
+            median_result = _rebuild_usage_medians(conn, path, median_path)
     except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
         raise AppError(
             code="llm_usage_ledger_append_failed",

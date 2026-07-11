@@ -22,6 +22,11 @@ def load_browser_download_settings(
     )
     data = _load_config(str(config_path))
     runtime_base_path = _resolve_runtime_base_path(config_path)
+    cost_cfg = _resolve_cost_config(
+        data,
+        config_path=config_path,
+        runtime_base_path=runtime_base_path,
+    )
     resolver = _ConfigResolver()
 
     paths = data.get("paths", {}) or {}
@@ -549,6 +554,7 @@ def load_browser_download_settings(
             ),
         ),
         route_budgets=route_budgets,
+        model_pricing=cost_cfg["pricing"],
     )
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)

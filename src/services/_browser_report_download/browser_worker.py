@@ -165,6 +165,11 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         ]
         if isinstance(route_budgets_payload, list)
         else [],
+        model_pricing=(
+            payload.get("model_pricing")
+            if isinstance(payload.get("model_pricing"), dict)
+            else {}
+        ),
     )
 
 

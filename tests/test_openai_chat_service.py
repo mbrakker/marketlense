@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
 
+from src.contracts.llm import LLMContextCompactionPolicy
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
     OpenAIJSONPromptRequest,
     OpenAIUsageAccountingResponse,
 )
-from src.contracts.llm import LLMContextCompactionPolicy
 from src.contracts.run_context import RunContext
-from src.services import llm_service as svc, openai_accounting_service
+from src.services import llm_service as svc
+from src.services import openai_accounting_service
 from src.utils.errors import AppError
 
 
@@ -142,6 +144,52 @@ def test_openai_chat_json_delegates_usage_accounting(
     assert accounting_request.request_id == "chat_1"
     assert accounting_request.cost_ledger_path == str(tmp_path / "ledger.jsonl")
     assert not (tmp_path / "ledger.jsonl").exists()
+
+
+def test_openai_chat_json_records_semantic_artifact_action(
+    external_boundary_mocks_only, tmp_path
+) -> None:
+    captured_accounting = []
+
+    class _FakeChatCompletions:
+        def create(self, **kwargs):
+            usage = SimpleNamespace(
+                prompt_tokens=12,
+                completion_tokens=5,
+                total_tokens=17,
+            )
+            message = SimpleNamespace(content=json.dumps({"ok": True}))
+            choice = SimpleNamespace(message=message)
+            return SimpleNamespace(id="chat_1", choices=[choice], usage=usage)
+
+    class _FakeClient:
+        def __init__(self, **kwargs):
+            self.chat = SimpleNamespace(completions=_FakeChatCompletions())
+
+    def _record_usage(request, ctx):
+        captured_accounting.append((request, ctx))
+        return OpenAIUsageAccountingResponse(
+            schema_version="1.0",
+            recorded=True,
+            estimated_cost_usd=0.0,
+            ledger_path=request.cost_ledger_path,
+            daily_path=request.cost_daily_path,
+        )
+
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
+    external_boundary_mocks_only.setattr(
+        openai_accounting_service, "record_usage", _record_usage
+    )
+
+    svc.openai_chat_json(
+        replace(
+            _chat_request(tmp_path),
+            prompt_namespace="report_vs/artifacts/insights_final",
+        ),
+        _ctx(),
+    )
+
+    assert captured_accounting[0][0].action == "artifacts:insights_final"
 
 
 def test_openai_chat_json_emits_redacted_model_call_audit(

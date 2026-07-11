@@ -1119,7 +1119,7 @@ def _record_browser_use_usage_row(
             cost_ledger_path="./out/cost-ledger.jsonl",
             cost_daily_path="./out/cost-daily.json",
             emit_cost_ledger=False,
-            model_pricing={},
+            model_pricing=request.settings.model_pricing,
             request_id=request_id,
             provider=_browser_usage_provider(
                 model=model_name,
