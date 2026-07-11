@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from pathlib import Path
 
 from src.contracts.costs import CostLedgerAppendRequest, CostRollupRequest
@@ -29,6 +30,7 @@ def _request(tmp_path: Path) -> OpenAIUsageAccountingRequest:
         cached_input_tokens=100,
         cost_ledger_path=str(tmp_path / "ledger.jsonl"),
         cost_daily_path=str(tmp_path / "daily.json"),
+        usage_db_path=str(tmp_path / "usage.sqlite"),
         model_pricing={
             "gpt-test": {
                 "input_tokens_per_1k_usd": 1.0,
@@ -37,6 +39,19 @@ def _request(tmp_path: Path) -> OpenAIUsageAccountingRequest:
             }
         },
         request_id="req_1",
+        provider="openai",
+        action="openai_chat_json",
+        total_tokens=1500,
+        publisher_name="Test Publisher",
+        report_name="Test Report",
+        source_url="https://example.com/report",
+        prompt_namespace="test/prompt",
+        prompt_hash="prompt-hash",
+        provider_decision="openai_primary",
+        cache_decision="disabled",
+        temperature=0.0,
+        seed=7,
+        timeout_seconds=30.0,
     )
 
 
@@ -103,6 +118,9 @@ def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
     assert response.ledger_path == str(tmp_path / "ledger.jsonl")
     assert response.daily_path == str(tmp_path / "daily.json")
     assert response.error is None
+    assert response.usage_db_recorded is True
+    assert response.usage_db_row_id == 1
+    assert response.usage_db_path == str(tmp_path / "usage.sqlite")
     assert len(appended_requests) == 1
     entry = appended_requests[0].entry
     assert_no_defaulted_required_fields(entry)
@@ -113,7 +131,32 @@ def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
     assert entry.cached_input_tokens == 100
     assert entry.tool_calls == 2
     assert entry.estimated_cost_usd == 2.5
-    assert entry.extra == {"request_id": "req_1"}
+    assert entry.extra == {
+        "request_id": "req_1",
+        "provider": "openai",
+        "action": "openai_chat_json",
+        "publisher_name": "Test Publisher",
+        "report_name": "Test Report",
+        "source_url": "https://example.com/report",
+        "prompt_namespace": "test/prompt",
+        "prompt_hash": "prompt-hash",
+        "provider_decision": "openai_primary",
+        "cache_decision": "disabled",
+    }
+    with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("select * from llm_usage_events").fetchone()
+    assert row is not None
+    assert row["provider"] == "openai"
+    assert row["action"] == "openai_chat_json"
+    assert row["publisher_name"] == "Test Publisher"
+    assert row["report_name"] == "Test Report"
+    assert row["source_url"] == "https://example.com/report"
+    assert row["input_tokens"] == 1000
+    assert row["output_tokens"] == 500
+    assert row["total_tokens"] == 1500
+    assert row["estimated_cost_usd"] == 2.5
+    assert row["prompt_namespace"] == "test/prompt"
     assert rollup_requests == [
         CostRollupRequest(
             schema_version="1.0",
@@ -161,6 +204,7 @@ def test_record_usage_returns_typed_failure_when_ledger_append_fails(
     assert response.recorded is False
     assert response.estimated_cost_usd == 2.5
     assert response.error == "ledger unavailable"
+    assert response.usage_db_recorded is False
     assert rollup_requests == []
     records = [
         json.loads(record.message)

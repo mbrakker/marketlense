@@ -119,6 +119,20 @@ class ReportRuntimeState:
     parallel_within_file: bool = field(
         metadata={"doc": "Whether within-file phase overlap is enabled."}
     )
+    publisher_name: str = field(
+        default="",
+        metadata={"doc": "Source-backed publisher name used for LLM usage attribution."},
+    )
+    source_report_name: str = field(
+        default="",
+        metadata={
+            "doc": "Source-backed human-readable report name used for LLM usage attribution."
+        },
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source-backed report URL used for LLM usage attribution."},
+    )
 
 
 @dataclass(frozen=True)

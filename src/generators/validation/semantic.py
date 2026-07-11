@@ -28,6 +28,9 @@ def run_semantic_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
         prompt_client=runtime.prompt_client,
         openai_client=runtime.openai_client,
         ctx=runtime.ctx,
+        publisher_name=runtime.request.publisher_name,
+        report_name=runtime.request.report_name,
+        source_url=runtime.request.source_url,
     )
     runtime.semantic_outcome = outcome
     return outcome.issues
@@ -41,6 +44,9 @@ def run_semantic_validation(
     prompt_client,
     openai_client,
     ctx: RunContext,
+    publisher_name: str = "",
+    report_name: str = "",
+    source_url: str = "",
 ) -> SemanticCheckOutcome:
     if not evidence_texts or (not insights and not quotes):
         return SemanticCheckOutcome(metric_support={}, quote_support={}, issues=[])
@@ -156,6 +162,11 @@ def run_semantic_validation(
                 cost_ledger_path=settings.cost_ledger_path,
                 cost_daily_path=settings.cost_daily_path,
                 model_pricing=settings.model_pricing,
+                publisher_name=publisher_name,
+                report_name=report_name,
+                source_url=source_url,
+                prompt_namespace=prompt_namespace,
+                prompt_hash=prompt_bundle.prompt_set.user.sha256,
             ),
             semantic_ctx,
         )

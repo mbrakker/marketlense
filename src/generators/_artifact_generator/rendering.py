@@ -8,8 +8,6 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.run_context import RunContext
 from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.utils.coercion import string_value as _s
-from src.utils.json_utils import dump_json_text as _dump_json
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.artifact_generator")
@@ -25,6 +23,9 @@ def render_artifact_json_model(
     prompt_client,
     allow_vector_store: bool,
     vector_store_id: Optional[str],
+    publisher_name: str = "",
+    report_name: str = "",
+    source_url: str = "",
 ) -> Dict[str, Any]:
     prompt_bundle = prepare_prompt_bundle(
         namespace=namespace,
@@ -99,6 +100,11 @@ def render_artifact_json_model(
                 cost_ledger_path=settings.cost_ledger_path,
                 cost_daily_path=settings.cost_daily_path,
                 model_pricing=settings.model_pricing,
+                publisher_name=publisher_name,
+                report_name=report_name,
+                source_url=source_url,
+                prompt_namespace=namespace,
+                prompt_hash=prompt_bundle.prompt_set.user.sha256,
             ),
             ctx,
         )
@@ -116,6 +122,11 @@ def render_artifact_json_model(
                 cost_ledger_path=settings.cost_ledger_path,
                 cost_daily_path=settings.cost_daily_path,
                 model_pricing=settings.model_pricing,
+                publisher_name=publisher_name,
+                report_name=report_name,
+                source_url=source_url,
+                prompt_namespace=namespace,
+                prompt_hash=prompt_bundle.prompt_set.user.sha256,
             ),
             ctx,
         )

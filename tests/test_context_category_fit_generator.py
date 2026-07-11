@@ -272,6 +272,9 @@ def test_fit_report_categories_from_context_returns_selected_categories(
             context=context,
             settings=settings,
             category_mapping_path="unused",
+            publisher_name="Deloitte",
+            report_name="Tech Trends 2026",
+            source_url="https://example.com/tech-trends-2026.pdf",
         ),
         _ctx(),
         openai_client=openai_client,
@@ -286,6 +289,12 @@ def test_fit_report_categories_from_context_returns_selected_categories(
     assert response.fits[0].supported_topic_rules
     assert response.fits[1].decision == "secondary"
     assert openai_client.requests[0][0].model == "gpt-5-mini"
+    assert openai_client.requests[0][0].publisher_name == "Deloitte"
+    assert openai_client.requests[0][0].report_name == "Tech Trends 2026"
+    assert (
+        openai_client.requests[0][0].source_url
+        == "https://example.com/tech-trends-2026.pdf"
+    )
     assert "enterprise technology platforms" in openai_client.requests[0][0].user_prompt
     assert "include_when" in openai_client.requests[0][0].user_prompt
     assert "exclude_when" in openai_client.requests[0][0].user_prompt

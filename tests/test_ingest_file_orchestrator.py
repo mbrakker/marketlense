@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import replace
 from types import SimpleNamespace
 
+from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.file_cache import (
     FileCacheMd5SidecarResolveResponse,
     FileCacheMd5SidecarWriteResponse,
 )
-from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.files import DeleteFileResponse, FileStatResponse
 from src.contracts.ingest import IngestOutcome
 from src.contracts.pdf_utils import PdfEofCheckResponse
@@ -45,6 +45,7 @@ def _base_dependencies(
     write_md5_sidecar_fn,
     check_pdf_eof_fn=None,
     download_pdf_to_path_fn=None,
+    state_record_fn=None,
 ):
     return IngestFileDependencies(
         should_skip=lambda *_args, **_kwargs: False,
@@ -86,7 +87,7 @@ def _base_dependencies(
             schema_version="1.0", path=req.path, deleted=True
         ),
         run_report_pipeline=run_report_pipeline_fn,
-        state_record=lambda *_args, **_kwargs: SimpleNamespace(),
+        state_record=state_record_fn or (lambda *_args, **_kwargs: SimpleNamespace()),
         eof_retry_limit=1,
     )
 
@@ -171,6 +172,7 @@ def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
     file = _drive_file(md5_checksum=None)
     download_calls = {"count": 0}
     pipeline_calls = {"count": 0}
+    state_records = []
 
     def _file_stat(request, _ctx):
         return FileStatResponse(
@@ -188,7 +190,7 @@ def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
             schema_version="1.0",
             file=req.file,
             output_path=req.output_path,
-            md5=None,
+            md5="source-md5",
             size=10,
         )
 
@@ -212,6 +214,9 @@ def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
             schema_version="1.0", path=req.path, has_eof=False
         ),
         download_pdf_to_path_fn=_download,
+        state_record_fn=lambda request, _ctx: (
+            state_records.append(request) or SimpleNamespace()
+        ),
     )
 
     result = run_ingest_file(file, 0, ingest_settings, run_context, dependencies)
@@ -222,6 +227,16 @@ def test_missing_eof_after_bounded_download_retries_stops_before_pipeline(
     )
     assert download_calls["count"] == 2
     assert pipeline_calls["count"] == 0
+    assert len(state_records) == 1
+    assert state_records[0].state_db == ingest_settings.state_db
+    assert state_records[0].file_id == "file-1"
+    assert state_records[0].md5 == "source-md5"
+    assert state_records[0].last_error == (
+        "pdf_download_missing_eof: "
+        f"Downloaded PDF is missing EOF marker: {ingest_settings.cache_dir}/file-1.pdf"
+    )
+    assert state_records[0].text_validation_status == "fail"
+    assert state_records[0].text_validation_reason == "pdf_download_missing_eof"
 
 
 def test_ingest_file_enables_latest_safe_resume_when_pipeline_accepts_keyword(
@@ -271,6 +286,53 @@ def test_ingest_file_enables_latest_safe_resume_when_pipeline_accepts_keyword(
 
     assert result.outcome.status == "processed"
     assert captured["auto_resume"] is True
+
+
+def test_ingest_file_records_pipeline_exception_as_terminal_state(
+    ingest_settings,
+    run_context,
+):
+    file = _drive_file(md5_checksum="drive-md5")
+    state_records = []
+
+    def _file_stat(request, _ctx):
+        return FileStatResponse(
+            schema_version="1.0",
+            path=request.path,
+            exists=True,
+            size_bytes=10,
+            mtime_utc=123.0,
+            md5="drive-md5" if request.compute_md5 else None,
+        )
+
+    def _run_report_pipeline(*_args, **_kwargs):
+        raise ValueError("Validation issue requested an unsupported repair target")
+
+    dependencies = _base_dependencies(
+        file_stat_fn=_file_stat,
+        run_report_pipeline_fn=_run_report_pipeline,
+        write_md5_sidecar_fn=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            record=None,
+            written=False,
+            reason="not_called",
+        ),
+        state_record_fn=lambda request, _ctx: (
+            state_records.append(request) or SimpleNamespace()
+        ),
+    )
+
+    result = run_ingest_file(file, 0, ingest_settings, run_context, dependencies)
+
+    assert result.outcome.status == "error"
+    assert result.outcome.md5 == "drive-md5"
+    assert state_records[0].file_id == "file-1"
+    assert state_records[0].md5 == "drive-md5"
+    assert state_records[0].last_error == (
+        "ValueError: Validation issue requested an unsupported repair target"
+    )
 
 
 def test_sidecar_is_written_after_computed_md5(ingest_settings, run_context):

@@ -152,6 +152,11 @@ def run_grounding_check(
                     cost_ledger_path=settings.cost_ledger_path,
                     cost_daily_path=settings.cost_daily_path,
                     model_pricing=settings.model_pricing,
+                    publisher_name=request.publisher_name,
+                    report_name=request.report_name,
+                    source_url=request.source_url,
+                    prompt_namespace=prompt_namespace,
+                    prompt_hash=prompt_bundle.prompt_set.user.sha256,
                 ),
                 prompt_ctx,
             )
@@ -169,6 +174,11 @@ def run_grounding_check(
                     cost_ledger_path=settings.cost_ledger_path,
                     cost_daily_path=settings.cost_daily_path,
                     model_pricing=settings.model_pricing,
+                    publisher_name=request.publisher_name,
+                    report_name=request.report_name,
+                    source_url=request.source_url,
+                    prompt_namespace=prompt_namespace,
+                    prompt_hash=prompt_bundle.prompt_set.user.sha256,
                 ),
                 prompt_ctx,
             )

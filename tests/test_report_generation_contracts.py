@@ -93,6 +93,9 @@ def _runtime() -> ReportRuntimeState:
         analysis_modes=["vector_store"],
         report_worker_limit=2,
         parallel_within_file=True,
+        publisher_name="Publisher",
+        source_report_name="Source Registry Report",
+        source_url="https://example.com/source.pdf",
     )
 
 
@@ -151,6 +154,9 @@ def test_report_generation_contract_roundtrip(assert_no_defaulted_required_field
         analysis_modes=runtime_dict["analysis_modes"],
         report_worker_limit=runtime_dict["report_worker_limit"],
         parallel_within_file=runtime_dict["parallel_within_file"],
+        publisher_name=runtime_dict["publisher_name"],
+        source_report_name=runtime_dict["source_report_name"],
+        source_url=runtime_dict["source_url"],
     )
     assert runtime_roundtrip == runtime
 

@@ -313,6 +313,9 @@ def _prepare_grounding(
         artifacts=artifacts,
         evidence_packs=request.evidence_packs,
         vector_store_id=request.vector_store_id,
+        publisher_name=request.publisher_name,
+        report_name=request.report_name,
+        source_url=request.source_url,
     )
     return prepare_validation_inputs(
         validation_request,
@@ -608,6 +611,9 @@ def _render_regeneration_model(
         prompt_client=execution.runtime.prompt_client,
         allow_vector_store=execution.runtime.artifact_use_vector_store,
         vector_store_id=request.vector_store_id,
+        publisher_name=request.publisher_name,
+        report_name=request.report_name,
+        source_url=request.source_url,
     )
 
 

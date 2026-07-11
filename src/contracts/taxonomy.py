@@ -37,6 +37,14 @@ class TaxonomyExtractRequest(SemanticIdContract):
         default=None,
         metadata={"doc": "Report slug used to resolve taxonomy cache path."},
     )
+    publisher_name: str = field(
+        default="",
+        metadata={"doc": "Publisher context recorded with downstream LLM usage."},
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context recorded with downstream LLM usage."},
+    )
 
 
 @dataclass(frozen=True)

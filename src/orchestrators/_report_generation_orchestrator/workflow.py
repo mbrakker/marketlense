@@ -12,6 +12,7 @@ from src.contracts.report_generation import (
     ReportGenerationClientBundle,
     require_report_generation_client_bundle,
 )
+from src.contracts.report_store import ReportSourceIdentityResolveRequest
 from src.contracts.run_context import RunContext
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
@@ -99,6 +100,65 @@ def _build_model_client(
     return llm_service.build_client_for_settings(settings, scope=scope)
 
 
+def _resolve_runtime_source_identity(
+    *,
+    file: DriveFile,
+    settings: IngestSettings,
+    md5: Optional[str],
+    ctx: RunContext,
+    deps: ReportGenerationDependencies,
+) -> tuple[str, str, str]:
+    fallback_report_name = file.name or file.file_id
+    try:
+        identity = deps.render.resolve_report_source_identity(
+            ReportSourceIdentityResolveRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                report_title=fallback_report_name,
+                md5=md5,
+            ),
+            ctx,
+        )
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_source_identity_resolve_failed",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "error": str(exc),
+                },
+            )
+        )
+        return "", fallback_report_name, ""
+    publisher_name = str(getattr(identity, "publisher_name", "") or "").strip()
+    source_report_name = (
+        str(getattr(identity, "report_name", "") or "").strip()
+        or fallback_report_name
+    )
+    source_url = str(getattr(identity, "source_url", "") or "").strip()
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_source_identity_resolved",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "publisher_name": publisher_name,
+                "source_report_name": source_report_name,
+                "has_source_url": bool(source_url),
+                "resolution_source": str(
+                    getattr(identity, "resolution_source", "") or ""
+                ),
+            },
+        )
+    )
+    return publisher_name, source_report_name, source_url
+
+
 def run_report_generation(
     file: DriveFile,
     local_pdf_path: str,
@@ -181,7 +241,23 @@ def run_report_generation(
                 deps.analysis.figure_caption.openai_chat_json_with_images
             ),
         )
-    runtime = _build_runtime_state(file, local_pdf_path, settings, md5, ctx)
+    publisher_name, source_report_name, source_url = _resolve_runtime_source_identity(
+        file=file,
+        settings=settings,
+        md5=md5,
+        ctx=ctx,
+        deps=deps,
+    )
+    runtime = _build_runtime_state(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        publisher_name=publisher_name,
+        source_report_name=source_report_name,
+        source_url=source_url,
+    )
     requested_resume_stage = str(resume_from_stage or "").strip()
     if requested_resume_stage:
         return _resume_from_checkpoint_stage(

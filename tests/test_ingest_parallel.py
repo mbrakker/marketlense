@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import json
 from concurrent.futures import Future
 from dataclasses import replace
-import json
 from pathlib import Path
 from threading import Barrier, Lock, get_ident
 from types import SimpleNamespace
 
+from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.file_cache import (
     FileCacheMd5SidecarResolveResponse,
     FileCacheMd5SidecarWriteResponse,
 )
-from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.ingest import IngestOutcome
 from src.contracts.state import (
     StateIngestCursorSetRequest,
@@ -25,7 +25,8 @@ from src.orchestrators.ingest_file_orchestrator import (
 )
 from src.services.file_service import delete_file, file_stat
 from src.services.pdf_service import check_pdf_eof
-from src.services.state_service import list_processed, record as state_record
+from src.services.state_service import list_processed
+from src.services.state_service import record as state_record
 
 
 class _DummyExecutor:
@@ -650,6 +651,68 @@ def test_ingest_retries_progress_state_without_final_text_validation(
     results = orch.run_ingest(settings, limit=1, dependencies=deps)
 
     assert [row.file_id for row in results] == ["file_progress"]
+
+
+def test_limited_ingest_continues_after_failed_candidate(ingest_settings) -> None:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    bad_file = DriveFile(
+        schema_version="1.0",
+        file_id="file_bad",
+        name="bad.pdf",
+        modified_time=None,
+        md5_checksum="md5-bad",
+    )
+    good_file = DriveFile(
+        schema_version="1.0",
+        file_id="file_good",
+        name="good.pdf",
+        modified_time=None,
+        md5_checksum="md5-good",
+    )
+    attempted: list[str] = []
+
+    def _fake_process_file(file, index, settings, root_ctx, force_report_cards):
+        del settings, root_ctx, force_report_cards
+        attempted.append(file.file_id)
+        if file.file_id == bad_file.file_id:
+            return orch._FileProcessResult(
+                index=index,
+                outcome=IngestOutcome(
+                    schema_version="1.0",
+                    file_id=file.file_id,
+                    name=file.name or file.file_id,
+                    md5=file.md5_checksum,
+                    html_path=None,
+                    status="error",
+                    error="source failed",
+                ),
+                processed=0,
+                had_error=True,
+            )
+        return orch._FileProcessResult(
+            index=index,
+            outcome=IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path=f"out/{file.file_id}.html",
+                status="processed",
+            ),
+            processed=1,
+            had_error=False,
+        )
+
+    deps = _batch_dependencies(
+        list_pdfs=lambda req, ctx: [bad_file, good_file],
+        process_file=_fake_process_file,
+    )
+
+    results = orch.run_ingest(settings, limit=1, dependencies=deps)
+
+    assert attempted == ["file_bad", "file_good"]
+    assert [row.file_id for row in results] == ["file_bad", "file_good"]
+    assert [row.status for row in results] == ["error", "processed"]
 
 
 def test_ingest_does_not_repeat_drive_md5_single_state_check(ingest_settings) -> None:

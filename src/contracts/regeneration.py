@@ -182,6 +182,14 @@ class ArtifactRegenerationRequest(SemanticIdContract):
         default=None,
         metadata={"doc": "Source PDF md5 used for cache metadata and logging."},
     )
+    publisher_name: str = field(
+        default="",
+        metadata={"doc": "Publisher context recorded with downstream LLM usage."},
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context recorded with downstream LLM usage."},
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Artifact regeneration request schema version."}
     )

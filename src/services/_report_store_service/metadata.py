@@ -12,6 +12,8 @@ from src.contracts.report_store import (
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
     ReportMetadataListResponse,
+    ReportSourceIdentityResolveRequest,
+    ReportSourceIdentityResolveResponse,
     ReportMetadataUpsertRequest,
 )
 from src.contracts.run_context import RunContext
@@ -98,6 +100,113 @@ def _report_source_publisher_from_store(
         (normalized_title, normalized_title, clean_md5, clean_md5),
     ).fetchone()
     return str(row[0]).strip() if row and str(row[0] or "").strip() else None
+
+
+def _report_source_identity_row(
+    conn: sqlite3.Connection,
+    *,
+    report_title: str,
+    publisher: Optional[str],
+    md5: Optional[str],
+) -> tuple[Optional[sqlite3.Row], str]:
+    if not _table_exists(conn, "report_sources"):
+        return None, "fallback"
+    clean_md5 = str(md5 or "").strip()
+    if clean_md5:
+        row = conn.execute(
+            """
+            SELECT report_name, publisher_name, landing_page_url
+            FROM report_sources
+            WHERE md5=?
+            ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (clean_md5,),
+        ).fetchone()
+        if row:
+            return row, "md5"
+    normalized_title = report_title.strip().casefold()
+    normalized_publisher = str(publisher or "").strip().casefold()
+    if normalized_title:
+        row = conn.execute(
+            """
+            SELECT report_name, publisher_name, landing_page_url
+            FROM report_sources
+            WHERE lower(report_name)=?
+              AND (?='' OR lower(COALESCE(publisher_name, ''))=?)
+            ORDER BY downloaded_at_utc DESC, updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (normalized_title, normalized_publisher, normalized_publisher),
+        ).fetchone()
+        if row:
+            return row, "title"
+    return None, "fallback"
+
+
+def resolve_report_source_identity(
+    request: ReportSourceIdentityResolveRequest, ctx: RunContext
+) -> ReportSourceIdentityResolveResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_identity_resolve_start",
+            module=logger.name,
+            fields={
+                "db_path": request.db_path,
+                "report_title": request.report_title,
+                "has_md5": bool(str(request.md5 or "").strip()),
+            },
+        )
+    )
+    if not request.db_path or not request.db_path.strip():
+        raise AppError(
+            code="metadata_db_missing",
+            message="Report metadata DB path is required",
+            retryable=False,
+            severity="error",
+        )
+    with _metadata_conn(request.db_path, ctx) as conn:
+        row, source = _report_source_identity_row(
+            conn,
+            report_title=request.report_title,
+            publisher=request.publisher_name,
+            md5=request.md5,
+        )
+    if row is None:
+        response = ReportSourceIdentityResolveResponse(
+            schema_version="1.0",
+            publisher_name=str(request.publisher_name or "").strip(),
+            report_name=str(request.report_title or "").strip(),
+            source_url="",
+            resolution_source=source,
+        )
+    else:
+        response = ReportSourceIdentityResolveResponse(
+            schema_version="1.0",
+            report_name=str(row[0] or "").strip()
+            or str(request.report_title or "").strip(),
+            publisher_name=str(row[1] or "").strip()
+            or str(request.publisher_name or "").strip(),
+            source_url=str(row[2] or "").strip(),
+            resolution_source=source,
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_identity_resolve_complete",
+            module=logger.name,
+            fields={
+                "publisher_name": response.publisher_name,
+                "report_name": response.report_name,
+                "has_source_url": bool(response.source_url),
+                "resolution_source": response.resolution_source,
+            },
+        )
+    )
+    return response
 
 
 def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetResponse:

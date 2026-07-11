@@ -219,3 +219,48 @@ class ReportMetadataListResponse:
         metadata={"doc": "All report metadata records."}
     )
 
+
+@dataclass(frozen=True)
+class ReportSourceIdentityResolveRequest:
+    schema_version: str = field(
+        metadata={"doc": "Report source identity lookup request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    report_title: str = field(
+        default="",
+        metadata={"doc": "Human-readable report title used as a fallback lookup key."},
+    )
+    md5: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Source PDF MD5 used as the preferred lookup key."},
+    )
+    publisher_name: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Known publisher used to disambiguate title matches."},
+    )
+
+
+@dataclass(frozen=True)
+class ReportSourceIdentityResolveResponse:
+    schema_version: str = field(
+        metadata={"doc": "Report source identity lookup response schema version."}
+    )
+    publisher_name: str = field(
+        default="",
+        metadata={"doc": "Resolved publisher display name, if known."},
+    )
+    report_name: str = field(
+        default="",
+        metadata={"doc": "Resolved source report display name, if known."},
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Resolved source or landing-page URL, if known."},
+    )
+    resolution_source: str = field(
+        default="",
+        metadata={"doc": "Lookup source used: md5, title, or fallback."},
+    )
+

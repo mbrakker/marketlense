@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import inspect
 from copy import deepcopy
-from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
 from src.contracts.regeneration import (
@@ -284,6 +283,8 @@ def _run_validation_regeneration_loop(
                 categories=category_labels,
                 vector_store_id=vector_store_id,
                 md5=runtime.md5,
+                publisher_name=runtime.publisher_name,
+                source_url=runtime.source_url,
             ),
             **regeneration_kwargs,
         )
@@ -314,6 +315,9 @@ def _run_validation_regeneration_loop(
                 artifacts=current_artifacts,
                 evidence_packs=evidence_packs,
                 vector_store_id=vector_store_id,
+                publisher_name=runtime.publisher_name,
+                report_name=runtime.source_report_name or runtime.report_title,
+                source_url=runtime.source_url,
             ),
             pack_name="validation",
             openai_client=validation_openai_client,

@@ -54,6 +54,10 @@ def _build_runtime_state(
     settings: IngestSettings,
     md5: Optional[str],
     ctx: RunContext,
+    *,
+    publisher_name: str = "",
+    source_report_name: str = "",
+    source_url: str = "",
 ) -> ReportRuntimeState:
     report_worker_limit = getattr(settings, "report_worker_limit", 1)
     try:
@@ -77,6 +81,9 @@ def _build_runtime_state(
         analysis_modes=["vector_store"],
         report_worker_limit=report_worker_limit,
         parallel_within_file=report_worker_limit > 1,
+        publisher_name=str(publisher_name or "").strip(),
+        source_report_name=str(source_report_name or "").strip(),
+        source_url=str(source_url or "").strip(),
     )
 
 

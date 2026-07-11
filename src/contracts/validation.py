@@ -117,3 +117,15 @@ class ValidationRequest(SemanticIdContract):
             "doc": "Validation execution mode: full, inline_deterministic, or deferred_grounding."
         },
     )
+    publisher_name: str = field(
+        default="",
+        metadata={"doc": "Publisher context recorded with downstream LLM usage."},
+    )
+    report_name: str = field(
+        default="",
+        metadata={"doc": "Human-readable report context recorded with LLM usage."},
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context recorded with downstream LLM usage."},
+    )

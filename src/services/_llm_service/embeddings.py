@@ -1,3 +1,4 @@
+# ruff: noqa: F403,F405
 from __future__ import annotations
 
 from src.services._llm_service.openai_client import (
@@ -136,11 +137,13 @@ def openai_create_embeddings(
         model=model,
         input_tokens=input_tokens,
         output_tokens=None,
+        total_tokens=total_tokens,
         tool_calls=0,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
         model_pricing=request.model_pricing,
         request_id=str(request_id) if request_id else None,
+        source_request=request,
     )
     response = OpenAIEmbeddingResponse(
         schema_version="1.0",

@@ -5,7 +5,6 @@ import hashlib
 import json
 import logging
 import mimetypes
-import re
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -14,6 +13,7 @@ from typing import Any, Callable
 
 import openai as openai_legacy
 
+from src.contracts.files import WriteBytesRequest
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
     OpenAIAnalyzeResponse,
@@ -25,6 +25,7 @@ from src.contracts.openai import (
     OpenAIPdfOcrResponse,
     OpenAIResponseRequest,
     OpenAIResponseResult,
+    OpenAIUsageAccountingRequest,
     OpenAIVectorStoreAttachFileRequest,
     OpenAIVectorStoreAttachFileResponse,
     OpenAIVectorStoreCreateRequest,
@@ -37,9 +38,7 @@ from src.contracts.openai import (
     OpenAIVectorStoreStatusResponse,
     OpenAIVectorStoreUpdateMetadataRequest,
     OpenAIVectorStoreUpdateMetadataResponse,
-    OpenAIUsageAccountingRequest,
 )
-from src.contracts.files import WriteBytesRequest
 from src.contracts.pdf_ocr import PdfOcrPageText
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
@@ -743,7 +742,19 @@ def _record_usage_accounting(
     model_pricing: dict,
     request_id: str | None,
     cached_input_tokens: int | None = None,
+    provider: str = "openai",
+    action: str | None = None,
+    total_tokens: int | None = None,
+    source_request: Any | None = None,
 ) -> None:
+    source = source_request
+    cache_decision = ""
+    if source is not None and hasattr(source, "response_cache_enabled"):
+        cache_decision = (
+            "enabled"
+            if bool(getattr(source, "response_cache_enabled", False))
+            else "disabled"
+        )
     openai_accounting_service.record_usage(
         OpenAIUsageAccountingRequest(
             schema_version="1.0",
@@ -751,12 +762,55 @@ def _record_usage_accounting(
             model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            total_tokens=total_tokens,
             cached_input_tokens=cached_input_tokens,
             tool_calls=int(tool_calls or 0),
             cost_ledger_path=cost_ledger_path,
             cost_daily_path=cost_daily_path,
             model_pricing=model_pricing or {},
             request_id=request_id,
+            provider=provider,
+            action=action or step_name,
+            usage_db_path=str(
+                getattr(source, "usage_db_path", "") or "./state/llm_usage.sqlite"
+            ),
+            publisher_name=str(
+                getattr(source, "publisher_name", "")
+                or getattr(source, "publisher", "")
+                or ""
+            ),
+            report_name=str(
+                getattr(source, "report_name", "")
+                or getattr(source, "report_title", "")
+                or getattr(source, "title", "")
+                or ""
+            ),
+            source_url=str(
+                getattr(source, "source_url", "")
+                or getattr(source, "landing_page_url", "")
+                or getattr(source, "url", "")
+                or ""
+            ),
+            prompt_namespace=str(getattr(source, "prompt_namespace", "") or ""),
+            prompt_hash=str(
+                getattr(source, "prompt_hash", "")
+                or getattr(source, "prompt_sha256", "")
+                or getattr(source, "prompt_user_sha256", "")
+                or ""
+            ),
+            provider_decision=str(
+                getattr(source, "provider_decision", "") or "openai_primary"
+            ),
+            cache_decision=cache_decision,
+            temperature=getattr(source, "temperature", None),
+            seed=getattr(source, "seed", None),
+            timeout_seconds=getattr(source, "timeout_seconds", None),
+            extra={
+                "schema_name": str(getattr(source, "schema_name", "") or ""),
+                "response_cache_dir": str(
+                    getattr(source, "response_cache_dir", "") or ""
+                ),
+            },
         ),
         ctx,
     )

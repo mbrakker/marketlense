@@ -224,6 +224,8 @@ def recover_pdf_text_with_ocr(
             attempted_models=attempted_models,
             logger=logger,
             chunk_ctx=chunk_ctx,
+            prompt_namespace=prompt_namespace,
+            prompt_hash=prompt_set.user.sha256,
         )
         chunk_pages = _map_chunk_pages(chunk, chunk_response.pages)
         aggregated_pages.extend(chunk_pages)
@@ -332,6 +334,8 @@ def _run_ocr_chunk(
     attempted_models: list[str],
     logger: logging.Logger,
     chunk_ctx,
+    prompt_namespace: str,
+    prompt_hash: str,
 ) -> OpenAIPdfOcrResponse:
     if not attempted_models:
         raise AppError(
@@ -376,6 +380,11 @@ def _run_ocr_chunk(
                 cost_ledger_path=runtime.settings.cost_ledger_path,
                 cost_daily_path=runtime.settings.cost_daily_path,
                 model_pricing=runtime.settings.model_pricing,
+                publisher_name=runtime.publisher_name,
+                report_name=runtime.source_report_name or runtime.report_title,
+                source_url=runtime.source_url,
+                prompt_namespace=prompt_namespace,
+                prompt_hash=prompt_hash,
             ),
             chunk_ctx,
         )

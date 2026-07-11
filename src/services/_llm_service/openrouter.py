@@ -2,19 +2,19 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Any, Callable
 from urllib import error as urllib_error
 from urllib import request as urllib_request
-from typing import Any, Callable
 
-from src.contracts.openai import OpenAIResponseResult
+from src.contracts.openai import OpenAIResponseResult, OpenAIUsageAccountingRequest
 from src.contracts.run_context import RunContext
+from src.services import openai_accounting_service
 from src.services._llm_service.context_compaction import (
     compact_prompt_request_if_needed,
 )
 from src.services._llm_service.policy import logger
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-
 
 _BROWSER_USE_OPENROUTER_MAX_TOKENS_CAP = 12000
 _OPENROUTER_CHAT_COMPLETIONS_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -214,6 +214,11 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
         total_tokens=_optional_int(usage.get("total_tokens")),
         request_id=str(response_payload.get("id") or "") or None,
     )
+    _record_openrouter_usage_accounting(
+        request=request,
+        result=result,
+        ctx=ctx,
+    )
     logger.info(
         log_event(
             ctx,
@@ -230,6 +235,85 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
         )
     )
     return result
+
+
+def _record_openrouter_usage_accounting(
+    *,
+    request: Any,
+    result: OpenAIResponseResult,
+    ctx: RunContext,
+) -> None:
+    cache_decision = ""
+    if hasattr(request, "response_cache_enabled"):
+        cache_decision = (
+            "enabled"
+            if bool(getattr(request, "response_cache_enabled", False))
+            else "disabled"
+        )
+    openai_accounting_service.record_usage(
+        OpenAIUsageAccountingRequest(
+            schema_version="1.0",
+            step_name="openrouter_chat_json",
+            model=result.model,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            total_tokens=result.total_tokens,
+            cached_input_tokens=None,
+            tool_calls=int(result.tool_calls or 0),
+            cost_ledger_path=str(
+                getattr(request, "cost_ledger_path", "") or "./out/cost-ledger.jsonl"
+            ),
+            cost_daily_path=str(
+                getattr(request, "cost_daily_path", "") or "./out/cost-daily.json"
+            ),
+            model_pricing=getattr(request, "model_pricing", None) or {},
+            request_id=result.request_id,
+            provider="openrouter",
+            action="openrouter_chat_json",
+            usage_db_path=str(
+                getattr(request, "usage_db_path", "") or "./state/llm_usage.sqlite"
+            ),
+            publisher_name=str(
+                getattr(request, "publisher_name", "")
+                or getattr(request, "publisher", "")
+                or ""
+            ),
+            report_name=str(
+                getattr(request, "report_name", "")
+                or getattr(request, "report_title", "")
+                or getattr(request, "title", "")
+                or ""
+            ),
+            source_url=str(
+                getattr(request, "source_url", "")
+                or getattr(request, "landing_page_url", "")
+                or getattr(request, "url", "")
+                or ""
+            ),
+            prompt_namespace=str(getattr(request, "prompt_namespace", "") or ""),
+            prompt_hash=str(
+                getattr(request, "prompt_hash", "")
+                or getattr(request, "prompt_sha256", "")
+                or getattr(request, "prompt_user_sha256", "")
+                or ""
+            ),
+            provider_decision=str(
+                getattr(request, "provider_decision", "") or "openrouter_direct"
+            ),
+            cache_decision=cache_decision,
+            temperature=getattr(request, "temperature", None),
+            seed=getattr(request, "seed", None),
+            timeout_seconds=getattr(request, "timeout_seconds", None),
+            extra={
+                "http_referer_present": bool(
+                    str(getattr(request, "openrouter_http_referer", "") or "").strip()
+                    or os.getenv("OPENROUTER_HTTP_REFERER", "").strip()
+                ),
+                "schema_name": str(getattr(request, "schema_name", "") or ""),
+            },
+        ),
+        ctx,
+    )
 
 
 def _openrouter_model(value: object) -> str:

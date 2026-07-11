@@ -5,13 +5,13 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Protocol, cast
 
+from src.contracts.drive import DriveDownloadToPathRequest, DriveFile
 from src.contracts.file_cache import (
     FileCacheMd5SidecarResolveRequest,
     FileCacheMd5SidecarResolveResponse,
     FileCacheMd5SidecarWriteRequest,
     FileCacheMd5SidecarWriteResponse,
 )
-from src.contracts.drive import DriveDownloadToPathRequest, DriveFile
 from src.contracts.files import DeleteFileRequest, FileStatRequest
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest
@@ -526,6 +526,57 @@ def _ensure_runtime_md5(
     )
 
 
+def _record_permanent_source_failure(
+    runtime: _IngestFileRuntime,
+    *,
+    settings: IngestSettings,
+    dependencies: IngestFileDependencies,
+    file_ctx: RunContext,
+    error: AppError,
+    logger_name: str,
+) -> bool:
+    if error.retryable or error.code != "pdf_download_missing_eof":
+        return False
+    md5 = (runtime.md5 or runtime.drive_md5 or "").strip()
+    if not md5:
+        return False
+    last_error = f"{error.code}: {error.message}"
+    dependencies.state_record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id=runtime.file.file_id,
+            md5=md5,
+            openai_file_id="",
+            vector_store_id=None,
+            vector_store_status=None,
+            indexed_at_utc=None,
+            last_error=last_error,
+            text_validation_status="fail",
+            text_validation_reason=error.code,
+            text_validation_pages=[],
+            doc_map_summary=None,
+            ocr_fallback_used=False,
+            ocr_pdf_path=None,
+        ),
+        file_ctx,
+    )
+    logging.getLogger(logger_name).info(
+        log_event(
+            file_ctx,
+            role="orchestrator",
+            event="source_pdf_validation_failure_recorded",
+            module=logger_name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "md5": md5,
+                "error_code": error.code,
+            },
+        )
+    )
+    return True
+
+
 def run_ingest_file(
     file: DriveFile,
     index: int,
@@ -782,6 +833,32 @@ def run_ingest_file(
             had_error=had_errors,
         )
     except Exception as exc:
+        recorded_source_failure = False
+        if isinstance(exc, AppError):
+            recorded_source_failure = _record_permanent_source_failure(
+                runtime,
+                settings=settings,
+                dependencies=dependencies,
+                file_ctx=file_ctx,
+                error=exc,
+                logger_name=logger_name,
+            )
+        error_md5 = runtime.md5 or runtime.drive_md5 or None
+        if error_md5 and not recorded_source_failure:
+            if isinstance(exc, AppError):
+                last_error = f"{exc.code}: {exc.message}"
+            else:
+                last_error = f"{type(exc).__name__}: {exc}"
+            dependencies.state_record(
+                StateRecordRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    file_id=runtime.file.file_id,
+                    md5=error_md5,
+                    last_error=last_error,
+                ),
+                file_ctx,
+            )
         logger.info(
             log_event(
                 file_ctx,
@@ -802,7 +879,7 @@ def run_ingest_file(
                 schema_version="1.0",
                 file_id=runtime.file.file_id,
                 name=runtime.display_name,
-                md5=None,
+                md5=error_md5,
                 html_path=None,
                 status="error",
                 error=str(exc),

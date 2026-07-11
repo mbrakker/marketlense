@@ -1,3 +1,4 @@
+# ruff: noqa: F403,F405,I001
 from __future__ import annotations
 
 from src.services._llm_service.openai_shared import *
@@ -167,11 +168,13 @@ def openai_ocr_pdf(
         model=resolved_model,
         input_tokens=metadata.input_tokens,
         output_tokens=metadata.output_tokens,
+        total_tokens=metadata.total_tokens,
         tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
+        source_request=request,
     )
     response = OpenAIPdfOcrResponse(
         schema_version="1.0",
@@ -338,11 +341,13 @@ def openai_respond_with_vector_store(
         model=request.model,
         input_tokens=metadata.input_tokens,
         output_tokens=metadata.output_tokens,
+        total_tokens=metadata.total_tokens,
         tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
+        source_request=request,
     )
 
     logger.info(

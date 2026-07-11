@@ -9,40 +9,57 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional
 
-from src.services.pdf_service import check_pdf_eof
+from src.contracts.drive import (
+    DriveDownloadToPathRequest,
+    DriveFile,
+    DriveFileMetadataRequest,
+    DriveListRequest,
+)
 from src.contracts.file_cache import (
     FileCacheMd5SidecarResolveRequest,
     FileCacheMd5SidecarWriteRequest,
 )
-from src.contracts.drive import (
-    DriveDownloadToPathRequest,
-    DriveFileMetadataRequest,
-    DriveListRequest,
-    DriveFile,
-)
-from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.files import (
     DeleteFileRequest,
     FileExistsRequest,
     FileStatRequest,
     ReadTextRequest,
 )
+from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.pdf_utils import PdfEofCheckRequest
+from src.contracts.state import (
+    StateBatchCheckItem,
+    StateBatchCheckRequest,
+    StateCheckRequest,
+    StateGetRequest,
+    StateGetResponse,
+    StateIngestCursorGetRequest,
+    StateIngestCursorSetRequest,
+)
 from src.generators.report_generation_shared import report_slug
+from src.orchestrators._ingest_orchestrator.db_preflight import (
+    verify_ingest_db_access,
+)
+from src.orchestrators._ingest_orchestrator.lock_lifecycle import (
+    acquire_ingest_lock,
+    finalize_ingest_run,
+)
 from src.orchestrators.ingest_file_orchestrator import (
     FileProcessResult as _FileProcessResult,
+)
+from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
 )
-from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.report_pipeline_orchestrator import (
     run_report_pipeline as run_report_pipeline_orchestrator,
 )
+from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.vector_store_retention_orchestrator import (
     run_vector_store_retention_cleanup,
 )
@@ -56,37 +73,22 @@ from src.services.file_cache_service import (
     write_md5_sidecar,
 )
 from src.services.file_service import delete_file, file_exists, file_stat, read_text
+from src.services.pdf_service import check_pdf_eof
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
 )
+from src.services.state_service import already_processed as state_already_processed
 from src.services.state_service import (
     already_processed_batch as state_already_processed_batch,
 )
-from src.services.state_service import already_processed as state_already_processed
 from src.services.state_service import get as state_get
 from src.services.state_service import (
     get_ingest_cursor,
     set_ingest_cursor,
 )
 from src.services.state_service import record as state_record
-from src.contracts.state import (
-    StateBatchCheckItem,
-    StateBatchCheckRequest,
-    StateCheckRequest,
-    StateGetResponse,
-    StateGetRequest,
-    StateIngestCursorGetRequest,
-    StateIngestCursorSetRequest,
-)
-from src.orchestrators._ingest_orchestrator.db_preflight import (
-    verify_ingest_db_access,
-)
-from src.orchestrators._ingest_orchestrator.lock_lifecycle import (
-    acquire_ingest_lock,
-    finalize_ingest_run,
-)
-from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.errors import AppError
+from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
 
 logger = logging.getLogger("market_lense.ingest_orchestrator")
@@ -387,6 +389,26 @@ def _process_file(
     root_ctx: RunContext,
     force_report_cards: bool,
 ) -> _FileProcessResult:
+    def _run_pipeline(
+        current_file: DriveFile,
+        local_pdf_path: str,
+        current_settings: IngestSettings,
+        current_md5: str | None,
+        current_ctx: RunContext,
+        **kwargs: object,
+    ) -> IngestOutcome:
+        return run_report_pipeline_orchestrator(
+            current_file,
+            local_pdf_path,
+            current_settings,
+            current_md5,
+            current_ctx,
+            retries=2,
+            auto_resume_from_latest_safe=bool(
+                kwargs.get("auto_resume_from_latest_safe", False)
+            ),
+        )
+
     dependencies = IngestFileDependencies(
         should_skip=_should_skip,
         cache_pdf_path=_cache_pdf_path,
@@ -399,19 +421,7 @@ def _process_file(
         download_pdf_to_path=download_pdf_to_path,
         check_pdf_eof=check_pdf_eof,
         delete_file=delete_file,
-        run_report_pipeline=lambda current_file, local_pdf_path, current_settings, current_md5, current_ctx, **kwargs: (
-            run_report_pipeline_orchestrator(
-                current_file,
-                local_pdf_path,
-                current_settings,
-                current_md5,
-                current_ctx,
-                retries=2,
-                auto_resume_from_latest_safe=bool(
-                    kwargs.get("auto_resume_from_latest_safe", False)
-                ),
-            )
-        ),
+        run_report_pipeline=_run_pipeline,
         state_record=state_record,
         eof_retry_limit=EOF_RETRY_LIMIT,
         bypass_existing_report_html=force_report_cards,
@@ -511,9 +521,14 @@ def _materialize_files_to_process(
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
     force_report_cards: bool,
+    excluded_file_ids: set[str] | None = None,
 ) -> list[DriveFile]:
     files_to_process: list[DriveFile] = []
     pending_md5_files: list[DriveFile] = []
+    excluded = excluded_file_ids or set()
+
+    if max_n <= 0:
+        return files_to_process
 
     def _flush_pending_md5_files() -> None:
         nonlocal pending_md5_files
@@ -549,6 +564,17 @@ def _materialize_files_to_process(
         pending_md5_files = []
 
     for file in deps.list_pdfs(list_req, root_ctx):
+        if file.file_id in excluded:
+            logger.info(
+                log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="drive_list_skip_attempted",
+                    module=logger.name,
+                    fields={"file_id": file.file_id},
+                )
+            )
+            continue
         drive_md5 = file.md5_checksum.strip() if file.md5_checksum else None
         if drive_md5:
             pending_md5_files.append(file)
@@ -569,7 +595,11 @@ def _materialize_files_to_process(
             role="orchestrator",
             event="drive_list_materialized",
             module=logger.name,
-            fields={"count": len(files_to_process), "limit": max_n},
+            fields={
+                "count": len(files_to_process),
+                "limit": max_n,
+                "excluded_count": len(excluded),
+            },
         )
     )
     return files_to_process
@@ -875,6 +905,7 @@ def _process_ingest_batch(
     deps: IngestBatchDependencies,
     root_ctx: RunContext,
     force_report_cards: bool,
+    start_index: int = 0,
 ) -> list[_FileProcessResult]:
     _prefetch_drive_cache_stage(
         files_to_process,
@@ -889,7 +920,7 @@ def _process_ingest_batch(
     )
     results: list[_FileProcessResult] = []
     if worker_limit <= 1 or len(files_to_process) <= 1:
-        for idx, file in enumerate(files_to_process):
+        for idx, file in enumerate(files_to_process, start=start_index):
             results.append(
                 deps.process_file(
                     file,
@@ -914,7 +945,7 @@ def _process_ingest_batch(
                 idx,
                 file,
             )
-            for idx, file in enumerate(files_to_process)
+            for idx, file in enumerate(files_to_process, start=start_index)
         }
         for future in as_completed(futures):
             idx, file = futures[future]
@@ -1068,26 +1099,70 @@ def run_ingest(
             limit=limit,
             modified_after=modified_after,
         )
-        files_to_process = _run_step_with_retry(
-            "materialize_drive_files",
-            root_ctx,
-            lambda: _materialize_files_to_process(
-                list_req,
+        if limit is None:
+            files_to_process = _run_step_with_retry(
+                "materialize_drive_files",
+                root_ctx,
+                lambda: _materialize_files_to_process(
+                    list_req,
+                    settings=settings,
+                    max_n=max_n,
+                    deps=deps,
+                    root_ctx=root_ctx,
+                    force_report_cards=force_report_cards,
+                ),
+                2,
+            )
+            results = _process_ingest_batch(
+                files_to_process,
                 settings=settings,
-                max_n=max_n,
                 deps=deps,
                 root_ctx=root_ctx,
                 force_report_cards=force_report_cards,
-            ),
-            2,
-        )
-        results = _process_ingest_batch(
-            files_to_process,
-            settings=settings,
-            deps=deps,
-            root_ctx=root_ctx,
-            force_report_cards=force_report_cards,
-        )
+            )
+        else:
+            results = []
+            attempted_file_ids: set[str] = set()
+            processed_so_far = 0
+            while processed_so_far < max_n:
+                remaining = max_n - processed_so_far
+
+                def _materialize_remaining(
+                    *,
+                    current_remaining: int = remaining,
+                    current_excluded: set[str] | None = None,
+                ) -> list[DriveFile]:
+                    return _materialize_files_to_process(
+                        list_req,
+                        settings=settings,
+                        max_n=current_remaining,
+                        deps=deps,
+                        root_ctx=root_ctx,
+                        force_report_cards=force_report_cards,
+                        excluded_file_ids=current_excluded or set(),
+                    )
+
+                files_to_process = _run_step_with_retry(
+                    "materialize_drive_files",
+                    root_ctx,
+                    lambda excluded=set(attempted_file_ids): _materialize_remaining(
+                        current_excluded=excluded,
+                    ),
+                    2,
+                )
+                if not files_to_process:
+                    break
+                attempted_file_ids.update(file.file_id for file in files_to_process)
+                batch_results = _process_ingest_batch(
+                    files_to_process,
+                    settings=settings,
+                    deps=deps,
+                    root_ctx=root_ctx,
+                    force_report_cards=force_report_cards,
+                    start_index=len(results),
+                )
+                results.extend(batch_results)
+                processed_so_far += sum(result.processed for result in batch_results)
         results.sort(key=lambda r: r.index)
         outcomes = [result.outcome for result in results]
         processed = sum(result.processed for result in results)

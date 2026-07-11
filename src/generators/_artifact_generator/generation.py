@@ -86,6 +86,8 @@ def generate_artifacts(
     source_status: Optional[Dict[str, Any]] = None,
     categories: Optional[List[str]] = None,
     ctx: Optional[RunContext] = None,
+    publisher_name: str = "",
+    source_url: str = "",
     openai_client=None,
     prompt_client=prompt_service,
     analysis_store=report_analysis_store_service,
@@ -131,6 +133,9 @@ def generate_artifacts(
             prompt_client=prompt_client,
             allow_vector_store=artifact_use_vector_store,
             vector_store_id=vector_store_id,
+            publisher_name=publisher_name,
+            report_name=report_name or "",
+            source_url=source_url,
         )
 
     logger.info(
@@ -310,6 +315,9 @@ def generate_artifacts(
         prompt_client=prompt_client,
         allow_vector_store=artifact_use_vector_store,
         vector_store_id=vector_store_id,
+        publisher_name=publisher_name,
+        report_name=report_name or "",
+        source_url=source_url,
     )
     insights_final = pad_artifact_insights(
         normalize_artifact_insights(
@@ -339,6 +347,9 @@ def generate_artifacts(
         prompt_client=prompt_client,
         allow_vector_store=artifact_use_vector_store,
         vector_store_id=vector_store_id,
+        publisher_name=publisher_name,
+        report_name=report_name or "",
+        source_url=source_url,
     )
     cover_semantics = _validate_cover_semantics(
         cover_semantics_result.get("cover_semantics"),

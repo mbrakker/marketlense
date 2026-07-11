@@ -198,6 +198,78 @@ class TestReportStoreService02UpsertAndGetRound(unittest.TestCase):
             )
             self.assertEqual("Publisher Inc", metadata.publisher)
 
+    def test_resolve_report_source_identity_uses_md5_before_title(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_source_identity")
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.execute(
+                    """
+                    CREATE TABLE report_sources (
+                      id INTEGER PRIMARY KEY,
+                      source_domain TEXT NOT NULL,
+                      report_name TEXT NOT NULL,
+                      landing_page_url TEXT NOT NULL,
+                      normalized_landing_page_url TEXT NOT NULL,
+                      source_status TEXT NOT NULL,
+                      source_page_url TEXT,
+                      publisher_name TEXT,
+                      discovered_at_utc TEXT,
+                      discovered_on_page_number INTEGER,
+                      downloaded_at_utc TEXT,
+                      md5 TEXT,
+                      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+                      updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO report_sources(
+                        source_domain,
+                        report_name,
+                        landing_page_url,
+                        normalized_landing_page_url,
+                        source_status,
+                        publisher_name,
+                        downloaded_at_utc,
+                        md5
+                    )
+                    VALUES(
+                        'publisher.example',
+                        'Source Registry Title',
+                        'https://publisher.example/source-registry-title.pdf',
+                        'https://publisher.example/source-registry-title.pdf',
+                        'downloaded',
+                        'Publisher Inc',
+                        '2026-04-20T00:00:00Z',
+                        'source-md5'
+                    )
+                    """
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            response = resolve_report_source_identity(
+                ReportSourceIdentityResolveRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    report_title="Derived File Title",
+                    md5="source-md5",
+                ),
+                ctx,
+            )
+
+            self.assertEqual("Publisher Inc", response.publisher_name)
+            self.assertEqual("Source Registry Title", response.report_name)
+            self.assertEqual(
+                "https://publisher.example/source-registry-title.pdf",
+                response.source_url,
+            )
+            self.assertEqual("md5", response.resolution_source)
+
     def test_missing_record_returns_none(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")

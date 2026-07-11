@@ -208,12 +208,14 @@ def _runtime(
             browser,
             output_model_schema,
             use_judge=False,
+            calculate_cost=False,
         ):
             self.task = task
             self.llm = llm
             self.browser = browser
             self.output_model_schema = output_model_schema
             self.use_judge = use_judge
+            self.calculate_cost = calculate_cost
 
         def run_sync(self, max_steps: int):
             self.browser.url = "https://example.com/final"

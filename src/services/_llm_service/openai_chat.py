@@ -1,4 +1,4 @@
-# ruff: noqa: F403,F405
+# ruff: noqa: F403,F405,I001
 from __future__ import annotations
 
 from typing import Any, cast
@@ -260,12 +260,14 @@ def analyze_report(
         model=request.model,
         input_tokens=prompt_tokens,
         output_tokens=completion_tokens,
+        total_tokens=total_tokens,
         cached_input_tokens=int(cached_tokens) if cached_tokens is not None else None,
         tool_calls=tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
         model_pricing=request.model_pricing,
         request_id=request_id,
+        source_request=request,
     )
 
     logger.info(
@@ -417,11 +419,13 @@ def openai_chat_json(
         model=request.model,
         input_tokens=metadata.input_tokens,
         output_tokens=metadata.output_tokens,
+        total_tokens=metadata.total_tokens,
         tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
+        source_request=request,
     )
 
     logger.info(
@@ -621,11 +625,13 @@ def openai_chat_json_with_images(
         model=request.model,
         input_tokens=metadata.input_tokens,
         output_tokens=metadata.output_tokens,
+        total_tokens=metadata.total_tokens,
         tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
+        source_request=request,
     )
     logger.info(
         log_event(

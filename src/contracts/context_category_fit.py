@@ -149,6 +149,18 @@ class ContextCategoryFitRequest:
         default="report_vs/context_category_fit",
         metadata={"doc": "Prompt namespace used for context-first category fitting."},
     )
+    publisher_name: str = field(
+        default="",
+        metadata={"doc": "Publisher context recorded with downstream LLM usage."},
+    )
+    report_name: str = field(
+        default="",
+        metadata={"doc": "Human-readable report context recorded with LLM usage."},
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context recorded with downstream LLM usage."},
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Context-category fit request schema version."}
     )

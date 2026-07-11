@@ -198,6 +198,8 @@ def run_report_analysis(
                 settings=runtime.settings,
                 ctx=evidence_ctx,
                 md5=runtime.md5,
+                publisher_name=runtime.publisher_name,
+                source_url=runtime.source_url,
                 **evidence_kwargs,
             )
             taxonomy_state = taxonomy_future.result()
@@ -240,6 +242,8 @@ def run_report_analysis(
                 settings=runtime.settings,
                 ctx=evidence_ctx,
                 md5=runtime.md5,
+                publisher_name=runtime.publisher_name,
+                source_url=runtime.source_url,
                 **evidence_kwargs,
             )
         elif evidence_error is not None:
@@ -432,6 +436,8 @@ def run_report_analysis(
             categories=category_assignment.category_labels,
             ctx=artifact_ctx,
             md5=runtime.md5,
+            publisher_name=runtime.publisher_name,
+            source_url=runtime.source_url,
             **artifact_kwargs,
         )
         mode_evidence_paths["artifacts"] = pack_paths(
@@ -513,6 +519,9 @@ def run_report_analysis(
             artifacts=artifacts_payload or {},
             evidence_packs=packs,
             vector_store_id=vector_state.vector_store_id,
+            publisher_name=runtime.publisher_name,
+            report_name=runtime.source_report_name or runtime.report_title,
+            source_url=runtime.source_url,
         ),
         pack_name="validation",
         openai_client=validation_openai_client,

@@ -256,6 +256,7 @@ def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
             output_model_schema,
             use_judge=False,
             fallback_llm=None,
+            calculate_cost=False,
         ):
             captured_agent.update(
                 {
@@ -264,6 +265,7 @@ def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
                     "fallback_llm": fallback_llm,
                     "output_model_schema": output_model_schema,
                     "use_judge": use_judge,
+                    "calculate_cost": calculate_cost,
                 }
             )
             self.browser = browser
@@ -306,4 +308,5 @@ def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
     assert captured_agent["fallback_llm"].provider == "openrouter"
     assert captured_agent["llm"].kwargs["model"] == "gpt-5-mini"
     assert captured_agent["fallback_llm"].kwargs["model"] == "openai/gpt-5-mini"
+    assert captured_agent["calculate_cost"] is True
     assert result.final_page_url == "https://example.com/final"

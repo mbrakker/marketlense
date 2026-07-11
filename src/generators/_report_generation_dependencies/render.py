@@ -20,6 +20,7 @@ from src.contracts.report_cards import (
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
+    ReportSourceIdentityResolveRequest,
 )
 from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
@@ -36,6 +37,7 @@ from src.services.pdf_service import render_preview as render_preview_service
 from src.services.render_service import render_report as render_report_service
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
+    resolve_report_source_identity,
     upsert_metadata as upsert_report_metadata,
 )
 
@@ -45,6 +47,9 @@ class ReportRenderDependencies:
     render_preview: Callable[[PreviewRequest, RunContext], Any]
     upsert_report_metadata: Callable[[ReportMetadataUpsertRequest, RunContext], Any]
     get_report_metadata: Callable[[ReportMetadataGetRequest, RunContext], Any]
+    resolve_report_source_identity: Callable[
+        [ReportSourceIdentityResolveRequest, RunContext], Any
+    ]
     render_report: Callable[[RenderRequest, RunContext], RenderResponse]
     generate_cover_images: Callable[[CoverImageGenerationRequest, RunContext], Any]
     file_stat: Callable[[FileStatRequest, RunContext], Any]
@@ -69,6 +74,7 @@ class ReportRenderDependencies:
             render_preview=render_preview_service,
             upsert_report_metadata=upsert_report_metadata,
             get_report_metadata=get_report_metadata,
+            resolve_report_source_identity=resolve_report_source_identity,
             render_report=render_report_service,
             generate_cover_images=generate_cover_images,
             file_stat=file_stat,

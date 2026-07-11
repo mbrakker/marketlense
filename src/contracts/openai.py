@@ -35,6 +35,22 @@ class OpenAIEmbeddingRequest:
         default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
         metadata={"doc": "Optional deterministic pre-call context compaction policy."},
     )
+    publisher_name: str = field(
+        default="", metadata={"doc": "Publisher context for usage reporting, if known."}
+    )
+    report_name: str = field(
+        default="", metadata={"doc": "Report context for usage reporting, if known."}
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context for usage reporting, if known."},
+    )
+    prompt_namespace: str = field(
+        default="", metadata={"doc": "Prompt namespace for usage reporting, if known."}
+    )
+    prompt_hash: str = field(
+        default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
+    )
 
 
 @dataclass(frozen=True)
@@ -91,6 +107,58 @@ class OpenAIUsageAccountingRequest:
     cached_input_tokens: Optional[int] = field(
         default=None, metadata={"doc": "Input tokens served from cache, if reported."}
     )
+    provider: str = field(
+        default="openai",
+        metadata={"doc": "Provider that returned usage, e.g. openai or openrouter."},
+    )
+    action: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Application action name; defaults to step_name."},
+    )
+    total_tokens: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Provider total token count, if reported."},
+    )
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "SQLite database path for durable LLM token usage records."},
+    )
+    publisher_name: str = field(
+        default="", metadata={"doc": "Publisher context for usage reporting, if known."}
+    )
+    report_name: str = field(
+        default="", metadata={"doc": "Report context for usage reporting, if known."}
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context for usage reporting, if known."},
+    )
+    prompt_namespace: str = field(
+        default="",
+        metadata={"doc": "Prompt namespace associated with the call, if known."},
+    )
+    prompt_hash: str = field(
+        default="", metadata={"doc": "Prompt hash associated with the call, if known."}
+    )
+    provider_decision: str = field(
+        default="", metadata={"doc": "Provider routing decision, if known."}
+    )
+    cache_decision: str = field(
+        default="", metadata={"doc": "Semantic cache decision, if known."}
+    )
+    temperature: Optional[float] = field(
+        default=None,
+        metadata={"doc": "Sampling temperature used for the call, if known."},
+    )
+    seed: Optional[int] = field(
+        default=None, metadata={"doc": "Seed used for the call, if configured."}
+    )
+    timeout_seconds: Optional[float] = field(
+        default=None, metadata={"doc": "Provider timeout in seconds, if configured."}
+    )
+    extra: Dict[str, Any] = field(
+        default_factory=dict, metadata={"doc": "Additional non-secret usage metadata."}
+    )
 
 
 @dataclass(frozen=True)
@@ -111,6 +179,18 @@ class OpenAIUsageAccountingResponse:
         metadata={
             "doc": "Sanitized non-fatal accounting error, when recording failed."
         },
+    )
+    usage_db_path: str = field(
+        default="",
+        metadata={"doc": "SQLite usage ledger path used, when configured."},
+    )
+    usage_db_recorded: bool = field(
+        default=False,
+        metadata={"doc": "Whether the SQLite usage ledger write succeeded."},
+    )
+    usage_db_row_id: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Inserted SQLite usage ledger row ID, if recorded."},
     )
 
 
@@ -154,6 +234,22 @@ class OpenAIAnalyzeRequest:
     model_pricing: dict = field(
         default_factory=dict,
         metadata={"doc": "Per-model pricing table for cost estimation."},
+    )
+    publisher_name: str = field(
+        default="", metadata={"doc": "Publisher context for usage reporting, if known."}
+    )
+    report_name: str = field(
+        default="", metadata={"doc": "Report context for usage reporting, if known."}
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context for usage reporting, if known."},
+    )
+    prompt_namespace: str = field(
+        default="", metadata={"doc": "Prompt namespace for usage reporting, if known."}
+    )
+    prompt_hash: str = field(
+        default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
     )
 
 
@@ -237,6 +333,22 @@ class OpenAIResponseRequest:
         default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
         metadata={"doc": "Optional deterministic pre-call context compaction policy."},
     )
+    publisher_name: str = field(
+        default="", metadata={"doc": "Publisher context for usage reporting, if known."}
+    )
+    report_name: str = field(
+        default="", metadata={"doc": "Report context for usage reporting, if known."}
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context for usage reporting, if known."},
+    )
+    prompt_namespace: str = field(
+        default="", metadata={"doc": "Prompt namespace for usage reporting, if known."}
+    )
+    prompt_hash: str = field(
+        default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
+    )
 
 
 @dataclass(frozen=True)
@@ -315,6 +427,22 @@ class OpenAIJSONPromptRequest:
         default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
         metadata={"doc": "Optional deterministic pre-call context compaction policy."},
     )
+    publisher_name: str = field(
+        default="", metadata={"doc": "Publisher context for usage reporting, if known."}
+    )
+    report_name: str = field(
+        default="", metadata={"doc": "Report context for usage reporting, if known."}
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context for usage reporting, if known."},
+    )
+    prompt_namespace: str = field(
+        default="", metadata={"doc": "Prompt namespace for usage reporting, if known."}
+    )
+    prompt_hash: str = field(
+        default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
+    )
 
 
 @dataclass(frozen=True)
@@ -368,6 +496,22 @@ class OpenAIJSONImagePromptRequest:
         default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
         metadata={"doc": "Optional deterministic pre-call context compaction policy."},
     )
+    publisher_name: str = field(
+        default="", metadata={"doc": "Publisher context for usage reporting, if known."}
+    )
+    report_name: str = field(
+        default="", metadata={"doc": "Report context for usage reporting, if known."}
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context for usage reporting, if known."},
+    )
+    prompt_namespace: str = field(
+        default="", metadata={"doc": "Prompt namespace for usage reporting, if known."}
+    )
+    prompt_hash: str = field(
+        default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
+    )
 
 
 @dataclass(frozen=True)
@@ -417,6 +561,22 @@ class OpenAIPdfOcrRequest:
     context_compaction_policy: LLMContextCompactionPolicy = field(
         default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
         metadata={"doc": "Optional deterministic pre-call context compaction policy."},
+    )
+    publisher_name: str = field(
+        default="", metadata={"doc": "Publisher context for usage reporting, if known."}
+    )
+    report_name: str = field(
+        default="", metadata={"doc": "Report context for usage reporting, if known."}
+    )
+    source_url: str = field(
+        default="",
+        metadata={"doc": "Source/report URL context for usage reporting, if known."},
+    )
+    prompt_namespace: str = field(
+        default="", metadata={"doc": "Prompt namespace for usage reporting, if known."}
+    )
+    prompt_hash: str = field(
+        default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
     )
 
 

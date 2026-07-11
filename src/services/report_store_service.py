@@ -24,6 +24,7 @@ from src.services._report_store_service.metadata import (
     check_report_db_access,
     get_metadata,
     list_metadata,
+    resolve_report_source_identity,
     upsert_metadata,
 )
 from src.services._report_store_service.publishers import (
@@ -64,6 +65,7 @@ __all__ = [
     "record_publisher_inventory_test_status",
     "record_report_source",
     "replace_publishers",
+    "resolve_report_source_identity",
     "update_publisher_google_folder",
     "upsert_metadata",
 ]

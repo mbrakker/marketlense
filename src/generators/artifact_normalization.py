@@ -30,6 +30,46 @@ INSIGHT_SCORE_FIELDS = (
     "metric_strength_score",
     "novelty_score",
 )
+COVERAGE_ROLE_VALUES = {
+    "market_context",
+    "behavior_shift",
+    "strategic_risk",
+    "operating_implication",
+    "investment_signal",
+    "proof_point",
+    "counter_signal",
+}
+REPORT_TYPE_LENS_VALUES = {
+    "market_size",
+    "consumer_behavior",
+    "technology_shift",
+    "channel_strategy",
+    "brand_strategy",
+    "investment_outlook",
+    "risk_regulation",
+    "operations",
+    "creative_culture",
+}
+REPORT_TYPE_LENS_TO_COVERAGE_ROLE = {
+    "market_size": "market_context",
+    "consumer_behavior": "behavior_shift",
+    "technology_shift": "market_context",
+    "channel_strategy": "operating_implication",
+    "brand_strategy": "market_context",
+    "investment_outlook": "investment_signal",
+    "risk_regulation": "strategic_risk",
+    "operations": "operating_implication",
+    "creative_culture": "market_context",
+}
+COVERAGE_ROLE_TO_REPORT_TYPE_LENS = {
+    "market_context": "market_size",
+    "behavior_shift": "consumer_behavior",
+    "strategic_risk": "risk_regulation",
+    "operating_implication": "operations",
+    "investment_signal": "investment_outlook",
+    "proof_point": "market_size",
+    "counter_signal": "risk_regulation",
+}
 INLINE_REFERENCE_TOKEN_RE = r"[A-Z]{1,4}-\d{1,4}"
 INLINE_REFERENCE_GROUP_RE = re.compile(
     rf"[\(\[]\s*{INLINE_REFERENCE_TOKEN_RE}(?:\s*[/,;|]\s*{INLINE_REFERENCE_TOKEN_RE})*\s*[\)\]]"
@@ -124,7 +164,7 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
             "pages": pages,
         }
         for field_name in INSIGHT_TEXT_FIELDS:
-            value = _s(item.get(field_name)).strip()
+            value = _normalize_insight_text_field(field_name, item.get(field_name))
             if value:
                 insight[field_name] = value
         for field_name in INSIGHT_SCORE_FIELDS:
@@ -147,9 +187,11 @@ def pad_artifact_insights(
         source_pages_raw = source.get("pages")
         source_pages = source_pages_raw if isinstance(source_pages_raw, list) else []
         text_fields = {
-            field_name: _s(source.get(field_name)).strip()
+            field_name: _normalize_insight_text_field(
+                field_name, source.get(field_name)
+            )
             for field_name in INSIGHT_TEXT_FIELDS
-            if _s(source.get(field_name)).strip()
+            if _normalize_insight_text_field(field_name, source.get(field_name))
         }
         score_fields: Dict[str, float] = {}
         for field_name in INSIGHT_SCORE_FIELDS:
@@ -514,6 +556,19 @@ def _empty_insight(idx: int) -> Dict[str, Any]:
         "metric": {key: "" for key in METRIC_FIELDS},
         "pages": [],
     }
+
+
+def _normalize_insight_text_field(field_name: str, value: Any) -> str:
+    text = _s(value).strip()
+    if field_name == "coverage_role":
+        if text in COVERAGE_ROLE_VALUES:
+            return text
+        return REPORT_TYPE_LENS_TO_COVERAGE_ROLE.get(text, text)
+    if field_name == "report_type_lens":
+        if text in REPORT_TYPE_LENS_VALUES:
+            return text
+        return COVERAGE_ROLE_TO_REPORT_TYPE_LENS.get(text, text)
+    return text
 
 
 def _collect_known_evidence_ids(

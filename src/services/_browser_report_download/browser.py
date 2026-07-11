@@ -25,7 +25,9 @@ from src.contracts.browser_download import (
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
 )
+from src.contracts.openai import OpenAIUsageAccountingRequest
 from src.contracts.run_context import RunContext
+from src.services import llm_service, openai_accounting_service
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
@@ -59,7 +61,6 @@ from src.services._browser_report_download.session_reuse import (
     finalize_browser_session_reuse,
     resolve_browser_session_reuse,
 )
-from src.services import llm_service
 from src.utils.coercion import normalize_optional_bool_signal
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -223,6 +224,7 @@ from src.services._browser_report_download._browser_runtime.session_lifecycle im
 )
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
+
 
 def _mark_lookup_submission_assisted_raw_response(raw_model_response: str) -> str:
     payload = _parse_raw_model_response(raw_model_response)
@@ -400,7 +402,10 @@ def _try_pre_llm_standard_form_submit(
                 role="service",
                 event="browser_report_download_pre_llm_autofill_skipped",
                 module=logger.name,
-                fields={"normalized_url": normalized_url, "reason": "no_identity_fields"},
+                fields={
+                    "normalized_url": normalized_url,
+                    "reason": "no_identity_fields",
+                },
             )
         )
         return None
@@ -445,7 +450,9 @@ def _try_pre_llm_standard_form_submit(
             )
         )
         return None
-    snapshot = _capture_terminal_snapshot(browser, ctx=ctx, normalized_url=normalized_url)
+    snapshot = _capture_terminal_snapshot(
+        browser, ctx=ctx, normalized_url=normalized_url
+    )
     final_url = helper_result.final_url or snapshot.url or execution_url
     logger.info(
         log_event(
@@ -600,9 +607,12 @@ def run_browser_report_download_agent(
             "output_model_schema": BrowserUseAgentResult,
             "use_judge": _BROWSER_AGENT_USE_JUDGE,
         }
+        agent_parameters = inspect.signature(browser_use.Agent).parameters
+        if "calculate_cost" in agent_parameters:
+            agent_kwargs["calculate_cost"] = True
         if (
             llm_clients.fallback_llm is not None
-            and "fallback_llm" in inspect.signature(browser_use.Agent).parameters
+            and "fallback_llm" in agent_parameters
         ):
             agent_kwargs["fallback_llm"] = llm_clients.fallback_llm
         agent = browser_use.Agent(**agent_kwargs)
@@ -614,6 +624,15 @@ def run_browser_report_download_agent(
             normalized_url=normalized_url,
         )
         history = history_result.history
+        _record_browser_use_agent_usage(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            prompt_bundle=prompt_bundle,
+            llm_clients=llm_clients,
+            agent=agent,
+            history=history,
+        )
         raw_model_response = str(history.final_result() or "").strip()
         history_final_page_url = _read_history_final_page_url(history)
         history_final_page_title = _read_history_final_page_title(history)
@@ -810,12 +829,14 @@ def run_browser_report_download_agent(
                 request=request,
                 raw_model_response=raw_model_response,
             ):
-                timed_out_form_assisted = _attempt_lookup_submission_assist_with_timeout(
-                    request=request,
-                    browser=browser,
-                    ctx=ctx,
-                    normalized_url=normalized_url,
-                    raw_model_response=raw_model_response,
+                timed_out_form_assisted = (
+                    _attempt_lookup_submission_assist_with_timeout(
+                        request=request,
+                        browser=browser,
+                        ctx=ctx,
+                        normalized_url=normalized_url,
+                        raw_model_response=raw_model_response,
+                    )
                 )
             if not timed_out_form_assisted and (
                 _should_attempt_timeout_standard_form_submit_assist(
@@ -824,11 +845,13 @@ def run_browser_report_download_agent(
                     raw_model_response=raw_model_response,
                 )
             ):
-                timed_out_form_assisted = _attempt_standard_form_submit_assist_with_timeout(
-                    request=request,
-                    browser=browser,
-                    ctx=ctx,
-                    normalized_url=normalized_url,
+                timed_out_form_assisted = (
+                    _attempt_standard_form_submit_assist_with_timeout(
+                        request=request,
+                        browser=browser,
+                        ctx=ctx,
+                        normalized_url=normalized_url,
+                    )
                 )
             if timed_out_form_assisted and raw_model_response:
                 raw_model_response = _mark_standard_form_submit_assisted_raw_response(
@@ -995,6 +1018,207 @@ def _load_browser_use_runtime(normalized_url: str) -> Any:
             retryable=False,
             context={"normalized_url": normalized_url},
         ) from exc
+
+
+def _record_browser_use_agent_usage(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    prompt_bundle: BrowserDownloadPromptBundle,
+    llm_clients: Any,
+    agent: Any,
+    history: Any,
+) -> None:
+    usage_entries = getattr(
+        getattr(agent, "token_cost_service", None), "usage_history", None
+    )
+    if isinstance(usage_entries, list) and usage_entries:
+        for index, entry in enumerate(usage_entries, start=1):
+            usage = getattr(entry, "usage", None)
+            if usage is None:
+                continue
+            model_name = str(getattr(entry, "model", "") or "")
+            _record_browser_use_usage_row(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                prompt_bundle=prompt_bundle,
+                llm_clients=llm_clients,
+                model_name=model_name,
+                input_tokens=_optional_usage_int(getattr(usage, "prompt_tokens", None)),
+                output_tokens=_optional_usage_int(
+                    getattr(usage, "completion_tokens", None)
+                ),
+                total_tokens=None,
+                cached_tokens=_optional_usage_int(
+                    getattr(usage, "prompt_cached_tokens", None)
+                ),
+                cost_usd=0.0,
+                extra={
+                    "browser_usage_entry_index": index,
+                    "browser_usage_timestamp": str(
+                        getattr(entry, "timestamp", "") or ""
+                    ),
+                    "browser_usage_entry_count": len(usage_entries),
+                },
+            )
+        return
+    usage = getattr(history, "usage", None)
+    if usage is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_llm_usage_unavailable",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "reason": "history_usage_missing",
+                    "primary_provider": getattr(llm_clients, "primary_provider", ""),
+                    "primary_model": getattr(llm_clients, "primary_model", ""),
+                },
+            )
+        )
+        return
+    by_model = getattr(usage, "by_model", None)
+    model_rows = by_model if isinstance(by_model, dict) and by_model else {}
+    if not model_rows:
+        model_rows = {
+            str(getattr(llm_clients, "primary_model", "") or "unknown"): usage
+        }
+    for model, stats in model_rows.items():
+        input_tokens = _optional_usage_int(
+            getattr(stats, "prompt_tokens", None)
+            or getattr(stats, "total_prompt_tokens", None)
+        )
+        output_tokens = _optional_usage_int(
+            getattr(stats, "completion_tokens", None)
+            or getattr(stats, "total_completion_tokens", None)
+        )
+        total_tokens = _optional_usage_int(getattr(stats, "total_tokens", None))
+        cached_tokens = _optional_usage_int(
+            getattr(stats, "prompt_cached_tokens", None)
+            or getattr(usage, "total_prompt_cached_tokens", None)
+        )
+        model_name = str(model or getattr(llm_clients, "primary_model", "") or "")
+        _record_browser_use_usage_row(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            prompt_bundle=prompt_bundle,
+            llm_clients=llm_clients,
+            model_name=model_name,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+            cached_tokens=cached_tokens,
+            cost_usd=float(
+                getattr(stats, "cost", None) or getattr(usage, "total_cost", 0.0) or 0.0
+            ),
+            extra={
+                "entry_count": _optional_usage_int(getattr(usage, "entry_count", None))
+            },
+        )
+
+
+def _record_browser_use_usage_row(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    prompt_bundle: BrowserDownloadPromptBundle,
+    llm_clients: Any,
+    model_name: str,
+    input_tokens: int | None,
+    output_tokens: int | None,
+    total_tokens: int | None,
+    cached_tokens: int | None,
+    cost_usd: float,
+    extra: dict[str, Any],
+) -> None:
+    row_extra = {
+        "browser_reported_cost_usd": cost_usd,
+        "route_family_hint": request.route_family_hint or "",
+        "route_kind_hint": request.route_kind_hint or "",
+        "primary_provider": getattr(llm_clients, "primary_provider", ""),
+        "fallback_provider": (getattr(llm_clients, "fallback_provider", "") or ""),
+        **extra,
+    }
+    openai_accounting_service.record_usage(
+        OpenAIUsageAccountingRequest(
+            schema_version="1.0",
+            step_name="browser_use_agent",
+            model=model_name,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+            cached_input_tokens=cached_tokens,
+            tool_calls=0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+            request_id=None,
+            provider=_browser_usage_provider(
+                model=model_name,
+                llm_clients=llm_clients,
+            ),
+            action="browser_use_agent",
+            usage_db_path="./state/llm_usage.sqlite",
+            publisher_name="",
+            report_name=_browser_usage_report_name(request),
+            source_url=normalized_url,
+            prompt_namespace=prompt_bundle.namespace,
+            prompt_hash=prompt_bundle.user_prompt_sha256,
+            provider_decision=_browser_usage_provider_decision(
+                model=model_name,
+                llm_clients=llm_clients,
+            ),
+            cache_decision="disabled",
+            temperature=request.settings.temperature,
+            seed=None,
+            timeout_seconds=request.settings.timeout_seconds,
+            extra=row_extra,
+        ),
+        ctx,
+    )
+
+
+def _optional_usage_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _browser_usage_report_name(request: BrowserReportDownloadRequest) -> str:
+    candidate_trace = request.candidate_trace
+    if candidate_trace is not None:
+        title = str(getattr(candidate_trace, "title", "") or "").strip()
+        if title:
+            return title
+    return ""
+
+
+def _browser_usage_provider(*, model: str, llm_clients: Any) -> str:
+    if model and model == str(getattr(llm_clients, "fallback_model", "") or ""):
+        return str(getattr(llm_clients, "fallback_provider", "") or "openrouter")
+    if model and model == str(getattr(llm_clients, "primary_model", "") or ""):
+        return str(getattr(llm_clients, "primary_provider", "") or "openai")
+    if "/" in model:
+        return "openrouter"
+    return str(getattr(llm_clients, "primary_provider", "") or "openai")
+
+
+def _browser_usage_provider_decision(*, model: str, llm_clients: Any) -> str:
+    provider = _browser_usage_provider(model=model, llm_clients=llm_clients)
+    if provider == "openrouter":
+        if str(getattr(llm_clients, "primary_provider", "") or "") == "openai":
+            return "openrouter_fallback"
+        return "openrouter_primary"
+    return "openai_primary"
 
 
 def _is_no_space_error(exc: BaseException) -> bool:

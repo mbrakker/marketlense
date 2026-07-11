@@ -41,6 +41,7 @@ from src.generators.analysis_store_adapter import (
 from src.generators.artifact_normalization import (
     bind_artifact_evidence_spans,
     normalize_artifact_evidence_ids,
+    normalize_artifact_insights,
     normalize_artifact_toc_entries,
 )
 from src.services import file_service
@@ -1342,14 +1343,10 @@ def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, 
     raw_quotes_final = payload.get("quotes_final")
     summary: Dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
     insights_candidates: List[Dict[str, Any]] = (
-        [item for item in raw_insights_candidates if isinstance(item, dict)]
-        if isinstance(raw_insights_candidates, list)
-        else []
+        normalize_artifact_insights(raw_insights_candidates, prefix="candidate")
     )
     insights_final: List[Dict[str, Any]] = (
-        [item for item in raw_insights_final if isinstance(item, dict)]
-        if isinstance(raw_insights_final, list)
-        else []
+        normalize_artifact_insights(raw_insights_final, prefix="insight")
     )
     quotes_final: List[Dict[str, Any]] = (
         [item for item in raw_quotes_final if isinstance(item, dict)]

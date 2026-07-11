@@ -154,6 +154,11 @@ def fit_report_categories_from_context(
                 cost_ledger_path=request.settings.cost_ledger_path,
                 cost_daily_path=request.settings.cost_daily_path,
                 model_pricing=request.settings.model_pricing,
+                publisher_name=request.publisher_name,
+                report_name=request.report_name,
+                source_url=request.source_url,
+                prompt_namespace=request.prompt_namespace,
+                prompt_hash=prompt_bundle.prompt_set.user.sha256,
             ),
             ctx,
         )
