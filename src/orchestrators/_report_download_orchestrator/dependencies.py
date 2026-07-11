@@ -7,6 +7,8 @@ from typing import Callable, Optional
 from src.contracts.browser_download import (
     BrowserDownloadIdentityFieldUpsertRequest,
     BrowserDownloadIdentityFieldUpsertResponse,
+    BrowserDownloadRequiredSelectOverrideRequest,
+    BrowserDownloadRequiredSelectOverrideResponse,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
     BrowserRoutePrivateApiAutoPromotionDetectionRequest,
@@ -65,7 +67,10 @@ from src.services.browser_report_download_service import (
     promote_private_api_evidence_to_browser_playbook,
     promote_validated_browser_route_result_to_playbook,
 )
-from src.services.config_service import upsert_browser_download_identity_fields
+from src.services.config_service import (
+    upsert_browser_download_identity_fields,
+    upsert_browser_download_required_select_overrides,
+)
 from src.services.drive_service import (
     ensure_folder,
     list_files_in_folder,
@@ -114,6 +119,10 @@ class ReportDownloadDependencies:
         BrowserDownloadIdentityFieldUpsertResponse,
     ]
     sleep_fn: Callable[[float], None]
+    upsert_browser_download_required_select_overrides: Callable[
+        [BrowserDownloadRequiredSelectOverrideRequest, RunContext],
+        BrowserDownloadRequiredSelectOverrideResponse,
+    ] = upsert_browser_download_required_select_overrides
     file_stat: Callable[[FileStatRequest, RunContext], FileStatResponse] = file_stat
     promote_validated_browser_route_result_to_playbook: Callable[
         ..., BrowserRoutePlaybookPromotionResponse
@@ -201,5 +210,8 @@ class ReportDownloadDependencies:
             ensure_folder=ensure_folder,
             update_publisher_google_folder=update_publisher_google_folder,
             upsert_browser_download_identity_fields=upsert_browser_download_identity_fields,
+            upsert_browser_download_required_select_overrides=(
+                upsert_browser_download_required_select_overrides
+            ),
             sleep_fn=time.sleep,
         )

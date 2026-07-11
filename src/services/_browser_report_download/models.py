@@ -43,6 +43,17 @@ class BrowserUseRouteStep(BaseModel):
     verification_status: str | None = Field(default=None)
 
 
+class BrowserUseRequiredSelectEvidence(BaseModel):
+    field_label: str = Field(description="Visible required select label.")
+    field_name: str = Field(default="", description="HTML or accessibility name.")
+    options: list[str] = Field(
+        default_factory=list, description="Visible option labels."
+    )
+    classifier_confidence: float = Field(
+        default=0.0, description="Confidence that this is a required select."
+    )
+
+
 class BrowserUseAgentResult(BaseModel):
     route_kind: str = Field(
         description="Either `pdf_download`, `email_delivery`, or `onsite_report`."
@@ -82,6 +93,10 @@ class BrowserUseAgentResult(BaseModel):
     encountered_form_fields: list[str] = Field(
         default_factory=list,
         description="Distinct form field labels or names encountered during the route.",
+    )
+    required_select_evidence: list[BrowserUseRequiredSelectEvidence] = Field(
+        default_factory=list,
+        description="Required-select evidence captured when no approved identity value matches.",
     )
     route_steps: list[BrowserUseRouteStep] = Field(
         default_factory=list,

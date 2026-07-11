@@ -55,10 +55,10 @@ steps:
   expected_url_contains: ''
   expected_text: ''
 - schema_version: '1.0'
-  action: input/select
+  action: select
   target: Company Type selected
-  verification: Company Type chosen ('Ad Exchange' first non-placeholder) as visible
-    in prior steps
+  verification: Company Type must match an approved publisher identity value; otherwise
+    stop as blocked_unknown_required_enum and retain field/options evidence for review.
   selector_type: ''
   selector: ''
   value: ''

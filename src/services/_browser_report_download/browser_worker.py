@@ -103,6 +103,7 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
     warm_worker_pool_payload = payload.get("warm_worker_pool_policy")
     captcha_handoff_payload = payload.get("captcha_handoff_policy")
     route_budgets_payload = payload.get("route_budgets")
+    model_pricing_payload = payload.get("model_pricing")
     session_reuse_policy = _build_session_reuse_policy(
         session_reuse_payload if isinstance(session_reuse_payload, dict) else {}
     )
@@ -166,9 +167,7 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         if isinstance(route_budgets_payload, list)
         else [],
         model_pricing=(
-            payload.get("model_pricing")
-            if isinstance(payload.get("model_pricing"), dict)
-            else {}
+            model_pricing_payload if isinstance(model_pricing_payload, dict) else {}
         ),
     )
 

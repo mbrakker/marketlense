@@ -45,7 +45,9 @@ def evaluate_crop_qa_escalation(
             },
         )
     )
-    prompt_payload = _load_escalation_prompts(policy, ctx) if policy.enabled else None
+    prompt_payload: dict[str, Any] = {}
+    if policy.enabled:
+        prompt_payload = _load_escalation_prompts(policy, ctx)
     decisions: list[CropQaEscalationDecision] = []
     eligible_count = 0
     model_call_count = 0
@@ -215,9 +217,7 @@ def _is_escalation_eligible(
     score = _qa_score(crop, sidecar)
     defects = set(_qa_defects(crop, sidecar))
     if score is not None and (
-        policy.low_confidence_min_score
-        <= score
-        <= policy.low_confidence_max_score
+        policy.low_confidence_min_score <= score <= policy.low_confidence_max_score
     ):
         return True, "low_confidence_score"
     if defects.intersection(set(policy.high_risk_defects)):
@@ -259,16 +259,14 @@ def _model_decision(
     decision = str(payload.get("decision") or "reject").strip().lower()
     if decision not in {"accept", "repair", "reject"}:
         decision = "reject"
-    defects = [
-        str(item).strip()
-        for item in payload.get("defects", [])
-        if str(item).strip()
-    ] if isinstance(payload.get("defects"), list) else []
+    defects = (
+        [str(item).strip() for item in payload.get("defects", []) if str(item).strip()]
+        if isinstance(payload.get("defects"), list)
+        else []
+    )
     confidence_value = payload.get("confidence")
     confidence = (
-        float(confidence_value)
-        if isinstance(confidence_value, (int, float))
-        else None
+        float(confidence_value) if isinstance(confidence_value, (int, float)) else None
     )
     return CropQaEscalationDecision(
         schema_version="1.0",
@@ -312,7 +310,8 @@ def _quality_profile(crop: dict[str, Any], sidecar: dict[str, Any]) -> str:
 
 
 def _qa_score(crop: dict[str, Any], sidecar: dict[str, Any]) -> float | None:
-    qa = sidecar.get("qa") if isinstance(sidecar.get("qa"), dict) else {}
+    raw_qa = sidecar.get("qa")
+    qa: dict[str, Any] = raw_qa if isinstance(raw_qa, dict) else {}
     value = crop.get("score", sidecar.get("score", qa.get("total_score")))
     if not isinstance(value, (int, float)):
         return None
@@ -321,7 +320,8 @@ def _qa_score(crop: dict[str, Any], sidecar: dict[str, Any]) -> float | None:
 
 
 def _qa_defects(crop: dict[str, Any], sidecar: dict[str, Any]) -> list[str]:
-    qa = sidecar.get("qa") if isinstance(sidecar.get("qa"), dict) else {}
+    raw_qa = sidecar.get("qa")
+    qa: dict[str, Any] = raw_qa if isinstance(raw_qa, dict) else {}
     value = crop.get("defects", sidecar.get("defects", qa.get("defect_labels")))
     if not isinstance(value, list):
         return []

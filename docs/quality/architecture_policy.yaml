@@ -54,6 +54,7 @@ external_system_ownership:
       - src/services/analytics_store_service.py
       - src/services/run_registry_service.py
       - src/services/idempotency_service.py
+      - src/services/llm_usage_ledger_service.py
   browser_runtime:
     import_prefixes: [browser_use, playwright, cdp_use]
     canonical_entrypoint: src/services/browser_report_download_service.py

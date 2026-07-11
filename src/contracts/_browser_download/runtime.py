@@ -6,7 +6,7 @@ from typing import Optional
 from src.contracts.drive import DriveFile
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 
-from .identity import BrowserDownloadSettings
+from .identity import BrowserDownloadRequiredSelectEvidence, BrowserDownloadSettings
 from .playbooks import BrowserRoutePlaybookSelection
 
 
@@ -496,6 +496,12 @@ class BrowserReportDownloadResult:
         default_factory=list,
         metadata={
             "doc": "Distinct form field labels or names encountered while following the route."
+        },
+    )
+    required_select_evidence: list[BrowserDownloadRequiredSelectEvidence] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Observed required-select labels, names, and visible options retained for safe identity learning."
         },
     )
     blocked_reason: Optional[str] = field(

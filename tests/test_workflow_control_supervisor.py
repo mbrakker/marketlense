@@ -137,3 +137,79 @@ def test_supervisor_plan_uses_scorecard_gate_for_publish_ready_run() -> None:
     assert plan.expected_side_effects == ["wordpress_publish"]
     assert held.selected_action == "notify"
     assert held.blockers == ["run_health_gate_failed"]
+
+
+def test_supervisor_dispatch_persists_registered_handler_outcome(tmp_path) -> None:
+    gate = workflow.evaluate_run_health_gate(
+        workflow.RunHealthGateInput(
+            schema_version="1.0",
+            workflow="publishing",
+            scorecard={"run_id": "run-dispatch", "warnings": []},
+        ),
+        ctx=_ctx(),
+    )
+    plan = workflow.plan_autonomous_run(
+        workflow.AutonomousRunSupervisorInput(
+            schema_version="1.0",
+            workflow="publishing",
+            run_id="run-dispatch",
+            current_state="publish_ready",
+            latest_safe_checkpoint="render_complete",
+            idempotency_scope="publish",
+            idempotency_key="publish:dispatch",
+            preflight_passed=True,
+            validation_status="pass",
+            health_gate=gate,
+            publish_allowed=True,
+        ),
+        ctx=_ctx(),
+    )
+
+    execution = workflow.dispatch_autonomous_run(
+        plan,
+        state_db=str(tmp_path / "state.sqlite"),
+        action_handlers={"publish": lambda _plan, _ctx: "wordpress_draft_created"},
+        ctx=_ctx(),
+    )
+
+    assert execution.status == "completed"
+    assert execution.outcome == "wordpress_draft_created"
+    from src.services.state_service import list_workflow_control_observations
+    from src.contracts.state import WorkflowControlObservationListRequest
+
+    persisted = list_workflow_control_observations(
+        WorkflowControlObservationListRequest(
+            schema_version="1.0",
+            state_db=str(tmp_path / "state.sqlite"),
+            workflow="publishing",
+        ),
+        _ctx(),
+    )
+    assert persisted.observations[0].step_name == "supervisor:publish"
+
+
+def test_run_health_gate_blocks_configured_operational_breaches() -> None:
+    decision = workflow.evaluate_run_health_gate(
+        workflow.RunHealthGateInput(
+            schema_version="1.0",
+            workflow="ingest",
+            scorecard={
+                "run_id": "run-health",
+                "warnings": [],
+                "cost_usd": 4.0,
+                "retry_exhaustion_rate": 0.3,
+                "crop_rejection_rate": 0.4,
+                "evidence_complete": False,
+            },
+            thresholds={
+                "max_cost_usd": 3.0,
+                "max_retry_exhaustion_rate": 0.2,
+                "max_crop_rejection_rate": 0.3,
+            },
+        ),
+        ctx=_ctx(),
+    )
+
+    assert decision.outcome == "fail"
+    assert decision.action == "notify"
+    assert "run_health_cost_usd_exceeded" in decision.blockers

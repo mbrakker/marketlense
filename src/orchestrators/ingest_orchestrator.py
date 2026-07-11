@@ -819,6 +819,37 @@ def _prefetch_cached_pdf(
             prefetch_ctx,
         )
         attempt += 1
+    if eof_check is None or not eof_check.has_eof:
+        delete_file(
+            DeleteFileRequest(
+                schema_version="1.0",
+                path=cache_path,
+                missing_ok=True,
+            ),
+            prefetch_ctx,
+        )
+        logger.info(
+            log_event(
+                prefetch_ctx,
+                role="orchestrator",
+                event="ingest_drive_cache_prefetch_rejected_missing_pdf_eof",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "md5": drive_md5 or "",
+                    "cache_path": cache_path,
+                    "attempt_count": attempt + 1,
+                    "reason": "missing_pdf_eof_after_bounded_retries",
+                },
+            )
+        )
+        return _DriveCachePrefetchResult(
+            file_id=file.file_id,
+            cache_path=cache_path,
+            md5=drive_md5,
+            status="rejected",
+            reason="missing_pdf_eof_after_bounded_retries",
+        )
     final_stat = file_stat(
         FileStatRequest(schema_version="1.0", path=cache_path, compute_md5=True),
         prefetch_ctx,
@@ -892,6 +923,7 @@ def _prefetch_drive_cache_stage(
                 "downloaded": sum(
                     1 for result in results if result.status == "downloaded"
                 ),
+                "rejected": sum(1 for result in results if result.status == "rejected"),
                 "md5_available": sum(1 for result in results if result.md5),
             },
         )

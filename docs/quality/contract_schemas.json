@@ -957,8 +957,20 @@
     "src.contracts._browser_download.identity.BrowserDownloadSettings": {
       "additionalProperties": false,
       "properties": {
+        "accounting_flush_timeout_seconds": {
+          "type": "number"
+        },
+        "accounting_queue_size": {
+          "type": "integer"
+        },
         "captcha_handoff_policy": {
           "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadCaptchaHandoffPolicy"
+        },
+        "cost_daily_path": {
+          "type": "string"
+        },
+        "cost_ledger_path": {
+          "type": "string"
         },
         "drive_upload_auth_mode": {
           "type": "string"
@@ -1033,6 +1045,9 @@
           "type": "integer"
         },
         "model": {
+          "type": "string"
+        },
+        "model_pricing": {
           "type": "string"
         },
         "openai_api_key": {
@@ -1110,6 +1125,9 @@
         },
         "timeout_seconds": {
           "type": "number"
+        },
+        "usage_db_path": {
+          "type": "string"
         },
         "warm_worker_pool_policy": {
           "$ref": "#/$defs/src.contracts._browser_download.worker_pool.BrowserDownloadWarmWorkerPoolPolicy"
@@ -2798,6 +2816,9 @@
             }
           ]
         },
+        "publisher_name": {
+          "type": "string"
+        },
         "publisher_recommended_discovery_route_kind": {
           "anyOf": [
             {
@@ -3003,6 +3024,12 @@
         },
         "outcome": {
           "type": "string"
+        },
+        "required_select_evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadRequiredSelectEvidence"
+          },
+          "type": "array"
         },
         "resolved_target_url": {
           "type": "string"
@@ -8486,6 +8513,69 @@
       ],
       "type": "object"
     },
+    "src.contracts._report_store.metadata.ReportSourceIdentityResolveRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "md5": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "report_title": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts._report_store.metadata.ReportSourceIdentityResolveResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
+        "resolution_source": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts._report_store.publishers.PublisherGoogleFolderUpdateRequest": {
       "additionalProperties": false,
       "properties": {
@@ -12192,6 +12282,9 @@
         "temperature": {
           "type": "number"
         },
+        "usage_db_path": {
+          "type": "string"
+        },
         "validation_data_gap_policy": {
           "type": "string"
         },
@@ -12528,6 +12621,12 @@
         "prompt_namespace": {
           "type": "string"
         },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -12540,6 +12639,9 @@
               "$ref": "#/$defs/src.contracts.ingest.IngestSettings"
             }
           ]
+        },
+        "source_url": {
+          "type": "string"
         }
       },
       "required": [
@@ -17652,6 +17754,413 @@
       ],
       "type": "object"
     },
+    "src.contracts.llm_usage.LLMUsageLedgerAppendRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "entry": {
+          "$ref": "#/$defs/src.contracts.llm_usage.LLMUsageLedgerEntry"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "entry"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageLedgerAppendResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "event_key": {
+          "type": "string"
+        },
+        "inserted": {
+          "type": "boolean"
+        },
+        "median_db_path": {
+          "type": "string"
+        },
+        "median_row_count": {
+          "type": "integer"
+        },
+        "row_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "row_id",
+        "event_key",
+        "inserted",
+        "median_db_path",
+        "median_row_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageLedgerEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "cache_decision": {
+          "type": "string"
+        },
+        "cached_input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "call_ordinal": {
+          "type": "integer"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_stage": {
+          "type": "string"
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "input_tokens": {
+          "type": "integer"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "model": {
+          "type": "string"
+        },
+        "output_tokens": {
+          "type": "integer"
+        },
+        "parse_status": {
+          "type": "string"
+        },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "provider_call_status": {
+          "type": "string"
+        },
+        "provider_decision": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_validation_status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_url": {
+          "type": "string"
+        },
+        "span_id": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timestamp_utc": {
+          "type": "string"
+        },
+        "tool_calls": {
+          "type": "integer"
+        },
+        "total_tokens": {
+          "type": "integer"
+        },
+        "trace_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "timestamp_utc",
+        "provider",
+        "action",
+        "run_id",
+        "task_id",
+        "span_id",
+        "trace_id",
+        "model",
+        "request_id",
+        "publisher_name",
+        "report_name",
+        "source_url",
+        "input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "cached_input_tokens",
+        "tool_calls",
+        "estimated_cost_usd",
+        "prompt_namespace",
+        "prompt_hash",
+        "provider_decision",
+        "cache_decision",
+        "temperature",
+        "seed",
+        "timeout_seconds"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageLedgerOutcomeUpdateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_stage": {
+          "type": "string"
+        },
+        "event_key": {
+          "type": "string"
+        },
+        "parse_status": {
+          "type": "string"
+        },
+        "schema_validation_status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "event_key",
+        "parse_status",
+        "schema_validation_status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageLedgerOutcomeUpdateResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "event_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "updated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "event_key",
+        "updated"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageLedgerReconciliationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "ledger_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "ledger_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageLedgerReconciliationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "export_cached_input_tokens": {
+          "type": "integer"
+        },
+        "export_estimated_cost_usd": {
+          "type": "number"
+        },
+        "export_event_count": {
+          "type": "integer"
+        },
+        "export_input_tokens": {
+          "type": "integer"
+        },
+        "export_output_tokens": {
+          "type": "integer"
+        },
+        "ledger_path": {
+          "type": "string"
+        },
+        "matches": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sqlite_cached_input_tokens": {
+          "type": "integer"
+        },
+        "sqlite_estimated_cost_usd": {
+          "type": "number"
+        },
+        "sqlite_event_count": {
+          "type": "integer"
+        },
+        "sqlite_input_tokens": {
+          "type": "integer"
+        },
+        "sqlite_output_tokens": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "ledger_path",
+        "sqlite_event_count",
+        "export_event_count",
+        "sqlite_input_tokens",
+        "export_input_tokens",
+        "sqlite_output_tokens",
+        "export_output_tokens",
+        "sqlite_cached_input_tokens",
+        "export_cached_input_tokens",
+        "sqlite_estimated_cost_usd",
+        "export_estimated_cost_usd",
+        "matches"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageMedianRebuildRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageMedianRebuildResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "median_db_path": {
+          "type": "string"
+        },
+        "median_row_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "median_db_path",
+        "median_row_count"
+      ],
+      "type": "object"
+    },
     "src.contracts.lock.LockAcquireRequest": {
       "additionalProperties": false,
       "properties": {
@@ -18410,10 +18919,22 @@
         "model_pricing": {
           "type": "string"
         },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
         "prompt_system_sha256": {
           "type": "string"
         },
         "prompt_user_sha256": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
           "type": "string"
         },
         "schema_version": {
@@ -18428,6 +18949,9 @@
               "type": "null"
             }
           ]
+        },
+        "source_url": {
+          "type": "string"
         },
         "system_prompt": {
           "type": "string"
@@ -18447,6 +18971,9 @@
         },
         "tool_calls": {
           "type": "integer"
+        },
+        "usage_db_path": {
+          "type": "string"
         },
         "user_prompt": {
           "type": "string"
@@ -18567,7 +19094,22 @@
         "model_pricing": {
           "type": "string"
         },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
         "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
           "type": "string"
         },
         "timeout_seconds": {
@@ -18579,6 +19121,9 @@
               "type": "null"
             }
           ]
+        },
+        "usage_db_path": {
+          "type": "string"
         }
       },
       "required": [
@@ -18679,6 +19224,18 @@
         "model_pricing": {
           "type": "string"
         },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
         "response_cache_dir": {
           "type": "string"
         },
@@ -18708,6 +19265,9 @@
             }
           ]
         },
+        "source_url": {
+          "type": "string"
+        },
         "system_prompt": {
           "type": "string"
         },
@@ -18723,6 +19283,9 @@
               "type": "null"
             }
           ]
+        },
+        "usage_db_path": {
+          "type": "string"
         },
         "user_prompt": {
           "type": "string"
@@ -18760,6 +19323,18 @@
         "model_pricing": {
           "type": "string"
         },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
         "response_cache_dir": {
           "type": "string"
         },
@@ -18789,6 +19364,9 @@
             }
           ]
         },
+        "source_url": {
+          "type": "string"
+        },
         "system_prompt": {
           "type": "string"
         },
@@ -18804,6 +19382,9 @@
               "type": "null"
             }
           ]
+        },
+        "usage_db_path": {
+          "type": "string"
         },
         "user_prompt": {
           "type": "string"
@@ -18843,6 +19424,18 @@
         "pdf_path": {
           "type": "string"
         },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
         "response_cache_dir": {
           "type": "string"
         },
@@ -18862,6 +19455,9 @@
         "schema_version": {
           "type": "string"
         },
+        "source_url": {
+          "type": "string"
+        },
         "system_prompt": {
           "type": "string"
         },
@@ -18874,6 +19470,9 @@
               "type": "null"
             }
           ]
+        },
+        "usage_db_path": {
+          "type": "string"
         },
         "user_prompt": {
           "type": "string"
@@ -18977,6 +19576,18 @@
         "model_pricing": {
           "type": "string"
         },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
         "response_cache_dir": {
           "type": "string"
         },
@@ -19006,6 +19617,9 @@
             }
           ]
         },
+        "source_url": {
+          "type": "string"
+        },
         "system_prompt": {
           "type": "string"
         },
@@ -19021,6 +19635,9 @@
               "type": "null"
             }
           ]
+        },
+        "usage_db_path": {
+          "type": "string"
         },
         "user_prompt": {
           "type": "string"
@@ -19122,6 +19739,19 @@
     "src.contracts.openai.OpenAIUsageAccountingRequest": {
       "additionalProperties": false,
       "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cache_decision": {
+          "type": "string"
+        },
         "cached_input_tokens": {
           "anyOf": [
             {
@@ -19132,11 +19762,27 @@
             }
           ]
         },
+        "call_ordinal": {
+          "type": "integer"
+        },
         "cost_daily_path": {
           "type": "string"
         },
         "cost_ledger_path": {
           "type": "string"
+        },
+        "emit_cost_ledger": {
+          "type": "boolean"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_stage": {
+          "type": "string"
+        },
+        "extra": {
+          "additionalProperties": {},
+          "type": "object"
         },
         "input_tokens": {
           "anyOf": [
@@ -19165,6 +19811,30 @@
             }
           ]
         },
+        "parse_status": {
+          "type": "string"
+        },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "provider_call_status": {
+          "type": "string"
+        },
+        "provider_decision": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
         "request_id": {
           "anyOf": [
             {
@@ -19175,14 +19845,63 @@
             }
           ]
         },
+        "schema_validation_status": {
+          "type": "string"
+        },
         "schema_version": {
+          "type": "string"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_url": {
           "type": "string"
         },
         "step_name": {
           "type": "string"
         },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "tool_calls": {
           "type": "integer"
+        },
+        "total_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usage_db_path": {
+          "type": "string"
         }
       },
       "required": [
@@ -19217,6 +19936,9 @@
         "estimated_cost_usd": {
           "type": "number"
         },
+        "event_key": {
+          "type": "string"
+        },
         "ledger_path": {
           "type": "string"
         },
@@ -19225,6 +19947,25 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "usage_db_inserted": {
+          "type": "boolean"
+        },
+        "usage_db_path": {
+          "type": "string"
+        },
+        "usage_db_recorded": {
+          "type": "boolean"
+        },
+        "usage_db_row_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -19233,6 +19974,40 @@
         "estimated_cost_usd",
         "ledger_path",
         "daily_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.openai.OpenAIUsageOutcomeUpdateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "error_code": {
+          "type": "string"
+        },
+        "error_stage": {
+          "type": "string"
+        },
+        "event_key": {
+          "type": "string"
+        },
+        "parse_status": {
+          "type": "string"
+        },
+        "schema_validation_status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path",
+        "event_key",
+        "parse_status",
+        "schema_validation_status"
       ],
       "type": "object"
     },
@@ -21563,6 +22338,9 @@
         "plan": {
           "$ref": "#/$defs/src.contracts.regeneration.RegenerationPlan"
         },
+        "publisher_name": {
+          "type": "string"
+        },
         "report_id": {
           "type": "string"
         },
@@ -21578,6 +22356,9 @@
         "source_status": {
           "additionalProperties": {},
           "type": "object"
+        },
+        "source_url": {
+          "type": "string"
         },
         "vector_store_id": {
           "anyOf": [
@@ -23703,6 +24484,9 @@
         "parallel_within_file": {
           "type": "boolean"
         },
+        "publisher_name": {
+          "type": "string"
+        },
         "report_name": {
           "type": "string"
         },
@@ -23717,6 +24501,12 @@
         },
         "settings": {
           "$ref": "#/$defs/src.contracts.ingest.IngestSettings"
+        },
+        "source_report_name": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
         }
       },
       "required": [
@@ -27337,6 +28127,9 @@
         "prompt_namespace": {
           "type": "string"
         },
+        "publisher_name": {
+          "type": "string"
+        },
         "report_id": {
           "type": "string"
         },
@@ -27365,6 +28158,9 @@
               "$ref": "#/$defs/src.contracts.ingest.IngestSettings"
             }
           ]
+        },
+        "source_url": {
+          "type": "string"
         },
         "vector_store_id": {
           "type": "string"
@@ -30044,13 +30840,22 @@
           },
           "type": "object"
         },
+        "publisher_name": {
+          "type": "string"
+        },
         "report": {
           "$ref": "#/$defs/src.contracts.report_models.ReportPayload"
         },
         "report_id": {
           "type": "string"
         },
+        "report_name": {
+          "type": "string"
+        },
         "schema_version": {
+          "type": "string"
+        },
+        "source_url": {
           "type": "string"
         },
         "validation_mode": {
@@ -31679,6 +32484,49 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.AutonomousRunSupervisorExecution": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_count": {
+          "type": "integer"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected_action": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "selected_action",
+        "workflow",
+        "run_id",
+        "idempotency_key",
+        "status",
+        "outcome",
+        "attempt_count"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.AutonomousRunSupervisorInput": {
       "additionalProperties": false,
       "properties": {
@@ -32859,6 +33707,19 @@
         },
         "scorecard": {
           "additionalProperties": {},
+          "type": "object"
+        },
+        "thresholds": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
           "type": "object"
         },
         "workflow": {

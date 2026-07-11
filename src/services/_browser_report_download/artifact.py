@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from pydantic import ValidationError
 
 from src.contracts.browser_download import (
+    BrowserDownloadRequiredSelectEvidence,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
 )
@@ -137,6 +139,10 @@ def finalize_browser_report_download_result(
     encountered_form_fields = _normalize_encountered_form_fields(
         agent_result.encountered_form_fields
     )
+    required_select_evidence = _required_select_evidence(
+        agent_result=agent_result,
+        fallback_url=normalized_url,
+    )
     final_url = _resolve_terminal_final_url(
         browser_run_final_url=browser_run.final_page_url,
         agent_result_final_url=agent_result.final_page_url,
@@ -245,6 +251,7 @@ def finalize_browser_report_download_result(
         browser_html=browser_html,
         html_snapshot_path=html_snapshot_path,
     )
+
     if downloaded_path is None:
         downloaded_path, observed_used_candidate_pdf_url = _complete_pdf_artifact(
             request=request,
@@ -589,6 +596,7 @@ def finalize_browser_report_download_result(
         used_candidate_pdf_url=used_candidate_pdf_url,
         used_candidate_source_page=_used_candidate_source_page(request),
         encountered_form_fields=encountered_form_fields,
+        required_select_evidence=required_select_evidence,
         blocked_reason=blocked_reason,
         blocked_reason_detail=blocked_reason_detail,
         downloaded_file_path=str(downloaded_path) if downloaded_path else None,
@@ -600,6 +608,38 @@ def finalize_browser_report_download_result(
         onsite_page_count=onsite_page_count,
         onsite_completeness_status=onsite_completeness_status,
     )
+
+
+def _required_select_evidence(
+    *, agent_result: BrowserUseAgentResult, fallback_url: str
+) -> list[BrowserDownloadRequiredSelectEvidence]:
+    evidence: list[BrowserDownloadRequiredSelectEvidence] = []
+    source_url = (
+        str(agent_result.final_page_url or fallback_url).strip() or fallback_url
+    )
+    host = str(urlsplit(source_url).hostname or "").strip().lower()
+    for item in agent_result.required_select_evidence:
+        label = str(item.field_label or "").strip()
+        if not label:
+            continue
+        evidence.append(
+            BrowserDownloadRequiredSelectEvidence(
+                schema_version="1.0",
+                host=host,
+                url=source_url,
+                field_label=label,
+                field_name=str(item.field_name or "").strip(),
+                options=[
+                    str(option).strip()
+                    for option in item.options
+                    if str(option).strip()
+                ],
+                classifier_confidence=max(
+                    0.0, min(1.0, float(item.classifier_confidence or 0.0))
+                ),
+            )
+        )
+    return evidence
 
 
 def _resolve_terminal_final_url(
