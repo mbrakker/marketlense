@@ -9,6 +9,8 @@ from urllib.parse import urlsplit
 from src.contracts.browser_download import (
     BrowserDownloadIdentityFieldUpsertRequest,
     BrowserDownloadIdentityFieldUpsertResponse,
+    BrowserDownloadRequiredSelectOverrideRequest,
+    BrowserDownloadRequiredSelectOverrideResponse,
     BrowserReportDownloadResult,
     DownloadTerminalEvidence,
     ReportDownloadDriveUpload,
@@ -43,6 +45,9 @@ logger = logging.getLogger("market_lense.report_download_orchestrator")
 _REPORT_DOWNLOAD_ROUTE_RECORD_SCOPE = "report_download_orchestrator.route_record"
 _REPORT_DOWNLOAD_SOURCE_RECORD_SCOPE = "report_download_orchestrator.source_record"
 _REPORT_DOWNLOAD_IDENTITY_UPDATE_SCOPE = "report_download_orchestrator.identity_update"
+_REPORT_DOWNLOAD_REQUIRED_SELECT_SCOPE = (
+    "report_download_orchestrator.required_select_learning"
+)
 
 
 def _lookup_idempotency_record(
@@ -616,6 +621,83 @@ def record_identity_update(
     )
 
     return identity_update
+
+
+def record_required_select_learning(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    result: BrowserReportDownloadResult,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> BrowserDownloadRequiredSelectOverrideResponse | None:
+    if not result.required_select_evidence:
+        return None
+    learning_request = BrowserDownloadRequiredSelectOverrideRequest(
+        schema_version="1.0",
+        path=request.settings.identity_config_path,
+        evidence=result.required_select_evidence,
+        approved_defaults={},
+    )
+    checksum = sha256_json(
+        {
+            "schema_version": "1.0",
+            "path": learning_request.path,
+            "evidence": [asdict(item) for item in learning_request.evidence],
+        }
+    )
+    key = _idempotency_key_with_checksum(learning_request.path, checksum=checksum)
+    existing = _lookup_idempotency_record(
+        db_path=request.reports_db,
+        scope=_REPORT_DOWNLOAD_REQUIRED_SELECT_SCOPE,
+        idempotency_key=key,
+        input_checksum=checksum,
+        ctx=ctx,
+    )
+    if existing is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_required_select_learning_idempotency_reused",
+                module=logger.name,
+                fields={
+                    "path": learning_request.path,
+                    "evidence_count": len(learning_request.evidence),
+                },
+            )
+        )
+        return None
+    response = dependencies.upsert_browser_download_required_select_overrides(
+        learning_request, ctx
+    )
+    _record_idempotency_outcome(
+        db_path=request.reports_db,
+        scope=_REPORT_DOWNLOAD_REQUIRED_SELECT_SCOPE,
+        idempotency_key=key,
+        input_checksum=checksum,
+        outcome_payload={
+            "applied_count": response.applied_count,
+            "refused_count": response.refused_count,
+            "unchanged_count": response.unchanged_count,
+        },
+        artifact_references={"path": response.path},
+        ctx=ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_required_select_learning_complete",
+            module=logger.name,
+            fields={
+                "path": response.path,
+                "applied_count": response.applied_count,
+                "refused_count": response.refused_count,
+                "unchanged_count": response.unchanged_count,
+            },
+        )
+    )
+    return response
 
 
 def _source_domain_for_url(url: str) -> str:

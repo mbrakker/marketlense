@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.services._config_service.common import *
 
+
 def _resolve_drive_settings(drive_cfg: dict[str, Any]) -> dict[str, Any]:
     drive_id_raw = drive_cfg.get("drive_id")
     return {
@@ -86,14 +87,6 @@ def _resolve_drive_auth_settings(
         oauth_client_path = ""
         oauth_token_path = ""
     else:
-        if _is_missing(oauth_client_path):
-            resolver.missing.append(
-                "ingest.drive.oauth_client_path|env:GOOGLE_OAUTH_CLIENT_JSON"
-            )
-        if _is_missing(oauth_token_path):
-            resolver.missing.append(
-                "ingest.drive.oauth_token_path|env:GOOGLE_OAUTH_TOKEN_JSON"
-            )
         google_sa_path = ""
     return {
         "drive_auth_mode": auth_mode,
@@ -101,5 +94,6 @@ def _resolve_drive_auth_settings(
         "google_oauth_client_path": oauth_client_path or None,
         "google_oauth_token_path": oauth_token_path or None,
     }
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

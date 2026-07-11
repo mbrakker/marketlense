@@ -109,7 +109,8 @@
         "src/services/report_store_service.py",
         "src/services/analytics_store_service.py",
         "src/services/run_registry_service.py",
-        "src/services/idempotency_service.py"
+        "src/services/idempotency_service.py",
+        "src/services/llm_usage_ledger_service.py"
       ]
     },
     "vector_store": {

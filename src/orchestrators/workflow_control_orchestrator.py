@@ -15,6 +15,7 @@ from src.contracts.retry_telemetry import RetryDecisionTelemetryReport
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import (
     AutonomousRunSupervisorInput,
+    AutonomousRunSupervisorExecution,
     AutonomousRunSupervisorPlan,
     ConcurrencyDecision,
     ConcurrencyLimit,
@@ -52,6 +53,7 @@ from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
 from src.contracts.state import (
     MailDeliveryRequestListDueRequest,
     MailDeliveryRequestMarkAttemptRequest,
+    WorkflowControlObservationWriteRequest,
 )
 from src.orchestrators.mail_report_acquisition_orchestrator import (
     run_mail_report_acquisition,
@@ -61,10 +63,12 @@ from src.orchestrators.pipeline_preflight_orchestrator import (
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy
 from src.utils.errors import AppError
+from src.utils.clock import utc_now_seconds_z
 from src.utils.logging import log_event
 from src.services.state_service import (
     list_due_mail_delivery_requests,
     mark_mail_delivery_request_attempt,
+    write_workflow_control_observation,
 )
 
 logger = logging.getLogger("market_lense.workflow_control_orchestrator")
@@ -681,9 +685,9 @@ def build_publish_remediation_from_validation(
         rule_id = _stable_text(getattr(issue, "rule_id", ""))
         severity = _key(getattr(issue, "severity", "")) or "warning"
         message = _stable_text(getattr(issue, "message", ""))
-        affected_section = _stable_text(getattr(issue, "artifact_path", "")) or _stable_text(
-            getattr(issue, "field_path", "")
-        )
+        affected_section = _stable_text(
+            getattr(issue, "artifact_path", "")
+        ) or _stable_text(getattr(issue, "field_path", ""))
         if severity in {"warning", "warn"}:
             warning_count += 1
         elif severity in {"error", "blocker", "critical"}:
@@ -748,14 +752,48 @@ def evaluate_run_health_gate(
     warning_count = len(warnings)
     error_count = int(scorecard.get("error_count") or 0)
     validation_failure_count = int(scorecard.get("validation_failure_count") or 0)
+    thresholds = dict(gate_input.thresholds)
     threshold_failed = warning_count > max(0, int(gate_input.max_warnings))
+    metric_limits = {
+        "cost_usd": thresholds.get("max_cost_usd"),
+        "projected_budget_usd": thresholds.get("max_projected_budget_usd"),
+        "failed_call_cost_usd": thresholds.get("max_failed_call_cost_usd"),
+        "retry_exhaustion_rate": thresholds.get("max_retry_exhaustion_rate"),
+        "crop_rejection_rate": thresholds.get("max_crop_rejection_rate"),
+        "latency_seconds": thresholds.get("max_latency_seconds"),
+        "benchmark_regression_count": thresholds.get("max_benchmark_regression_count"),
+    }
     override_used = bool(threshold_failed and gate_input.allow_threshold_override)
     blockers: list[str] = []
+    breached_metrics: list[str] = []
+    for metric_name, limit in metric_limits.items():
+        if limit is None:
+            continue
+        try:
+            value = float(scorecard.get(metric_name) or 0.0)
+            numeric_limit = float(limit)
+        except (TypeError, ValueError):
+            continue
+        if value > numeric_limit:
+            breached_metrics.append(metric_name)
+    evidence_invalid = bool(scorecard.get("evidence_complete") is False) or bool(
+        scorecard.get("validation_failure_count")
+    )
     if error_count > 0 or validation_failure_count > 0:
         outcome = "fail"
         action = "notify"
         reason = "scorecard_errors_or_validation_failures"
         blockers.append("run_health_gate_failed")
+    elif evidence_invalid or breached_metrics:
+        outcome = "fail"
+        action = "notify"
+        reason = "scorecard_operational_threshold_exceeded"
+        blockers.extend(
+            [
+                "run_health_gate_failed",
+                *[f"run_health_{item}_exceeded" for item in breached_metrics],
+            ]
+        )
     elif threshold_failed and not override_used:
         outcome = "fail"
         action = "notify"
@@ -857,6 +895,80 @@ def plan_autonomous_run(
         )
     )
     return plan
+
+
+def dispatch_autonomous_run(
+    plan: AutonomousRunSupervisorPlan,
+    *,
+    state_db: str,
+    action_handlers: dict[
+        str, Callable[[AutonomousRunSupervisorPlan, RunContext], str]
+    ],
+    ctx: RunContext,
+) -> AutonomousRunSupervisorExecution:
+    """Dispatch one already-planned action and persist its observable outcome."""
+    handler = action_handlers.get(plan.selected_action)
+    if handler is None:
+        raise AppError(
+            code="supervisor_action_handler_missing",
+            message="The autonomous supervisor action has no registered handler",
+            retryable=False,
+            context={"action": plan.selected_action, "workflow": plan.workflow},
+        )
+    try:
+        outcome = str(handler(plan, ctx) or "completed").strip() or "completed"
+        status = "skipped" if plan.selected_action == "skip_duplicate" else "completed"
+        error_code = ""
+    except AppError as exc:
+        outcome = "failed"
+        status = "failed"
+        error_code = exc.code
+    execution = AutonomousRunSupervisorExecution(
+        schema_version="1.0",
+        selected_action=plan.selected_action,
+        workflow=plan.workflow,
+        run_id=plan.run_id,
+        idempotency_key=plan.idempotency_key,
+        status=status,
+        outcome=outcome,
+        attempt_count=1,
+        error_code=error_code,
+    )
+    write_workflow_control_observation(
+        WorkflowControlObservationWriteRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            observation=WorkflowControlObservation(
+                schema_version="1.0",
+                observed_at_utc=utc_now_seconds_z(),
+                run_id=plan.run_id,
+                workflow=plan.workflow,
+                step_name=f"supervisor:{plan.selected_action}",
+                route=plan.resume_stage,
+                publisher="",
+                report_key=plan.idempotency_key,
+                outcome=outcome,
+                error_code=error_code,
+                error_retryable=False,
+                error_severity="error" if error_code else "info",
+                latency_ms=0,
+                cost_usd=0.0,
+                retry_count=0,
+                resource_pressure={"idempotency_scope": plan.idempotency_scope},
+            ),
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_autonomous_supervisor_dispatched",
+            module=logger.name,
+            fields=asdict(execution),
+        )
+    )
+    return execution
 
 
 def _publish_repair_action(rule_id: str) -> str:
@@ -1492,6 +1604,7 @@ __all__ = [
     "evaluate_pre_llm_data_quality",
     "evaluate_publish_policy",
     "evaluate_run_health_gate",
+    "dispatch_autonomous_run",
     "is_valid_transition",
     "recommend_from_operational_memory",
     "resolve_all_adaptive_concurrency",

@@ -55,6 +55,7 @@ from src.orchestrators._report_download_orchestrator.failure_forensics import (
 from src.orchestrators._report_download_orchestrator.persistence import (
     record_downloaded_source,
     record_identity_update,
+    record_required_select_learning,
     record_route_outcome,
 )
 from src.orchestrators._report_download_orchestrator.promotions import (
@@ -289,6 +290,12 @@ def run_report_download(
         dependencies=deps,
     )
     identity_update = record_identity_update(
+        request=request,
+        result=result,
+        ctx=ctx,
+        dependencies=deps,
+    )
+    record_required_select_learning(
         request=request,
         result=result,
         ctx=ctx,
@@ -759,7 +766,9 @@ def preflight_mailbox_before_email_form(
             settings=request.mailbox_settings,
             delivery_email=delivery_email,
             source_url=request.url,
-            report_title=_mail_delivery_report_title_for_request(request, normalized_url),
+            report_title=_mail_delivery_report_title_for_request(
+                request, normalized_url
+            ),
             publisher_name=_mail_delivery_publisher_name(request),
             query_terms=[],
         ),

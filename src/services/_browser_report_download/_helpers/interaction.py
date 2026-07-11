@@ -353,10 +353,10 @@ def browser_helper_form_autocomplete(
             const exactOption = options.find((node) =>
               tokenMatchesAny(node.textContent || node.value, field)
             );
-            const fallbackOption = options.find((node) =>
-              !looksLikePlaceholderOption(node.textContent || node.value)
-            );
-            const option = exactOption || fallbackOption;
+            // A select value is an identity assertion.  Never turn an unknown
+            // required enum into a technically valid submission by choosing its
+            // first enabled option.
+            const option = exactOption;
             if (option) {{
               control.value = option.value;
               option.selected = true;
@@ -380,14 +380,12 @@ def browser_helper_form_autocomplete(
             );
             const invalid = String(control.getAttribute('aria-invalid') || '')
               .toLowerCase() === 'true';
-            const verified = !invalid && persisted && (
-              tokenMatchesAny(persisted, field) || Boolean(option && !exactOption)
-            );
+            const verified = !invalid && persisted && tokenMatchesAny(persisted, field);
             if (verified && option) {{
               field.selectionVerification = {{
                 field_label: field.label || 'Select',
                 option_text: normalize(option.textContent || option.value),
-                mode: exactOption ? 'configured_match' : 'first_enabled_option',
+                mode: 'configured_match',
                 persisted: true,
               }};
             }}
@@ -418,10 +416,7 @@ def browser_helper_form_autocomplete(
                 const exactOption = options.find((node) =>
                   tokenMatchesAny(node.innerText || node.textContent, field)
                 );
-                const fallbackOption = options.find((node) =>
-                  !looksLikePlaceholderOption(node.innerText || node.textContent)
-                );
-                const option = exactOption || fallbackOption;
+                const option = exactOption;
                 if (option) {{
                   clickOption(option);
                 }} else {{
@@ -439,14 +434,12 @@ def browser_helper_form_autocomplete(
                 );
                 const invalid = String(control.getAttribute('aria-invalid') || '')
                   .toLowerCase() === 'true';
-                selected = !invalid && persisted && (
-                  tokenMatchesAny(persisted, field) || Boolean(option && !exactOption)
-                );
+                selected = !invalid && persisted && tokenMatchesAny(persisted, field);
                 if (selected && option) {{
                   field.selectionVerification = {{
                     field_label: field.label || label,
                     option_text: normalize(option.innerText || option.textContent),
-                    mode: exactOption ? 'configured_match' : 'first_enabled_option',
+                    mode: 'configured_match',
                     persisted: true,
                   }};
                 }}
@@ -759,10 +752,7 @@ def browser_helper_standard_form_submit(
               const exact = field ? options.find((option) =>
                 optionMatches(option.textContent || option.value, field)
               ) : null;
-              const fallback = options.find((option) =>
-                !placeholderOption(option.textContent || option.value)
-              );
-              const option = exact || fallback;
+              const option = exact;
               if (!option) {{
                 if (requiredLike(control)) unresolvedFields.push(labelsFor(control, root)[0] || 'select');
                 continue;

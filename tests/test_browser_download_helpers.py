@@ -176,11 +176,12 @@ class NativeSelectSuccessPage(FakePage):
         }
 
 
-class NativeSelectFallbackPage(FakePage):
+class NativeSelectMismatchPage(FakePage):
     def evaluate(self, expression: str) -> dict[str, Any]:
         script_text = str(expression)
         assert "looksLikePlaceholderOption" in script_text
-        assert "exactOption || fallbackOption" in script_text
+        assert "const option = exactOption;" in script_text
+        assert "first_enabled_option" not in script_text
         assert 'input[name*="state" i]' in script_text
         assert "sameOriginDocuments" in script_text
         assert "frame.contentDocument" in script_text
@@ -190,17 +191,10 @@ class NativeSelectFallbackPage(FakePage):
             "ok": True,
             "result": {
                 "attempted_count": 1,
-                "selected_count": 1,
-                "selected_fields": ["State"],
-                "selection_verification": [
-                    {
-                        "field_label": "State",
-                        "option_text": "Ontario",
-                        "mode": "first_enabled_option",
-                        "persisted": True,
-                    }
-                ],
-                "unresolved_fields": [],
+                "selected_count": 0,
+                "selected_fields": [],
+                "selection_verification": [],
+                "unresolved_fields": ["State"],
                 "submitted": False,
                 "final_url": "https://publisher.example/form",
             },
@@ -285,11 +279,11 @@ def test_form_autocomplete_helper_handles_native_select_controls(
     assert result.selected_fields == ("Country",)
 
 
-def test_form_autocomplete_helper_allows_first_non_placeholder_fallback(
+def test_form_autocomplete_helper_rejects_unapproved_select_value(
     run_context,
 ) -> None:
     result = browser_helper_form_autocomplete(
-        page=NativeSelectFallbackPage(),
+        page=NativeSelectMismatchPage(),
         field_values=[
             {
                 "key": "state_region",
@@ -304,18 +298,11 @@ def test_form_autocomplete_helper_allows_first_non_placeholder_fallback(
         submit=False,
     )
 
-    assert result.status == "ok"
-    assert result.selected_count == 1
-    assert result.unresolved_fields == ()
-    assert result.selected_fields == ("State",)
-    assert result.selection_verification == (
-        {
-            "field_label": "State",
-            "option_text": "Ontario",
-            "mode": "first_enabled_option",
-            "persisted": True,
-        },
-    )
+    assert result.status == "blocked"
+    assert result.selected_count == 0
+    assert result.unresolved_fields == ("State",)
+    assert result.selected_fields == ()
+    assert result.selection_verification == ()
 
 
 def test_standard_form_submit_helper_submits_when_controls_already_resolved(

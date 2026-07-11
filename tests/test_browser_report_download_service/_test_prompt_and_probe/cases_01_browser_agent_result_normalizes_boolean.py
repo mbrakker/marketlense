@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 @pytest.mark.parametrize(
     ("raw_value", "expected"),
     [
@@ -42,6 +43,7 @@ def test_browser_agent_result_normalizes_boolean_terminal_signals(
     assert result.confirmation_url_changed is expected
     assert result.form_disappeared is expected
 
+
 def test_browser_agent_result_logs_ambiguous_boolean_terminal_signal(
     caplog,
     run_context,
@@ -75,6 +77,7 @@ def test_browser_agent_result_logs_ambiguous_boolean_terminal_signal(
         events[-1]["fields"]["normalized_signals"]["email_submission_completed"] is None
     )
 
+
 def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
     tmp_path: Path,
     run_context,
@@ -103,17 +106,35 @@ def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
     assert "do not click unrelated navigation links" in bundle.task_prompt
     assert "click the exact matching option text" in bundle.task_prompt
     assert "even when no configured value exists" in bundle.task_prompt
-    assert "every mandatory legal/report-delivery agreement checkbox is checked" in bundle.task_prompt
-    assert "Click the mandatory checkbox, verify it is checked, and submit again" in bundle.task_prompt
-    assert "separate `route_steps` item for each mandatory checkbox" in bundle.task_prompt
+    assert (
+        "every mandatory legal/report-delivery agreement checkbox is checked"
+        in bundle.task_prompt
+    )
+    assert (
+        "Click the mandatory checkbox, verify it is checked, and submit again"
+        in bundle.task_prompt
+    )
+    assert (
+        "separate `route_steps` item for each mandatory checkbox" in bundle.task_prompt
+    )
     assert "dispatching `input` and `change`" in bundle.task_prompt
-    assert "optional marketing/newsletter opt-in checkboxes unchecked" in bundle.task_prompt
+    assert (
+        "optional marketing/newsletter opt-in checkboxes unchecked"
+        in bundle.task_prompt
+    )
     assert "Invisible reCAPTCHA badges" in bundle.task_prompt
     assert "not operator-solvable" in bundle.task_prompt
-    assert "first visible enabled non-placeholder option" in bundle.task_prompt
-    assert "Research for business type, industry, department, role, or priority" in bundle.task_prompt
-    assert "open the iframe `src` or same-origin popup/form target directly" in bundle.task_prompt
+    assert "Never choose a first enabled option" in bundle.task_prompt
+    assert (
+        "Research for business type, industry, department, role, or priority"
+        in bundle.task_prompt
+    )
+    assert (
+        "open the iframe `src` or same-origin popup/form target directly"
+        in bundle.task_prompt
+    )
     assert "return `blocked_email_domain` immediately" in bundle.task_prompt
+
 
 def test_download_report_with_browser_use_redacts_identity_values_from_prompt_logs(
     tmp_path: Path,
@@ -240,6 +261,7 @@ def test_download_report_with_browser_use_redacts_identity_values_from_prompt_lo
         in prompt_event["fields"]["rendered_system_prompt"]
     )
 
+
 def test_browser_report_download_prompt_templates_fail_on_missing_variables(
     run_context,
     assert_app_error,
@@ -272,6 +294,7 @@ def test_browser_report_download_prompt_templates_fail_on_missing_variables(
         code="prompt_render_missing_variable",
         retryable=False,
     )
+
 
 def test_download_report_with_browser_use_returns_downloaded_pdf(
     tmp_path: Path,
@@ -328,6 +351,7 @@ def test_download_report_with_browser_use_returns_downloaded_pdf(
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_service_events(caplog))
 
+
 def test_download_report_with_browser_use_disables_browser_use_judge(
     tmp_path: Path,
     run_context,
@@ -366,6 +390,7 @@ def test_download_report_with_browser_use_disables_browser_use_judge(
 
     assert response.outcome == "downloaded"
     assert observed_use_judge == [False]
+
 
 def test_download_report_with_browser_use_short_circuits_direct_pdf_url(
     tmp_path: Path,
@@ -423,6 +448,7 @@ def test_download_report_with_browser_use_short_circuits_direct_pdf_url(
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_service_events(caplog))
 
+
 def test_download_report_with_browser_use_falls_back_from_invalid_direct_pdf(
     tmp_path: Path,
     run_context,
@@ -470,6 +496,7 @@ def test_download_report_with_browser_use_falls_back_from_invalid_direct_pdf(
     assert response.downloaded_file_path is not None
     assert Path(str(response.downloaded_file_path)).exists()
     assert_no_defaulted_required_fields(response)
+
 
 def test_download_report_with_browser_use_short_circuits_report_page_pdf_link(
     tmp_path: Path,
@@ -534,6 +561,7 @@ def test_download_report_with_browser_use_short_circuits_report_page_pdf_link(
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_service_events(caplog))
 
+
 def test_download_report_with_browser_use_ignores_unrelated_report_page_pdf_link(
     tmp_path: Path,
     run_context,
@@ -584,6 +612,7 @@ def test_download_report_with_browser_use_ignores_unrelated_report_page_pdf_link
     assert response.downloaded_file_path is not None
     assert Path(str(response.downloaded_file_path)).exists()
     assert_no_defaulted_required_fields(response)
+
 
 def test_download_report_with_browser_use_rejects_unrelated_downloaded_pdf_artifact(
     tmp_path: Path,
@@ -664,6 +693,7 @@ def test_download_report_with_browser_use_rejects_unrelated_downloaded_pdf_artif
     assert response.terminal_evidence.artifact_kind == "email_delivery"
     assert_no_defaulted_required_fields(response)
 
+
 def test_download_report_with_browser_use_http_probe_skips_direct_pdf_fetch_for_html_page(
     tmp_path: Path,
     run_context,
@@ -707,6 +737,7 @@ def test_download_report_with_browser_use_http_probe_skips_direct_pdf_fetch_for_
         retryable=True,
         severity="error",
     )
+
 
 __all__ = [
     "test_browser_agent_result_normalizes_boolean_terminal_signals",
