@@ -9,7 +9,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import anyio
 import httpx
@@ -56,6 +56,7 @@ class TokenCost:
 		self.include_cost = include_cost or os.getenv('BROWSER_USE_CALCULATE_COST', 'false').lower() == 'true'
 
 		self.usage_history: list[TokenUsageEntry] = []
+		self._usage_callback: Callable[[TokenUsageEntry], None] | None = None
 		self.registered_llms: dict[str, BaseChatModel] = {}
 		self._pricing_data: dict[str, Any] | None = None
 		self._initialized = False
@@ -224,15 +225,30 @@ class TokenCost:
 			completion_cost=usage.completion_tokens * float(data.output_cost_per_token or 0),
 		)
 
-	def add_usage(self, model: str, usage: ChatInvokeUsage) -> TokenUsageEntry:
+	def set_usage_callback(self, callback: Callable[[TokenUsageEntry], None] | None) -> None:
+		"""Set a best-effort callback invoked once for each completed provider response."""
+		self._usage_callback = callback
+
+	def add_usage(
+		self,
+		model: str,
+		usage: ChatInvokeUsage,
+		request_id: str | None = None,
+	) -> TokenUsageEntry:
 		"""Add token usage entry to history (without calculating cost)"""
 		entry = TokenUsageEntry(
 			model=model,
 			timestamp=datetime.now(),
 			usage=usage,
+			request_id=request_id,
 		)
 
 		self.usage_history.append(entry)
+		if self._usage_callback is not None:
+			try:
+				self._usage_callback(entry)
+			except Exception:
+				logger.exception('Token usage callback failed')
 
 		return entry
 
@@ -341,7 +357,11 @@ class TokenCost:
 			# Track usage if available (no await needed since add_usage is now sync)
 			# Use llm.model instead of llm.name for consistency with get_usage_tokens_for_model()
 			if result.usage:
-				usage = token_cost_service.add_usage(llm.model, result.usage)
+				usage = token_cost_service.add_usage(
+					llm.model,
+					result.usage,
+					request_id=result.request_id,
+				)
 
 				logger.debug(f'Token cost service: {usage}')
 

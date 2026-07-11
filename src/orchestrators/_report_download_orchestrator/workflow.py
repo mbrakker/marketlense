@@ -384,6 +384,7 @@ def _run_download_attempt(
         route_family_hint=planned_step.route_family,
         source_page_url_hint=planned_step.source_page_url_hint,
         report_title=request.report_title,
+        publisher_name=request.publisher_name,
     )
 
     def _attempt_operation() -> BrowserReportDownloadResult:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from dataclasses import replace
 from pathlib import Path
 
 from src.contracts.costs import CostLedgerAppendRequest, CostRollupRequest
@@ -174,6 +175,22 @@ def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
         "openai_usage_accounting_complete",
     ]
     assert_logs_have_required_fields(records)
+
+
+def test_record_usage_can_write_usage_database_without_cost_ledger(tmp_path) -> None:
+    request = replace(_request(tmp_path), emit_cost_ledger=False)
+
+    response = svc.record_usage(request, _ctx())
+
+    assert response.recorded is False
+    assert response.usage_db_recorded is True
+    assert not (tmp_path / "ledger.jsonl").exists()
+    assert not (tmp_path / "daily.json").exists()
+    with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
+        row = conn.execute(
+            "select action, input_tokens, output_tokens from llm_usage_events"
+        ).fetchone()
+    assert row == ("openai_chat_json", 1000, 500)
 
 
 def test_record_usage_returns_typed_failure_when_ledger_append_fails(

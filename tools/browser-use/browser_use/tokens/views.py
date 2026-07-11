@@ -14,6 +14,7 @@ class TokenUsageEntry(BaseModel):
 	model: str
 	timestamp: datetime
 	usage: ChatInvokeUsage
+	request_id: str | None = None
 
 
 class TokenCostCalculated(BaseModel):

@@ -218,6 +218,7 @@ class ChatOpenAI(BaseChatModel):
 				return ChatInvokeCompletion(
 					completion=choice.message.content or '',
 					usage=usage,
+					request_id=str(response.id) if response.id else None,
 					stop_reason=choice.finish_reason,
 				)
 
@@ -286,6 +287,7 @@ class ChatOpenAI(BaseChatModel):
 				return ChatInvokeCompletion(
 					completion=parsed,
 					usage=usage,
+					request_id=str(response.id) if response.id else None,
 					stop_reason=choice.finish_reason,
 				)
 

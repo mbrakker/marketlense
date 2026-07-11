@@ -101,6 +101,12 @@ class OpenAIUsageAccountingRequest:
     model_pricing: Dict[str, Any] = field(
         metadata={"doc": "Per-model pricing table for cost estimation."}
     )
+    emit_cost_ledger: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether to append this event to the JSON cost ledger and refresh daily rollups."
+        },
+    )
     request_id: Optional[str] = field(
         default=None, metadata={"doc": "Provider request ID, if available."}
     )

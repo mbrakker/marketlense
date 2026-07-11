@@ -168,6 +168,7 @@ class ChatOpenRouter(BaseChatModel):
 				return ChatInvokeCompletion(
 					completion=response.choices[0].message.content or '',
 					usage=usage,
+					request_id=str(response.id) if response.id else None,
 				)
 
 			else:
@@ -196,6 +197,7 @@ class ChatOpenRouter(BaseChatModel):
 				return ChatInvokeCompletion(
 					completion=parsed,
 					usage=usage,
+					request_id=str(response.id) if response.id else None,
 				)
 
 		except RateLimitError as e:

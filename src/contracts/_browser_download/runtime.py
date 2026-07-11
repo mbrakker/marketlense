@@ -413,6 +413,10 @@ class BrowserReportDownloadRequest:
             "doc": "Fresh browser route playbooks selected for this attempt and cited in the browser-use prompt."
         },
     )
+    publisher_name: str = field(
+        default="",
+        metadata={"doc": "Publisher name associated with this browser-use action."},
+    )
 
 
 @dataclass(frozen=True)

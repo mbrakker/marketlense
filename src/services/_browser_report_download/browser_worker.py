@@ -303,6 +303,7 @@ def _build_request(payload: dict) -> BrowserReportDownloadRequest:
         attempt_url=payload.get("attempt_url"),
         route_family_hint=payload.get("route_family_hint"),
         source_page_url_hint=payload.get("source_page_url_hint"),
+        publisher_name=str(payload.get("publisher_name") or "").strip(),
         selected_playbooks=[
             BrowserRoutePlaybookSelection(
                 schema_version=str(item.get("schema_version", "1.0")),

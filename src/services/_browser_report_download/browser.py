@@ -616,6 +616,14 @@ def run_browser_report_download_agent(
         ):
             agent_kwargs["fallback_llm"] = llm_clients.fallback_llm
         agent = browser_use.Agent(**agent_kwargs)
+        _configure_browser_use_usage_recorder(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            prompt_bundle=prompt_bundle,
+            llm_clients=llm_clients,
+            agent=agent,
+        )
         history_result = _run_agent_history_with_timeout(
             agent=agent,
             browser=browser,
@@ -624,15 +632,6 @@ def run_browser_report_download_agent(
             normalized_url=normalized_url,
         )
         history = history_result.history
-        _record_browser_use_agent_usage(
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            prompt_bundle=prompt_bundle,
-            llm_clients=llm_clients,
-            agent=agent,
-            history=history,
-        )
         raw_model_response = str(history.final_result() or "").strip()
         history_final_page_url = _read_history_final_page_url(history)
         history_final_page_title = _read_history_final_page_title(history)
@@ -1020,7 +1019,7 @@ def _load_browser_use_runtime(normalized_url: str) -> Any:
         ) from exc
 
 
-def _record_browser_use_agent_usage(
+def _configure_browser_use_usage_recorder(
     *,
     request: BrowserReportDownloadRequest,
     ctx: RunContext,
@@ -1028,80 +1027,29 @@ def _record_browser_use_agent_usage(
     prompt_bundle: BrowserDownloadPromptBundle,
     llm_clients: Any,
     agent: Any,
-    history: Any,
 ) -> None:
-    usage_entries = getattr(
-        getattr(agent, "token_cost_service", None), "usage_history", None
-    )
-    if isinstance(usage_entries, list) and usage_entries:
-        for index, entry in enumerate(usage_entries, start=1):
-            usage = getattr(entry, "usage", None)
-            if usage is None:
-                continue
-            model_name = str(getattr(entry, "model", "") or "")
-            _record_browser_use_usage_row(
-                request=request,
-                ctx=ctx,
-                normalized_url=normalized_url,
-                prompt_bundle=prompt_bundle,
-                llm_clients=llm_clients,
-                model_name=model_name,
-                input_tokens=_optional_usage_int(getattr(usage, "prompt_tokens", None)),
-                output_tokens=_optional_usage_int(
-                    getattr(usage, "completion_tokens", None)
-                ),
-                total_tokens=None,
-                cached_tokens=_optional_usage_int(
-                    getattr(usage, "prompt_cached_tokens", None)
-                ),
-                cost_usd=0.0,
-                extra={
-                    "browser_usage_entry_index": index,
-                    "browser_usage_timestamp": str(
-                        getattr(entry, "timestamp", "") or ""
-                    ),
-                    "browser_usage_entry_count": len(usage_entries),
-                },
-            )
-        return
-    usage = getattr(history, "usage", None)
-    if usage is None:
+    token_cost_service = getattr(agent, "token_cost_service", None)
+    set_usage_callback = getattr(token_cost_service, "set_usage_callback", None)
+    if not callable(set_usage_callback):
         logger.info(
             log_event(
                 ctx,
                 role="service",
-                event="browser_report_download_llm_usage_unavailable",
+                event="browser_report_download_llm_usage_callback_unavailable",
                 module=logger.name,
-                fields={
-                    "normalized_url": normalized_url,
-                    "reason": "history_usage_missing",
-                    "primary_provider": getattr(llm_clients, "primary_provider", ""),
-                    "primary_model": getattr(llm_clients, "primary_model", ""),
-                },
+                fields={"normalized_url": normalized_url},
             )
         )
         return
-    by_model = getattr(usage, "by_model", None)
-    model_rows = by_model if isinstance(by_model, dict) and by_model else {}
-    if not model_rows:
-        model_rows = {
-            str(getattr(llm_clients, "primary_model", "") or "unknown"): usage
-        }
-    for model, stats in model_rows.items():
-        input_tokens = _optional_usage_int(
-            getattr(stats, "prompt_tokens", None)
-            or getattr(stats, "total_prompt_tokens", None)
-        )
-        output_tokens = _optional_usage_int(
-            getattr(stats, "completion_tokens", None)
-            or getattr(stats, "total_completion_tokens", None)
-        )
-        total_tokens = _optional_usage_int(getattr(stats, "total_tokens", None))
-        cached_tokens = _optional_usage_int(
-            getattr(stats, "prompt_cached_tokens", None)
-            or getattr(usage, "total_prompt_cached_tokens", None)
-        )
-        model_name = str(model or getattr(llm_clients, "primary_model", "") or "")
+    entry_index = 0
+
+    def _record_entry(entry: Any) -> None:
+        nonlocal entry_index
+        usage = getattr(entry, "usage", None)
+        if usage is None:
+            return
+        entry_index += 1
+        model_name = str(getattr(entry, "model", "") or "")
         _record_browser_use_usage_row(
             request=request,
             ctx=ctx,
@@ -1109,17 +1057,31 @@ def _record_browser_use_agent_usage(
             prompt_bundle=prompt_bundle,
             llm_clients=llm_clients,
             model_name=model_name,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=total_tokens,
-            cached_tokens=cached_tokens,
-            cost_usd=float(
-                getattr(stats, "cost", None) or getattr(usage, "total_cost", 0.0) or 0.0
+            input_tokens=_optional_usage_int(getattr(usage, "prompt_tokens", None)),
+            output_tokens=_optional_usage_int(
+                getattr(usage, "completion_tokens", None)
             ),
+            total_tokens=_optional_usage_int(getattr(usage, "total_tokens", None)),
+            cached_tokens=_optional_usage_int(
+                getattr(usage, "prompt_cached_tokens", None)
+            ),
+            request_id=str(getattr(entry, "request_id", "") or "") or None,
             extra={
-                "entry_count": _optional_usage_int(getattr(usage, "entry_count", None))
+                "browser_usage_entry_index": entry_index,
+                "browser_usage_timestamp": str(getattr(entry, "timestamp", "") or ""),
             },
         )
+
+    set_usage_callback(_record_entry)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_llm_usage_callback_configured",
+            module=logger.name,
+            fields={"normalized_url": normalized_url},
+        )
+    )
 
 
 def _record_browser_use_usage_row(
@@ -1134,11 +1096,10 @@ def _record_browser_use_usage_row(
     output_tokens: int | None,
     total_tokens: int | None,
     cached_tokens: int | None,
-    cost_usd: float,
+    request_id: str | None,
     extra: dict[str, Any],
 ) -> None:
     row_extra = {
-        "browser_reported_cost_usd": cost_usd,
         "route_family_hint": request.route_family_hint or "",
         "route_kind_hint": request.route_kind_hint or "",
         "primary_provider": getattr(llm_clients, "primary_provider", ""),
@@ -1148,7 +1109,7 @@ def _record_browser_use_usage_row(
     openai_accounting_service.record_usage(
         OpenAIUsageAccountingRequest(
             schema_version="1.0",
-            step_name="browser_use_agent",
+            step_name="browser_use_llm_call",
             model=model_name,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -1157,15 +1118,16 @@ def _record_browser_use_usage_row(
             tool_calls=0,
             cost_ledger_path="./out/cost-ledger.jsonl",
             cost_daily_path="./out/cost-daily.json",
+            emit_cost_ledger=False,
             model_pricing={},
-            request_id=None,
+            request_id=request_id,
             provider=_browser_usage_provider(
                 model=model_name,
                 llm_clients=llm_clients,
             ),
-            action="browser_use_agent",
+            action="browser_use_llm_call",
             usage_db_path="./state/llm_usage.sqlite",
-            publisher_name="",
+            publisher_name=request.publisher_name,
             report_name=_browser_usage_report_name(request),
             source_url=normalized_url,
             prompt_namespace=prompt_bundle.namespace,
@@ -1199,7 +1161,7 @@ def _browser_usage_report_name(request: BrowserReportDownloadRequest) -> str:
         title = str(getattr(candidate_trace, "title", "") or "").strip()
         if title:
             return title
-    return ""
+    return str(request.report_title or "").strip()
 
 
 def _browser_usage_provider(*, model: str, llm_clients: Any) -> str:

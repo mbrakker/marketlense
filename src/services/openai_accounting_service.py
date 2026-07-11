@@ -152,37 +152,38 @@ def record_usage(
     usage_db_recorded = False
     usage_db_row_id = None
     try:
-        entry = CostLedgerEntry(
-            schema_version="1.0",
-            timestamp_utc=timestamp_utc,
-            run_id=ctx.run_id,
-            task_id=ctx.task_id,
-            span_id=ctx.span_id,
-            step_name=request.step_name,
-            model=request.model,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cached_input_tokens=request.cached_input_tokens,
-            tool_calls=tool_calls,
-            estimated_cost_usd=estimated_cost,
-            extra=_cost_entry_extra(request),
-        )
-        cost_ledger_service.append_entry(
-            CostLedgerAppendRequest(
+        if request.emit_cost_ledger:
+            entry = CostLedgerEntry(
                 schema_version="1.0",
-                path=request.cost_ledger_path,
-                entry=entry,
-            ),
-            ctx,
-        )
-        cost_ledger_service.rollup_daily(
-            CostRollupRequest(
-                schema_version="1.0",
-                ledger_path=request.cost_ledger_path,
-                out_path=request.cost_daily_path,
-            ),
-            ctx,
-        )
+                timestamp_utc=timestamp_utc,
+                run_id=ctx.run_id,
+                task_id=ctx.task_id,
+                span_id=ctx.span_id,
+                step_name=request.step_name,
+                model=request.model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cached_input_tokens=request.cached_input_tokens,
+                tool_calls=tool_calls,
+                estimated_cost_usd=estimated_cost,
+                extra=_cost_entry_extra(request),
+            )
+            cost_ledger_service.append_entry(
+                CostLedgerAppendRequest(
+                    schema_version="1.0",
+                    path=request.cost_ledger_path,
+                    entry=entry,
+                ),
+                ctx,
+            )
+            cost_ledger_service.rollup_daily(
+                CostRollupRequest(
+                    schema_version="1.0",
+                    ledger_path=request.cost_ledger_path,
+                    out_path=request.cost_daily_path,
+                ),
+                ctx,
+            )
         usage_response = llm_usage_ledger_service.append_usage(
             LLMUsageLedgerAppendRequest(
                 schema_version="1.0",
@@ -275,7 +276,7 @@ def record_usage(
     )
     return OpenAIUsageAccountingResponse(
         schema_version="1.0",
-        recorded=True,
+        recorded=request.emit_cost_ledger,
         estimated_cost_usd=estimated_cost,
         ledger_path=request.cost_ledger_path,
         daily_path=request.cost_daily_path,

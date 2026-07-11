@@ -44,5 +44,8 @@ class ChatInvokeCompletion(BaseModel, Generic[T]):
 	usage: ChatInvokeUsage | None
 	"""The usage of the response."""
 
+	request_id: str | None = None
+	"""Provider request identifier for the response, when the provider exposes one."""
+
 	stop_reason: str | None = None
 	"""The reason the model stopped generating. Common values: 'end_turn', 'max_tokens', 'stop_sequence'."""
