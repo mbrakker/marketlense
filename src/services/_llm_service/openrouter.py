@@ -6,7 +6,12 @@ from typing import Any, Callable
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 
-from src.contracts.openai import OpenAIResponseResult, OpenAIUsageAccountingRequest
+from src.contracts.openai import (
+    OpenAIResponseResult,
+    OpenAIUsageAccountingRequest,
+    OpenAIUsageAccountingResponse,
+    OpenAIUsageOutcomeUpdateRequest,
+)
 from src.contracts.run_context import RunContext
 from src.services import openai_accounting_service
 from src.services._llm_service.context_compaction import (
@@ -189,9 +194,7 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
         ) from exc
     try:
         response_payload = json.loads(raw_text)
-        text = str(response_payload["choices"][0]["message"]["content"] or "")
-        parsed_json = json.loads(text)
-    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+    except json.JSONDecodeError as exc:
         raise AppError(
             code="openrouter_response_invalid_json",
             message="OpenRouter response did not contain valid JSON content",
@@ -203,6 +206,81 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
         response_payload.get("usage") if isinstance(response_payload, dict) else {}
     )
     usage = usage_payload if isinstance(usage_payload, dict) else {}
+    try:
+        text = str(response_payload["choices"][0]["message"]["content"] or "")
+    except (KeyError, IndexError, TypeError) as exc:
+        result = OpenAIResponseResult(
+            schema_version="1.0",
+            text="",
+            parsed_json=None,
+            input_tokens=_optional_int(usage.get("prompt_tokens")),
+            output_tokens=_optional_int(usage.get("completion_tokens")),
+            tool_calls=0,
+            model=model,
+            total_tokens=_optional_int(usage.get("total_tokens")),
+            request_id=(
+                str(response_payload.get("id") or "")
+                if isinstance(response_payload, dict)
+                else ""
+            )
+            or None,
+        )
+        accounting = _record_openrouter_usage_accounting(
+            request=request,
+            result=result,
+            ctx=ctx,
+            parse_status="not_validated",
+            schema_validation_status="not_validated",
+        )
+        _finalize_openrouter_usage_accounting(
+            accounting=accounting,
+            ctx=ctx,
+            parse_status="invalid",
+            schema_validation_status="not_validated",
+            error_code="openrouter_response_invalid_json",
+        )
+        raise AppError(
+            code="openrouter_response_invalid_json",
+            message="OpenRouter response did not contain valid JSON content",
+            cause=exc,
+            retryable=False,
+            context={"model": model},
+        ) from exc
+    try:
+        parsed_json = json.loads(text)
+    except json.JSONDecodeError as exc:
+        result = OpenAIResponseResult(
+            schema_version="1.0",
+            text=text,
+            parsed_json=None,
+            input_tokens=_optional_int(usage.get("prompt_tokens")),
+            output_tokens=_optional_int(usage.get("completion_tokens")),
+            tool_calls=0,
+            model=model,
+            total_tokens=_optional_int(usage.get("total_tokens")),
+            request_id=str(response_payload.get("id") or "") or None,
+        )
+        accounting = _record_openrouter_usage_accounting(
+            request=request,
+            result=result,
+            ctx=ctx,
+            parse_status="not_validated",
+            schema_validation_status="not_validated",
+        )
+        _finalize_openrouter_usage_accounting(
+            accounting=accounting,
+            ctx=ctx,
+            parse_status="invalid",
+            schema_validation_status="not_validated",
+            error_code="openrouter_response_invalid_json",
+        )
+        raise AppError(
+            code="openrouter_response_invalid_json",
+            message="OpenRouter response did not contain valid JSON content",
+            cause=exc,
+            retryable=False,
+            context={"model": model},
+        ) from exc
     result = OpenAIResponseResult(
         schema_version="1.0",
         text=text,
@@ -214,10 +292,18 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
         total_tokens=_optional_int(usage.get("total_tokens")),
         request_id=str(response_payload.get("id") or "") or None,
     )
-    _record_openrouter_usage_accounting(
+    accounting = _record_openrouter_usage_accounting(
         request=request,
         result=result,
         ctx=ctx,
+        parse_status="valid",
+        schema_validation_status="not_validated",
+    )
+    _finalize_openrouter_usage_accounting(
+        accounting=accounting,
+        ctx=ctx,
+        parse_status="valid",
+        schema_validation_status="valid",
     )
     logger.info(
         log_event(
@@ -242,7 +328,9 @@ def _record_openrouter_usage_accounting(
     request: Any,
     result: OpenAIResponseResult,
     ctx: RunContext,
-) -> None:
+    parse_status: str,
+    schema_validation_status: str,
+) -> OpenAIUsageAccountingResponse:
     cache_decision = ""
     if hasattr(request, "response_cache_enabled"):
         cache_decision = (
@@ -250,7 +338,7 @@ def _record_openrouter_usage_accounting(
             if bool(getattr(request, "response_cache_enabled", False))
             else "disabled"
         )
-    openai_accounting_service.record_usage(
+    return openai_accounting_service.record_usage(
         OpenAIUsageAccountingRequest(
             schema_version="1.0",
             step_name="openrouter_chat_json",
@@ -304,6 +392,8 @@ def _record_openrouter_usage_accounting(
             temperature=getattr(request, "temperature", None),
             seed=getattr(request, "seed", None),
             timeout_seconds=getattr(request, "timeout_seconds", None),
+            parse_status=parse_status,
+            schema_validation_status=schema_validation_status,
             extra={
                 "http_referer_present": bool(
                     str(getattr(request, "openrouter_http_referer", "") or "").strip()
@@ -311,6 +401,30 @@ def _record_openrouter_usage_accounting(
                 ),
                 "schema_name": str(getattr(request, "schema_name", "") or ""),
             },
+        ),
+        ctx,
+    )
+
+
+def _finalize_openrouter_usage_accounting(
+    *,
+    accounting: OpenAIUsageAccountingResponse,
+    ctx: RunContext,
+    parse_status: str,
+    schema_validation_status: str,
+    error_code: str = "",
+) -> None:
+    if not accounting.usage_db_recorded or not accounting.event_key:
+        return
+    openai_accounting_service.update_usage_outcome(
+        OpenAIUsageOutcomeUpdateRequest(
+            schema_version="1.0",
+            usage_db_path=accounting.usage_db_path,
+            event_key=accounting.event_key,
+            parse_status=parse_status,
+            schema_validation_status=schema_validation_status,
+            error_stage="output_validation" if error_code else "",
+            error_code=error_code,
         ),
         ctx,
     )

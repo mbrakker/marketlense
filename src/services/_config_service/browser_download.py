@@ -30,6 +30,7 @@ def load_browser_download_settings(
     resolver = _ConfigResolver()
 
     paths = data.get("paths", {}) or {}
+    analysis_cfg = data.get("analysis", {}) or {}
     ingest = data.get("ingest", {}) or {}
     drive_cfg = ingest.get("drive", {}) or {}
     browser_download = data.get("browser_download", {}) or {}
@@ -199,6 +200,24 @@ def load_browser_download_settings(
         or 2
     )
     route_budgets = _load_browser_route_budgets(route_budgets_cfg)
+    cost_ledger_path = _resolve_optional_path(
+        analysis_cfg.get("cost_ledger_path")
+        or _env_value("COST_LEDGER_PATH")
+        or "./out/cost-ledger.jsonl",
+        base_path=runtime_base_path,
+    )
+    cost_daily_path = _resolve_optional_path(
+        cost_cfg.get("daily_path")
+        or _env_value("COST_DAILY_PATH")
+        or "./out/cost-daily.json",
+        base_path=runtime_base_path,
+    )
+    usage_db_path = _resolve_optional_path(
+        cost_cfg.get("usage_db_path")
+        or _env_value("LLM_USAGE_DB_PATH")
+        or "./state/llm_usage.sqlite",
+        base_path=runtime_base_path,
+    )
     session_reuse_policy = BrowserDownloadSessionReusePolicy(
         schema_version="1.0",
         enabled=_to_bool(
@@ -555,11 +574,33 @@ def load_browser_download_settings(
         ),
         route_budgets=route_budgets,
         model_pricing=cost_cfg["pricing"],
+        cost_ledger_path=cost_ledger_path,
+        cost_daily_path=cost_daily_path,
+        usage_db_path=usage_db_path,
+        accounting_queue_size=max(
+            _to_int(
+                browser_download.get("accounting_queue_size")
+                or _env_value("BROWSER_ACCOUNTING_QUEUE_SIZE")
+                or 256,
+                256,
+            ),
+            1,
+        ),
+        accounting_flush_timeout_seconds=max(
+            _to_float(
+                browser_download.get("accounting_flush_timeout_seconds")
+                or _env_value("BROWSER_ACCOUNTING_FLUSH_TIMEOUT_SECONDS")
+                or 5.0,
+                5.0,
+            ),
+            0.1,
+        ),
     )
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
     Path(settings.reports_db).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.usage_db_path).parent.mkdir(parents=True, exist_ok=True)
     logger.info(
         log_event(
             ctx,

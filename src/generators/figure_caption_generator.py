@@ -425,6 +425,7 @@ def generate_figure_captions(
                     timeout_seconds=runtime.settings.figure_caption_timeout_seconds,
                     cost_ledger_path=runtime.settings.cost_ledger_path,
                     cost_daily_path=runtime.settings.cost_daily_path,
+                    usage_db_path=str(getattr(runtime.settings, "usage_db_path", "./state/llm_usage.sqlite")),
                     model_pricing=runtime.settings.model_pricing,
                     publisher_name=runtime.publisher_name,
                     report_name=runtime.source_report_name or runtime.report_title,

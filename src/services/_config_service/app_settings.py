@@ -179,6 +179,7 @@ def _config_load_complete_fields(
         "strict_schema_validation": settings.strict_schema_validation,
         "cost_ledger_path": settings.cost_ledger_path,
         "cost_daily_path": settings.cost_daily_path,
+        "usage_db_path": settings.usage_db_path,
         "html_tag_acronyms": settings.html_tag_acronyms,
         "html_tag_acronyms_count": len(settings.html_tag_acronyms),
         "validation_data_gap_policy": settings.validation_data_gap_policy,
@@ -418,6 +419,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         strict_schema_validation=analysis_settings["strict_schema_validation"],
         cost_ledger_path=analysis_settings["cost_ledger_path"],
         cost_daily_path=analysis_settings["cost_daily_path"],
+        usage_db_path=analysis_settings["usage_db_path"],
         model_pricing=analysis_settings["model_pricing"],
         html_tag_acronyms=analysis_settings["html_tag_acronyms"],
         validation_data_gap_policy=validation_settings["validation_data_gap_policy"],
@@ -492,6 +494,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     Path(settings.ingest_lock_path).parent.mkdir(parents=True, exist_ok=True)
     Path(settings.cost_ledger_path).parent.mkdir(parents=True, exist_ok=True)
     Path(settings.cost_daily_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.usage_db_path).parent.mkdir(parents=True, exist_ok=True)
     logger.info(
         log_event(
             ctx,

@@ -226,6 +226,7 @@ def extract_taxonomy(
                 timeout_seconds=request.settings.openai_timeout_seconds,
                 cost_ledger_path=request.settings.cost_ledger_path,
                 cost_daily_path=request.settings.cost_daily_path,
+                usage_db_path=str(getattr(request.settings, "usage_db_path", "./state/llm_usage.sqlite")),
                 model_pricing=request.settings.model_pricing,
                 publisher_name=request.publisher_name,
                 report_name=request.report_title,

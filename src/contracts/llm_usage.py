@@ -92,6 +92,32 @@ class LLMUsageLedgerEntry(SemanticIdContract):
     timeout_seconds: Optional[float] = field(
         metadata={"doc": "Provider request timeout in seconds, if configured."}
     )
+    call_ordinal: int = field(
+        default=0,
+        metadata={
+            "doc": "Zero-based ordinal that distinguishes separate provider calls in one run context."
+        },
+    )
+    provider_call_status: str = field(
+        default="completed",
+        metadata={"doc": "Provider transport outcome: completed or failed."},
+    )
+    parse_status: str = field(
+        default="not_applicable",
+        metadata={"doc": "Output parsing outcome: valid, invalid, not_validated, or not_applicable."},
+    )
+    schema_validation_status: str = field(
+        default="not_applicable",
+        metadata={"doc": "Schema validation outcome: valid, invalid, not_validated, or not_applicable."},
+    )
+    error_stage: str = field(
+        default="",
+        metadata={"doc": "Bounded stage that produced the terminal error, when any."},
+    )
+    error_code: str = field(
+        default="",
+        metadata={"doc": "Bounded terminal application error code, when any."},
+    )
     metadata: Dict[str, Any] = field(
         default_factory=dict, metadata={"doc": "Additional non-secret usage metadata."}
     )
@@ -115,6 +141,12 @@ class LLMUsageLedgerAppendResponse:
     )
     db_path: str = field(metadata={"doc": "SQLite database path used."})
     row_id: int = field(metadata={"doc": "Inserted SQLite row identifier."})
+    event_key: str = field(
+        metadata={"doc": "Deterministic idempotency key for this provider usage event."}
+    )
+    inserted: bool = field(
+        metadata={"doc": "Whether this call inserted a new event instead of replaying one."}
+    )
     median_db_path: str = field(
         metadata={
             "doc": "SQLite database path where usage medians were rebuilt."
@@ -124,6 +156,76 @@ class LLMUsageLedgerAppendResponse:
         metadata={
             "doc": "Number of per-call-family median rows rebuilt from the ledger."
         }
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageLedgerOutcomeUpdateRequest:
+    schema_version: str = field(
+        metadata={"doc": "LLM usage outcome update request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "SQLite database path for the usage event."})
+    event_key: str = field(metadata={"doc": "Deterministic key of the event to finalize."})
+    parse_status: str = field(metadata={"doc": "Final parse outcome for the provider response."})
+    schema_validation_status: str = field(
+        metadata={"doc": "Final schema-validation outcome for the provider response."}
+    )
+    error_stage: str = field(
+        default="", metadata={"doc": "Bounded terminal error stage, when any."}
+    )
+    error_code: str = field(
+        default="", metadata={"doc": "Bounded terminal application error code, when any."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageLedgerOutcomeUpdateResponse:
+    schema_version: str = field(
+        metadata={"doc": "LLM usage outcome update response schema version."}
+    )
+    db_path: str = field(metadata={"doc": "SQLite database path updated."})
+    event_key: str = field(metadata={"doc": "Deterministic key of the finalized event."})
+    updated: bool = field(metadata={"doc": "Whether one durable usage event was updated."})
+
+
+@dataclass(frozen=True)
+class LLMUsageLedgerReconciliationRequest:
+    schema_version: str = field(
+        metadata={"doc": "Usage-ledger reconciliation request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
+    ledger_path: str = field(
+        metadata={"doc": "Compatibility JSONL usage export path."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageLedgerReconciliationResponse:
+    schema_version: str = field(
+        metadata={"doc": "Usage-ledger reconciliation response schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path read."})
+    ledger_path: str = field(metadata={"doc": "Compatibility JSONL usage export path read."})
+    sqlite_event_count: int = field(metadata={"doc": "Canonical SQLite event count."})
+    export_event_count: int = field(metadata={"doc": "Compatibility export event count."})
+    sqlite_input_tokens: int = field(metadata={"doc": "Canonical SQLite input-token total."})
+    export_input_tokens: int = field(metadata={"doc": "Compatibility export input-token total."})
+    sqlite_output_tokens: int = field(metadata={"doc": "Canonical SQLite output-token total."})
+    export_output_tokens: int = field(metadata={"doc": "Compatibility export output-token total."})
+    sqlite_cached_input_tokens: int = field(
+        metadata={"doc": "Canonical SQLite cached-input-token total."}
+    )
+    export_cached_input_tokens: int = field(
+        metadata={"doc": "Compatibility export cached-input-token total."}
+    )
+    sqlite_estimated_cost_usd: float = field(
+        metadata={"doc": "Canonical SQLite estimated-cost total."}
+    )
+    export_estimated_cost_usd: float = field(
+        metadata={"doc": "Compatibility export estimated-cost total."}
+    )
+    matches: bool = field(
+        metadata={"doc": "Whether exact integer totals and cost tolerance reconcile."}
     )
 
 

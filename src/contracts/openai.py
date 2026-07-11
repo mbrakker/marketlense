@@ -51,6 +51,10 @@ class OpenAIEmbeddingRequest:
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
     )
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -162,6 +166,25 @@ class OpenAIUsageAccountingRequest:
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Provider timeout in seconds, if configured."}
     )
+    call_ordinal: int = field(
+        default=0,
+        metadata={"doc": "Ordinal distinguishing separate provider calls in the active run context."},
+    )
+    provider_call_status: str = field(
+        default="completed", metadata={"doc": "Provider transport outcome for this usage event."}
+    )
+    parse_status: str = field(
+        default="not_applicable", metadata={"doc": "Current response parsing outcome."}
+    )
+    schema_validation_status: str = field(
+        default="not_applicable", metadata={"doc": "Current response schema-validation outcome."}
+    )
+    error_stage: str = field(
+        default="", metadata={"doc": "Bounded terminal error stage, when any."}
+    )
+    error_code: str = field(
+        default="", metadata={"doc": "Bounded terminal application error code, when any."}
+    )
     extra: Dict[str, Any] = field(
         default_factory=dict, metadata={"doc": "Additional non-secret usage metadata."}
     )
@@ -197,6 +220,32 @@ class OpenAIUsageAccountingResponse:
     usage_db_row_id: Optional[int] = field(
         default=None,
         metadata={"doc": "Inserted SQLite usage ledger row ID, if recorded."},
+    )
+    event_key: str = field(
+        default="", metadata={"doc": "Deterministic idempotency key for the durable usage event."}
+    )
+    usage_db_inserted: bool = field(
+        default=False,
+        metadata={"doc": "Whether SQLite inserted this event instead of recognizing a replay."},
+    )
+
+
+@dataclass(frozen=True)
+class OpenAIUsageOutcomeUpdateRequest:
+    schema_version: str = field(
+        metadata={"doc": "Usage outcome update request schema version."}
+    )
+    usage_db_path: str = field(metadata={"doc": "SQLite usage ledger path to update."})
+    event_key: str = field(metadata={"doc": "Deterministic event key to finalize."})
+    parse_status: str = field(metadata={"doc": "Final parse status for the provider response."})
+    schema_validation_status: str = field(
+        metadata={"doc": "Final schema-validation status for the provider response."}
+    )
+    error_stage: str = field(
+        default="", metadata={"doc": "Bounded terminal error stage, when any."}
+    )
+    error_code: str = field(
+        default="", metadata={"doc": "Bounded terminal error code, when any."}
     )
 
 
@@ -256,6 +305,10 @@ class OpenAIAnalyzeRequest:
     )
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
+    )
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
     )
 
 
@@ -355,6 +408,10 @@ class OpenAIResponseRequest:
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
     )
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -449,6 +506,10 @@ class OpenAIJSONPromptRequest:
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
     )
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -518,6 +579,10 @@ class OpenAIJSONImagePromptRequest:
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
     )
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
+    )
 
 
 @dataclass(frozen=True)
@@ -583,6 +648,10 @@ class OpenAIPdfOcrRequest:
     )
     prompt_hash: str = field(
         default="", metadata={"doc": "Prompt hash for usage reporting, if known."}
+    )
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
     )
 
 

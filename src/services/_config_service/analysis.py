@@ -109,6 +109,24 @@ def _resolve_analysis_settings(
         cost_cfg.get("daily_path")
         or _default_config_value("cost", "daily_path", fallback="./out/cost-daily.json")
     )
+    resolved["usage_db_path"] = str(
+        _resolve_setting_raw(
+            cost_cfg,
+            _SettingSpec(
+                field_name="usage_db_path",
+                config_key="usage_db_path",
+                default=str(
+                    _default_config_value(
+                        "cost", "usage_db_path", fallback="./state/llm_usage.sqlite"
+                    )
+                ),
+                coerce=_to_str,
+                env_key="LLM_USAGE_DB_PATH",
+                env_first=True,
+            ),
+        )
+        or "./state/llm_usage.sqlite"
+    )
     resolved["model_pricing"] = cost_cfg.get("pricing") or _default_config_value(
         "cost", "pricing", fallback={}
     )

@@ -171,6 +171,8 @@ browser_download:
       timeout_seconds: 120
       max_steps: 16
   max_tokens: 12000
+  accounting_queue_size: 256
+  accounting_flush_timeout_seconds: 5
   output_dir: "./out/browser_downloads"
   headed: false
   warm_worker_pool:
@@ -290,6 +292,7 @@ cross_report_analysis:
 
 cost:
   daily_path: "./out/cost-daily.json"
+  usage_db_path: "./state/llm_usage.sqlite"
   pricing_path: "./src/config/llm-costs.yaml"
 
 workflow_control:

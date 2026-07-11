@@ -26,6 +26,8 @@ from src.contracts.openai import (
     OpenAIResponseRequest,
     OpenAIResponseResult,
     OpenAIUsageAccountingRequest,
+    OpenAIUsageAccountingResponse,
+    OpenAIUsageOutcomeUpdateRequest,
     OpenAIVectorStoreAttachFileRequest,
     OpenAIVectorStoreAttachFileResponse,
     OpenAIVectorStoreCreateRequest,
@@ -758,7 +760,10 @@ def _record_usage_accounting(
     action: str | None = None,
     total_tokens: int | None = None,
     source_request: Any | None = None,
-) -> None:
+    call_ordinal: int = 0,
+    parse_status: str = "not_applicable",
+    schema_validation_status: str = "not_applicable",
+) -> OpenAIUsageAccountingResponse:
     source = source_request
     cache_decision = ""
     if source is not None and hasattr(source, "response_cache_enabled"):
@@ -767,7 +772,7 @@ def _record_usage_accounting(
             if bool(getattr(source, "response_cache_enabled", False))
             else "disabled"
         )
-    openai_accounting_service.record_usage(
+    return openai_accounting_service.record_usage(
         OpenAIUsageAccountingRequest(
             schema_version="1.0",
             step_name=step_name,
@@ -819,12 +824,40 @@ def _record_usage_accounting(
             temperature=getattr(source, "temperature", None),
             seed=getattr(source, "seed", None),
             timeout_seconds=getattr(source, "timeout_seconds", None),
+            call_ordinal=call_ordinal,
+            parse_status=parse_status,
+            schema_validation_status=schema_validation_status,
             extra={
                 "schema_name": str(getattr(source, "schema_name", "") or ""),
                 "response_cache_dir": str(
                     getattr(source, "response_cache_dir", "") or ""
                 ),
             },
+        ),
+        ctx,
+    )
+
+
+def _finalize_usage_accounting(
+    *,
+    accounting: OpenAIUsageAccountingResponse,
+    ctx: RunContext,
+    parse_status: str,
+    schema_validation_status: str,
+    error_stage: str = "",
+    error_code: str = "",
+) -> None:
+    if not accounting.usage_db_recorded or not accounting.event_key:
+        return
+    openai_accounting_service.update_usage_outcome(
+        OpenAIUsageOutcomeUpdateRequest(
+            schema_version="1.0",
+            usage_db_path=accounting.usage_db_path,
+            event_key=accounting.event_key,
+            parse_status=parse_status,
+            schema_validation_status=schema_validation_status,
+            error_stage=error_stage,
+            error_code=error_code,
         ),
         ctx,
     )
@@ -930,6 +963,7 @@ __all__ = [
     "_parse_response_json",
     "_read_semantic_response_cache",
     "_record_usage_accounting",
+    "_finalize_usage_accounting",
     "_semantic_response_cache_spec",
     "_sha256_payload",
     "_sha256_text",

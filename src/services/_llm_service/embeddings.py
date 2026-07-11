@@ -120,18 +120,10 @@ def openai_create_embeddings(
         ) from exc
 
     vectors = _embedding_vectors_from_response(resp)
-    if len(vectors) != len(inputs):
-        raise AppError(
-            code="openai_embedding_count_mismatch",
-            message="OpenAI embedding response count did not match request inputs",
-            retryable=True,
-            severity="error",
-            context={"expected": len(inputs), "actual": len(vectors)},
-        )
     input_tokens, total_tokens = _embedding_usage(resp)
     request_id = _value_from_response(resp, "id")
     model = str(_value_from_response(resp, "model") or request.model)
-    _record_usage_accounting(
+    accounting = _record_usage_accounting(
         ctx=ctx,
         step_name="openai_embeddings",
         model=model,
@@ -144,6 +136,30 @@ def openai_create_embeddings(
         model_pricing=request.model_pricing,
         request_id=str(request_id) if request_id else None,
         source_request=request,
+        parse_status="not_applicable",
+        schema_validation_status="not_validated",
+    )
+    if len(vectors) != len(inputs):
+        _finalize_usage_accounting(
+            accounting=accounting,
+            ctx=ctx,
+            parse_status="not_applicable",
+            schema_validation_status="invalid",
+            error_stage="output_validation",
+            error_code="openai_embedding_count_mismatch",
+        )
+        raise AppError(
+            code="openai_embedding_count_mismatch",
+            message="OpenAI embedding response count did not match request inputs",
+            retryable=True,
+            severity="error",
+            context={"expected": len(inputs), "actual": len(vectors)},
+        )
+    _finalize_usage_accounting(
+        accounting=accounting,
+        ctx=ctx,
+        parse_status="not_applicable",
+        schema_validation_status="valid",
     )
     response = OpenAIEmbeddingResponse(
         schema_version="1.0",

@@ -489,3 +489,23 @@ class BrowserDownloadSettings:
             "doc": "Per-model token pricing used to estimate Browser Use LLM call cost."
         },
     )
+    cost_ledger_path: str = field(
+        default="./out/cost-ledger.jsonl",
+        metadata={"doc": "Configured compatibility JSONL export path for usage events."},
+    )
+    cost_daily_path: str = field(
+        default="./out/cost-daily.json",
+        metadata={"doc": "Configured compatibility daily-rollup path for usage events."},
+    )
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "Canonical SQLite usage ledger path shared with report calls."},
+    )
+    accounting_queue_size: int = field(
+        default=256,
+        metadata={"doc": "Bounded browser-use usage-event queue capacity."},
+    )
+    accounting_flush_timeout_seconds: float = field(
+        default=5.0,
+        metadata={"doc": "Maximum shutdown wait for queued browser usage writes."},
+    )

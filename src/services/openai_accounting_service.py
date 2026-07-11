@@ -11,10 +11,12 @@ from src.contracts.costs import (
 from src.contracts.llm_usage import (
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerEntry,
+    LLMUsageLedgerOutcomeUpdateRequest,
 )
 from src.contracts.openai import (
     OpenAIUsageAccountingRequest,
     OpenAIUsageAccountingResponse,
+    OpenAIUsageOutcomeUpdateRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services import cost_ledger_service, llm_usage_ledger_service
@@ -92,6 +94,14 @@ def _cost_entry_extra(request: OpenAIUsageAccountingRequest) -> dict:
         "prompt_hash": request.prompt_hash or None,
         "provider_decision": request.provider_decision or None,
         "cache_decision": request.cache_decision or None,
+        "event_outcome": {
+            "provider_call_status": request.provider_call_status,
+            "parse_status": request.parse_status,
+            "schema_validation_status": request.schema_validation_status,
+            "error_stage": request.error_stage or None,
+            "error_code": request.error_code or None,
+            "call_ordinal": int(request.call_ordinal),
+        },
     }
 
 
@@ -151,39 +161,9 @@ def record_usage(
     timestamp_utc = datetime.now(timezone.utc).isoformat()
     usage_db_recorded = False
     usage_db_row_id = None
+    usage_db_event_key = ""
+    usage_db_inserted = False
     try:
-        if request.emit_cost_ledger:
-            entry = CostLedgerEntry(
-                schema_version="1.0",
-                timestamp_utc=timestamp_utc,
-                run_id=ctx.run_id,
-                task_id=ctx.task_id,
-                span_id=ctx.span_id,
-                step_name=request.step_name,
-                model=request.model,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                cached_input_tokens=request.cached_input_tokens,
-                tool_calls=tool_calls,
-                estimated_cost_usd=estimated_cost,
-                extra=_cost_entry_extra(request),
-            )
-            cost_ledger_service.append_entry(
-                CostLedgerAppendRequest(
-                    schema_version="1.0",
-                    path=request.cost_ledger_path,
-                    entry=entry,
-                ),
-                ctx,
-            )
-            cost_ledger_service.rollup_daily(
-                CostRollupRequest(
-                    schema_version="1.0",
-                    ledger_path=request.cost_ledger_path,
-                    out_path=request.cost_daily_path,
-                ),
-                ctx,
-            )
         usage_response = llm_usage_ledger_service.append_usage(
             LLMUsageLedgerAppendRequest(
                 schema_version="1.0",
@@ -217,6 +197,12 @@ def record_usage(
                     temperature=request.temperature,
                     seed=request.seed,
                     timeout_seconds=request.timeout_seconds,
+                    call_ordinal=int(request.call_ordinal),
+                    provider_call_status=request.provider_call_status,
+                    parse_status=request.parse_status,
+                    schema_validation_status=request.schema_validation_status,
+                    error_stage=request.error_stage,
+                    error_code=request.error_code,
                     metadata=_usage_metadata(request),
                 ),
             ),
@@ -224,6 +210,40 @@ def record_usage(
         )
         usage_db_recorded = True
         usage_db_row_id = usage_response.row_id
+        usage_db_event_key = usage_response.event_key
+        usage_db_inserted = usage_response.inserted
+        if request.emit_cost_ledger and usage_response.inserted:
+            entry = CostLedgerEntry(
+                schema_version="1.0",
+                timestamp_utc=timestamp_utc,
+                run_id=ctx.run_id,
+                task_id=ctx.task_id,
+                span_id=ctx.span_id,
+                step_name=request.step_name,
+                model=request.model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cached_input_tokens=request.cached_input_tokens,
+                tool_calls=tool_calls,
+                estimated_cost_usd=estimated_cost,
+                extra=_cost_entry_extra(request),
+            )
+            cost_ledger_service.append_entry(
+                CostLedgerAppendRequest(
+                    schema_version="1.0",
+                    path=request.cost_ledger_path,
+                    entry=entry,
+                ),
+                ctx,
+            )
+            cost_ledger_service.rollup_daily(
+                CostRollupRequest(
+                    schema_version="1.0",
+                    ledger_path=request.cost_ledger_path,
+                    out_path=request.cost_daily_path,
+                ),
+                ctx,
+            )
     except OPENAI_ACCOUNTING_EXCEPTIONS as exc:
         logger.info(
             log_event(
@@ -252,6 +272,8 @@ def record_usage(
             usage_db_path=request.usage_db_path,
             usage_db_recorded=usage_db_recorded,
             usage_db_row_id=usage_db_row_id,
+            event_key=usage_db_event_key,
+            usage_db_inserted=usage_db_inserted,
         )
 
     logger.info(
@@ -271,16 +293,38 @@ def record_usage(
                 "cost_daily_path": request.cost_daily_path,
                 "usage_db_path": request.usage_db_path,
                 "usage_db_row_id": usage_db_row_id,
+                "event_key": usage_db_event_key,
+                "usage_db_inserted": usage_db_inserted,
             },
         )
     )
     return OpenAIUsageAccountingResponse(
         schema_version="1.0",
-        recorded=request.emit_cost_ledger,
+        recorded=request.emit_cost_ledger and usage_db_inserted,
         estimated_cost_usd=estimated_cost,
         ledger_path=request.cost_ledger_path,
         daily_path=request.cost_daily_path,
         usage_db_path=request.usage_db_path,
         usage_db_recorded=usage_db_recorded,
         usage_db_row_id=usage_db_row_id,
+        event_key=usage_db_event_key,
+        usage_db_inserted=usage_db_inserted,
     )
+
+
+def update_usage_outcome(
+    request: OpenAIUsageOutcomeUpdateRequest, ctx: RunContext
+) -> bool:
+    response = llm_usage_ledger_service.update_usage_outcome(
+        LLMUsageLedgerOutcomeUpdateRequest(
+            schema_version=request.schema_version,
+            db_path=request.usage_db_path,
+            event_key=request.event_key,
+            parse_status=request.parse_status,
+            schema_validation_status=request.schema_validation_status,
+            error_stage=request.error_stage,
+            error_code=request.error_code,
+        ),
+        ctx,
+    )
+    return response.updated

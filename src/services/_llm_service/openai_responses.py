@@ -131,6 +131,22 @@ def openai_ocr_pdf(
 
     resolved_model = str(getattr(resp, "model", None) or request.model)
     metadata = _adapt_responses_metadata(resp, recover_json_object=True)
+    accounting = _record_usage_accounting(
+        ctx=ctx,
+        step_name="openai_ocr_pdf",
+        model=resolved_model,
+        input_tokens=metadata.input_tokens,
+        output_tokens=metadata.output_tokens,
+        total_tokens=metadata.total_tokens,
+        tool_calls=metadata.tool_calls,
+        cost_ledger_path=request.cost_ledger_path,
+        cost_daily_path=request.cost_daily_path,
+        model_pricing=request.model_pricing,
+        request_id=metadata.request_id,
+        source_request=request,
+        parse_status="not_validated",
+        schema_validation_status="not_validated",
+    )
     pages = _coerce_pdf_ocr_pages(metadata.parsed_json)
     logger.info(
         log_event(
@@ -150,6 +166,14 @@ def openai_ocr_pdf(
         )
     )
     if not pages:
+        _finalize_usage_accounting(
+            accounting=accounting,
+            ctx=ctx,
+            parse_status="invalid",
+            schema_validation_status="invalid",
+            error_stage="output_validation",
+            error_code="openai_ocr_invalid_response",
+        )
         raise AppError(
             code="openai_ocr_invalid_response",
             message="OpenAI OCR returned no structured pages",
@@ -162,19 +186,11 @@ def openai_ocr_pdf(
             },
         )
 
-    _record_usage_accounting(
+    _finalize_usage_accounting(
+        accounting=accounting,
         ctx=ctx,
-        step_name="openai_ocr_pdf",
-        model=resolved_model,
-        input_tokens=metadata.input_tokens,
-        output_tokens=metadata.output_tokens,
-        total_tokens=metadata.total_tokens,
-        tool_calls=metadata.tool_calls,
-        cost_ledger_path=request.cost_ledger_path,
-        cost_daily_path=request.cost_daily_path,
-        model_pricing=request.model_pricing,
-        request_id=metadata.request_id,
-        source_request=request,
+        parse_status="valid",
+        schema_validation_status="valid",
     )
     response = OpenAIPdfOcrResponse(
         schema_version="1.0",
@@ -335,7 +351,7 @@ def openai_respond_with_vector_store(
             parse_error_code = "openai_response_invalid_json"
             parse_error_message = "OpenAI response is not valid JSON"
 
-    _record_usage_accounting(
+    accounting = _record_usage_accounting(
         ctx=ctx,
         step_name="openai_response_vector_store",
         model=request.model,
@@ -348,6 +364,8 @@ def openai_respond_with_vector_store(
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
         source_request=request,
+        parse_status=("valid" if metadata.parsed_json is not None else "invalid"),
+        schema_validation_status="not_validated",
     )
 
     logger.info(
@@ -369,6 +387,14 @@ def openai_respond_with_vector_store(
         )
     )
     if parse_error_code:
+        _finalize_usage_accounting(
+            accounting=accounting,
+            ctx=ctx,
+            parse_status="invalid",
+            schema_validation_status="not_validated",
+            error_stage="output_validation",
+            error_code=parse_error_code,
+        )
         raise AppError(
             code=parse_error_code,
             message=parse_error_message,
@@ -380,6 +406,12 @@ def openai_respond_with_vector_store(
                 "response_text_preview": metadata.text[:240],
             },
         )
+    _finalize_usage_accounting(
+        accounting=accounting,
+        ctx=ctx,
+        parse_status="valid",
+        schema_validation_status="valid",
+    )
     result = OpenAIResponseResult(
         schema_version="1.0",
         text=metadata.text,

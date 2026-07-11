@@ -734,6 +734,7 @@ def generate_cross_report_analysis(
             ),
             cost_ledger_path=str(getattr(settings, "cost_ledger_path", "")),
             cost_daily_path=str(getattr(settings, "cost_daily_path", "")),
+            usage_db_path=str(getattr(settings, "usage_db_path", "")),
             model_pricing=dict(getattr(settings, "model_pricing", {}) or {}),
             response_cache_enabled=bool(
                 getattr(settings, "cross_report_analysis_cache_enabled", True)

@@ -225,36 +225,7 @@ def analyze_report(
             },
         ) from exc
 
-    payload_text = payload if isinstance(payload, str) else ""
-    if not payload_text:
-        raise AppError(
-            code="openai_response_empty",
-            message="OpenAI response payload is empty",
-            retryable=False,
-            context={"model": request.model},
-        )
-
-    try:
-        data = json.loads(payload_text)
-        _validate_payload(data)
-    except json.JSONDecodeError as exc:
-        raise AppError(
-            code="openai_response_invalid_json",
-            message="OpenAI response JSON parsing failed",
-            cause=exc,
-            retryable=False,
-            context={"model": request.model},
-        ) from exc
-    except ValueError as exc:
-        raise AppError(
-            code="openai_response_validation_failed",
-            message=str(exc),
-            cause=exc,
-            retryable=False,
-            context={"model": request.model},
-        ) from exc
-
-    _record_usage_accounting(
+    accounting = _record_usage_accounting(
         ctx=ctx,
         step_name="openai_analyze",
         model=request.model,
@@ -268,6 +239,67 @@ def analyze_report(
         model_pricing=request.model_pricing,
         request_id=request_id,
         source_request=request,
+        parse_status="not_validated",
+        schema_validation_status="not_validated",
+    )
+    payload_text = payload if isinstance(payload, str) else ""
+    if not payload_text:
+        _finalize_usage_accounting(
+            accounting=accounting,
+            ctx=ctx,
+            parse_status="invalid",
+            schema_validation_status="not_validated",
+            error_stage="output_validation",
+            error_code="openai_response_empty",
+        )
+        raise AppError(
+            code="openai_response_empty",
+            message="OpenAI response payload is empty",
+            retryable=False,
+            context={"model": request.model},
+        )
+
+    try:
+        data = json.loads(payload_text)
+        _validate_payload(data)
+    except json.JSONDecodeError as exc:
+        _finalize_usage_accounting(
+            accounting=accounting,
+            ctx=ctx,
+            parse_status="invalid",
+            schema_validation_status="not_validated",
+            error_stage="output_validation",
+            error_code="openai_response_invalid_json",
+        )
+        raise AppError(
+            code="openai_response_invalid_json",
+            message="OpenAI response JSON parsing failed",
+            cause=exc,
+            retryable=False,
+            context={"model": request.model},
+        ) from exc
+    except ValueError as exc:
+        _finalize_usage_accounting(
+            accounting=accounting,
+            ctx=ctx,
+            parse_status="valid",
+            schema_validation_status="invalid",
+            error_stage="output_validation",
+            error_code="openai_response_validation_failed",
+        )
+        raise AppError(
+            code="openai_response_validation_failed",
+            message=str(exc),
+            cause=exc,
+            retryable=False,
+            context={"model": request.model},
+        ) from exc
+
+    _finalize_usage_accounting(
+        accounting=accounting,
+        ctx=ctx,
+        parse_status="valid",
+        schema_validation_status="valid",
     )
 
     logger.info(
@@ -426,6 +458,8 @@ def openai_chat_json(
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
         source_request=request,
+        parse_status="valid" if metadata.parsed_json is not None else "invalid",
+        schema_validation_status="not_applicable",
     )
 
     logger.info(
@@ -632,6 +666,8 @@ def openai_chat_json_with_images(
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
         source_request=request,
+        parse_status="valid" if metadata.parsed_json is not None else "invalid",
+        schema_validation_status="not_applicable",
     )
     logger.info(
         log_event(

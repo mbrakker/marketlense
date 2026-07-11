@@ -27,7 +27,7 @@ from src.contracts.browser_download import (
 )
 from src.contracts.openai import OpenAIUsageAccountingRequest
 from src.contracts.run_context import RunContext
-from src.services import llm_service, openai_accounting_service
+from src.services import llm_service
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
@@ -61,6 +61,7 @@ from src.services._browser_report_download.session_reuse import (
     finalize_browser_session_reuse,
     resolve_browser_session_reuse,
 )
+from src.services._browser_report_download.usage_writer import BrowserUsageWriter
 from src.utils.coercion import normalize_optional_bool_signal
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -545,6 +546,7 @@ def run_browser_report_download_agent(
             prompt_bundle=prompt_bundle,
         )
     browser: Any | None = None
+    usage_writer: BrowserUsageWriter | None = None
     _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
     preexisting_temp_dirs = {str(path) for path in _list_browser_use_temp_dirs()}
     session_reuse_decision = resolve_browser_session_reuse(
@@ -616,7 +618,7 @@ def run_browser_report_download_agent(
         ):
             agent_kwargs["fallback_llm"] = llm_clients.fallback_llm
         agent = browser_use.Agent(**agent_kwargs)
-        _configure_browser_use_usage_recorder(
+        usage_writer = _configure_browser_use_usage_recorder(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
@@ -927,6 +929,10 @@ def run_browser_report_download_agent(
             context={"normalized_url": normalized_url},
         ) from exc
     finally:
+        if usage_writer is not None:
+            usage_writer.flush(
+                timeout_seconds=request.settings.accounting_flush_timeout_seconds
+            )
         if browser is not None:
             dialog_evidence.extend(
                 _capture_terminal_dialog_evidence(
@@ -1027,7 +1033,7 @@ def _configure_browser_use_usage_recorder(
     prompt_bundle: BrowserDownloadPromptBundle,
     llm_clients: Any,
     agent: Any,
-) -> None:
+) -> BrowserUsageWriter | None:
     token_cost_service = getattr(agent, "token_cost_service", None)
     set_usage_callback = getattr(token_cost_service, "set_usage_callback", None)
     if not callable(set_usage_callback):
@@ -1040,7 +1046,12 @@ def _configure_browser_use_usage_recorder(
                 fields={"normalized_url": normalized_url},
             )
         )
-        return
+        return None
+    writer = BrowserUsageWriter(
+        ctx=ctx,
+        queue_size=request.settings.accounting_queue_size,
+        normalized_url=normalized_url,
+    )
     entry_index = 0
 
     def _record_entry(entry: Any) -> None:
@@ -1050,7 +1061,7 @@ def _configure_browser_use_usage_recorder(
             return
         entry_index += 1
         model_name = str(getattr(entry, "model", "") or "")
-        _record_browser_use_usage_row(
+        usage_request = _record_browser_use_usage_row(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
@@ -1071,6 +1082,7 @@ def _configure_browser_use_usage_recorder(
                 "browser_usage_timestamp": str(getattr(entry, "timestamp", "") or ""),
             },
         )
+        writer.enqueue(usage_request)
 
     set_usage_callback(_record_entry)
     logger.info(
@@ -1082,6 +1094,7 @@ def _configure_browser_use_usage_recorder(
             fields={"normalized_url": normalized_url},
         )
     )
+    return writer
 
 
 def _record_browser_use_usage_row(
@@ -1098,7 +1111,7 @@ def _record_browser_use_usage_row(
     cached_tokens: int | None,
     request_id: str | None,
     extra: dict[str, Any],
-) -> None:
+) -> OpenAIUsageAccountingRequest:
     row_extra = {
         "route_family_hint": request.route_family_hint or "",
         "route_kind_hint": request.route_kind_hint or "",
@@ -1106,8 +1119,7 @@ def _record_browser_use_usage_row(
         "fallback_provider": (getattr(llm_clients, "fallback_provider", "") or ""),
         **extra,
     }
-    openai_accounting_service.record_usage(
-        OpenAIUsageAccountingRequest(
+    return OpenAIUsageAccountingRequest(
             schema_version="1.0",
             step_name="browser_use_llm_call",
             model=model_name,
@@ -1116,8 +1128,8 @@ def _record_browser_use_usage_row(
             total_tokens=total_tokens,
             cached_input_tokens=cached_tokens,
             tool_calls=0,
-            cost_ledger_path="./out/cost-ledger.jsonl",
-            cost_daily_path="./out/cost-daily.json",
+            cost_ledger_path=request.settings.cost_ledger_path,
+            cost_daily_path=request.settings.cost_daily_path,
             emit_cost_ledger=False,
             model_pricing=request.settings.model_pricing,
             request_id=request_id,
@@ -1126,7 +1138,7 @@ def _record_browser_use_usage_row(
                 llm_clients=llm_clients,
             ),
             action="browser_use_llm_call",
-            usage_db_path="./state/llm_usage.sqlite",
+            usage_db_path=request.settings.usage_db_path,
             publisher_name=request.publisher_name,
             report_name=_browser_usage_report_name(request),
             source_url=normalized_url,
@@ -1140,9 +1152,8 @@ def _record_browser_use_usage_row(
             temperature=request.settings.temperature,
             seed=None,
             timeout_seconds=request.settings.timeout_seconds,
+            call_ordinal=int(extra.get("browser_usage_entry_index") or 0),
             extra=row_extra,
-        ),
-        ctx,
     )
 
 

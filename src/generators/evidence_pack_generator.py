@@ -614,6 +614,7 @@ def _generate_pack(
                 timeout_seconds=settings.openai_timeout_seconds,
                 cost_ledger_path=settings.cost_ledger_path,
                 cost_daily_path=settings.cost_daily_path,
+                usage_db_path=str(getattr(settings, "usage_db_path", "./state/llm_usage.sqlite")),
                 model_pricing=settings.model_pricing,
                 publisher_name=publisher_name,
                 report_name=report_name,

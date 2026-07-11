@@ -144,6 +144,14 @@ def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
         "prompt_hash": "prompt-hash",
         "provider_decision": "openai_primary",
         "cache_decision": "disabled",
+        "event_outcome": {
+            "provider_call_status": "completed",
+            "parse_status": "not_applicable",
+            "schema_validation_status": "not_applicable",
+            "error_stage": None,
+            "error_code": None,
+            "call_ordinal": 0,
+        },
     }
     with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
         conn.row_factory = sqlite3.Row
@@ -232,7 +240,8 @@ def test_record_usage_returns_typed_failure_when_ledger_append_fails(
     assert response.recorded is False
     assert response.estimated_cost_usd == 2.5
     assert response.error == "ledger unavailable"
-    assert response.usage_db_recorded is False
+    assert response.usage_db_recorded is True
+    assert response.usage_db_inserted is True
     assert rollup_requests == []
     records = [
         json.loads(record.message)
