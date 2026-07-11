@@ -1224,6 +1224,54 @@ fields:
   value: null
   aliases: []
   option_aliases: []
+- schema_version: '1.0'
+  key: first_name_firstname
+  label: First name (firstname)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: last_name_lastname
+  label: Last name (lastname)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: business_email_email
+  label: Business email (email)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_company
+  label: Company (company)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: job_title_jobtitle
+  label: Job title (jobtitle)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: company_type_organization_type_demo_selected_for
+  label: Company Type (organization_type / demo_selected_for)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: country_country_country_dropdown
+  label: Country (country / country_dropdown)
+  value: null
+  aliases: []
+  option_aliases: []
+- schema_version: '1.0'
+  key: required_consent_legal_consent_checkbox
+  label: Required consent / LEGAL_CONSENT checkbox
+  value: null
+  aliases: []
+  option_aliases: []
 delivery_emails:
 - reports@marketbearing.eu
 consent_policy:

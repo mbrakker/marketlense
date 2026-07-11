@@ -1,0 +1,109 @@
+schema_version: '1.0'
+playbook_id: learned-doubleverify-com-browser-email-form
+version: 1.0.0
+status: active
+updated_at: '2026-07-11T11:22:51Z'
+stale_after_days: 120
+publisher_pattern: doubleverify.com
+host_patterns:
+- doubleverify.com
+url_path_markers:
+- report
+- verify
+- dvs-2026-q1-quality-attention-benchmarks-report
+route_family: browser_email_form
+route_kind: email_delivery
+summary: Filled form on the DoubleVerify report landing page (first name, last name,
+  email, company, job title, company type, country), checked required consent checkbox,
+  clicked submit; page transitioned to a thank-you/confirmation landing with a visible
+  'Download Now' CTA.
+steps:
+- schema_version: '1.0'
+  action: input
+  target: First name filled
+  verification: First name set to configured value
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: input
+  target: Last name filled
+  verification: Last name set to configured value
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: input
+  target: Email filled
+  verification: Email set to ***REDACTED***
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: input
+  target: Company filled
+  verification: Company set to configured value
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: input/select
+  target: Company Type selected
+  verification: Company Type chosen ('Ad Exchange' first non-placeholder) as visible
+    in prior steps
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: select
+  target: Country selected
+  verification: Country set to '***REDACTED***' (configured)
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: click
+  target: Required consent checkbox
+  verification: Mandatory consent checkbox checked
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+- schema_version: '1.0'
+  action: click
+  target: Submit / Download
+  verification: Form submitted; page navigated to thank-you / confirmation state
+  selector_type: ''
+  selector: ''
+  value: ''
+  expected_url_contains: ''
+  expected_text: ''
+traps: []
+evidence_notes:
+- Promoted only after verified route evidence with outcome email_requested.
+source_evidence:
+- submit_observed
+- success_text
+- form_disappeared
+- structured_result
+- verified
+- email_delivery
+private_api_evidence: []
+history:
+- schema_version: '1.0'
+  changed_at: '2026-07-11T11:22:51Z'
+  source: validated_route_promotion
+  summary: Promoted browser_email_form/email_delivery after email_requested evidence.
