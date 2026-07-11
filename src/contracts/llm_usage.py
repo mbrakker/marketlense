@@ -115,3 +115,13 @@ class LLMUsageLedgerAppendResponse:
     )
     db_path: str = field(metadata={"doc": "SQLite database path used."})
     row_id: int = field(metadata={"doc": "Inserted SQLite row identifier."})
+    median_db_path: str = field(
+        metadata={
+            "doc": "SQLite database path where usage medians were rebuilt."
+        }
+    )
+    median_row_count: int = field(
+        metadata={
+            "doc": "Number of per-call-family median rows rebuilt from the ledger."
+        }
+    )
