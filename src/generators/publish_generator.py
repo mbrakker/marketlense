@@ -196,7 +196,13 @@ def publish_html(
                 ctx=ctx,
                 sequential=True,
             )
-            card_meta = _report_card_post_meta(card_manifest, backfill_media_ids)
+            card_meta = _report_card_post_meta(
+                card_manifest,
+                backfill_media_ids,
+                has_public_intelligence=_has_public_intelligence_surface(
+                    html_snapshot.body_html
+                ),
+            )
         elif briefing_card:
             backfill_media_ids = _upload_briefing_card_covers(
                 card=briefing_card,

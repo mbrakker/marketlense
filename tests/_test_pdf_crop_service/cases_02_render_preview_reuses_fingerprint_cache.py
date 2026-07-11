@@ -159,8 +159,150 @@ def test_crop_regions_reuses_fingerprint_cache_on_partial_change_rerun(
     events = _events(caplog, "market_lense.pdf_service.crop")
     assert any(event.get("event") == "crop_region_cache_hit" for event in events)
 
+
+def test_publication_strict_cache_rejects_cached_crop_from_qa_diagnostics(
+    tmp_path, caplog
+) -> None:
+    pdf_path = tmp_path / "strict-cache.pdf"
+    out_dir = tmp_path / "out"
+    _build_basic_pdf(pdf_path)
+    item = CropItem(
+        id="strict-figure",
+        type="figure",
+        score=91.0,
+        page=0,
+        bbox=(60, 90, 360, 280),
+    )
+    request = CropRequest(
+        schema_version="1.0",
+        pdf_path=pdf_path.as_posix(),
+        out_dir=out_dir.as_posix(),
+        report_name="report",
+        items=[item],
+        subdir="slices",
+        mode="publication_strict",
+    )
+
+    first = crop_regions(request, _ctx())
+    assert first.paths
+    assert first.outcomes[0].accepted is True
+    artifact_path = out_dir / first.paths[0]
+    diagnostics_path = artifact_path.with_suffix(artifact_path.suffix + ".qa.json")
+    diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+    diagnostics["accepted"] = False
+    diagnostics["qa"]["accepted"] = False
+    diagnostics["qa"]["defect_labels"] = ["neighbor_contamination"]
+    diagnostics_path.write_text(json.dumps(diagnostics), encoding="utf-8")
+
+    caplog.set_level(logging.INFO, logger="market_lense.pdf_service.crop")
+    second = crop_regions(request, _ctx())
+
+    assert second.paths == []
+    assert len(second.outcomes) == 1
+    assert second.outcomes[0].accepted is False
+    assert second.outcomes[0].path == ""
+    assert second.outcomes[0].rejection_reason == "neighbor_contamination"
+    events = _events(caplog, "market_lense.pdf_service.crop")
+    assert any(event.get("event") == "crop_region_cache_rejected" for event in events)
+
+
+@pytest.mark.parametrize("diagnostics_payload", [None, "not-json"])
+def test_publication_strict_cache_regenerates_missing_or_invalid_qa_diagnostics(
+    tmp_path, caplog, diagnostics_payload
+) -> None:
+    pdf_path = tmp_path / "strict-cache-diagnostics.pdf"
+    out_dir = tmp_path / "out"
+    _build_basic_pdf(pdf_path)
+    item = CropItem(
+        id="strict-figure",
+        type="figure",
+        score=91.0,
+        page=0,
+        bbox=(60, 90, 360, 280),
+    )
+    request = CropRequest(
+        schema_version="1.0",
+        pdf_path=pdf_path.as_posix(),
+        out_dir=out_dir.as_posix(),
+        report_name="report",
+        items=[item],
+        subdir="slices",
+        mode="publication_strict",
+    )
+
+    first = crop_regions(request, _ctx())
+    artifact_path = out_dir / first.paths[0]
+    diagnostics_path = artifact_path.with_suffix(artifact_path.suffix + ".qa.json")
+    if diagnostics_payload is None:
+        diagnostics_path.unlink()
+    else:
+        diagnostics_path.write_text(diagnostics_payload, encoding="utf-8")
+
+    caplog.set_level(logging.INFO, logger="market_lense.pdf_service.crop")
+    second = crop_regions(request, _ctx())
+
+    assert second.paths == first.paths
+    assert second.outcomes[0].accepted is True
+    restored = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+    assert restored["accepted"] is True
+    events = _events(caplog, "market_lense.pdf_service.crop")
+    assert any(
+        event.get("event") == "crop_region_cache_store"
+        and event.get("fields", {}).get("validity_reason")
+        == "qa_diagnostics_missing_or_invalid"
+        for event in events
+    )
+
+
+def test_publication_strict_cache_invalidates_old_crop_artifact_version(
+    tmp_path, caplog
+) -> None:
+    pdf_path = tmp_path / "strict-cache-version.pdf"
+    out_dir = tmp_path / "out"
+    _build_basic_pdf(pdf_path)
+    item = CropItem(
+        id="strict-figure",
+        type="figure",
+        score=91.0,
+        page=0,
+        bbox=(60, 90, 360, 280),
+    )
+    request = CropRequest(
+        schema_version="1.0",
+        pdf_path=pdf_path.as_posix(),
+        out_dir=out_dir.as_posix(),
+        report_name="report",
+        items=[item],
+        subdir="slices",
+        mode="publication_strict",
+    )
+
+    first = crop_regions(request, _ctx())
+    artifact_path = out_dir / first.paths[0]
+    fingerprint_path = artifact_path.with_name(
+        f"{artifact_path.name}.fingerprint.json"
+    )
+    fingerprint = json.loads(fingerprint_path.read_text(encoding="utf-8"))
+    fingerprint["artifact_version"] = "1.0"
+    fingerprint_path.write_text(json.dumps(fingerprint), encoding="utf-8")
+
+    caplog.set_level(logging.INFO, logger="market_lense.pdf_service.crop")
+    second = crop_regions(request, _ctx())
+
+    assert second.paths == first.paths
+    assert second.outcomes[0].accepted is True
+    events = _events(caplog, "market_lense.pdf_service.crop")
+    assert any(
+        event.get("event") == "crop_region_cache_store"
+        and event.get("fields", {}).get("validity_reason") == "version_changed"
+        for event in events
+    )
+
 __all__ = [
     "test_render_preview_reuses_fingerprint_cache_on_partial_change_rerun",
     "test_render_page_for_crop_refine_invalidates_stale_artifact_version",
     "test_crop_regions_reuses_fingerprint_cache_on_partial_change_rerun",
+    "test_publication_strict_cache_rejects_cached_crop_from_qa_diagnostics",
+    "test_publication_strict_cache_regenerates_missing_or_invalid_qa_diagnostics",
+    "test_publication_strict_cache_invalidates_old_crop_artifact_version",
 ]

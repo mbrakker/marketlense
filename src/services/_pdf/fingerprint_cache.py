@@ -16,7 +16,10 @@ PAGE_CONTENT_FINGERPRINT_VERSION = "1.0"
 PAGE_CONTENT_FINGERPRINT_DPI = 48
 PREVIEW_ARTIFACT_VERSION = "1.0"
 CROP_REFINE_PAGE_ARTIFACT_VERSION = "1.0"
-CROP_REGION_ARTIFACT_VERSION = "1.0"
+# Crop cache acceptance now depends on the final strict-QA diagnostic sidecar.
+# Bump only this artifact so pre-QA cache entries are rebuilt without
+# invalidating unrelated preview/refinement artifacts.
+CROP_REGION_ARTIFACT_VERSION = "1.1"
 
 
 @dataclass(frozen=True)

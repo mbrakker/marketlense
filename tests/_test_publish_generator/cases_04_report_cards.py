@@ -167,6 +167,66 @@ def test_publish_html_updates_existing_report_card_post_in_place(
     )
 
 
+def test_publish_html_preserves_public_intelligence_for_existing_report_card(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_path = Path(settings.output_dir) / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text(
+        "<html><head><title>Report</title></head>"
+        '<body><section id="report-intelligence" class="report-intelligence-panel">'
+        "Topics covered</section>Drive fileId: file123</body></html>",
+        encoding="utf-8",
+    )
+    write_report_card_fixture(settings, html_path)
+    add_card_media_responses(wordpress_http)
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report/42",
+        status_code=200,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report/42",
+        status_code=200,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    request = PublishRequest(
+        schema_version="1.0",
+        html_path=str(html_path),
+        auth_header="Bearer token",
+        file_id="file123",
+        existing_post_id=42,
+    )
+    first = pg.publish_html(
+        request,
+        settings,
+        run_context,
+    )
+    second = pg.publish_html(
+        request,
+        settings,
+        run_context,
+    )
+
+    update_calls = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report/42"
+    )
+    assert first.status == second.status == "published"
+    assert first.post_id == second.post_id == 42
+    assert len(update_calls) == 2
+    assert all(
+        call.json_data["meta"]["ml_public_intelligence"] == "1"
+        for call in update_calls
+    )
+    assert update_calls[0].json_data["meta"] == update_calls[1].json_data["meta"]
+
+
 def test_publish_html_updates_legacy_post_with_the_report_card_contract(
     publish_settings_factory,
     run_context,

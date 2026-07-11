@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Iterable, List, Optional, cast
 
@@ -299,37 +299,83 @@ def _crop_regions(
             if cache_status.hit:
                 qa_sidecar_path = _qa_sidecar_rel_path(rel)
                 qa_result = _read_crop_diagnostics(output_path)
-                outcomes.append(
-                    _crop_outcome(
-                        item=it,
-                        path=rel.as_posix(),
-                        accepted=True,
-                        quality_profile=str(mode or ""),
-                        qa_sidecar_path=qa_sidecar_path
-                        if qa_result is not None
-                        else "",
-                        qa_result=qa_result,
-                        rejection_reason="",
+                if mode == "publication_strict" and qa_result is None:
+                    # A strict crop without its final QA sidecar cannot be
+                    # accepted from cache. Fall through to regenerate it.
+                    cache_status = replace(
+                        cache_status,
+                        hit=False,
+                        reason="qa_diagnostics_missing_or_invalid",
                     )
-                )
-                if ctx is not None:
-                    crop_logger.info(
-                        log_event(
-                            ctx,
-                            role="service",
-                            event="crop_region_cache_hit",
-                            module=crop_logger.name,
-                            fields={
-                                "cache_key": cache_status.cache_key,
-                                "source_artifact": cache_status.output_rel_path,
-                                "validity_reason": cache_status.reason,
-                                "page": int(it.page),
-                                "item_id": str(it.id or ""),
-                            },
+                elif (
+                    mode == "publication_strict"
+                    and not _strict_qa_diagnostics_accepted(qa_result)
+                ):
+                    outcomes.append(
+                        _crop_outcome(
+                            item=it,
+                            path="",
+                            accepted=False,
+                            quality_profile=str(mode or ""),
+                            qa_sidecar_path=qa_sidecar_path,
+                            qa_result=qa_result,
+                            rejection_reason=_rejection_reason(qa_result),
                         )
                     )
-                paths.append(rel.as_posix())
-                continue
+                    if ctx is not None:
+                        crop_logger.info(
+                            log_event(
+                                ctx,
+                                role="service",
+                                event="crop_region_cache_rejected",
+                                module=crop_logger.name,
+                                fields={
+                                    "cache_key": cache_status.cache_key,
+                                    "source_artifact": cache_status.output_rel_path,
+                                    "page": int(it.page),
+                                    "item_id": str(it.id or ""),
+                                    "defect_labels": _qa_payload(qa_result).get(
+                                        "defect_labels"
+                                    ),
+                                    "total_score": _qa_payload(qa_result).get(
+                                        "total_score"
+                                    ),
+                                },
+                            )
+                        )
+                    continue
+                if cache_status.hit:
+                    outcomes.append(
+                        _crop_outcome(
+                            item=it,
+                            path=rel.as_posix(),
+                            accepted=True,
+                            quality_profile=str(mode or ""),
+                            qa_sidecar_path=qa_sidecar_path
+                            if qa_result is not None
+                            else "",
+                            qa_result=qa_result,
+                            rejection_reason="",
+                        )
+                    )
+                    if ctx is not None:
+                        crop_logger.info(
+                            log_event(
+                                ctx,
+                                role="service",
+                                event="crop_region_cache_hit",
+                                module=crop_logger.name,
+                                fields={
+                                    "cache_key": cache_status.cache_key,
+                                    "source_artifact": cache_status.output_rel_path,
+                                    "validity_reason": cache_status.reason,
+                                    "page": int(it.page),
+                                    "item_id": str(it.id or ""),
+                                },
+                            )
+                        )
+                    paths.append(rel.as_posix())
+                    continue
             pix = page.get_pixmap(
                 matrix=fitz.Matrix(render_scale, render_scale),
                 clip=region.rect,
@@ -671,6 +717,13 @@ def _qa_payload(qa_result: dict[str, object] | None) -> dict[str, object]:
     if isinstance(nested, dict):
         return nested
     return qa_result
+
+
+def _strict_qa_diagnostics_accepted(qa_result: dict[str, object] | None) -> bool:
+    if not isinstance(qa_result, dict):
+        return False
+    qa = _qa_payload(qa_result)
+    return bool(qa_result.get("accepted")) and bool(qa.get("accepted"))
 
 
 def _rejection_reason(qa_result: dict[str, object] | None) -> str:
