@@ -149,6 +149,83 @@ class BrowserDownloadIdentityFieldUpsertResponse:
 
 
 @dataclass(frozen=True)
+class BrowserDownloadRequiredSelectEvidence:
+    schema_version: str = field(
+        metadata={"doc": "Required-select evidence schema version."}
+    )
+    host: str = field(metadata={"doc": "Observed form host, normalized by caller."})
+    url: str = field(metadata={"doc": "Observed form URL used as evidence."})
+    field_label: str = field(
+        metadata={"doc": "Human-readable required select label from the live form."}
+    )
+    field_name: str = field(
+        default="",
+        metadata={"doc": "HTML field name or accessible name, when observed."},
+    )
+    options: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Visible select option labels observed on the live form."},
+    )
+    classifier_confidence: float = field(
+        default=0.0,
+        metadata={"doc": "Confidence that the select was live, required, and relevant."},
+    )
+
+
+@dataclass(frozen=True)
+class BrowserDownloadRequiredSelectOverrideProposal:
+    schema_version: str = field(
+        metadata={"doc": "Required-select override proposal schema version."}
+    )
+    host: str = field(metadata={"doc": "Host scope for the proposed override."})
+    field_key: str = field(metadata={"doc": "Identity field key to persist."})
+    field_label: str = field(metadata={"doc": "Observed field label."})
+    selected_value: str = field(metadata={"doc": "Visible option value selected."})
+    option_alias: str = field(metadata={"doc": "Observed option label accepted as alias."})
+    semantic_family: str = field(
+        metadata={"doc": "Safe semantic family matched for the required select."}
+    )
+    match_source: str = field(
+        metadata={"doc": "Selection source: identity_fact, approved_default, or refused."}
+    )
+    status: str = field(
+        metadata={"doc": "Proposal status: applied, unchanged, or refused."}
+    )
+    reason: str = field(metadata={"doc": "Stable machine-readable proposal reason."})
+
+
+@dataclass(frozen=True)
+class BrowserDownloadRequiredSelectOverrideRequest:
+    schema_version: str = field(
+        metadata={"doc": "Required-select override request schema version."}
+    )
+    path: str = field(
+        metadata={"doc": "Absolute YAML path used to persist browser identity overrides."}
+    )
+    evidence: list[BrowserDownloadRequiredSelectEvidence] = field(
+        metadata={"doc": "Live gated-form required-select evidence rows."}
+    )
+    approved_defaults: dict[str, str] = field(
+        default_factory=dict,
+        metadata={"doc": "Operator-approved safe defaults by semantic family."},
+    )
+
+
+@dataclass(frozen=True)
+class BrowserDownloadRequiredSelectOverrideResponse:
+    schema_version: str = field(
+        metadata={"doc": "Required-select override response schema version."}
+    )
+    path: str = field(metadata={"doc": "Identity YAML path inspected and updated."})
+    proposals: list[BrowserDownloadRequiredSelectOverrideProposal] = field(
+        metadata={"doc": "Per-evidence proposal outcomes."}
+    )
+    applied_count: int = field(metadata={"doc": "Override values newly written."})
+    refused_count: int = field(metadata={"doc": "Evidence rows refused for safety or ambiguity."})
+    unchanged_count: int = field(metadata={"doc": "Evidence rows already represented exactly."})
+
+
+@dataclass(frozen=True)
 class BrowserDownloadCaptchaHandoffPolicy:
     schema_version: str = field(
         metadata={"doc": "Browser-download CAPTCHA handoff policy schema version."}

@@ -136,6 +136,63 @@ def test_publish_html_blocks_editorial_contract_failures_with_rule_ids(
     )
 
 
+def test_publish_editorial_contract_warns_for_expanded_quality_rules(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    write_report_card_fixture(settings, "out/report.html")
+    add_card_media_responses(wordpress_http)
+    html_text = (
+        "<html><head><title>Report</title>"
+        '<meta name="editorial-contract-version" content="public-report-editorial-v1">'
+        "</head><body>"
+        "Drive fileId: file123"
+        "<article>"
+        "This will transform the market without source support. "
+        "Leaders should act now. Leaders should act now. "
+        "There are no caveats in the report. "
+        "Companies should monitor the trend. "
+        "Revenue increased but no metric support is shown. "
+        "This awesome report proves everyone must act."
+        "</article>"
+        "</body></html>"
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    outcome = pg.publish_html(
+        PublishRequest(
+            schema_version="1.0",
+            html_path="out/report.html",
+            auth_header="Bearer token",
+            file_id="file123",
+            html_text=html_text,
+        ),
+        settings,
+        run_context,
+    )
+
+    assert outcome.status == "published"
+    assert outcome.validation_status == "fail"
+    assert {
+        issue.split("|", 1)[0] for issue in outcome.validation_issues
+    } >= {
+        "editorial.unsupported_implication",
+        "editorial.duplicate_insight",
+        "editorial.missing_caveat",
+        "editorial.weak_actionability",
+        "editorial.missing_metric_support",
+        "editorial.tone_defect",
+    }
+    assert all("|severity=warning|" in issue for issue in outcome.validation_issues)
+
+
 def test_publish_html_uses_filename_for_nonreport_when_document_title_is_missing(
     publish_settings_factory,
     run_context,

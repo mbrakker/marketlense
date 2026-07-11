@@ -493,6 +493,156 @@ def _coerce_public_advisory(artifacts: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _coerce_public_topics_covered(
+    artifacts: dict[str, Any],
+    *,
+    limit: int = 6,
+) -> list[dict[str, Any]]:
+    topics: list[dict[str, Any]] = []
+    raw_topics = _coerce_list(artifacts.get("topics_covered")) or _coerce_list(
+        artifacts.get("toc_topics_expanded")
+    ) or _coerce_list(
+        artifacts.get("toc_entries")
+    )
+    for raw_item in raw_topics:
+        item = _coerce_dict(raw_item)
+        title = _pick_first_text(
+            item.get("topic"),
+            item.get("title"),
+            item.get("display_title"),
+            raw_item if isinstance(raw_item, str) else "",
+        )
+        if not title:
+            continue
+        pages = [
+            str(page).strip()
+            for page in _coerce_list(item.get("pages"))
+            if _s(page)
+        ]
+        topics.append(
+            {
+                "topic": title,
+                "summary": _pick_first_text(
+                    item.get("why_it_matters"),
+                    item.get("summary"),
+                    "Covered by the source report.",
+                ),
+                "subtopics": [
+                    _s(point)
+                    for point in _coerce_list(item.get("subtopics"))
+                    if _s(point)
+                ][:4],
+                "source_label": f"Pages {', '.join(pages)}" if pages else "",
+            }
+        )
+        if len(topics) >= limit:
+            break
+    return topics
+
+
+def _coerce_public_key_figures(
+    artifacts: dict[str, Any],
+    *,
+    limit: int = 6,
+) -> list[dict[str, str]]:
+    figures: list[dict[str, str]] = []
+    raw_figures = _coerce_list(artifacts.get("key_figures")) or _coerce_list(
+        artifacts.get("metric_spine")
+    )
+    for raw_item in raw_figures:
+        item = _coerce_dict(raw_item)
+        value = _pick_first_text(item.get("value"), item.get("figure"))
+        label = _pick_first_text(item.get("label"), item.get("metric"), item.get("name"))
+        if not value or not label:
+            continue
+        unit = _s(item.get("unit"))
+        if unit and unit.casefold() in value.casefold():
+            display_value = value
+        elif unit in {"%", "pp"}:
+            display_value = f"{value}{unit}"
+        else:
+            display_value = " ".join(part for part in (value, unit) if part)
+        figures.append(
+            {
+                "value": display_value,
+                "label": label,
+                "context": ", ".join(
+                    part
+                    for part in (
+                        _s(item.get("context")),
+                        _s(item.get("segment")),
+                        _s(item.get("geography")),
+                        _s(item.get("timeframe")),
+                    )
+                    if part
+                ),
+                "confidence_label": _public_label_from_token(item.get("confidence"))
+                or "Source-backed",
+            }
+        )
+        if len(figures) >= limit:
+            break
+    return figures
+
+
+def _coerce_public_chart_insight_cards(
+    artifacts: dict[str, Any],
+    *,
+    limit: int = 4,
+) -> list[dict[str, str]]:
+    cards: list[dict[str, str]] = []
+    for raw_item in _coerce_list(artifacts.get("chart_insight_cards")):
+        item = _coerce_dict(raw_item)
+        title = _pick_first_text(
+            item.get("title"),
+            item.get("chart_title"),
+            item.get("caption"),
+            item.get("takeaway"),
+        )
+        status = _s(item.get("status")).casefold()
+        limitation = _pick_first_text(
+            item.get("limitation"),
+            item.get("avoid_reason"),
+            item.get("avoid_reason_if_weak"),
+            item.get("diagnostic"),
+        )
+        if not title:
+            continue
+        if status in {"weak", "weak_evidence", "limited", "abstained"}:
+            cards.append(
+                {
+                    "title": title,
+                    "insight": "",
+                    "so_what": "",
+                    "now_what": "",
+                    "status_label": "Limited evidence",
+                    "limitation": limitation
+                    or "Chart evidence was too weak for a public claim.",
+                }
+            )
+        else:
+            insight = _pick_first_text(
+                item.get("insight"),
+                item.get("takeaway"),
+                item.get("business_implication"),
+            )
+            if not insight:
+                continue
+            cards.append(
+                {
+                    "title": title,
+                    "insight": insight,
+                    "so_what": _s(item.get("so_what")),
+                    "now_what": _s(item.get("now_what")),
+                    "status_label": "Chart-backed",
+                    "limitation": limitation,
+                }
+            )
+        if len(cards) >= limit:
+            break
+    return cards
+
+
 def _coerce_insights(
     raw_insights: object, *, report_title: str
 ) -> list[dict[str, str]]:
@@ -947,6 +1097,9 @@ __all__ = [
     "_build_report_identity_items",
     "_coerce_claim_map",
     "_coerce_public_advisory",
+    "_coerce_public_topics_covered",
+    "_coerce_public_key_figures",
+    "_coerce_public_chart_insight_cards",
     "_coerce_insights",
     "_coerce_quotes",
     "_display_quote_author",

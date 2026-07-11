@@ -16,6 +16,7 @@ $meta_keys = [
     'ml_publisher_name',
     'ml_time_period',
     'ml_region',
+    'ml_public_intelligence',
 ];
 
 foreach ($meta_keys as $meta_key) {

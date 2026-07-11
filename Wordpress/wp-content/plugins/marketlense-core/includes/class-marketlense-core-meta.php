@@ -29,6 +29,8 @@ final class Meta
 
     public const META_REGION = 'ml_region';
 
+    public const META_PUBLIC_INTELLIGENCE = 'ml_public_intelligence';
+
     public const META_CARD_SCHEMA_VERSION = 'ml_card_schema_version';
 
     public const META_CARD_TITLE_SCALE = 'ml_card_title_scale';
@@ -64,6 +66,7 @@ final class Meta
             self::META_PUBLISHER,
             self::META_TIME_PERIOD,
             self::META_REGION,
+            self::META_PUBLIC_INTELLIGENCE,
         ];
 
         foreach (Post_Type::report_post_types() as $post_type) {
@@ -415,6 +418,7 @@ final class Meta
         $publisher = $this->parser->extract_metadata_value($content, 'Publisher');
         $time_period = $this->parser->extract_metadata_value($content, 'Time period');
         $region = $this->extract_region_value($content);
+        $has_public_intelligence = $this->content_has_public_intelligence($content) ? '1' : '0';
 
         if ($publisher === '') {
             $publisher = $this->resolve_existing_publisher($post_id);
@@ -425,6 +429,7 @@ final class Meta
         $this->upsert_string_meta($post_id, self::META_PUBLISHER, $publisher);
         $this->upsert_string_meta($post_id, self::META_TIME_PERIOD, $time_period);
         $this->upsert_string_meta($post_id, self::META_REGION, $region);
+        $this->upsert_string_meta($post_id, self::META_PUBLIC_INTELLIGENCE, $has_public_intelligence);
 
         if ($publisher !== '') {
             wp_set_object_terms($post_id, [$publisher], Taxonomies::PUBLISHER_TAXONOMY, false);
@@ -439,6 +444,13 @@ final class Meta
         }
 
         return sanitize_text_field(trim((string) $existing[0]));
+    }
+
+    private function content_has_public_intelligence(string $content): bool
+    {
+        return str_contains($content, 'report-intelligence-panel')
+            || str_contains($content, 'id="report-intelligence"')
+            || str_contains($content, "id='report-intelligence'");
     }
 
     private function should_sync_report_post(int $post_id, \WP_Post $post, string $content): bool

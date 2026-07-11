@@ -12,6 +12,7 @@ HEADER = THEME / "parts" / "header.html"
 FOOTER = THEME / "parts" / "footer.html"
 HERO = THEME / "patterns" / "hero-institutional.php"
 SHORTCODES = PLUGIN / "includes" / "class-marketlense-core-shortcodes.php"
+ARCHIVE_BROWSER = PLUGIN / "includes" / "class-marketlense-core-archive-browser.php"
 REPORT_FILTERS_JS = PLUGIN / "assets" / "js" / "report-filters.js"
 VIEW_MODEL = (
     PLUGIN / "includes" / "class-marketlense-core-report-view-model-builder.php"
@@ -220,6 +221,7 @@ def test_archive_templates_use_shared_hero_with_four_dynamic_counts() -> None:
 
 def test_report_archive_exposes_real_live_search_region_and_period_filters() -> None:
     shortcodes = SHORTCODES.read_text(encoding="utf-8")
+    archive_browser = ARCHIVE_BROWSER.read_text(encoding="utf-8")
     stats = STATS.read_text(encoding="utf-8")
     filter_js = REPORT_FILTERS_JS.read_text(encoding="utf-8")
 
@@ -231,12 +233,16 @@ def test_report_archive_exposes_real_live_search_region_and_period_filters() -> 
     assert 'name="ml_period"' in shortcodes
     assert "ml_region_filter" in shortcodes
     assert 'name="ml_region"' in shortcodes
+    assert "ml_intelligence_filter" in archive_browser
+    assert "'ml_intelligence'" in archive_browser
+    assert "Reports with public intelligence" in archive_browser
     assert "ml-report-browser-utility-bar" in shortcodes
     assert "ml-report-search-form" in shortcodes
     assert "ml-report-search-field" in shortcodes
     assert shortcodes.index("ml-report-browser-utility-bar") < shortcodes.index("ml-report-browser-layout")
     assert "Meta::META_TIME_PERIOD" in shortcodes
     assert "Meta::META_REGION" in shortcodes
+    assert "Meta::META_PUBLIC_INTELLIGENCE" in archive_browser
     assert "report_periods()" in shortcodes
     assert "report_regions()" in shortcodes
     assert "public function report_regions()" in stats

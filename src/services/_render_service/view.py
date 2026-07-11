@@ -17,6 +17,9 @@ from .normalization import (
     _build_signal_cards,
     _coerce_chapters,
     _coerce_claim_map,
+    _coerce_public_chart_insight_cards,
+    _coerce_public_key_figures,
+    _coerce_public_topics_covered,
     _coerce_contacts,
     _coerce_coverage,
     _coerce_dict,
@@ -263,6 +266,9 @@ def _build_render_view(
     linkedin_status = _coerce_family_status(artifacts, "linkedin_post")
     report_quality_score = _build_report_quality_score(data)
     advisory = _coerce_public_advisory(artifacts)
+    topics_covered = _coerce_public_topics_covered(artifacts)
+    key_figures = _coerce_public_key_figures(artifacts)
+    chart_insight_cards = _coerce_public_chart_insight_cards(artifacts)
     core_signal = _build_core_signal(
         tldr_text=tldr_text,
         executive_summary=executive_summary,
@@ -343,6 +349,11 @@ def _build_render_view(
             "claim_map": _coerce_claim_map(summary, report_title=report_title),
         },
         "advisory": advisory,
+        "public_intelligence": {
+            "topics_covered": topics_covered,
+            "key_figures": key_figures,
+            "chart_insight_cards": chart_insight_cards,
+        },
         "snapshot": {
             "facts": [
                 item
@@ -417,6 +428,9 @@ def _build_render_view(
                 or advisory["risks"]
                 or advisory["metric_spine"]
                 or advisory["claim_support"]
+            ),
+            "has_public_intelligence": bool(
+                topics_covered or key_figures or chart_insight_cards
             ),
         },
         "seo": {

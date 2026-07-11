@@ -361,7 +361,11 @@ def publish_html(
     slug = str(request.slug or "").strip() or slugify(title)
 
     post_meta = (
-        _report_card_post_meta(card_manifest, card_media_ids)
+        _report_card_post_meta(
+            card_manifest,
+            card_media_ids,
+            has_public_intelligence=_has_public_intelligence_surface(body_html),
+        )
         if card_manifest is not None
         else _briefing_card_post_meta(briefing_card, card_media_ids)
         if briefing_card
@@ -484,7 +488,102 @@ def _validate_publish_editorial_contract(html_text: str) -> list[str]:
                 ),
             )
         )
+    text_content = _visible_text_for_editorial_checks(html_text)
+    lowered_text = text_content.casefold()
+    if re.search(
+        r"\b(?:will|must|proves?|transform)\b.{0,80}\b(?:without source support|without evidence|unsupported)\b",
+        lowered_text,
+    ):
+        issues.append(
+            _editorial_issue(
+                rule_id="editorial.unsupported_implication",
+                field="body",
+                severity="warning",
+                remediation=(
+                    "Add source support or soften the implication before publishing."
+                ),
+            )
+        )
+    if _has_duplicate_sentence(text_content):
+        issues.append(
+            _editorial_issue(
+                rule_id="editorial.duplicate_insight",
+                field="body",
+                severity="warning",
+                remediation="Remove duplicated public insight wording.",
+            )
+        )
+    if re.search(r"\b(?:no caveats|without caveats|no limitations)\b", lowered_text):
+        issues.append(
+            _editorial_issue(
+                rule_id="editorial.missing_caveat",
+                field="body",
+                severity="warning",
+                remediation=(
+                    "Restore caveat-aware wording or limitation context for the claim."
+                ),
+            )
+        )
+    if re.search(r"\b(?:monitor the trend|act now|take action)\b", lowered_text):
+        issues.append(
+            _editorial_issue(
+                rule_id="editorial.weak_actionability",
+                field="body",
+                severity="warning",
+                remediation="Replace generic action language with a concrete next step.",
+            )
+        )
+    if re.search(r"\b(?:revenue|growth|share|market|percentage|metric)\b", lowered_text) and re.search(
+        r"\b(?:no metric support|without metric support|without quantified support)\b",
+        lowered_text,
+    ):
+        issues.append(
+            _editorial_issue(
+                rule_id="editorial.missing_metric_support",
+                field="body",
+                severity="warning",
+                remediation="Attach a source-backed metric or remove the metric claim.",
+            )
+        )
+    if re.search(r"\b(?:awesome|everyone must|game[- ]changing|revolutionary)\b", lowered_text):
+        issues.append(
+            _editorial_issue(
+                rule_id="editorial.tone_defect",
+                field="body",
+                severity="warning",
+                remediation="Use neutral, evidence-led editorial tone.",
+            )
+        )
     return issues
+
+
+def _visible_text_for_editorial_checks(html_text: str) -> str:
+    without_scripts = re.sub(
+        r"<(?:script|style)\b[^>]*>.*?</(?:script|style)>",
+        " ",
+        html_text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    text = re.sub(r"<[^>]+>", " ", without_scripts)
+    return html.unescape(" ".join(text.split()))
+
+
+def _has_duplicate_sentence(text: str) -> bool:
+    sentences = [
+        sentence.strip().casefold()
+        for sentence in re.split(r"(?<=[.!?])\s+", text)
+        if len(sentence.strip()) >= 18
+    ]
+    seen: set[str] = set()
+    for sentence in sentences:
+        normalized = re.sub(r"[^a-z0-9 ]+", "", sentence)
+        normalized = " ".join(normalized.split())
+        if not normalized:
+            continue
+        if normalized in seen:
+            return True
+        seen.add(normalized)
+    return False
 
 
 def _load_report_card_manifest(
@@ -789,11 +888,14 @@ def _upload_entity_card_covers(
 def _report_card_post_meta(
     manifest: ReportCardManifest,
     media_ids: dict[str, int],
+    *,
+    has_public_intelligence: bool = False,
 ) -> dict[str, object]:
     return {
         "ml_publisher_name": manifest.publisher,
         "ml_time_period": manifest.covered_period,
         "ml_region": manifest.geography_label,
+        "ml_public_intelligence": "1" if has_public_intelligence else "0",
         "ml_card_schema_version": manifest.schema_version,
         "ml_card_title_scale": manifest.title_scale,
         "ml_card_tldr_compact": manifest.tldr_compact,
@@ -808,6 +910,14 @@ def _report_card_post_meta(
         "ml_card_cover_medium_id": media_ids["medium"],
         "ml_card_cover_large_id": media_ids["large"],
     }
+
+
+def _has_public_intelligence_surface(html: str) -> bool:
+    return (
+        "report-intelligence-panel" in html
+        or 'id="report-intelligence"' in html
+        or "id='report-intelligence'" in html
+    )
 
 
 def _validate_briefing_card(card: dict[str, object]) -> None:

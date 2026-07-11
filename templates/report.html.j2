@@ -143,6 +143,71 @@
         </div>
         {% endif %}
 
+        {% if view.display.has_public_intelligence %}
+        <section class="report-intelligence-panel" id="report-intelligence" aria-label="Report intelligence modules">
+          {% if view.public_intelligence.topics_covered %}
+          <article class="intelligence-module intelligence-module-topics">
+            <div class="advisory-panel-head">
+              <span class="badge">Coverage map</span>
+              <h3>Topics covered</h3>
+            </div>
+            <div class="intelligence-topic-list">
+              {% for topic in view.public_intelligence.topics_covered %}
+              <article>
+                <h4>{{ topic.topic }}</h4>
+                <p>{{ topic.summary }}</p>
+                {% if topic.subtopics %}<small>{{ topic.subtopics|join(" · ") }}</small>{% endif %}
+                {% if topic.source_label %}<small>{{ topic.source_label }}</small>{% endif %}
+              </article>
+              {% endfor %}
+            </div>
+          </article>
+          {% endif %}
+
+          {% if view.public_intelligence.key_figures %}
+          <article class="intelligence-module">
+            <div class="advisory-panel-head">
+              <span class="badge green">Quantified</span>
+              <h3>Key figures</h3>
+            </div>
+            <dl class="key-figure-list">
+              {% for figure in view.public_intelligence.key_figures %}
+              <div>
+                <dt>{{ figure.value }}</dt>
+                <dd>{{ figure.label }}{% if figure.context %}<small>{{ figure.context }}</small>{% endif %}{% if figure.confidence_label %}<small>{{ figure.confidence_label }}</small>{% endif %}</dd>
+              </div>
+              {% endfor %}
+            </dl>
+          </article>
+          {% endif %}
+
+          {% if view.public_intelligence.chart_insight_cards %}
+          <article class="intelligence-module intelligence-module-charts">
+            <div class="advisory-panel-head">
+              <span class="badge green">Visual read</span>
+              <h3>Chart insight cards</h3>
+            </div>
+            <div class="chart-insight-grid">
+              {% for card in view.public_intelligence.chart_insight_cards %}
+              <article>
+                <span class="badge{% if card.status_label == 'Chart-backed' %} green{% endif %}">{{ card.status_label }}</span>
+                <h4>{{ card.title }}</h4>
+                {% if card.insight %}<p>{{ card.insight }}</p>{% endif %}
+                {% if card.so_what or card.now_what %}
+                <dl class="insight-implications compact">
+                  {% if card.so_what %}<div><dt>So what</dt><dd>{{ card.so_what }}</dd></div>{% endif %}
+                  {% if card.now_what %}<div><dt>Now what</dt><dd>{{ card.now_what }}</dd></div>{% endif %}
+                </dl>
+                {% endif %}
+                {% if card.limitation %}<small>{{ card.limitation }}</small>{% endif %}
+              </article>
+              {% endfor %}
+            </div>
+          </article>
+          {% endif %}
+        </section>
+        {% endif %}
+
         {% if view.display.has_advisory %}
         <div class="advisory-suite" aria-label="Decision advisory and source-backed claim support">
           {% if view.advisory.decision.available %}

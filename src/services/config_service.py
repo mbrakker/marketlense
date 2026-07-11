@@ -5,6 +5,8 @@ from dotenv import find_dotenv, load_dotenv
 from src.contracts.browser_download import (
     BrowserDownloadIdentityFieldUpsertRequest,
     BrowserDownloadIdentityFieldUpsertResponse,
+    BrowserDownloadRequiredSelectOverrideRequest,
+    BrowserDownloadRequiredSelectOverrideResponse,
 )
 from src.contracts.config import (
     AppSettings,
@@ -103,6 +105,16 @@ def upsert_browser_download_identity_fields(
     return _identity_upsert.upsert_browser_download_identity_fields(request, ctx)
 
 
+def upsert_browser_download_required_select_overrides(
+    request: BrowserDownloadRequiredSelectOverrideRequest,
+    ctx: RunContext,
+) -> BrowserDownloadRequiredSelectOverrideResponse:
+    return _identity_upsert.upsert_browser_download_required_select_overrides(
+        request,
+        ctx,
+    )
+
+
 def resolve_openai_credential(
     request: OpenAICredentialResolveRequest,
     ctx: RunContext,
@@ -130,5 +142,6 @@ __all__ = [
     "read_app_config",
     "resolve_openai_credential",
     "upsert_browser_download_identity_fields",
+    "upsert_browser_download_required_select_overrides",
     "write_app_config",
 ]

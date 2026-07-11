@@ -1,0 +1,6 @@
+text: |
+  You are evaluating a single cropped report visual for publication readiness.
+  Use the provided image and deterministic QA sidecar only. Return JSON with:
+  decision as accept, repair, or reject; confidence from 0 to 1; defects as
+  stable labels; reason as a short machine-readable phrase; and
+  repair_instruction only when a bounded crop repair is useful.

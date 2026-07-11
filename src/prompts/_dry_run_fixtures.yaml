@@ -81,11 +81,23 @@ shared:
     expected_output_tokens: 900
   benchmark_figure_caption: &benchmark_figure_caption
     expected_output_tokens: 160
+  benchmark_crop_qa_escalation: &benchmark_crop_qa_escalation
+    expected_output_tokens: 120
   benchmark_taxonomy: &benchmark_taxonomy
     expected_output_tokens: 100
   benchmark_validation: &benchmark_validation
     expected_output_tokens: 380
 fixtures:
+  - namespace: "crop_qa_escalation/publication_strict"
+    family: "crop_qa_escalation"
+    model: "gpt-5-mini"
+    temperature: 0.0
+    benchmark: *benchmark_crop_qa_escalation
+    system_variables: {}
+    user_variables:
+      candidate_id: "chart-qa-fixture"
+      deterministic_sidecar: >-
+        {"schema_version":"1.0","mode":"publication_strict","accepted":true,"score":76.0,"defects":["chart_axis_clipped"],"detectors":{"chart_completeness":{"confidence":0.71}}}
   - namespace: "cross_report_analysis/synthesis"
     family: "cross_report_analysis"
     model: "gpt-5-mini"

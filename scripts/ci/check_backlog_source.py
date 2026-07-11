@@ -47,7 +47,7 @@ def list_tracked_markdown() -> tuple[str, ...]:
 
 def _is_ignored(path: str) -> bool:
     return (
-        path in {CANONICAL_BACKLOG, "simplification.md"}
+        path in {CANONICAL_BACKLOG, "simplification.md", "x100tasks.md"}
         or path.startswith("tools/")
         or path.startswith("docs/superpowers/plans/")
         or path.startswith("docs/superpowers/specs/")

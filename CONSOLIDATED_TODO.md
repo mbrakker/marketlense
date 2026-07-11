@@ -235,16 +235,6 @@ Scoring:
 
 ## 4. PDF, Dashboard, and Runtime Performance
 
-- **Title:** Add low-confidence model-backed crop QA escalation from `publication_strict` sidecars [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: `publication_strict` now produces deterministic final-PNG QA sidecars, but borderline crops are still accepted or rejected by heuristics only.
-  - Why implement: A bounded multimodal second opinion on low-score or high-contamination sidecars can improve public crop quality without adding model spend to every crop.
-  - Tradeoffs / risks: The model-backed pass must stay outside the PDF service boundary, run only under an explicit quality profile, and never replace deterministic diagnostics or benchmark gates.
-  - Acceptance Criteria:
-    - An orchestrator/generator-level escalation reads existing `.qa.json` sidecars and sends only configured low-confidence crops to the canonical LLM/image boundary.
-    - Escalation returns accept, repair, or reject with typed defect labels, provider request metadata, cost accounting, and a capped repair budget.
-    - Default runs remain deterministic and no-model; live profile benchmarks report escalation rate, accepted/rejected deltas, model-call count, and qualitative before/after examples from existing benchmark artifacts.
-    - Tests cover no-escalation default behavior, bounded low-confidence escalation, no PDF-service model calls, and preserved deterministic sidecar fields.
-
 - **Title:** Promote final-crop QA sidecars into release scorecards and selection telemetry [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Final crop QA now emits DPI, quality score, defect labels, and table/chart/card detector diagnostics, but release evidence and selection summaries still rely mostly on candidate/crop signatures and manual visual review.
   - Why implement: Makes the new deterministic detectors operational: regressions become visible by report, candidate type, publisher, and crop profile, and selection can prioritize high-quality accepted crops without waiting for manual review.
@@ -267,16 +257,6 @@ Scoring:
     - The benchmark can run in default read-only mode without model calls and optionally sample live regeneration behind an explicit flag.
     - Tests cover metric calculation, narrow-report fallback, unsupported-role detection, and unchanged-artifact baseline stability.
 
-- **Title:** Render topics, key figures, and chart insight cards in public report pages [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: `topics_covered`, `key_figures`, and `chart_insight_cards` are now generated in artifact payloads, but public report pages do not yet turn them into scan-friendly modules.
-  - Why implement: These artifacts can materially improve page usefulness by surfacing the report's topic map, quantified proof points, and visual implications without forcing readers through long prose.
-  - Tradeoffs / risks: Rendering must preserve evidence confidence, handle weak or absent chart links gracefully, and avoid turning weak-evidence card metadata into public claims.
-  - Acceptance Criteria:
-    - Report HTML renders topic modules, key-figure tiles, and chart insight cards from approved artifacts when present.
-    - Weak chart cards render limitation/avoidance text or admin diagnostics without overstating evidence strength.
-    - Archive/search facets can filter by key-figure and chart-card availability using persisted artifact fields.
-    - Visual, schema, and mobile tests cover populated, partial, weak-evidence, and absent artifact states.
-
 - **Title:** Benchmark route-memory avoided browser spend from mailbox and download outcomes [Impact: 4/5, Effort: 2/5]
   - Problem fixed: Mailbox successes now promote publisher route memory, but operators need a measured report showing avoided browser launches, avoided model calls, and route-success stability over retained publisher evidence.
   - Why implement: Quantifies cost/speed gains from the new feedback loop and gives a guardrail if stale route memory starts hurting acquisition quality.
@@ -287,33 +267,25 @@ Scoring:
     - The script can optionally sample a bounded live rerun set when explicitly enabled.
     - Tests cover deterministic metric calculation and stale/conflict classification.
 
-- **Title:** Expand editorial contract quality rules beyond the initial publish gate [Impact: 5/5, Effort: 4/5]
-  - Problem fixed: Public HTML now carries an editorial contract version and publish blocks generic phrasing/internal-reference leakage, but unsupported implications, duplicated insights, missing caveats, weak actionability, missing metric support, and tone defects are not yet all covered by stable rule IDs.
-  - Why implement: The initial gate gives a stable contract surface; expanding rule coverage turns it into a fuller editorial quality firewall without silently changing public rendering.
-  - Tradeoffs / risks: Overly strict gates can raise regeneration cost, block acceptable outputs, or create repetitive copy if repair prompts are too narrow.
+- **Title:** Backfill public-intelligence metadata and cards across the retained published report corpus [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: New reports now publish `ml_public_intelligence` and can be archive-filtered by public intelligence availability, but older published reports need a governed backfill before the archive facet reaches full corpus value.
+  - Why implement: Makes the new topics, key figures, and chart insight cards useful at site scale instead of only for newly regenerated reports.
+  - Tradeoffs / risks: Backfill must use approved retained artifacts and WordPress metadata updates only; it must not synthesize intelligence inside WordPress runtime or alter unrelated post content.
   - Acceptance Criteria:
-    - Editorial quality validation emits stable rule IDs for unsupported implications, missing metric support, duplicate insights, missing caveats, weak actionability, and tone defects.
-    - New quality rules start as warnings with logged remediation context, then can be promoted to hard failures only after fixture and live-artifact evidence proves stability.
-    - README documents the rule rollout sequence, warning-to-error policy, and coexistence behavior with the current `public-report-editorial-v1` contract.
+    - A backfill command scans retained report-analysis artifacts, renders or verifies public intelligence availability, and updates `ml_public_intelligence` for matching published reports through the canonical WordPress service.
+    - Output reports total reports scanned, reports updated, missing artifact blockers, and archive-facet coverage before/after.
+    - A live local WordPress run proves archive filtering returns only reports with populated public intelligence modules.
+    - Tests cover idempotent meta updates, missing artifact handling, no-runtime-intelligence synthesis, and unchanged unrelated post meta.
 
-- **Title:** Add retained public-advisory render benchmark and screenshot gate [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Public advisory, metric-spine, and claim-support rendering is now live, but release evidence does not yet quantify retained-artifact coverage, leakage prevention, or visual integration across report families.
-  - Why implement: The new public advisory surface should become a measurable quality loop, not a one-off template addition.
-  - Tradeoffs / risks: The benchmark must use existing retained artifacts by default, avoid brittle text snapshots, and keep screenshots as evidence rather than fixtures that force copy stagnation.
+- **Title:** Add advisory `so_what` / `now_what` remediation from retained render benchmark gaps [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: The retained public-advisory benchmark can now measure `so_what` and `now_what` coverage, and live verification found older retained artifacts with advisory coverage but zero `so_what`/`now_what` availability.
+  - Why implement: Converts benchmark gaps into targeted artifact remediation so public advisory pages become more decision-useful without broad regeneration.
+  - Tradeoffs / risks: Repairs must remain source-grounded, target only affected artifact families, and keep benchmark output as evidence rather than a brittle text fixture.
   - Acceptance Criteria:
-    - A quality command renders retained report-analysis artifacts and reports advisory coverage, metric-spine count, claim-support count, `so_what`/`now_what` coverage, public-label coverage, and internal-ID leakage failures.
-    - Optional Playwright screenshots cover representative populated, partial, and absent advisory states with no overlap/overflow findings.
-    - Release evidence records benchmark JSON plus screenshot paths, and failures include report ID, field path, rule ID, and remediation target.
-
-- **Title:** Promote inline artifact-quality warnings into publish remediation workflow [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Inline deterministic validation can now flag generic wording and deferred grounding obligations quickly, but publish and operator workflows do not yet turn those warnings into repair queues, hold decisions, or quality trend reports.
-  - Why implement: The live validation check caught a real banned-pattern issue in an existing Capgemini artifact, proving the signal is useful only if it routes to remediation before public release.
-  - Tradeoffs / risks: Initial rollout should warn/hold based on severity and artifact family, then promote to hard failures only after live-artifact stability is measured.
-  - Acceptance Criteria:
-    - Publish readiness consumes inline validation reports and records artifact-quality warnings, deferred-grounding obligations, and remediation targets.
-    - Operator/UI views show affected artifact path, rule ID, severity, sample text, and recommended repair action without exposing internal evidence IDs publicly.
-    - Policy supports warn, hold, and hard-fail modes by rule severity and report value band.
-    - Tests cover publish warn/hold decisions, remediation payload shape, and no-public-leak rendering.
+    - Benchmark rows with missing `so_what` or `now_what` produce typed remediation targets linked to the affected report and artifact family.
+    - Targeted regeneration fills missing fields only when source support exists and records abstentions when it does not.
+    - Release evidence reports coverage improvement across retained artifacts and flags unsupported attempted repairs.
+    - Tests cover missing-field target creation, grounded repair acceptance, abstention behavior, and unchanged public rendering when fields remain unsupported.
 
 ## 6. Architecture, Schema Compatibility, and Observability
 
@@ -372,16 +344,6 @@ Scoring:
     - Profile resolution validates against the existing settings contract and never hides secrets in YAML.
     - Tests cover profile selection, explicit override precedence, invalid profile names, and deterministic resolved settings.
 
-- **Title:** Add an autonomous run supervisor control loop [Impact: 5/5, Effort: 5/5]
-  - Problem fixed: Preflight, retry decisions, idempotency, checkpoints, run registry state, validation repair, and health scorecards exist as separate capabilities, but no single control loop continuously chooses `start`, `resume`, `retry`, `defer`, `repair`, `publish`, `dead-letter`, or `notify` across the full pipeline.
-  - Why implement: Lets the system operate as an unattended agent that chooses safe next actions from state instead of requiring users to invoke the correct entrypoint or resume flag.
-  - Tradeoffs / risks: Must remain a control-plane orchestrator and must not duplicate generator domain logic or service I/O behavior.
-  - Acceptance Criteria:
-    - A typed supervisor plan contract lists selected action, workflow, checkpoint/resume stage, idempotency scope/key, retry/defer decision, health inputs, blockers, and expected side effects.
-    - The supervisor consumes existing preflight reports, run registry records, retry telemetry, validation failures, checkpoints, and idempotency lookups without performing unplanned side effects.
-    - The supervisor can start a new run, resume from the latest safe checkpoint, invoke targeted repair, schedule retry/defer, publish when policy allows, or dead-letter with a remediation reason.
-    - Pipeline tests cover fresh, duplicate, partial-checkpoint, validation-failed, transient-failed, missing-credential, and publish-ready scenarios with structured log assertions.
-
 - **Title:** Add a durable autonomous dead-letter queue with typed remediation plans [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Failure classification and UI-run dead-letter concepts exist, but failed autonomous work is not yet represented as a durable queue of remediable work items with retry/defer/repair scheduling.
   - Why implement: Failed runs should become managed work items that can be retried, resumed, repaired, or escalated without users reconstructing context.
@@ -412,16 +374,6 @@ Scoring:
     - User-action-required records resume automatically when the required credential/config preflight passes.
     - Tests cover due/not-due selection, credential blocker clearance, max-attempt exhaustion, duplicate suppression, and structured logs.
 
-- **Title:** Promote run health scorecards into production run gates [Impact: 4/5, Effort: 3/5]
-  - Problem fixed: Health scorecards and retry telemetry are useful release evidence, but production workflows do not consistently use scorecard outcomes as gates for publish, retry, repair, or operator notification.
-  - Why implement: Autonomous execution needs a self-assessment loop that turns run evidence into next actions.
-  - Tradeoffs / risks: Gate thresholds must be calibrated to avoid noisy holds while still catching real quality regressions.
-  - Acceptance Criteria:
-    - Every autonomous workflow writes a run health scorecard artifact with error, retry, validation, latency, cost, benchmark, and retry-telemetry summaries where applicable.
-    - Supervisor policy consumes the scorecard to allow publish, schedule retry, invoke repair, or notify operators.
-    - Scorecard thresholds are configurable and logged with policy version.
-    - Tests cover passing, warning, failing, missing-evidence, and threshold-override scorecards.
-
 - **Title:** Add model fallback policies by failure class and artifact family [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Model selection is mostly namespace-static, so the system cannot automatically switch to cheaper models for easy work or stronger/different models for repeated schema or validation failures.
   - Why implement: Policy-driven fallback can reduce cost on easy tasks and rescue difficult artifacts without user intervention.
@@ -445,18 +397,6 @@ Scoring:
     - Workflow-control reports avoided browser launches and skipped mailbox polls for the policy decision.
     - Live verification covers at least one publisher already observed with `blocked_email_domain` and shows reduced runtime without an operator step.
     - Tests cover policy TTL expiry, mailbox-availability override, exact-URL versus publisher-scope behavior, and required structured logs.
-
-- **Title:** Learn and apply safe required-select identity values from live gated-form evidence [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: The 2026-07-04 database-derived email-route matrix blocked 4 of 10 tested publishers on required enum/select fields whose option sets were visible but not represented in the configured identity profile. The 2026-07-05/2026-07-06 second publisher set repeated the same high-impact blocker on Adobe's required State lookup after the route otherwise completed cleanly as `email_delivery / email_required`.
-  - Why implement: Turns repeated manual publisher-form configuration into unattended, evidence-backed acquisition improvements, raising success rate without operator intervention.
-  - Tradeoffs / risks: The system must only auto-select semantically safe values from allowlisted identity families and must fail closed for regulated, role-sensitive, or materially false options.
-  - Acceptance Criteria:
-    - Required enum blockers persist observed option sets, field labels, host, URL, and classifier confidence as structured acquisition evidence.
-    - A config generator proposes host-scoped identity overrides only for allowlisted safe families such as company size, revenue band, country, industry, department, and organization type.
-    - Proposed values require deterministic semantic matching to existing identity facts or approved default policies; unresolved sensitive fields remain `blocked_unknown_required_enum`.
-    - Accepted overrides are written through the existing identity config service path with idempotent diffs, structured logs, and no secrets in YAML.
-    - Live verification reruns at least three previously blocked publishers and demonstrates increased acquired or email-requested outcomes without increasing false submissions.
-    - Tests cover option-set persistence, safe-family matching, sensitive-field refusal, config diff idempotency, and required structured logs.
 
 - **Title:** Persist anti-bot and CAPTCHA acquisition blockers as route policy [Impact: 4/5, Effort: 2/5]
   - Problem fixed: Live Genetec and Proximic reruns reached external access controls (`HTTP 403` and interactive CAPTCHA) after generic form/onsite handling was fixed, but that blocker evidence is not yet promoted into fast autonomous route policy.

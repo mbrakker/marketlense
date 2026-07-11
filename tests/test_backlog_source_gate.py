@@ -65,6 +65,8 @@ def test_backlog_source_gate_ignores_intake_and_execution_plan_documents(
     )
     simplification = tmp_path / "simplification.md"
     simplification.write_text("- **Title:** Intake item\n", encoding="utf-8")
+    x100tasks = tmp_path / "x100tasks.md"
+    x100tasks.write_text("- **Title:** x100 intake item\n", encoding="utf-8")
     plan = tmp_path / "docs" / "superpowers" / "plans" / "implementation.md"
     plan.parent.mkdir(parents=True, exist_ok=True)
     plan.write_text("- [ ] Execute implementation step\n", encoding="utf-8")
@@ -75,6 +77,7 @@ def test_backlog_source_gate_ignores_intake_and_execution_plan_documents(
             "CONSOLIDATED_TODO.md",
             "docs/quality/deep-analysis-x10-plan-2026-04-15.md",
             "simplification.md",
+            "x100tasks.md",
             "docs/superpowers/plans/implementation.md",
         ),
         root=tmp_path,

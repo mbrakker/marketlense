@@ -6,7 +6,11 @@ from unittest.mock import patch
 
 import yaml
 
-from src.contracts.browser_download import BrowserDownloadIdentityFieldUpsertRequest
+from src.contracts.browser_download import (
+    BrowserDownloadIdentityFieldUpsertRequest,
+    BrowserDownloadRequiredSelectEvidence,
+    BrowserDownloadRequiredSelectOverrideRequest,
+)
 from src.contracts.config import (
     AppConfigReadRequest,
     AppConfigWriteRequest,
@@ -15,6 +19,7 @@ from src.contracts.run_context import RunContext
 from src.services.config_service import (
     read_app_config,
     upsert_browser_download_identity_fields,
+    upsert_browser_download_required_select_overrides,
     write_app_config,
 )
 from src.utils.errors import AppError
@@ -245,3 +250,97 @@ def test_upsert_browser_download_identity_fields_adds_and_filters_keys(
         "budget_range",
         "name",
     ]
+
+
+def test_required_select_evidence_writes_safe_host_override_idempotently(
+    tmp_path: Path,
+) -> None:
+    _, identity_path = _write_app_config_fixture(tmp_path)
+
+    request = BrowserDownloadRequiredSelectOverrideRequest(
+        schema_version="1.0",
+        path=str(identity_path),
+        evidence=[
+            BrowserDownloadRequiredSelectEvidence(
+                schema_version="1.0",
+                host="go.example.com",
+                url="https://go.example.com/report",
+                field_label="Company Size",
+                field_name="company_size",
+                options=[
+                    "Please select",
+                    "1-10 employees",
+                    "11-50 employees",
+                    "51-200 employees",
+                ],
+                classifier_confidence=0.94,
+            ),
+            BrowserDownloadRequiredSelectEvidence(
+                schema_version="1.0",
+                host="go.example.com",
+                url="https://go.example.com/report",
+                field_label="Job Role",
+                field_name="job_role",
+                options=["CEO", "Marketing Manager", "Student"],
+                classifier_confidence=0.96,
+            ),
+        ],
+        approved_defaults={"company_size": "11-50 employees"},
+    )
+
+    first = upsert_browser_download_required_select_overrides(request, _ctx())
+    second = upsert_browser_download_required_select_overrides(request, _ctx())
+    payload = yaml.safe_load(identity_path.read_text(encoding="utf-8"))
+
+    assert first.applied_count == 1
+    assert first.refused_count == 1
+    assert first.proposals[0].status == "applied"
+    assert first.proposals[0].semantic_family == "company_size"
+    assert first.proposals[1].status == "refused_sensitive_field"
+    assert second.applied_count == 0
+    override = payload["publisher_overrides"][0]
+    assert override["host_pattern"] == "go.example.com"
+    assert override["field_values"][0]["key"] == "company_size"
+    assert override["field_values"][0]["value"] == "11-50 employees"
+    assert override["field_values"][0]["option_aliases"] == ["11-50 employees"]
+
+
+def test_required_select_evidence_matches_existing_identity_fact(tmp_path: Path) -> None:
+    _, identity_path = _write_app_config_fixture(tmp_path)
+    payload = yaml.safe_load(identity_path.read_text(encoding="utf-8"))
+    payload["fields"].append(
+        {
+            "schema_version": "1.0",
+            "key": "country",
+            "label": "Country",
+            "value": "United States",
+            "aliases": ["Country/Region"],
+            "option_aliases": [],
+        }
+    )
+    identity_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    response = upsert_browser_download_required_select_overrides(
+        BrowserDownloadRequiredSelectOverrideRequest(
+            schema_version="1.0",
+            path=str(identity_path),
+            evidence=[
+                BrowserDownloadRequiredSelectEvidence(
+                    schema_version="1.0",
+                    host="forms.example.com",
+                    url="https://forms.example.com/a",
+                    field_label="Country/Region",
+                    field_name="Country",
+                    options=["Select...", "United States", "Canada"],
+                    classifier_confidence=0.91,
+                )
+            ],
+            approved_defaults={},
+        ),
+        _ctx(),
+    )
+
+    payload = yaml.safe_load(identity_path.read_text(encoding="utf-8"))
+    assert response.applied_count == 1
+    assert response.proposals[0].match_source == "identity_fact"
+    assert payload["publisher_overrides"][0]["field_values"][0]["key"] == "country"

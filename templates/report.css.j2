@@ -540,6 +540,88 @@ a:hover{text-decoration:underline}
   margin-top:8px;
   color:var(--muted);
 }
+.report-intelligence-panel{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) minmax(280px, .72fr);
+  gap:16px;
+  margin-top:24px;
+}
+.intelligence-module{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:22px;
+  box-shadow:0 8px 26px rgba(8,43,82,.045);
+}
+.intelligence-module-topics,
+.intelligence-module-charts{
+  grid-column:1 / -1;
+}
+.intelligence-topic-list,
+.chart-insight-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+}
+.intelligence-topic-list article,
+.chart-insight-grid article{
+  min-block-size:100%;
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:16px;
+  background:#f8fbff;
+}
+.intelligence-topic-list h4,
+.chart-insight-grid h4{
+  color:var(--navy);
+  font-size:1rem;
+  line-height:1.2;
+  margin:10px 0 8px;
+  text-wrap:pretty;
+}
+.intelligence-topic-list p,
+.chart-insight-grid p{
+  color:#26394f;
+  margin:0;
+}
+.intelligence-topic-list small,
+.chart-insight-grid small{
+  display:block;
+  color:var(--muted);
+  margin-top:10px;
+}
+.key-figure-list{
+  display:grid;
+  gap:12px;
+  margin:0;
+}
+.key-figure-list div{
+  display:grid;
+  grid-template-columns:minmax(92px, .36fr) minmax(0, 1fr);
+  gap:14px;
+  align-items:start;
+  padding-block:12px;
+  border-top:1px solid var(--line);
+}
+.key-figure-list div:first-child{
+  border-top:0;
+  padding-top:0;
+}
+.key-figure-list dt{
+  color:var(--navy);
+  font-size:1.55rem;
+  line-height:1;
+  font-weight:820;
+}
+.key-figure-list dd{
+  color:#26394f;
+  margin:0;
+}
+.key-figure-list small{
+  display:block;
+  color:var(--muted);
+  margin-top:6px;
+}
 .advisory-suite{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -1038,6 +1120,7 @@ summary{
   .quote-board,
   .summary-panel,
   .claim-strip,
+  .report-intelligence-panel,
   .advisory-suite,
   .expert-panel,
   .source-layout{grid-template-columns:1fr}
@@ -1054,7 +1137,9 @@ summary{
   .toc a{padding:6px 0}
   .section-head{grid-template-columns:1fr;gap:12px}
   .finding-list,
-  .tag-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
+  .tag-grid,
+  .intelligence-topic-list,
+  .chart-insight-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
   .claim-strip article{
     border-right:0;
     border-bottom:1px solid var(--line);
@@ -1089,7 +1174,10 @@ summary{
   .signal-stat-grid,
   .hero-score,
   .finding-list,
-  .tag-grid{grid-template-columns:1fr}
+  .tag-grid,
+  .intelligence-topic-list,
+  .chart-insight-grid,
+  .key-figure-list div{grid-template-columns:1fr}
   .hero-score-main{
     border-right:0;
     border-bottom:1px solid var(--line);

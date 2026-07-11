@@ -167,3 +167,85 @@ def test_render_surfaces_public_advisory_metric_spine_and_claim_support(tmp_path
     assert "canonical_claim_id" not in html
     assert "report:executive_advisory" not in html
     assert "metric-internal-1" not in html
+
+
+def test_render_surfaces_topics_key_figures_and_chart_insight_cards(tmp_path):
+    data = {
+        "title": "Evidence Cards Report",
+        "tldr": "Decision makers should inspect quantified demand shifts.",
+        "insights": ["Legacy insight"] * 5,
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["demand"],
+        "region": "Global",
+        "time_period": "2026",
+        "contents_page_number": 0,
+        "artifacts": {
+            "summary": {
+                "tldr": "Demand shifts are measurable.",
+                "executive_summary": "Demand shifts are measurable.",
+            },
+            "topics_covered": [
+                {
+                    "topic_id": "t1",
+                    "topic": "Demand outlook",
+                    "why_it_matters": "It frames where the report expects pressure.",
+                    "subtopics": ["Premium demand", "Value demand"],
+                    "source_pages": [2, 3],
+                }
+            ],
+            "key_figures": [
+                {
+                    "figure": "42 percent",
+                    "label": "premium buyers trading down",
+                    "context": "Demand pressure in 2026",
+                    "source_page": 4,
+                    "confidence": "source_backed",
+                }
+            ],
+            "chart_insight_cards": [
+                {
+                    "card_id": "chart-1",
+                    "status": "generated",
+                    "title": "Premium demand weakens",
+                    "insight": "The chart points to sharper pressure among premium buyers.",
+                    "so_what": "Planning cannot rely on blended category averages.",
+                    "avoid_reason_if_weak": "",
+                    "source_page": 4,
+                },
+                {
+                    "card_id": "chart-2",
+                    "status": "weak_evidence",
+                    "title": "Weak visual link",
+                    "insight": "Do not publish as a claim.",
+                    "avoid_reason_if_weak": "Chart link is too weak for a public implication.",
+                    "source_page": 9,
+                },
+            ],
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="cards.pdf",
+        file_id="file_cards",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert 'id="report-intelligence"' in html
+    assert "Topics covered" in html
+    assert "Demand outlook" in html
+    assert "Premium demand" in html
+    assert "Key figures" in html
+    assert "42 percent" in html
+    assert "premium buyers trading down" in html
+    assert "Chart insight cards" in html
+    assert "Premium demand weakens" in html
+    assert "Planning cannot rely on blended category averages." in html
+    assert "Chart link is too weak for a public implication." in html
+    assert "Do not publish as a claim." not in html

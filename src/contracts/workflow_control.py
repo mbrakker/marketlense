@@ -381,6 +381,149 @@ class PublishPolicyDecision:
 
 
 @dataclass(frozen=True)
+class PublishRemediationTarget:
+    schema_version: str = field(
+        metadata={"doc": "Publish remediation target schema version."}
+    )
+    rule_id: str = field(metadata={"doc": "Stable validation or editorial rule ID."})
+    severity: str = field(metadata={"doc": "Warning, hold, or error severity."})
+    affected_section: str = field(
+        metadata={"doc": "Artifact path, section, or field affected by the issue."}
+    )
+    repair_target: str = field(
+        metadata={"doc": "Machine-readable target to route the remediation step."}
+    )
+    repair_action: str = field(
+        metadata={"doc": "Recommended remediation action for the operator or supervisor."}
+    )
+    sample_text: str = field(
+        metadata={"doc": "Sanitized excerpt that explains the issue without leaking secrets."}
+    )
+
+
+@dataclass(frozen=True)
+class PublishRemediationWorkflow:
+    schema_version: str = field(
+        metadata={"doc": "Publish remediation workflow schema version."}
+    )
+    decision: str = field(
+        metadata={"doc": "Publish decision: pass, warn, hold, or fail."}
+    )
+    policy_mode: str = field(metadata={"doc": "Policy mode used for severity routing."})
+    value_band: str = field(metadata={"doc": "Value band used for publish risk routing."})
+    warning_count: int = field(metadata={"doc": "Non-fatal warning count."})
+    deferred_grounding_count: int = field(
+        metadata={"doc": "Count of deferred grounding remediation targets."}
+    )
+    hard_fail_count: int = field(metadata={"doc": "Hard-fail issue count."})
+    targets: list[PublishRemediationTarget] = field(
+        metadata={"doc": "Structured remediation targets in issue order."}
+    )
+
+
+@dataclass(frozen=True)
+class RunHealthGateInput:
+    schema_version: str = field(metadata={"doc": "Run health gate input schema version."})
+    workflow: str = field(metadata={"doc": "Workflow controlled by the health gate."})
+    scorecard: dict[str, Any] = field(
+        metadata={"doc": "Run health scorecard payload or summary."}
+    )
+    max_warnings: int = field(
+        default=0,
+        metadata={"doc": "Maximum warning count allowed before the gate fails."},
+    )
+    allow_threshold_override: bool = field(
+        default=False,
+        metadata={"doc": "Whether operator override may bypass warning thresholds."},
+    )
+    policy_version: str = field(
+        default="run-health-gate-v1",
+        metadata={"doc": "Gate policy version logged for reproducibility."},
+    )
+
+
+@dataclass(frozen=True)
+class RunHealthGateDecision:
+    schema_version: str = field(
+        metadata={"doc": "Run health gate decision schema version."}
+    )
+    workflow: str = field(metadata={"doc": "Workflow controlled by the health gate."})
+    outcome: str = field(metadata={"doc": "Gate outcome: pass, warning, or fail."})
+    action: str = field(metadata={"doc": "Supervisor action: allow, hold, or notify."})
+    reason: str = field(metadata={"doc": "Stable machine-readable decision reason."})
+    warning_count: int = field(metadata={"doc": "Scorecard warning count used by the gate."})
+    blockers: list[str] = field(metadata={"doc": "Gate blockers for supervisor planning."})
+    policy_version: str = field(metadata={"doc": "Gate policy version."})
+    threshold_override_used: bool = field(
+        metadata={"doc": "Whether an override changed a failing threshold."}
+    )
+    scorecard_run_id: str = field(metadata={"doc": "Scorecard run identifier, if present."})
+
+
+@dataclass(frozen=True)
+class AutonomousRunSupervisorInput:
+    schema_version: str = field(
+        metadata={"doc": "Autonomous supervisor input schema version."}
+    )
+    workflow: str = field(metadata={"doc": "Workflow being supervised."})
+    run_id: str = field(metadata={"doc": "Current run identifier."})
+    current_state: str = field(metadata={"doc": "Current workflow state."})
+    latest_safe_checkpoint: str = field(
+        metadata={"doc": "Latest checkpoint stage safe to resume from."}
+    )
+    idempotency_scope: str = field(
+        metadata={"doc": "Side-effect scope used for idempotency."}
+    )
+    idempotency_key: str = field(metadata={"doc": "Idempotency key for side effects."})
+    preflight_passed: bool = field(metadata={"doc": "Whether preflight passed."})
+    validation_status: str = field(metadata={"doc": "Validation status for the run."})
+    health_gate: RunHealthGateDecision = field(
+        metadata={"doc": "Run health gate decision consumed by the supervisor."}
+    )
+    retry_action: str = field(
+        default="",
+        metadata={"doc": "Retry or repair action selected by retry telemetry."},
+    )
+    blockers: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Known blockers that prevent autonomous continuation."},
+    )
+    publish_allowed: bool = field(
+        default=False,
+        metadata={"doc": "Whether the current run is allowed to publish."},
+    )
+    duplicate_side_effect_detected: bool = field(
+        default=False,
+        metadata={"doc": "Whether idempotency state shows the side effect already occurred."},
+    )
+    duplicate: bool = field(
+        default=False,
+        metadata={"doc": "Compatibility alias for duplicate side-effect detection."},
+    )
+
+
+@dataclass(frozen=True)
+class AutonomousRunSupervisorPlan:
+    schema_version: str = field(
+        metadata={"doc": "Autonomous supervisor plan schema version."}
+    )
+    selected_action: str = field(
+        metadata={"doc": "Selected action: start, resume, repair, retry, defer, publish, notify, dead_letter, or skip_duplicate."}
+    )
+    workflow: str = field(metadata={"doc": "Workflow being supervised."})
+    run_id: str = field(metadata={"doc": "Current run identifier."})
+    resume_stage: str = field(metadata={"doc": "Checkpoint or stage selected for resume."})
+    idempotency_scope: str = field(metadata={"doc": "Idempotency scope for planned side effects."})
+    idempotency_key: str = field(metadata={"doc": "Idempotency key for planned side effects."})
+    retry_action: str = field(metadata={"doc": "Retry action selected by telemetry, if any."})
+    health_gate_outcome: str = field(metadata={"doc": "Run health gate outcome."})
+    blockers: list[str] = field(metadata={"doc": "Blockers attached to the selected action."})
+    expected_side_effects: list[str] = field(metadata={"doc": "External side-effect families the plan may perform."})
+    preflight_passed: bool = field(metadata={"doc": "Whether preflight passed."})
+    validation_status: str = field(metadata={"doc": "Validation status consumed by the plan."})
+
+
+@dataclass(frozen=True)
 class WorkflowControlObservation:
     schema_version: str = field(
         metadata={"doc": "Workflow-control observation schema version."}

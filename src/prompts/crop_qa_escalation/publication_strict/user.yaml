@@ -1,0 +1,7 @@
+text: |
+  Candidate: {{ candidate_id }}
+
+  Deterministic QA sidecar:
+  {{ deterministic_sidecar }}
+
+  Decide whether this crop is safe for public report publication.

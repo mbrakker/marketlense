@@ -14,6 +14,8 @@ from src.contracts.publish import PublishSettings
 from src.contracts.retry_telemetry import RetryDecisionTelemetryReport
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import (
+    AutonomousRunSupervisorInput,
+    AutonomousRunSupervisorPlan,
     ConcurrencyDecision,
     ConcurrencyLimit,
     ConcurrencyObservation,
@@ -29,10 +31,14 @@ from src.contracts.workflow_control import (
     PreLlmDataQualityInput,
     PreflightRemediationAction,
     PreflightRemediationArtifact,
+    PublishRemediationTarget,
+    PublishRemediationWorkflow,
     PublishPolicyDecision,
     PublishPolicyInput,
     ResolvedRetryPolicy,
     ResolvedRunIntent,
+    RunHealthGateDecision,
+    RunHealthGateInput,
     RunIntent,
     WorkflowContract,
     WorkflowControlSettings,
@@ -660,6 +666,214 @@ def evaluate_publish_policy(
     return decision
 
 
+def build_publish_remediation_from_validation(
+    validation_report: Any,
+    *,
+    value_band: str,
+    policy_mode: str,
+    ctx: RunContext,
+) -> PublishRemediationWorkflow:
+    targets: list[PublishRemediationTarget] = []
+    warning_count = 0
+    deferred_grounding_count = 0
+    hard_fail_count = 0
+    for issue in list(getattr(validation_report, "issues", []) or []):
+        rule_id = _stable_text(getattr(issue, "rule_id", ""))
+        severity = _key(getattr(issue, "severity", "")) or "warning"
+        message = _stable_text(getattr(issue, "message", ""))
+        affected_section = _stable_text(getattr(issue, "artifact_path", "")) or _stable_text(
+            getattr(issue, "field_path", "")
+        )
+        if severity in {"warning", "warn"}:
+            warning_count += 1
+        elif severity in {"error", "blocker", "critical"}:
+            hard_fail_count += 1
+        if rule_id == "deferred_grounding_required":
+            deferred_grounding_count += 1
+        targets.append(
+            PublishRemediationTarget(
+                schema_version="1.0",
+                rule_id=rule_id,
+                severity="warning" if severity == "warn" else severity,
+                affected_section=affected_section,
+                repair_target=affected_section or rule_id,
+                repair_action=_publish_repair_action(rule_id),
+                sample_text=_sample_text(message),
+            )
+        )
+    value_key = _key(value_band)
+    policy_key = _key(policy_mode)
+    if hard_fail_count:
+        decision = "fail"
+    elif (
+        warning_count
+        and value_key in {"high", "premium", "strategic"}
+        and policy_key == "hold_high_value_warnings"
+    ):
+        decision = "hold"
+    elif warning_count:
+        decision = "warn"
+    else:
+        decision = "pass"
+    workflow = PublishRemediationWorkflow(
+        schema_version="1.0",
+        decision=decision,
+        policy_mode=policy_mode,
+        value_band=value_band,
+        warning_count=warning_count,
+        deferred_grounding_count=deferred_grounding_count,
+        hard_fail_count=hard_fail_count,
+        targets=targets,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_publish_remediation_resolved",
+            module=logger.name,
+            fields=asdict(workflow),
+        )
+    )
+    return workflow
+
+
+def evaluate_run_health_gate(
+    gate_input: RunHealthGateInput,
+    *,
+    ctx: RunContext,
+) -> RunHealthGateDecision:
+    scorecard = dict(gate_input.scorecard)
+    raw_warnings = scorecard.get("warnings")
+    warnings = raw_warnings if isinstance(raw_warnings, list) else []
+    warning_count = len(warnings)
+    error_count = int(scorecard.get("error_count") or 0)
+    validation_failure_count = int(scorecard.get("validation_failure_count") or 0)
+    threshold_failed = warning_count > max(0, int(gate_input.max_warnings))
+    override_used = bool(threshold_failed and gate_input.allow_threshold_override)
+    blockers: list[str] = []
+    if error_count > 0 or validation_failure_count > 0:
+        outcome = "fail"
+        action = "notify"
+        reason = "scorecard_errors_or_validation_failures"
+        blockers.append("run_health_gate_failed")
+    elif threshold_failed and not override_used:
+        outcome = "fail"
+        action = "notify"
+        reason = "scorecard_warning_threshold_exceeded"
+        blockers.append("run_health_gate_failed")
+    elif threshold_failed and override_used:
+        outcome = "warning"
+        action = "allow"
+        reason = "scorecard_warning_threshold_overridden"
+    elif warning_count:
+        outcome = "warning"
+        action = "hold"
+        reason = "scorecard_warnings_present"
+    else:
+        outcome = "pass"
+        action = "allow"
+        reason = "scorecard_passed"
+    decision = RunHealthGateDecision(
+        schema_version="1.0",
+        workflow=_key(gate_input.workflow),
+        outcome=outcome,
+        action=action,
+        reason=reason,
+        warning_count=warning_count,
+        blockers=blockers,
+        policy_version=gate_input.policy_version,
+        threshold_override_used=override_used,
+        scorecard_run_id=_stable_text(scorecard.get("run_id", "")),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_run_health_gate_decision",
+            module=logger.name,
+            fields=asdict(decision),
+        )
+    )
+    return decision
+
+
+def plan_autonomous_run(
+    supervisor_input: AutonomousRunSupervisorInput,
+    *,
+    ctx: RunContext,
+) -> AutonomousRunSupervisorPlan:
+    blockers = list(dict.fromkeys([*supervisor_input.blockers]))
+    expected_side_effects: list[str] = []
+    if supervisor_input.duplicate_side_effect_detected or supervisor_input.duplicate:
+        selected_action = "skip_duplicate"
+        blockers.append("duplicate_side_effect_detected")
+    elif supervisor_input.health_gate.outcome == "fail":
+        selected_action = "notify"
+        blockers.extend(supervisor_input.health_gate.blockers)
+    elif blockers:
+        selected_action = "notify"
+    elif not supervisor_input.preflight_passed:
+        selected_action = "defer"
+        blockers.append("preflight_not_passed")
+    elif supervisor_input.retry_action:
+        selected_action = (
+            "repair" if "repair" in _key(supervisor_input.retry_action) else "retry"
+        )
+    elif supervisor_input.validation_status != "pass":
+        selected_action = "repair"
+    elif (
+        _key(supervisor_input.current_state) == "publish_ready"
+        and supervisor_input.publish_allowed
+        and supervisor_input.health_gate.action == "allow"
+    ):
+        selected_action = "publish"
+        expected_side_effects = ["wordpress_publish"]
+    elif supervisor_input.latest_safe_checkpoint:
+        selected_action = "resume"
+    else:
+        selected_action = "start"
+    plan = AutonomousRunSupervisorPlan(
+        schema_version="1.0",
+        selected_action=selected_action,
+        workflow=_key(supervisor_input.workflow),
+        run_id=supervisor_input.run_id,
+        resume_stage=supervisor_input.latest_safe_checkpoint,
+        idempotency_scope=supervisor_input.idempotency_scope,
+        idempotency_key=supervisor_input.idempotency_key,
+        retry_action=supervisor_input.retry_action,
+        health_gate_outcome=supervisor_input.health_gate.outcome,
+        blockers=list(dict.fromkeys(blockers)),
+        expected_side_effects=expected_side_effects,
+        preflight_passed=supervisor_input.preflight_passed,
+        validation_status=supervisor_input.validation_status,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_autonomous_supervisor_plan",
+            module=logger.name,
+            fields=asdict(plan),
+        )
+    )
+    return plan
+
+
+def _publish_repair_action(rule_id: str) -> str:
+    if rule_id == "deferred_grounding_required":
+        return "run_deferred_grounding"
+    return "regenerate_artifact"
+
+
+def _sample_text(message: str) -> str:
+    text = _stable_text(message)
+    if ":" in text:
+        text = text.split(":", 1)[0].strip()
+    if len(text) <= 160:
+        return text
+    return text[:157].rstrip() + "..."
+
+
 def build_operational_memory_from_feedback(
     observations: list[WorkflowControlObservation],
 ) -> list[OperationalMemoryRecord]:
@@ -1240,6 +1454,8 @@ __all__ = [
     "ConcurrencyDecision",
     "ConcurrencyLimit",
     "ConcurrencyObservation",
+    "AutonomousRunSupervisorInput",
+    "AutonomousRunSupervisorPlan",
     "ModelCallAuditRecord",
     "ModelCallReplayBundle",
     "MailDeliveryWorkflowItemResult",
@@ -1252,8 +1468,12 @@ __all__ = [
     "PreLlmDataQualityInput",
     "PreflightRemediationAction",
     "PreflightRemediationArtifact",
+    "PublishRemediationTarget",
+    "PublishRemediationWorkflow",
     "PublishPolicyDecision",
     "PublishPolicyInput",
+    "RunHealthGateDecision",
+    "RunHealthGateInput",
     "ResolvedRetryPolicy",
     "ResolvedRunIntent",
     "RunIntent",
@@ -1265,11 +1485,13 @@ __all__ = [
     "WorkflowTransition",
     "build_operational_memory_from_feedback",
     "build_operational_memory",
+    "build_publish_remediation_from_validation",
     "build_preflight_remediation_artifact",
     "build_workflow_preflight_request",
     "default_workflow_control_settings",
     "evaluate_pre_llm_data_quality",
     "evaluate_publish_policy",
+    "evaluate_run_health_gate",
     "is_valid_transition",
     "recommend_from_operational_memory",
     "resolve_all_adaptive_concurrency",
@@ -1277,6 +1499,7 @@ __all__ = [
     "resolve_adaptive_concurrency",
     "resolve_retry_policy",
     "resolve_workflow_contract",
+    "plan_autonomous_run",
     "run_after_pre_llm_gate",
     "run_due_mail_delivery_requests",
 ]

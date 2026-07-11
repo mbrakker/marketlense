@@ -16,7 +16,8 @@ def test_publish_html_uploads_three_card_covers_and_sends_registered_meta(
     html_path.parent.mkdir(parents=True, exist_ok=True)
     html_path.write_text(
         "<html><head><title>Report</title></head>"
-        "<body>Drive fileId: file123</body></html>",
+        '<body><section id="report-intelligence" class="report-intelligence-panel">'
+        "Topics covered</section>Drive fileId: file123</body></html>",
         encoding="utf-8",
     )
     write_report_card_fixture(settings, html_path)
@@ -88,6 +89,7 @@ def test_publish_html_uploads_three_card_covers_and_sends_registered_meta(
         "ml_time_period": "Q2 2026",
         "ml_region": "Global",
         "ml_publisher_name": "McKinsey & Company",
+        "ml_public_intelligence": "1",
         "ml_card_schema_version": "1.0",
         "ml_card_title_scale": "long",
         "ml_card_tldr_compact": "Complete compact TLDR.",
@@ -157,6 +159,7 @@ def test_publish_html_updates_existing_report_card_post_in_place(
     assert update_call.json_data["featured_media"] == 303
     assert update_call.json_data["meta"]["ml_time_period"] == "Q2 2026"
     assert update_call.json_data["meta"]["ml_region"] == "Global"
+    assert update_call.json_data["meta"]["ml_public_intelligence"] == "0"
     assert update_call.json_data["meta"]["ml_card_cover_small_id"] == 301
     assert (
         wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")
