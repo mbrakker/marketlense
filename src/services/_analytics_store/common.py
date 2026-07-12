@@ -16,7 +16,6 @@ from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.services.sqlite_migration_service import apply_reports_db_migrations
 from src.services._sqlite_common import (
     configure_sqlite_connection,
-    table_exists as _table_exists,
 )
 from src.utils.errors import AppError
 
@@ -325,7 +324,7 @@ def _analytics_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="reports_db",
                     db_path=db_path,
-                    target_version=14,
+                    target_version=15,
                     ctx=ctx,
                 ),
                 conn,

@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-11
+Last audited: 2026-07-12
 
 This file is the single active backlog for this repository. It supersedes older backlog notes, archived planning docs, and ad hoc audit intake.
 
@@ -254,6 +254,16 @@ Scoring:
 
 ### 6. Architecture, Schema Compatibility, and Observability
 
+
+- **Title:** Operationalize lineage-driven selective regeneration and cost reporting [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Canonical artifact lineage now records retained checkpoint artifacts, dependency edges, compatibility metadata, and invalidation state, but pipeline planning does not yet choose the smallest valid regeneration plan or quantify avoided work from those decisions.
+  - Why implement: Converts the new lineage foundation into measurable LLM/PDF/render cost and latency reductions while preserving source-to-publication traceability.
+  - Tradeoffs / risks: Regeneration planning must remain fail-closed on missing provenance, preserve checkpoint compatibility, and never treat an invalidated artifact as reusable.
+  - Acceptance Criteria:
+    - A typed planner maps source, prompt, template, crop, and validator changes to the minimal checkpoint stage(s) requiring regeneration.
+    - Report and cross-report publish workflows consult compatibility-aware lineage reuse before model, PDF, crop, render, and publication work.
+    - A bounded quality command reports invalidation fan-out, compatible reuse hits/misses, avoided provider/PDF/render work, and lineage coverage by artifact family.
+    - Retained-artifact regression tests prove render-only changes reuse analysis and source changes never reuse dependent artifacts.
 - **Title:** Publish release evidence reviews into CI job summaries and PR release notes [Impact: 3/5, Effort: 2/5]
   - Problem fixed: Release evidence review Markdown is now generated and archived, but reviewers still need to open the artifact bundle to see the approval surface.
   - Why implement: Puts unwaived issues, waived issues, owners, expiry dates, and artifact freshness directly where release reviewers already work.

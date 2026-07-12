@@ -1,16 +1,15 @@
-from __future__ import annotations
-
 """Projections ownership for reports database migrations."""
 
+from __future__ import annotations
+
+# ruff: noqa: E501
 import sqlite3
-from ..runner import (
-    _add_column_if_missing,
-)
 
 from src.services._sqlite_migration._reports.schema import (
+    _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL,
+    _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
+    _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
     _CLAIM_EMBEDDINGS_TABLE_SQL,
-    _REPORTS_CORE_TABLE_SQL,
-    _REPORTS_REQUIRED_COLUMNS,
     _REPORT_CATEGORIES_TABLE_SQL,
     _REPORT_CLAIMS_TABLE_SQL,
     _REPORT_FIGURES_TABLE_SQL,
@@ -20,9 +19,15 @@ from src.services._sqlite_migration._reports.schema import (
     _REPORT_SECTIONS_TABLE_SQL,
     _REPORT_SOURCES_TABLE_SQL,
     _REPORT_TAGS_TABLE_SQL,
-    _SIGNAL_CANDIDATES_TABLE_SQL,
+    _REPORTS_CORE_TABLE_SQL,
+    _REPORTS_REQUIRED_COLUMNS,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
+    _SIGNAL_CANDIDATES_TABLE_SQL,
     _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
+)
+
+from ..runner import (
+    _add_column_if_missing,
 )
 
 
@@ -170,4 +175,21 @@ def _reports_db_014_create_claim_embedding_records(
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_claim_embeddings_content_hash ON claim_embeddings(content_hash)"
+    )
+
+
+def _reports_db_015_create_artifact_lineage_registry(
+    conn: sqlite3.Connection,
+) -> None:
+    conn.execute(_ARTIFACT_LINEAGE_RECORDS_TABLE_SQL)
+    conn.execute(_ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL)
+    conn.execute(_ARTIFACT_LINEAGE_STATES_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_artifact_lineage_records_scope ON artifact_lineage_records(report_id, source_id, artifact_kind)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_artifact_lineage_records_prompt ON artifact_lineage_records(prompt_hash)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_artifact_lineage_dependencies_dependency ON artifact_lineage_dependencies(dependency_artifact_id)"
     )

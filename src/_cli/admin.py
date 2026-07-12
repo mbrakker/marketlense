@@ -1,11 +1,19 @@
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import os
 
 import typer
-from rich.table import Table
 from rich import box
+from rich.table import Table
 
+from src._cli.app import cli_app, console, logger
+from src._cli.runtime import sync_cli_patch_points
+from src.contracts.artifact_lineage import (
+    ARTIFACT_LINEAGE_SCHEMA_VERSION,
+    ArtifactLineageBackfillRequest,
+)
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.drive import DriveOAuthAuthorizeRequest
 from src.contracts.logging import LoggingSetupRequest
@@ -16,10 +24,8 @@ from src.services.config_service import (
 )
 from src.services.drive_service import authorize_oauth_user
 from src.services.logging_service import setup_logging
+from src.services.report_store_service import backfill_artifact_lineage
 from src.utils.logging import log_event, new_run_context
-
-from src._cli.app import cli_app, console, logger
-from src._cli.runtime import sync_cli_patch_points
 
 _CLI_PATCH_POINTS = (
     "authorize_oauth_user",
@@ -153,4 +159,42 @@ def sync_publishers(
     table.add_row("Reports DB", result.reports_db)
     table.add_row("Source page", result.source_page_url)
     table.add_row("Replaced publishers", str(result.replaced_count))
+    console.print(table)
+
+
+@cli_app.command("backfill-artifact-lineage")
+def backfill_artifact_lineage_command(
+    checkpoint_root: str = typer.Option(
+        "out/.checkpoints/report_generation",
+        help="Existing report-generation checkpoint directory to scan",
+    ),
+    limit: int = typer.Option(100, min=1, help="Maximum checkpoint files to inspect"),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--apply",
+        help="Inspect only by default; --apply records missing immutable lineage rows",
+    ),
+) -> None:
+    _sync_cli_patch_points()
+    ctx = new_run_context(task_id="cli_backfill_artifact_lineage")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    result = backfill_artifact_lineage(
+        ArtifactLineageBackfillRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=settings.reports_db,
+            checkpoint_root=checkpoint_root,
+            limit=limit,
+            dry_run=dry_run,
+        ),
+        ctx,
+    )
+    table = Table(title="Artifact Lineage Backfill", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Mode", "dry run" if result.dry_run else "apply")
+    table.add_row("Checkpoints scanned", str(result.scanned_checkpoints))
+    table.add_row("Eligible artifacts", str(result.eligible_artifacts))
+    table.add_row("New records", str(result.created_artifacts))
+    table.add_row("Skipped", str(result.skipped_artifacts))
     console.print(table)

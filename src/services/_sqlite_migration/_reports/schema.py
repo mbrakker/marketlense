@@ -441,6 +441,45 @@ CREATE TABLE IF NOT EXISTS claim_embeddings (
 );
 """
 
+_ARTIFACT_LINEAGE_RECORDS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS artifact_lineage_records (
+  artifact_id TEXT PRIMARY KEY,
+  artifact_kind TEXT NOT NULL,
+  report_id TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  storage_ref TEXT NOT NULL,
+  producer TEXT NOT NULL,
+  schema_version_used TEXT NOT NULL,
+  processing_version TEXT NOT NULL,
+  prompt_hash TEXT NOT NULL,
+  model_provider TEXT NOT NULL,
+  model_name TEXT NOT NULL,
+  model_parameters_hash TEXT NOT NULL,
+  validation_status TEXT NOT NULL,
+  metadata_json TEXT NOT NULL,
+  created_at_utc TEXT NOT NULL
+);
+"""
+
+_ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS artifact_lineage_dependencies (
+  artifact_id TEXT NOT NULL REFERENCES artifact_lineage_records(artifact_id),
+  dependency_artifact_id TEXT NOT NULL REFERENCES artifact_lineage_records(artifact_id),
+  PRIMARY KEY(artifact_id, dependency_artifact_id)
+);
+"""
+
+_ARTIFACT_LINEAGE_STATES_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS artifact_lineage_states (
+  artifact_id TEXT PRIMARY KEY REFERENCES artifact_lineage_records(artifact_id),
+  state TEXT NOT NULL CHECK(state IN ('active','invalidated','superseded')),
+  invalidation_reason TEXT NOT NULL,
+  superseded_by TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL
+);
+"""
+
 _SIGNAL_CANDIDATES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS signal_candidates (
   candidate_id TEXT PRIMARY KEY,

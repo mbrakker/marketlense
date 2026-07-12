@@ -1,18 +1,39 @@
-from __future__ import annotations
-
+# ruff: noqa: F401
 """Ordered reports database migration registry and compatibility facade."""
 
-from src.services._sqlite_migration.runner import _MigrationSpec
+from __future__ import annotations
 
+from src.services._sqlite_migration._reports.core import (
+    _reports_db_001_create_reports_core,
+    _reports_db_002_create_report_sources_base,
+    _reports_db_003_normalize_report_sources,
+    _reports_db_004_create_publishers_base,
+    _reports_db_005_normalize_publishers,
+)
+from src.services._sqlite_migration._reports.projections import (
+    _reports_db_009_add_reports_projection_columns,
+    _reports_db_010_create_analytics_projection_tables,
+    _reports_db_011_add_report_source_value_scores,
+    _reports_db_013_create_signal_candidate_projection,
+    _reports_db_014_create_claim_embedding_records,
+    _reports_db_015_create_artifact_lineage_registry,
+)
+from src.services._sqlite_migration._reports.routing import (
+    _reports_db_006_create_or_upgrade_download_route_history,
+    _reports_db_007_normalize_inventory_recovery_cache,
+    _reports_db_008_create_inventory_route_history,
+    _reports_db_012_create_private_api_candidate_ledger,
+)
 from src.services._sqlite_migration._reports.schema import (
+    _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL,
+    _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
+    _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
     _CLAIM_EMBEDDINGS_TABLE_SQL,
     _DOWNLOAD_ROUTE_HISTORY_TABLE_SQL,
     _INVENTORY_RECOVERY_CACHE_TABLE_SQL,
     _INVENTORY_ROUTE_HISTORY_TABLE_SQL,
     _PRIVATE_API_CANDIDATE_TABLE_SQL,
     _PUBLISHERS_TABLE_SQL,
-    _REPORTS_CORE_TABLE_SQL,
-    _REPORTS_REQUIRED_COLUMNS,
     _REPORT_CATEGORIES_TABLE_SQL,
     _REPORT_CLAIMS_TABLE_SQL,
     _REPORT_FIGURES_TABLE_SQL,
@@ -22,33 +43,13 @@ from src.services._sqlite_migration._reports.schema import (
     _REPORT_SECTIONS_TABLE_SQL,
     _REPORT_SOURCES_TABLE_SQL,
     _REPORT_TAGS_TABLE_SQL,
-    _SIGNAL_CANDIDATES_TABLE_SQL,
+    _REPORTS_CORE_TABLE_SQL,
+    _REPORTS_REQUIRED_COLUMNS,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
+    _SIGNAL_CANDIDATES_TABLE_SQL,
     _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
-)
-
-from src.services._sqlite_migration._reports.core import (
-    _reports_db_001_create_reports_core,
-    _reports_db_002_create_report_sources_base,
-    _reports_db_003_normalize_report_sources,
-    _reports_db_004_create_publishers_base,
-    _reports_db_005_normalize_publishers,
-)
-
-from src.services._sqlite_migration._reports.routing import (
-    _reports_db_006_create_or_upgrade_download_route_history,
-    _reports_db_007_normalize_inventory_recovery_cache,
-    _reports_db_008_create_inventory_route_history,
-    _reports_db_012_create_private_api_candidate_ledger,
-)
-
-from src.services._sqlite_migration._reports.projections import (
-    _reports_db_009_add_reports_projection_columns,
-    _reports_db_010_create_analytics_projection_tables,
-    _reports_db_011_add_report_source_value_scores,
-    _reports_db_013_create_signal_candidate_projection,
-    _reports_db_014_create_claim_embedding_records,
-)
+)  # noqa: F401
+from src.services._sqlite_migration.runner import _MigrationSpec
 
 _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
@@ -120,5 +121,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_014_create_claim_embedding_records",
         version=14,
         apply_fn=_reports_db_014_create_claim_embedding_records,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_015_create_artifact_lineage_registry",
+        version=15,
+        apply_fn=_reports_db_015_create_artifact_lineage_registry,
     ),
 )

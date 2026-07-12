@@ -11194,6 +11194,471 @@
       ],
       "type": "object"
     },
+    "src.contracts.artifact_lineage.ArtifactInvalidationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "change_kind": {
+          "type": "string"
+        },
+        "changed_value": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "change_kind",
+        "changed_value"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactInvalidationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "dry_run": {
+          "type": "boolean"
+        },
+        "invalidated_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "root_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "root_artifact_ids",
+        "invalidated_artifact_ids",
+        "dry_run"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageBackfillRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_root": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "checkpoint_root"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageBackfillResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "created_artifacts": {
+          "type": "integer"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "eligible_artifacts": {
+          "type": "integer"
+        },
+        "scanned_checkpoints": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "skipped_artifacts": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "scanned_checkpoints",
+        "eligible_artifacts",
+        "created_artifacts",
+        "skipped_artifacts",
+        "dry_run"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_kind": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "invalidation_reason": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "model_parameters_hash": {
+          "type": "string"
+        },
+        "model_provider": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "producer": {
+          "type": "string"
+        },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "schema_version_used": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "storage_ref": {
+          "type": "string"
+        },
+        "superseded_by": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifact_id",
+        "artifact_kind",
+        "report_id",
+        "source_id",
+        "content_hash",
+        "storage_ref",
+        "producer",
+        "schema_version_used",
+        "processing_version",
+        "prompt_hash",
+        "model_provider",
+        "model_name",
+        "model_parameters_hash",
+        "validation_status",
+        "state"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageRegistrationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "dependency_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "model_parameters_hash": {
+          "type": "string"
+        },
+        "model_provider": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "producer": {
+          "type": "string"
+        },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "schema_version_used": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "storage_ref": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "artifact_kind",
+        "report_id",
+        "source_id",
+        "storage_ref",
+        "producer",
+        "schema_version_used",
+        "processing_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageRegistrationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "created": {
+          "type": "boolean"
+        },
+        "record": {
+          "$ref": "#/$defs/src.contracts.artifact_lineage.ArtifactLineageRecord"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "record",
+        "created"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageStorageLookupRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "storage_ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "report_id",
+        "artifact_kind",
+        "storage_ref"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageStorageLookupResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.artifact_lineage.ArtifactLineageRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageTraceRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "artifact_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactLineageTraceResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "edges": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.artifact_lineage.ArtifactLineageRecord"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "records",
+        "edges"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactReuseCheckRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "expected_model_name": {
+          "type": "string"
+        },
+        "expected_processing_version": {
+          "type": "string"
+        },
+        "expected_prompt_hash": {
+          "type": "string"
+        },
+        "expected_schema_version": {
+          "type": "string"
+        },
+        "expected_validation_status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "artifact_id",
+        "expected_schema_version",
+        "expected_processing_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.artifact_lineage.ArtifactReuseCheckResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.artifact_lineage.ArtifactLineageRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reusable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "reusable",
+        "reason"
+      ],
+      "type": "object"
+    },
     "src.contracts.candidate_extraction.CandidateExtractOutcome": {
       "additionalProperties": false,
       "properties": {

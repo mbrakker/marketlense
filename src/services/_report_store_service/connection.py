@@ -10,8 +10,8 @@ from src.services.sqlite_migration_service import apply_reports_db_migrations
 from src.utils.errors import AppError
 
 from .common import (
-    DEFAULT_BUSY_TIMEOUT_SECONDS,
     _REPORT_CONN_LOCK,
+    DEFAULT_BUSY_TIMEOUT_SECONDS,
     _configure_sqlite_connection,
 )
 
@@ -42,13 +42,14 @@ def _metadata_conn(path: str, ctx: RunContext):
             conn,
             busy_timeout_seconds=DEFAULT_BUSY_TIMEOUT_SECONDS,
         )
+        conn.row_factory = sqlite3.Row
         with _REPORT_CONN_LOCK:
             apply_reports_db_migrations(
                 SqliteMigrationApplyRequest(
                     schema_version="1.0",
                     database_key="reports_db",
                     db_path=path,
-                    target_version=14,
+                    target_version=15,
                     ctx=ctx,
                 ),
                 conn,

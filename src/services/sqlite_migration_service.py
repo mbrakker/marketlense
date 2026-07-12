@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 # ruff: noqa: F401
-
 import sqlite3
 
 from src.contracts.sqlite_migration import (
@@ -11,37 +10,41 @@ from src.contracts.sqlite_migration import (
 
 from ._sqlite_migration.runner import (
     _LEDGER_DDL,
-    _MigrationSpec,
+    _add_column_if_missing,
+    _applied_migration_ids,
     _apply_migration_plan,
     _current_version,
-    _applied_migration_ids,
-    _utc_now,
-    _normalize_url_key,
     _fetch_columns,
+    _MigrationSpec,
+    _normalize_url_key,
     _table_exists,
-    _add_column_if_missing,
+    _utc_now,
 )
 from ._sqlite_migration.reports import (
+    _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL,
+    _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
+    _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
     _CLAIM_EMBEDDINGS_TABLE_SQL,
-    _REPORTS_CORE_TABLE_SQL,
-    _REPORTS_REQUIRED_COLUMNS,
-    _REPORT_SOURCES_TABLE_SQL,
-    _PUBLISHERS_TABLE_SQL,
     _DOWNLOAD_ROUTE_HISTORY_TABLE_SQL,
-    _PRIVATE_API_CANDIDATE_TABLE_SQL,
     _INVENTORY_RECOVERY_CACHE_TABLE_SQL,
     _INVENTORY_ROUTE_HISTORY_TABLE_SQL,
-    _REPORT_SECTIONS_TABLE_SQL,
+    _PRIVATE_API_CANDIDATE_TABLE_SQL,
+    _PUBLISHERS_TABLE_SQL,
+    _REPORT_CATEGORIES_TABLE_SQL,
+    _REPORT_CLAIMS_TABLE_SQL,
+    _REPORT_FIGURES_TABLE_SQL,
     _REPORT_FINDINGS_TABLE_SQL,
     _REPORT_METRICS_TABLE_SQL,
     _REPORT_QUOTES_TABLE_SQL,
-    _REPORT_CLAIMS_TABLE_SQL,
+    _REPORT_SECTIONS_TABLE_SQL,
+    _REPORT_SOURCES_TABLE_SQL,
     _REPORT_TAGS_TABLE_SQL,
-    _REPORT_CATEGORIES_TABLE_SQL,
-    _REPORT_FIGURES_TABLE_SQL,
-    _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
-    _SIGNAL_CANDIDATES_TABLE_SQL,
+    _REPORTS_CORE_TABLE_SQL,
+    _REPORTS_REQUIRED_COLUMNS,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
+    _SIGNAL_CANDIDATES_TABLE_SQL,
+    _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
+    _REPORTS_DB_MIGRATIONS,
     _reports_db_001_create_reports_core,
     _reports_db_002_create_report_sources_base,
     _reports_db_003_normalize_report_sources,
@@ -56,14 +59,15 @@ from ._sqlite_migration.reports import (
     _reports_db_012_create_private_api_candidate_ledger,
     _reports_db_013_create_signal_candidate_projection,
     _reports_db_014_create_claim_embedding_records,
-    _REPORTS_DB_MIGRATIONS,
+    _reports_db_015_create_artifact_lineage_registry,
 )
 from ._sqlite_migration.state import (
-    _STATE_PROCESSED_TABLE_SQL,
-    _STATE_INGEST_STATE_TABLE_SQL,
-    _STATE_PUBLISHED_TABLE_SQL,
+    _STATE_DB_MIGRATIONS,
     _STATE_DOWNLOAD_ROUTES_TABLE_SQL,
+    _STATE_INGEST_STATE_TABLE_SQL,
     _STATE_MAIL_DELIVERY_REQUESTS_TABLE_SQL,
+    _STATE_PROCESSED_TABLE_SQL,
+    _STATE_PUBLISHED_TABLE_SQL,
     _STATE_WORKFLOW_CONTROL_OBSERVATIONS_TABLE_SQL,
     _state_db_001_create_base_tables,
     _state_db_002_add_processed_vector_columns,
@@ -72,15 +76,14 @@ from ._sqlite_migration.state import (
     _state_db_005_add_report_download_final_page_url,
     _state_db_006_create_workflow_control_observations,
     _state_db_007_create_mail_delivery_requests,
-    _STATE_DB_MIGRATIONS,
 )
 from ._sqlite_migration.ui_runs import (
-    _UI_RUNS_TABLE_SQL,
-    _UI_RUN_DEAD_LETTERS_TABLE_SQL,
     _UI_RUN_DEAD_LETTER_ACTIONS_TABLE_SQL,
+    _UI_RUN_DEAD_LETTERS_TABLE_SQL,
+    _UI_RUN_REGISTRY_MIGRATIONS,
+    _UI_RUNS_TABLE_SQL,
     _ui_run_registry_001_create_ui_runs,
     _ui_run_registry_002_add_dead_letter_ledger,
-    _UI_RUN_REGISTRY_MIGRATIONS,
 )
 
 

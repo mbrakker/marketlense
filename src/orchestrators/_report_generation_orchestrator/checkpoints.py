@@ -1,18 +1,21 @@
 from __future__ import annotations
+
+import hashlib
+import json
+import logging
 from dataclasses import asdict
 from datetime import datetime, timezone
-import logging
 from typing import Optional
+
+from src.contracts.artifact_lineage import (
+    ARTIFACT_LINEAGE_SCHEMA_VERSION,
+    ArtifactLineageRegistrationRequest,
+)
 from src.contracts.drive import DriveFile
 from src.contracts.files import (
     FileStatRequest,
     PipelineCheckpointWriteRequest,
     PipelineStageCheckpoint,
-)
-from src.contracts.report_artifacts import (
-    ArtifactRef,
-    ArtifactRegistry,
-    artifact_registry_to_payload,
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
@@ -20,6 +23,11 @@ from src.contracts.pdf_utils import PdfInfoResponse
 from src.contracts.regeneration import (
     RegenerationAttemptResult,
     RegenerationLoopState,
+)
+from src.contracts.report_artifacts import (
+    ArtifactRef,
+    ArtifactRegistry,
+    artifact_registry_to_payload,
 )
 from src.contracts.report_assets import PreviewResponse
 from src.contracts.report_generation import (
@@ -37,6 +45,7 @@ from src.services.file_service import (
     file_stat,
     write_pipeline_checkpoint,
 )
+from src.services.report_store_service import record_artifact_lineage
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -281,6 +290,12 @@ def _write_stage_checkpoint(
         stage_name=stage_name,
         artifact_refs=artifact_refs,
     )
+    checkpoint_payload["artifact_lineage"] = _record_checkpoint_artifact_lineage(
+        runtime,
+        stage_name=stage_name,
+        artifact_registry=checkpoint_payload["artifact_registry"],
+        payload=checkpoint_payload,
+    )
     response = write_pipeline_checkpoint(
         PipelineCheckpointWriteRequest(
             schema_version="1.0",
@@ -315,10 +330,134 @@ def _write_stage_checkpoint(
                 "artifact_registry_count": len(
                     checkpoint_payload["artifact_registry"]["refs"]
                 ),
+                "artifact_lineage_count": len(checkpoint_payload["artifact_lineage"]),
             },
         )
     )
     return response.checkpoint_path
+
+
+def _record_checkpoint_artifact_lineage(
+    runtime: ReportRuntimeState,
+    *,
+    stage_name: str,
+    artifact_registry: dict,
+    payload: dict,
+) -> dict[str, str]:
+    """Persist checkpoint artifacts without changing legacy checkpoint ref IDs."""
+    lineage_ids: dict[str, str] = {}
+    refs = artifact_registry.get("refs")
+    if not isinstance(refs, list):
+        return lineage_ids
+    validation_status = _checkpoint_validation_status(payload)
+    for raw_ref in refs:
+        if not isinstance(raw_ref, dict):
+            continue
+        artifact_name = str(raw_ref.get("artifact_id") or "").strip()
+        storage_ref = str(raw_ref.get("path") or "").strip()
+        if not artifact_name or not storage_ref:
+            continue
+        storage_stat = file_stat(
+            FileStatRequest(schema_version="1.0", path=storage_ref, compute_md5=False),
+            runtime.ctx,
+        )
+        if not storage_stat.exists or not storage_stat.is_file:
+            continue
+        dependencies = (
+            sorted(
+                artifact_id
+                for name, artifact_id in lineage_ids.items()
+                if name not in {"source_pdf", "analysis_pdf", "preview_image"}
+            )
+            if artifact_name == "rendered_html"
+            else [
+                lineage_ids[dependency]
+                for dependency in _checkpoint_dependency_names(artifact_name)
+                if dependency in lineage_ids
+            ]
+        )
+        prompt_hash, model_name, metadata = _checkpoint_model_provenance(
+            payload, artifact_name
+        )
+        response = record_artifact_lineage(
+            ArtifactLineageRegistrationRequest(
+                schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+                db_path=runtime.settings.reports_db,
+                artifact_kind=artifact_name,
+                report_id=runtime.file.file_id,
+                source_id=str(runtime.md5 or "").strip().lower(),
+                storage_ref=storage_ref,
+                producer=stage_name,
+                schema_version_used=str(raw_ref.get("schema_version") or "1.0"),
+                processing_version="report_generation_checkpoint_v1",
+                dependency_artifact_ids=dependencies,
+                prompt_hash=prompt_hash,
+                model_name=model_name,
+                validation_status=(
+                    validation_status
+                    if artifact_name == "validation"
+                    else "not_applicable"
+                ),
+                metadata=metadata,
+            ),
+            runtime.ctx,
+        )
+        lineage_ids[artifact_name] = response.record.artifact_id
+    return lineage_ids
+
+
+def _checkpoint_dependency_names(artifact_name: str) -> tuple[str, ...]:
+    if artifact_name == "analysis_pdf":
+        return ("source_pdf",)
+    if artifact_name in {"contents_image", "preview_image"}:
+        return ("analysis_pdf",)
+    if artifact_name == "rendered_html":
+        return ("artifacts", "validation")
+    if artifact_name not in {"source_pdf", "analysis_pdf"}:
+        return ("analysis_pdf",)
+    return ()
+
+
+def _checkpoint_validation_status(payload: dict) -> str:
+    analysis = payload.get("analysis")
+    if not isinstance(analysis, dict):
+        return "not_recorded"
+    report = analysis.get("validation_report")
+    if not isinstance(report, dict):
+        return "not_recorded"
+    return str(report.get("status") or "not_recorded")
+
+
+def _checkpoint_model_provenance(
+    payload: dict, artifact_name: str
+) -> tuple[str, str, dict[str, object]]:
+    metadata: dict[str, object] = {"checkpoint_artifact_name": artifact_name}
+    if artifact_name != "artifacts":
+        return "", "", metadata
+    analysis = payload.get("analysis")
+    if not isinstance(analysis, dict):
+        return "", "", metadata
+    generated = analysis.get("artifacts_payload")
+    if not isinstance(generated, dict):
+        return "", "", metadata
+    cache = generated.get("_cache")
+    prompts = cache.get("prompts") if isinstance(cache, dict) else None
+    if not isinstance(prompts, dict) or not prompts:
+        return "", "", metadata
+    prompt_hash = hashlib.sha256(
+        json.dumps(
+            prompts, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    ).hexdigest()
+    models = sorted(
+        {
+            str(value.get("model") or "").strip()
+            for value in prompts.values()
+            if isinstance(value, dict) and str(value.get("model") or "").strip()
+        }
+    )
+    metadata["prompt_hashes"] = prompts
+    return prompt_hash, ",".join(models), metadata
 
 
 def _artifact_required(artifact_id: str) -> bool:

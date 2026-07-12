@@ -52,6 +52,7 @@ PROJECTIONS = {
     "_reports_db_011_add_report_source_value_scores",
     "_reports_db_013_create_signal_candidate_projection",
     "_reports_db_014_create_claim_embedding_records",
+    "_reports_db_015_create_artifact_lineage_registry",
 }
 
 

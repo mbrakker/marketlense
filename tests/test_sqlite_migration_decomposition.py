@@ -26,6 +26,7 @@ MODULE_SYMBOLS = {
         "_reports_db_007_normalize_inventory_recovery_cache",
         "_reports_db_013_create_signal_candidate_projection",
         "_reports_db_014_create_claim_embedding_records",
+        "_reports_db_015_create_artifact_lineage_registry",
     },
     "state.py": {
         "_STATE_DB_MIGRATIONS",

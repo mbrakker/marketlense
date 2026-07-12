@@ -1,11 +1,16 @@
-from __future__ import annotations
-
 """Idempotency helpers for publication orchestration."""
 
-from dataclasses import asdict, replace
+from __future__ import annotations
+
 import hashlib
 import json
+from dataclasses import asdict, replace
 from typing import List
+
+from src.contracts.artifact_lineage import (
+    ARTIFACT_LINEAGE_SCHEMA_VERSION,
+    ArtifactLineageStorageLookupRequest,
+)
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
     CrossReportPublishPackage,
@@ -20,12 +25,12 @@ from src.contracts.publish import (
     PublishSettings,
 )
 from src.contracts.run_context import RunContext
-from src.services import idempotency_service
-
 from src.orchestrators._publish_orchestrator.models import (
     _CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE,
     _PUBLISH_IDEMPOTENCY_SCOPE,
 )
+from src.services import idempotency_service
+from src.services.report_store_service import get_artifact_lineage_for_storage
 
 
 def _publish_idempotency_key(*, file_id: str, post_type: str) -> str:
@@ -97,6 +102,16 @@ def _record_publish_idempotency(
 ) -> None:
     if not outcome.file_id:
         return
+    lineage = get_artifact_lineage_for_storage(
+        ArtifactLineageStorageLookupRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=settings.reports_db,
+            report_id=outcome.file_id,
+            artifact_kind="rendered_html",
+            storage_ref=outcome.html_path,
+        ),
+        ctx,
+    )
     idempotency_service.record_outcome(
         OrchestratorIdempotencyRecordRequest(
             schema_version="1.0",
@@ -113,6 +128,9 @@ def _record_publish_idempotency(
                 "status": outcome.status,
                 "post_id": outcome.post_id,
                 "post_url": outcome.post_url,
+                "lineage_artifact_id": (
+                    lineage.record.artifact_id if lineage.record is not None else ""
+                ),
             },
         ),
         ctx,
