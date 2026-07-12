@@ -849,8 +849,7 @@ def append_usage(
         and _schedule_median_rebuild(path, ctx)
     )
     export_projection_due = bool(
-        inserted
-        and canonical_event_count % _USAGE_EXPORT_PROJECTION_INTERVAL == 0
+        inserted and canonical_event_count % _USAGE_EXPORT_PROJECTION_INTERVAL == 0
     )
     if median_rebuild_scheduled:
         logger.info(
@@ -1069,7 +1068,11 @@ def _stable_json_bytes(payload: Any) -> bytes:
 
 def _projection_segment_path(ledger_path: Path, generation_id: int) -> Path:
     """Immutable generation segment retained beside the compatibility JSONL file."""
-    return ledger_path.parent / f"{ledger_path.stem}.segments" / f"{generation_id:020d}.jsonl"
+    return (
+        ledger_path.parent
+        / f"{ledger_path.stem}.segments"
+        / f"{generation_id:020d}.jsonl"
+    )
 
 
 def _projection_files_valid(
@@ -1088,7 +1091,9 @@ def _projection_files_valid(
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
         return False
     # checkpoint tuple order is stable at all call sites below.
-    event_count, source_sha256, ledger_sha256, daily_sha256, last_event_id = checkpoint[:5]
+    event_count, source_sha256, ledger_sha256, daily_sha256, last_event_id = checkpoint[
+        :5
+    ]
     return (
         sha256(ledger_content).hexdigest() == str(ledger_sha256)
         and sha256(daily_content).hexdigest() == str(daily_sha256)
@@ -1132,7 +1137,11 @@ def _acquire_projection_lease(
         """,
         key,
     ).fetchone()
-    if current is not None and str(current[1]) > now.isoformat() and str(current[0]) != holder_id:
+    if (
+        current is not None
+        and str(current[1]) > now.isoformat()
+        and str(current[0]) != holder_id
+    ):
         raise AppError(
             code="llm_usage_projection_busy",
             message="Another process is materializing this usage projection",
@@ -1427,9 +1436,7 @@ def rebuild_usage_exports(
                 generation_id=generation_id,
             )
             lease_acquired = True
-            rows = _canonical_export_rows(
-                conn, after_event_id=last_projected_event_id
-            )
+            rows = _canonical_export_rows(conn, after_event_id=last_projected_event_id)
         if not rows and not baseline_required:
             _release_projection_lease(
                 db_path=db_path,
@@ -1463,9 +1470,7 @@ def rebuild_usage_exports(
                 source_sha256=source_sha256,
                 ledger_sha256=ledger_sha256,
             )
-            daily_payload["ledger_state"]["event_count"] = int(
-                canonical_event_count
-            )
+            daily_payload["ledger_state"]["event_count"] = int(canonical_event_count)
             daily_payload["ledger_state"]["last_projected_event_id"] = int(
                 highest_event_id
             )
@@ -1492,13 +1497,17 @@ def rebuild_usage_exports(
             segment_path = _projection_segment_path(ledger_path, generation_id)
             file_service.write_bytes(
                 WriteBytesRequest(
-                    schema_version="1.0", path=str(segment_path), content=projected_content
+                    schema_version="1.0",
+                    path=str(segment_path),
+                    content=projected_content,
                 ),
                 ctx,
             )
             file_service.append_bytes(
                 AppendBytesRequest(
-                    schema_version="1.0", path=str(ledger_path), content=projected_content
+                    schema_version="1.0",
+                    path=str(ledger_path),
+                    content=projected_content,
                 ),
                 ctx,
             )
@@ -1712,7 +1721,10 @@ def evaluate_daily_spend_guardrail(
                 (day_utc,),
             ).fetchone()[0]
         median_path = _median_db_path(Path(request.db_path))
-        if all((request.provider, request.task, request.action, request.model)) and median_path.is_file():
+        if (
+            all((request.provider, request.task, request.action, request.model))
+            and median_path.is_file()
+        ):
             with sqlite3.connect(median_path) as median_conn:
                 median_row = median_conn.execute(
                     """
@@ -1721,7 +1733,13 @@ def evaluate_daily_spend_guardrail(
                     where provider = ? and task = ? and action = ? and model = ?
                       and prompt_namespace = ?
                     """,
-                    (request.provider, request.task, request.action, request.model, request.prompt_namespace),
+                    (
+                        request.provider,
+                        request.task,
+                        request.action,
+                        request.model,
+                        request.prompt_namespace,
+                    ),
                 ).fetchone()
             if median_row is not None:
                 median_sample_count = int(median_row[0])
@@ -1745,24 +1763,35 @@ def evaluate_daily_spend_guardrail(
     else:
         decision = "allow"
     response = LLMUsageSpendGuardrailResponse(
-        schema_version="1.0", day_utc=day_utc, canonical_spend_usd=spend,
-        median_forecast_usd=median_forecast, median_sample_count=median_sample_count,
+        schema_version="1.0",
+        day_utc=day_utc,
+        canonical_spend_usd=spend,
+        median_forecast_usd=median_forecast,
+        median_sample_count=median_sample_count,
         projected_spend_usd=projected_spend,
         forecast_status="matched" if median_sample_count else "cold_start",
-        warn_usd=float(request.warn_usd), decision=decision,
+        warn_usd=float(request.warn_usd),
+        decision=decision,
     )
     logger.info(
         log_event(
-            ctx, role="service", event="llm_usage_spend_guardrail_evaluated",
+            ctx,
+            role="service",
+            event="llm_usage_spend_guardrail_evaluated",
             module=logger.name,
-            fields={"day_utc": response.day_utc, "canonical_spend_usd": response.canonical_spend_usd,
-                    "median_forecast_usd": response.median_forecast_usd,
-                    "median_sample_count": response.median_sample_count,
-                    "projected_spend_usd": response.projected_spend_usd,
-                    "forecast_status": response.forecast_status,
-                    "warn_usd": response.warn_usd, "decision": response.decision,
-                    "pause_usd": request.pause_usd, "stop_usd": request.stop_usd,
-                    "overrides_allowed": request.overrides_allowed},
+            fields={
+                "day_utc": response.day_utc,
+                "canonical_spend_usd": response.canonical_spend_usd,
+                "median_forecast_usd": response.median_forecast_usd,
+                "median_sample_count": response.median_sample_count,
+                "projected_spend_usd": response.projected_spend_usd,
+                "forecast_status": response.forecast_status,
+                "warn_usd": response.warn_usd,
+                "decision": response.decision,
+                "pause_usd": request.pause_usd,
+                "stop_usd": request.stop_usd,
+                "overrides_allowed": request.overrides_allowed,
+            },
         )
     )
     return response
@@ -1793,7 +1822,9 @@ def reconcile_usage_export(
                 """
             ).fetchone()
             highest_event_id = int(
-                conn.execute("select coalesce(max(id), 0) from llm_usage_events").fetchone()[0]
+                conn.execute(
+                    "select coalesce(max(id), 0) from llm_usage_events"
+                ).fetchone()[0]
             )
             canonical_rows = _canonical_export_rows(conn)
             checkpoint = None
@@ -1859,8 +1890,7 @@ def reconcile_usage_export(
     canonical_ids = [
         int(row["extra"]["canonical_event_id"])
         for row in export_rows
-        if isinstance(row.get("extra"), dict)
-        and "canonical_event_id" in row["extra"]
+        if isinstance(row.get("extra"), dict) and "canonical_event_id" in row["extra"]
     ]
     expected_canonical_ids = [
         int(row["extra"]["canonical_event_id"]) for row in canonical_rows
@@ -1885,7 +1915,9 @@ def reconcile_usage_export(
         expected_daily["ledger_state"]["event_count"] = int(sqlite_totals[0])
         expected_daily["ledger_state"]["last_projected_event_id"] = highest_event_id
         try:
-            daily_matches = daily_path.read_bytes() == _stable_json_bytes(expected_daily)
+            daily_matches = daily_path.read_bytes() == _stable_json_bytes(
+                expected_daily
+            )
         except OSError:
             daily_matches = False
         checkpoint_matches = _projection_files_valid(

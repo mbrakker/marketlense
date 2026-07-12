@@ -397,7 +397,8 @@ def test_llm_usage_ledger_updates_outcome_and_reconciles_json_export(
     assert reconciliation.matches is True
     with sqlite3.connect(db_path) as conn:
         row = conn.execute(
-            "select parse_status, schema_validation_status, error_stage, error_code from llm_usage_events"
+            "select parse_status, schema_validation_status, error_stage, error_code "
+            "from llm_usage_events"
         ).fetchone()
     assert row == (
         "invalid",
@@ -448,7 +449,9 @@ def test_llm_usage_exports_rebuild_stably_and_reconciliation_repairs_tampering(
     assert incremental.projected_event_count == 1
     assert incremental.event_count == 3
     assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 3
-    segment_path = ledger_path.parent / "cost-ledger.segments" / "00000000000000000002.jsonl"
+    segment_path = (
+        ledger_path.parent / "cost-ledger.segments" / "00000000000000000002.jsonl"
+    )
     assert segment_path.read_text(encoding="utf-8").count("\n") == 1
     ledger_path.write_text('{"altered":true}\n', encoding="utf-8")
     reconciled = svc.reconcile_usage_export(
@@ -472,7 +475,72 @@ def test_llm_usage_exports_rebuild_stably_and_reconciliation_repairs_tampering(
     assert checkpoint == (3,)
 
 
-def test_finalized_projected_event_refreshes_its_derived_outcome(tmp_path: Path) -> None:
+def test_cached_provider_usage_reconciliation_rejects_tampered_cached_tokens(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    ledger_path = tmp_path / "cost-ledger.jsonl"
+    daily_path = tmp_path / "cost-daily.json"
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            entry=replace(
+                _entry(), cached_input_tokens=8, cache_decision="provider_hit"
+            ),
+        ),
+        _ctx(),
+    )
+    svc.rebuild_usage_exports(
+        LLMUsageExportRebuildRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+
+    verified = svc.reconcile_usage_export(
+        LLMUsageLedgerReconciliationRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+
+    assert verified.matches is True
+    assert verified.sqlite_cached_input_tokens == 8
+    assert verified.export_cached_input_tokens == 8
+    with sqlite3.connect(db_path) as conn:
+        checkpoint_source_sha256 = conn.execute(
+            "select source_sha256 from llm_usage_export_checkpoints"
+        ).fetchone()
+    assert checkpoint_source_sha256 is not None
+    assert checkpoint_source_sha256[0]
+    payload = json.loads(ledger_path.read_text(encoding="utf-8"))
+    payload["cached_input_tokens"] = 0
+    ledger_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    tampered = svc.reconcile_usage_export(
+        LLMUsageLedgerReconciliationRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+
+    assert tampered.matches is False
+    assert tampered.sqlite_cached_input_tokens == 8
+    assert tampered.export_cached_input_tokens == 0
+
+
+def test_finalized_projected_event_refreshes_its_derived_outcome(
+    tmp_path: Path,
+) -> None:
     db_path = tmp_path / "usage.sqlite"
     ledger_path = tmp_path / "cost-ledger.jsonl"
     daily_path = tmp_path / "cost-daily.json"
@@ -480,7 +548,9 @@ def test_finalized_projected_event_refreshes_its_derived_outcome(tmp_path: Path)
         LLMUsageLedgerAppendRequest(
             schema_version="1.0",
             db_path=str(db_path),
-            entry=replace(_entry(), timestamp_utc=datetime.now(timezone.utc).isoformat()),
+            entry=replace(
+                _entry(), timestamp_utc=datetime.now(timezone.utc).isoformat()
+            ),
         ),
         _ctx(),
     )
@@ -514,7 +584,9 @@ def test_finalized_projected_event_refreshes_its_derived_outcome(tmp_path: Path)
     assert row["extra"]["event_outcome"]["error_code"] == "openai_response_invalid_json"
 
 
-def test_projection_status_reports_bounded_pending_canonical_cost(tmp_path: Path) -> None:
+def test_projection_status_reports_bounded_pending_canonical_cost(
+    tmp_path: Path,
+) -> None:
     db_path = tmp_path / "usage.sqlite"
     ledger_path = tmp_path / "cost-ledger.jsonl"
     daily_path = tmp_path / "cost-daily.json"
@@ -522,7 +594,9 @@ def test_projection_status_reports_bounded_pending_canonical_cost(tmp_path: Path
         LLMUsageLedgerAppendRequest(
             schema_version="1.0",
             db_path=str(db_path),
-            entry=replace(_entry(), timestamp_utc=datetime.now(timezone.utc).isoformat()),
+            entry=replace(
+                _entry(), timestamp_utc=datetime.now(timezone.utc).isoformat()
+            ),
         ),
         _ctx(),
     )
@@ -544,13 +618,17 @@ def test_projection_status_reports_bounded_pending_canonical_cost(tmp_path: Path
     assert status.files_valid is False
 
 
-def test_daily_spend_guardrail_uses_canonical_events_not_lagging_export(tmp_path: Path) -> None:
+def test_daily_spend_guardrail_uses_canonical_events_not_lagging_export(
+    tmp_path: Path,
+) -> None:
     db_path = tmp_path / "usage.sqlite"
     svc.append_usage(
         LLMUsageLedgerAppendRequest(
             schema_version="1.0",
             db_path=str(db_path),
-            entry=replace(_entry(), timestamp_utc=datetime.now(timezone.utc).isoformat()),
+            entry=replace(
+                _entry(), timestamp_utc=datetime.now(timezone.utc).isoformat()
+            ),
         ),
         _ctx(),
     )

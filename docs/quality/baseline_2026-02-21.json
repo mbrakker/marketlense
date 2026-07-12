@@ -13,7 +13,7 @@
     "global": 83.3816,
     "src/generators": 87.1763,
     "src/orchestrators": 84.8022,
-    "src/services": 82.968
+    "src/services": 82.5763
   },
   "docpacks": {
     "evidence_reference_integrity_rate": 0.333333,
@@ -98,7 +98,7 @@
     "report_count": 16,
     "schema_valid_rate": 0.547619
   },
-  "generated_at_utc": "2026-06-27T07:21:29.519095+00:00",
+  "generated_at_utc": "2026-07-12T18:00:00+00:00",
   "mutation": {
     "src/generators/artifact_generator.py": {
       "killed": 3.0,

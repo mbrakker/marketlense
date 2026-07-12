@@ -25,3 +25,13 @@ allowlist:
     reason: "Adds one publishing namespace for grounded cover-semantics classification."
     expires_on: "2026-07-31"
     max_delta_absolute: 1
+  - pattern: "families.set"
+    owner: "market-lense"
+    reason: "Adds the approved crop_qa_escalation prompt family; the bounded new dry-run is tracked until the next corpus-baseline review."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 1
+  - pattern: "families.browser_download.total_tokens"
+    owner: "market-lense"
+    reason: "Current browser-download prompts include the approved acquisition-route context, with a bounded 90-token increase and no browser-attempt or OCR increase."
+    expires_on: "2026-07-31"
+    max_delta_absolute: 90

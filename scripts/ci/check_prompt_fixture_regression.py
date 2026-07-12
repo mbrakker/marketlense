@@ -140,16 +140,24 @@ def compare_prompt_fixture_metrics(
     if baseline_families != current_families:
         missing = sorted(baseline_families - current_families)
         added = sorted(current_families - baseline_families)
-        failures.append(
-            PromptRegressionFailure(
-                metric_path="families.set",
-                baseline=float(len(baseline_families)),
-                current=float(len(current_families)),
-                delta=float(len(current_families) - len(baseline_families)),
-                delta_percent=None,
-                reason=f"family set mismatch; missing={missing} added={added}",
+        delta = float(len(current_families) - len(baseline_families))
+        if missing or not _is_allowlisted(
+            metric_path="families.set",
+            delta=delta,
+            delta_percent=None,
+            allowlist=allowlist,
+            today=current_date,
+        ):
+            failures.append(
+                PromptRegressionFailure(
+                    metric_path="families.set",
+                    baseline=float(len(baseline_families)),
+                    current=float(len(current_families)),
+                    delta=delta,
+                    delta_percent=None,
+                    reason=f"family set mismatch; missing={missing} added={added}",
+                )
             )
-        )
 
     for metric in REGRESSION_METRICS:
         baseline_totals = float(((baseline.get("totals") or {}).get(metric) or 0.0))
