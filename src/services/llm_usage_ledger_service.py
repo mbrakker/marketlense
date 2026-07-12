@@ -1699,6 +1699,8 @@ def evaluate_daily_spend_guardrail(
             retryable=False,
         )
     day_utc = datetime.now(timezone.utc).date().isoformat()
+    median_forecast = 0.0
+    median_sample_count = 0
     try:
         with _LOCK, sqlite3.connect(request.db_path) as conn:
             _ensure_schema(conn)
@@ -1709,6 +1711,21 @@ def evaluate_daily_spend_guardrail(
                 """,
                 (day_utc,),
             ).fetchone()[0]
+        median_path = _median_db_path(Path(request.db_path))
+        if all((request.provider, request.task, request.action, request.model)) and median_path.is_file():
+            with sqlite3.connect(median_path) as median_conn:
+                median_row = median_conn.execute(
+                    """
+                    select sample_count, median_estimated_cost_usd
+                    from llm_usage_medians
+                    where provider = ? and task = ? and action = ? and model = ?
+                      and prompt_namespace = ?
+                    """,
+                    (request.provider, request.task, request.action, request.model, request.prompt_namespace),
+                ).fetchone()
+            if median_row is not None:
+                median_sample_count = int(median_row[0])
+                median_forecast = round(float(median_row[1]), 6)
     except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
         raise AppError(
             code="llm_usage_spend_guardrail_failed",
@@ -1718,16 +1735,20 @@ def evaluate_daily_spend_guardrail(
             context={"db_path": request.db_path},
         ) from exc
     spend = round(float(recorded or 0.0), 6)
-    if request.stop_usd is not None and spend >= float(request.stop_usd):
+    projected_spend = round(spend + median_forecast, 6)
+    if request.stop_usd is not None and projected_spend >= float(request.stop_usd):
         decision = "stop"
-    elif request.pause_usd is not None and spend >= float(request.pause_usd):
+    elif request.pause_usd is not None and projected_spend >= float(request.pause_usd):
         decision = "pause"
-    elif float(request.warn_usd) >= 0.0 and spend >= float(request.warn_usd):
+    elif float(request.warn_usd) >= 0.0 and projected_spend >= float(request.warn_usd):
         decision = "warn"
     else:
         decision = "allow"
     response = LLMUsageSpendGuardrailResponse(
         schema_version="1.0", day_utc=day_utc, canonical_spend_usd=spend,
+        median_forecast_usd=median_forecast, median_sample_count=median_sample_count,
+        projected_spend_usd=projected_spend,
+        forecast_status="matched" if median_sample_count else "cold_start",
         warn_usd=float(request.warn_usd), decision=decision,
     )
     logger.info(
@@ -1735,6 +1756,10 @@ def evaluate_daily_spend_guardrail(
             ctx, role="service", event="llm_usage_spend_guardrail_evaluated",
             module=logger.name,
             fields={"day_utc": response.day_utc, "canonical_spend_usd": response.canonical_spend_usd,
+                    "median_forecast_usd": response.median_forecast_usd,
+                    "median_sample_count": response.median_sample_count,
+                    "projected_spend_usd": response.projected_spend_usd,
+                    "forecast_status": response.forecast_status,
                     "warn_usd": response.warn_usd, "decision": response.decision,
                     "pause_usd": request.pause_usd, "stop_usd": request.stop_usd,
                     "overrides_allowed": request.overrides_allowed},

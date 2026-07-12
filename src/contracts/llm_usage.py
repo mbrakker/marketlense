@@ -402,6 +402,11 @@ class LLMUsageSpendGuardrailRequest:
     overrides_allowed: bool = field(
         default=False, metadata={"doc": "Whether operator overrides may bypass a pause or stop."}
     )
+    provider: str = field(default="", metadata={"doc": "Provider for the exact median-cost lookup."})
+    task: str = field(default="", metadata={"doc": "Normalized task for the exact median-cost lookup."})
+    action: str = field(default="", metadata={"doc": "Action for the exact median-cost lookup."})
+    model: str = field(default="", metadata={"doc": "Model for the exact median-cost lookup."})
+    prompt_namespace: str = field(default="", metadata={"doc": "Prompt namespace for the exact median-cost lookup."})
 
 
 @dataclass(frozen=True)
@@ -409,6 +414,10 @@ class LLMUsageSpendGuardrailResponse:
     schema_version: str = field(metadata={"doc": "Spend-guardrail response schema version."})
     day_utc: str = field(metadata={"doc": "UTC day evaluated for canonical spend."})
     canonical_spend_usd: float = field(metadata={"doc": "Canonical spend recorded for the UTC day."})
+    median_forecast_usd: float = field(metadata={"doc": "Exact matching historical median cost forecast for the pending call."})
+    median_sample_count: int = field(metadata={"doc": "Sample count supporting the exact median forecast."})
+    projected_spend_usd: float = field(metadata={"doc": "Canonical spend plus median forecast used for the decision."})
+    forecast_status: str = field(metadata={"doc": "Median forecast status: matched or cold_start."})
     warn_usd: float = field(metadata={"doc": "Configured UTC daily warning threshold."})
     decision: str = field(metadata={"doc": "Explicit guardrail decision: allow, warn, pause, or stop."})
 

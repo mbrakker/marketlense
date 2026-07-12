@@ -87,6 +87,8 @@ def _openai_client_factory() -> Any | None:
 
 
 def _enforce_daily_spend_guardrail(request: Any, ctx: RunContext, *, operation: str) -> None:
+    raw_task = str(ctx.task_id)
+    _, marker, semantic_task = raw_task.rpartition(":vector_store:")
     guardrail = evaluate_daily_spend_guardrail(
         LLMUsageSpendGuardrailRequest(
             schema_version="1.0",
@@ -95,6 +97,11 @@ def _enforce_daily_spend_guardrail(request: Any, ctx: RunContext, *, operation: 
             pause_usd=float(getattr(request, "daily_spend_pause_usd", 5.0)),
             stop_usd=float(getattr(request, "daily_spend_stop_usd", 6.0)),
             overrides_allowed=False,
+            provider="openai",
+            task=semantic_task if marker and semantic_task else operation,
+            action=operation,
+            model=str(getattr(request, "model", "")),
+            prompt_namespace=str(getattr(request, "prompt_namespace", "")),
         ),
         ctx,
     )
@@ -106,6 +113,8 @@ def _enforce_daily_spend_guardrail(request: Any, ctx: RunContext, *, operation: 
             context={
                 "operation": operation,
                 "canonical_spend_usd": guardrail.canonical_spend_usd,
+                "median_forecast_usd": guardrail.median_forecast_usd,
+                "projected_spend_usd": guardrail.projected_spend_usd,
                 "warn_usd": guardrail.warn_usd,
             },
         )

@@ -589,6 +589,44 @@ def test_daily_spend_guardrail_uses_canonical_events_not_lagging_export(tmp_path
     assert stopped.decision == "stop"
 
 
+def test_daily_spend_guardrail_forecasts_exact_task_median_before_call(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    entry = replace(_entry(), timestamp_utc=datetime.now(timezone.utc).isoformat())
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0", db_path=str(db_path), entry=entry
+        ),
+        _ctx(),
+    )
+    svc.rebuild_usage_medians(
+        LLMUsageMedianRebuildRequest(schema_version="1.0", db_path=str(db_path)),
+        _ctx(),
+    )
+
+    guardrail = svc.evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            warn_usd=0.0015,
+            provider=entry.provider,
+            task=entry.action,
+            action=entry.action,
+            model=entry.model,
+            prompt_namespace=entry.prompt_namespace,
+        ),
+        _ctx(),
+    )
+
+    assert guardrail.canonical_spend_usd == 0.001
+    assert guardrail.median_forecast_usd == 0.001
+    assert guardrail.median_sample_count == 1
+    assert guardrail.projected_spend_usd == 0.002
+    assert guardrail.forecast_status == "matched"
+    assert guardrail.decision == "warn"
+
+
 def test_concurrent_projection_generations_preserve_one_consistent_checkpoint(
     tmp_path: Path,
 ) -> None:

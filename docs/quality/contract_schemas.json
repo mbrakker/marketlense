@@ -18920,7 +18920,13 @@
     "src.contracts.llm_usage.LLMUsageSpendGuardrailRequest": {
       "additionalProperties": false,
       "properties": {
+        "action": {
+          "type": "string"
+        },
         "db_path": {
+          "type": "string"
+        },
+        "model": {
           "type": "string"
         },
         "overrides_allowed": {
@@ -18936,6 +18942,12 @@
             }
           ]
         },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -18948,6 +18960,9 @@
               "type": "null"
             }
           ]
+        },
+        "task": {
+          "type": "string"
         },
         "warn_usd": {
           "type": "number"
@@ -18972,6 +18987,18 @@
         "decision": {
           "type": "string"
         },
+        "forecast_status": {
+          "type": "string"
+        },
+        "median_forecast_usd": {
+          "type": "number"
+        },
+        "median_sample_count": {
+          "type": "integer"
+        },
+        "projected_spend_usd": {
+          "type": "number"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -18983,6 +19010,10 @@
         "schema_version",
         "day_utc",
         "canonical_spend_usd",
+        "median_forecast_usd",
+        "median_sample_count",
+        "projected_spend_usd",
+        "forecast_status",
         "warn_usd",
         "decision"
       ],
