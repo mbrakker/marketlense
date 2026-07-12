@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 from urllib.parse import unquote, urlparse
 
+from bs4 import BeautifulSoup
+
 from src.contracts.categories import CategoryMappingLoadRequest
 from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
 from src.contracts.publish import (
@@ -460,14 +462,15 @@ def _validate_publish_editorial_contract(html_text: str) -> list[str]:
                 ),
             )
         )
+    text_content = _visible_text_for_editorial_checks(html_text)
+    lowered_text = text_content.casefold()
     generic_patterns = (
         "valuable insights",
         "in today's rapidly evolving",
         "it is important to note",
         "overall, this report",
     )
-    lowered = html_text.casefold()
-    if any(pattern in lowered for pattern in generic_patterns):
+    if any(pattern in lowered_text for pattern in generic_patterns):
         issues.append(
             _editorial_issue(
                 rule_id="editorial.generic_phrasing",
@@ -480,8 +483,7 @@ def _validate_publish_editorial_contract(html_text: str) -> list[str]:
         )
     if re.search(
         r"\b(?:canonical_claim_id|report:[a-z0-9_.:-]+|[a-z]+-internal-\d+)\b",
-        html_text,
-        flags=re.IGNORECASE,
+        text_content,
     ):
         issues.append(
             _editorial_issue(
@@ -494,8 +496,6 @@ def _validate_publish_editorial_contract(html_text: str) -> list[str]:
                 ),
             )
         )
-    text_content = _visible_text_for_editorial_checks(html_text)
-    lowered_text = text_content.casefold()
     if re.search(
         r"\b(?:will|must|proves?|transform)\b.{0,80}\b(?:without source support|without evidence|unsupported)\b",
         lowered_text,
@@ -564,14 +564,10 @@ def _validate_publish_editorial_contract(html_text: str) -> list[str]:
 
 
 def _visible_text_for_editorial_checks(html_text: str) -> str:
-    without_scripts = re.sub(
-        r"<(?:script|style)\b[^>]*>.*?</(?:script|style)>",
-        " ",
-        html_text,
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-    text = re.sub(r"<[^>]+>", " ", without_scripts)
-    return html.unescape(" ".join(text.split()))
+    document = BeautifulSoup(html_text, "html.parser")
+    for node in document(("script", "style")):
+        node.decompose()
+    return html.unescape(" ".join(document.get_text(" ", strip=True).split()))
 
 
 def _has_duplicate_sentence(text: str) -> bool:
