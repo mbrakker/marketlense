@@ -241,6 +241,15 @@ Scoring:
     - Missing per-service integration coverage requires a marked test or explicit temporary waiver.
     - README documents how to add and retire waivers.
 
+- **Title:** Restore service-quality coverage above the pre-June snapshot [Impact: 4/5, Effort: 3/5]
+  - Problem fixed: The measured full-suite service coverage is 82.5763%, above the enforced 47% package floor but below the previous 82.9680% aggregate snapshot after substantial service growth in accounting, browser acquisition, PDF, and lineage capabilities.
+  - Why implement: Recovering targeted coverage keeps the quality snapshot a true non-regression signal and hardens the service boundaries that now own more durable workflow state.
+  - Tradeoffs / risks: Add behavior-focused tests for real service contracts and failure recovery; do not weaken the enforced floor, add exemptions, or use coverage-only execution paths.
+  - Acceptance Criteria:
+    - Full default coverage reaches or exceeds 82.9680% for `src/services` without reducing global, generator, or orchestrator coverage.
+    - New coverage prioritizes canonical ledger recovery, browser worker lifecycle, and artifact-lineage failure paths with observable contract or persisted-state assertions.
+    - The quality baseline is refreshed only from a passing full CI run and records the exact resulting SHA.
+
 - **Title:** Surface canonical LLM projection lag to budget and release gates [Impact: 5/5, Effort: 2/5]
   - Problem fixed: Incremental token/cost exports intentionally lag by up to nineteen canonical events, but operators and budget decisions do not yet see that lag or its possible cost impact.
   - Why implement: Makes the batching performance gain safe for live spend controls and release evidence.

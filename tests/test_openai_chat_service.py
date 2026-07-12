@@ -16,6 +16,7 @@ from src.contracts.openai import (
 from src.contracts.run_context import RunContext
 from src.services import llm_service as svc
 from src.services import openai_accounting_service
+from src.services._llm_service import openai_shared
 from src.utils.errors import AppError
 
 
@@ -556,3 +557,179 @@ def test_legacy_chat_completion_policy_does_not_leak_between_requests(
             svc.openai_legacy.max_retries = original_max_retries
         elif hasattr(svc.openai_legacy, "max_retries"):
             delattr(svc.openai_legacy, "max_retries")
+
+
+def test_openai_semantic_cache_rejects_corrupt_and_expired_entries(
+    tmp_path, caplog, assert_logs_have_required_fields
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service.openai")
+    request = OpenAIJSONPromptRequest(
+        **{
+            **_chat_request(tmp_path).__dict__,
+            "response_cache_enabled": True,
+            "response_cache_dir": str(tmp_path / "cache"),
+            "response_cache_ttl_seconds": 60.0,
+        }
+    )
+    spec = openai_shared._semantic_response_cache_spec(
+        request,
+        operation="openai_chat_json",
+        params={"model": request.model},
+    )
+    assert spec is not None
+    spec.path.parent.mkdir(parents=True)
+    context = _ctx()
+
+    spec.path.write_text("not-json", encoding="utf-8")
+    assert openai_shared._read_semantic_response_cache(spec, context) is None
+    spec.path.write_text("[]", encoding="utf-8")
+    assert openai_shared._read_semantic_response_cache(spec, context) is None
+    spec.path.write_text(json.dumps({"_cache": {"key": "wrong"}}), encoding="utf-8")
+    assert openai_shared._read_semantic_response_cache(spec, context) is None
+    spec.path.write_text(
+        json.dumps(
+            {
+                "_cache": {"key": spec.key, "cached_at_epoch": 0.0},
+                "response": {"text": "stale"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert openai_shared._read_semantic_response_cache(spec, context) is None
+
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.llm_service.openai"
+    ]
+    reasons = [event["fields"].get("reason") for event in events]
+    assert reasons == ["read_failed", "invalid_payload", "key_mismatch", "expired"]
+    assert_logs_have_required_fields(events)
+
+
+def test_openai_shared_adapts_cache_contracts_and_file_failures(tmp_path) -> None:
+    source = tmp_path / "image.bin"
+    source.write_bytes(b"Market Lense")
+
+    empty_fingerprint = openai_shared._file_fingerprint("", content_hash=True)
+    missing_fingerprint = openai_shared._file_fingerprint(
+        str(tmp_path / "missing.bin"), content_hash=True
+    )
+    hashed_fingerprint = openai_shared._file_fingerprint(str(source), content_hash=True)
+    timed_fingerprint = openai_shared._file_fingerprint(str(source), content_hash=False)
+
+    assert empty_fingerprint == {"path": ""}
+    assert missing_fingerprint["error"] == "FileNotFoundError"
+    assert hashed_fingerprint["size_bytes"] == len(b"Market Lense")
+    assert hashed_fingerprint["sha256"]
+    assert timed_fingerprint["mtime_ns"] > 0
+    assert openai_shared._image_path_to_data_url(str(source)).startswith(
+        "data:application/octet-stream;base64,"
+    )
+    with pytest.raises(AppError) as exc_info:
+        openai_shared._image_path_to_data_url(str(tmp_path / "missing.png"))
+    assert exc_info.value.code == "image_not_found"
+
+    cached_response = openai_shared._openai_response_result_from_cache(
+        {
+            "schema_version": "1.0",
+            "text": '{"ok": true}',
+            "parsed_json": {"ok": True},
+            "input_tokens": 7,
+            "output_tokens": 3,
+            "tool_calls": 0,
+            "model": "gpt-4.1-mini",
+            "total_tokens": 10,
+            "request_id": "chat_cached",
+        }
+    )
+    cached_ocr = openai_shared._ocr_response_from_cache(
+        {
+            "pages": [{"page_number": 1, "text": "cached page"}],
+            "raw_text": "cached page",
+            "model": "gpt-4.1-mini",
+            "input_tokens": 7,
+            "output_tokens": 3,
+            "tool_calls": 0,
+            "request_id": "ocr_cached",
+        }
+    )
+
+    assert cached_response.parsed_json == {"ok": True}
+    assert cached_response.total_tokens == 10
+    assert cached_ocr.pages[0].page_number == 1
+    assert cached_ocr.request_id == "ocr_cached"
+
+
+def test_openai_error_classifier_uses_provider_error_semantics() -> None:
+    class _ProviderError(RuntimeError):
+        status_code = 429
+        body = {"error": {"code": "rate_limit_exceeded"}}
+
+    assert openai_shared._classify_openai_request_error(
+        _ProviderError("rate limit"),
+        default_code="default",
+        default_message="default message",
+    ) == ("default", "default message", True)
+    assert openai_shared._classify_openai_request_error(
+        RuntimeError("content_filter blocked"),
+        default_code="default",
+        default_message="default message",
+    ) == (
+        "openai_refusal",
+        "OpenAI request was refused or blocked by policy",
+        False,
+    )
+
+
+def test_openai_shared_adapts_responses_and_ocr_payload_boundaries() -> None:
+    response = SimpleNamespace(
+        id="resp_1",
+        output=[
+            SimpleNamespace(content=[SimpleNamespace(text="first")]),
+            {"content": [{"text": "second"}]},
+        ],
+        usage={
+            "input_tokens": 10,
+            "output_tokens": 4,
+            "total_tokens": 14,
+            "total_tool_calls": 2,
+        },
+    )
+    metadata = openai_shared._adapt_responses_metadata(
+        response, recover_json_object=False
+    )
+    recovered = openai_shared._adapt_responses_metadata(
+        SimpleNamespace(
+            id="resp_2",
+            output_text='prefix {"ok": true}',
+            usage=SimpleNamespace(input_tokens=3, output_tokens=2, total_tokens=None),
+        ),
+        recover_json_object=True,
+    )
+
+    assert metadata.text == "first\nsecond"
+    assert metadata.tool_calls == 2
+    assert metadata.parsed_json is None
+    assert recovered.parsed_json == {"ok": True}
+    assert recovered.total_tokens == 5
+    assert openai_shared._known_unsupported_responses_params("gpt-5-mini") == {
+        "seed",
+        "temperature",
+    }
+    assert openai_shared._coerce_pdf_ocr_pages(
+        {
+            "pages": [
+                {"page_number": "2", "text": "second"},
+                {"page_number": "1", "text": "first"},
+                {"page_number": "1", "text": "duplicate"},
+                {"page_number": "bad", "text": "invalid"},
+                {"page_number": 0, "text": "invalid"},
+            ]
+        }
+    ) == [
+        openai_shared.PdfOcrPageText(schema_version="1.0", page_number=1, text="first"),
+        openai_shared.PdfOcrPageText(
+            schema_version="1.0", page_number=2, text="second"
+        ),
+    ]
