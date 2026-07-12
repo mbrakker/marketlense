@@ -35,12 +35,12 @@ Scoring:
 
 ### 1. Cost and LLM Controls
 
-- **Title:** Enforce real-time spend guardrails across run/day/publisher budgets [Impact: 5/5, Effort: 2/5]
+- **Title:** Enforce real-time spend guardrails across day budgets [Impact: 5/5, Effort: 2/5]
   - Problem fixed: Cost ledger append and rollup paths exist, but they are post-hoc reporting. There is still no pre-call policy that warns, pauses, or blocks expensive model/browser/OCR work based on live spend.
   - Why implement: Prevents runaway spend and makes cost decisions operationally visible.
   - Tradeoffs / risks: Needs a clear operator override path so legitimate runs are not blocked silently.
   - Acceptance Criteria:
-    - YAML config defines thresholds for run, day, and publisher scopes.
+    - YAML config defines thresholds for day 
     - Orchestrators check thresholds before model, browser, OCR, or other expensive calls.
     - Breaches emit typed events, structured logs, and explicit outcomes: `warn`, `pause`, `stop`, or `override`.
     - Tests cover warn, hard-stop, and operator-override paths with output contract and log assertions.
@@ -56,33 +56,9 @@ Scoring:
     - Regression tests protect evidence retention on a fixed prompt/output corpus across the routed task families.
     - Benchmarks show token/cost reduction without quality regression on that corpus.
 
-- **Title:** Measure md5 vector-store reuse savings and stale-store risk [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: Duplicate-content vector-store reuse now exists, but operators cannot yet see avoided uploads/indexing calls or stale-store candidates across retained state.
-  - Why implement: Quantifies cost and latency savings from md5 reuse and gives retention cleanup a concrete safety signal.
-  - Tradeoffs / risks: The report must read existing state only by default and avoid remote provider calls unless explicitly requested.
-  - Acceptance Criteria:
-    - A quality command reads processed-state rows and reports duplicate md5 groups, reused vector-store count, avoided upload/indexing estimate, and rows missing reusable state.
-    - Optional live validation samples a bounded set of reused vector stores and records status without mutating state.
-    - Retention cleanup can consume the report or equivalent helper to avoid pruning stores still referenced by duplicate aliases.
-    - Tests cover duplicate grouping, missing-vector-store rows, stale status classification, and no-provider-call default behavior.
 
-- **Title:** Benchmark browser acquisition cache and deterministic autofill savings [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: Artifact cache reuse and pre-LLM form autofill now avoid expensive acquisition paths, but there is no fleet-level report showing avoided browser launches, avoided model calls, or cache rejection reasons.
-  - Why implement: Quantifies cost and latency savings and identifies publishers where deterministic forms should be promoted into route playbooks.
-  - Tradeoffs / risks: The benchmark must consume existing acquisition/state artifacts by default and avoid rerunning browser automation unless explicitly requested.
-  - Acceptance Criteria:
-    - A quality command reports acquisition-cache hits/misses/rejections, avoided browser/model-call estimates, pre-LLM autofill submit counts, and top publisher/report families by savings.
-    - Optional live validation samples a bounded set of cache hits and deterministic form routes, recording artifact validation and escalation reasons.
-    - Tests cover cache-hit accounting, hash/expiry rejection accounting, avoided-call estimates, and no-browser/no-model default behavior.
 
-- **Title:** Add ingest prefetch throughput benchmark and adaptive Drive/cache worker policy [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: Drive/cache prefetch now runs before report workers, but worker limits are still static and operators cannot see when Drive, local hashing, or report generation is the bottleneck.
-  - Why implement: Tunes throughput without increasing LLM concurrency or Drive pressure blindly.
-  - Tradeoffs / risks: Policy changes must preserve provider caps and avoid reordering outputs in ways that break checkpoint/idempotency assumptions.
-  - Acceptance Criteria:
-    - A benchmark command compares cached, uncached, and mixed existing Drive/file batches with separate Drive/cache/report timing.
-    - Adaptive policy recommends Drive/cache worker limits from observed latency and current report/LLM caps.
-    - Tests cover timing aggregation, provider-cap preservation, output-order preservation, and deterministic recommendations.
+
 
 ---
 
@@ -222,25 +198,6 @@ Scoring:
     - Report pages begin with related reports, related briefings, topic links, and publisher links; other relationship modules require measurable engagement and useful inventory before promotion.
     - Tests prove public output redacts internal processing diagnostics and fails closed when approved evidence/projection data is absent.
 
-- **Title:** Benchmark route-memory avoided browser spend from mailbox and download outcomes [Impact: 4/5, Effort: 2/5]
-  - Problem fixed: Mailbox successes now promote publisher route memory, but operators need a measured report showing avoided browser launches, avoided model calls, and route-success stability over retained publisher evidence.
-  - Why implement: Quantifies cost/speed gains from the new feedback loop and gives a guardrail if stale route memory starts hurting acquisition quality.
-  - Tradeoffs / risks: The benchmark must use retained report-store/state evidence and avoid rerunning expensive browser flows by default.
-  - Acceptance Criteria:
-    - A quality script reads existing report-store route history and state mail-delivery rows, then estimates avoided browser/model calls by route family and publisher.
-    - Output reports exact-route reuse, publisher-policy reuse, mailbox-promoted route count, stale/conflicting memory count, and verified-success rate.
-    - The script can optionally sample a bounded live rerun set when explicitly enabled.
-    - Tests cover deterministic metric calculation and stale/conflict classification.
-
-- **Title:** Backfill public-intelligence metadata and cards across the retained published report corpus [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: New reports now publish `ml_public_intelligence` and can be archive-filtered by public intelligence availability, but older published reports need a governed backfill before the archive facet reaches full corpus value.
-  - Why implement: Makes the new topics, key figures, and chart insight cards useful at site scale instead of only for newly regenerated reports.
-  - Tradeoffs / risks: Backfill must use approved retained artifacts and WordPress metadata updates only; it must not synthesize intelligence inside WordPress runtime or alter unrelated post content.
-  - Acceptance Criteria:
-    - A backfill command scans retained report-analysis artifacts, renders or verifies public intelligence availability, and updates `ml_public_intelligence` for matching published reports through the canonical WordPress service.
-    - Output reports total reports scanned, reports updated, missing artifact blockers, and archive-facet coverage before/after.
-    - A live local WordPress run proves archive filtering returns only reports with populated public intelligence modules.
-    - Tests cover idempotent meta updates, missing artifact handling, no-runtime-intelligence synthesis, and unchanged unrelated post meta.
 
 - **Title:** Add advisory `so_what` / `now_what` remediation from retained render benchmark gaps [Impact: 4/5, Effort: 3/5]
   - Problem fixed: The retained public-advisory benchmark can now measure `so_what` and `now_what` coverage, and live verification found older retained artifacts with advisory coverage but zero `so_what`/`now_what` availability.
@@ -254,7 +211,6 @@ Scoring:
 
 ### 6. Architecture, Schema Compatibility, and Observability
 
-
 - **Title:** Operationalize lineage-driven selective regeneration and cost reporting [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Canonical artifact lineage now records retained checkpoint artifacts, dependency edges, compatibility metadata, and invalidation state, but pipeline planning does not yet choose the smallest valid regeneration plan or quantify avoided work from those decisions.
   - Why implement: Converts the new lineage foundation into measurable LLM/PDF/render cost and latency reductions while preserving source-to-publication traceability.
@@ -264,6 +220,7 @@ Scoring:
     - Report and cross-report publish workflows consult compatibility-aware lineage reuse before model, PDF, crop, render, and publication work.
     - A bounded quality command reports invalidation fan-out, compatible reuse hits/misses, avoided provider/PDF/render work, and lineage coverage by artifact family.
     - Retained-artifact regression tests prove render-only changes reuse analysis and source changes never reuse dependent artifacts.
+
 - **Title:** Publish release evidence reviews into CI job summaries and PR release notes [Impact: 3/5, Effort: 2/5]
   - Problem fixed: Release evidence review Markdown is now generated and archived, but reviewers still need to open the artifact bundle to see the approval surface.
   - Why implement: Puts unwaived issues, waived issues, owners, expiry dates, and artifact freshness directly where release reviewers already work.
