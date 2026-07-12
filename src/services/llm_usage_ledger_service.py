@@ -4,9 +4,10 @@ import json
 import logging
 import sqlite3
 import threading
-from hashlib import sha256
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
 from statistics import median
 from typing import Any
@@ -28,6 +29,12 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.llm_usage_ledger_service")
 _LOCK = threading.Lock()
+_MEDIAN_REBUILD_EXECUTOR = ThreadPoolExecutor(
+    max_workers=1, thread_name_prefix="llm_usage_median_rebuild"
+)
+_PENDING_MEDIAN_REBUILD_PATHS: set[str] = set()
+_PENDING_MEDIAN_REBUILD_LOCK = threading.Lock()
+_MEDIAN_REBUILD_EVENT_INTERVAL = 20
 _OUTCOME_STATUSES = {"valid", "invalid", "not_validated", "not_applicable"}
 _PROVIDER_CALL_STATUSES = {"completed", "failed"}
 
@@ -307,6 +314,49 @@ def _semantic_task(task_id: str, action: str) -> str:
     return semantic_task if marker and semantic_task else action
 
 
+def _semantic_task_event_count(conn: sqlite3.Connection, task: str) -> int:
+    rows = conn.execute("select task_id, action from llm_usage_events").fetchall()
+    return sum(_semantic_task(str(row[0]), str(row[1])) == task for row in rows)
+
+
+def _run_scheduled_median_rebuild(path: Path, ctx: RunContext, path_key: str) -> None:
+    try:
+        rebuild_usage_medians(
+            LLMUsageMedianRebuildRequest(schema_version="1.0", db_path=str(path)),
+            ctx,
+        )
+    except AppError as exc:
+        logger.error(
+            log_event(
+                ctx,
+                role="service",
+                event="llm_usage_ledger_median_rebuild_failed",
+                module=logger.name,
+                fields={"db_path": str(path), "error_code": exc.code},
+            )
+        )
+    finally:
+        with _PENDING_MEDIAN_REBUILD_LOCK:
+            _PENDING_MEDIAN_REBUILD_PATHS.discard(path_key)
+
+
+def _schedule_median_rebuild(path: Path, ctx: RunContext) -> bool:
+    path_key = str(path.resolve())
+    with _PENDING_MEDIAN_REBUILD_LOCK:
+        if path_key in _PENDING_MEDIAN_REBUILD_PATHS:
+            return False
+        _PENDING_MEDIAN_REBUILD_PATHS.add(path_key)
+    try:
+        _MEDIAN_REBUILD_EXECUTOR.submit(
+            _run_scheduled_median_rebuild, path, ctx, path_key
+        )
+    except RuntimeError:
+        with _PENDING_MEDIAN_REBUILD_LOCK:
+            _PENDING_MEDIAN_REBUILD_PATHS.discard(path_key)
+        return False
+    return True
+
+
 def _rebuild_usage_medians(
     conn: sqlite3.Connection, source_db_path: Path, median_db_path: Path
 ) -> LLMUsageMedianRebuildResponse:
@@ -543,18 +593,8 @@ def append_usage(
                 "select id from llm_usage_events where event_key = ?", (event_key,)
             ).fetchone()
             row_id = int(row[0]) if row is not None else 0
-            median_result = (
-                _rebuild_usage_medians(conn, path, median_path)
-                if inserted
-                else LLMUsageMedianRebuildResponse(
-                    schema_version="1.0",
-                    db_path=str(path),
-                    median_db_path=str(median_path),
-                    median_row_count=conn.execute(
-                        "select count(*) from llm_usage_events"
-                    ).fetchone()[0],
-                )
-            )
+            median_task = _semantic_task(str(entry.task_id), entry.action)
+            median_task_event_count = _semantic_task_event_count(conn, median_task)
     except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
         raise AppError(
             code="llm_usage_ledger_append_failed",
@@ -563,19 +603,26 @@ def append_usage(
             retryable=False,
             context={"db_path": str(path), "provider": entry.provider},
         ) from exc
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="llm_usage_ledger_medians_rebuilt",
-            module=logger.name,
-            fields={
-                "db_path": str(path),
-                "median_db_path": median_result.median_db_path,
-                "median_row_count": median_result.median_row_count,
-            },
-        )
+    median_rebuild_scheduled = bool(
+        inserted
+        and median_task_event_count % _MEDIAN_REBUILD_EVENT_INTERVAL == 0
+        and _schedule_median_rebuild(path, ctx)
     )
+    if median_rebuild_scheduled:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="llm_usage_ledger_median_rebuild_scheduled",
+                module=logger.name,
+                fields={
+                    "db_path": str(path),
+                    "median_db_path": str(median_path),
+                    "task": median_task,
+                    "task_event_count": median_task_event_count,
+                },
+            )
+        )
     logger.info(
         log_event(
             ctx,
@@ -584,8 +631,10 @@ def append_usage(
             module=logger.name,
             fields={
                 "db_path": str(path),
-                "median_db_path": median_result.median_db_path,
-                "median_row_count": median_result.median_row_count,
+                "median_db_path": str(median_path),
+                "median_rebuild_scheduled": median_rebuild_scheduled,
+                "median_task": median_task,
+                "median_task_event_count": median_task_event_count,
                 "row_id": row_id,
                 "event_key": event_key,
                 "inserted": inserted,
@@ -596,13 +645,16 @@ def append_usage(
         )
     )
     return LLMUsageLedgerAppendResponse(
-        schema_version="1.0",
+        schema_version="1.1",
         db_path=str(path),
         row_id=row_id,
         event_key=event_key,
         inserted=inserted,
-        median_db_path=median_result.median_db_path,
-        median_row_count=median_result.median_row_count,
+        median_db_path=str(median_path),
+        median_rebuild_scheduled=median_rebuild_scheduled,
+        median_task=median_task,
+        median_task_event_count=median_task_event_count,
+        median_row_count=None,
     )
 
 

@@ -148,13 +148,23 @@ class LLMUsageLedgerAppendResponse:
         metadata={"doc": "Whether this call inserted a new event instead of replaying one."}
     )
     median_db_path: str = field(
-        metadata={
-            "doc": "SQLite database path where usage medians were rebuilt."
-        }
+        metadata={"doc": "SQLite database path for derived usage medians."}
     )
-    median_row_count: int = field(
+    median_rebuild_scheduled: bool = field(
+        metadata={"doc": "Whether this write scheduled an asynchronous median rebuild."}
+    )
+    median_task: str = field(
+        metadata={"doc": "Normalized task whose event count was evaluated."}
+    )
+    median_task_event_count: int = field(
+        metadata={"doc": "Current durable source-event count for the normalized task."}
+    )
+    median_row_count: Optional[int] = field(
         metadata={
-            "doc": "Number of per-call-family median rows rebuilt from the ledger."
+            "doc": (
+                "Median rows rebuilt synchronously, or None when rebuild is "
+                "asynchronous."
+            )
         }
     )
 

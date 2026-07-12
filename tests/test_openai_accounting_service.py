@@ -122,7 +122,6 @@ def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
     assert response.usage_db_recorded is True
     assert response.usage_db_row_id == 1
     assert response.usage_db_path == str(tmp_path / "usage.sqlite")
-    assert (tmp_path / "usage_medians.sqlite").exists()
     assert len(appended_requests) == 1
     entry = appended_requests[0].entry
     assert_no_defaulted_required_fields(entry)
@@ -167,16 +166,6 @@ def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
     assert row["total_tokens"] == 1500
     assert row["estimated_cost_usd"] == 2.5
     assert row["prompt_namespace"] == "test/prompt"
-    with sqlite3.connect(tmp_path / "usage_medians.sqlite") as conn:
-        median_row = conn.execute(
-            """
-            select sample_count, median_total_tokens
-            from llm_usage_medians
-            where provider = ? and action = ? and model = ? and prompt_namespace = ?
-            """,
-            ("openai", "openai_chat_json", "gpt-test", "test/prompt"),
-        ).fetchone()
-    assert median_row == (1, 1500.0)
     assert rollup_requests == [
         CostRollupRequest(
             schema_version="1.0",
