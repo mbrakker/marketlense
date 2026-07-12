@@ -9,6 +9,7 @@ from pathlib import Path
 from src.contracts.openai import (
     OpenAIUsageAccountingRequest,
     OpenAIUsageAccountingResponse,
+    OpenAIUsageOutcomeUpdateRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services import openai_accounting_service as svc
@@ -161,6 +162,28 @@ def test_record_usage_can_write_usage_database_without_cost_ledger(tmp_path) -> 
     assert row == ("openai_chat_json", 1000, 500)
 
 
+def test_finalized_model_outcome_uses_shared_projection_finalizer(tmp_path) -> None:
+    request = _request(tmp_path)
+    recorded = svc.record_usage(request, _ctx())
+
+    updated = svc.update_usage_outcome(
+        OpenAIUsageOutcomeUpdateRequest(
+            schema_version="1.0",
+            usage_db_path=request.usage_db_path,
+            event_key=recorded.event_key,
+            parse_status="valid",
+            schema_validation_status="valid",
+            cost_ledger_path=request.cost_ledger_path,
+            cost_daily_path=request.cost_daily_path,
+        ),
+        _ctx(),
+    )
+
+    assert updated is True
+    assert (tmp_path / "ledger.jsonl").is_file()
+    assert (tmp_path / "daily.json").is_file()
+
+
 def test_record_usage_marks_unknown_model_pricing_instead_of_zero_cost_ambiguity(tmp_path) -> None:
     response = svc.record_usage(
         replace(_request(tmp_path), model="unpriced-model", request_id="unpriced"),
@@ -171,8 +194,29 @@ def test_record_usage_marks_unknown_model_pricing_instead_of_zero_cost_ambiguity
     assert response.pricing_status == "missing"
     assert response.pricing_key == ""
     with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
-        metadata = json.loads(conn.execute("select metadata_json from llm_usage_events").fetchone()[0])
+        metadata = json.loads(
+            conn.execute("select metadata_json from llm_usage_events").fetchone()[0]
+        )
     assert metadata["pricing_status"] == "missing"
+    assert metadata["pricing_rates"] == {}
+    assert len(metadata["pricing_file_sha256"]) == 64
+
+
+def test_record_usage_persists_resolved_pricing_rates_and_file_hash(tmp_path) -> None:
+    svc.record_usage(_request(tmp_path), _ctx())
+
+    with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
+        metadata = json.loads(
+            conn.execute("select metadata_json from llm_usage_events").fetchone()[0]
+        )
+
+    assert metadata["pricing_status"] == "matched"
+    assert metadata["pricing_rates"] == {
+        "input_tokens_per_1k_usd": 1.0,
+        "output_tokens_per_1k_usd": 2.0,
+        "tool_call_usd": 0.25,
+    }
+    assert len(metadata["pricing_file_sha256"]) == 64
 
 
 def test_record_usage_returns_typed_failure_when_canonical_export_write_fails(

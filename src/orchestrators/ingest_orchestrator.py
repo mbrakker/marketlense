@@ -26,10 +26,7 @@ from src.contracts.files import (
     ReadTextRequest,
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
-from src.contracts.llm_usage import (
-    LLMUsageExportRebuildRequest,
-    LLMUsageProjectionStatusRequest,
-)
+from src.contracts.llm_usage import LLMUsageProjectionStatusRequest
 from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
@@ -78,8 +75,7 @@ from src.services.file_cache_service import (
 )
 from src.services.file_service import delete_file, file_exists, file_stat, read_text
 from src.services.llm_usage_ledger_service import (
-    get_projection_status,
-    rebuild_usage_exports,
+    finalize_usage_projection,
 )
 from src.services.pdf_service import check_pdf_eof
 from src.services.report_store_service import (
@@ -1099,7 +1095,7 @@ def _finalize_usage_projection(settings: IngestSettings, root_ctx: RunContext) -
     ).exists:
         return
     try:
-        status = get_projection_status(
+        status = finalize_usage_projection(
             LLMUsageProjectionStatusRequest(
                 schema_version="1.0",
                 db_path=settings.usage_db_path,
@@ -1108,18 +1104,6 @@ def _finalize_usage_projection(settings: IngestSettings, root_ctx: RunContext) -
             ),
             root_ctx,
         )
-        if status.latest_event_id and (
-            status.pending_event_count or not status.files_valid
-        ):
-            rebuild_usage_exports(
-                LLMUsageExportRebuildRequest(
-                    schema_version="1.0",
-                    db_path=settings.usage_db_path,
-                    ledger_path=settings.cost_ledger_path,
-                    daily_path=settings.cost_daily_path,
-                ),
-                root_ctx,
-            )
         logger.info(
             log_event(
                 root_ctx,

@@ -52,6 +52,7 @@ from src.services._llm_service.openai_usage_accounting import (
 from src.services._llm_service.openai_usage_accounting import (
     record_usage_accounting as _record_usage_accounting,
 )
+from src.services._llm_service.policy import spend_reservation_key
 from src.services.llm_usage_ledger_service import evaluate_daily_spend_guardrail
 from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
@@ -92,11 +93,14 @@ def _openai_client_factory() -> Any | None:
     return getattr(openai_legacy, "OpenAI", None)
 
 
-def _enforce_daily_spend_guardrail(
-    request: Any, ctx: RunContext, *, operation: str
+def enforce_daily_spend_guardrail(
+    request: Any, ctx: RunContext, *, operation: str, provider: str = "openai"
 ) -> None:
-    raw_task = str(ctx.task_id)
-    _, marker, semantic_task = raw_task.rpartition(":vector_store:")
+    prompt_namespace = str(getattr(request, "prompt_namespace", "") or "").strip()
+    namespace_parts = [part for part in prompt_namespace.split("/") if part]
+    if namespace_parts[:1] == ["report_vs"]:
+        namespace_parts = namespace_parts[1:]
+    semantic_action = ":".join(namespace_parts) or operation
     guardrail = evaluate_daily_spend_guardrail(
         LLMUsageSpendGuardrailRequest(
             schema_version="1.0",
@@ -105,17 +109,21 @@ def _enforce_daily_spend_guardrail(
             pause_usd=float(getattr(request, "daily_spend_pause_usd", 5.0)),
             stop_usd=float(getattr(request, "daily_spend_stop_usd", 6.0)),
             overrides_allowed=False,
-            provider="openai",
-            task=semantic_task if marker and semantic_task else operation,
-            action=operation,
+            provider=provider,
+            task=semantic_action,
+            action=semantic_action,
             model=str(getattr(request, "model", "")),
             prompt_namespace=str(getattr(request, "prompt_namespace", "")),
+            reservation_key=spend_reservation_key(
+                ctx, provider=provider, operation=operation
+            ),
+            reserve_in_flight=True,
         ),
         ctx,
     )
     if guardrail.decision in {"pause", "stop"}:
         raise AppError(
-            code=f"openai_daily_spend_{guardrail.decision}",
+            code=f"{provider}_daily_spend_{guardrail.decision}",
             message=(
                 "Canonical daily spend reached the configured "
                 f"{guardrail.decision} threshold"
@@ -134,7 +142,7 @@ def _enforce_daily_spend_guardrail(
             log_event(
                 ctx,
                 role="service",
-                event="openai_spend_warning",
+                event=f"{provider}_spend_warning",
                 module=logger.name,
                 fields={
                     "operation": operation,

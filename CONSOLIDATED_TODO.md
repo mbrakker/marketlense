@@ -35,15 +35,15 @@ Scoring:
 
 ### 1. Cost and LLM Controls
 
-- **Title:** Enforce real-time spend guardrails across day budgets [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: Cost ledger append and rollup paths exist, but they are post-hoc reporting. There is still no pre-call policy that warns, pauses, or blocks expensive model/browser/OCR work based on live spend.
-  - Why implement: Prevents runaway spend and makes cost decisions operationally visible.
-  - Tradeoffs / risks: Needs a clear operator override path so legitimate runs are not blocked silently.
+- **Title:** Route Browser Use direct calls through the canonical reserved-spend policy [Impact: 5/5, Effort: 2/5]
+  - Problem fixed: Canonical OpenAI and OpenRouter calls now reserve exact matched-median in-flight spend atomically, release it when canonical usage is recorded, and finalize the projection at call completion. Browser Use's direct vendor clients still bypass that policy, and there is no expiry-bound, actor-attributed operator override.
+  - Why implement: Extends the newly proven hard-limit behavior to the remaining expensive provider path without allowing browser automation or unbounded overrides to create a spend blind spot.
+  - Tradeoffs / risks: Browser client wiring must not add another provider boundary or cause a reservation to survive a crashed worker beyond its bounded TTL.
   - Acceptance Criteria:
-    - YAML config defines thresholds for day 
-    - Orchestrators check thresholds before model, browser, OCR, or other expensive calls.
-    - Breaches emit typed events, structured logs, and explicit outcomes: `warn`, `pause`, `stop`, or `override`.
-    - Tests cover warn, hard-stop, and operator-override paths with output contract and log assertions.
+    - Browser Use OpenAI/OpenRouter calls use the same canonical pre-call reservation and post-call release as public LLM service calls.
+    - YAML-backed, expiry-bound overrides require actor, reason, and scope; every override is durably logged and reconciled to actual canonical cost.
+    - Breaches and overrides emit typed events with provider, action, reservation, actor/reason, and expiry fields.
+    - Process-level tests cover concurrent Browser Use admission, expired reservation recovery, and override expiry without bypassing actual cost accounting.
 
 - **Title:** Implement budget-aware model routing and compaction policy rollout [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Deterministic pre-call compaction exists for JSON chat request contracts, but model resolution is still mostly static through configured OpenAI models and namespace matching. `llm_service` records budget policy as not configured.

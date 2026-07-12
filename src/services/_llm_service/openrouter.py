@@ -17,6 +17,9 @@ from src.services import openai_accounting_service
 from src.services._llm_service.context_compaction import (
     compact_prompt_request_if_needed,
 )
+from src.services._llm_service.openai_shared import (
+    enforce_daily_spend_guardrail,
+)
 from src.services._llm_service.policy import logger
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -123,6 +126,12 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
         ctx=ctx,
         operation="openrouter_chat_json",
         logger=logger,
+    )
+    enforce_daily_spend_guardrail(
+        request,
+        ctx,
+        operation="openrouter_chat_json",
+        provider="openrouter",
     )
     api_key = (
         str(getattr(request, "openrouter_api_key", "") or "").strip()
@@ -425,6 +434,8 @@ def _finalize_openrouter_usage_accounting(
             schema_validation_status=schema_validation_status,
             error_stage="output_validation" if error_code else "",
             error_code=error_code,
+            cost_ledger_path=accounting.ledger_path,
+            cost_daily_path=accounting.daily_path,
         ),
         ctx,
     )

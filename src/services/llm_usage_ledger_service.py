@@ -8,7 +8,7 @@ import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
 from statistics import median
@@ -25,15 +25,25 @@ from src.contracts.llm_usage import (
     LLMUsageLedgerOutcomeUpdateResponse,
     LLMUsageLedgerReconciliationRequest,
     LLMUsageLedgerReconciliationResponse,
+    LLMUsageMedianRebuildRequest,
+    LLMUsageMedianRebuildResponse,
     LLMUsageProjectionStatusRequest,
     LLMUsageProjectionStatusResponse,
     LLMUsageSpendGuardrailRequest,
     LLMUsageSpendGuardrailResponse,
-    LLMUsageMedianRebuildRequest,
-    LLMUsageMedianRebuildResponse,
+    LLMUsageSpendReservationReleaseRequest,
+    LLMUsageSpendReservationReleaseResponse,
 )
 from src.contracts.run_context import RunContext
 from src.services import file_service
+from src.services._llm_usage_ledger.projection_state import (
+    allocate_projection_generation,
+    ensure_projection_state_schema,
+    event_count,
+    increment_event_count,
+    increment_semantic_task_count,
+    semantic_task_count,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -335,6 +345,26 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         values (1, '') on conflict(singleton) do nothing
         """
     )
+    conn.execute(
+        """
+        create table if not exists llm_usage_spend_reservations (
+            reservation_key text primary key,
+            day_utc text not null,
+            estimated_cost_usd real not null,
+            status text not null,
+            expires_at_utc text not null,
+            created_at_utc text not null,
+            released_at_utc text not null default ''
+        )
+        """
+    )
+    conn.execute(
+        """
+        create index if not exists idx_llm_usage_spend_reservations_active
+        on llm_usage_spend_reservations(day_utc, status, expires_at_utc)
+        """
+    )
+    ensure_projection_state_schema(conn)
 
 
 def _event_key(entry: LLMUsageLedgerEntry) -> str:
@@ -505,10 +535,7 @@ def _semantic_task(task_id: str, action: str) -> str:
 
 
 def _semantic_task_event_count(conn: sqlite3.Connection, task: str) -> int:
-    row = conn.execute(
-        "select count(*) from llm_usage_events where semantic_task = ?", (task,)
-    ).fetchone()
-    return int(row[0]) if row is not None else 0
+    return semantic_task_count(conn, task)
 
 
 def _run_scheduled_median_rebuild(path: Path, ctx: RunContext, path_key: str) -> None:
@@ -643,6 +670,22 @@ def _rebuild_usage_medians(
     )
 
 
+def _clear_failed_median_rebuild(path: Path) -> None:
+    """Allow restart recovery to schedule the still-dirty durable median snapshot."""
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            _ensure_schema(conn)
+            conn.execute(
+                """
+                update llm_usage_median_state
+                set rebuild_in_progress = 0, updated_at_utc = ? where singleton = 1
+                """,
+                (datetime.now(timezone.utc).isoformat(),),
+            )
+    except (OSError, sqlite3.Error, TypeError, ValueError):
+        return
+
+
 def rebuild_usage_medians(
     request: LLMUsageMedianRebuildRequest, ctx: RunContext
 ) -> LLMUsageMedianRebuildResponse:
@@ -690,8 +733,10 @@ def rebuild_usage_medians(
             )
             rebuilt = _rebuild_usage_medians(conn, path, median_path)
     except AppError:
+        _clear_failed_median_rebuild(path)
         raise
     except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
+        _clear_failed_median_rebuild(path)
         raise AppError(
             code="llm_usage_median_rebuild_failed",
             message=f"Failed to rebuild LLM usage medians from {path}",
@@ -830,11 +875,15 @@ def append_usage(
                     """,
                     (row_id, datetime.now(timezone.utc).isoformat()),
                 )
-            canonical_event_count = int(
-                conn.execute("select count(*) from llm_usage_events").fetchone()[0]
-            )
             median_task = _semantic_task(str(entry.task_id), entry.action)
-            median_task_event_count = _semantic_task_event_count(conn, median_task)
+            if inserted:
+                canonical_event_count = increment_event_count(conn)
+                median_task_event_count = increment_semantic_task_count(
+                    conn, median_task
+                )
+            else:
+                canonical_event_count = event_count(conn)
+                median_task_event_count = _semantic_task_event_count(conn, median_task)
     except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
         raise AppError(
             code="llm_usage_ledger_append_failed",
@@ -1084,7 +1133,6 @@ def _projection_files_valid(
     if checkpoint is None or not ledger_path.is_file() or not daily_path.is_file():
         return False
     try:
-        ledger_content = ledger_path.read_bytes()
         daily_content = daily_path.read_bytes()
         daily_payload = json.loads(daily_content.decode("utf-8"))
         state = dict(daily_payload.get("ledger_state") or {})
@@ -1094,13 +1142,19 @@ def _projection_files_valid(
     event_count, source_sha256, ledger_sha256, daily_sha256, last_event_id = checkpoint[
         :5
     ]
+    generation_id = checkpoint[5] if len(checkpoint) > 5 else None
     return (
-        sha256(ledger_content).hexdigest() == str(ledger_sha256)
-        and sha256(daily_content).hexdigest() == str(daily_sha256)
-        and str(source_sha256) == sha256(ledger_content).hexdigest()
+        sha256(daily_content).hexdigest() == str(daily_sha256)
+        and str(state.get("ledger_sha256") or "") == str(ledger_sha256)
+        and str(state.get("source_sha256") or "") == str(source_sha256)
         and int(state.get("event_count") or -1) == int(event_count)
         and int(state.get("last_projected_event_id") or -1) == int(last_event_id)
-        and str(state.get("source_sha256") or "") == str(source_sha256)
+        and int(state.get("generation_id") or -1) == int(generation_id or -1)
+        and _projection_segment_path(ledger_path, int(generation_id)).is_file()
+        and sha256(
+            _projection_segment_path(ledger_path, int(generation_id)).read_bytes()
+        ).hexdigest()
+        == str(state.get("last_segment_sha256") or "")
     )
 
 
@@ -1196,6 +1250,47 @@ def _release_projection_lease(
         )
 
 
+def _renew_projection_lease(
+    conn: sqlite3.Connection,
+    *,
+    ledger_path: Path,
+    daily_path: Path,
+    holder_id: str,
+    generation_id: int,
+) -> None:
+    """Fence stale workers before they commit a projection checkpoint."""
+    now = datetime.now(timezone.utc)
+    cursor = conn.execute(
+        """
+        update llm_usage_projection_leases
+        set expires_at_utc = ?
+        where ledger_path = ? and daily_path = ? and holder_id = ?
+          and generation_id = ? and expires_at_utc > ?
+        """,
+        (
+            datetime.fromtimestamp(
+                now.timestamp() + _PROJECTION_LEASE_SECONDS, tz=timezone.utc
+            ).isoformat(),
+            str(ledger_path.resolve()),
+            str(daily_path.resolve()),
+            holder_id,
+            generation_id,
+            now.isoformat(),
+        ),
+    )
+    if cursor.rowcount != 1:
+        raise AppError(
+            code="llm_usage_projection_lease_lost",
+            message="Projection lease expired or was taken over before checkpoint commit",
+            retryable=True,
+            context={
+                "ledger_path": str(ledger_path),
+                "daily_path": str(daily_path),
+                "generation_id": generation_id,
+            },
+        )
+
+
 def _rollup_metrics(
     rows: list[dict[str, Any]], key: str
 ) -> dict[str, dict[str, float | int]]:
@@ -1243,7 +1338,13 @@ def _daily_total(day: str, metrics: dict[str, float | int]) -> dict[str, Any]:
 
 
 def _daily_export_payload(
-    rows: list[dict[str, Any]], *, db_path: Path, source_sha256: str, ledger_sha256: str
+    rows: list[dict[str, Any]],
+    *,
+    db_path: Path,
+    source_sha256: str,
+    ledger_sha256: str,
+    generation_id: int,
+    last_segment_sha256: str,
 ) -> dict[str, Any]:
     by_date = _rollup_metrics(rows, "date")
     by_run = _rollup_metrics(rows, "run_id")
@@ -1259,8 +1360,10 @@ def _daily_export_payload(
             "source": "canonical_sqlite",
             "db_path": str(db_path),
             "event_count": len(rows),
+            "generation_id": generation_id,
             "source_sha256": source_sha256,
             "ledger_sha256": ledger_sha256,
+            "last_segment_sha256": last_segment_sha256,
         },
         "totals": totals_by_date,
         "totals_by_date": totals_by_date,
@@ -1314,6 +1417,8 @@ def _increment_daily_export_payload(
     ledger_sha256: str,
     event_count: int,
     last_projected_event_id: int,
+    generation_id: int,
+    last_segment_sha256: str,
 ) -> dict[str, Any]:
     totals_by_date = {
         str(key): dict(value)
@@ -1367,9 +1472,11 @@ def _increment_daily_export_payload(
             "source": "canonical_sqlite",
             "db_path": str(db_path),
             "event_count": event_count,
+            "generation_id": generation_id,
             "last_projected_event_id": last_projected_event_id,
             "source_sha256": source_sha256,
             "ledger_sha256": ledger_sha256,
+            "last_segment_sha256": last_segment_sha256,
         },
         "totals": dict(sorted(totals_by_date.items())),
         "totals_by_date": dict(sorted(totals_by_date.items())),
@@ -1427,16 +1534,21 @@ def rebuild_usage_exports(
                 checkpoint, ledger_path, daily_path
             )
             last_projected_event_id = 0 if baseline_required else int(checkpoint[4])
-            generation_id = (int(checkpoint[5]) if checkpoint is not None else 0) + 1
-            _acquire_projection_lease(
-                conn,
-                ledger_path=ledger_path,
-                daily_path=daily_path,
-                holder_id=lease_holder_id,
-                generation_id=generation_id,
-            )
-            lease_acquired = True
             rows = _canonical_export_rows(conn, after_event_id=last_projected_event_id)
+            if rows or baseline_required:
+                generation_id = allocate_projection_generation(
+                    conn,
+                    ledger_path=str(ledger_path.resolve()),
+                    daily_path=str(daily_path.resolve()),
+                )
+                _acquire_projection_lease(
+                    conn,
+                    ledger_path=ledger_path,
+                    daily_path=daily_path,
+                    holder_id=lease_holder_id,
+                    generation_id=generation_id,
+                )
+                lease_acquired = True
         if not rows and not baseline_required:
             _release_projection_lease(
                 db_path=db_path,
@@ -1459,9 +1571,15 @@ def rebuild_usage_exports(
                 generation_id=int(checkpoint[5]),
             )
         projected_content = b"".join(_stable_json_bytes(row) for row in rows)
-        existing_ledger = b"" if baseline_required else ledger_path.read_bytes()
-        ledger_content = existing_ledger + projected_content
-        source_sha256 = sha256(ledger_content).hexdigest()
+        projected_sha256 = sha256(projected_content).hexdigest()
+        ledger_content = projected_content
+        source_sha256 = (
+            projected_sha256
+            if baseline_required
+            else sha256(
+                f"{checkpoint[1]}:{generation_id}:{projected_sha256}".encode("utf-8")
+            ).hexdigest()
+        )
         ledger_sha256 = source_sha256
         if baseline_required:
             daily_payload = _daily_export_payload(
@@ -1469,6 +1587,8 @@ def rebuild_usage_exports(
                 db_path=db_path,
                 source_sha256=source_sha256,
                 ledger_sha256=ledger_sha256,
+                generation_id=generation_id,
+                last_segment_sha256=projected_sha256,
             )
             daily_payload["ledger_state"]["event_count"] = int(canonical_event_count)
             daily_payload["ledger_state"]["last_projected_event_id"] = int(
@@ -1483,10 +1603,20 @@ def rebuild_usage_exports(
                 ledger_sha256=ledger_sha256,
                 event_count=int(canonical_event_count),
                 last_projected_event_id=int(highest_event_id),
+                generation_id=generation_id,
+                last_segment_sha256=projected_sha256,
             )
         daily_content = _stable_json_bytes(daily_payload)
         daily_sha256 = sha256(daily_content).hexdigest()
         if baseline_required:
+            file_service.write_bytes(
+                WriteBytesRequest(
+                    schema_version="1.0",
+                    path=str(_projection_segment_path(ledger_path, generation_id)),
+                    content=projected_content,
+                ),
+                ctx,
+            )
             file_service.write_bytes(
                 WriteBytesRequest(
                     schema_version="1.0", path=str(ledger_path), content=ledger_content
@@ -1519,6 +1649,13 @@ def rebuild_usage_exports(
         )
         with _LOCK, sqlite3.connect(db_path) as conn:
             _ensure_schema(conn)
+            _renew_projection_lease(
+                conn,
+                ledger_path=ledger_path,
+                daily_path=daily_path,
+                holder_id=lease_holder_id,
+                generation_id=generation_id,
+            )
             conn.execute(
                 """
                 insert into llm_usage_export_checkpoints (
@@ -1543,7 +1680,7 @@ def rebuild_usage_exports(
                     source_sha256,
                     ledger_sha256,
                     daily_sha256,
-                    max((str(row["timestamp_utc"]) for row in rows), default=""),
+                    datetime.now(timezone.utc).isoformat(),
                     int(highest_event_id),
                     generation_id,
                 ),
@@ -1698,6 +1835,42 @@ def get_projection_status(
     return response
 
 
+def finalize_usage_projection(
+    request: LLMUsageProjectionStatusRequest, ctx: RunContext
+) -> LLMUsageProjectionStatusResponse:
+    """Materialize pending canonical usage through the shared bounded finalizer."""
+    status = get_projection_status(request, ctx)
+    if status.latest_event_id and (
+        status.pending_event_count or not status.files_valid
+    ):
+        rebuild_usage_exports(
+            LLMUsageExportRebuildRequest(
+                schema_version="1.0",
+                db_path=request.db_path,
+                ledger_path=request.ledger_path,
+                daily_path=request.daily_path,
+            ),
+            ctx,
+        )
+        status = get_projection_status(request, ctx)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_usage_projection_finalized",
+            module=logger.name,
+            fields={
+                "latest_event_id": status.latest_event_id,
+                "projected_event_id": status.projected_event_id,
+                "pending_event_count": status.pending_event_count,
+                "files_valid": status.files_valid,
+                "projection_generation_id": status.projection_generation_id,
+            },
+        )
+    )
+    return status
+
+
 def evaluate_daily_spend_guardrail(
     request: LLMUsageSpendGuardrailRequest, ctx: RunContext
 ) -> LLMUsageSpendGuardrailResponse:
@@ -1710,9 +1883,20 @@ def evaluate_daily_spend_guardrail(
     day_utc = datetime.now(timezone.utc).date().isoformat()
     median_forecast = 0.0
     median_sample_count = 0
+    in_flight_reserved = 0.0
+    reservation_created = False
     try:
         with _LOCK, sqlite3.connect(request.db_path) as conn:
             _ensure_schema(conn)
+            now = datetime.now(timezone.utc)
+            conn.execute(
+                """
+                update llm_usage_spend_reservations
+                set status = 'expired'
+                where status = 'reserved' and expires_at_utc <= ?
+                """,
+                (now.isoformat(),),
+            )
             recorded = conn.execute(
                 """
                 select coalesce(sum(estimated_cost_usd), 0.0) from llm_usage_events
@@ -1753,15 +1937,87 @@ def evaluate_daily_spend_guardrail(
             context={"db_path": request.db_path},
         ) from exc
     spend = round(float(recorded or 0.0), 6)
-    projected_spend = round(spend + median_forecast, 6)
-    if request.stop_usd is not None and projected_spend >= float(request.stop_usd):
-        decision = "stop"
-    elif request.pause_usd is not None and projected_spend >= float(request.pause_usd):
-        decision = "pause"
-    elif float(request.warn_usd) >= 0.0 and projected_spend >= float(request.warn_usd):
-        decision = "warn"
-    else:
-        decision = "allow"
+    try:
+        with _LOCK, sqlite3.connect(request.db_path) as conn:
+            conn.execute("begin immediate")
+            _ensure_schema(conn)
+            now = datetime.now(timezone.utc)
+            existing_reservation = None
+            if request.reservation_key:
+                existing_reservation = conn.execute(
+                    """
+                    select estimated_cost_usd from llm_usage_spend_reservations
+                    where reservation_key = ? and status = 'reserved'
+                      and expires_at_utc > ?
+                    """,
+                    (request.reservation_key, now.isoformat()),
+                ).fetchone()
+            in_flight_reserved = round(
+                float(
+                    conn.execute(
+                        """
+                        select coalesce(sum(estimated_cost_usd), 0.0)
+                        from llm_usage_spend_reservations
+                        where day_utc = ? and status = 'reserved' and expires_at_utc > ?
+                        """,
+                        (day_utc, now.isoformat()),
+                    ).fetchone()[0]
+                    or 0.0
+                ),
+                6,
+            )
+            if existing_reservation is not None:
+                median_forecast = round(float(existing_reservation[0]), 6)
+                in_flight_reserved = round(in_flight_reserved - median_forecast, 6)
+            projected_spend = round(spend + in_flight_reserved + median_forecast, 6)
+            if request.stop_usd is not None and projected_spend >= float(
+                request.stop_usd
+            ):
+                decision = "stop"
+            elif request.pause_usd is not None and projected_spend >= float(
+                request.pause_usd
+            ):
+                decision = "pause"
+            elif float(request.warn_usd) >= 0.0 and projected_spend >= float(
+                request.warn_usd
+            ):
+                decision = "warn"
+            else:
+                decision = "allow"
+            if (
+                request.reserve_in_flight
+                and request.reservation_key
+                and decision in {"allow", "warn"}
+                and median_forecast > 0
+                and existing_reservation is None
+            ):
+                cursor = conn.execute(
+                    """
+                    insert into llm_usage_spend_reservations (
+                        reservation_key, day_utc, estimated_cost_usd, status,
+                        expires_at_utc, created_at_utc
+                    ) values (?, ?, ?, 'reserved', ?, ?)
+                    """,
+                    (
+                        request.reservation_key,
+                        day_utc,
+                        median_forecast,
+                        (
+                            now
+                            + timedelta(seconds=max(1, request.reservation_ttl_seconds))
+                        ).isoformat(),
+                        now.isoformat(),
+                    ),
+                )
+                reservation_created = cursor.rowcount == 1
+    except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
+        raise AppError(
+            code="llm_usage_spend_guardrail_failed",
+            message="Failed to read in-flight spend reservations",
+            cause=exc,
+            retryable=False,
+            context={"db_path": request.db_path},
+        ) from exc
     response = LLMUsageSpendGuardrailResponse(
         schema_version="1.0",
         day_utc=day_utc,
@@ -1772,6 +2028,8 @@ def evaluate_daily_spend_guardrail(
         forecast_status="matched" if median_sample_count else "cold_start",
         warn_usd=float(request.warn_usd),
         decision=decision,
+        in_flight_reserved_usd=in_flight_reserved,
+        reservation_created=reservation_created,
     )
     logger.info(
         log_event(
@@ -1786,11 +2044,63 @@ def evaluate_daily_spend_guardrail(
                 "median_sample_count": response.median_sample_count,
                 "projected_spend_usd": response.projected_spend_usd,
                 "forecast_status": response.forecast_status,
+                "in_flight_reserved_usd": response.in_flight_reserved_usd,
+                "reservation_created": response.reservation_created,
                 "warn_usd": response.warn_usd,
                 "decision": response.decision,
                 "pause_usd": request.pause_usd,
                 "stop_usd": request.stop_usd,
                 "overrides_allowed": request.overrides_allowed,
+            },
+        )
+    )
+    return response
+
+
+def release_daily_spend_reservation(
+    request: LLMUsageSpendReservationReleaseRequest, ctx: RunContext
+) -> LLMUsageSpendReservationReleaseResponse:
+    if (
+        request.schema_version != "1.0"
+        or not request.db_path
+        or not request.reservation_key
+    ):
+        raise AppError(
+            code="llm_usage_spend_reservation_release_request_invalid",
+            message="Spend-reservation release requires a canonical database and key",
+            retryable=False,
+        )
+    try:
+        with _LOCK, sqlite3.connect(request.db_path) as conn:
+            _ensure_schema(conn)
+            cursor = conn.execute(
+                """
+                update llm_usage_spend_reservations
+                set status = 'released', released_at_utc = ?
+                where reservation_key = ? and status = 'reserved'
+                """,
+                (datetime.now(timezone.utc).isoformat(), request.reservation_key),
+            )
+    except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
+        raise AppError(
+            code="llm_usage_spend_reservation_release_failed",
+            message="Failed to reconcile an in-flight LLM spend reservation",
+            cause=exc,
+            retryable=False,
+            context={"db_path": request.db_path},
+        ) from exc
+    response = LLMUsageSpendReservationReleaseResponse(
+        schema_version="1.0", released=cursor.rowcount == 1
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_usage_spend_reservation_released",
+            module=logger.name,
+            fields={
+                "reservation_key": request.reservation_key,
+                "released": response.released,
             },
         )
     )
@@ -1895,7 +2205,11 @@ def reconcile_usage_export(
     expected_canonical_ids = [
         int(row["extra"]["canonical_event_id"]) for row in canonical_rows
     ]
-    identity_matches = not canonical_ids or canonical_ids == expected_canonical_ids
+    canonical_projection = bool(canonical_ids)
+    identity_matches = (
+        canonical_ids == expected_canonical_ids if canonical_projection else True
+    )
+    payload_matches = export_rows == canonical_rows if canonical_projection else True
     daily_matches = True
     checkpoint_matches = True
     mismatch_reasons: list[str] = []
@@ -1903,14 +2217,29 @@ def reconcile_usage_export(
         mismatch_reasons.append("totals_mismatch")
     if not identity_matches:
         mismatch_reasons.append("canonical_event_identity_mismatch")
+    if not payload_matches:
+        mismatch_reasons.append("canonical_event_payload_mismatch")
     if daily_path is not None:
         expected_ledger = b"".join(_stable_json_bytes(row) for row in canonical_rows)
-        source_sha256 = sha256(expected_ledger).hexdigest()
+        source_sha256 = (
+            str(checkpoint[1]) if checkpoint else sha256(expected_ledger).hexdigest()
+        )
+        ledger_sha256 = (
+            str(checkpoint[2]) if checkpoint else sha256(expected_ledger).hexdigest()
+        )
+        generation_id = int(checkpoint[5]) if checkpoint else 0
+        segment_path = _projection_segment_path(ledger_path, generation_id)
+        try:
+            last_segment_sha256 = sha256(segment_path.read_bytes()).hexdigest()
+        except OSError:
+            last_segment_sha256 = ""
         expected_daily = _daily_export_payload(
             canonical_rows,
             db_path=db_path,
             source_sha256=source_sha256,
-            ledger_sha256=source_sha256,
+            ledger_sha256=ledger_sha256,
+            generation_id=generation_id,
+            last_segment_sha256=last_segment_sha256,
         )
         expected_daily["ledger_state"]["event_count"] = int(sqlite_totals[0])
         expected_daily["ledger_state"]["last_projected_event_id"] = highest_event_id
@@ -1927,7 +2256,13 @@ def reconcile_usage_export(
             mismatch_reasons.append("daily_projection_mismatch")
         if not checkpoint_matches:
             mismatch_reasons.append("checkpoint_mismatch")
-    matches = totals_match and identity_matches and daily_matches and checkpoint_matches
+    matches = (
+        totals_match
+        and identity_matches
+        and payload_matches
+        and daily_matches
+        and checkpoint_matches
+    )
     response = LLMUsageLedgerReconciliationResponse(
         schema_version="1.0",
         db_path=str(db_path),
