@@ -123,16 +123,63 @@ def test_publish_html_blocks_editorial_contract_failures_with_rule_ids(
     assert outcome.error == "publish_editorial_contract_failed"
     assert outcome.validation_status == "fail"
     assert any(
-        "editorial.generic_phrasing" in issue
-        for issue in outcome.validation_issues
+        "editorial.generic_phrasing" in issue for issue in outcome.validation_issues
     )
     assert any(
-        "editorial.internal_reference" in issue
-        for issue in outcome.validation_issues
+        "editorial.internal_reference" in issue for issue in outcome.validation_issues
     )
     assert (
         wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")
         == []
+    )
+
+
+def test_publish_html_ignores_text_inside_malformed_script_tags(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+) -> None:
+    settings = publish_settings_factory(validation_policy="block")
+    write_report_card_fixture(settings, "out/report.html")
+    add_card_media_responses(wordpress_http)
+    html_text = (
+        "<html><head><title>Report</title>"
+        '<meta name="editorial-contract-version" content="public-report-editorial-v1">'
+        "</head><body>Drive fileId: file123"
+        "<article>The report identifies source-backed market signals.</article>"
+        "<script>Overall, this report provides valuable insights</script malformed>"
+        "</body></html>"
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    outcome = pg.publish_html(
+        PublishRequest(
+            schema_version="1.0",
+            html_path="out/report.html",
+            auth_header="Bearer token",
+            file_id="file123",
+            html_text=html_text,
+        ),
+        settings,
+        run_context,
+    )
+
+    assert outcome.status == "published"
+    assert not any(
+        "editorial.generic_phrasing" in issue for issue in outcome.validation_issues
+    )
+    assert (
+        len(
+            wordpress_http.calls_for(
+                "POST", "https://example.com/wp-json/wp/v2/ml_report"
+            )
+        )
+        == 1
     )
 
 
@@ -180,9 +227,7 @@ def test_publish_editorial_contract_warns_for_expanded_quality_rules(
 
     assert outcome.status == "published"
     assert outcome.validation_status == "fail"
-    assert {
-        issue.split("|", 1)[0] for issue in outcome.validation_issues
-    } >= {
+    assert {issue.split("|", 1)[0] for issue in outcome.validation_issues} >= {
         "editorial.unsupported_implication",
         "editorial.duplicate_insight",
         "editorial.missing_caveat",

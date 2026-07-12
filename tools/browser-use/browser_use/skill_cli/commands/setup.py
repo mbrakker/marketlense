@@ -229,13 +229,10 @@ async def execute_actions(
 
 		elif action_type == 'configure_api_key':
 			if not json_output:
-				print('🔑 Configuring API key...')
-			from browser_use.skill_cli.api_key import save_api_key
-
+				print('🔑 Persistent API key storage is disabled')
 			if api_key:
-				save_api_key(api_key)
 				if not json_output:
-					print('✓ API key configured')
+					print('   Set BROWSER_USE_API_KEY in the launching environment instead.')
 
 		elif action_type == 'prompt_api_key':
 			if not json_output:

@@ -1345,7 +1345,7 @@ The dev requirements include third-party type stub packages used by the full-rep
 Browser Use is vendored locally at `tools/browser-use` from `https://github.com/mbrakker/browser-use` as a subordinate tool inside Market Lense.
 Root project conventions and the root `AGENTS.md` are authoritative; vendored Browser Use docs and agent-instruction files are wrappers that defer to this repo.
 Preserved upstream reference material lives in `tools/browser-use/UPSTREAM_README.md`, `tools/browser-use/UPSTREAM_AGENTS.md`, `tools/browser-use/UPSTREAM_CLAUDE.md`, and `tools/browser-use/UPSTREAM_CLOUD.md`.
-Browser Use runtime configuration also lives in the root `.env`; the vendored subtree is wired to read `C:\Programing\Market lense\.env` instead of maintaining its own local `.env`.
+Browser Use runtime configuration also lives in the root `.env`; the vendored subtree is wired to read `C:\Programing\Market lense\.env` instead of maintaining its own local `.env`. Set Browser Use credentials through `BROWSER_USE_API_KEY`; on-disk API-key persistence is disabled so secrets are never written to its local config file.
 The vendored copy also carries local CodeQL remediations for Market Lense CI: startup/setup logs avoid config-derived secret values, sensitive-data placeholder logs report counts and sanitized hosts only, example HTML-to-text conversion uses an HTML parser, and URL assertions use parsed hostnames instead of substring checks. Keep these hardening patches when refreshing the vendored tree, or port them upstream before replacing it.
 To use that local source inside this project virtualenv, install it editable:
 
