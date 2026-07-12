@@ -35,15 +35,16 @@ Scoring:
 
 ### 1. Cost and LLM Controls
 
-- **Title:** Enforce real-time spend guardrails across day budgets [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: Cost ledger append and rollup paths exist, but they are post-hoc reporting. There is still no pre-call policy that warns, pauses, or blocks expensive model/browser/OCR work based on live spend.
-  - Why implement: Prevents runaway spend and makes cost decisions operationally visible.
-  - Tradeoffs / risks: Needs a clear operator override path so legitimate runs are not blocked silently.
+- **Title:** Complete a pipeline-wide budget manager beyond the current OpenAI day guardrail [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: Configured, pre-call OpenAI day guardrails now use canonical spend plus an exact matching task-median forecast for chat, image chat, embeddings, OCR, and vector-store calls. The remaining gap is a single policy for run/publisher scopes and non-OpenAI external work; the current OpenAI path has no operator override flow.
+  - Why implement: Prevents runaway spend and makes cost decisions operationally visible across unattended workflows.
+  - Tradeoffs / risks: The manager must extend the existing canonical ledger and service boundaries rather than create a parallel cost ledger or silently degrade work.
   - Acceptance Criteria:
-    - YAML config defines thresholds for day 
-    - Orchestrators check thresholds before model, browser, OCR, or other expensive calls.
-    - Breaches emit typed events, structured logs, and explicit outcomes: `warn`, `pause`, `stop`, or `override`.
-    - Tests cover warn, hard-stop, and operator-override paths with output contract and log assertions.
+    - A typed `RunBudget` covers run, day, and publisher scopes for USD, model calls, tokens, wall-clock time, retries, browser launches, Drive writes, WordPress writes, and PDFs per batch.
+    - Before each budgeted action, the manager uses the exact historical median for the matching provider/task/action/model/prompt namespace when available and records a named cold-start policy otherwise.
+    - Browser, Drive, WordPress, and other non-OpenAI expensive side effects receive the same explicit `warn`, `pause`, `defer`, `stop`, or authorized `override` outcome as model calls.
+    - Budget decisions remain visible to orchestrators and health scorecards; overrides are auditable and cannot be implicit.
+    - Tests cover normal use, warning, hard stop, defer, override, cold start, and required structured log fields.
 
 - **Title:** Implement budget-aware model routing and compaction policy rollout [Impact: 5/5, Effort: 4/5]
   - Problem fixed: Deterministic pre-call compaction exists for JSON chat request contracts, but model resolution is still mostly static through configured OpenAI models and namespace matching. `llm_service` records budget policy as not configured.
@@ -241,24 +242,23 @@ Scoring:
     - Missing per-service integration coverage requires a marked test or explicit temporary waiver.
     - README documents how to add and retire waivers.
 
-- **Title:** Include canonical LLM-accounting reconciliation in the release evidence manifest [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: SQLite-backed LLM accounting can deterministically rebuild and repair its JSONL/daily compatibility exports, but CI does not yet retain a reconciliation artifact alongside the release evidence bundle.
-  - Why implement: Makes token/cost totals, cached usage, invalid outcomes, and replay suppression auditable at release time instead of only through local service tests.
-  - Tradeoffs / risks: The gate must use a committed, representative non-secret event corpus and must not turn CI into a live-provider dependency.
+- **Title:** Add cached-provider usage to the retained LLM-accounting reconciliation corpus [Impact: 3/5, Effort: 1/5]
+  - Problem fixed: CI now rebuilds and reconciles a committed SQLite corpus, includes the reconciliation JSON in the release-evidence manifest and uploaded bundle, and covers successful, invalid, and replay-suppressed events with projection checkpoint hashes. The retained corpus has no actual cached-input/cache-hit event yet.
+  - Why implement: Makes cached-token accounting release-auditable instead of relying only on service-level coverage.
+  - Tradeoffs / risks: The fixture must remain non-secret, deterministic, and represent real provider-accounting semantics without a live call.
   - Acceptance Criteria:
-    - CI rebuilds JSONL and daily projections from a representative retained canonical SQLite corpus, reconciles them, and fails on any count/token/cost mismatch.
-    - The artifact covers successful, invalid, cached, and replayed provider events and records projection checkpoint hashes.
-    - The reconciliation JSON is included in the release-evidence manifest and uploaded bundle.
-    - Tests cover missing/altered projections, repeatable rebuilds, and manifest inclusion.
+    - The retained CI corpus includes a cached-provider usage event with non-zero cached-input tokens and its cache outcome.
+    - Reconciliation asserts cached-input totals and checkpoint hashes for that event alongside valid, invalid, and replay-suppressed records.
+    - Tests prove a tampered cached-input value fails reconciliation and the release manifest still includes the artifact.
 
-- **Title:** Surface canonical LLM projection lag to budget and release gates [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: Incremental token/cost exports intentionally lag by up to nineteen canonical events, but operators and budget decisions do not yet see that lag or its possible cost impact.
-  - Why implement: Makes the batching performance gain safe for live spend controls and release evidence.
-  - Tradeoffs / risks: The gate must distinguish normal bounded lag from a failed or stalled projection and must not force a full rebuild on every read.
+- **Title:** Consume canonical LLM projection status in budget and release decisions [Impact: 5/5, Effort: 2/5]
+  - Problem fixed: `get_projection_status` now exposes the checkpoint, latest canonical event, pending-event count, pending estimated cost, last successful projection time, and derived-file validity. Budget and release decisions do not yet consume that status.
+  - Why implement: Makes bounded incremental-export lag safe for hard spend and release decisions.
+  - Tradeoffs / risks: The consumer must distinguish normal bounded lag from a missing, stale, or invalid projection without forcing a rebuild for ordinary reads.
   - Acceptance Criteria:
-    - Projection status reports checkpoint event ID, latest canonical event ID, pending-event count, pending estimated cost, and last successful projection time.
-    - Run-budget and release evidence consume that status and either account for pending canonical usage directly or require an explicit fresh projection before a hard spend or release decision.
-    - Tests cover normal bounded lag, threshold projection, missing checkpoint, stalled projection, and no-unnecessary-rebuild behavior.
+    - Run-budget and release evidence consume projection status and either account for pending canonical usage directly or require an explicit fresh projection before a hard spend or release decision.
+    - Status consumption emits a typed, structured outcome for normal lag, threshold-triggered projection, missing checkpoint, stalled projection, and invalid derived files.
+    - Tests cover each outcome and prove ordinary status reads do not unnecessarily rebuild exports.
 
 
 ---
@@ -304,17 +304,6 @@ Scoring:
     - A reaper orchestrator retries transient failures after cooldown, resumes from valid checkpoints, invokes targeted repair where available, and escalates only irreducible blockers.
     - Attempt budgets, terminal states, and duplicate suppression are enforced through idempotency.
     - Tests cover transient recovery, permanent failure, missing credentials, stale checkpoint, repeated failure loop prevention, and runbook surfacing.
-
-- **Title:** Add a run-level budget manager for cost, tokens, time, retries, and external calls [Impact: 5/5, Effort: 3/5]
-  - Problem fixed: Cost, retry, latency, worker, browser, and model limits are configured or reported in separate places, but no online budget manager enforces total run/day/publisher constraints before each expensive action.
-  - Why implement: Autonomous execution needs predictable spend, runtime, and call ceilings without operator babysitting.
-  - Tradeoffs / risks: Budget enforcement must distinguish warning, defer, stop, and approved override outcomes without silently dropping work.
-  - Acceptance Criteria:
-    - A typed `RunBudget` contract tracks max USD, model calls, tokens, wall-clock time, retries, browser launches, Drive writes, WordPress writes, and PDFs per batch by run/day/publisher scopes.
-    - Before each model call, the manager reads the exact historical median for the matching provider/action/model/prompt namespace from `llm_usage_medians`, records the forecast sample count and projected tokens/USD, and uses only an explicit cold-start policy when no matching history exists.
-    - Orchestrators check budget before model, browser, OCR, Drive, and WordPress side effects and emit typed budget decisions.
-    - The health scorecard consumes final budget usage and reports avoided calls, budget breaches, and override usage.
-    - Tests cover normal use, warning thresholds, hard stop, defer, override, and structured log fields.
 
 - **Title:** Add model fallback policies by failure class and artifact family [Impact: 4/5, Effort: 3/5]
   - Problem fixed: Model selection is mostly namespace-static, so the system cannot automatically switch to cheaper models for easy work or stronger/different models for repeated schema or validation failures.
@@ -469,10 +458,14 @@ Supervisor workflows may start, resume, retry, repair, validate, render, create 
 
 ## Current-State Evidence
 
-- Active-backlog revalidation on 2026-07-11 checked all 37 active items against the current checkout, including README change evidence, implementation/test surfaces, CI configuration, and the current WordPress theme/plugin source. No active item met all of its acceptance criteria. Partially landed foundations were narrowed in place: public-advisory rendering/benchmarking, crop-QA sidecars, workflow-control intent/preflight profiles, supervisor plans, model-call replay bundles, release-evidence review, public-intelligence metadata, and LLM-usage medians.
+- Baseline active-backlog revalidation on 2026-07-11 checked the then-active items against the current checkout, including README change evidence, implementation/test surfaces, CI configuration, and the current WordPress theme/plugin source. No active item met all of its acceptance criteria. Partially landed foundations were narrowed in place: public-advisory rendering/benchmarking, crop-QA sidecars, workflow-control intent/preflight profiles, supervisor plans, model-call replay bundles, release-evidence review, public-intelligence metadata, and LLM-usage medians.
 - CI currently runs formatting, risk classification, split-symbol linking, typing, architecture import, forbidden patching, repository hygiene, quality ledger, remediation runbook, backlog source, contract schema snapshot, WordPress subproject, default pytest with coverage, coverage gate, mutation gate, quality non-regression, prompt fixture corpus regression, and release evidence manifest archival/freshness gates through `.github/workflows/ci.yml`.
 - Durable LLM usage accounting now keeps `state/llm_usage.sqlite` as the canonical source. Every twentieth normalized task event schedules an asynchronous median projection, while every twentieth canonical event incrementally advances JSONL/daily compatibility exports from the persisted last canonical event ID; source-ledger rebuild remains available for a missing or repaired checkpoint. Live verification on 2026-07-12 established a baseline at 413 events / canonical ID 448, then seven real OpenAI calls advanced the checkpoint to 420 events / ID 456. Export and source ID sets matched exactly, reconciliation passed, and a follow-up projection processed zero rows.
 - On 2026-07-12, canonical accounting gained atomic call-ordinal allocation, deterministic SQLite-to-JSONL/daily projections, durable projection checkpoints, repairable reconciliation, normalized path resolution, bounded terminal-outcome taxonomy, and deterministic browser-writer shutdown accounting. A real OpenAI JSON smoke call passed in 3.34s; subsequent reconciliation of 324 retained canonical events matched the export exactly at 944,640 input and 243,719 output tokens with no repair required. Full regression verification passed at 3,753 tests / 25 deselected.
+- Post-audit alignment on 2026-07-12 confirmed configured OpenAI pre-call day guardrails for chat, image chat, embeddings, OCR, and vector-store calls. They read canonical daily spend, add an exact matching task-median forecast when available, emit warning or typed pause/stop outcomes, and are covered by focused tests; pipeline-wide scopes, non-OpenAI side effects, and authorized overrides remain open.
+- The same alignment confirmed that CI builds a retained canonical LLM-accounting corpus, reconciles its SQLite/JSONL/daily projections, adds the result to the release-evidence manifest, and uploads it in the release bundle. The corpus covers valid, invalid, and replay-suppressed records but not a cache-hit event, so only cached-provider reconciliation remains active.
+- `get_projection_status` now reports canonical/export lag and pending estimated cost without rebuilding exports. Its consumption by the future run-budget and release gates remains active.
+- This alignment merges the duplicate run-level budget-manager item into the cost-control item, leaving 34 active backlog items.
 - Prompt dry-run validation and fixture-corpus regression are landed through `src/contracts/prompts.py`, `src/services/prompt_service.py`, `scripts/ci/check_prompt_fixture_regression.py`, `tests/test_prompt_dry_run_validation.py`, and `tests/test_prompt_fixture_corpus_regression.py`.
 - OCR confidence gating and native-confidence-based OCR fallback controls are landed in `src/config/app.yaml`, `src/generators/report_source_generator.py`, and the quality ledger.
 - Publisher discovery route memory, deferred recovery, direct-detail handling, KPI guardrail logging, and default-on rollout controls are landed. There is no active "publisher discovery rollout" backlog item unless a new measured gap is opened.
