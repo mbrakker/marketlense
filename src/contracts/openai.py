@@ -245,13 +245,17 @@ class OpenAIUsageAccountingResponse:
     )
     pricing_status: str = field(
         default="missing",
-        metadata={"doc": "Pricing resolution result: matched, alias_matched, missing, or invalid."},
+        metadata={
+            "doc": "Pricing resolution result: matched, alias_matched, missing, or invalid."
+        },
     )
     pricing_key: str = field(
-        default="", metadata={"doc": "Pricing table key used for the cost estimate, if any."}
+        default="",
+        metadata={"doc": "Pricing table key used for the cost estimate, if any."},
     )
     pricing_version: str = field(
-        default="", metadata={"doc": "Configured pricing-table version used for the estimate."}
+        default="",
+        metadata={"doc": "Configured pricing-table version used for the estimate."},
     )
 
 
@@ -273,6 +277,16 @@ class OpenAIUsageOutcomeUpdateRequest:
     )
     error_code: str = field(
         default="", metadata={"doc": "Bounded terminal error code, when any."}
+    )
+    cost_ledger_path: str = field(
+        default="",
+        metadata={
+            "doc": "Compatibility JSONL path to finalize when accounting succeeds."
+        },
+    )
+    cost_daily_path: str = field(
+        default="",
+        metadata={"doc": "Daily rollup path to finalize when accounting succeeds."},
     )
 
 

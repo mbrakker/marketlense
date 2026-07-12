@@ -52,6 +52,11 @@ _RATE_LIMITERS_LOCK = threading.Lock()
 _RATE_LIMITERS: dict[str, _RateLimiterState] = {}
 
 
+def spend_reservation_key(ctx: RunContext, *, provider: str, operation: str) -> str:
+    """Stable per-call key shared by spend admission and accounting reconciliation."""
+    return ":".join((provider, operation, ctx.run_id, ctx.task_id, ctx.span_id))
+
+
 def _llm_retry_decision(exc: Exception) -> _LLMRetryDecision:
     if not isinstance(exc, AppError):
         return _LLMRetryDecision(False, "non_app_error")

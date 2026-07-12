@@ -11,7 +11,7 @@ from src.services._llm_service.context_compaction import (
     compact_prompt_request_if_needed,
 )
 from src.services._llm_service.openai_shared import *
-from src.services._llm_service.openai_shared import _enforce_daily_spend_guardrail
+from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
 from src.services._llm_service.openai_client import *
 
 
@@ -429,7 +429,7 @@ def openai_chat_json(
         cached_payload = _read_semantic_response_cache(cache_spec, ctx)
         if cached_payload is not None:
             return _openai_response_result_from_cache(cached_payload)
-    _enforce_daily_spend_guardrail(request, ctx, operation="openai_chat_json")
+    enforce_daily_spend_guardrail(request, ctx, operation="openai_chat_json")
     metadata = _OpenAIResponseMetadata(
         text="",
         request_id=None,
@@ -470,7 +470,7 @@ def openai_chat_json(
             },
         ) from exc
 
-    _record_usage_accounting(
+    accounting = _record_usage_accounting(
         ctx=ctx,
         step_name="openai_chat_json",
         model=request.model,
@@ -484,6 +484,12 @@ def openai_chat_json(
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
         source_request=request,
+        parse_status="valid" if metadata.parsed_json is not None else "invalid",
+        schema_validation_status="not_applicable",
+    )
+    _finalize_usage_accounting(
+        accounting=accounting,
+        ctx=ctx,
         parse_status="valid" if metadata.parsed_json is not None else "invalid",
         schema_validation_status="not_applicable",
     )
@@ -599,7 +605,7 @@ def openai_chat_json_with_images(
         cached_payload = _read_semantic_response_cache(cache_spec, ctx)
         if cached_payload is not None:
             return _openai_response_result_from_cache(cached_payload)
-    _enforce_daily_spend_guardrail(
+    enforce_daily_spend_guardrail(
         request, ctx, operation="openai_chat_json_with_images"
     )
     image_urls = [_image_path_to_data_url(path) for path in request.image_paths]
@@ -682,7 +688,7 @@ def openai_chat_json_with_images(
         ) from exc
 
     metadata = _adapt_responses_metadata(resp, recover_json_object=False)
-    _record_usage_accounting(
+    accounting = _record_usage_accounting(
         ctx=ctx,
         step_name="openai_chat_json_with_images",
         model=request.model,
@@ -695,6 +701,12 @@ def openai_chat_json_with_images(
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
         source_request=request,
+        parse_status="valid" if metadata.parsed_json is not None else "invalid",
+        schema_validation_status="not_applicable",
+    )
+    _finalize_usage_accounting(
+        accounting=accounting,
+        ctx=ctx,
         parse_status="valid" if metadata.parsed_json is not None else "invalid",
         schema_validation_status="not_applicable",
     )

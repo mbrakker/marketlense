@@ -436,6 +436,20 @@ class LLMUsageSpendGuardrailRequest:
         default="",
         metadata={"doc": "Prompt namespace for the exact median-cost lookup."},
     )
+    reservation_key: str = field(
+        default="",
+        metadata={
+            "doc": "Idempotency key for an optional in-flight spend reservation."
+        },
+    )
+    reserve_in_flight: bool = field(
+        default=False,
+        metadata={"doc": "Whether an allowed forecast reserves budget atomically."},
+    )
+    reservation_ttl_seconds: int = field(
+        default=300,
+        metadata={"doc": "Bounded lifetime of an unreconciled in-flight reservation."},
+    )
 
 
 @dataclass(frozen=True)
@@ -464,6 +478,35 @@ class LLMUsageSpendGuardrailResponse:
     warn_usd: float = field(metadata={"doc": "Configured UTC daily warning threshold."})
     decision: str = field(
         metadata={"doc": "Explicit guardrail decision: allow, warn, pause, or stop."}
+    )
+    in_flight_reserved_usd: float = field(
+        default=0.0,
+        metadata={"doc": "Active in-flight forecast cost included in this decision."},
+    )
+    reservation_created: bool = field(
+        default=False,
+        metadata={"doc": "Whether this request atomically created a reservation."},
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageSpendReservationReleaseRequest:
+    schema_version: str = field(
+        metadata={"doc": "Reservation-release request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
+    reservation_key: str = field(
+        metadata={"doc": "Reservation idempotency key to release."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageSpendReservationReleaseResponse:
+    schema_version: str = field(
+        metadata={"doc": "Reservation-release response schema version."}
+    )
+    released: bool = field(
+        metadata={"doc": "Whether an active reservation was released."}
     )
 
 

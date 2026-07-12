@@ -149,16 +149,18 @@ All work is listed below in one register. `Active` items have detailed completio
 
 - **Title:** Pipeline-wide budget manager
 - **Impact 5 / effort: 3**
-- **Context:** OpenAI service calls already evaluate canonical daily spend plus an exact historical median forecast, but browser, Drive, WordPress, and run/publisher limits are not governed by the same policy.
+- **Context:** Canonical OpenAI and OpenRouter calls now evaluate daily spend with exact matched-median forecasts, atomically reserve in-flight cost, release it on canonical recording, and finalize their projection. Browser Use direct vendor clients, Drive, WordPress, and run/publisher limits are not yet governed by that same policy.
 - **Benefit:** Unattended runs gain predictable spend, runtime, and call ceilings before they make any expensive side effect.
 - **Risks to avoid:** Extend the canonical ledger and service boundaries; do not create a parallel ledger or silently drop work.
 
-**Current foundation:** OpenAI chat, image chat, embeddings, OCR, and vector-store calls already use canonical daily spend plus an exact task-median forecast where available.
+**Current foundation:** OpenAI chat, image chat, embeddings, OCR, vector-store, and OpenRouter JSON calls use canonical spend plus matched median and in-flight reservation where available. Projection finalization is fenced, segment-backed, and reconciled from canonical SQLite.
 
 - **Success criteria:**
 
 - Typed `RunBudget` covers run, day, and publisher scopes for spend, tokens, time, retries, browser launches, Drive/WordPress writes, and PDFs.
+- Browser Use OpenAI/OpenRouter calls use the same canonical reservation and post-call release path; a crashed worker cannot retain a reservation beyond its bounded TTL.
 - Non-OpenAI side effects receive explicit `warn`, `pause`, `defer`, `stop`, or authorized `override` decisions; cold-start forecasting is named and logged.
+- Overrides are YAML-backed, expiry-bound, and require actor, reason, and scope; each is durably logged and reconciled to actual canonical cost.
 - Health scorecards retain usage, avoided calls, breaches, and overrides; tests cover all outcomes, required log fields, and the absence of side effects after a stop/defer decision.
 
 #### A7. Policy-driven LLM routing, compaction, and same-provider fallback

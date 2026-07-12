@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone
+from hashlib import sha256
 
 from src.contracts.llm_usage import (
     LLMUsageExportRebuildRequest,
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerEntry,
     LLMUsageLedgerOutcomeUpdateRequest,
+    LLMUsageProjectionStatusRequest,
+    LLMUsageSpendReservationReleaseRequest,
 )
 from src.contracts.openai import (
     OpenAIUsageAccountingRequest,
@@ -16,6 +20,7 @@ from src.contracts.openai import (
 )
 from src.contracts.run_context import RunContext
 from src.services import llm_usage_ledger_service
+from src.services._llm_service.policy import spend_reservation_key
 from src.utils.costing import estimate_cost_usd, resolve_model_pricing
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -79,7 +84,12 @@ def _usage_total_tokens(
 
 
 def _usage_metadata(
-    request: OpenAIUsageAccountingRequest, *, pricing_status: str, pricing_key: str, pricing_version: str
+    request: OpenAIUsageAccountingRequest,
+    *,
+    pricing_status: str,
+    pricing_key: str,
+    pricing_version: str,
+    pricing_rates: dict[str, float],
 ) -> dict:
     metadata = {
         "cost_ledger_path": request.cost_ledger_path,
@@ -88,6 +98,10 @@ def _usage_metadata(
         "pricing_status": pricing_status,
         "pricing_key": pricing_key,
         "pricing_version": pricing_version,
+        "pricing_rates": pricing_rates,
+        "pricing_file_sha256": sha256(
+            json.dumps(request.model_pricing or {}, sort_keys=True).encode("utf-8")
+        ).hexdigest(),
         "emit_cost_ledger": request.emit_cost_ledger,
     }
     metadata.update(request.extra or {})
@@ -119,6 +133,22 @@ def record_usage(
         tool_calls,
         pricing=request.model_pricing or {},
     )
+    if pricing_resolution.status in {"missing", "invalid"}:
+        logger.warning(
+            log_event(
+                ctx,
+                role="service",
+                event="openai_usage_pricing_unresolved",
+                module=logger.name,
+                fields={
+                    "provider": request.provider,
+                    "model": request.model,
+                    "pricing_status": pricing_resolution.status,
+                    "pricing_key": pricing_resolution.key,
+                    "pricing_version": pricing_version,
+                },
+            )
+        )
     logger.info(
         log_event(
             ctx,
@@ -193,6 +223,7 @@ def record_usage(
                         pricing_status=pricing_resolution.status,
                         pricing_key=pricing_resolution.key,
                         pricing_version=pricing_version,
+                        pricing_rates=pricing_resolution.rates,
                     ),
                 ),
             ),
@@ -202,6 +233,16 @@ def record_usage(
         usage_db_row_id = usage_response.row_id
         usage_db_event_key = usage_response.event_key
         usage_db_inserted = usage_response.inserted
+        llm_usage_ledger_service.release_daily_spend_reservation(
+            LLMUsageSpendReservationReleaseRequest(
+                schema_version="1.0",
+                db_path=request.usage_db_path,
+                reservation_key=spend_reservation_key(
+                    ctx, provider=request.provider, operation=action
+                ),
+            ),
+            ctx,
+        )
         if (
             request.emit_cost_ledger
             and usage_response.inserted
@@ -313,4 +354,25 @@ def update_usage_outcome(
         ),
         ctx,
     )
+    if response.updated and request.cost_ledger_path and request.cost_daily_path:
+        try:
+            llm_usage_ledger_service.finalize_usage_projection(
+                LLMUsageProjectionStatusRequest(
+                    schema_version="1.0",
+                    db_path=request.usage_db_path,
+                    ledger_path=request.cost_ledger_path,
+                    daily_path=request.cost_daily_path,
+                ),
+                ctx,
+            )
+        except OPENAI_ACCOUNTING_EXCEPTIONS as exc:
+            logger.warning(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="openai_usage_projection_finalize_failed",
+                    module=logger.name,
+                    fields={"event_key": request.event_key, "error": str(exc)},
+                )
+            )
     return response.updated

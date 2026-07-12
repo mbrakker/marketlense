@@ -6,7 +6,7 @@ from src.services._llm_service.openai_client import (
     _value_from_response,
 )
 from src.services._llm_service.openai_shared import *
-from src.services._llm_service.openai_shared import _enforce_daily_spend_guardrail
+from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
 
 
 def _embedding_vectors_from_response(resp: Any) -> list[list[float]]:
@@ -97,7 +97,7 @@ def openai_create_embeddings(
             },
         )
     )
-    _enforce_daily_spend_guardrail(request, ctx, operation="openai_embeddings")
+    enforce_daily_spend_guardrail(request, ctx, operation="openai_embeddings")
     try:
         client = _build_openai_client(
             api_key=request.api_key,

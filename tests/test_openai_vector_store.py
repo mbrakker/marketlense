@@ -8,9 +8,9 @@ import pytest
 
 from src.contracts.openai import (
     OpenAIEmbeddingRequest,
-    OpenAIVectorStoreAttachFileRequest,
     OpenAIJSONImagePromptRequest,
     OpenAIResponseRequest,
+    OpenAIVectorStoreAttachFileRequest,
     OpenAIVectorStoreCreateRequest,
     OpenAIVectorStoreDeleteRequest,
     OpenAIVectorStoreFileUploadRequest,
@@ -36,7 +36,7 @@ def _events(caplog) -> list[dict[str, object]]:
     return events
 
 
-def test_openai_response_with_vector_store_defers_compatibility_export(
+def test_openai_response_with_vector_store_finalizes_compatibility_export(
     tmp_path, fake_openai
 ) -> None:
     ledger_path = tmp_path / "ledger.jsonl"
@@ -69,8 +69,8 @@ def test_openai_response_with_vector_store_defers_compatibility_export(
     assert resp.parsed_json == {"result": "ok"}
     assert resp.request_id == "resp_1"
     assert resp.total_tokens == 30
-    assert not ledger_path.exists()
-    assert not daily_path.exists()
+    assert ledger_path.is_file()
+    assert daily_path.is_file()
     assert fake_openai.calls["responses.create"][0]["tools"][0]["vector_store_ids"] == [
         "vs_123"
     ]

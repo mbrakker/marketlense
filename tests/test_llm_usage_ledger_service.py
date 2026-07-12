@@ -21,6 +21,7 @@ from src.contracts.llm_usage import (
     LLMUsageMedianRebuildRequest,
     LLMUsageProjectionStatusRequest,
     LLMUsageSpendGuardrailRequest,
+    LLMUsageSpendReservationReleaseRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services import cost_ledger_service
@@ -584,6 +585,81 @@ def test_finalized_projected_event_refreshes_its_derived_outcome(
     assert row["extra"]["event_outcome"]["error_code"] == "openai_response_invalid_json"
 
 
+def test_reconciliation_rejects_canonical_outcome_payload_tampering(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    ledger_path = tmp_path / "cost-ledger.jsonl"
+    daily_path = tmp_path / "cost-daily.json"
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0", db_path=str(db_path), entry=_entry()
+        ),
+        _ctx(),
+    )
+    svc.rebuild_usage_exports(
+        LLMUsageExportRebuildRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+    payload = json.loads(ledger_path.read_text(encoding="utf-8"))
+    payload["extra"]["event_outcome"]["parse_status"] = "invalid"
+    ledger_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+    reconciliation = svc.reconcile_usage_export(
+        LLMUsageLedgerReconciliationRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+
+    assert reconciliation.matches is False
+    assert "canonical_event_payload_mismatch" in reconciliation.mismatch_reasons
+
+
+def test_projection_status_rejects_daily_generation_mismatch(tmp_path: Path) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    ledger_path = tmp_path / "cost-ledger.jsonl"
+    daily_path = tmp_path / "cost-daily.json"
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0", db_path=str(db_path), entry=_entry()
+        ),
+        _ctx(),
+    )
+    svc.rebuild_usage_exports(
+        LLMUsageExportRebuildRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+    daily_payload = json.loads(daily_path.read_text(encoding="utf-8"))
+    daily_payload["ledger_state"]["generation_id"] += 1
+    daily_path.write_text(json.dumps(daily_payload), encoding="utf-8")
+
+    status = svc.get_projection_status(
+        LLMUsageProjectionStatusRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+
+    assert status.files_valid is False
+
+
 def test_projection_status_reports_bounded_pending_canonical_cost(
     tmp_path: Path,
 ) -> None:
@@ -703,6 +779,58 @@ def test_daily_spend_guardrail_forecasts_exact_task_median_before_call(
     assert guardrail.projected_spend_usd == 0.002
     assert guardrail.forecast_status == "matched"
     assert guardrail.decision == "warn"
+
+
+def test_spend_guardrail_reserves_and_releases_concurrent_forecast_capacity(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    entry = replace(_entry(), timestamp_utc=datetime.now(timezone.utc).isoformat())
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0", db_path=str(db_path), entry=entry
+        ),
+        _ctx(),
+    )
+    svc.rebuild_usage_medians(
+        LLMUsageMedianRebuildRequest(schema_version="1.0", db_path=str(db_path)),
+        _ctx(),
+    )
+    common = {
+        "schema_version": "1.0",
+        "db_path": str(db_path),
+        "warn_usd": 10.0,
+        "pause_usd": 0.003,
+        "stop_usd": 0.004,
+        "provider": entry.provider,
+        "task": entry.action,
+        "action": entry.action,
+        "model": entry.model,
+        "prompt_namespace": entry.prompt_namespace,
+        "reserve_in_flight": True,
+    }
+    first = svc.evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(**common, reservation_key="first"), _ctx()
+    )
+    blocked = svc.evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(**common, reservation_key="second"), _ctx()
+    )
+    released = svc.release_daily_spend_reservation(
+        LLMUsageSpendReservationReleaseRequest(
+            schema_version="1.0", db_path=str(db_path), reservation_key="first"
+        ),
+        _ctx(),
+    )
+    after_release = svc.evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(**common, reservation_key="second"), _ctx()
+    )
+
+    assert first.reservation_created is True
+    assert blocked.in_flight_reserved_usd == 0.001
+    assert blocked.decision == "pause"
+    assert released.released is True
+    assert after_release.decision == "allow"
+    assert after_release.reservation_created is True
 
 
 def test_concurrent_projection_generations_preserve_one_consistent_checkpoint(

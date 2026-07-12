@@ -141,6 +141,8 @@ def finalize_usage_accounting(
             schema_validation_status=schema_validation_status,
             error_stage=error_stage,
             error_code=error_code,
+            cost_ledger_path=accounting.ledger_path,
+            cost_daily_path=accounting.daily_path,
         ),
         ctx,
     )
