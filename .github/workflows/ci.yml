@@ -104,6 +104,19 @@ jobs:
               handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
           PY
           python scripts/quality/run_health_scorecard.py out/ci_health_events.jsonl --run-id ci-release-evidence --output-json out/run_health_scorecard_ci.json
+      - name: Reconcile retained canonical LLM accounting corpus
+        run: |
+          mkdir -p out/ci_llm_accounting
+          python scripts/quality/build_llm_accounting_corpus.py \
+            --fixture-json tests/fixtures/llm_accounting/canonical_events.json \
+            --db out/ci_llm_accounting/usage.sqlite \
+            --ledger out/ci_llm_accounting/cost-ledger.jsonl \
+            --daily out/ci_llm_accounting/cost-daily.json
+          python scripts/quality/reconcile_llm_usage_ledger.py \
+            --db out/ci_llm_accounting/usage.sqlite \
+            --ledger out/ci_llm_accounting/cost-ledger.jsonl \
+            --daily out/ci_llm_accounting/cost-daily.json \
+            --output-json out/llm_accounting_reconciliation_ci.json
       - name: Prompt fixture corpus regression gate
         run: python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3
       - name: Build release evidence manifest
@@ -128,12 +141,15 @@ jobs:
             --expected-schema pdf_trends=1.0 \
             --artifact health_scorecard=out/run_health_scorecard_ci.json \
             --expected-schema health_scorecard=1.0 \
+            --artifact llm_accounting_reconciliation=out/llm_accounting_reconciliation_ci.json \
+            --expected-schema llm_accounting_reconciliation=1.0 \
             --artifact-command coverage="python scripts/ci/check_coverage.py --coverage-xml coverage.xml" \
             --artifact-command mutation="python scripts/ci/run_mutation_gate.py --json-out mutation_results.json" \
             --artifact-command pdf_candidate="python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_candidate_benchmark_ci.json" \
             --artifact-command pdf_crop_refine="python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_crop_refine_benchmark_ci.json" \
             --artifact-command pdf_trends="python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs" \
             --artifact-command health_scorecard="python scripts/quality/run_health_scorecard.py out/ci_health_events.jsonl --run-id ci-release-evidence --output-json out/run_health_scorecard_ci.json" \
+            --artifact-command llm_accounting_reconciliation="python scripts/quality/reconcile_llm_usage_ledger.py --db out/ci_llm_accounting/usage.sqlite --ledger out/ci_llm_accounting/cost-ledger.jsonl --daily out/ci_llm_accounting/cost-daily.json --output-json out/llm_accounting_reconciliation_ci.json" \
             --fresh-after "${RELEASE_EVIDENCE_STARTED_AT}" \
             --require-head-commit \
             --allow-issues \
@@ -164,3 +180,4 @@ jobs:
             out/pdf_crop_refine_benchmark_ci.json
             out/pdf_benchmark_trends_ci.json
             out/run_health_scorecard_ci.json
+            out/llm_accounting_reconciliation_ci.json
