@@ -73,7 +73,7 @@ def test_openai_usage_accounting_contracts_round_trip(
     assert_no_defaulted_required_fields(response)
 
 
-def test_record_usage_rebuilds_compatibility_exports_from_canonical_sqlite(
+def test_record_usage_defers_compatibility_exports_until_projection_interval(
     tmp_path,
     caplog,
     assert_logs_have_required_fields,
@@ -83,7 +83,7 @@ def test_record_usage_rebuilds_compatibility_exports_from_canonical_sqlite(
 
     response = svc.record_usage(_request(tmp_path), _ctx())
 
-    assert response.recorded is True
+    assert response.recorded is False
     assert response.estimated_cost_usd == 2.5
     assert response.ledger_path == str(tmp_path / "ledger.jsonl")
     assert response.daily_path == str(tmp_path / "daily.json")
@@ -105,22 +105,8 @@ def test_record_usage_rebuilds_compatibility_exports_from_canonical_sqlite(
     assert row["total_tokens"] == 1500
     assert row["estimated_cost_usd"] == 2.5
     assert row["prompt_namespace"] == "test/prompt"
-    exported_rows = [
-        json.loads(line)
-        for line in (tmp_path / "ledger.jsonl").read_text(encoding="utf-8").splitlines()
-    ]
-    assert exported_rows[0]["step_name"] == "openai_chat_json"
-    assert exported_rows[0]["input_tokens"] == 1000
-    assert exported_rows[0]["extra"]["event_outcome"]["call_ordinal"] == 0
-    daily = json.loads((tmp_path / "daily.json").read_text(encoding="utf-8"))
-    assert daily["ledger_state"]["source"] == "canonical_sqlite"
-    assert daily["totals_by_run"]["r"]["estimated_cost_usd"] == 2.5
-    with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
-        checkpoint = conn.execute(
-            "select event_count, source_sha256 from llm_usage_export_checkpoints"
-        ).fetchone()
-    assert checkpoint is not None
-    assert checkpoint[0] == 1
+    assert not (tmp_path / "ledger.jsonl").exists()
+    assert not (tmp_path / "daily.json").exists()
     records = [
         json.loads(record.message)
         for record in caplog.records
@@ -131,6 +117,32 @@ def test_record_usage_rebuilds_compatibility_exports_from_canonical_sqlite(
         "openai_usage_accounting_complete",
     ]
     assert_logs_have_required_fields(records)
+
+
+def test_record_usage_projects_compatibility_exports_on_twentieth_event(tmp_path) -> None:
+    response = None
+    for call_ordinal in range(20):
+        response = svc.record_usage(
+            replace(_request(tmp_path), call_ordinal=call_ordinal), _ctx()
+        )
+
+    assert response is not None
+    assert response.recorded is True
+    exported_rows = [
+        json.loads(line)
+        for line in (tmp_path / "ledger.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(exported_rows) == 20
+    daily = json.loads((tmp_path / "daily.json").read_text(encoding="utf-8"))
+    assert daily["ledger_state"]["source"] == "canonical_sqlite"
+    with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
+        checkpoint = conn.execute(
+            """
+            select event_count, last_projected_event_id
+            from llm_usage_export_checkpoints
+            """
+        ).fetchone()
+    assert checkpoint == (20, 20)
 
 
 def test_record_usage_can_write_usage_database_without_cost_ledger(tmp_path) -> None:
@@ -162,7 +174,14 @@ def test_record_usage_returns_typed_failure_when_canonical_export_write_fails(
         svc.llm_usage_ledger_service.file_service, "write_bytes", _write_bytes
     )
 
-    response = svc.record_usage(_request(tmp_path), _ctx())
+    for call_ordinal in range(19):
+        response = svc.record_usage(
+            replace(_request(tmp_path), call_ordinal=call_ordinal), _ctx()
+        )
+        assert response.error is None
+    response = svc.record_usage(
+        replace(_request(tmp_path), call_ordinal=19), _ctx()
+    )
 
     assert response.recorded is False
     assert response.estimated_cost_usd == 2.5
@@ -174,7 +193,7 @@ def test_record_usage_returns_typed_failure_when_canonical_export_write_fails(
         for record in caplog.records
         if record.name == "market_lense.openai_accounting_service"
     ]
-    assert [record["event"] for record in records] == [
+    assert [record["event"] for record in records[-2:]] == [
         "openai_usage_accounting_start",
         "openai_usage_accounting_failed",
     ]

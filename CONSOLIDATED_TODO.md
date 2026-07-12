@@ -251,6 +251,15 @@ Scoring:
     - The reconciliation JSON is included in the release-evidence manifest and uploaded bundle.
     - Tests cover missing/altered projections, repeatable rebuilds, and manifest inclusion.
 
+- **Title:** Surface canonical LLM projection lag to budget and release gates [Impact: 5/5, Effort: 2/5]
+  - Problem fixed: Incremental token/cost exports intentionally lag by up to nineteen canonical events, but operators and budget decisions do not yet see that lag or its possible cost impact.
+  - Why implement: Makes the batching performance gain safe for live spend controls and release evidence.
+  - Tradeoffs / risks: The gate must distinguish normal bounded lag from a failed or stalled projection and must not force a full rebuild on every read.
+  - Acceptance Criteria:
+    - Projection status reports checkpoint event ID, latest canonical event ID, pending-event count, pending estimated cost, and last successful projection time.
+    - Run-budget and release evidence consume that status and either account for pending canonical usage directly or require an explicit fresh projection before a hard spend or release decision.
+    - Tests cover normal bounded lag, threshold projection, missing checkpoint, stalled projection, and no-unnecessary-rebuild behavior.
+
 
 ---
 
@@ -462,7 +471,7 @@ Supervisor workflows may start, resume, retry, repair, validate, render, create 
 
 - Active-backlog revalidation on 2026-07-11 checked all 37 active items against the current checkout, including README change evidence, implementation/test surfaces, CI configuration, and the current WordPress theme/plugin source. No active item met all of its acceptance criteria. Partially landed foundations were narrowed in place: public-advisory rendering/benchmarking, crop-QA sidecars, workflow-control intent/preflight profiles, supervisor plans, model-call replay bundles, release-evidence review, public-intelligence metadata, and LLM-usage medians.
 - CI currently runs formatting, risk classification, split-symbol linking, typing, architecture import, forbidden patching, repository hygiene, quality ledger, remediation runbook, backlog source, contract schema snapshot, WordPress subproject, default pytest with coverage, coverage gate, mutation gate, quality non-regression, prompt fixture corpus regression, and release evidence manifest archival/freshness gates through `.github/workflows/ci.yml`.
-- Durable LLM usage accounting now atomically rebuilds `state/llm_usage_medians.sqlite` after every source-ledger write. The derived `llm_usage_medians` table records exact input/output/total-token medians and sample counts per provider/action/model/prompt namespace, preserving the `llm_usage.sqlite` ledger as the source of truth. A live OpenAI JSON call on 2026-07-11 recorded 19 input and 5 output tokens with a provider request ID; its real historical group contained 27 samples and an exact median total of 17 tokens.
+- Durable LLM usage accounting now keeps `state/llm_usage.sqlite` as the canonical source. Every twentieth normalized task event schedules an asynchronous median projection, while every twentieth canonical event incrementally advances JSONL/daily compatibility exports from the persisted last canonical event ID; source-ledger rebuild remains available for a missing or repaired checkpoint. Live verification on 2026-07-12 established a baseline at 413 events / canonical ID 448, then seven real OpenAI calls advanced the checkpoint to 420 events / ID 456. Export and source ID sets matched exactly, reconciliation passed, and a follow-up projection processed zero rows.
 - On 2026-07-12, canonical accounting gained atomic call-ordinal allocation, deterministic SQLite-to-JSONL/daily projections, durable projection checkpoints, repairable reconciliation, normalized path resolution, bounded terminal-outcome taxonomy, and deterministic browser-writer shutdown accounting. A real OpenAI JSON smoke call passed in 3.34s; subsequent reconciliation of 324 retained canonical events matched the export exactly at 944,640 input and 243,719 output tokens with no repair required. Full regression verification passed at 3,753 tests / 25 deselected.
 - Prompt dry-run validation and fixture-corpus regression are landed through `src/contracts/prompts.py`, `src/services/prompt_service.py`, `scripts/ci/check_prompt_fixture_regression.py`, `tests/test_prompt_dry_run_validation.py`, and `tests/test_prompt_fixture_corpus_regression.py`.
 - OCR confidence gating and native-confidence-based OCR fallback controls are landed in `src/config/app.yaml`, `src/generators/report_source_generator.py`, and the quality ledger.

@@ -13,12 +13,13 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
+from src.contracts.files import WriteBytesRequest
 from src.contracts.llm_usage import (
+    LLMUsageExportRebuildRequest,
+    LLMUsageExportRebuildResponse,
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerAppendResponse,
     LLMUsageLedgerEntry,
-    LLMUsageExportRebuildRequest,
-    LLMUsageExportRebuildResponse,
     LLMUsageLedgerOutcomeUpdateRequest,
     LLMUsageLedgerOutcomeUpdateResponse,
     LLMUsageLedgerReconciliationRequest,
@@ -26,7 +27,6 @@ from src.contracts.llm_usage import (
     LLMUsageMedianRebuildRequest,
     LLMUsageMedianRebuildResponse,
 )
-from src.contracts.files import WriteBytesRequest
 from src.contracts.run_context import RunContext
 from src.services import file_service
 from src.utils.errors import AppError
@@ -40,6 +40,7 @@ _MEDIAN_REBUILD_EXECUTOR = ThreadPoolExecutor(
 _PENDING_MEDIAN_REBUILD_PATHS: set[str] = set()
 _PENDING_MEDIAN_REBUILD_LOCK = threading.Lock()
 _MEDIAN_REBUILD_EVENT_INTERVAL = 20
+_USAGE_EXPORT_PROJECTION_INTERVAL = 20
 _OUTCOME_STATUSES = {"valid", "invalid", "not_validated", "not_applicable"}
 _PROVIDER_CALL_STATUSES = {"completed", "failed"}
 _ERROR_CODE_STAGES = {
@@ -261,6 +262,19 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    checkpoint_columns = {
+        str(row[1])
+        for row in conn.execute(
+            "pragma table_info(llm_usage_export_checkpoints)"
+        ).fetchall()
+    }
+    if "last_projected_event_id" not in checkpoint_columns:
+        conn.execute(
+            """
+            alter table llm_usage_export_checkpoints
+            add column last_projected_event_id integer not null default 0
+            """
+        )
 
 
 def _event_key(entry: LLMUsageLedgerEntry) -> str:
@@ -699,7 +713,7 @@ def append_usage(
                     entry.seed,
                     entry.timeout_seconds,
                     event_key,
-                    int(entry.call_ordinal),
+                    int(entry.call_ordinal or 0),
                     entry.provider_call_status,
                     entry.parse_status,
                     entry.schema_validation_status,
@@ -713,6 +727,9 @@ def append_usage(
                 "select id from llm_usage_events where event_key = ?", (event_key,)
             ).fetchone()
             row_id = int(row[0]) if row is not None else 0
+            canonical_event_count = int(
+                conn.execute("select count(*) from llm_usage_events").fetchone()[0]
+            )
             median_task = _semantic_task(str(entry.task_id), entry.action)
             median_task_event_count = _semantic_task_event_count(conn, median_task)
     except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
@@ -727,6 +744,10 @@ def append_usage(
         inserted
         and median_task_event_count % _MEDIAN_REBUILD_EVENT_INTERVAL == 0
         and _schedule_median_rebuild(path, ctx)
+    )
+    export_projection_due = bool(
+        inserted
+        and canonical_event_count % _USAGE_EXPORT_PROJECTION_INTERVAL == 0
     )
     if median_rebuild_scheduled:
         logger.info(
@@ -755,6 +776,8 @@ def append_usage(
                 "median_rebuild_scheduled": median_rebuild_scheduled,
                 "median_task": median_task,
                 "median_task_event_count": median_task_event_count,
+                "canonical_event_count": canonical_event_count,
+                "export_projection_due": export_projection_due,
                 "row_id": row_id,
                 "event_key": event_key,
                 "inserted": inserted,
@@ -776,6 +799,8 @@ def append_usage(
         median_task=median_task,
         median_task_event_count=median_task_event_count,
         median_row_count=None,
+        canonical_event_count=canonical_event_count,
+        export_projection_due=export_projection_due,
     )
 
 
@@ -836,7 +861,9 @@ def update_usage_outcome(
     )
 
 
-def _canonical_export_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+def _canonical_export_rows(
+    conn: sqlite3.Connection, *, after_event_id: int = 0
+) -> list[dict[str, Any]]:
     rows = conn.execute(
         """
         select id, timestamp_utc, run_id, task_id, span_id, action, model,
@@ -846,8 +873,9 @@ def _canonical_export_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
                provider_decision, cache_decision, call_ordinal,
                provider_call_status, parse_status, schema_validation_status,
                error_stage, error_code, event_key, metadata_json
-        from llm_usage_events order by id
-        """
+        from llm_usage_events where id > ? order by id
+        """,
+        (after_event_id,),
     ).fetchall()
     export_rows: list[dict[str, Any]] = []
     for row in rows:
@@ -987,6 +1015,110 @@ def _daily_export_payload(
     }
 
 
+def _increment_cost_total(total: dict[str, Any], row: dict[str, Any]) -> None:
+    total["total_input_tokens"] = int(total.get("total_input_tokens") or 0) + int(
+        row["input_tokens"]
+    )
+    total["total_output_tokens"] = int(total.get("total_output_tokens") or 0) + int(
+        row["output_tokens"]
+    )
+    total["total_tool_calls"] = int(total.get("total_tool_calls") or 0) + int(
+        row["tool_calls"]
+    )
+    total["estimated_cost_usd"] = round(
+        float(total.get("estimated_cost_usd") or 0.0)
+        + float(row["estimated_cost_usd"]),
+        6,
+    )
+
+
+def _increment_daily_total(total: dict[str, Any], row: dict[str, Any]) -> None:
+    total["input_tokens"] = int(total.get("input_tokens") or 0) + int(
+        row["input_tokens"]
+    )
+    total["output_tokens"] = int(total.get("output_tokens") or 0) + int(
+        row["output_tokens"]
+    )
+    total["tool_calls"] = int(total.get("tool_calls") or 0) + int(row["tool_calls"])
+    total["total_usd"] = round(
+        float(total.get("total_usd") or 0.0) + float(row["estimated_cost_usd"]),
+        6,
+    )
+
+
+def _increment_daily_export_payload(
+    existing_payload: dict[str, Any],
+    rows: list[dict[str, Any]],
+    *,
+    db_path: Path,
+    source_sha256: str,
+    ledger_sha256: str,
+    event_count: int,
+    last_projected_event_id: int,
+) -> dict[str, Any]:
+    totals_by_date = {
+        str(key): dict(value)
+        for key, value in dict(existing_payload.get("totals_by_date") or {}).items()
+    }
+    totals_by_run = {
+        str(key): dict(value)
+        for key, value in dict(existing_payload.get("totals_by_run") or {}).items()
+    }
+    totals_by_task = {
+        str(key): dict(value)
+        for key, value in dict(existing_payload.get("totals_by_task") or {}).items()
+    }
+    for row in rows:
+        date_key = str(row["timestamp_utc"])[:10] or "unknown"
+        date_total = totals_by_date.setdefault(
+            date_key,
+            {
+                "schema_version": "1.0",
+                "date_utc": date_key,
+                "total_usd": 0.0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "tool_calls": 0,
+            },
+        )
+        _increment_daily_total(date_total, row)
+        for key, totals in (
+            (str(row["run_id"] or "unknown"), totals_by_run),
+            (str(row["task_id"] or "unknown"), totals_by_task),
+        ):
+            cost_total = totals.setdefault(
+                key,
+                {
+                    "schema_version": "1.0",
+                    "total_input_tokens": 0,
+                    "total_output_tokens": 0,
+                    "total_tool_calls": 0,
+                    "estimated_cost_usd": 0.0,
+                },
+            )
+            _increment_cost_total(cost_total, row)
+    return {
+        "schema_version": "1.3",
+        "generated_at": max(
+            [str(existing_payload.get("generated_at") or "")]
+            + [str(row["timestamp_utc"]) for row in rows]
+        ),
+        "ledger_state": {
+            "schema_version": "1.0",
+            "source": "canonical_sqlite",
+            "db_path": str(db_path),
+            "event_count": event_count,
+            "last_projected_event_id": last_projected_event_id,
+            "source_sha256": source_sha256,
+            "ledger_sha256": ledger_sha256,
+        },
+        "totals": dict(sorted(totals_by_date.items())),
+        "totals_by_date": dict(sorted(totals_by_date.items())),
+        "totals_by_run": dict(sorted(totals_by_run.items())),
+        "totals_by_task": dict(sorted(totals_by_task.items())),
+    }
+
+
 def rebuild_usage_exports(
     request: LLMUsageExportRebuildRequest, ctx: RunContext
 ) -> LLMUsageExportRebuildResponse:
@@ -1018,18 +1150,71 @@ def rebuild_usage_exports(
     try:
         with _LOCK, sqlite3.connect(db_path) as conn:
             _ensure_schema(conn)
-            rows = _canonical_export_rows(conn)
-        ledger_content = b"".join(_stable_json_bytes(row) for row in rows)
+            checkpoint = conn.execute(
+                """
+                select event_count, source_sha256, ledger_sha256, daily_sha256,
+                       last_projected_event_id
+                from llm_usage_export_checkpoints
+                where ledger_path = ? and daily_path = ?
+                """,
+                (str(ledger_path.resolve()), str(daily_path.resolve())),
+            ).fetchone()
+            canonical_event_count, highest_event_id = conn.execute(
+                "select count(*), coalesce(max(id), 0) from llm_usage_events"
+            ).fetchone()
+            baseline_required = (
+                checkpoint is None
+                or int(checkpoint[4]) == 0
+                or not ledger_path.is_file()
+                or not daily_path.is_file()
+            )
+            last_projected_event_id = 0 if baseline_required else int(checkpoint[4])
+            rows = _canonical_export_rows(
+                conn, after_event_id=last_projected_event_id
+            )
+        if not rows and not baseline_required:
+            return LLMUsageExportRebuildResponse(
+                schema_version="1.1",
+                db_path=str(db_path),
+                ledger_path=str(ledger_path),
+                daily_path=str(daily_path),
+                event_count=int(checkpoint[0]),
+                source_sha256=str(checkpoint[1]),
+                ledger_sha256=str(checkpoint[2]),
+                daily_sha256=str(checkpoint[3]),
+                last_projected_event_id=last_projected_event_id,
+                projected_event_count=0,
+            )
+        existing_ledger = b"" if baseline_required else ledger_path.read_bytes()
+        ledger_content = existing_ledger + b"".join(
+            _stable_json_bytes(row) for row in rows
+        )
         source_sha256 = sha256(ledger_content).hexdigest()
         ledger_sha256 = source_sha256
-        daily_content = _stable_json_bytes(
-            _daily_export_payload(
+        if baseline_required:
+            daily_payload = _daily_export_payload(
                 rows,
                 db_path=db_path,
                 source_sha256=source_sha256,
                 ledger_sha256=ledger_sha256,
             )
-        )
+            daily_payload["ledger_state"]["event_count"] = int(
+                canonical_event_count
+            )
+            daily_payload["ledger_state"]["last_projected_event_id"] = int(
+                highest_event_id
+            )
+        else:
+            daily_payload = _increment_daily_export_payload(
+                json.loads(daily_path.read_text(encoding="utf-8")),
+                rows,
+                db_path=db_path,
+                source_sha256=source_sha256,
+                ledger_sha256=ledger_sha256,
+                event_count=int(canonical_event_count),
+                last_projected_event_id=int(highest_event_id),
+            )
+        daily_content = _stable_json_bytes(daily_payload)
         daily_sha256 = sha256(daily_content).hexdigest()
         file_service.write_bytes(
             WriteBytesRequest(
@@ -1049,23 +1234,26 @@ def rebuild_usage_exports(
                 """
                 insert into llm_usage_export_checkpoints (
                     ledger_path, daily_path, event_count, source_sha256,
-                    ledger_sha256, daily_sha256, completed_at_utc
-                ) values (?, ?, ?, ?, ?, ?, ?)
+                    ledger_sha256, daily_sha256, completed_at_utc,
+                    last_projected_event_id
+                ) values (?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(ledger_path, daily_path) do update set
                     event_count = excluded.event_count,
                     source_sha256 = excluded.source_sha256,
                     ledger_sha256 = excluded.ledger_sha256,
                     daily_sha256 = excluded.daily_sha256,
-                    completed_at_utc = excluded.completed_at_utc
+                    completed_at_utc = excluded.completed_at_utc,
+                    last_projected_event_id = excluded.last_projected_event_id
                 """,
                 (
                     str(ledger_path.resolve()),
                     str(daily_path.resolve()),
-                    len(rows),
+                    int(canonical_event_count),
                     source_sha256,
                     ledger_sha256,
                     daily_sha256,
                     max((str(row["timestamp_utc"]) for row in rows), default=""),
+                    int(highest_event_id),
                 ),
             )
     except (AppError, OSError, sqlite3.Error, TypeError, ValueError) as exc:
@@ -1083,14 +1271,16 @@ def rebuild_usage_exports(
             },
         ) from exc
     response = LLMUsageExportRebuildResponse(
-        schema_version="1.0",
+        schema_version="1.1",
         db_path=str(db_path),
         ledger_path=str(ledger_path),
         daily_path=str(daily_path),
-        event_count=len(rows),
+        event_count=int(canonical_event_count),
         source_sha256=source_sha256,
         ledger_sha256=ledger_sha256,
         daily_sha256=daily_sha256,
+        last_projected_event_id=int(highest_event_id),
+        projected_event_count=len(rows),
     )
     logger.info(
         log_event(
@@ -1100,6 +1290,8 @@ def rebuild_usage_exports(
             module=logger.name,
             fields={
                 "event_count": response.event_count,
+                "projected_event_count": response.projected_event_count,
+                "last_projected_event_id": response.last_projected_event_id,
                 "source_sha256": response.source_sha256,
                 "ledger_path": response.ledger_path,
                 "daily_path": response.daily_path,
@@ -1107,6 +1299,20 @@ def rebuild_usage_exports(
         )
     )
     return response
+
+
+def _reset_usage_export_checkpoint(
+    *, db_path: str, ledger_path: str, daily_path: str
+) -> None:
+    with _LOCK, sqlite3.connect(db_path) as conn:
+        _ensure_schema(conn)
+        conn.execute(
+            """
+            delete from llm_usage_export_checkpoints
+            where ledger_path = ? and daily_path = ?
+            """,
+            (str(Path(ledger_path).resolve()), str(Path(daily_path).resolve())),
+        )
 
 
 def reconcile_usage_export(
@@ -1139,6 +1345,11 @@ def reconcile_usage_export(
         ]
     except (OSError, sqlite3.Error, TypeError, ValueError, json.JSONDecodeError) as exc:
         if request.repair and request.daily_path:
+            _reset_usage_export_checkpoint(
+                db_path=request.db_path,
+                ledger_path=request.ledger_path,
+                daily_path=request.daily_path,
+            )
             rebuild_usage_exports(
                 LLMUsageExportRebuildRequest(
                     schema_version="1.0",
@@ -1192,6 +1403,11 @@ def reconcile_usage_export(
         matches=matches,
     )
     if not response.matches and request.repair and request.daily_path:
+        _reset_usage_export_checkpoint(
+            db_path=request.db_path,
+            ledger_path=request.ledger_path,
+            daily_path=request.daily_path,
+        )
         rebuild_usage_exports(
             LLMUsageExportRebuildRequest(
                 schema_version="1.0",

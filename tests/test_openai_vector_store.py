@@ -36,7 +36,9 @@ def _events(caplog) -> list[dict[str, object]]:
     return events
 
 
-def test_openai_response_with_vector_store_writes_ledger(tmp_path, fake_openai) -> None:
+def test_openai_response_with_vector_store_defers_compatibility_export(
+    tmp_path, fake_openai
+) -> None:
     ledger_path = tmp_path / "ledger.jsonl"
     daily_path = tmp_path / "daily.json"
     fake_openai.queue_response_text(json.dumps({"result": "ok"}))
@@ -67,10 +69,8 @@ def test_openai_response_with_vector_store_writes_ledger(tmp_path, fake_openai) 
     assert resp.parsed_json == {"result": "ok"}
     assert resp.request_id == "resp_1"
     assert resp.total_tokens == 30
-    assert ledger_path.exists()
-    assert daily_path.exists()
-    ledger_lines = ledger_path.read_text(encoding="utf-8").strip().splitlines()
-    assert ledger_lines and json.loads(ledger_lines[0])["model"] == "gpt-4.1-mini"
+    assert not ledger_path.exists()
+    assert not daily_path.exists()
     assert fake_openai.calls["responses.create"][0]["tools"][0]["vector_store_ids"] == [
         "vs_123"
     ]
