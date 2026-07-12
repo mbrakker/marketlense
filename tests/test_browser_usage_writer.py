@@ -13,7 +13,9 @@ def test_browser_usage_writer_flushes_queued_event_without_blocking_callback(
 ) -> None:
     db_path = tmp_path / "usage.sqlite"
     writer = BrowserUsageWriter(
-        ctx=RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span"),
+        ctx=RunContext(
+            schema_version="1.0", run_id="run", task_id="task", span_id="span"
+        ),
         queue_size=1,
         normalized_url="https://example.com/report",
     )
@@ -37,7 +39,11 @@ def test_browser_usage_writer_flushes_queued_event_without_blocking_callback(
     )
 
     assert accepted is True
-    assert writer.flush(timeout_seconds=3.0) is True
+    shutdown = writer.flush(timeout_seconds=3.0)
+    assert shutdown.drained is True
+    assert shutdown.written_events == 1
+    assert shutdown.pending_events == 0
+    assert shutdown.dropped_events == 0
     with sqlite3.connect(db_path) as conn:
         row = conn.execute(
             "select action, input_tokens, output_tokens, call_ordinal from llm_usage_events"

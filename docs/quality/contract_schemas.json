@@ -3365,6 +3365,34 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.usage.BrowserUsageWriterShutdownResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "drained": {
+          "type": "boolean"
+        },
+        "dropped_events": {
+          "type": "integer"
+        },
+        "pending_events": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "written_events": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "drained",
+        "written_events",
+        "pending_events",
+        "dropped_events"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.worker_pool.BrowserDownloadWarmWorkerPoolDecision": {
       "additionalProperties": false,
       "properties": {
@@ -17754,6 +17782,70 @@
       ],
       "type": "object"
     },
+    "src.contracts.llm_usage.LLMUsageExportRebuildRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "daily_path": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "ledger_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "ledger_path",
+        "daily_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageExportRebuildResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "daily_path": {
+          "type": "string"
+        },
+        "daily_sha256": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "event_count": {
+          "type": "integer"
+        },
+        "ledger_path": {
+          "type": "string"
+        },
+        "ledger_sha256": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "ledger_path",
+        "daily_path",
+        "event_count",
+        "source_sha256",
+        "ledger_sha256",
+        "daily_sha256"
+      ],
+      "type": "object"
+    },
     "src.contracts.llm_usage.LLMUsageLedgerAppendRequest": {
       "additionalProperties": false,
       "properties": {
@@ -17777,6 +17869,9 @@
     "src.contracts.llm_usage.LLMUsageLedgerAppendResponse": {
       "additionalProperties": false,
       "properties": {
+        "call_ordinal": {
+          "type": "integer"
+        },
         "db_path": {
           "type": "string"
         },
@@ -17789,7 +17884,23 @@
         "median_db_path": {
           "type": "string"
         },
+        "median_rebuild_scheduled": {
+          "type": "boolean"
+        },
         "median_row_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "median_task": {
+          "type": "string"
+        },
+        "median_task_event_count": {
           "type": "integer"
         },
         "row_id": {
@@ -17804,8 +17915,12 @@
         "db_path",
         "row_id",
         "event_key",
+        "call_ordinal",
         "inserted",
         "median_db_path",
+        "median_rebuild_scheduled",
+        "median_task",
+        "median_task_event_count",
         "median_row_count"
       ],
       "type": "object"
@@ -17830,7 +17945,14 @@
           ]
         },
         "call_ordinal": {
-          "type": "integer"
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "error_code": {
           "type": "string"
@@ -18040,11 +18162,24 @@
     "src.contracts.llm_usage.LLMUsageLedgerReconciliationRequest": {
       "additionalProperties": false,
       "properties": {
+        "daily_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "db_path": {
           "type": "string"
         },
         "ledger_path": {
           "type": "string"
+        },
+        "repair": {
+          "type": "boolean"
         },
         "schema_version": {
           "type": "string"
@@ -18082,6 +18217,9 @@
           "type": "string"
         },
         "matches": {
+          "type": "boolean"
+        },
+        "repaired": {
           "type": "boolean"
         },
         "schema_version": {
@@ -19763,7 +19901,14 @@
           ]
         },
         "call_ordinal": {
-          "type": "integer"
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "cost_daily_path": {
           "type": "string"
@@ -19920,6 +20065,16 @@
     "src.contracts.openai.OpenAIUsageAccountingResponse": {
       "additionalProperties": false,
       "properties": {
+        "call_ordinal": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "daily_path": {
           "type": "string"
         },

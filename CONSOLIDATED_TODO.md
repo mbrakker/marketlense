@@ -274,6 +274,16 @@ Scoring:
     - Missing per-service integration coverage requires a marked test or explicit temporary waiver.
     - README documents how to add and retire waivers.
 
+- **Title:** Include canonical LLM-accounting reconciliation in the release evidence manifest [Impact: 5/5, Effort: 2/5]
+  - Problem fixed: SQLite-backed LLM accounting can deterministically rebuild and repair its JSONL/daily compatibility exports, but CI does not yet retain a reconciliation artifact alongside the release evidence bundle.
+  - Why implement: Makes token/cost totals, cached usage, invalid outcomes, and replay suppression auditable at release time instead of only through local service tests.
+  - Tradeoffs / risks: The gate must use a committed, representative non-secret event corpus and must not turn CI into a live-provider dependency.
+  - Acceptance Criteria:
+    - CI rebuilds JSONL and daily projections from a representative retained canonical SQLite corpus, reconciles them, and fails on any count/token/cost mismatch.
+    - The artifact covers successful, invalid, cached, and replayed provider events and records projection checkpoint hashes.
+    - The reconciliation JSON is included in the release-evidence manifest and uploaded bundle.
+    - Tests cover missing/altered projections, repeatable rebuilds, and manifest inclusion.
+
 
 ---
 
@@ -486,6 +496,7 @@ Supervisor workflows may start, resume, retry, repair, validate, render, create 
 - Active-backlog revalidation on 2026-07-11 checked all 37 active items against the current checkout, including README change evidence, implementation/test surfaces, CI configuration, and the current WordPress theme/plugin source. No active item met all of its acceptance criteria. Partially landed foundations were narrowed in place: public-advisory rendering/benchmarking, crop-QA sidecars, workflow-control intent/preflight profiles, supervisor plans, model-call replay bundles, release-evidence review, public-intelligence metadata, and LLM-usage medians.
 - CI currently runs formatting, risk classification, split-symbol linking, typing, architecture import, forbidden patching, repository hygiene, quality ledger, remediation runbook, backlog source, contract schema snapshot, WordPress subproject, default pytest with coverage, coverage gate, mutation gate, quality non-regression, prompt fixture corpus regression, and release evidence manifest archival/freshness gates through `.github/workflows/ci.yml`.
 - Durable LLM usage accounting now atomically rebuilds `state/llm_usage_medians.sqlite` after every source-ledger write. The derived `llm_usage_medians` table records exact input/output/total-token medians and sample counts per provider/action/model/prompt namespace, preserving the `llm_usage.sqlite` ledger as the source of truth. A live OpenAI JSON call on 2026-07-11 recorded 19 input and 5 output tokens with a provider request ID; its real historical group contained 27 samples and an exact median total of 17 tokens.
+- On 2026-07-12, canonical accounting gained atomic call-ordinal allocation, deterministic SQLite-to-JSONL/daily projections, durable projection checkpoints, repairable reconciliation, normalized path resolution, bounded terminal-outcome taxonomy, and deterministic browser-writer shutdown accounting. A real OpenAI JSON smoke call passed in 3.34s; subsequent reconciliation of 324 retained canonical events matched the export exactly at 944,640 input and 243,719 output tokens with no repair required. Full regression verification passed at 3,753 tests / 25 deselected.
 - Prompt dry-run validation and fixture-corpus regression are landed through `src/contracts/prompts.py`, `src/services/prompt_service.py`, `scripts/ci/check_prompt_fixture_regression.py`, `tests/test_prompt_dry_run_validation.py`, and `tests/test_prompt_fixture_corpus_regression.py`.
 - OCR confidence gating and native-confidence-based OCR fallback controls are landed in `src/config/app.yaml`, `src/generators/report_source_generator.py`, and the quality ledger.
 - Publisher discovery route memory, deferred recovery, direct-detail handling, KPI guardrail logging, and default-on rollout controls are landed. There is no active "publisher discovery rollout" backlog item unless a new measured gap is opened.

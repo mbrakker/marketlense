@@ -92,10 +92,14 @@ class LLMUsageLedgerEntry(SemanticIdContract):
     timeout_seconds: Optional[float] = field(
         metadata={"doc": "Provider request timeout in seconds, if configured."}
     )
-    call_ordinal: int = field(
-        default=0,
+    call_ordinal: Optional[int] = field(
+        default=None,
         metadata={
-            "doc": "Zero-based ordinal that distinguishes separate provider calls in one run context."
+            "doc": (
+                "Zero-based ordinal that distinguishes provider calls in one run "
+                "context. None delegates allocation to the canonical ledger; callers "
+                "replaying a call must retain the resolved ordinal."
+            )
         },
     )
     provider_call_status: str = field(
@@ -104,11 +108,15 @@ class LLMUsageLedgerEntry(SemanticIdContract):
     )
     parse_status: str = field(
         default="not_applicable",
-        metadata={"doc": "Output parsing outcome: valid, invalid, not_validated, or not_applicable."},
+        metadata={
+            "doc": "Output parsing outcome: valid, invalid, not_validated, or not_applicable."
+        },
     )
     schema_validation_status: str = field(
         default="not_applicable",
-        metadata={"doc": "Schema validation outcome: valid, invalid, not_validated, or not_applicable."},
+        metadata={
+            "doc": "Schema validation outcome: valid, invalid, not_validated, or not_applicable."
+        },
     )
     error_stage: str = field(
         default="",
@@ -144,8 +152,13 @@ class LLMUsageLedgerAppendResponse:
     event_key: str = field(
         metadata={"doc": "Deterministic idempotency key for this provider usage event."}
     )
+    call_ordinal: int = field(
+        metadata={"doc": "Resolved call ordinal used in the durable event key."}
+    )
     inserted: bool = field(
-        metadata={"doc": "Whether this call inserted a new event instead of replaying one."}
+        metadata={
+            "doc": "Whether this call inserted a new event instead of replaying one."
+        }
     )
     median_db_path: str = field(
         metadata={"doc": "SQLite database path for derived usage medians."}
@@ -175,8 +188,12 @@ class LLMUsageLedgerOutcomeUpdateRequest:
         metadata={"doc": "LLM usage outcome update request schema version."}
     )
     db_path: str = field(metadata={"doc": "SQLite database path for the usage event."})
-    event_key: str = field(metadata={"doc": "Deterministic key of the event to finalize."})
-    parse_status: str = field(metadata={"doc": "Final parse outcome for the provider response."})
+    event_key: str = field(
+        metadata={"doc": "Deterministic key of the event to finalize."}
+    )
+    parse_status: str = field(
+        metadata={"doc": "Final parse outcome for the provider response."}
+    )
     schema_validation_status: str = field(
         metadata={"doc": "Final schema-validation outcome for the provider response."}
     )
@@ -184,7 +201,8 @@ class LLMUsageLedgerOutcomeUpdateRequest:
         default="", metadata={"doc": "Bounded terminal error stage, when any."}
     )
     error_code: str = field(
-        default="", metadata={"doc": "Bounded terminal application error code, when any."}
+        default="",
+        metadata={"doc": "Bounded terminal application error code, when any."},
     )
 
 
@@ -194,8 +212,12 @@ class LLMUsageLedgerOutcomeUpdateResponse:
         metadata={"doc": "LLM usage outcome update response schema version."}
     )
     db_path: str = field(metadata={"doc": "SQLite database path updated."})
-    event_key: str = field(metadata={"doc": "Deterministic key of the finalized event."})
-    updated: bool = field(metadata={"doc": "Whether one durable usage event was updated."})
+    event_key: str = field(
+        metadata={"doc": "Deterministic key of the finalized event."}
+    )
+    updated: bool = field(
+        metadata={"doc": "Whether one durable usage event was updated."}
+    )
 
 
 @dataclass(frozen=True)
@@ -204,8 +226,18 @@ class LLMUsageLedgerReconciliationRequest:
         metadata={"doc": "Usage-ledger reconciliation request schema version."}
     )
     db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
-    ledger_path: str = field(
-        metadata={"doc": "Compatibility JSONL usage export path."}
+    ledger_path: str = field(metadata={"doc": "Compatibility JSONL usage export path."})
+    daily_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Derived daily-rollup path required when repair is requested."
+        },
+    )
+    repair: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether missing or altered derived exports are rebuilt from SQLite."
+        },
     )
 
 
@@ -215,13 +247,25 @@ class LLMUsageLedgerReconciliationResponse:
         metadata={"doc": "Usage-ledger reconciliation response schema version."}
     )
     db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path read."})
-    ledger_path: str = field(metadata={"doc": "Compatibility JSONL usage export path read."})
+    ledger_path: str = field(
+        metadata={"doc": "Compatibility JSONL usage export path read."}
+    )
     sqlite_event_count: int = field(metadata={"doc": "Canonical SQLite event count."})
-    export_event_count: int = field(metadata={"doc": "Compatibility export event count."})
-    sqlite_input_tokens: int = field(metadata={"doc": "Canonical SQLite input-token total."})
-    export_input_tokens: int = field(metadata={"doc": "Compatibility export input-token total."})
-    sqlite_output_tokens: int = field(metadata={"doc": "Canonical SQLite output-token total."})
-    export_output_tokens: int = field(metadata={"doc": "Compatibility export output-token total."})
+    export_event_count: int = field(
+        metadata={"doc": "Compatibility export event count."}
+    )
+    sqlite_input_tokens: int = field(
+        metadata={"doc": "Canonical SQLite input-token total."}
+    )
+    export_input_tokens: int = field(
+        metadata={"doc": "Compatibility export input-token total."}
+    )
+    sqlite_output_tokens: int = field(
+        metadata={"doc": "Canonical SQLite output-token total."}
+    )
+    export_output_tokens: int = field(
+        metadata={"doc": "Compatibility export output-token total."}
+    )
     sqlite_cached_input_tokens: int = field(
         metadata={"doc": "Canonical SQLite cached-input-token total."}
     )
@@ -237,6 +281,42 @@ class LLMUsageLedgerReconciliationResponse:
     matches: bool = field(
         metadata={"doc": "Whether exact integer totals and cost tolerance reconcile."}
     )
+    repaired: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether reconciliation rebuilt derived exports before matching."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageExportRebuildRequest:
+    schema_version: str = field(
+        metadata={"doc": "Canonical usage-export rebuild request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
+    ledger_path: str = field(
+        metadata={"doc": "Derived compatibility JSONL export path."}
+    )
+    daily_path: str = field(
+        metadata={"doc": "Derived compatibility daily-rollup path."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageExportRebuildResponse:
+    schema_version: str = field(
+        metadata={"doc": "Canonical usage-export rebuild response schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path read."})
+    ledger_path: str = field(metadata={"doc": "Derived JSONL export path written."})
+    daily_path: str = field(metadata={"doc": "Derived daily-rollup path written."})
+    event_count: int = field(metadata={"doc": "Canonical event count projected."})
+    source_sha256: str = field(
+        metadata={"doc": "Stable hash of canonical projected rows."}
+    )
+    ledger_sha256: str = field(metadata={"doc": "Hash of the JSONL export bytes."})
+    daily_sha256: str = field(metadata={"doc": "Hash of the daily-rollup bytes."})
 
 
 @dataclass(frozen=True)

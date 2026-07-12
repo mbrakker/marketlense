@@ -6,7 +6,6 @@ import sqlite3
 from dataclasses import replace
 from pathlib import Path
 
-from src.contracts.costs import CostLedgerAppendRequest, CostRollupRequest
 from src.contracts.openai import (
     OpenAIUsageAccountingRequest,
     OpenAIUsageAccountingResponse,
@@ -74,43 +73,13 @@ def test_openai_usage_accounting_contracts_round_trip(
     assert_no_defaulted_required_fields(response)
 
 
-def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
-    external_boundary_mocks_only,
+def test_record_usage_rebuilds_compatibility_exports_from_canonical_sqlite(
     tmp_path,
     caplog,
     assert_logs_have_required_fields,
     assert_no_defaulted_required_fields,
 ) -> None:
-    appended_requests: list[CostLedgerAppendRequest] = []
-    rollup_requests: list[CostRollupRequest] = []
-
-    def _append_entry(request, ctx):
-        appended_requests.append(request)
-        return type(
-            "AppendResponse", (), {"schema_version": "1.0", "path": request.path}
-        )()
-
-    def _rollup_daily(request, ctx):
-        rollup_requests.append(request)
-        return type(
-            "RollupResponse",
-            (),
-            {
-                "schema_version": "1.0",
-                "out_path": request.out_path,
-                "totals_by_date": {},
-                "totals_by_run": {},
-                "totals_by_task": {},
-            },
-        )()
-
     caplog.set_level(logging.INFO, logger="market_lense.openai_accounting_service")
-    external_boundary_mocks_only.setattr(
-        svc.cost_ledger_service, "append_entry", _append_entry
-    )
-    external_boundary_mocks_only.setattr(
-        svc.cost_ledger_service, "rollup_daily", _rollup_daily
-    )
 
     response = svc.record_usage(_request(tmp_path), _ctx())
 
@@ -122,36 +91,6 @@ def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
     assert response.usage_db_recorded is True
     assert response.usage_db_row_id == 1
     assert response.usage_db_path == str(tmp_path / "usage.sqlite")
-    assert len(appended_requests) == 1
-    entry = appended_requests[0].entry
-    assert_no_defaulted_required_fields(entry)
-    assert entry.step_name == "openai_chat_json"
-    assert entry.model == "gpt-test"
-    assert entry.input_tokens == 1000
-    assert entry.output_tokens == 500
-    assert entry.cached_input_tokens == 100
-    assert entry.tool_calls == 2
-    assert entry.estimated_cost_usd == 2.5
-    assert entry.extra == {
-        "request_id": "req_1",
-        "provider": "openai",
-        "action": "openai_chat_json",
-        "publisher_name": "Test Publisher",
-        "report_name": "Test Report",
-        "source_url": "https://example.com/report",
-        "prompt_namespace": "test/prompt",
-        "prompt_hash": "prompt-hash",
-        "provider_decision": "openai_primary",
-        "cache_decision": "disabled",
-        "event_outcome": {
-            "provider_call_status": "completed",
-            "parse_status": "not_applicable",
-            "schema_validation_status": "not_applicable",
-            "error_stage": None,
-            "error_code": None,
-            "call_ordinal": 0,
-        },
-    }
     with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute("select * from llm_usage_events").fetchone()
@@ -166,13 +105,22 @@ def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
     assert row["total_tokens"] == 1500
     assert row["estimated_cost_usd"] == 2.5
     assert row["prompt_namespace"] == "test/prompt"
-    assert rollup_requests == [
-        CostRollupRequest(
-            schema_version="1.0",
-            ledger_path=str(tmp_path / "ledger.jsonl"),
-            out_path=str(tmp_path / "daily.json"),
-        )
+    exported_rows = [
+        json.loads(line)
+        for line in (tmp_path / "ledger.jsonl").read_text(encoding="utf-8").splitlines()
     ]
+    assert exported_rows[0]["step_name"] == "openai_chat_json"
+    assert exported_rows[0]["input_tokens"] == 1000
+    assert exported_rows[0]["extra"]["event_outcome"]["call_ordinal"] == 0
+    daily = json.loads((tmp_path / "daily.json").read_text(encoding="utf-8"))
+    assert daily["ledger_state"]["source"] == "canonical_sqlite"
+    assert daily["totals_by_run"]["r"]["estimated_cost_usd"] == 2.5
+    with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
+        checkpoint = conn.execute(
+            "select event_count, source_sha256 from llm_usage_export_checkpoints"
+        ).fetchone()
+    assert checkpoint is not None
+    assert checkpoint[0] == 1
     records = [
         json.loads(record.message)
         for record in caplog.records
@@ -201,27 +149,17 @@ def test_record_usage_can_write_usage_database_without_cost_ledger(tmp_path) -> 
     assert row == ("openai_chat_json", 1000, 500)
 
 
-def test_record_usage_returns_typed_failure_when_ledger_append_fails(
+def test_record_usage_returns_typed_failure_when_canonical_export_write_fails(
     external_boundary_mocks_only, tmp_path, caplog, assert_logs_have_required_fields
 ) -> None:
-    rollup_requests: list[CostRollupRequest] = []
-
-    def _append_entry(request, ctx):
+    def _write_bytes(request, ctx):
         raise AppError(
-            code="cost_ledger_append_failed",
-            message="ledger unavailable",
-            retryable=False,
+            code="file_write_failed", message="ledger unavailable", retryable=False
         )
-
-    def _rollup_daily(request, ctx):
-        rollup_requests.append(request)
 
     caplog.set_level(logging.INFO, logger="market_lense.openai_accounting_service")
     external_boundary_mocks_only.setattr(
-        svc.cost_ledger_service, "append_entry", _append_entry
-    )
-    external_boundary_mocks_only.setattr(
-        svc.cost_ledger_service, "rollup_daily", _rollup_daily
+        svc.llm_usage_ledger_service.file_service, "write_bytes", _write_bytes
     )
 
     response = svc.record_usage(_request(tmp_path), _ctx())
@@ -231,7 +169,6 @@ def test_record_usage_returns_typed_failure_when_ledger_append_fails(
     assert response.error == "ledger unavailable"
     assert response.usage_db_recorded is True
     assert response.usage_db_inserted is True
-    assert rollup_requests == []
     records = [
         json.loads(record.message)
         for record in caplog.records

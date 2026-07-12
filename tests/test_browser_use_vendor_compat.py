@@ -147,7 +147,7 @@ def test_browser_use_usage_callback_records_each_provider_response(
     token_cost_service.register_llm(fallback_llm)
     asyncio.run(fallback_llm.ainvoke([]))
     assert usage_writer is not None
-    assert usage_writer.flush(timeout_seconds=3.0) is True
+    assert usage_writer.flush(timeout_seconds=3.0).drained is True
 
     with sqlite3.connect(tmp_path / "state" / "llm_usage.sqlite") as connection:
         rows = connection.execute(

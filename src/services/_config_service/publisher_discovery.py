@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# ruff: noqa: F403, F405
 from src.services._config_service.common import *
 from src.services._config_service.settings_resolvers import *
 
@@ -87,6 +88,7 @@ def load_publisher_inventory_settings(
         analysis_cfg,
         cost_cfg,
         html_tag_acronyms_path=paths_settings["html_tag_acronyms_path"],
+        runtime_base_path=runtime_base_path,
     )
 
     api_key = _env_value("OPENROUTER_API_KEY")

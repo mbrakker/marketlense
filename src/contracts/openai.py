@@ -166,24 +166,32 @@ class OpenAIUsageAccountingRequest:
     timeout_seconds: Optional[float] = field(
         default=None, metadata={"doc": "Provider timeout in seconds, if configured."}
     )
-    call_ordinal: int = field(
-        default=0,
-        metadata={"doc": "Ordinal distinguishing separate provider calls in the active run context."},
+    call_ordinal: Optional[int] = field(
+        default=None,
+        metadata={
+            "doc": (
+                "Optional stable ordinal distinguishing provider calls in the active "
+                "run context. None is allocated atomically by the canonical ledger."
+            )
+        },
     )
     provider_call_status: str = field(
-        default="completed", metadata={"doc": "Provider transport outcome for this usage event."}
+        default="completed",
+        metadata={"doc": "Provider transport outcome for this usage event."},
     )
     parse_status: str = field(
         default="not_applicable", metadata={"doc": "Current response parsing outcome."}
     )
     schema_validation_status: str = field(
-        default="not_applicable", metadata={"doc": "Current response schema-validation outcome."}
+        default="not_applicable",
+        metadata={"doc": "Current response schema-validation outcome."},
     )
     error_stage: str = field(
         default="", metadata={"doc": "Bounded terminal error stage, when any."}
     )
     error_code: str = field(
-        default="", metadata={"doc": "Bounded terminal application error code, when any."}
+        default="",
+        metadata={"doc": "Bounded terminal application error code, when any."},
     )
     extra: Dict[str, Any] = field(
         default_factory=dict, metadata={"doc": "Additional non-secret usage metadata."}
@@ -222,11 +230,18 @@ class OpenAIUsageAccountingResponse:
         metadata={"doc": "Inserted SQLite usage ledger row ID, if recorded."},
     )
     event_key: str = field(
-        default="", metadata={"doc": "Deterministic idempotency key for the durable usage event."}
+        default="",
+        metadata={"doc": "Deterministic idempotency key for the durable usage event."},
+    )
+    call_ordinal: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Resolved canonical ordinal for the durable usage event."},
     )
     usage_db_inserted: bool = field(
         default=False,
-        metadata={"doc": "Whether SQLite inserted this event instead of recognizing a replay."},
+        metadata={
+            "doc": "Whether SQLite inserted this event instead of recognizing a replay."
+        },
     )
 
 
@@ -237,7 +252,9 @@ class OpenAIUsageOutcomeUpdateRequest:
     )
     usage_db_path: str = field(metadata={"doc": "SQLite usage ledger path to update."})
     event_key: str = field(metadata={"doc": "Deterministic event key to finalize."})
-    parse_status: str = field(metadata={"doc": "Final parse status for the provider response."})
+    parse_status: str = field(
+        metadata={"doc": "Final parse status for the provider response."}
+    )
     schema_validation_status: str = field(
         metadata={"doc": "Final schema-validation status for the provider response."}
     )

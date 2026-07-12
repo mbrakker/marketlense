@@ -3,14 +3,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from src.contracts.costs import (
-    CostLedgerAppendRequest,
-    CostLedgerEntry,
-    CostRollupRequest,
-)
 from src.contracts.llm_usage import (
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerEntry,
+    LLMUsageExportRebuildRequest,
     LLMUsageLedgerOutcomeUpdateRequest,
 )
 from src.contracts.openai import (
@@ -19,7 +15,7 @@ from src.contracts.openai import (
     OpenAIUsageOutcomeUpdateRequest,
 )
 from src.contracts.run_context import RunContext
-from src.services import cost_ledger_service, llm_usage_ledger_service
+from src.services import llm_usage_ledger_service
 from src.utils.costing import estimate_cost_usd
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -80,29 +76,6 @@ def _usage_total_tokens(
     if total_tokens is not None:
         return int(total_tokens or 0)
     return int(input_tokens or 0) + int(output_tokens or 0)
-
-
-def _cost_entry_extra(request: OpenAIUsageAccountingRequest) -> dict:
-    return {
-        "request_id": str(request.request_id) if request.request_id else None,
-        "provider": request.provider,
-        "action": request.action or request.step_name,
-        "publisher_name": request.publisher_name or None,
-        "report_name": request.report_name or None,
-        "source_url": request.source_url or None,
-        "prompt_namespace": request.prompt_namespace or None,
-        "prompt_hash": request.prompt_hash or None,
-        "provider_decision": request.provider_decision or None,
-        "cache_decision": request.cache_decision or None,
-        "event_outcome": {
-            "provider_call_status": request.provider_call_status,
-            "parse_status": request.parse_status,
-            "schema_validation_status": request.schema_validation_status,
-            "error_stage": request.error_stage or None,
-            "error_code": request.error_code or None,
-            "call_ordinal": int(request.call_ordinal),
-        },
-    }
 
 
 def _usage_metadata(request: OpenAIUsageAccountingRequest) -> dict:
@@ -197,7 +170,7 @@ def record_usage(
                     temperature=request.temperature,
                     seed=request.seed,
                     timeout_seconds=request.timeout_seconds,
-                    call_ordinal=int(request.call_ordinal),
+                    call_ordinal=request.call_ordinal,
                     provider_call_status=request.provider_call_status,
                     parse_status=request.parse_status,
                     schema_validation_status=request.schema_validation_status,
@@ -213,34 +186,12 @@ def record_usage(
         usage_db_event_key = usage_response.event_key
         usage_db_inserted = usage_response.inserted
         if request.emit_cost_ledger and usage_response.inserted:
-            entry = CostLedgerEntry(
-                schema_version="1.0",
-                timestamp_utc=timestamp_utc,
-                run_id=ctx.run_id,
-                task_id=ctx.task_id,
-                span_id=ctx.span_id,
-                step_name=request.step_name,
-                model=request.model,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                cached_input_tokens=request.cached_input_tokens,
-                tool_calls=tool_calls,
-                estimated_cost_usd=estimated_cost,
-                extra=_cost_entry_extra(request),
-            )
-            cost_ledger_service.append_entry(
-                CostLedgerAppendRequest(
+            llm_usage_ledger_service.rebuild_usage_exports(
+                LLMUsageExportRebuildRequest(
                     schema_version="1.0",
-                    path=request.cost_ledger_path,
-                    entry=entry,
-                ),
-                ctx,
-            )
-            cost_ledger_service.rollup_daily(
-                CostRollupRequest(
-                    schema_version="1.0",
+                    db_path=request.usage_db_path,
                     ledger_path=request.cost_ledger_path,
-                    out_path=request.cost_daily_path,
+                    daily_path=request.cost_daily_path,
                 ),
                 ctx,
             )
@@ -274,6 +225,7 @@ def record_usage(
             usage_db_row_id=usage_db_row_id,
             event_key=usage_db_event_key,
             usage_db_inserted=usage_db_inserted,
+            call_ordinal=None,
         )
 
     logger.info(
@@ -295,6 +247,7 @@ def record_usage(
                 "usage_db_row_id": usage_db_row_id,
                 "event_key": usage_db_event_key,
                 "usage_db_inserted": usage_db_inserted,
+                "call_ordinal": usage_response.call_ordinal,
             },
         )
     )
@@ -309,6 +262,7 @@ def record_usage(
         usage_db_row_id=usage_db_row_id,
         event_key=usage_db_event_key,
         usage_db_inserted=usage_db_inserted,
+        call_ordinal=usage_response.call_ordinal,
     )
 
 

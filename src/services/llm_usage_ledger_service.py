@@ -6,6 +6,7 @@ import sqlite3
 import threading
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
@@ -16,6 +17,8 @@ from src.contracts.llm_usage import (
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerAppendResponse,
     LLMUsageLedgerEntry,
+    LLMUsageExportRebuildRequest,
+    LLMUsageExportRebuildResponse,
     LLMUsageLedgerOutcomeUpdateRequest,
     LLMUsageLedgerOutcomeUpdateResponse,
     LLMUsageLedgerReconciliationRequest,
@@ -23,7 +26,9 @@ from src.contracts.llm_usage import (
     LLMUsageMedianRebuildRequest,
     LLMUsageMedianRebuildResponse,
 )
+from src.contracts.files import WriteBytesRequest
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -37,6 +42,43 @@ _PENDING_MEDIAN_REBUILD_LOCK = threading.Lock()
 _MEDIAN_REBUILD_EVENT_INTERVAL = 20
 _OUTCOME_STATUSES = {"valid", "invalid", "not_validated", "not_applicable"}
 _PROVIDER_CALL_STATUSES = {"completed", "failed"}
+_ERROR_CODE_STAGES = {
+    "openai_embedding_count_mismatch": "output_validation",
+    "openai_ocr_invalid_response": "output_validation",
+    "openai_response_empty": "output_validation",
+    "openai_response_json_type_invalid": "output_validation",
+    "openai_response_invalid_json": "output_validation",
+    "openai_response_validation_failed": "output_validation",
+    "openrouter_response_invalid_json": "output_validation",
+}
+_ERROR_STAGES = {"", *set(_ERROR_CODE_STAGES.values())}
+
+
+def _validate_error_taxonomy(*, error_stage: str, error_code: str) -> None:
+    if error_stage not in _ERROR_STAGES:
+        raise AppError(
+            code="llm_usage_ledger_error_stage_invalid",
+            message="LLM usage error stage is unsupported",
+            retryable=False,
+            context={"error_stage": error_stage},
+        )
+    if not error_code:
+        if error_stage:
+            raise AppError(
+                code="llm_usage_ledger_error_code_missing",
+                message="LLM usage error stage requires a terminal error code",
+                retryable=False,
+                context={"error_stage": error_stage},
+            )
+        return
+    expected_stage = _ERROR_CODE_STAGES.get(error_code)
+    if expected_stage is None or expected_stage != error_stage:
+        raise AppError(
+            code="llm_usage_ledger_error_taxonomy_invalid",
+            message="LLM usage terminal error code must map to its documented stage",
+            retryable=False,
+            context={"error_stage": error_stage, "error_code": error_code},
+        )
 
 
 def _validate_request(request: LLMUsageLedgerAppendRequest) -> None:
@@ -93,13 +135,17 @@ def _validate_request(request: LLMUsageLedgerAppendRequest) -> None:
                 "schema_validation_status": request.entry.schema_validation_status
             },
         )
-    if int(request.entry.call_ordinal) < 0:
+    if request.entry.call_ordinal is not None and int(request.entry.call_ordinal) < 0:
         raise AppError(
             code="llm_usage_ledger_call_ordinal_invalid",
             message="LLM usage call ordinal must be non-negative",
             retryable=False,
             context={"call_ordinal": request.entry.call_ordinal},
         )
+    _validate_error_taxonomy(
+        error_stage=request.entry.error_stage,
+        error_code=request.entry.error_code,
+    )
 
 
 def _validate_median_rebuild_request(request: LLMUsageMedianRebuildRequest) -> None:
@@ -174,7 +220,9 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     }
     for column, definition in migrations.items():
         if column not in existing_columns:
-            conn.execute(f"alter table llm_usage_events add column {column} {definition}")
+            conn.execute(
+                f"alter table llm_usage_events add column {column} {definition}"
+            )
     conn.execute(
         "update llm_usage_events set event_key = 'legacy:' || id where event_key is null or event_key = ''"
     )
@@ -199,6 +247,20 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         on llm_usage_events(run_id, task_id)
         """
     )
+    conn.execute(
+        """
+        create table if not exists llm_usage_export_checkpoints (
+            ledger_path text not null,
+            daily_path text not null,
+            event_count integer not null,
+            source_sha256 text not null,
+            ledger_sha256 text not null,
+            daily_sha256 text not null,
+            completed_at_utc text not null,
+            primary key (ledger_path, daily_path)
+        )
+        """
+    )
 
 
 def _event_key(entry: LLMUsageLedgerEntry) -> str:
@@ -214,14 +276,62 @@ def _event_key(entry: LLMUsageLedgerEntry) -> str:
         "source_url": entry.source_url,
         "prompt_namespace": entry.prompt_namespace,
         "prompt_hash": entry.prompt_hash,
-        "call_ordinal": int(entry.call_ordinal),
+        "call_ordinal": int(entry.call_ordinal or 0),
         "ledger_scope": str((entry.metadata or {}).get("cost_ledger_path") or ""),
     }
     return sha256(
-        json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode(
-            "utf-8"
-        )
+        json.dumps(
+            payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
     ).hexdigest()
+
+
+def _call_identity(entry: LLMUsageLedgerEntry) -> tuple[str, ...]:
+    """Fields that make an ordinal sequence local to one logical provider-call stream."""
+    return (
+        entry.provider,
+        entry.action,
+        str(entry.run_id),
+        str(entry.task_id),
+        entry.span_id,
+        entry.trace_id,
+        entry.model,
+        entry.source_url,
+        entry.prompt_namespace,
+        entry.prompt_hash,
+    )
+
+
+def _resolve_call_ordinal(conn: sqlite3.Connection, entry: LLMUsageLedgerEntry) -> int:
+    """Return an atomic, replay-stable ordinal without merging separate direct calls.
+
+    A caller that already has a resolved ordinal owns replay identity. Otherwise a
+    provider request ID reuses its existing ordinal (the normal accounting retry
+    path); an absent request ID deliberately receives the next ordinal so two
+    otherwise identical direct calls remain distinct.
+    """
+    if entry.call_ordinal is not None:
+        return int(entry.call_ordinal)
+
+    identity = _call_identity(entry)
+    where_clause = """
+        provider = ? and action = ? and run_id = ? and task_id = ? and
+        span_id = ? and trace_id = ? and model = ? and source_url = ? and
+        prompt_namespace = ? and prompt_hash = ?
+    """
+    if entry.request_id:
+        replay = conn.execute(
+            f"select call_ordinal from llm_usage_events where {where_clause} and request_id = ?",
+            (*identity, entry.request_id),
+        ).fetchone()
+        if replay is not None:
+            return int(replay[0])
+
+    row = conn.execute(
+        f"select coalesce(max(call_ordinal), -1) from llm_usage_events where {where_clause}",
+        identity,
+    ).fetchone()
+    return int(row[0]) + 1 if row is not None and row[0] is not None else 0
 
 
 def _validate_outcome_update(request: LLMUsageLedgerOutcomeUpdateRequest) -> None:
@@ -252,6 +362,12 @@ def _validate_outcome_update(request: LLMUsageLedgerOutcomeUpdateRequest) -> Non
             retryable=False,
             context={"schema_validation_status": request.schema_validation_status},
         )
+    _validate_error_taxonomy(
+        error_stage=request.error_stage,
+        error_code=request.error_code,
+    )
+
+
 def _metadata_json(metadata: dict[str, Any]) -> str:
     try:
         return json.dumps(metadata or {}, ensure_ascii=False, sort_keys=True)
@@ -506,7 +622,7 @@ def append_usage(
     path = Path(request.db_path)
     median_path = _median_db_path(path)
     entry = request.entry
-    event_key = _event_key(entry)
+    event_key = ""
     logger.info(
         log_event(
             ctx,
@@ -521,7 +637,6 @@ def append_usage(
                 "model": entry.model,
                 "publisher_name": entry.publisher_name,
                 "request_id": entry.request_id or "",
-                "event_key": event_key,
                 "call_ordinal": entry.call_ordinal,
                 "input_tokens": entry.input_tokens,
                 "output_tokens": entry.output_tokens,
@@ -533,6 +648,11 @@ def append_usage(
         path.parent.mkdir(parents=True, exist_ok=True)
         with _LOCK, sqlite3.connect(path) as conn:
             _ensure_schema(conn)
+            entry = replace(
+                entry,
+                call_ordinal=_resolve_call_ordinal(conn, entry),
+            )
+            event_key = _event_key(entry)
             cursor = conn.execute(
                 """
                 insert into llm_usage_events (
@@ -649,6 +769,7 @@ def append_usage(
         db_path=str(path),
         row_id=row_id,
         event_key=event_key,
+        call_ordinal=int(entry.call_ordinal or 0),
         inserted=inserted,
         median_db_path=str(median_path),
         median_rebuild_scheduled=median_rebuild_scheduled,
@@ -715,6 +836,279 @@ def update_usage_outcome(
     )
 
 
+def _canonical_export_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        """
+        select id, timestamp_utc, run_id, task_id, span_id, action, model,
+               input_tokens, output_tokens, cached_input_tokens, tool_calls,
+               estimated_cost_usd, provider, request_id, publisher_name,
+               report_name, source_url, prompt_namespace, prompt_hash,
+               provider_decision, cache_decision, call_ordinal,
+               provider_call_status, parse_status, schema_validation_status,
+               error_stage, error_code, event_key, metadata_json
+        from llm_usage_events order by id
+        """
+    ).fetchall()
+    export_rows: list[dict[str, Any]] = []
+    for row in rows:
+        metadata = _safe_metadata(str(row[28]))
+        export_rows.append(
+            {
+                "schema_version": "1.0",
+                "timestamp_utc": str(row[1]),
+                "run_id": str(row[2]),
+                "task_id": str(row[3]),
+                "span_id": str(row[4]),
+                "step_name": str(row[5]),
+                "model": str(row[6]),
+                "input_tokens": int(row[7]),
+                "output_tokens": int(row[8]),
+                "cached_input_tokens": row[9],
+                "tool_calls": int(row[10]),
+                "estimated_cost_usd": float(row[11]),
+                "extra": {
+                    "canonical_event_id": int(row[0]),
+                    "event_key": str(row[27]),
+                    "request_id": row[13],
+                    "provider": str(row[12]),
+                    "action": str(row[5]),
+                    "publisher_name": str(row[14]),
+                    "report_name": str(row[15]),
+                    "source_url": str(row[16]),
+                    "prompt_namespace": str(row[17]),
+                    "prompt_hash": str(row[18]),
+                    "provider_decision": str(row[19]),
+                    "cache_decision": str(row[20]),
+                    "event_outcome": {
+                        "call_ordinal": int(row[21]),
+                        "provider_call_status": str(row[22]),
+                        "parse_status": str(row[23]),
+                        "schema_validation_status": str(row[24]),
+                        "error_stage": str(row[25]) or None,
+                        "error_code": str(row[26]) or None,
+                    },
+                    "metadata": metadata,
+                },
+            }
+        )
+    return export_rows
+
+
+def _safe_metadata(raw_metadata: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(raw_metadata)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _stable_json_bytes(payload: Any) -> bytes:
+    return (
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        + "\n"
+    ).encode("utf-8")
+
+
+def _rollup_metrics(
+    rows: list[dict[str, Any]], key: str
+) -> dict[str, dict[str, float | int]]:
+    totals: dict[str, dict[str, float | int]] = {}
+    for row in rows:
+        if key == "date":
+            bucket = str(row["timestamp_utc"])[:10] or "unknown"
+        else:
+            bucket = str(row.get(key) or "unknown")
+        metrics = totals.setdefault(
+            bucket,
+            {
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "tool_calls": 0,
+                "estimated_cost_usd": 0.0,
+            },
+        )
+        metrics["input_tokens"] += int(row["input_tokens"])
+        metrics["output_tokens"] += int(row["output_tokens"])
+        metrics["tool_calls"] += int(row["tool_calls"])
+        metrics["estimated_cost_usd"] += float(row["estimated_cost_usd"])
+    return totals
+
+
+def _cost_total(metrics: dict[str, float | int]) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "total_input_tokens": int(metrics["input_tokens"]),
+        "total_output_tokens": int(metrics["output_tokens"]),
+        "total_tool_calls": int(metrics["tool_calls"]),
+        "estimated_cost_usd": round(float(metrics["estimated_cost_usd"]), 6),
+    }
+
+
+def _daily_total(day: str, metrics: dict[str, float | int]) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "date_utc": day,
+        "total_usd": round(float(metrics["estimated_cost_usd"]), 6),
+        "input_tokens": int(metrics["input_tokens"]),
+        "output_tokens": int(metrics["output_tokens"]),
+        "tool_calls": int(metrics["tool_calls"]),
+    }
+
+
+def _daily_export_payload(
+    rows: list[dict[str, Any]], *, db_path: Path, source_sha256: str, ledger_sha256: str
+) -> dict[str, Any]:
+    by_date = _rollup_metrics(rows, "date")
+    by_run = _rollup_metrics(rows, "run_id")
+    by_task = _rollup_metrics(rows, "task_id")
+    totals_by_date = {
+        day: _daily_total(day, metrics) for day, metrics in sorted(by_date.items())
+    }
+    return {
+        "schema_version": "1.3",
+        "generated_at": max((str(row["timestamp_utc"]) for row in rows), default=""),
+        "ledger_state": {
+            "schema_version": "1.0",
+            "source": "canonical_sqlite",
+            "db_path": str(db_path),
+            "event_count": len(rows),
+            "source_sha256": source_sha256,
+            "ledger_sha256": ledger_sha256,
+        },
+        "totals": totals_by_date,
+        "totals_by_date": totals_by_date,
+        "totals_by_run": {
+            run_id: _cost_total(metrics) for run_id, metrics in sorted(by_run.items())
+        },
+        "totals_by_task": {
+            task_id: _cost_total(metrics)
+            for task_id, metrics in sorted(by_task.items())
+        },
+    }
+
+
+def rebuild_usage_exports(
+    request: LLMUsageExportRebuildRequest, ctx: RunContext
+) -> LLMUsageExportRebuildResponse:
+    if request.schema_version != "1.0" or not all(
+        str(value or "").strip()
+        for value in (request.db_path, request.ledger_path, request.daily_path)
+    ):
+        raise AppError(
+            code="llm_usage_export_rebuild_request_invalid",
+            message="Usage export rebuild requires canonical and both derived paths",
+            retryable=False,
+        )
+    db_path = Path(request.db_path)
+    ledger_path = Path(request.ledger_path)
+    daily_path = Path(request.daily_path)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_usage_export_rebuild_start",
+            module=logger.name,
+            fields={
+                "db_path": str(db_path),
+                "ledger_path": str(ledger_path),
+                "daily_path": str(daily_path),
+            },
+        )
+    )
+    try:
+        with _LOCK, sqlite3.connect(db_path) as conn:
+            _ensure_schema(conn)
+            rows = _canonical_export_rows(conn)
+        ledger_content = b"".join(_stable_json_bytes(row) for row in rows)
+        source_sha256 = sha256(ledger_content).hexdigest()
+        ledger_sha256 = source_sha256
+        daily_content = _stable_json_bytes(
+            _daily_export_payload(
+                rows,
+                db_path=db_path,
+                source_sha256=source_sha256,
+                ledger_sha256=ledger_sha256,
+            )
+        )
+        daily_sha256 = sha256(daily_content).hexdigest()
+        file_service.write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0", path=str(ledger_path), content=ledger_content
+            ),
+            ctx,
+        )
+        file_service.write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0", path=str(daily_path), content=daily_content
+            ),
+            ctx,
+        )
+        with _LOCK, sqlite3.connect(db_path) as conn:
+            _ensure_schema(conn)
+            conn.execute(
+                """
+                insert into llm_usage_export_checkpoints (
+                    ledger_path, daily_path, event_count, source_sha256,
+                    ledger_sha256, daily_sha256, completed_at_utc
+                ) values (?, ?, ?, ?, ?, ?, ?)
+                on conflict(ledger_path, daily_path) do update set
+                    event_count = excluded.event_count,
+                    source_sha256 = excluded.source_sha256,
+                    ledger_sha256 = excluded.ledger_sha256,
+                    daily_sha256 = excluded.daily_sha256,
+                    completed_at_utc = excluded.completed_at_utc
+                """,
+                (
+                    str(ledger_path.resolve()),
+                    str(daily_path.resolve()),
+                    len(rows),
+                    source_sha256,
+                    ledger_sha256,
+                    daily_sha256,
+                    max((str(row["timestamp_utc"]) for row in rows), default=""),
+                ),
+            )
+    except (AppError, OSError, sqlite3.Error, TypeError, ValueError) as exc:
+        if isinstance(exc, AppError):
+            raise
+        raise AppError(
+            code="llm_usage_export_rebuild_failed",
+            message="Failed to rebuild derived usage exports from canonical SQLite",
+            cause=exc,
+            retryable=False,
+            context={
+                "db_path": str(db_path),
+                "ledger_path": str(ledger_path),
+                "daily_path": str(daily_path),
+            },
+        ) from exc
+    response = LLMUsageExportRebuildResponse(
+        schema_version="1.0",
+        db_path=str(db_path),
+        ledger_path=str(ledger_path),
+        daily_path=str(daily_path),
+        event_count=len(rows),
+        source_sha256=source_sha256,
+        ledger_sha256=ledger_sha256,
+        daily_sha256=daily_sha256,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_usage_export_rebuild_complete",
+            module=logger.name,
+            fields={
+                "event_count": response.event_count,
+                "source_sha256": response.source_sha256,
+                "ledger_path": response.ledger_path,
+                "daily_path": response.daily_path,
+            },
+        )
+    )
+    return response
+
+
 def reconcile_usage_export(
     request: LLMUsageLedgerReconciliationRequest, ctx: RunContext
 ) -> LLMUsageLedgerReconciliationResponse:
@@ -744,6 +1138,25 @@ def reconcile_usage_export(
             if line.strip()
         ]
     except (OSError, sqlite3.Error, TypeError, ValueError, json.JSONDecodeError) as exc:
+        if request.repair and request.daily_path:
+            rebuild_usage_exports(
+                LLMUsageExportRebuildRequest(
+                    schema_version="1.0",
+                    db_path=request.db_path,
+                    ledger_path=request.ledger_path,
+                    daily_path=request.daily_path,
+                ),
+                ctx,
+            )
+            repaired = reconcile_usage_export(
+                LLMUsageLedgerReconciliationRequest(
+                    schema_version="1.0",
+                    db_path=request.db_path,
+                    ledger_path=request.ledger_path,
+                ),
+                ctx,
+            )
+            return replace(repaired, repaired=True)
         raise AppError(
             code="llm_usage_ledger_reconciliation_failed",
             message="Failed to reconcile canonical LLM usage with its JSONL export",
@@ -778,6 +1191,25 @@ def reconcile_usage_export(
         export_estimated_cost_usd=export_totals[4],
         matches=matches,
     )
+    if not response.matches and request.repair and request.daily_path:
+        rebuild_usage_exports(
+            LLMUsageExportRebuildRequest(
+                schema_version="1.0",
+                db_path=request.db_path,
+                ledger_path=request.ledger_path,
+                daily_path=request.daily_path,
+            ),
+            ctx,
+        )
+        repaired = reconcile_usage_export(
+            LLMUsageLedgerReconciliationRequest(
+                schema_version="1.0",
+                db_path=request.db_path,
+                ledger_path=request.ledger_path,
+            ),
+            ctx,
+        )
+        return replace(repaired, repaired=True)
     logger.info(
         log_event(
             ctx,

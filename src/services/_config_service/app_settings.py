@@ -259,6 +259,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         sections.analysis_cfg,
         sections.cost_cfg,
         html_tag_acronyms_path=paths_settings["html_tag_acronyms_path"],
+        runtime_base_path=sections.runtime_base_path,
     )
     drive_settings = _resolve_drive_settings(sections.drive_cfg)
     drive_auth_settings = _resolve_drive_auth_settings(

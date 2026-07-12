@@ -4,6 +4,7 @@ import json
 import logging
 import sqlite3
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from src.contracts.costs import CostLedgerAppendRequest, CostLedgerEntry
 from src.contracts.llm_usage import (
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerEntry,
+    LLMUsageExportRebuildRequest,
     LLMUsageLedgerOutcomeUpdateRequest,
     LLMUsageLedgerReconciliationRequest,
     LLMUsageMedianRebuildRequest,
@@ -199,9 +201,7 @@ def test_llm_usage_ledger_groups_vector_store_records_by_semantic_task(
                 db_path=str(db_path),
                 entry=replace(
                     _entry(),
-                    task_id=(
-                        "run-id:vector_store:artifacts:insights_final"
-                    ),
+                    task_id=("run-id:vector_store:artifacts:insights_final"),
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                     total_tokens=input_tokens + output_tokens,
@@ -290,6 +290,55 @@ def test_llm_usage_ledger_event_key_is_idempotent_and_call_ordinal_is_distinct(
         assert conn.execute("select count(*) from llm_usage_events").fetchone() == (2,)
 
 
+def test_llm_usage_ledger_rejects_unmapped_terminal_error_taxonomy(
+    tmp_path: Path, assert_app_error
+) -> None:
+    with pytest.raises(AppError) as captured:
+        svc.append_usage(
+            LLMUsageLedgerAppendRequest(
+                schema_version="1.0",
+                db_path=str(tmp_path / "usage.sqlite"),
+                entry=replace(
+                    _entry(),
+                    error_stage="output_validation",
+                    error_code="unknown_terminal_error",
+                ),
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        captured.value,
+        code="llm_usage_ledger_error_taxonomy_invalid",
+        retryable=False,
+        severity="error",
+    )
+
+
+def test_llm_usage_ledger_allocates_distinct_ordinals_for_concurrent_direct_calls(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    direct_entry = replace(_entry(), request_id=None, call_ordinal=None)
+
+    def append_one() -> int:
+        response = svc.append_usage(
+            LLMUsageLedgerAppendRequest(
+                schema_version="1.0", db_path=str(db_path), entry=direct_entry
+            ),
+            _ctx(),
+        )
+        assert response.inserted is True
+        return response.call_ordinal
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        ordinals = list(executor.map(lambda _: append_one(), range(12)))
+
+    assert sorted(ordinals) == list(range(12))
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("select count(*) from llm_usage_events").fetchone() == (12,)
+
+
 def test_llm_usage_ledger_updates_outcome_and_reconciles_json_export(
     tmp_path: Path,
 ) -> None:
@@ -353,3 +402,53 @@ def test_llm_usage_ledger_updates_outcome_and_reconciles_json_export(
         "output_validation",
         "openai_response_invalid_json",
     )
+
+
+def test_llm_usage_exports_rebuild_stably_and_reconciliation_repairs_tampering(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    ledger_path = tmp_path / "cost-ledger.jsonl"
+    daily_path = tmp_path / "cost-daily.json"
+    for ordinal in (0, 1):
+        svc.append_usage(
+            LLMUsageLedgerAppendRequest(
+                schema_version="1.0",
+                db_path=str(db_path),
+                entry=replace(_entry(), call_ordinal=ordinal),
+            ),
+            _ctx(),
+        )
+
+    request = LLMUsageExportRebuildRequest(
+        schema_version="1.0",
+        db_path=str(db_path),
+        ledger_path=str(ledger_path),
+        daily_path=str(daily_path),
+    )
+    first = svc.rebuild_usage_exports(request, _ctx())
+    first_bytes = (ledger_path.read_bytes(), daily_path.read_bytes())
+    second = svc.rebuild_usage_exports(request, _ctx())
+
+    assert first.source_sha256 == second.source_sha256
+    assert first_bytes == (ledger_path.read_bytes(), daily_path.read_bytes())
+    ledger_path.write_text('{"altered":true}\n', encoding="utf-8")
+    reconciled = svc.reconcile_usage_export(
+        LLMUsageLedgerReconciliationRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+            repair=True,
+        ),
+        _ctx(),
+    )
+
+    assert reconciled.matches is True
+    assert reconciled.repaired is True
+    assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 2
+    with sqlite3.connect(db_path) as conn:
+        checkpoint = conn.execute(
+            "select event_count from llm_usage_export_checkpoints"
+        ).fetchone()
+    assert checkpoint == (2,)

@@ -51,7 +51,10 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
         self.assertEqual(30, settings.vector_store_retention_days)
         self.assertFalse(settings.artifacts_use_vector_store)
         self.assertFalse(settings.validation_grounding_use_vector_store)
-        self.assertEqual("./out/cost-ledger.jsonl", settings.cost_ledger_path)
+        self.assertEqual(
+            Path(tmp_dir, "out", "cost-ledger.jsonl").resolve(),
+            Path(settings.cost_ledger_path),
+        )
         self.assertIn("AI", settings.html_tag_acronyms)
         self.assertIn("ROI", settings.html_tag_acronyms)
         self.assertTrue(
@@ -170,8 +173,12 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
         self.assertEqual(14, settings.vector_store_retention_days)
         self.assertTrue(settings.artifacts_use_vector_store)
         self.assertTrue(settings.validation_grounding_use_vector_store)
-        self.assertEqual(f"{tmp_dir}/ledger.jsonl", settings.cost_ledger_path)
-        self.assertEqual("./out/cost-daily.json", settings.cost_daily_path)
+        self.assertEqual("ledger.jsonl", Path(settings.cost_ledger_path).name)
+        self.assertEqual(
+            Path(tmp_dir).name, Path(settings.cost_ledger_path).parent.name
+        )
+        self.assertEqual("cost-daily.json", Path(settings.cost_daily_path).name)
+        self.assertEqual("out", Path(settings.cost_daily_path).parent.name)
         self.assertIsInstance(settings.model_pricing, dict)
 
     def test_model_pricing_loads_from_separate_llm_costs_yaml(self) -> None:
@@ -214,7 +221,10 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
                 app_settings = load_settings(request, ctx)
                 inventory_settings = load_publisher_inventory_settings(request, ctx)
 
-        self.assertEqual("./out/custom-cost-daily.json", app_settings.cost_daily_path)
+        self.assertEqual(
+            Path(tmp_dir, "out", "custom-cost-daily.json").resolve(),
+            Path(app_settings.cost_daily_path),
+        )
         self.assertEqual(pricing, app_settings.model_pricing)
         self.assertEqual(pricing, inventory_settings.model_pricing)
         self.assertEqual("gpt-5", app_settings.openai_model)

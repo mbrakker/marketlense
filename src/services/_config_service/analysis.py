@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+# ruff: noqa: F403, F405
 from src.services._config_service.common import *
+
 
 def _resolve_analysis_settings(
     analysis_cfg: dict[str, Any],
     cost_cfg: dict[str, Any],
     *,
     html_tag_acronyms_path: str,
+    runtime_base_path: Path,
 ) -> dict[str, Any]:
     resolved = _resolve_scalar_settings(
         analysis_cfg,
@@ -81,7 +84,7 @@ def _resolve_analysis_settings(
             ),
         ],
     )
-    resolved["cost_ledger_path"] = str(
+    resolved["cost_ledger_path"] = _resolve_optional_path(
         _resolve_setting_raw(
             analysis_cfg,
             _SettingSpec(
@@ -103,13 +106,18 @@ def _resolve_analysis_settings(
             _default_config_value(
                 "analysis", "cost_ledger_path", fallback="./out/cost-ledger.jsonl"
             )
-        )
+        ),
+        base_path=runtime_base_path,
     )
-    resolved["cost_daily_path"] = str(
+    resolved["cost_daily_path"] = _resolve_optional_path(
         cost_cfg.get("daily_path")
-        or _default_config_value("cost", "daily_path", fallback="./out/cost-daily.json")
+        or _env_value("COST_DAILY_PATH")
+        or _default_config_value(
+            "cost", "daily_path", fallback="./out/cost-daily.json"
+        ),
+        base_path=runtime_base_path,
     )
-    resolved["usage_db_path"] = str(
+    resolved["usage_db_path"] = _resolve_optional_path(
         _resolve_setting_raw(
             cost_cfg,
             _SettingSpec(
@@ -125,12 +133,14 @@ def _resolve_analysis_settings(
                 env_first=True,
             ),
         )
-        or "./state/llm_usage.sqlite"
+        or "./state/llm_usage.sqlite",
+        base_path=runtime_base_path,
     )
     resolved["model_pricing"] = cost_cfg.get("pricing") or _default_config_value(
         "cost", "pricing", fallback={}
     )
     resolved["html_tag_acronyms"] = _load_html_tag_acronyms(html_tag_acronyms_path)
     return resolved
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]
