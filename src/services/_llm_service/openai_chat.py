@@ -61,7 +61,7 @@ def _legacy_chat_completion_call(
             legacy_openai.timeout = timeout_seconds
         elif had_timeout_attr:
             delattr(legacy_openai, "timeout")
-        payload_args = {
+        payload_args: dict[str, Any] = {
             "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
@@ -124,7 +124,7 @@ def _modern_chat_completion_call(
     if timeout_seconds is not None:
         client_kwargs["timeout"] = timeout_seconds
     client = client_factory(**client_kwargs)
-    payload_args = {
+    payload_args: dict[str, Any] = {
         "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
