@@ -166,6 +166,16 @@ Scoring:
 
 ### 4. PDF, Dashboard, and Runtime Performance
 
+- **Title:** Make retained PDF benchmark evidence executable in CI [Impact: 5/5, Effort: 3/5]
+  - Problem fixed: CI deliberately permits missing retained PDF and crop-refine assets, so both benchmark artifacts become warned and currently require expiry-dated release-evidence waivers instead of providing executable evidence.
+  - Why implement: Restores the intended release guarantee: candidate and crop-refine equivalence, runtime, and estimated model-work regressions are independently verified on every release SHA.
+  - Tradeoffs / risks: The corpus must remain non-secret, licensed, integrity-pinned, and bounded in download/runtime; do not replace retained artifact verification with synthetic fixtures or silently treat missing evidence as passing.
+  - Acceptance Criteria:
+    - CI securely materializes the existing approved benchmark PDFs and generated crop artifacts (or an integrity-pinned retained corpus) before the two benchmark gates run.
+    - Candidate, crop-refine, trend, health-scorecard, manifest, and release review all pass without `--allow-missing-assets` warnings or release-evidence waivers.
+    - Corpus manifests record source, license/retention decision, SHA-256 hashes, and expected paths; missing or hash-mismatched inputs fail the release gate.
+    - A real CI run on the exact release SHA publishes fully passing benchmark evidence and retires the temporary PDF waiver entries.
+
 - **Title:** Promote final-crop QA sidecars into release scorecards and selection telemetry [Impact: 5/5, Effort: 3/5]
   - Problem fixed: Final crop QA now emits DPI, quality score, defect labels, and table/chart/card detector diagnostics, but release evidence and selection summaries still rely mostly on candidate/crop signatures and manual visual review.
   - Why implement: Makes the new deterministic detectors operational: regressions become visible by report, candidate type, publisher, and crop profile, and selection can prioritize high-quality accepted crops without waiting for manual review.
