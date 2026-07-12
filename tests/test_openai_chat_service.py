@@ -35,6 +35,7 @@ def _chat_request(tmp_path) -> OpenAIJSONPromptRequest:
         timeout_seconds=5.0,
         cost_ledger_path=str(tmp_path / "ledger.jsonl"),
         cost_daily_path=str(tmp_path / "daily.json"),
+        usage_db_path=str(tmp_path / "usage.sqlite"),
         model_pricing={},
     )
 
@@ -106,6 +107,7 @@ def test_openai_chat_json_delegates_usage_accounting(
                 prompt_tokens=12,
                 completion_tokens=5,
                 total_tokens=17,
+                prompt_tokens_details=SimpleNamespace(cached_tokens=8),
             )
             message = SimpleNamespace(content=json.dumps({"ok": True}))
             choice = SimpleNamespace(message=message)
@@ -140,6 +142,8 @@ def test_openai_chat_json_delegates_usage_accounting(
     assert accounting_request.model == "gpt-4.1-mini"
     assert accounting_request.input_tokens == 12
     assert accounting_request.output_tokens == 5
+    assert accounting_request.cached_input_tokens == 8
+    assert accounting_request.cache_decision == "provider_hit"
     assert accounting_request.tool_calls == 0
     assert accounting_request.request_id == "chat_1"
     assert accounting_request.cost_ledger_path == str(tmp_path / "ledger.jsonl")

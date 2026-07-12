@@ -79,6 +79,32 @@
       "schema_validation_status": "not_applicable",
       "error_stage": "",
       "error_code": ""
+    },
+    {
+      "timestamp_utc": "2026-07-12T17:21:42.425546+00:00",
+      "provider": "openai",
+      "action": "live_cache_canary:readme",
+      "run_id": "live-cache-canary",
+      "task_id": "readme-2",
+      "span_id": "call-2",
+      "trace_id": "",
+      "model": "gpt-4.1-mini",
+      "request_id": "chatcmpl-E0sA1PJClHbTaDzO8zORcmHQS0IWA",
+      "input_tokens": 4587,
+      "output_tokens": 5,
+      "total_tokens": 4592,
+      "cached_input_tokens": 4352,
+      "tool_calls": 0,
+      "estimated_cost_usd": 0.0,
+      "prompt_namespace": "live_cache_canary/readme",
+      "prompt_hash": "",
+      "provider_decision": "openai_primary",
+      "cache_decision": "provider_hit",
+      "call_ordinal": 0,
+      "parse_status": "valid",
+      "schema_validation_status": "not_applicable",
+      "error_stage": "",
+      "error_code": ""
     }
   ],
   "replay_record_index": 0

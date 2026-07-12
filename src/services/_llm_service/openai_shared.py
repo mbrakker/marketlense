@@ -27,8 +27,8 @@ from src.contracts.openai import (
     OpenAIResponseRequest,
     OpenAIResponseResult,
     OpenAIUsageAccountingRequest,
-    OpenAIUsageAccountingResponse,
-    OpenAIUsageOutcomeUpdateRequest,
+    OpenAIUsageAccountingResponse,  # noqa: F401 - compatibility facade export.
+    OpenAIUsageOutcomeUpdateRequest,  # noqa: F401 - compatibility facade export.
     OpenAIVectorStoreAttachFileRequest,
     OpenAIVectorStoreAttachFileResponse,
     OpenAIVectorStoreCreateRequest,
@@ -46,6 +46,12 @@ from src.contracts.pdf_ocr import PdfOcrPageText
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.services import file_service, openai_accounting_service
+from src.services._llm_service.openai_usage_accounting import (
+    finalize_usage_accounting as _finalize_usage_accounting,
+)
+from src.services._llm_service.openai_usage_accounting import (
+    record_usage_accounting as _record_usage_accounting,
+)
 from src.services.llm_usage_ledger_service import evaluate_daily_spend_guardrail
 from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
@@ -86,7 +92,9 @@ def _openai_client_factory() -> Any | None:
     return getattr(openai_legacy, "OpenAI", None)
 
 
-def _enforce_daily_spend_guardrail(request: Any, ctx: RunContext, *, operation: str) -> None:
+def _enforce_daily_spend_guardrail(
+    request: Any, ctx: RunContext, *, operation: str
+) -> None:
     raw_task = str(ctx.task_id)
     _, marker, semantic_task = raw_task.rpartition(":vector_store:")
     guardrail = evaluate_daily_spend_guardrail(
@@ -108,7 +116,10 @@ def _enforce_daily_spend_guardrail(request: Any, ctx: RunContext, *, operation: 
     if guardrail.decision in {"pause", "stop"}:
         raise AppError(
             code=f"openai_daily_spend_{guardrail.decision}",
-            message=f"Canonical daily spend reached the configured {guardrail.decision} threshold",
+            message=(
+                "Canonical daily spend reached the configured "
+                f"{guardrail.decision} threshold"
+            ),
             retryable=guardrail.decision == "pause",
             context={
                 "operation": operation,
@@ -702,6 +713,7 @@ class _OpenAIResponseMetadata:
     output_tokens: int | None
     tool_calls: int
     total_tokens: int | None
+    cached_input_tokens: int | None
     parsed_json: dict | None
     parse_strategy: str
 
@@ -730,6 +742,7 @@ def _build_response_metadata(
     output_tokens: int | None,
     tool_calls: int,
     total_tokens: int | None,
+    cached_input_tokens: int | None,
     recover_json_object: bool,
 ) -> _OpenAIResponseMetadata:
     parsed_json, parse_strategy = _parse_response_json(
@@ -748,6 +761,7 @@ def _build_response_metadata(
         output_tokens=output_tokens,
         tool_calls=int(tool_calls or 0),
         total_tokens=resolved_total_tokens,
+        cached_input_tokens=cached_input_tokens,
         parsed_json=parsed_json,
         parse_strategy=parse_strategy,
     )
@@ -761,6 +775,7 @@ def _adapt_chat_completion_metadata(run: Any) -> _OpenAIResponseMetadata:
         output_tokens=run.completion_tokens,
         tool_calls=0,
         total_tokens=run.total_tokens,
+        cached_input_tokens=run.cached_input_tokens,
         recover_json_object=False,
     )
 
@@ -778,139 +793,8 @@ def _adapt_responses_metadata(
         output_tokens=output_tokens,
         tool_calls=tool_calls,
         total_tokens=total_tokens,
+        cached_input_tokens=None,
         recover_json_object=recover_json_object,
-    )
-
-
-def _semantic_usage_action(*, step_name: str, source_request: Any | None) -> str:
-    prompt_namespace = str(
-        getattr(source_request, "prompt_namespace", "") or ""
-    ).strip()
-    if not prompt_namespace:
-        return step_name
-    namespace_parts = [part for part in prompt_namespace.split("/") if part]
-    if namespace_parts[:1] == ["report_vs"]:
-        namespace_parts = namespace_parts[1:]
-    return ":".join(namespace_parts) or step_name
-
-
-def _record_usage_accounting(
-    *,
-    ctx: RunContext,
-    step_name: str,
-    model: str,
-    input_tokens: int | None,
-    output_tokens: int | None,
-    tool_calls: int,
-    cost_ledger_path: str,
-    cost_daily_path: str,
-    model_pricing: dict,
-    request_id: str | None,
-    cached_input_tokens: int | None = None,
-    provider: str = "openai",
-    action: str | None = None,
-    total_tokens: int | None = None,
-    source_request: Any | None = None,
-    call_ordinal: int = 0,
-    parse_status: str = "not_applicable",
-    schema_validation_status: str = "not_applicable",
-) -> OpenAIUsageAccountingResponse:
-    source = source_request
-    cache_decision = ""
-    if source is not None and hasattr(source, "response_cache_enabled"):
-        cache_decision = (
-            "enabled"
-            if bool(getattr(source, "response_cache_enabled", False))
-            else "disabled"
-        )
-    return openai_accounting_service.record_usage(
-        OpenAIUsageAccountingRequest(
-            schema_version="1.0",
-            step_name=step_name,
-            model=model,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=total_tokens,
-            cached_input_tokens=cached_input_tokens,
-            tool_calls=int(tool_calls or 0),
-            cost_ledger_path=cost_ledger_path,
-            cost_daily_path=cost_daily_path,
-            model_pricing=model_pricing or {},
-            request_id=request_id,
-            provider=provider,
-            action=action or _semantic_usage_action(
-                step_name=step_name, source_request=source
-            ),
-            usage_db_path=str(
-                getattr(source, "usage_db_path", "") or "./state/llm_usage.sqlite"
-            ),
-            publisher_name=str(
-                getattr(source, "publisher_name", "")
-                or getattr(source, "publisher", "")
-                or ""
-            ),
-            report_name=str(
-                getattr(source, "report_name", "")
-                or getattr(source, "report_title", "")
-                or getattr(source, "title", "")
-                or ""
-            ),
-            source_url=str(
-                getattr(source, "source_url", "")
-                or getattr(source, "landing_page_url", "")
-                or getattr(source, "url", "")
-                or ""
-            ),
-            prompt_namespace=str(getattr(source, "prompt_namespace", "") or ""),
-            prompt_hash=str(
-                getattr(source, "prompt_hash", "")
-                or getattr(source, "prompt_sha256", "")
-                or getattr(source, "prompt_user_sha256", "")
-                or ""
-            ),
-            provider_decision=str(
-                getattr(source, "provider_decision", "") or "openai_primary"
-            ),
-            cache_decision=cache_decision,
-            temperature=getattr(source, "temperature", None),
-            seed=getattr(source, "seed", None),
-            timeout_seconds=getattr(source, "timeout_seconds", None),
-            call_ordinal=call_ordinal,
-            parse_status=parse_status,
-            schema_validation_status=schema_validation_status,
-            extra={
-                "schema_name": str(getattr(source, "schema_name", "") or ""),
-                "response_cache_dir": str(
-                    getattr(source, "response_cache_dir", "") or ""
-                ),
-            },
-        ),
-        ctx,
-    )
-
-
-def _finalize_usage_accounting(
-    *,
-    accounting: OpenAIUsageAccountingResponse,
-    ctx: RunContext,
-    parse_status: str,
-    schema_validation_status: str,
-    error_stage: str = "",
-    error_code: str = "",
-) -> None:
-    if not accounting.usage_db_recorded or not accounting.event_key:
-        return
-    openai_accounting_service.update_usage_outcome(
-        OpenAIUsageOutcomeUpdateRequest(
-            schema_version="1.0",
-            usage_db_path=accounting.usage_db_path,
-            event_key=accounting.event_key,
-            parse_status=parse_status,
-            schema_validation_status=schema_validation_status,
-            error_stage=error_stage,
-            error_code=error_code,
-        ),
-        ctx,
     )
 
 

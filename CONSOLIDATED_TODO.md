@@ -241,16 +241,6 @@ Scoring:
     - Missing per-service integration coverage requires a marked test or explicit temporary waiver.
     - README documents how to add and retire waivers.
 
-- **Title:** Include canonical LLM-accounting reconciliation in the release evidence manifest [Impact: 5/5, Effort: 2/5]
-  - Problem fixed: SQLite-backed LLM accounting can deterministically rebuild and repair its JSONL/daily compatibility exports, but CI does not yet retain a reconciliation artifact alongside the release evidence bundle.
-  - Why implement: Makes token/cost totals, cached usage, invalid outcomes, and replay suppression auditable at release time instead of only through local service tests.
-  - Tradeoffs / risks: The gate must use a committed, representative non-secret event corpus and must not turn CI into a live-provider dependency.
-  - Acceptance Criteria:
-    - CI rebuilds JSONL and daily projections from a representative retained canonical SQLite corpus, reconciles them, and fails on any count/token/cost mismatch.
-    - The artifact covers successful, invalid, cached, and replayed provider events and records projection checkpoint hashes.
-    - The reconciliation JSON is included in the release-evidence manifest and uploaded bundle.
-    - Tests cover missing/altered projections, repeatable rebuilds, and manifest inclusion.
-
 - **Title:** Surface canonical LLM projection lag to budget and release gates [Impact: 5/5, Effort: 2/5]
   - Problem fixed: Incremental token/cost exports intentionally lag by up to nineteen canonical events, but operators and budget decisions do not yet see that lag or its possible cost impact.
   - Why implement: Makes the batching performance gain safe for live spend controls and release evidence.

@@ -81,7 +81,7 @@ class LLMUsageLedgerEntry(SemanticIdContract):
         }
     )
     cache_decision: str = field(
-        metadata={"doc": "Semantic cache decision for the call, if known."}
+        metadata={"doc": "Semantic or provider cache outcome for the call, if known."}
     )
     temperature: Optional[float] = field(
         metadata={"doc": "Sampling temperature used for the call, if configured."}
@@ -297,11 +297,15 @@ class LLMUsageLedgerReconciliationResponse:
     )
     daily_matches: bool = field(
         default=False,
-        metadata={"doc": "Whether the derived daily projection matches canonical events."},
+        metadata={
+            "doc": "Whether the derived daily projection matches canonical events."
+        },
     )
     checkpoint_matches: bool = field(
         default=False,
-        metadata={"doc": "Whether checkpoint hashes and event boundary match derived files."},
+        metadata={
+            "doc": "Whether checkpoint hashes and event boundary match derived files."
+        },
     )
     mismatch_reasons: tuple[str, ...] = field(
         default=(),
@@ -372,13 +376,19 @@ class LLMUsageProjectionStatusResponse:
     )
     db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
     latest_event_id: int = field(metadata={"doc": "Latest durable canonical event ID."})
-    projected_event_id: int = field(metadata={"doc": "Latest event ID materialized in exports."})
-    pending_event_count: int = field(metadata={"doc": "Canonical events not yet materialized."})
+    projected_event_id: int = field(
+        metadata={"doc": "Latest event ID materialized in exports."}
+    )
+    pending_event_count: int = field(
+        metadata={"doc": "Canonical events not yet materialized."}
+    )
     pending_estimated_cost_usd: float = field(
         metadata={"doc": "Estimated cost of canonical events pending materialization."}
     )
     projection_generation_id: int = field(
-        metadata={"doc": "Latest durable projection generation, or zero before first projection."}
+        metadata={
+            "doc": "Latest durable projection generation, or zero before first projection."
+        }
     )
     last_successful_projection_at_utc: str = field(
         metadata={"doc": "UTC timestamp of the latest successful projection, if any."}
@@ -390,36 +400,71 @@ class LLMUsageProjectionStatusResponse:
 
 @dataclass(frozen=True)
 class LLMUsageSpendGuardrailRequest:
-    schema_version: str = field(metadata={"doc": "Spend-guardrail request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Spend-guardrail request schema version."}
+    )
     db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
-    warn_usd: float = field(metadata={"doc": "UTC daily spend threshold that emits a warning."})
+    warn_usd: float = field(
+        metadata={"doc": "UTC daily spend threshold that emits a warning."}
+    )
     pause_usd: float | None = field(
-        default=None, metadata={"doc": "UTC daily spend threshold that defers new calls."}
+        default=None,
+        metadata={"doc": "UTC daily spend threshold that defers new calls."},
     )
     stop_usd: float | None = field(
-        default=None, metadata={"doc": "UTC daily spend threshold that hard-stops new calls."}
+        default=None,
+        metadata={"doc": "UTC daily spend threshold that hard-stops new calls."},
     )
     overrides_allowed: bool = field(
-        default=False, metadata={"doc": "Whether operator overrides may bypass a pause or stop."}
+        default=False,
+        metadata={"doc": "Whether operator overrides may bypass a pause or stop."},
     )
-    provider: str = field(default="", metadata={"doc": "Provider for the exact median-cost lookup."})
-    task: str = field(default="", metadata={"doc": "Normalized task for the exact median-cost lookup."})
-    action: str = field(default="", metadata={"doc": "Action for the exact median-cost lookup."})
-    model: str = field(default="", metadata={"doc": "Model for the exact median-cost lookup."})
-    prompt_namespace: str = field(default="", metadata={"doc": "Prompt namespace for the exact median-cost lookup."})
+    provider: str = field(
+        default="", metadata={"doc": "Provider for the exact median-cost lookup."}
+    )
+    task: str = field(
+        default="",
+        metadata={"doc": "Normalized task for the exact median-cost lookup."},
+    )
+    action: str = field(
+        default="", metadata={"doc": "Action for the exact median-cost lookup."}
+    )
+    model: str = field(
+        default="", metadata={"doc": "Model for the exact median-cost lookup."}
+    )
+    prompt_namespace: str = field(
+        default="",
+        metadata={"doc": "Prompt namespace for the exact median-cost lookup."},
+    )
 
 
 @dataclass(frozen=True)
 class LLMUsageSpendGuardrailResponse:
-    schema_version: str = field(metadata={"doc": "Spend-guardrail response schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Spend-guardrail response schema version."}
+    )
     day_utc: str = field(metadata={"doc": "UTC day evaluated for canonical spend."})
-    canonical_spend_usd: float = field(metadata={"doc": "Canonical spend recorded for the UTC day."})
-    median_forecast_usd: float = field(metadata={"doc": "Exact matching historical median cost forecast for the pending call."})
-    median_sample_count: int = field(metadata={"doc": "Sample count supporting the exact median forecast."})
-    projected_spend_usd: float = field(metadata={"doc": "Canonical spend plus median forecast used for the decision."})
-    forecast_status: str = field(metadata={"doc": "Median forecast status: matched or cold_start."})
+    canonical_spend_usd: float = field(
+        metadata={"doc": "Canonical spend recorded for the UTC day."}
+    )
+    median_forecast_usd: float = field(
+        metadata={
+            "doc": "Exact matching historical median cost forecast for the pending call."
+        }
+    )
+    median_sample_count: int = field(
+        metadata={"doc": "Sample count supporting the exact median forecast."}
+    )
+    projected_spend_usd: float = field(
+        metadata={"doc": "Canonical spend plus median forecast used for the decision."}
+    )
+    forecast_status: str = field(
+        metadata={"doc": "Median forecast status: matched or cold_start."}
+    )
     warn_usd: float = field(metadata={"doc": "Configured UTC daily warning threshold."})
-    decision: str = field(metadata={"doc": "Explicit guardrail decision: allow, warn, pause, or stop."})
+    decision: str = field(
+        metadata={"doc": "Explicit guardrail decision: allow, warn, pause, or stop."}
+    )
 
 
 @dataclass(frozen=True)

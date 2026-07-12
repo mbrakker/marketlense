@@ -22,6 +22,7 @@ class _ChatCompletionRun:
     prompt_tokens: int | None
     completion_tokens: int | None
     total_tokens: int | None
+    cached_input_tokens: int | None
 
 
 def _chat_completion_model_kwargs(
@@ -80,12 +81,14 @@ def _legacy_chat_completion_call(
             resp = legacy_openai.ChatCompletion.create(**payload_args)
         payload = resp["choices"][0]["message"]["content"]
         usage = resp.get("usage") or {}
+        prompt_tokens_details = usage.get("prompt_tokens_details") or {}
         return _ChatCompletionRun(
             payload=payload,
             request_id=resp.get("id"),
             prompt_tokens=usage.get("prompt_tokens"),
             completion_tokens=usage.get("completion_tokens"),
             total_tokens=usage.get("total_tokens"),
+            cached_input_tokens=prompt_tokens_details.get("cached_tokens"),
         )
     finally:
         if had_timeout_attr:
@@ -130,12 +133,13 @@ def _modern_chat_completion_call(
         "response_format": {"type": "json_object"},
     }
     payload_args.update(
-        _chat_completion_model_kwargs(
-            model=model, temperature=temperature, seed=seed
-        )
+        _chat_completion_model_kwargs(model=model, temperature=temperature, seed=seed)
     )
     resp = client.chat.completions.create(**payload_args)
     usage = getattr(resp, "usage", None)
+    prompt_tokens_details = (
+        getattr(usage, "prompt_tokens_details", None) if usage is not None else None
+    )
     return _ChatCompletionRun(
         payload=resp.choices[0].message.content or "",
         request_id=getattr(resp, "id", None),
@@ -148,6 +152,7 @@ def _modern_chat_completion_call(
         total_tokens=getattr(usage, "total_tokens", None)
         if usage is not None
         else None,
+        cached_input_tokens=getattr(prompt_tokens_details, "cached_tokens", None),
     )
 
 
@@ -432,6 +437,7 @@ def openai_chat_json(
         output_tokens=None,
         tool_calls=0,
         total_tokens=None,
+        cached_input_tokens=None,
         parsed_json=None,
         parse_strategy="empty",
     )
@@ -471,6 +477,7 @@ def openai_chat_json(
         input_tokens=metadata.input_tokens,
         output_tokens=metadata.output_tokens,
         total_tokens=metadata.total_tokens,
+        cached_input_tokens=metadata.cached_input_tokens,
         tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
