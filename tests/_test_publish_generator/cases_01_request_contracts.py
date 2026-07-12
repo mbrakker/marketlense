@@ -123,12 +123,10 @@ def test_publish_html_blocks_editorial_contract_failures_with_rule_ids(
     assert outcome.error == "publish_editorial_contract_failed"
     assert outcome.validation_status == "fail"
     assert any(
-        "editorial.generic_phrasing" in issue
-        for issue in outcome.validation_issues
+        "editorial.generic_phrasing" in issue for issue in outcome.validation_issues
     )
     assert any(
-        "editorial.internal_reference" in issue
-        for issue in outcome.validation_issues
+        "editorial.internal_reference" in issue for issue in outcome.validation_issues
     )
     assert (
         wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")
@@ -173,12 +171,16 @@ def test_publish_html_ignores_text_inside_malformed_script_tags(
 
     assert outcome.status == "published"
     assert not any(
-        "editorial.generic_phrasing" in issue
-        for issue in outcome.validation_issues
+        "editorial.generic_phrasing" in issue for issue in outcome.validation_issues
     )
-    assert len(
-        wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")
-    ) == 1
+    assert (
+        len(
+            wordpress_http.calls_for(
+                "POST", "https://example.com/wp-json/wp/v2/ml_report"
+            )
+        )
+        == 1
+    )
 
 
 def test_publish_editorial_contract_warns_for_expanded_quality_rules(
@@ -225,9 +227,7 @@ def test_publish_editorial_contract_warns_for_expanded_quality_rules(
 
     assert outcome.status == "published"
     assert outcome.validation_status == "fail"
-    assert {
-        issue.split("|", 1)[0] for issue in outcome.validation_issues
-    } >= {
+    assert {issue.split("|", 1)[0] for issue in outcome.validation_issues} >= {
         "editorial.unsupported_implication",
         "editorial.duplicate_insight",
         "editorial.missing_caveat",

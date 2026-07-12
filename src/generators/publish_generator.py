@@ -146,9 +146,7 @@ def publish_html(
                     "html_path": request.html_path,
                     "policy": settings.validation_policy,
                     "rule_ids": [
-                        issue.split("|", 1)[0]
-                        for issue in editorial_issues
-                        if issue
+                        issue.split("|", 1)[0] for issue in editorial_issues if issue
                     ],
                 },
             )
@@ -437,9 +435,7 @@ def _editorial_issue(
     severity: str,
     remediation: str,
 ) -> str:
-    return (
-        f"{rule_id}|field={field}|severity={severity}|remediation={remediation}"
-    )
+    return f"{rule_id}|field={field}|severity={severity}|remediation={remediation}"
 
 
 def _blocking_editorial_issues(issues: list[str]) -> list[str]:
@@ -539,7 +535,9 @@ def _validate_publish_editorial_contract(html_text: str) -> list[str]:
                 remediation="Replace generic action language with a concrete next step.",
             )
         )
-    if re.search(r"\b(?:revenue|growth|share|market|percentage|metric)\b", lowered_text) and re.search(
+    if re.search(
+        r"\b(?:revenue|growth|share|market|percentage|metric)\b", lowered_text
+    ) and re.search(
         r"\b(?:no metric support|without metric support|without quantified support)\b",
         lowered_text,
     ):
@@ -551,7 +549,9 @@ def _validate_publish_editorial_contract(html_text: str) -> list[str]:
                 remediation="Attach a source-backed metric or remove the metric claim.",
             )
         )
-    if re.search(r"\b(?:awesome|everyone must|game[- ]changing|revolutionary)\b", lowered_text):
+    if re.search(
+        r"\b(?:awesome|everyone must|game[- ]changing|revolutionary)\b", lowered_text
+    ):
         issues.append(
             _editorial_issue(
                 rule_id="editorial.tone_defect",
