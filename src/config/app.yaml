@@ -293,6 +293,10 @@ cross_report_analysis:
 cost:
   daily_path: "./out/cost-daily.json"
   usage_db_path: "./state/llm_usage.sqlite"
+  daily_spend_warn_usd: 3.0
+  daily_spend_pause_usd: 5.0
+  daily_spend_stop_usd: 6.0
+  daily_spend_overrides_allowed: false
   pricing_path: "./src/config/llm-costs.yaml"
 
 workflow_control:

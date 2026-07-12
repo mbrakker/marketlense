@@ -16018,6 +16018,54 @@
       ],
       "type": "object"
     },
+    "src.contracts.files.AppendBytesRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "contentEncoding": "base64",
+          "type": "string"
+        },
+        "make_parents": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "content"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.AppendBytesResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes_appended": {
+          "type": "integer"
+        },
+        "md5": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "bytes_appended",
+        "md5"
+      ],
+      "type": "object"
+    },
     "src.contracts.files.DeleteFileRequest": {
       "additionalProperties": false,
       "properties": {
@@ -17954,6 +18002,9 @@
         "temperature": {
           "type": "number"
         },
+        "usage_db_path": {
+          "type": "string"
+        },
         "validation_data_gap_policy": {
           "type": "string"
         },
@@ -18286,11 +18337,20 @@
         "event_count": {
           "type": "integer"
         },
+        "generation_id": {
+          "type": "integer"
+        },
+        "last_projected_event_id": {
+          "type": "integer"
+        },
         "ledger_path": {
           "type": "string"
         },
         "ledger_sha256": {
           "type": "string"
+        },
+        "projected_event_count": {
+          "type": "integer"
         },
         "schema_version": {
           "type": "string"
@@ -18307,7 +18367,9 @@
         "event_count",
         "source_sha256",
         "ledger_sha256",
-        "daily_sha256"
+        "daily_sha256",
+        "last_projected_event_id",
+        "projected_event_count"
       ],
       "type": "object"
     },
@@ -18337,11 +18399,17 @@
         "call_ordinal": {
           "type": "integer"
         },
+        "canonical_event_count": {
+          "type": "integer"
+        },
         "db_path": {
           "type": "string"
         },
         "event_key": {
           "type": "string"
+        },
+        "export_projection_due": {
+          "type": "boolean"
         },
         "inserted": {
           "type": "boolean"
@@ -18386,7 +18454,9 @@
         "median_rebuild_scheduled",
         "median_task",
         "median_task_event_count",
-        "median_row_count"
+        "median_row_count",
+        "canonical_event_count",
+        "export_projection_due"
       ],
       "type": "object"
     },
@@ -18609,6 +18679,9 @@
         "event_key": {
           "type": "string"
         },
+        "export_refreshed": {
+          "type": "boolean"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -18660,6 +18733,12 @@
     "src.contracts.llm_usage.LLMUsageLedgerReconciliationResponse": {
       "additionalProperties": false,
       "properties": {
+        "checkpoint_matches": {
+          "type": "boolean"
+        },
+        "daily_matches": {
+          "type": "boolean"
+        },
         "db_path": {
           "type": "string"
         },
@@ -18683,6 +18762,12 @@
         },
         "matches": {
           "type": "boolean"
+        },
+        "mismatch_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "repaired": {
           "type": "boolean"
@@ -18761,6 +18846,145 @@
         "db_path",
         "median_db_path",
         "median_row_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageProjectionStatusRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "daily_path": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "ledger_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "ledger_path",
+        "daily_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageProjectionStatusResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "files_valid": {
+          "type": "boolean"
+        },
+        "last_successful_projection_at_utc": {
+          "type": "string"
+        },
+        "latest_event_id": {
+          "type": "integer"
+        },
+        "pending_estimated_cost_usd": {
+          "type": "number"
+        },
+        "pending_event_count": {
+          "type": "integer"
+        },
+        "projected_event_id": {
+          "type": "integer"
+        },
+        "projection_generation_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "latest_event_id",
+        "projected_event_id",
+        "pending_event_count",
+        "pending_estimated_cost_usd",
+        "projection_generation_id",
+        "last_successful_projection_at_utc",
+        "files_valid"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageSpendGuardrailRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "overrides_allowed": {
+          "type": "boolean"
+        },
+        "pause_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stop_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "warn_usd": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "warn_usd"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageSpendGuardrailResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_spend_usd": {
+          "type": "number"
+        },
+        "day_utc": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "warn_usd": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "day_utc",
+        "canonical_spend_usd",
+        "warn_usd",
+        "decision"
       ],
       "type": "object"
     },
@@ -19920,6 +20144,15 @@
         "cost_ledger_path": {
           "type": "string"
         },
+        "daily_spend_pause_usd": {
+          "type": "number"
+        },
+        "daily_spend_stop_usd": {
+          "type": "number"
+        },
+        "daily_spend_warn_usd": {
+          "type": "number"
+        },
         "model": {
           "type": "string"
         },
@@ -20560,6 +20793,15 @@
           "type": "string"
         },
         "ledger_path": {
+          "type": "string"
+        },
+        "pricing_key": {
+          "type": "string"
+        },
+        "pricing_status": {
+          "type": "string"
+        },
+        "pricing_version": {
           "type": "string"
         },
         "recorded": {

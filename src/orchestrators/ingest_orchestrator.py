@@ -26,6 +26,10 @@ from src.contracts.files import (
     ReadTextRequest,
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.llm_usage import (
+    LLMUsageExportRebuildRequest,
+    LLMUsageProjectionStatusRequest,
+)
 from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.contracts.report_cards import ReportCardManifest
 from src.contracts.report_store import (
@@ -73,6 +77,10 @@ from src.services.file_cache_service import (
     write_md5_sidecar,
 )
 from src.services.file_service import delete_file, file_exists, file_stat, read_text
+from src.services.llm_usage_ledger_service import (
+    get_projection_status,
+    rebuild_usage_exports,
+)
 from src.services.pdf_service import check_pdf_eof
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
@@ -1084,6 +1092,59 @@ def _update_ingest_cursor(
     )
 
 
+def _finalize_usage_projection(settings: IngestSettings, root_ctx: RunContext) -> None:
+    """Boundedly materialize canonical usage after an ingest run without masking its result."""
+    if not file_exists(
+        FileExistsRequest(schema_version="1.0", path=settings.usage_db_path), root_ctx
+    ).exists:
+        return
+    try:
+        status = get_projection_status(
+            LLMUsageProjectionStatusRequest(
+                schema_version="1.0",
+                db_path=settings.usage_db_path,
+                ledger_path=settings.cost_ledger_path,
+                daily_path=settings.cost_daily_path,
+            ),
+            root_ctx,
+        )
+        if status.latest_event_id and (
+            status.pending_event_count or not status.files_valid
+        ):
+            rebuild_usage_exports(
+                LLMUsageExportRebuildRequest(
+                    schema_version="1.0",
+                    db_path=settings.usage_db_path,
+                    ledger_path=settings.cost_ledger_path,
+                    daily_path=settings.cost_daily_path,
+                ),
+                root_ctx,
+            )
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_usage_projection_finalized",
+                module=logger.name,
+                fields={
+                    "latest_event_id": status.latest_event_id,
+                    "pending_event_count": status.pending_event_count,
+                    "files_valid": status.files_valid,
+                },
+            )
+        )
+    except AppError as exc:
+        logger.warning(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_usage_projection_finalize_failed",
+                module=logger.name,
+                fields={"error_code": exc.code, "retryable": exc.retryable},
+            )
+        )
+
+
 def run_ingest(
     settings: IngestSettings,
     *,
@@ -1219,6 +1280,7 @@ def run_ingest(
         )
         return outcomes
     finally:
+        _finalize_usage_projection(settings, root_ctx)
         finalize_ingest_run(
             lock_ctx=lock_ctx,
             lock_info=lock_info,

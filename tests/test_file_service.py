@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from src.contracts.files import (
+    AppendBytesRequest,
     FileBundleHashRequest,
     FileStatRequest,
     JsonObjectCacheReadRequest,
@@ -34,6 +35,7 @@ from src.contracts.report_cards import (
     ReportCardManifestWriteRequest,
 )
 from src.services.file_service import (
+    append_bytes,
     hash_file_bundle,
     read_json_object_cache,
     write_json_object_cache,
@@ -229,6 +231,22 @@ def test_read_latest_pdf_cache_text_rejects_invalid_md5_key(
         code="pdf_cache_md5_invalid",
         retryable=False,
     )
+
+
+def test_append_bytes_appends_under_the_file_service_lock(tmp_path: Path) -> None:
+    path = tmp_path / "ledger.jsonl"
+    write_bytes(
+        WriteBytesRequest(schema_version="1.0", path=str(path), content=b"first\n"),
+        _ctx(),
+    )
+
+    response = append_bytes(
+        AppendBytesRequest(schema_version="1.0", path=str(path), content=b"second\n"),
+        _ctx(),
+    )
+
+    assert response.bytes_appended == len(b"second\n")
+    assert path.read_bytes() == b"first\nsecond\n"
 
 
 def test_write_bytes_uses_atomic_replace_and_cleans_stale_temp(tmp_path: Path) -> None:

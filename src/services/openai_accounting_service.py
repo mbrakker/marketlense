@@ -16,7 +16,7 @@ from src.contracts.openai import (
 )
 from src.contracts.run_context import RunContext
 from src.services import llm_usage_ledger_service
-from src.utils.costing import estimate_cost_usd
+from src.utils.costing import estimate_cost_usd, resolve_model_pricing
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -78,11 +78,17 @@ def _usage_total_tokens(
     return int(input_tokens or 0) + int(output_tokens or 0)
 
 
-def _usage_metadata(request: OpenAIUsageAccountingRequest) -> dict:
+def _usage_metadata(
+    request: OpenAIUsageAccountingRequest, *, pricing_status: str, pricing_key: str, pricing_version: str
+) -> dict:
     metadata = {
         "cost_ledger_path": request.cost_ledger_path,
         "cost_daily_path": request.cost_daily_path,
         "request_id": str(request.request_id) if request.request_id else None,
+        "pricing_status": pricing_status,
+        "pricing_key": pricing_key,
+        "pricing_version": pricing_version,
+        "emit_cost_ledger": request.emit_cost_ledger,
     }
     metadata.update(request.extra or {})
     return metadata
@@ -101,6 +107,11 @@ def record_usage(
         total_tokens=request.total_tokens,
     )
     action = request.action or request.step_name
+    pricing_resolution = resolve_model_pricing(request.model, request.model_pricing)
+    pricing_version = str(
+        (request.extra or {}).get("pricing_version")
+        or request.model_pricing.get("schema_version", "")
+    )
     estimated_cost = estimate_cost_usd(
         request.model,
         input_tokens,
@@ -177,7 +188,12 @@ def record_usage(
                     schema_validation_status=request.schema_validation_status,
                     error_stage=request.error_stage,
                     error_code=request.error_code,
-                    metadata=_usage_metadata(request),
+                    metadata=_usage_metadata(
+                        request,
+                        pricing_status=pricing_resolution.status,
+                        pricing_key=pricing_resolution.key,
+                        pricing_version=pricing_version,
+                    ),
                 ),
             ),
             ctx,
@@ -232,6 +248,9 @@ def record_usage(
             event_key=usage_db_event_key,
             usage_db_inserted=usage_db_inserted,
             call_ordinal=None,
+            pricing_status=pricing_resolution.status,
+            pricing_key=pricing_resolution.key,
+            pricing_version=pricing_version,
         )
 
     logger.info(
@@ -255,6 +274,9 @@ def record_usage(
                 "usage_db_inserted": usage_db_inserted,
                 "usage_exports_projected": usage_exports_projected,
                 "call_ordinal": usage_response.call_ordinal,
+                "pricing_status": pricing_resolution.status,
+                "pricing_key": pricing_resolution.key,
+                "pricing_version": pricing_version,
             },
         )
     )
@@ -270,6 +292,9 @@ def record_usage(
         event_key=usage_db_event_key,
         usage_db_inserted=usage_db_inserted,
         call_ordinal=usage_response.call_ordinal,
+        pricing_status=pricing_resolution.status,
+        pricing_key=pricing_resolution.key,
+        pricing_version=pricing_version,
     )
 
 

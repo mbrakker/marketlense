@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from src.contracts.files import (
+    AppendBytesRequest,
+    AppendBytesResponse,
     DeleteFileRequest,
     DeleteFileResponse,
     DirectoryEntry,
@@ -802,6 +804,41 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
         path=request.path,
         bytes_written=len(request.content),
         md5=md5,
+    )
+
+
+def append_bytes(request: AppendBytesRequest, ctx: RunContext) -> AppendBytesResponse:
+    logger.info(
+        log_event(
+            ctx, role="service", event="append_bytes_start", module=logger.name,
+            fields={"path": request.path, "size": len(request.content)},
+        )
+    )
+    path = Path(request.path)
+    if request.make_parents:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with _write_lock_for_path(path), path.open("ab") as file_obj:
+            file_obj.write(request.content)
+            file_obj.flush()
+            os.fsync(file_obj.fileno())
+    except OSError as exc:
+        raise AppError(
+            code="file_append_failed",
+            message=f"Failed to append binary file: {request.path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    md5 = _md5_bytes(request.content)
+    logger.info(
+        log_event(
+            ctx, role="service", event="append_bytes_complete", module=logger.name,
+            fields={"path": request.path, "bytes_appended": len(request.content), "md5": md5},
+        )
+    )
+    return AppendBytesResponse(
+        schema_version="1.0", path=request.path,
+        bytes_appended=len(request.content), md5=md5,
     )
 
 

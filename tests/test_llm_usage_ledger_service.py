@@ -6,6 +6,7 @@ import sqlite3
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,8 @@ from src.contracts.llm_usage import (
     LLMUsageLedgerOutcomeUpdateRequest,
     LLMUsageLedgerReconciliationRequest,
     LLMUsageMedianRebuildRequest,
+    LLMUsageProjectionStatusRequest,
+    LLMUsageSpendGuardrailRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services import cost_ledger_service
@@ -445,6 +448,8 @@ def test_llm_usage_exports_rebuild_stably_and_reconciliation_repairs_tampering(
     assert incremental.projected_event_count == 1
     assert incremental.event_count == 3
     assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 3
+    segment_path = ledger_path.parent / "cost-ledger.segments" / "00000000000000000002.jsonl"
+    assert segment_path.read_text(encoding="utf-8").count("\n") == 1
     ledger_path.write_text('{"altered":true}\n', encoding="utf-8")
     reconciled = svc.reconcile_usage_export(
         LLMUsageLedgerReconciliationRequest(
@@ -465,3 +470,167 @@ def test_llm_usage_exports_rebuild_stably_and_reconciliation_repairs_tampering(
             "select event_count from llm_usage_export_checkpoints"
         ).fetchone()
     assert checkpoint == (3,)
+
+
+def test_finalized_projected_event_refreshes_its_derived_outcome(tmp_path: Path) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    ledger_path = tmp_path / "cost-ledger.jsonl"
+    daily_path = tmp_path / "cost-daily.json"
+    appended = svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            entry=replace(_entry(), timestamp_utc=datetime.now(timezone.utc).isoformat()),
+        ),
+        _ctx(),
+    )
+    svc.rebuild_usage_exports(
+        LLMUsageExportRebuildRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+
+    outcome = svc.update_usage_outcome(
+        LLMUsageLedgerOutcomeUpdateRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            event_key=appended.event_key,
+            parse_status="invalid",
+            schema_validation_status="not_validated",
+            error_stage="output_validation",
+            error_code="openai_response_invalid_json",
+        ),
+        _ctx(),
+    )
+
+    row = json.loads(ledger_path.read_text(encoding="utf-8").strip())
+    assert outcome.updated is True
+    assert outcome.export_refreshed is True
+    assert row["extra"]["event_outcome"]["parse_status"] == "invalid"
+    assert row["extra"]["event_outcome"]["error_code"] == "openai_response_invalid_json"
+
+
+def test_projection_status_reports_bounded_pending_canonical_cost(tmp_path: Path) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    ledger_path = tmp_path / "cost-ledger.jsonl"
+    daily_path = tmp_path / "cost-daily.json"
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            entry=replace(_entry(), timestamp_utc=datetime.now(timezone.utc).isoformat()),
+        ),
+        _ctx(),
+    )
+
+    status = svc.get_projection_status(
+        LLMUsageProjectionStatusRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+
+    assert status.latest_event_id == 1
+    assert status.projected_event_id == 0
+    assert status.pending_event_count == 1
+    assert status.pending_estimated_cost_usd == 0.001
+    assert status.files_valid is False
+
+
+def test_daily_spend_guardrail_uses_canonical_events_not_lagging_export(tmp_path: Path) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            entry=replace(_entry(), timestamp_utc=datetime.now(timezone.utc).isoformat()),
+        ),
+        _ctx(),
+    )
+
+    guardrail = svc.evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(
+            schema_version="1.0", db_path=str(db_path), warn_usd=0.001
+        ),
+        _ctx(),
+    )
+
+    assert guardrail.canonical_spend_usd == 0.001
+    assert guardrail.decision == "warn"
+
+    paused = svc.evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            warn_usd=0.0001,
+            pause_usd=0.001,
+            stop_usd=0.002,
+        ),
+        _ctx(),
+    )
+    stopped = svc.evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            warn_usd=0.0001,
+            pause_usd=0.0005,
+            stop_usd=0.001,
+        ),
+        _ctx(),
+    )
+    assert paused.decision == "pause"
+    assert stopped.decision == "stop"
+
+
+def test_concurrent_projection_generations_preserve_one_consistent_checkpoint(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "usage.sqlite"
+    ledger_path = tmp_path / "cost-ledger.jsonl"
+    daily_path = tmp_path / "cost-daily.json"
+    for ordinal in (0, 1):
+        svc.append_usage(
+            LLMUsageLedgerAppendRequest(
+                schema_version="1.0",
+                db_path=str(db_path),
+                entry=replace(_entry(), call_ordinal=ordinal),
+            ),
+            _ctx(),
+        )
+
+    request = LLMUsageExportRebuildRequest(
+        schema_version="1.0",
+        db_path=str(db_path),
+        ledger_path=str(ledger_path),
+        daily_path=str(daily_path),
+    )
+
+    def rebuild_one() -> tuple[str, int]:
+        try:
+            response = svc.rebuild_usage_exports(request, _ctx())
+            return ("ok", response.generation_id)
+        except AppError as exc:
+            return (exc.code, 0)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(lambda _: rebuild_one(), range(2)))
+
+    assert any(result[0] == "ok" for result in results)
+    assert all(result[0] in {"ok", "llm_usage_projection_busy"} for result in results)
+    reconciled = svc.reconcile_usage_export(
+        LLMUsageLedgerReconciliationRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            ledger_path=str(ledger_path),
+            daily_path=str(daily_path),
+        ),
+        _ctx(),
+    )
+    assert reconciled.matches is True

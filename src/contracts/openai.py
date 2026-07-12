@@ -243,6 +243,16 @@ class OpenAIUsageAccountingResponse:
             "doc": "Whether SQLite inserted this event instead of recognizing a replay."
         },
     )
+    pricing_status: str = field(
+        default="missing",
+        metadata={"doc": "Pricing resolution result: matched, alias_matched, missing, or invalid."},
+    )
+    pricing_key: str = field(
+        default="", metadata={"doc": "Pricing table key used for the cost estimate, if any."}
+    )
+    pricing_version: str = field(
+        default="", metadata={"doc": "Configured pricing-table version used for the estimate."}
+    )
 
 
 @dataclass(frozen=True)
@@ -526,6 +536,18 @@ class OpenAIJSONPromptRequest:
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
+    )
+    daily_spend_warn_usd: float = field(
+        default=3.0,
+        metadata={"doc": "UTC canonical-spend threshold that warns before this call."},
+    )
+    daily_spend_pause_usd: float = field(
+        default=5.0,
+        metadata={"doc": "UTC canonical-spend threshold that defers this call."},
+    )
+    daily_spend_stop_usd: float = field(
+        default=6.0,
+        metadata={"doc": "UTC canonical-spend threshold that hard-stops this call."},
     )
 
 

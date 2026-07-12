@@ -161,6 +161,20 @@ def test_record_usage_can_write_usage_database_without_cost_ledger(tmp_path) -> 
     assert row == ("openai_chat_json", 1000, 500)
 
 
+def test_record_usage_marks_unknown_model_pricing_instead_of_zero_cost_ambiguity(tmp_path) -> None:
+    response = svc.record_usage(
+        replace(_request(tmp_path), model="unpriced-model", request_id="unpriced"),
+        _ctx(),
+    )
+
+    assert response.estimated_cost_usd == 0.0
+    assert response.pricing_status == "missing"
+    assert response.pricing_key == ""
+    with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
+        metadata = json.loads(conn.execute("select metadata_json from llm_usage_events").fetchone()[0])
+    assert metadata["pricing_status"] == "missing"
+
+
 def test_record_usage_returns_typed_failure_when_canonical_export_write_fails(
     external_boundary_mocks_only, tmp_path, caplog, assert_logs_have_required_fields
 ) -> None:

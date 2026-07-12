@@ -2,10 +2,20 @@ from __future__ import annotations
 
 import math
 import re
+from dataclasses import dataclass
 from typing import Dict
 
 
 _VERSION_SUFFIX_RE = re.compile(r"-(?:19|20)\d{2}-\d{2}-\d{2}$")
+
+
+@dataclass(frozen=True)
+class PricingResolution:
+    """Deterministic pricing lookup result used by the accounting service."""
+
+    status: str
+    key: str
+    rates: dict
 
 
 def estimate_text_tokens(text: str) -> int:
@@ -23,7 +33,7 @@ def estimate_cost_usd(
     tool_calls: int,
     pricing: Dict[str, dict],
 ) -> float:
-    model_pricing = _resolve_model_pricing(model, pricing)
+    model_pricing = resolve_model_pricing(model, pricing).rates
     input_rate = float(model_pricing.get("input_tokens_per_1k_usd", 0.0))
     output_rate = float(model_pricing.get("output_tokens_per_1k_usd", 0.0))
     tool_rate = float(model_pricing.get("tool_call_usd", 0.0))
@@ -33,27 +43,42 @@ def estimate_cost_usd(
     return round(cost, 6)
 
 
-def _resolve_model_pricing(model: str, pricing: Dict[str, dict]) -> dict:
+def resolve_model_pricing(model: str, pricing: Dict[str, dict]) -> PricingResolution:
     if not pricing:
-        return {}
+        return PricingResolution(status="missing", key="", rates={})
     normalized = str(model or "").strip()
     if not normalized:
-        return {}
+        return PricingResolution(status="missing", key="", rates={})
     if normalized in pricing:
-        return pricing[normalized]
+        return _pricing_resolution("matched", normalized, pricing[normalized])
 
     normalized_lower = normalized.lower()
-    lower_index = {str(key).strip().lower(): value for key, value in pricing.items()}
+    lower_index = {str(key).strip().lower(): (str(key), value) for key, value in pricing.items()}
     if normalized_lower in lower_index:
-        return lower_index[normalized_lower]
+        key, rates = lower_index[normalized_lower]
+        return _pricing_resolution("alias_matched", key, rates)
 
     for candidate in _model_alias_candidates(normalized):
         if candidate in pricing:
-            return pricing[candidate]
+            return _pricing_resolution("alias_matched", candidate, pricing[candidate])
         lower_candidate = candidate.lower()
         if lower_candidate in lower_index:
-            return lower_index[lower_candidate]
-    return {}
+            key, rates = lower_index[lower_candidate]
+            return _pricing_resolution("alias_matched", key, rates)
+    return PricingResolution(status="missing", key="", rates={})
+
+
+def _pricing_resolution(status: str, key: str, rates: object) -> PricingResolution:
+    if not isinstance(rates, dict):
+        return PricingResolution(status="invalid", key=key, rates={})
+    required = ("input_tokens_per_1k_usd", "output_tokens_per_1k_usd", "tool_call_usd")
+    try:
+        normalized = {name: float(rates.get(name, 0.0)) for name in required}
+    except (TypeError, ValueError):
+        return PricingResolution(status="invalid", key=key, rates={})
+    if any(value < 0.0 for value in normalized.values()):
+        return PricingResolution(status="invalid", key=key, rates={})
+    return PricingResolution(status=status, key=key, rates=normalized)
 
 
 def _model_alias_candidates(model: str) -> tuple[str, ...]:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from src.services._llm_service.openai_shared import *
+from src.services._llm_service.openai_shared import _enforce_daily_spend_guardrail
 from src.services._llm_service.openai_client import *
 
 
@@ -52,6 +53,7 @@ def openai_ocr_pdf(
         cached_payload = _read_semantic_response_cache(cache_spec, ctx)
         if cached_payload is not None:
             return _ocr_response_from_cache(cached_payload)
+    _enforce_daily_spend_guardrail(request, ctx, operation="openai_ocr_pdf")
 
     logger.info(
         log_event(
@@ -262,6 +264,9 @@ def openai_respond_with_vector_store(
         cached_payload = _read_semantic_response_cache(cache_spec, ctx)
         if cached_payload is not None:
             return _openai_response_result_from_cache(cached_payload)
+    _enforce_daily_spend_guardrail(
+        request, ctx, operation="openai_respond_with_vector_store"
+    )
     payload_args: dict[str, Any] = {
         "model": request.model,
         "instructions": request.system_prompt,

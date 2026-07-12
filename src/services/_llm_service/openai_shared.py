@@ -14,6 +14,7 @@ from typing import Any, Callable
 import openai as openai_legacy
 
 from src.contracts.files import WriteBytesRequest
+from src.contracts.llm_usage import LLMUsageSpendGuardrailRequest
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
     OpenAIAnalyzeResponse,
@@ -45,6 +46,7 @@ from src.contracts.pdf_ocr import PdfOcrPageText
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.services import file_service, openai_accounting_service
+from src.services.llm_usage_ledger_service import evaluate_daily_spend_guardrail
 from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import log_event
@@ -82,6 +84,46 @@ OPENAI_CLIENT_INIT_EXCEPTIONS: tuple[type[Exception], ...] = OPENAI_ERROR_TYPES 
 
 def _openai_client_factory() -> Any | None:
     return getattr(openai_legacy, "OpenAI", None)
+
+
+def _enforce_daily_spend_guardrail(request: Any, ctx: RunContext, *, operation: str) -> None:
+    guardrail = evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(
+            schema_version="1.0",
+            db_path=str(getattr(request, "usage_db_path", "./state/llm_usage.sqlite")),
+            warn_usd=float(getattr(request, "daily_spend_warn_usd", 3.0)),
+            pause_usd=float(getattr(request, "daily_spend_pause_usd", 5.0)),
+            stop_usd=float(getattr(request, "daily_spend_stop_usd", 6.0)),
+            overrides_allowed=False,
+        ),
+        ctx,
+    )
+    if guardrail.decision in {"pause", "stop"}:
+        raise AppError(
+            code=f"openai_daily_spend_{guardrail.decision}",
+            message=f"Canonical daily spend reached the configured {guardrail.decision} threshold",
+            retryable=guardrail.decision == "pause",
+            context={
+                "operation": operation,
+                "canonical_spend_usd": guardrail.canonical_spend_usd,
+                "warn_usd": guardrail.warn_usd,
+            },
+        )
+    if guardrail.decision == "warn":
+        logger.warning(
+            log_event(
+                ctx,
+                role="service",
+                event="openai_spend_warning",
+                module=logger.name,
+                fields={
+                    "operation": operation,
+                    "day_utc": guardrail.day_utc,
+                    "canonical_spend_usd": guardrail.canonical_spend_usd,
+                    "warn_usd": guardrail.warn_usd,
+                },
+            )
+        )
 
 
 REQUIRED_KEYS = (

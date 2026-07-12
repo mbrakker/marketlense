@@ -303,6 +303,22 @@ class WriteBytesResponse:
 
 
 @dataclass(frozen=True)
+class AppendBytesRequest:
+    schema_version: str = field(metadata={"doc": "Append-bytes request schema version."})
+    path: str = field(metadata={"doc": "Filesystem path to append."})
+    content: bytes = field(metadata={"doc": "Binary content appended atomically under the service lock."})
+    make_parents: bool = field(default=True, metadata={"doc": "Create parent directories if needed."})
+
+
+@dataclass(frozen=True)
+class AppendBytesResponse:
+    schema_version: str = field(metadata={"doc": "Append-bytes response schema version."})
+    path: str = field(metadata={"doc": "Filesystem path appended."})
+    bytes_appended: int = field(metadata={"doc": "Number of bytes appended."})
+    md5: str = field(metadata={"doc": "MD5 checksum of the appended content."})
+
+
+@dataclass(frozen=True)
 class PipelineStageCheckpoint:
     schema_version: str = field(
         metadata={"doc": "Pipeline checkpoint contract schema version."}

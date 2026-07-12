@@ -454,6 +454,10 @@ class IngestSettings:
         default="./out/cost-daily.json",
         metadata={"doc": "Filesystem path for daily cost rollup JSON."},
     )
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "Canonical SQLite path for durable LLM usage events."},
+    )
     model_pricing: dict = field(
         default_factory=dict,
         metadata={

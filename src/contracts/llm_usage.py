@@ -226,6 +226,12 @@ class LLMUsageLedgerOutcomeUpdateResponse:
     updated: bool = field(
         metadata={"doc": "Whether one durable usage event was updated."}
     )
+    export_refreshed: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether finalization refreshed an already materialized compatibility projection."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -289,6 +295,18 @@ class LLMUsageLedgerReconciliationResponse:
     matches: bool = field(
         metadata={"doc": "Whether exact integer totals and cost tolerance reconcile."}
     )
+    daily_matches: bool = field(
+        default=False,
+        metadata={"doc": "Whether the derived daily projection matches canonical events."},
+    )
+    checkpoint_matches: bool = field(
+        default=False,
+        metadata={"doc": "Whether checkpoint hashes and event boundary match derived files."},
+    )
+    mismatch_reasons: tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "Stable reconciliation mismatch classifications, if any."},
+    )
     repaired: bool = field(
         default=False,
         metadata={
@@ -331,6 +349,68 @@ class LLMUsageExportRebuildResponse:
     projected_event_count: int = field(
         metadata={"doc": "New canonical events incorporated by this projection."}
     )
+    generation_id: int = field(
+        default=0,
+        metadata={"doc": "Monotonic durable generation assigned to this projection."},
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageProjectionStatusRequest:
+    schema_version: str = field(
+        metadata={"doc": "Usage projection-status request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
+    ledger_path: str = field(metadata={"doc": "Derived compatibility JSONL path."})
+    daily_path: str = field(metadata={"doc": "Derived daily-rollup path."})
+
+
+@dataclass(frozen=True)
+class LLMUsageProjectionStatusResponse:
+    schema_version: str = field(
+        metadata={"doc": "Usage projection-status response schema version."}
+    )
+    db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
+    latest_event_id: int = field(metadata={"doc": "Latest durable canonical event ID."})
+    projected_event_id: int = field(metadata={"doc": "Latest event ID materialized in exports."})
+    pending_event_count: int = field(metadata={"doc": "Canonical events not yet materialized."})
+    pending_estimated_cost_usd: float = field(
+        metadata={"doc": "Estimated cost of canonical events pending materialization."}
+    )
+    projection_generation_id: int = field(
+        metadata={"doc": "Latest durable projection generation, or zero before first projection."}
+    )
+    last_successful_projection_at_utc: str = field(
+        metadata={"doc": "UTC timestamp of the latest successful projection, if any."}
+    )
+    files_valid: bool = field(
+        metadata={"doc": "Whether existing derived files match the durable checkpoint."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageSpendGuardrailRequest:
+    schema_version: str = field(metadata={"doc": "Spend-guardrail request schema version."})
+    db_path: str = field(metadata={"doc": "Canonical SQLite usage ledger path."})
+    warn_usd: float = field(metadata={"doc": "UTC daily spend threshold that emits a warning."})
+    pause_usd: float | None = field(
+        default=None, metadata={"doc": "UTC daily spend threshold that defers new calls."}
+    )
+    stop_usd: float | None = field(
+        default=None, metadata={"doc": "UTC daily spend threshold that hard-stops new calls."}
+    )
+    overrides_allowed: bool = field(
+        default=False, metadata={"doc": "Whether operator overrides may bypass a pause or stop."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMUsageSpendGuardrailResponse:
+    schema_version: str = field(metadata={"doc": "Spend-guardrail response schema version."})
+    day_utc: str = field(metadata={"doc": "UTC day evaluated for canonical spend."})
+    canonical_spend_usd: float = field(metadata={"doc": "Canonical spend recorded for the UTC day."})
+    warn_usd: float = field(metadata={"doc": "Configured UTC daily warning threshold."})
+    decision: str = field(metadata={"doc": "Explicit guardrail decision: allow, warn, pause, or stop."})
 
 
 @dataclass(frozen=True)

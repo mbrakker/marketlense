@@ -4,6 +4,7 @@ import json
 import logging
 import sqlite3
 import threading
+import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
@@ -13,7 +14,7 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
-from src.contracts.files import WriteBytesRequest
+from src.contracts.files import AppendBytesRequest, WriteBytesRequest
 from src.contracts.llm_usage import (
     LLMUsageExportRebuildRequest,
     LLMUsageExportRebuildResponse,
@@ -24,6 +25,10 @@ from src.contracts.llm_usage import (
     LLMUsageLedgerOutcomeUpdateResponse,
     LLMUsageLedgerReconciliationRequest,
     LLMUsageLedgerReconciliationResponse,
+    LLMUsageProjectionStatusRequest,
+    LLMUsageProjectionStatusResponse,
+    LLMUsageSpendGuardrailRequest,
+    LLMUsageSpendGuardrailResponse,
     LLMUsageMedianRebuildRequest,
     LLMUsageMedianRebuildResponse,
 )
@@ -41,6 +46,7 @@ _PENDING_MEDIAN_REBUILD_PATHS: set[str] = set()
 _PENDING_MEDIAN_REBUILD_LOCK = threading.Lock()
 _MEDIAN_REBUILD_EVENT_INTERVAL = 20
 _USAGE_EXPORT_PROJECTION_INTERVAL = 20
+_PROJECTION_LEASE_SECONDS = 120
 _OUTCOME_STATUSES = {"valid", "invalid", "not_validated", "not_applicable"}
 _PROVIDER_CALL_STATUSES = {"completed", "failed"}
 _ERROR_CODE_STAGES = {
@@ -218,6 +224,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         "schema_validation_status": "text not null default 'not_applicable'",
         "error_stage": "text not null default ''",
         "error_code": "text not null default ''",
+        "semantic_task": "text not null default ''",
     }
     for column, definition in migrations.items():
         if column not in existing_columns:
@@ -225,7 +232,24 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
                 f"alter table llm_usage_events add column {column} {definition}"
             )
     conn.execute(
+        """
+        update llm_usage_events
+        set semantic_task = case
+            when instr(task_id, ':vector_store:') > 0
+                then substr(task_id, instr(task_id, ':vector_store:') + 14)
+            else action
+        end
+        where semantic_task = ''
+        """
+    )
+    conn.execute(
         "update llm_usage_events set event_key = 'legacy:' || id where event_key is null or event_key = ''"
+    )
+    conn.execute(
+        """
+        create index if not exists idx_llm_usage_events_semantic_task
+        on llm_usage_events(semantic_task)
+        """
     )
     conn.execute(
         "create unique index if not exists idx_llm_usage_events_event_key on llm_usage_events(event_key)"
@@ -275,6 +299,42 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             add column last_projected_event_id integer not null default 0
             """
         )
+    if "generation_id" not in checkpoint_columns:
+        conn.execute(
+            """
+            alter table llm_usage_export_checkpoints
+            add column generation_id integer not null default 0
+            """
+        )
+    conn.execute(
+        """
+        create table if not exists llm_usage_projection_leases (
+            ledger_path text not null,
+            daily_path text not null,
+            holder_id text not null,
+            expires_at_utc text not null,
+            generation_id integer not null,
+            primary key (ledger_path, daily_path)
+        )
+        """
+    )
+    conn.execute(
+        """
+        create table if not exists llm_usage_median_state (
+            singleton integer primary key check (singleton = 1),
+            dirty_through_event_id integer not null default 0,
+            snapshot_through_event_id integer not null default 0,
+            rebuild_in_progress integer not null default 0,
+            updated_at_utc text not null default ''
+        )
+        """
+    )
+    conn.execute(
+        """
+        insert into llm_usage_median_state(singleton, updated_at_utc)
+        values (1, '') on conflict(singleton) do nothing
+        """
+    )
 
 
 def _event_key(entry: LLMUsageLedgerEntry) -> str:
@@ -445,16 +505,25 @@ def _semantic_task(task_id: str, action: str) -> str:
 
 
 def _semantic_task_event_count(conn: sqlite3.Connection, task: str) -> int:
-    rows = conn.execute("select task_id, action from llm_usage_events").fetchall()
-    return sum(_semantic_task(str(row[0]), str(row[1])) == task for row in rows)
+    row = conn.execute(
+        "select count(*) from llm_usage_events where semantic_task = ?", (task,)
+    ).fetchone()
+    return int(row[0]) if row is not None else 0
 
 
 def _run_scheduled_median_rebuild(path: Path, ctx: RunContext, path_key: str) -> None:
+    reschedule = False
     try:
         rebuild_usage_medians(
             LLMUsageMedianRebuildRequest(schema_version="1.0", db_path=str(path)),
             ctx,
         )
+        with _LOCK, sqlite3.connect(path) as conn:
+            _ensure_schema(conn)
+            dirty, snapshot = conn.execute(
+                "select dirty_through_event_id, snapshot_through_event_id from llm_usage_median_state where singleton = 1"
+            ).fetchone()
+            reschedule = int(dirty) > int(snapshot)
     except AppError as exc:
         logger.error(
             log_event(
@@ -468,6 +537,8 @@ def _run_scheduled_median_rebuild(path: Path, ctx: RunContext, path_key: str) ->
     finally:
         with _PENDING_MEDIAN_REBUILD_LOCK:
             _PENDING_MEDIAN_REBUILD_PATHS.discard(path_key)
+        if reschedule:
+            _schedule_median_rebuild(path, ctx)
 
 
 def _schedule_median_rebuild(path: Path, ctx: RunContext) -> bool:
@@ -494,7 +565,7 @@ def _rebuild_usage_medians(
     _ensure_median_schema(conn)
     rows = conn.execute(
         """
-        select provider, task_id, action, model, prompt_namespace,
+        select provider, semantic_task, action, model, prompt_namespace,
                input_tokens, output_tokens, total_tokens, estimated_cost_usd
         from llm_usage_events
         """
@@ -508,7 +579,7 @@ def _rebuild_usage_medians(
         action = str(row[2])
         key = (
             provider,
-            _semantic_task(task_id, action),
+            task_id,
             action,
             str(row[3]),
             str(row[4]),
@@ -551,6 +622,19 @@ def _rebuild_usage_medians(
             ), usage_samples in grouped_usage.items()
         ],
     )
+    snapshot_through_event_id = int(
+        conn.execute("select coalesce(max(id), 0) from llm_usage_events").fetchone()[0]
+    )
+    conn.execute(
+        """
+        update llm_usage_median_state
+        set snapshot_through_event_id = ?, dirty_through_event_id = case
+            when dirty_through_event_id <= ? then 0 else dirty_through_event_id end,
+            rebuild_in_progress = 0, updated_at_utc = ?
+        where singleton = 1
+        """,
+        (snapshot_through_event_id, snapshot_through_event_id, recalculated_at_utc),
+    )
     return LLMUsageMedianRebuildResponse(
         schema_version="1.0",
         db_path=str(source_db_path),
@@ -583,6 +667,7 @@ def rebuild_usage_medians(
                 context={"db_path": str(path)},
             )
         with _LOCK, sqlite3.connect(path) as conn:
+            _ensure_schema(conn)
             table_exists = conn.execute(
                 """
                 select 1 from sqlite_master
@@ -596,6 +681,13 @@ def rebuild_usage_medians(
                     retryable=False,
                     context={"db_path": str(path)},
                 )
+            conn.execute(
+                """
+                update llm_usage_median_state
+                set rebuild_in_progress = 1, updated_at_utc = ? where singleton = 1
+                """,
+                (datetime.now(timezone.utc).isoformat(),),
+            )
             rebuilt = _rebuild_usage_medians(conn, path, median_path)
     except AppError:
         raise
@@ -678,10 +770,10 @@ def append_usage(
                     provider_decision, cache_decision, temperature, seed,
                     timeout_seconds, event_key, call_ordinal, provider_call_status,
                     parse_status, schema_validation_status, error_stage, error_code,
-                    metadata_json
+                    semantic_task, metadata_json
                 ) values (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 on conflict(event_key) do nothing
                 """,
@@ -719,6 +811,7 @@ def append_usage(
                     entry.schema_validation_status,
                     entry.error_stage,
                     entry.error_code,
+                    _semantic_task(str(entry.task_id), entry.action),
                     _metadata_json(entry.metadata),
                 ),
             )
@@ -727,6 +820,16 @@ def append_usage(
                 "select id from llm_usage_events where event_key = ?", (event_key,)
             ).fetchone()
             row_id = int(row[0]) if row is not None else 0
+            if inserted:
+                conn.execute(
+                    """
+                    update llm_usage_median_state
+                    set dirty_through_event_id = max(dirty_through_event_id, ?),
+                        updated_at_utc = ?
+                    where singleton = 1
+                    """,
+                    (row_id, datetime.now(timezone.utc).isoformat()),
+                )
             canonical_event_count = int(
                 conn.execute("select count(*) from llm_usage_events").fetchone()[0]
             )
@@ -809,6 +912,7 @@ def update_usage_outcome(
 ) -> LLMUsageLedgerOutcomeUpdateResponse:
     _validate_outcome_update(request)
     path = Path(request.db_path)
+    projections_to_refresh: list[tuple[str, str]] = []
     try:
         with _LOCK, sqlite3.connect(path) as conn:
             _ensure_schema(conn)
@@ -828,6 +932,15 @@ def update_usage_outcome(
                 ),
             )
             updated = cursor.rowcount == 1
+            if updated:
+                event_row = conn.execute(
+                    "select id from llm_usage_events where event_key = ?",
+                    (request.event_key,),
+                ).fetchone()
+                if event_row is not None:
+                    projections_to_refresh = _projection_checkpoint_rows(
+                        conn, event_id=int(event_row[0])
+                    )
     except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
         raise AppError(
             code="llm_usage_ledger_outcome_update_failed",
@@ -836,6 +949,21 @@ def update_usage_outcome(
             retryable=False,
             context={"db_path": str(path), "event_key": request.event_key},
         ) from exc
+    export_refreshed = False
+    for ledger_path, daily_path in projections_to_refresh:
+        _reset_usage_export_checkpoint(
+            db_path=str(path), ledger_path=ledger_path, daily_path=daily_path
+        )
+        rebuild_usage_exports(
+            LLMUsageExportRebuildRequest(
+                schema_version="1.0",
+                db_path=str(path),
+                ledger_path=ledger_path,
+                daily_path=daily_path,
+            ),
+            ctx,
+        )
+        export_refreshed = True
     logger.info(
         log_event(
             ctx,
@@ -850,6 +978,7 @@ def update_usage_outcome(
                 "schema_validation_status": request.schema_validation_status,
                 "error_stage": request.error_stage,
                 "error_code": request.error_code,
+                "export_refreshed": export_refreshed,
             },
         )
     )
@@ -858,6 +987,7 @@ def update_usage_outcome(
         db_path=str(path),
         event_key=request.event_key,
         updated=updated,
+        export_refreshed=export_refreshed,
     )
 
 
@@ -935,6 +1065,126 @@ def _stable_json_bytes(payload: Any) -> bytes:
         json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         + "\n"
     ).encode("utf-8")
+
+
+def _projection_segment_path(ledger_path: Path, generation_id: int) -> Path:
+    """Immutable generation segment retained beside the compatibility JSONL file."""
+    return ledger_path.parent / f"{ledger_path.stem}.segments" / f"{generation_id:020d}.jsonl"
+
+
+def _projection_files_valid(
+    checkpoint: sqlite3.Row | tuple[Any, ...] | None,
+    ledger_path: Path,
+    daily_path: Path,
+) -> bool:
+    """Verify both derived artifacts before using an incremental checkpoint."""
+    if checkpoint is None or not ledger_path.is_file() or not daily_path.is_file():
+        return False
+    try:
+        ledger_content = ledger_path.read_bytes()
+        daily_content = daily_path.read_bytes()
+        daily_payload = json.loads(daily_content.decode("utf-8"))
+        state = dict(daily_payload.get("ledger_state") or {})
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        return False
+    # checkpoint tuple order is stable at all call sites below.
+    event_count, source_sha256, ledger_sha256, daily_sha256, last_event_id = checkpoint[:5]
+    return (
+        sha256(ledger_content).hexdigest() == str(ledger_sha256)
+        and sha256(daily_content).hexdigest() == str(daily_sha256)
+        and str(source_sha256) == sha256(ledger_content).hexdigest()
+        and int(state.get("event_count") or -1) == int(event_count)
+        and int(state.get("last_projected_event_id") or -1) == int(last_event_id)
+        and str(state.get("source_sha256") or "") == str(source_sha256)
+    )
+
+
+def _projection_checkpoint_rows(
+    conn: sqlite3.Connection, *, event_id: int
+) -> list[tuple[str, str]]:
+    return [
+        (str(row[0]), str(row[1]))
+        for row in conn.execute(
+            """
+            select ledger_path, daily_path
+            from llm_usage_export_checkpoints
+            where last_projected_event_id >= ?
+            """,
+            (event_id,),
+        ).fetchall()
+    ]
+
+
+def _acquire_projection_lease(
+    conn: sqlite3.Connection,
+    *,
+    ledger_path: Path,
+    daily_path: Path,
+    holder_id: str,
+    generation_id: int,
+) -> None:
+    now = datetime.now(timezone.utc)
+    key = (str(ledger_path.resolve()), str(daily_path.resolve()))
+    current = conn.execute(
+        """
+        select holder_id, expires_at_utc from llm_usage_projection_leases
+        where ledger_path = ? and daily_path = ?
+        """,
+        key,
+    ).fetchone()
+    if current is not None and str(current[1]) > now.isoformat() and str(current[0]) != holder_id:
+        raise AppError(
+            code="llm_usage_projection_busy",
+            message="Another process is materializing this usage projection",
+            retryable=True,
+            context={"ledger_path": key[0], "daily_path": key[1]},
+        )
+    conn.execute(
+        """
+        insert into llm_usage_projection_leases (
+            ledger_path, daily_path, holder_id, expires_at_utc, generation_id
+        ) values (?, ?, ?, ?, ?)
+        on conflict(ledger_path, daily_path) do update set
+            holder_id = excluded.holder_id,
+            expires_at_utc = excluded.expires_at_utc,
+            generation_id = excluded.generation_id
+        """,
+        (
+            *key,
+            holder_id,
+            (now.timestamp() + _PROJECTION_LEASE_SECONDS),
+            generation_id,
+        ),
+    )
+    # ISO-8601 comparison is deliberate for portable SQLite ordering.
+    conn.execute(
+        """
+        update llm_usage_projection_leases
+        set expires_at_utc = ?
+        where ledger_path = ? and daily_path = ? and holder_id = ?
+        """,
+        (
+            datetime.fromtimestamp(
+                now.timestamp() + _PROJECTION_LEASE_SECONDS, tz=timezone.utc
+            ).isoformat(),
+            *key,
+            holder_id,
+        ),
+    )
+
+
+def _release_projection_lease(
+    *, db_path: Path, ledger_path: Path, daily_path: Path, holder_id: str
+) -> None:
+    with _LOCK, sqlite3.connect(db_path) as conn:
+        _ensure_schema(conn)
+        conn.execute(
+            """
+            delete from llm_usage_projection_leases
+            where ledger_path = ? and daily_path = ? and holder_id = ?
+            """,
+            (str(ledger_path.resolve()), str(daily_path.resolve()), holder_id),
+        )
 
 
 def _rollup_metrics(
@@ -1134,6 +1384,8 @@ def rebuild_usage_exports(
     db_path = Path(request.db_path)
     ledger_path = Path(request.ledger_path)
     daily_path = Path(request.daily_path)
+    lease_holder_id = uuid.uuid4().hex
+    lease_acquired = False
     logger.info(
         log_event(
             ctx,
@@ -1153,7 +1405,7 @@ def rebuild_usage_exports(
             checkpoint = conn.execute(
                 """
                 select event_count, source_sha256, ledger_sha256, daily_sha256,
-                       last_projected_event_id
+                       last_projected_event_id, generation_id
                 from llm_usage_export_checkpoints
                 where ledger_path = ? and daily_path = ?
                 """,
@@ -1162,17 +1414,30 @@ def rebuild_usage_exports(
             canonical_event_count, highest_event_id = conn.execute(
                 "select count(*), coalesce(max(id), 0) from llm_usage_events"
             ).fetchone()
-            baseline_required = (
-                checkpoint is None
-                or int(checkpoint[4]) == 0
-                or not ledger_path.is_file()
-                or not daily_path.is_file()
+            baseline_required = not _projection_files_valid(
+                checkpoint, ledger_path, daily_path
             )
             last_projected_event_id = 0 if baseline_required else int(checkpoint[4])
+            generation_id = (int(checkpoint[5]) if checkpoint is not None else 0) + 1
+            _acquire_projection_lease(
+                conn,
+                ledger_path=ledger_path,
+                daily_path=daily_path,
+                holder_id=lease_holder_id,
+                generation_id=generation_id,
+            )
+            lease_acquired = True
             rows = _canonical_export_rows(
                 conn, after_event_id=last_projected_event_id
             )
         if not rows and not baseline_required:
+            _release_projection_lease(
+                db_path=db_path,
+                ledger_path=ledger_path,
+                daily_path=daily_path,
+                holder_id=lease_holder_id,
+            )
+            lease_acquired = False
             return LLMUsageExportRebuildResponse(
                 schema_version="1.1",
                 db_path=str(db_path),
@@ -1184,11 +1449,11 @@ def rebuild_usage_exports(
                 daily_sha256=str(checkpoint[3]),
                 last_projected_event_id=last_projected_event_id,
                 projected_event_count=0,
+                generation_id=int(checkpoint[5]),
             )
+        projected_content = b"".join(_stable_json_bytes(row) for row in rows)
         existing_ledger = b"" if baseline_required else ledger_path.read_bytes()
-        ledger_content = existing_ledger + b"".join(
-            _stable_json_bytes(row) for row in rows
-        )
+        ledger_content = existing_ledger + projected_content
         source_sha256 = sha256(ledger_content).hexdigest()
         ledger_sha256 = source_sha256
         if baseline_required:
@@ -1216,12 +1481,27 @@ def rebuild_usage_exports(
             )
         daily_content = _stable_json_bytes(daily_payload)
         daily_sha256 = sha256(daily_content).hexdigest()
-        file_service.write_bytes(
-            WriteBytesRequest(
-                schema_version="1.0", path=str(ledger_path), content=ledger_content
-            ),
-            ctx,
-        )
+        if baseline_required:
+            file_service.write_bytes(
+                WriteBytesRequest(
+                    schema_version="1.0", path=str(ledger_path), content=ledger_content
+                ),
+                ctx,
+            )
+        else:
+            segment_path = _projection_segment_path(ledger_path, generation_id)
+            file_service.write_bytes(
+                WriteBytesRequest(
+                    schema_version="1.0", path=str(segment_path), content=projected_content
+                ),
+                ctx,
+            )
+            file_service.append_bytes(
+                AppendBytesRequest(
+                    schema_version="1.0", path=str(ledger_path), content=projected_content
+                ),
+                ctx,
+            )
         file_service.write_bytes(
             WriteBytesRequest(
                 schema_version="1.0", path=str(daily_path), content=daily_content
@@ -1236,7 +1516,8 @@ def rebuild_usage_exports(
                     ledger_path, daily_path, event_count, source_sha256,
                     ledger_sha256, daily_sha256, completed_at_utc,
                     last_projected_event_id
-                ) values (?, ?, ?, ?, ?, ?, ?, ?)
+                    , generation_id
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(ledger_path, daily_path) do update set
                     event_count = excluded.event_count,
                     source_sha256 = excluded.source_sha256,
@@ -1244,6 +1525,7 @@ def rebuild_usage_exports(
                     daily_sha256 = excluded.daily_sha256,
                     completed_at_utc = excluded.completed_at_utc,
                     last_projected_event_id = excluded.last_projected_event_id
+                    , generation_id = excluded.generation_id
                 """,
                 (
                     str(ledger_path.resolve()),
@@ -1254,9 +1536,24 @@ def rebuild_usage_exports(
                     daily_sha256,
                     max((str(row["timestamp_utc"]) for row in rows), default=""),
                     int(highest_event_id),
+                    generation_id,
                 ),
             )
+        _release_projection_lease(
+            db_path=db_path,
+            ledger_path=ledger_path,
+            daily_path=daily_path,
+            holder_id=lease_holder_id,
+        )
+        lease_acquired = False
     except (AppError, OSError, sqlite3.Error, TypeError, ValueError) as exc:
+        if lease_acquired:
+            _release_projection_lease(
+                db_path=db_path,
+                ledger_path=ledger_path,
+                daily_path=daily_path,
+                holder_id=lease_holder_id,
+            )
         if isinstance(exc, AppError):
             raise
         raise AppError(
@@ -1281,6 +1578,7 @@ def rebuild_usage_exports(
         daily_sha256=daily_sha256,
         last_projected_event_id=int(highest_event_id),
         projected_event_count=len(rows),
+        generation_id=generation_id,
     )
     logger.info(
         log_event(
@@ -1293,6 +1591,7 @@ def rebuild_usage_exports(
                 "projected_event_count": response.projected_event_count,
                 "last_projected_event_id": response.last_projected_event_id,
                 "source_sha256": response.source_sha256,
+                "generation_id": response.generation_id,
                 "ledger_path": response.ledger_path,
                 "daily_path": response.daily_path,
             },
@@ -1315,6 +1614,135 @@ def _reset_usage_export_checkpoint(
         )
 
 
+def get_projection_status(
+    request: LLMUsageProjectionStatusRequest, ctx: RunContext
+) -> LLMUsageProjectionStatusResponse:
+    if request.schema_version != "1.0" or not all(
+        str(value or "").strip()
+        for value in (request.db_path, request.ledger_path, request.daily_path)
+    ):
+        raise AppError(
+            code="llm_usage_projection_status_request_invalid",
+            message="Projection status requires canonical and both derived paths",
+            retryable=False,
+        )
+    db_path = Path(request.db_path)
+    ledger_path = Path(request.ledger_path)
+    daily_path = Path(request.daily_path)
+    try:
+        with _LOCK, sqlite3.connect(db_path) as conn:
+            _ensure_schema(conn)
+            latest_event_id, total_events = conn.execute(
+                "select coalesce(max(id), 0), count(*) from llm_usage_events"
+            ).fetchone()
+            checkpoint = conn.execute(
+                """
+                select event_count, source_sha256, ledger_sha256, daily_sha256,
+                       last_projected_event_id, generation_id, completed_at_utc
+                from llm_usage_export_checkpoints where ledger_path = ? and daily_path = ?
+                """,
+                (str(ledger_path.resolve()), str(daily_path.resolve())),
+            ).fetchone()
+            projected_event_id = int(checkpoint[4]) if checkpoint else 0
+            pending_count, pending_cost = conn.execute(
+                """
+                select count(*), coalesce(sum(estimated_cost_usd), 0.0)
+                from llm_usage_events where id > ?
+                """,
+                (projected_event_id,),
+            ).fetchone()
+    except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
+        raise AppError(
+            code="llm_usage_projection_status_failed",
+            message="Failed to read canonical usage projection status",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(db_path)},
+        ) from exc
+    files_valid = _projection_files_valid(checkpoint, ledger_path, daily_path)
+    response = LLMUsageProjectionStatusResponse(
+        schema_version="1.0",
+        db_path=str(db_path),
+        latest_event_id=int(latest_event_id),
+        projected_event_id=projected_event_id,
+        pending_event_count=int(pending_count),
+        pending_estimated_cost_usd=round(float(pending_cost), 6),
+        projection_generation_id=int(checkpoint[5]) if checkpoint else 0,
+        last_successful_projection_at_utc=str(checkpoint[6]) if checkpoint else "",
+        files_valid=files_valid,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="llm_usage_projection_status_read",
+            module=logger.name,
+            fields={
+                "latest_event_id": response.latest_event_id,
+                "projected_event_id": response.projected_event_id,
+                "pending_event_count": response.pending_event_count,
+                "pending_estimated_cost_usd": response.pending_estimated_cost_usd,
+                "files_valid": response.files_valid,
+            },
+        )
+    )
+    return response
+
+
+def evaluate_daily_spend_guardrail(
+    request: LLMUsageSpendGuardrailRequest, ctx: RunContext
+) -> LLMUsageSpendGuardrailResponse:
+    if request.schema_version != "1.0" or not str(request.db_path or "").strip():
+        raise AppError(
+            code="llm_usage_spend_guardrail_request_invalid",
+            message="Spend guardrail requires a canonical usage database path",
+            retryable=False,
+        )
+    day_utc = datetime.now(timezone.utc).date().isoformat()
+    try:
+        with _LOCK, sqlite3.connect(request.db_path) as conn:
+            _ensure_schema(conn)
+            recorded = conn.execute(
+                """
+                select coalesce(sum(estimated_cost_usd), 0.0) from llm_usage_events
+                where substr(timestamp_utc, 1, 10) = ?
+                """,
+                (day_utc,),
+            ).fetchone()[0]
+    except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
+        raise AppError(
+            code="llm_usage_spend_guardrail_failed",
+            message="Failed to read canonical daily spend",
+            cause=exc,
+            retryable=False,
+            context={"db_path": request.db_path},
+        ) from exc
+    spend = round(float(recorded or 0.0), 6)
+    if request.stop_usd is not None and spend >= float(request.stop_usd):
+        decision = "stop"
+    elif request.pause_usd is not None and spend >= float(request.pause_usd):
+        decision = "pause"
+    elif float(request.warn_usd) >= 0.0 and spend >= float(request.warn_usd):
+        decision = "warn"
+    else:
+        decision = "allow"
+    response = LLMUsageSpendGuardrailResponse(
+        schema_version="1.0", day_utc=day_utc, canonical_spend_usd=spend,
+        warn_usd=float(request.warn_usd), decision=decision,
+    )
+    logger.info(
+        log_event(
+            ctx, role="service", event="llm_usage_spend_guardrail_evaluated",
+            module=logger.name,
+            fields={"day_utc": response.day_utc, "canonical_spend_usd": response.canonical_spend_usd,
+                    "warn_usd": response.warn_usd, "decision": response.decision,
+                    "pause_usd": request.pause_usd, "stop_usd": request.stop_usd,
+                    "overrides_allowed": request.overrides_allowed},
+        )
+    )
+    return response
+
+
 def reconcile_usage_export(
     request: LLMUsageLedgerReconciliationRequest, ctx: RunContext
 ) -> LLMUsageLedgerReconciliationResponse:
@@ -1326,6 +1754,7 @@ def reconcile_usage_export(
         )
     db_path = Path(request.db_path)
     ledger_path = Path(request.ledger_path)
+    daily_path = Path(request.daily_path) if request.daily_path else None
     try:
         with _LOCK, sqlite3.connect(db_path) as conn:
             _ensure_schema(conn)
@@ -1338,6 +1767,21 @@ def reconcile_usage_export(
                 from llm_usage_events
                 """
             ).fetchone()
+            highest_event_id = int(
+                conn.execute("select coalesce(max(id), 0) from llm_usage_events").fetchone()[0]
+            )
+            canonical_rows = _canonical_export_rows(conn)
+            checkpoint = None
+            if daily_path is not None:
+                checkpoint = conn.execute(
+                    """
+                    select event_count, source_sha256, ledger_sha256, daily_sha256,
+                           last_projected_event_id, generation_id
+                    from llm_usage_export_checkpoints
+                    where ledger_path = ? and daily_path = ?
+                    """,
+                    (str(ledger_path.resolve()), str(daily_path.resolve())),
+                ).fetchone()
         export_rows = [
             json.loads(line)
             for line in ledger_path.read_text(encoding="utf-8").splitlines()
@@ -1364,6 +1808,7 @@ def reconcile_usage_export(
                     schema_version="1.0",
                     db_path=request.db_path,
                     ledger_path=request.ledger_path,
+                    daily_path=request.daily_path,
                 ),
                 ctx,
             )
@@ -1382,10 +1827,50 @@ def reconcile_usage_export(
         sum(int(row.get("cached_input_tokens") or 0) for row in export_rows),
         sum(float(row.get("estimated_cost_usd") or 0.0) for row in export_rows),
     )
-    matches = (
+    totals_match = (
         tuple(int(value) for value in sqlite_totals[:4]) == export_totals[:4]
         and abs(float(sqlite_totals[4]) - export_totals[4]) <= 1e-9
     )
+    canonical_ids = [
+        int(row["extra"]["canonical_event_id"])
+        for row in export_rows
+        if isinstance(row.get("extra"), dict)
+        and "canonical_event_id" in row["extra"]
+    ]
+    expected_canonical_ids = [
+        int(row["extra"]["canonical_event_id"]) for row in canonical_rows
+    ]
+    identity_matches = not canonical_ids or canonical_ids == expected_canonical_ids
+    daily_matches = True
+    checkpoint_matches = True
+    mismatch_reasons: list[str] = []
+    if not totals_match:
+        mismatch_reasons.append("totals_mismatch")
+    if not identity_matches:
+        mismatch_reasons.append("canonical_event_identity_mismatch")
+    if daily_path is not None:
+        expected_ledger = b"".join(_stable_json_bytes(row) for row in canonical_rows)
+        source_sha256 = sha256(expected_ledger).hexdigest()
+        expected_daily = _daily_export_payload(
+            canonical_rows,
+            db_path=db_path,
+            source_sha256=source_sha256,
+            ledger_sha256=source_sha256,
+        )
+        expected_daily["ledger_state"]["event_count"] = int(sqlite_totals[0])
+        expected_daily["ledger_state"]["last_projected_event_id"] = highest_event_id
+        try:
+            daily_matches = daily_path.read_bytes() == _stable_json_bytes(expected_daily)
+        except OSError:
+            daily_matches = False
+        checkpoint_matches = _projection_files_valid(
+            checkpoint, ledger_path, daily_path
+        )
+        if not daily_matches:
+            mismatch_reasons.append("daily_projection_mismatch")
+        if not checkpoint_matches:
+            mismatch_reasons.append("checkpoint_mismatch")
+    matches = totals_match and identity_matches and daily_matches and checkpoint_matches
     response = LLMUsageLedgerReconciliationResponse(
         schema_version="1.0",
         db_path=str(db_path),
@@ -1401,6 +1886,9 @@ def reconcile_usage_export(
         sqlite_estimated_cost_usd=float(sqlite_totals[4]),
         export_estimated_cost_usd=export_totals[4],
         matches=matches,
+        daily_matches=daily_matches,
+        checkpoint_matches=checkpoint_matches,
+        mismatch_reasons=tuple(mismatch_reasons),
     )
     if not response.matches and request.repair and request.daily_path:
         _reset_usage_export_checkpoint(
@@ -1422,6 +1910,7 @@ def reconcile_usage_export(
                 schema_version="1.0",
                 db_path=request.db_path,
                 ledger_path=request.ledger_path,
+                daily_path=request.daily_path,
             ),
             ctx,
         )
@@ -1438,6 +1927,9 @@ def reconcile_usage_export(
                 "matches": response.matches,
                 "sqlite_event_count": response.sqlite_event_count,
                 "export_event_count": response.export_event_count,
+                "daily_matches": response.daily_matches,
+                "checkpoint_matches": response.checkpoint_matches,
+                "mismatch_reasons": list(response.mismatch_reasons),
             },
         )
     )

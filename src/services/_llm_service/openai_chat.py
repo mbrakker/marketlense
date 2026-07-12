@@ -11,6 +11,7 @@ from src.services._llm_service.context_compaction import (
     compact_prompt_request_if_needed,
 )
 from src.services._llm_service.openai_shared import *
+from src.services._llm_service.openai_shared import _enforce_daily_spend_guardrail
 from src.services._llm_service.openai_client import *
 
 
@@ -21,6 +22,18 @@ class _ChatCompletionRun:
     prompt_tokens: int | None
     completion_tokens: int | None
     total_tokens: int | None
+
+
+def _chat_completion_model_kwargs(
+    *, model: str, temperature: float, seed: int | None
+) -> dict[str, float | int]:
+    """GPT-5 Chat Completions accepts provider defaults, not caller sampling knobs."""
+    if str(model).strip().lower().startswith("gpt-5"):
+        return {}
+    kwargs: dict[str, float | int] = {"temperature": temperature}
+    if seed is not None:
+        kwargs["seed"] = seed
+    return kwargs
 
 
 def _legacy_chat_completion_call(
@@ -53,9 +66,12 @@ def _legacy_chat_completion_call(
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": temperature,
-            "seed": seed,
         }
+        payload_args.update(
+            _chat_completion_model_kwargs(
+                model=model, temperature=temperature, seed=seed
+            )
+        )
         try:
             payload_args["response_format"] = {"type": "json_object"}
             resp = legacy_openai.ChatCompletion.create(**payload_args)
@@ -112,10 +128,12 @@ def _modern_chat_completion_call(
             {"role": "user", "content": user_prompt},
         ],
         "response_format": {"type": "json_object"},
-        "temperature": temperature,
     }
-    if seed is not None:
-        payload_args["seed"] = seed
+    payload_args.update(
+        _chat_completion_model_kwargs(
+            model=model, temperature=temperature, seed=seed
+        )
+    )
     resp = client.chat.completions.create(**payload_args)
     usage = getattr(resp, "usage", None)
     return _ChatCompletionRun(
@@ -406,6 +424,7 @@ def openai_chat_json(
         cached_payload = _read_semantic_response_cache(cache_spec, ctx)
         if cached_payload is not None:
             return _openai_response_result_from_cache(cached_payload)
+    _enforce_daily_spend_guardrail(request, ctx, operation="openai_chat_json")
     metadata = _OpenAIResponseMetadata(
         text="",
         request_id=None,
@@ -573,6 +592,9 @@ def openai_chat_json_with_images(
         cached_payload = _read_semantic_response_cache(cache_spec, ctx)
         if cached_payload is not None:
             return _openai_response_result_from_cache(cached_payload)
+    _enforce_daily_spend_guardrail(
+        request, ctx, operation="openai_chat_json_with_images"
+    )
     image_urls = [_image_path_to_data_url(path) for path in request.image_paths]
     try:
         client = _build_openai_client(
