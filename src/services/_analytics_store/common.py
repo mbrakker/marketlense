@@ -343,6 +343,16 @@ def _configure(conn: sqlite3.Connection) -> None:
     )
 
 
+def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
+    return (
+        conn.execute(
+            "select 1 from sqlite_master where type = 'table' and name = ?",
+            (table_name,),
+        ).fetchone()
+        is not None
+    )
+
+
 def _ensure_reports_projection_columns(conn: sqlite3.Connection) -> None:
     cols = {
         str(row[1]) for row in conn.execute("PRAGMA table_info(reports)").fetchall()

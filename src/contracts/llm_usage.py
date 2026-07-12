@@ -180,6 +180,14 @@ class LLMUsageLedgerAppendResponse:
             )
         }
     )
+    canonical_event_count: int = field(
+        metadata={"doc": "Current count of canonical usage events after this write."}
+    )
+    export_projection_due: bool = field(
+        metadata={
+            "doc": "Whether this inserted event reached the export projection interval."
+        }
+    )
 
 
 @dataclass(frozen=True)
@@ -317,6 +325,12 @@ class LLMUsageExportRebuildResponse:
     )
     ledger_sha256: str = field(metadata={"doc": "Hash of the JSONL export bytes."})
     daily_sha256: str = field(metadata={"doc": "Hash of the daily-rollup bytes."})
+    last_projected_event_id: int = field(
+        metadata={"doc": "Highest canonical event ID included in the derived exports."}
+    )
+    projected_event_count: int = field(
+        metadata={"doc": "New canonical events incorporated by this projection."}
+    )
 
 
 @dataclass(frozen=True)

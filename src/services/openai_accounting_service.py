@@ -4,9 +4,9 @@ import logging
 from datetime import datetime, timezone
 
 from src.contracts.llm_usage import (
+    LLMUsageExportRebuildRequest,
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerEntry,
-    LLMUsageExportRebuildRequest,
     LLMUsageLedgerOutcomeUpdateRequest,
 )
 from src.contracts.openai import (
@@ -136,6 +136,7 @@ def record_usage(
     usage_db_row_id = None
     usage_db_event_key = ""
     usage_db_inserted = False
+    usage_exports_projected = False
     try:
         usage_response = llm_usage_ledger_service.append_usage(
             LLMUsageLedgerAppendRequest(
@@ -185,7 +186,11 @@ def record_usage(
         usage_db_row_id = usage_response.row_id
         usage_db_event_key = usage_response.event_key
         usage_db_inserted = usage_response.inserted
-        if request.emit_cost_ledger and usage_response.inserted:
+        if (
+            request.emit_cost_ledger
+            and usage_response.inserted
+            and usage_response.export_projection_due
+        ):
             llm_usage_ledger_service.rebuild_usage_exports(
                 LLMUsageExportRebuildRequest(
                     schema_version="1.0",
@@ -195,6 +200,7 @@ def record_usage(
                 ),
                 ctx,
             )
+            usage_exports_projected = True
     except OPENAI_ACCOUNTING_EXCEPTIONS as exc:
         logger.info(
             log_event(
@@ -247,13 +253,14 @@ def record_usage(
                 "usage_db_row_id": usage_db_row_id,
                 "event_key": usage_db_event_key,
                 "usage_db_inserted": usage_db_inserted,
+                "usage_exports_projected": usage_exports_projected,
                 "call_ordinal": usage_response.call_ordinal,
             },
         )
     )
     return OpenAIUsageAccountingResponse(
         schema_version="1.0",
-        recorded=request.emit_cost_ledger and usage_db_inserted,
+        recorded=usage_exports_projected,
         estimated_cost_usd=estimated_cost,
         ledger_path=request.cost_ledger_path,
         daily_path=request.cost_daily_path,

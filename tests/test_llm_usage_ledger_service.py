@@ -12,9 +12,9 @@ import pytest
 
 from src.contracts.costs import CostLedgerAppendRequest, CostLedgerEntry
 from src.contracts.llm_usage import (
+    LLMUsageExportRebuildRequest,
     LLMUsageLedgerAppendRequest,
     LLMUsageLedgerEntry,
-    LLMUsageExportRebuildRequest,
     LLMUsageLedgerOutcomeUpdateRequest,
     LLMUsageLedgerReconciliationRequest,
     LLMUsageMedianRebuildRequest,
@@ -431,7 +431,20 @@ def test_llm_usage_exports_rebuild_stably_and_reconciliation_repairs_tampering(
     second = svc.rebuild_usage_exports(request, _ctx())
 
     assert first.source_sha256 == second.source_sha256
+    assert second.projected_event_count == 0
     assert first_bytes == (ledger_path.read_bytes(), daily_path.read_bytes())
+    svc.append_usage(
+        LLMUsageLedgerAppendRequest(
+            schema_version="1.0",
+            db_path=str(db_path),
+            entry=replace(_entry(), call_ordinal=2),
+        ),
+        _ctx(),
+    )
+    incremental = svc.rebuild_usage_exports(request, _ctx())
+    assert incremental.projected_event_count == 1
+    assert incremental.event_count == 3
+    assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 3
     ledger_path.write_text('{"altered":true}\n', encoding="utf-8")
     reconciled = svc.reconcile_usage_export(
         LLMUsageLedgerReconciliationRequest(
@@ -446,9 +459,9 @@ def test_llm_usage_exports_rebuild_stably_and_reconciliation_repairs_tampering(
 
     assert reconciled.matches is True
     assert reconciled.repaired is True
-    assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 2
+    assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 3
     with sqlite3.connect(db_path) as conn:
         checkpoint = conn.execute(
             "select event_count from llm_usage_export_checkpoints"
         ).fetchone()
-    assert checkpoint == (2,)
+    assert checkpoint == (3,)
