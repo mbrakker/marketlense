@@ -36,6 +36,9 @@ tests/fixtures/*
 !tests/fixtures/pdf_benchmark/
 !tests/fixtures/pdf_benchmark/golden/
 !tests/fixtures/pdf_benchmark/golden/**
+!tests/fixtures/pdf_crop_refine/
+!tests/fixtures/pdf_crop_refine/golden/
+!tests/fixtures/pdf_crop_refine/golden/**
 htmlcov/
 
 # Editor directories and files

@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "7b3055a2dc6033692151e3df38798634fec14424d5287da1edd70b33bcce176f",
+    "md5": "fccf7f92dc7e14a27ee6a90daf16705a",
+    "model": "gpt-5-mini",
+    "temperature": 0.0,
+    "seed": null,
+    "mode": "adaptive",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "a876ed2c2827ddef501f6f988e17fbf3185ce58bc85b1dcf9db07d0457378302"
+  },
+  "results": [
+    {
+      "entry_key": "fa690601eff901bc311803705911501bd8bb626cbd4021a73113f35ed3b852c7",
+      "candidate_id": "table-24-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        25.0,
+        60.0,
+        695.0,
+        395.0
+      ],
+      "reason": "This crop contains a complete, data-rich infographic (title, three percentage panels, and the 'What this means for marketers' panel). The refined bbox trims the bottom footer and page numbering while keeping the full figure and title.",
+      "page": 24
+    }
+  ]
+}

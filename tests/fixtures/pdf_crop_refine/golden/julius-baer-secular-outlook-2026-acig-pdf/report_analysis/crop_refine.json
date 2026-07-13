@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "d47ed314c8adc66c4eb239239382a2a07e26aac29709df891bba8a6d361a0292",
+    "md5": "468e8c08c83182f4803e07f5357c9160",
+    "model": "gpt-5-mini",
+    "temperature": 0.0,
+    "seed": null,
+    "mode": "always",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "a876ed2c2827ddef501f6f988e17fbf3185ce58bc85b1dcf9db07d0457378302"
+  },
+  "results": [
+    {
+      "entry_key": "4bd73007a5e912a0cc7f0113a7e305ba5e08201fca6d611b67fb68ac31adebea",
+      "candidate_id": "chart-22-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        58.960577697753905,
+        454.4778137207031,
+        536.3151257324218,
+        787.0742797851562
+      ],
+      "reason": "Complete, data-rich line chart with title, legend, axes and source/note present; bbox captures the full figure without surrounding article text.",
+      "page": 22
+    },
+    {
+      "entry_key": "bbedc0d3289e6f931a71db8be42bc5fe44387ae72ee79a3df47378c99e13aa3f",
+      "candidate_id": "chart-18-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        58.960577697753905,
+        420.6778259277344,
+        530.3623669433593,
+        787.0742797851562
+      ],
+      "reason": "Clear, data-rich time-series chart with title, legend and source/note; bbox captures the full figure suitable for publication.",
+      "page": 18
+    },
+    {
+      "entry_key": "ccf63d735ffc10f2c5acf3a98d2781398eeeb1f686e731a85dee1bf26a2dccc8",
+      "candidate_id": "chart-24-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        52.0,
+        420.0,
+        542.0,
+        786.0
+      ],
+      "reason": "Clear, data-rich time-series chart with title, legend and source note; refined bbox tightly captures the full chart area including title and note without unrelated body text or page footer.",
+      "page": 24
+    },
+    {
+      "entry_key": "d35f05e571e270262fd7847e36cf52d493ead1526a76eab437b5f795e0b960b3",
+      "candidate_id": "chart-3-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        58.960478515625,
+        420.6778259277344,
+        536.3145153808593,
+        787.0742797851562
+      ],
+      "reason": "Complete chart with title, data-rich visualization, legend and source note; bbox tightly covers the figure without extraneous page prose.",
+      "page": 3
+    },
+    {
+      "entry_key": "ebc3f886ac3ca32aa3559b1926b07dbe1c386b8e602de69df7a6122544f859aa",
+      "candidate_id": "chart-25-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        58.960478515625,
+        411.0936279296875,
+        536.3145153808593,
+        748.7434692382812
+      ],
+      "reason": "Clear, data-rich chart with title, axes, legend and source; bbox captures the full figure and attached note while excluding the main page heading and surrounding prose.",
+      "page": 25
+    }
+  ]
+}

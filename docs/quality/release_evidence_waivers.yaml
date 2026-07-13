@@ -1,7 +1,2 @@
 schema_version: "1.0"
-waivers:
-  - artifact_name: pdf_crop_refine
-    reason: artifact_failed
-    owner: market-lense
-    expires_on: "2026-07-31"
-    justification: CI intentionally runs the retained crop-refine benchmark without generated crop assets; the artifact records that missing-evidence warning and remains visible in the release bundle until the retained corpus is made available to CI.
+waivers: []

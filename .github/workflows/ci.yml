@@ -84,7 +84,7 @@ jobs:
       - name: PDF candidate benchmark gate
         run: python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json
       - name: PDF crop-refine benchmark gate
-        run: python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_crop_refine_benchmark_ci.json
+        run: python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --output-json out/pdf_crop_refine_benchmark_ci.json
       - name: PDF benchmark trend gate
         run: python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs
       - name: Build CI health scorecard
@@ -146,7 +146,7 @@ jobs:
             --artifact-command coverage="python scripts/ci/check_coverage.py --coverage-xml coverage.xml" \
             --artifact-command mutation="python scripts/ci/run_mutation_gate.py --json-out mutation_results.json" \
             --artifact-command pdf_candidate="python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json" \
-            --artifact-command pdf_crop_refine="python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_crop_refine_benchmark_ci.json" \
+            --artifact-command pdf_crop_refine="python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --output-json out/pdf_crop_refine_benchmark_ci.json" \
             --artifact-command pdf_trends="python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs" \
             --artifact-command health_scorecard="python scripts/quality/run_health_scorecard.py out/ci_health_events.jsonl --run-id ci-release-evidence --output-json out/run_health_scorecard_ci.json" \
             --artifact-command llm_accounting_reconciliation="python scripts/quality/reconcile_llm_usage_ledger.py --db out/ci_llm_accounting/usage.sqlite --ledger out/ci_llm_accounting/cost-ledger.jsonl --daily out/ci_llm_accounting/cost-daily.json --output-json out/llm_accounting_reconciliation_ci.json" \
