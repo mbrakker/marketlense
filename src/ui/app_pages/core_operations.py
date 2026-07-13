@@ -432,13 +432,13 @@ def _render_publishing_control(
 ) -> None:
     can_publish = publish_settings is not None
     clicked, filters, main_col, detail_col = _page_shell(
-        "Publishing Control",
+        "Publish Readiness",
         status_label="Ready" if can_publish else "Config Missing",
         status_level="success" if can_publish else "error",
         primary_action="Publish Queue",
         primary_help=_tip(
-            "Publish queued HTML reports to WordPress with the configured validation policy.",
-            "Set publish limit to 20 for a controlled batch publish.",
+            "Publish HTML reports that pass validation using the configured WordPress status.",
+            "Use the CLI --draft option when review-only drafts are required.",
         ),
         primary_key="run_publish",
         primary_disabled=not can_publish,
@@ -459,7 +459,7 @@ def _render_publishing_control(
         response = launch_background_run(
             settings,
             run_type="publish",
-            display_name="Publish queue",
+            display_name="Publish readiness run",
             request_payload={"limit": int(limit)},
         )
         _append_terminal(f"Publish launched: {response.record.run_id}")
@@ -486,7 +486,7 @@ def _render_publishing_control(
         queue_rows = []
 
     with main_col:
-        st.subheader("Publish Queue")
+        st.subheader("Publish Readiness")
         if queue_rows:
             st.dataframe(queue_rows, use_container_width=True, hide_index=True)
         else:

@@ -1882,6 +1882,7 @@ def evaluate_daily_spend_guardrail(
             message="Spend guardrail requires a canonical usage database path",
             retryable=False,
         )
+    Path(request.db_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
     day_utc = datetime.now(timezone.utc).date().isoformat()
     median_forecast = 0.0
     median_sample_count = 0

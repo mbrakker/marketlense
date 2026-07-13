@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 from collections import defaultdict
 from dataclasses import asdict
@@ -25,6 +26,7 @@ from src.contracts.workflow_control import (
     MailDeliveryWorkflowRunResult,
     ModelCallAuditRecord,
     ModelCallReplayBundle,
+    PipelineExecutionPlan,
     OperationalMemoryRecommendation,
     OperationalMemoryRecord,
     OperationalObservation,
@@ -606,6 +608,74 @@ def resolve_run_intent(
         )
     )
     return resolved
+
+
+def build_pipeline_execution_plan(
+    intent: RunIntent,
+    settings: WorkflowControlSettings,
+    *,
+    ctx: RunContext,
+) -> PipelineExecutionPlan:
+    """Create the inspectable, side-effect-free plan consumed before execution."""
+    resolved = resolve_run_intent(intent, settings, ctx=ctx)
+    if resolved.status != "resolved":
+        plan = PipelineExecutionPlan(
+            schema_version="1.0",
+            intent_key=resolved.intent_key,
+            workflow="",
+            profile="",
+            ordered_steps=[],
+            skipped_steps=[],
+            blocked_steps=list(resolved.blockers),
+            required_credentials=[],
+            checkpoints=[],
+            expected_artifacts=[],
+            planned_side_effects=[],
+            idempotency_key="",
+            executable=False,
+            blockers=list(resolved.blockers),
+        )
+    else:
+        profile = _profile(settings, resolved.preflight_profile)
+        contract = resolve_workflow_contract(settings, resolved.workflow)
+        ordered_steps = list(
+            dict.fromkeys(transition.step_name for transition in contract.transitions)
+        )
+        required_credentials = _required_credentials(profile)
+        identity = "|".join(
+            [
+                resolved.intent_key,
+                intent.subject.strip(),
+                intent.publisher.strip(),
+                intent.report_id.strip(),
+            ]
+        )
+        plan = PipelineExecutionPlan(
+            schema_version="1.0",
+            intent_key=resolved.intent_key,
+            workflow=resolved.workflow,
+            profile=profile.workflow,
+            ordered_steps=ordered_steps,
+            skipped_steps=[],
+            blocked_steps=[],
+            required_credentials=required_credentials,
+            checkpoints=list(contract.checkpoint_outputs),
+            expected_artifacts=list(contract.checkpoint_outputs),
+            planned_side_effects=list(resolved.side_effect_plan),
+            idempotency_key=hashlib.sha256(identity.encode("utf-8")).hexdigest(),
+            executable=True,
+            blockers=[],
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_pipeline_execution_plan",
+            module=logger.name,
+            fields=asdict(plan),
+        )
+    )
+    return plan
 
 
 def evaluate_publish_policy(
@@ -1558,6 +1628,19 @@ def _intent_key(value: object) -> str:
     return aliases.get(token, token)
 
 
+def _required_credentials(profile: WorkflowPreflightProfile) -> list[str]:
+    required: list[str] = []
+    if profile.require_llm:
+        required.append("llm")
+    if profile.require_drive:
+        required.append("drive")
+    if profile.require_publish:
+        required.append("wordpress")
+    if profile.require_browser:
+        required.append("browser")
+    return required
+
+
 def _bounded(value: int, *, minimum: int, maximum: int) -> int:
     return min(maximum, max(minimum, value))
 
@@ -1580,6 +1663,7 @@ __all__ = [
     "PreLlmDataQualityInput",
     "PreflightRemediationAction",
     "PreflightRemediationArtifact",
+    "PipelineExecutionPlan",
     "PublishRemediationTarget",
     "PublishRemediationWorkflow",
     "PublishPolicyDecision",
@@ -1599,6 +1683,7 @@ __all__ = [
     "build_operational_memory",
     "build_publish_remediation_from_validation",
     "build_preflight_remediation_artifact",
+    "build_pipeline_execution_plan",
     "build_workflow_preflight_request",
     "default_workflow_control_settings",
     "evaluate_pre_llm_data_quality",

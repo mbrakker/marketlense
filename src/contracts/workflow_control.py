@@ -335,6 +335,54 @@ class ResolvedRunIntent:
 
 
 @dataclass(frozen=True)
+class PipelineExecutionPlan:
+    schema_version: str = field(metadata={"doc": "Execution-plan contract version."})
+    intent_key: str = field(metadata={"doc": "Normalized operator intent."})
+    workflow: str = field(
+        metadata={"doc": "Canonical workflow selected for execution."}
+    )
+    profile: str = field(metadata={"doc": "Resolved preflight/profile name."})
+    ordered_steps: list[str] = field(
+        metadata={"doc": "Deterministic workflow steps in execution order."}
+    )
+    skipped_steps: list[str] = field(
+        metadata={"doc": "Known steps excluded before execution with no side effect."}
+    )
+    blocked_steps: list[str] = field(
+        metadata={"doc": "Steps blocked before execution with stable blocker codes."}
+    )
+    required_credentials: list[str] = field(
+        metadata={"doc": "Credential boundaries required by the selected profile."}
+    )
+    checkpoints: list[str] = field(
+        metadata={
+            "doc": "Checkpoint outputs available for resume or expected from the workflow."
+        }
+    )
+    expected_artifacts: list[str] = field(
+        metadata={"doc": "Expected durable workflow artifacts before execution begins."}
+    )
+    planned_side_effects: list[str] = field(
+        metadata={
+            "doc": "External side-effect families allowed only after plan approval."
+        }
+    )
+    idempotency_key: str = field(
+        metadata={
+            "doc": "Stable idempotency key derived from the scoped operator intent."
+        }
+    )
+    executable: bool = field(
+        metadata={"doc": "Whether resolution produced an unblocked canonical workflow."}
+    )
+    blockers: list[str] = field(
+        metadata={
+            "doc": "Resolution blockers that prevent execution without a new plan."
+        }
+    )
+
+
+@dataclass(frozen=True)
 class PublishPolicyInput:
     schema_version: str = field(
         metadata={"doc": "Publish policy input schema version."}

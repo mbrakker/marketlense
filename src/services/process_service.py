@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
+import threading
 from pathlib import Path
 
 from src.contracts.run_context import RunContext
@@ -22,6 +23,10 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.process_service")
+
+
+_MANAGED_PROCESSES: dict[int, subprocess.Popen[bytes]] = {}
+_MANAGED_PROCESSES_LOCK = threading.Lock()
 
 
 def _is_windows() -> bool:
@@ -143,6 +148,8 @@ def launch_process(
         output_path=str(output_path),
         started_at_utc=_utc_now(),
     )
+    with _MANAGED_PROCESSES_LOCK:
+        _MANAGED_PROCESSES[response.pid] = process
     logger.info(
         log_event(
             ctx,
@@ -174,7 +181,14 @@ def poll_process(request: ProcessPollRequest, ctx: RunContext) -> ProcessPollRes
     )
     running = False
     try:
-        if _is_windows():
+        with _MANAGED_PROCESSES_LOCK:
+            process = _MANAGED_PROCESSES.get(pid)
+        if process is not None:
+            running = process.poll() is None
+            if not running:
+                with _MANAGED_PROCESSES_LOCK:
+                    _MANAGED_PROCESSES.pop(pid, None)
+        elif _is_windows():
             result = subprocess.run(
                 ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
                 capture_output=True,
@@ -215,7 +229,19 @@ def terminate_process(
     )
     terminated = True
     try:
-        if _is_windows():
+        with _MANAGED_PROCESSES_LOCK:
+            process = _MANAGED_PROCESSES.get(pid)
+        if process is not None:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+            finally:
+                with _MANAGED_PROCESSES_LOCK:
+                    _MANAGED_PROCESSES.pop(pid, None)
+        elif _is_windows():
             result = subprocess.run(
                 ["taskkill", "/PID", str(pid), "/T", "/F"],
                 capture_output=True,

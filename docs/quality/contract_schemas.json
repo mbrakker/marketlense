@@ -34252,6 +34252,94 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.PipelineExecutionPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "blocked_steps": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "blockers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "checkpoints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "executable": {
+          "type": "boolean"
+        },
+        "expected_artifacts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "intent_key": {
+          "type": "string"
+        },
+        "ordered_steps": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "planned_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "required_credentials": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "skipped_steps": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "intent_key",
+        "workflow",
+        "profile",
+        "ordered_steps",
+        "skipped_steps",
+        "blocked_steps",
+        "required_credentials",
+        "checkpoints",
+        "expected_artifacts",
+        "planned_side_effects",
+        "idempotency_key",
+        "executable",
+        "blockers"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.PreLlmDataQualityDecision": {
       "additionalProperties": false,
       "properties": {

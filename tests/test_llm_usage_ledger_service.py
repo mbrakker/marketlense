@@ -743,6 +743,23 @@ def test_daily_spend_guardrail_uses_canonical_events_not_lagging_export(
     assert stopped.decision == "stop"
 
 
+def test_daily_spend_guardrail_initializes_a_missing_database_parent(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "new" / "ledger" / "usage.sqlite"
+
+    response = svc.evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(
+            schema_version="1.0", db_path=str(db_path), warn_usd=1.0
+        ),
+        _ctx(),
+    )
+
+    assert db_path.is_file()
+    assert response.canonical_spend_usd == 0.0
+    assert response.decision == "allow"
+
+
 def test_daily_spend_guardrail_forecasts_exact_task_median_before_call(
     tmp_path: Path,
 ) -> None:

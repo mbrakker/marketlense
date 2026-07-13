@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# This compatibility facade deliberately re-exports migration seams for callers/tests.
+# ruff: noqa: F401
 import copy
 from dataclasses import asdict, dataclass, field, replace
 import hashlib
@@ -500,8 +502,29 @@ def run_publish(
     html_paths: Optional[List[str]] = None,
     ctx: Optional[RunContext] = None,
     force_report_cards: bool = False,
+    force_draft: bool = False,
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
+    requested_post_status = str(settings.wp.post_status or "publish").strip().lower()
+    effective_post_status = "draft" if force_draft else requested_post_status
+    if requested_post_status != effective_post_status:
+        settings = replace(
+            settings,
+            wp=replace(settings.wp, post_status=effective_post_status),
+        )
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="publish_post_status_resolved",
+                module=logger.name,
+                fields={
+                    "requested_post_status": requested_post_status,
+                    "effective_post_status": effective_post_status,
+                    "reason": "explicit_draft_requested",
+                },
+            )
+        )
     logger.info(
         log_event(
             root_ctx,
@@ -512,6 +535,8 @@ def run_publish(
                 "limit": limit,
                 "explicit_html_paths": len(html_paths) if html_paths is not None else 0,
                 "force_report_cards": force_report_cards,
+                "force_draft": force_draft,
+                "post_status": settings.wp.post_status,
             },
         )
     )

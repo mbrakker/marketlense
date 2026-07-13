@@ -102,6 +102,21 @@ def _resolve_cli_workflow_control(
         settings,
         ctx=ctx,
     )
+    plan = workflow_control.build_pipeline_execution_plan(
+        workflow_control.RunIntent(
+            schema_version="1.0",
+            intent=intent,
+            subject=subject,
+            publisher=publisher,
+            report_id=report_id,
+            requested_side_effects=list(requested_side_effects or []),
+            dry_run=True,
+            allow_automation=False,
+            metadata={"source": "cli"},
+        ),
+        settings,
+        ctx=ctx,
+    )
     retry_policy_id = ""
     if resolved.workflow:
         step_name = (
@@ -127,6 +142,17 @@ def _resolve_cli_workflow_control(
         "side_effect_plan": list(resolved.side_effect_plan),
         "alternatives": list(resolved.alternatives),
         "blockers": list(resolved.blockers),
+        "execution_plan": {
+            "ordered_steps": list(plan.ordered_steps),
+            "skipped_steps": list(plan.skipped_steps),
+            "blocked_steps": list(plan.blocked_steps),
+            "required_credentials": list(plan.required_credentials),
+            "checkpoints": list(plan.checkpoints),
+            "expected_artifacts": list(plan.expected_artifacts),
+            "planned_side_effects": list(plan.planned_side_effects),
+            "idempotency_key": plan.idempotency_key,
+            "executable": plan.executable,
+        },
     }
     logger.info(
         log_event(
@@ -344,6 +370,14 @@ def extract_candidates(
 @cli_app.command("publish-wp")
 def publish_wp(
     limit: int = typer.Option(None, help="Max HTML reports to publish this run"),
+    draft: bool = typer.Option(
+        False,
+        "--draft",
+        help=(
+            "Create new WordPress posts as drafts for review instead of using the "
+            "configured publication status."
+        ),
+    ),
     force_report_cards: bool = typer.Option(
         False,
         "--force-report-cards",
@@ -379,6 +413,7 @@ def publish_wp(
         limit=limit,
         ctx=ctx,
         force_report_cards=force_report_cards,
+        force_draft=draft,
     )
     _record_cli_workflow_feedback(
         state_db=settings.state_db,
