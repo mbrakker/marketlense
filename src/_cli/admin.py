@@ -164,6 +164,10 @@ def sync_publishers(
 
 @cli_app.command("backfill-artifact-lineage")
 def backfill_artifact_lineage_command(
+    reports_db: str = typer.Option(
+        "state/reports.sqlite",
+        help="Existing reports SQLite database; does not require provider credentials.",
+    ),
     checkpoint_root: str = typer.Option(
         "out/.checkpoints/report_generation",
         help="Existing report-generation checkpoint directory to scan",
@@ -178,11 +182,10 @@ def backfill_artifact_lineage_command(
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_backfill_artifact_lineage")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
-    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
     result = backfill_artifact_lineage(
         ArtifactLineageBackfillRequest(
             schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
-            db_path=settings.reports_db,
+            db_path=reports_db,
             checkpoint_root=checkpoint_root,
             limit=limit,
             dry_run=dry_run,
