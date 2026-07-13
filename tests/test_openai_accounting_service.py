@@ -120,7 +120,9 @@ def test_record_usage_defers_compatibility_exports_until_projection_interval(
     assert_logs_have_required_fields(records)
 
 
-def test_record_usage_projects_compatibility_exports_on_twentieth_event(tmp_path) -> None:
+def test_record_usage_projects_compatibility_exports_on_twentieth_event(
+    tmp_path,
+) -> None:
     response = None
     for call_ordinal in range(20):
         response = svc.record_usage(
@@ -184,7 +186,9 @@ def test_finalized_model_outcome_uses_shared_projection_finalizer(tmp_path) -> N
     assert (tmp_path / "daily.json").is_file()
 
 
-def test_record_usage_marks_unknown_model_pricing_instead_of_zero_cost_ambiguity(tmp_path) -> None:
+def test_record_usage_marks_unknown_model_pricing_instead_of_zero_cost_ambiguity(
+    tmp_path,
+) -> None:
     response = svc.record_usage(
         replace(_request(tmp_path), model="unpriced-model", request_id="unpriced"),
         _ctx(),
@@ -237,9 +241,7 @@ def test_record_usage_returns_typed_failure_when_canonical_export_write_fails(
             replace(_request(tmp_path), call_ordinal=call_ordinal), _ctx()
         )
         assert response.error is None
-    response = svc.record_usage(
-        replace(_request(tmp_path), call_ordinal=19), _ctx()
-    )
+    response = svc.record_usage(replace(_request(tmp_path), call_ordinal=19), _ctx())
 
     assert response.recorded is False
     assert response.estimated_cost_usd == 2.5
