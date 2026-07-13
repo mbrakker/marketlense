@@ -33,6 +33,8 @@ final class Plugin
 
     private Intelligence_Stats $stats;
 
+    private Intelligence_Projection $intelligence_projection;
+
     private Report_Card_Renderer $report_card_renderer;
 
     private Briefing_Card_View_Model_Builder $briefing_card_view_model_builder;
@@ -54,7 +56,8 @@ final class Plugin
         $this->media_proxy = new Media_Proxy();
         $this->content_formatting = new Content_Formatting();
         $this->view_model_builder = new Report_View_Model_Builder($parser);
-        $this->stats = new Intelligence_Stats($this->view_model_builder);
+        $this->intelligence_projection = new Intelligence_Projection();
+        $this->stats = new Intelligence_Stats($this->view_model_builder, $this->intelligence_projection);
         $this->report_card_renderer = new Report_Card_Renderer();
         $this->briefing_card_view_model_builder = new Briefing_Card_View_Model_Builder();
         $this->briefing_card_renderer = new Briefing_Card_Renderer();
@@ -90,6 +93,7 @@ final class Plugin
         add_action('init', [$this->taxonomies, 'register'], 8);
         add_action('init', [$this->meta, 'register_meta_fields'], 11);
         add_action('init', [$this->shortcodes, 'register'], 12);
+        $this->intelligence_projection->register();
         add_action('init', [$this->meta, 'backfill_report_contracts'], 13);
         add_action('init', [self::class, 'migrate_site_identity'], 14);
         add_action('init', [self::class, 'migrate_public_discovery'], 15);

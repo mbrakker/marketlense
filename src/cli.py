@@ -143,6 +143,7 @@ from src._cli.pipeline import (
     plan_execution,
     publish_wp,
     recategorize,
+    sync_wordpress_intelligence,
     update_wp_categories,
 )
 from src._cli.browser import browser_doctor, download_report, poll_mail_report

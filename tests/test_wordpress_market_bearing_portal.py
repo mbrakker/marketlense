@@ -107,7 +107,8 @@ def test_report_artifact_counts_drive_trust_and_card_citations() -> None:
     assert "'citation_count' =>" in stats
     assert "'briefing_count' =>" in stats
     assert "'signal_count' =>" in stats
-    assert "new Intelligence_Stats($this->view_model_builder)" in bootstrap
+    assert "new Intelligence_Projection()" in bootstrap
+    assert "new Intelligence_Stats($this->view_model_builder, $this->intelligence_projection)" in bootstrap
     assert "Citations & evidence links" in shortcodes
     assert "citations_count" not in renderer
     assert "quotes_count" not in renderer

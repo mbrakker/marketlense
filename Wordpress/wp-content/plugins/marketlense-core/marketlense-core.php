@@ -33,6 +33,7 @@ require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-content-fo
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-meta.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-media-proxy.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-report-view-model-builder.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-intelligence-projection.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-intelligence-stats.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-report-card-renderer.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-briefing-card-view-model-builder.php';

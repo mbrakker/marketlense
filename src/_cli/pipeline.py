@@ -1,42 +1,49 @@
 from __future__ import annotations
 
-
 import time
 from dataclasses import asdict
 
 import typer
-from rich.table import Table
 from rich import box
+from rich.table import Table
 
-from src.utils.errors import AppError
-from src.contracts.costs import CostReportRequest, CostReportingRequest
+from src._cli.app import cli_app, console, logger
+from src._cli.runtime import sync_cli_patch_points
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.costs import CostReportingRequest, CostReportRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.semantic_ids import RunId
 from src.contracts.state import WorkflowControlObservationWriteRequest
+from src.contracts.wordpress_intelligence_projection import (
+    WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+    WordPressIntelligenceSourceReadRequest,
+    WordPressIntelligenceSyncRequest,
+)
 from src.contracts.workflow_control import WorkflowControlObservation
-from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
-from src.orchestrators.ingest_orchestrator import run_ingest
+from src.orchestrators import workflow_control_orchestrator as workflow_control
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
+from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
+from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
-from src.orchestrators import workflow_control_orchestrator as workflow_control
+from src.orchestrators.wordpress_intelligence_projection_orchestrator import (
+    sync_wordpress_intelligence_projection,
+)
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.config_service import (
     build_ingest_settings,
-    load_settings,
     load_publish_settings,
+    load_settings,
 )
-from src.services.state_service import write_workflow_control_observation
 from src.services.logging_service import setup_logging
+from src.services.state_service import write_workflow_control_observation
 from src.utils.clock import utc_now_iso
+from src.utils.errors import AppError
 from src.utils.logging import log_event, new_run_context
-
-from src._cli.app import cli_app, console, logger
-from src._cli.runtime import sync_cli_patch_points
+from src.utils.wp_auth import build_auth_header
 
 _CLI_PATCH_POINTS = (
     "authorize_oauth_user",
@@ -76,6 +83,45 @@ _CLI_PATCH_POINTS = (
 
 def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
+
+
+@cli_app.command("sync-wordpress-intelligence")
+def sync_wordpress_intelligence() -> None:
+    """Rebuild WordPress homepage intelligence from approved published entities."""
+    _sync_cli_patch_points()
+    ctx = new_run_context(task_id="cli_sync_wordpress_intelligence")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    settings = load_publish_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
+    auth_header = build_auth_header(
+        username=settings.wp.username,
+        app_password=settings.wp.app_password,
+        bearer_token=settings.wp.bearer_token,
+    )
+    outcome = sync_wordpress_intelligence_projection(
+        WordPressIntelligenceSyncRequest(
+            schema_version=WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+            source_request=WordPressIntelligenceSourceReadRequest(
+                schema_version=WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+                base_url=settings.wp.site_url,
+                auth_header=auth_header,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+            ),
+            generated_at_utc=utc_now_iso(),
+        ),
+        ctx,
+    )
+    table = Table(title="WordPress Intelligence Projection", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Approved entities", str(outcome.entity_count))
+    table.add_row("Reports", str(outcome.projection.homepage_metrics.report_count))
+    table.add_row("Briefings", str(outcome.projection.homepage_metrics.briefing_count))
+    table.add_row("Signals", str(outcome.projection.homepage_metrics.signal_count))
+    table.add_row("Generated", outcome.write_response.generated_at_utc)
+    console.print(table)
 
 
 def _resolve_cli_workflow_control(

@@ -50,6 +50,10 @@ from src.services._wordpress_service.taxonomy import (
     ensure_tags,
     update_post_categories,
 )
+from src.services._wordpress_service.intelligence_projection import (
+    read_published_intelligence_source,
+    write_wordpress_intelligence_projection,
+)
 from src.utils.wp_auth import build_auth_header
 
 # Preserve the report-only entrypoint while card updates become entity-agnostic.
@@ -122,4 +126,6 @@ __all__ = [
     "ensure_taxonomy_terms",
     "ensure_tags",
     "update_post_categories",
+    "read_published_intelligence_source",
+    "write_wordpress_intelligence_projection",
 ]

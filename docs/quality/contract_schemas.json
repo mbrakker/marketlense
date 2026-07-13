@@ -33594,6 +33594,421 @@
       ],
       "type": "object"
     },
+    "src.contracts.wordpress_intelligence_projection.WordPressHomepageMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "briefing_count": {
+          "type": "integer"
+        },
+        "citation_count": {
+          "type": "integer"
+        },
+        "latest_label": {
+          "type": "string"
+        },
+        "publisher_count": {
+          "type": "integer"
+        },
+        "report_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "signal_count": {
+          "type": "integer"
+        },
+        "signal_label": {
+          "type": "string"
+        },
+        "topic_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_count",
+        "publisher_count",
+        "topic_count",
+        "briefing_count",
+        "signal_count",
+        "signal_label",
+        "citation_count",
+        "latest_label"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceBuildRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceSourceReadResponse"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source",
+        "generated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": {
+          "type": "string"
+        },
+        "entity_type": {
+          "enum": [
+            "ml_report",
+            "ml_briefing",
+            "ml_signal"
+          ]
+        },
+        "published_at_utc": {
+          "type": "string"
+        },
+        "publishers": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceTerm"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "topics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceTerm"
+          },
+          "type": "array"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "entity_id",
+        "entity_type",
+        "published_at_utc",
+        "url",
+        "publishers",
+        "topics"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "delta": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "homepage": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "count",
+        "delta",
+        "url",
+        "homepage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "homepage_metrics": {
+          "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressHomepageMetrics"
+        },
+        "projection_version": {
+          "type": "string"
+        },
+        "publisher_authority": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceMetric"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "strategic_themes": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceMetric"
+          },
+          "type": "array"
+        },
+        "weekly_signals": {
+          "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressWeeklyIntelligence"
+        }
+      },
+      "required": [
+        "schema_version",
+        "projection_version",
+        "generated_at_utc",
+        "homepage_metrics",
+        "weekly_signals",
+        "strategic_themes",
+        "publisher_authority"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceProjectionWriteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_header": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "ca_bundle_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "projection": {
+          "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceProjection"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "ssl_verify": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "base_url",
+        "auth_header",
+        "projection",
+        "ssl_verify",
+        "ca_bundle_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceProjectionWriteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "projection_version": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "stored"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "projection_version",
+        "generated_at_utc",
+        "status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceSourceReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_header": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "ca_bundle_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "ssl_verify": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "base_url",
+        "auth_header",
+        "ssl_verify",
+        "ca_bundle_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceSourceReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "entities": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceEntity"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "entities"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceSyncRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_request": {
+          "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceSourceReadRequest"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_request",
+        "generated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceSyncResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_count": {
+          "type": "integer"
+        },
+        "projection": {
+          "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceProjection"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "write_response": {
+          "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceProjectionWriteResponse"
+        }
+      },
+      "required": [
+        "schema_version",
+        "entity_count",
+        "projection",
+        "write_response"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressIntelligenceTerm": {
+      "additionalProperties": false,
+      "properties": {
+        "homepage": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "url",
+        "homepage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_intelligence_projection.WordPressWeeklyIntelligence": {
+      "additionalProperties": false,
+      "properties": {
+        "emerging_themes": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceMetric"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "top_publishers": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceMetric"
+          },
+          "type": "array"
+        },
+        "trending_topics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_intelligence_projection.WordPressIntelligenceMetric"
+          },
+          "type": "array"
+        },
+        "window_label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "window_label",
+        "trending_topics",
+        "emerging_themes",
+        "top_publishers"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.AutonomousRunSupervisorExecution": {
       "additionalProperties": false,
       "properties": {

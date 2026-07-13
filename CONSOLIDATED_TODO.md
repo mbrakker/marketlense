@@ -35,7 +35,6 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
 | Active | A9 | Source publication-metadata capture for retained regeneration | Source-supported render metadata outcome. |
 | Active | P1 | Publish snapshot naming and synchronous idempotent publishing | Publish Readiness outcome. |
-| Active | P2 | Stop WordPress intelligence/freshness/authority synthesis | Approved-projection rendering outcome. |
 | Active | P3 | Hosted HTTPS, safe errors, and public trust checks | Hosted trust outcome. |
 | Active | P4 | Briefing, correction, and submission CTAs | Public intake outcome. |
 | Active | P5 | Archive/search facets, mobile navigation, and responsive workflows | Responsive public-workflow outcome. |
@@ -217,19 +216,6 @@ All work is listed below in one register. `Active` items have detailed completio
 - `publish_queue_orchestrator.py` terminology is replaced by `Publish Readiness` at public/operator boundaries without creating a queue or outbox.
 - The output retains validation, evidence, health, duplicate-suppression, and review blockers; publishing remains draft/review-required by default.
 - Failure-injection tests cover restart, retry, duplicate dispatch, and partial WordPress failure, with retained findings for any future outbox decision.
-
-#### P2. Move public intelligence claims out of WordPress runtime synthesis
-
-- **Title:** Move public intelligence claims out of WordPress runtime synthesis
-- **Impact 5 / effort: 3**
-- **Context:** Some shortcode/stat surfaces still derive weekly signals, strategic themes, freshness-style movement, or publisher authority from WordPress counts and dates despite the pipeline owning approved projections.
-- **Benefit:** Analytical claims remain reproducible, source-grounded, and owned by the Python pipeline rather than mutable runtime queries.
-- **Risks to avoid:** Fail closed when projections are unavailable; do not invent neutral-looking claims from WordPress data.
-- **Success criteria:**
-
-- Signal, freshness, strategic-theme, and publisher-authority modules use an approved source contract.
-- Missing projections fail closed with neutral UI or an admin-visible diagnostic.
-- Tests prove no claim is generated solely from WordPress counts/dates, and README maps each intelligence surface to its projection source.
 
 #### P3. Resolve hosted-site trust blockers
 
@@ -521,7 +507,7 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 - Claim embeddings, stale/no-embedding fallback, bounded semantic preselection, durable Signal artifacts, artifact lineage storage, and lineage invalidation are present.
 - Workflow-control intent/preflight, UI dead letters, mailbox acquisition, resume checkpoints, prompt dry runs, provider decisions, and deterministic JSON-chat compaction are present.
 - Public report rendering exposes approved advisory/metric-spine data while redacting canonical IDs; strict crop acceptance emits typed QA sidecars.
-- WordPress report, briefing, and signal entities have REST draft/readback verification; hosted SEO/social/performance gate exists. Hosted HTTPS/error handling, intake, responsive UI, and editorial leakage remain active public-site gaps.
+- WordPress report, briefing, and signal entities have REST draft/readback verification; `sync-wordpress-intelligence` now projects 64 retained local public entities (47 reports, 5 briefings, 12 signals, and 29 publishers) through the authenticated plugin route, while missing/invalid projections render neutral values. Hosted HTTPS/error handling, intake, responsive UI, and editorial leakage remain active public-site gaps.
 - CI runs formatting, typing, architecture/import checks, forbidden-patching checks, hygiene, coverage, mutation, prompt regression, release-evidence archival, and WordPress staging verification when configured. PDF benchmark evidence remains temporarily waived when retained assets are unavailable.
 
 ## Audit Notes
