@@ -257,7 +257,7 @@ class UiRunDeadLetterRecord(SemanticIdContract):
     )
     triage_status: str = field(
         metadata={
-            "doc": "Dead-letter workflow status: open, recovery_requested, or discarded."
+            "doc": "Dead-letter workflow status: open, recovery_requested, discarded, or escalated."
         }
     )
     triage_category: str = field(
@@ -651,7 +651,9 @@ class UiRunDeadLetterActionRequest(SemanticIdContract):
     )
     run_id: RunId = field(metadata={"doc": "Dead-letter run identifier to update."})
     action: str = field(
-        metadata={"doc": "Dead-letter action to record: retry_requested or discarded."}
+        metadata={
+            "doc": "Dead-letter action to record: retry_requested, discarded, or escalated."
+        }
     )
     actor: str = field(
         default="ui",

@@ -19,11 +19,13 @@ DEAD_LETTER_TRIAGE_STATUSES = {
     "open",
     "recovery_requested",
     "discarded",
+    "escalated",
 }
 DEAD_LETTER_ACTIONS = {
     "auto_triaged",
     "retry_requested",
     "discarded",
+    "escalated",
 }
 DEAD_LETTER_CATEGORIES = {
     "config_validation",

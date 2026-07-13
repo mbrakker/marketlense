@@ -711,7 +711,7 @@ def record_ui_run_dead_letter_action(
     if action not in DEAD_LETTER_ACTIONS - {"auto_triaged"}:
         raise AppError(
             code="ui_run_dead_letter_action_invalid",
-            message="Dead-letter action must be retry_requested or discarded",
+            message="Dead-letter action must be retry_requested, discarded, or escalated",
             retryable=False,
             context={"action": request.action},
         )
@@ -746,7 +746,13 @@ def record_ui_run_dead_letter_action(
                 },
             )
         existing = _dead_letter_from_row(row)
-        triage_status = "discarded" if action == "discarded" else "recovery_requested"
+        triage_status = (
+            "discarded"
+            if action == "discarded"
+            else "escalated"
+            if action == "escalated"
+            else "recovery_requested"
+        )
         if triage_status not in DEAD_LETTER_TRIAGE_STATUSES:
             raise AppError(
                 code="ui_run_dead_letter_status_invalid",

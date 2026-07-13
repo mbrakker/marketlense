@@ -457,6 +457,13 @@ def reap_dead_letter_runs(
             now=now,
             cooldown_seconds=request.cooldown_seconds,
         ):
+            if not dead_letter.error_taxonomy.retryable:
+                _escalate_dead_letter(
+                    request=request,
+                    dead_letter=dead_letter,
+                    note="automatic_escalation:non_retryable_failure",
+                    ctx=ctx,
+                )
             held.append(dead_letter.run_id)
             continue
         stored = get_ui_run_record(
@@ -476,11 +483,23 @@ def reap_dead_letter_runs(
             "retry_later",
             "resume_from_checkpoint",
         }:
+            _escalate_dead_letter(
+                request=request,
+                dead_letter=dead_letter,
+                note=f"automatic_escalation:{classification.action}",
+                ctx=ctx,
+            )
             held.append(dead_letter.run_id)
             continue
         payload = dict(stored.request_payload)
         recovery_attempt = _recovery_attempt(payload)
         if recovery_attempt >= max(0, request.max_recovery_attempts):
+            _escalate_dead_letter(
+                request=request,
+                dead_letter=dead_letter,
+                note="automatic_escalation:recovery_attempt_budget_exhausted",
+                ctx=ctx,
+            )
             held.append(dead_letter.run_id)
             continue
         payload["_workflow_control_recovery_attempt"] = recovery_attempt + 1
@@ -530,6 +549,28 @@ def reap_dead_letter_runs(
         )
     )
     return response
+
+
+def _escalate_dead_letter(
+    *,
+    request: UiRunDeadLetterReapRequest,
+    dead_letter,
+    note: str,
+    ctx: RunContext,
+) -> None:
+    if dead_letter.triage_status != "open":
+        return
+    apply_dead_letter_action(
+        UiRunDeadLetterActionRequest(
+            schema_version="1.0",
+            registry_path=request.registry_path,
+            run_id=dead_letter.run_id,
+            action="escalated",
+            actor=request.actor,
+            note=note,
+        ),
+        ctx,
+    )
 
 
 def _dead_letter_is_cooled_down(
