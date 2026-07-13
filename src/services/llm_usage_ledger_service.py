@@ -1143,6 +1143,8 @@ def _projection_files_valid(
         :5
     ]
     generation_id = checkpoint[5] if len(checkpoint) > 5 else None
+    if generation_id is None:
+        return False
     return (
         sha256(daily_content).hexdigest() == str(daily_sha256)
         and str(state.get("ledger_sha256") or "") == str(ledger_sha256)
