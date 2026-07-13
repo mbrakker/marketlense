@@ -29,4 +29,4 @@ def test_lineage_backfill_dry_run_uses_explicit_local_paths_without_provider_con
     assert result.exit_code == 0, result.output
     assert "Artifact Lineage Backfill" in result.output
     assert "Checkpoints scanned" in result.output
-    assert reports_db.is_file()
+    assert not reports_db.exists()
