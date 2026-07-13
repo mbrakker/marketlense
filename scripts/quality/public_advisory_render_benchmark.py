@@ -28,17 +28,29 @@ class PublicAdvisoryRenderBenchmarkRow:
     report_id: str = field(metadata={"doc": "Report artifact identifier."})
     artifact_path: str = field(metadata={"doc": "Source artifact JSON path."})
     html_path: str = field(metadata={"doc": "Rendered HTML path."})
-    advisory_available: bool = field(metadata={"doc": "Whether advisory decision brief is available."})
+    advisory_available: bool = field(
+        metadata={"doc": "Whether advisory decision brief is available."}
+    )
     metric_spine_count: int = field(metadata={"doc": "Public metric spine count."})
     claim_support_count: int = field(metadata={"doc": "Public claim support count."})
-    so_what_available: bool = field(metadata={"doc": "Whether any public insight has so_what."})
-    now_what_available: bool = field(metadata={"doc": "Whether any public insight has now_what."})
+    so_what_available: bool = field(
+        metadata={"doc": "Whether any public insight has so_what."}
+    )
+    now_what_available: bool = field(
+        metadata={"doc": "Whether any public insight has now_what."}
+    )
     so_what_coverage: float = field(metadata={"doc": "Per-row so_what coverage."})
     now_what_coverage: float = field(metadata={"doc": "Per-row now_what coverage."})
-    public_label_count: int = field(metadata={"doc": "Count of public support/confidence labels."})
-    internal_id_leak_count: int = field(metadata={"doc": "Internal identifier leak count in rendered HTML."})
+    public_label_count: int = field(
+        metadata={"doc": "Count of public support/confidence labels."}
+    )
+    internal_id_leak_count: int = field(
+        metadata={"doc": "Internal identifier leak count in rendered HTML."}
+    )
     remediation_targets: list[dict[str, str]] = field(
-        metadata={"doc": "Benchmark failures with report, field, rule, and remediation."}
+        metadata={
+            "doc": "Benchmark failures with report, field, rule, and remediation."
+        }
     )
 
 
@@ -49,7 +61,9 @@ class PublicAdvisoryRenderBenchmarkReport:
     advisory_coverage: float = field(metadata={"doc": "Share with advisory brief."})
     so_what_coverage: float = field(metadata={"doc": "Share with so_what coverage."})
     now_what_coverage: float = field(metadata={"doc": "Share with now_what coverage."})
-    internal_id_leak_count: int = field(metadata={"doc": "Total rendered internal ID leaks."})
+    internal_id_leak_count: int = field(
+        metadata={"doc": "Total rendered internal ID leaks."}
+    )
     screenshot_paths: tuple[str, ...] = field(
         metadata={"doc": "Optional Playwright screenshot paths retained for the run."}
     )
@@ -78,7 +92,9 @@ def build_public_advisory_render_benchmark(
     for artifact_path in artifact_paths:
         path = Path(artifact_path).resolve()
         artifacts = _load_artifacts(path)
-        report_id = str(artifacts.get("report_id") or path.stem)
+        report_id = str(
+            artifacts.get("report_id") or path.parent.parent.name or path.stem
+        )
         render_response = render_report(
             RenderRequest(
                 schema_version="1.0",
@@ -99,9 +115,7 @@ def build_public_advisory_render_benchmark(
         )
         rows.append(row)
     report_count = len(rows)
-    remediation_targets = [
-        target for row in rows for target in row.remediation_targets
-    ]
+    remediation_targets = [target for row in rows for target in row.remediation_targets]
     return PublicAdvisoryRenderBenchmarkReport(
         schema_version="1.0",
         report_count=report_count,
@@ -120,15 +134,25 @@ def _load_artifacts(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def _render_data_from_artifacts(artifacts: dict[str, Any], *, report_id: str) -> dict[str, Any]:
-    summary = artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
+def _render_data_from_artifacts(
+    artifacts: dict[str, Any], *, report_id: str
+) -> dict[str, Any]:
+    summary = (
+        artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
+    )
     return {
         "title": str(artifacts.get("title") or report_id),
         "publisher": str(artifacts.get("publisher") or "MarketBearing"),
         "region": str(artifacts.get("region") or ""),
         "time_period": str(artifacts.get("time_period") or ""),
-        "tldr": str(summary.get("tldr") or artifacts.get("tldr") or "Source-backed public report benchmark."),
-        "commentary": str(summary.get("executive_summary") or artifacts.get("commentary") or ""),
+        "tldr": str(
+            summary.get("tldr")
+            or artifacts.get("tldr")
+            or "Source-backed public report benchmark."
+        ),
+        "commentary": str(
+            summary.get("executive_summary") or artifacts.get("commentary") or ""
+        ),
         "insights": artifacts.get("insights_final") or artifacts.get("insights") or [],
         "taxonomy": artifacts.get("taxonomy") or [],
         "artifacts": artifacts,
@@ -143,11 +167,31 @@ def _benchmark_row(
     html: str,
     report_id: str,
 ) -> PublicAdvisoryRenderBenchmarkRow:
-    advisory = artifacts.get("executive_advisory") if isinstance(artifacts.get("executive_advisory"), dict) else {}
-    decision = advisory.get("decision_brief") if isinstance(advisory.get("decision_brief"), dict) else {}
-    metric_spine = artifacts.get("metric_spine") if isinstance(artifacts.get("metric_spine"), list) else []
-    claim_support = artifacts.get("claim_ledgers") if isinstance(artifacts.get("claim_ledgers"), list) else []
-    insights = artifacts.get("insights_final") if isinstance(artifacts.get("insights_final"), list) else []
+    advisory = (
+        artifacts.get("executive_advisory")
+        if isinstance(artifacts.get("executive_advisory"), dict)
+        else {}
+    )
+    decision = (
+        advisory.get("decision_brief")
+        if isinstance(advisory.get("decision_brief"), dict)
+        else {}
+    )
+    metric_spine = (
+        artifacts.get("metric_spine")
+        if isinstance(artifacts.get("metric_spine"), list)
+        else []
+    )
+    claim_support = (
+        artifacts.get("claim_ledgers")
+        if isinstance(artifacts.get("claim_ledgers"), list)
+        else []
+    )
+    insights = (
+        artifacts.get("insights_final")
+        if isinstance(artifacts.get("insights_final"), list)
+        else []
+    )
     leaks = _INTERNAL_ID_PATTERN.findall(html)
     targets: list[dict[str, str]] = []
     if leaks:
@@ -197,9 +241,13 @@ def _coverage(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run public advisory render benchmark.")
+    parser = argparse.ArgumentParser(
+        description="Run public advisory render benchmark."
+    )
     parser.add_argument("artifacts", nargs="+", help="Artifact JSON paths to render.")
-    parser.add_argument("--output-dir", default="./out/public-advisory-render-benchmark")
+    parser.add_argument(
+        "--output-dir", default="./out/public-advisory-render-benchmark"
+    )
     parser.add_argument("--screenshot", action="append", default=[])
     parser.add_argument("--json-output", default="")
     args = parser.parse_args()
