@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
@@ -8,34 +9,22 @@ from src.contracts.browser_download import (
     BrowserReportDownloadResult,
     FailedAcquisitionForensicsPack,
     PublisherDownloadRouteMemory,
-    ReportDownloadRoutePlanRequest,
-    ReportDownloadRoutePlanStep,
     ReportDownloadOrchestratorRequest,
     ReportDownloadOrchestratorResult,
-)
-from src.contracts.state import (
-    MailDeliveryRequestUpsertRequest,
-    WorkflowControlObservationWriteRequest,
+    ReportDownloadRoutePlanRequest,
+    ReportDownloadRoutePlanStep,
 )
 from src.contracts.mailbox_acquisition import MailboxSearchRequest
-from src.contracts.workflow_control import WorkflowControlObservation
 from src.contracts.report_store import (
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteResponse,
 )
 from src.contracts.run_context import RunContext
-from src.orchestrators.retry_orchestrator import (
-    RetryPolicy,
-    is_retryable_app_error,
-    run_with_retry,
+from src.contracts.state import (
+    MailDeliveryRequestUpsertRequest,
+    WorkflowControlObservationWriteRequest,
 )
-from src.orchestrators._report_download_orchestrator.route_planner import (
-    plan_report_download_routes,
-)
-from src.utils.logging import log_event
-from src.utils.errors import AppError
-from src.utils.clock import utc_now_seconds_z
-from src.utils.url_utils import normalize_url
+from src.contracts.workflow_control import WorkflowControlObservation
 from src.orchestrators._report_download_orchestrator.candidate_readiness import (
     assert_candidate_download_ready,
 )
@@ -62,6 +51,18 @@ from src.orchestrators._report_download_orchestrator.promotions import (
     evaluate_private_api_playbook_auto_promotion,
     evaluate_route_playbook_promotion,
 )
+from src.orchestrators._report_download_orchestrator.route_planner import (
+    plan_report_download_routes,
+)
+from src.orchestrators.retry_orchestrator import (
+    RetryPolicy,
+    is_retryable_app_error,
+    run_with_retry,
+)
+from src.utils.clock import utc_now_seconds_z
+from src.utils.errors import AppError
+from src.utils.logging import log_event
+from src.utils.url_utils import normalize_url
 
 logger = logging.getLogger("market_lense.report_download_orchestrator")
 
@@ -159,12 +160,33 @@ def run_report_download(
         jitter_seconds=request.settings.retry_jitter_seconds,
     )
 
+    route_memory = _remembered_route_memory(
+        remembered_route,
+        ttl_seconds=request.settings.route_memory_ttl_seconds,
+        now_seconds=int(time.time()),
+    )
+    if remembered_route is not None and route_memory is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_route_memory_expired",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "updated_at": remembered_route.updated_at,
+                    "ttl_seconds": request.settings.route_memory_ttl_seconds,
+                    "exact_route_found": remembered_route.exact_route_found,
+                    "decision": "fresh_discovery",
+                },
+            )
+        )
     plan = plan_report_download_routes(
         ReportDownloadRoutePlanRequest(
             schema_version="1.0",
             normalized_url=normalized_url,
             delivery_email=_resolve_deferred_delivery_email(request),
-            remembered_route=_remembered_route_memory(remembered_route),
+            remembered_route=route_memory,
             candidate_trace=request.candidate_trace,
             publisher_discovery_route_kind=request.publisher_discovery_route_kind,
             publisher_recommended_discovery_route_kind=request.publisher_recommended_discovery_route_kind,
@@ -529,8 +551,18 @@ def _is_download_operation_retryable(
 
 def _remembered_route_memory(
     remembered_route: PublisherDownloadRouteResponse | None,
+    *,
+    ttl_seconds: int,
+    now_seconds: int,
 ) -> PublisherDownloadRouteMemory | None:
     if remembered_route is None:
+        return None
+    updated_at = max(0, int(remembered_route.updated_at))
+    if (
+        updated_at <= 0
+        or updated_at > now_seconds
+        or now_seconds - updated_at > max(1, ttl_seconds)
+    ):
         return None
     return PublisherDownloadRouteMemory(
         schema_version="1.0",
@@ -548,6 +580,7 @@ def _remembered_route_memory(
         exact_route_found=remembered_route.exact_route_found,
         browser_had_structured_result=remembered_route.browser_had_structured_result,
         onsite_completeness_status=remembered_route.onsite_completeness_status,
+        updated_at=updated_at,
         route_policy=list(remembered_route.route_policy),
         publisher_route_policy=list(remembered_route.publisher_route_policy),
     )

@@ -1125,6 +1125,9 @@
           },
           "type": "array"
         },
+        "route_memory_ttl_seconds": {
+          "type": "integer"
+        },
         "route_playbook_dir": {
           "type": "string"
         },
@@ -1539,6 +1542,9 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "updated_at": {
+          "type": "integer"
         },
         "verified_successes": {
           "type": "integer"
