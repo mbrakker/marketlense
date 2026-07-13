@@ -18948,6 +18948,15 @@
         "provider": {
           "type": "string"
         },
+        "reservation_key": {
+          "type": "string"
+        },
+        "reservation_ttl_seconds": {
+          "type": "integer"
+        },
+        "reserve_in_flight": {
+          "type": "boolean"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -18990,6 +18999,9 @@
         "forecast_status": {
           "type": "string"
         },
+        "in_flight_reserved_usd": {
+          "type": "number"
+        },
         "median_forecast_usd": {
           "type": "number"
         },
@@ -18998,6 +19010,9 @@
         },
         "projected_spend_usd": {
           "type": "number"
+        },
+        "reservation_created": {
+          "type": "boolean"
         },
         "schema_version": {
           "type": "string"
@@ -19016,6 +19031,42 @@
         "forecast_status",
         "warn_usd",
         "decision"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageSpendReservationReleaseRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "reservation_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "reservation_key"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm_usage.LLMUsageSpendReservationReleaseResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "released": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "released"
       ],
       "type": "object"
     },
@@ -20873,6 +20924,12 @@
     "src.contracts.openai.OpenAIUsageOutcomeUpdateRequest": {
       "additionalProperties": false,
       "properties": {
+        "cost_daily_path": {
+          "type": "string"
+        },
+        "cost_ledger_path": {
+          "type": "string"
+        },
         "error_code": {
           "type": "string"
         },
