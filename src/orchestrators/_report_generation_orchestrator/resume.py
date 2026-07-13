@@ -768,7 +768,12 @@ def _resume_from_source_checkpoint(
     _log_semantic_restart(runtime, checkpoint, checkpoint_path)
     source = _source_state_from_checkpoint(runtime, checkpoint.payload.get("source"))
     vector_state = start_vector_store_indexing(runtime, source, dependencies.analysis)
-    selection = select_report_figures(runtime, source, dependencies.selection)
+    selection = select_report_figures(
+        runtime,
+        source,
+        dependencies.selection,
+        crop_qa_llm_client=figure_caption_openai_client,
+    )
     _write_stage_checkpoint(
         runtime,
         stage_name=STAGE_SELECTION_COMPLETE,

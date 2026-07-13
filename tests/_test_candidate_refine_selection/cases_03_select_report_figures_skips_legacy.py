@@ -339,6 +339,126 @@ def test_select_report_figures_maps_publication_strict_outcomes_by_candidate_id(
     )
 
 
+def test_select_report_figures_excludes_model_rejected_borderline_crop(tmp_path):
+    settings = _settings(
+        tmp_path,
+        crop_refine_enabled=False,
+        crop_refine_mode="off",
+        rank_selected_max=1,
+        rank_max_candidates=4,
+        crop_qa_escalation_enabled=True,
+        crop_qa_escalation_min_score=72.0,
+        crop_qa_escalation_max_score=82.0,
+    )
+    candidate = _candidate(
+        cid="chart_borderline",
+        kind="chart",
+        page=0,
+        caption="Figure 1. Borderline chart",
+        meta={"area_frac": 0.2, "text_ratio": 0.2},
+    )
+    crop_path = tmp_path / "chart_borderline.png"
+    crop_path.write_bytes(b"png")
+    sidecar_path = crop_path.with_suffix(".png.qa.json")
+    sidecar_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "mode": "publication_strict",
+                "accepted": True,
+                "score": 76.0,
+                "defects": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class _RejectingImageClient:
+        def openai_chat_json_with_images(self, request, ctx):
+            return SimpleNamespace(
+                parsed_json={"decision": "reject", "reason": "labels unreadable"},
+                request_id="crop-reject",
+                input_tokens=10,
+                output_tokens=5,
+                total_tokens=15,
+            )
+
+    deps = _deps(
+        collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[candidate]),
+        extract_best_figure=lambda req, ctx: SimpleNamespace(
+            image_path=None, caption=None, page=-1
+        ),
+        rank_candidates=lambda req, ctx: SimpleNamespace(
+            results=[
+                RankedCandidate(
+                    id="chart_borderline",
+                    type="chart",
+                    score=98,
+                    quality_score=98,
+                    insight_score=98,
+                    data_score=98,
+                    keep=True,
+                )
+            ],
+            prompt_tokens=None,
+            completion_tokens=None,
+            total_tokens=None,
+            request_id="rank",
+            raw_content="[]",
+        ),
+        crop_regions=lambda req, ctx: SimpleNamespace(
+            paths=[str(crop_path)],
+            outcomes=[
+                SimpleNamespace(
+                    candidate_id="chart_borderline",
+                    path=str(crop_path),
+                    accepted=True,
+                    qa_sidecar_path=str(sidecar_path),
+                    score=76.0,
+                    defects=[],
+                    rejection_reason="",
+                    quality_profile="publication_strict",
+                )
+            ],
+        ),
+    )
+    payload = ReportPayload(
+        tldr="",
+        title="Report",
+        insights=[],
+        quote=Quote(text="q"),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+        source="",
+    )
+    runtime = SimpleNamespace(
+        local_pdf_path=_pdf_path(tmp_path),
+        settings=settings,
+        report_name="report",
+        file=SimpleNamespace(file_id="file"),
+        md5=None,
+        ctx=_ctx(),
+        report_worker_limit=1,
+        parallel_within_file=False,
+    )
+    source = SimpleNamespace(
+        payload=payload,
+        contents_page_number=0,
+        pdf_context=None,
+        pdf_context_for_tasks=None,
+    )
+
+    selection = rsg.select_report_figures(
+        runtime,
+        source,
+        deps,
+        crop_qa_llm_client=_RejectingImageClient(),
+    )
+
+    assert selection.payload._figure_gallery == []
+    assert selection.payload._figure_section_enabled is False
+
+
 def test_select_report_figures_ranks_table_and_chart_batches_concurrently(
     tmp_path,
 ):

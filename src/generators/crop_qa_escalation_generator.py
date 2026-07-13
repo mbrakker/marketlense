@@ -17,6 +17,7 @@ from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
 from src.services.file_service import read_text
 from src.services.prompt_service import load_prompt_set, render_prompt
+from src.utils.costing import estimate_cost_usd
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.model_client_contract import require_injected_model_client
@@ -56,7 +57,13 @@ def evaluate_crop_qa_escalation(
     for crop in crops:
         sidecar = _load_sidecar(crop, ctx)
         eligible, reason = _is_escalation_eligible(crop, sidecar, policy)
+        if reason == "high_risk_defect":
+            decisions.append(_deterministic_rejection(crop, sidecar, reason))
+            reject_count += 1
+            continue
         if not eligible or model_call_count >= max(0, policy.max_escalations):
+            if eligible:
+                reason = "escalation_budget_exhausted"
             decisions.append(_deterministic_decision(crop, sidecar, reason))
             continue
         eligible_count += 1
@@ -79,7 +86,7 @@ def evaluate_crop_qa_escalation(
             ctx,
         )
         model_call_count += 1
-        decision = _model_decision(crop, sidecar, result)
+        decision = _model_decision(crop, sidecar, result, policy)
         if decision.decision == "repair":
             if repair_count >= max(0, policy.max_repairs):
                 decision = CropQaEscalationDecision(
@@ -216,12 +223,12 @@ def _is_escalation_eligible(
         return False, "qa_sidecar_missing"
     score = _qa_score(crop, sidecar)
     defects = set(_qa_defects(crop, sidecar))
+    if defects.intersection(set(policy.high_risk_defects)):
+        return False, "high_risk_defect"
     if score is not None and (
         policy.low_confidence_min_score <= score <= policy.low_confidence_max_score
     ):
         return True, "low_confidence_score"
-    if defects.intersection(set(policy.high_risk_defects)):
-        return True, "high_risk_defect"
     return False, "deterministic_qa_passed"
 
 
@@ -250,10 +257,36 @@ def _deterministic_decision(
     )
 
 
+def _deterministic_rejection(
+    crop: dict[str, Any],
+    sidecar: dict[str, Any],
+    reason: str,
+) -> CropQaEscalationDecision:
+    return CropQaEscalationDecision(
+        schema_version="1.0",
+        candidate_id=_candidate_id(crop),
+        image_path=_crop_image_path(crop),
+        qa_sidecar_path=_sidecar_path(crop),
+        deterministic_score=_qa_score(crop, sidecar),
+        deterministic_defects=_qa_defects(crop, sidecar),
+        decision="reject",
+        reason="high_risk_defect_deterministically_rejected",
+        model_confidence=None,
+        defects=[],
+        repair_instruction="",
+        provider_request_id="",
+        input_tokens=None,
+        output_tokens=None,
+        total_tokens=None,
+        estimated_cost_usd=0.0,
+    )
+
+
 def _model_decision(
     crop: dict[str, Any],
     sidecar: dict[str, Any],
     result: Any,
+    policy: CropQaEscalationPolicy,
 ) -> CropQaEscalationDecision:
     payload = result.parsed_json if isinstance(result.parsed_json, dict) else {}
     decision = str(payload.get("decision") or "reject").strip().lower()
@@ -284,7 +317,13 @@ def _model_decision(
         input_tokens=result.input_tokens,
         output_tokens=result.output_tokens,
         total_tokens=result.total_tokens,
-        estimated_cost_usd=0.0,
+        estimated_cost_usd=estimate_cost_usd(
+            str(getattr(result, "model", "") or policy.model),
+            int(result.input_tokens or 0),
+            int(result.output_tokens or 0),
+            0,
+            policy.model_pricing,
+        ),
     )
 
 

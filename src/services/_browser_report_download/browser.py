@@ -25,9 +25,18 @@ from src.contracts.browser_download import (
     BrowserDownloadNetworkEvent,
     BrowserReportDownloadRequest,
 )
+from src.contracts.llm_usage import (
+    LLMUsageSpendGuardrailRequest,
+    LLMUsageSpendReservationReleaseRequest,
+)
 from src.contracts.openai import OpenAIUsageAccountingRequest
 from src.contracts.run_context import RunContext
 from src.services import llm_service
+from src.services._llm_service.policy import spend_reservation_key
+from src.services.llm_usage_ledger_service import (
+    evaluate_daily_spend_guardrail,
+    release_daily_spend_reservation,
+)
 from src.services._browser_report_download.cdp import (
     capture_print_pdf_via_cdp,
     collect_terminal_dialog_evidence_via_cdp,
@@ -579,6 +588,7 @@ def run_browser_report_download_agent(
     print_pdf_capture_path = ""
     print_pdf_capture_provenance = ""
     dialog_evidence: list[BrowserDownloadDialogEvidence] = []
+    browser_spend_reservation_key = ""
     try:
         browser = browser_use.Browser(
             downloads_path=str(download_dir),
@@ -596,6 +606,11 @@ def run_browser_report_download_agent(
         )
         if pre_llm_form_result is not None:
             return pre_llm_form_result
+        browser_spend_reservation_key = _reserve_browser_use_spend(
+            request=request,
+            ctx=ctx,
+            prompt_bundle=prompt_bundle,
+        )
         llm_clients = llm_service.build_browser_use_llm_clients(
             settings=request.settings,
             ctx=ctx,
@@ -933,6 +948,12 @@ def run_browser_report_download_agent(
             usage_writer.flush(
                 timeout_seconds=request.settings.accounting_flush_timeout_seconds
             )
+        if browser_spend_reservation_key:
+            _release_browser_use_spend(
+                request=request,
+                ctx=ctx,
+                reservation_key=browser_spend_reservation_key,
+            )
         if browser is not None:
             dialog_evidence.extend(
                 _capture_terminal_dialog_evidence(
@@ -1023,6 +1044,95 @@ def _load_browser_use_runtime(normalized_url: str) -> Any:
             retryable=False,
             context={"normalized_url": normalized_url},
         ) from exc
+
+
+def _reserve_browser_use_spend(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    prompt_bundle: BrowserDownloadPromptBundle,
+) -> str:
+    settings = request.settings
+    provider = "openai" if str(settings.openai_api_key or "").strip() else "openrouter"
+    model = settings.model if provider == "openai" else settings.openrouter_model
+    reservation_key = spend_reservation_key(
+        ctx,
+        provider=provider,
+        operation="browser_use_llm_call",
+    )
+    decision = evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(
+            schema_version="1.0",
+            db_path=settings.usage_db_path,
+            warn_usd=settings.daily_spend_warn_usd,
+            pause_usd=settings.daily_spend_pause_usd,
+            stop_usd=settings.daily_spend_stop_usd,
+            provider=provider,
+            task="browser_use_llm_call",
+            action="browser_use_llm_call",
+            model=model,
+            prompt_namespace=prompt_bundle.namespace,
+            reservation_key=reservation_key,
+            reserve_in_flight=True,
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_spend_decision",
+            module=logger.name,
+            fields={
+                "provider": provider,
+                "model": model,
+                "decision": decision.decision,
+                "projected_spend_usd": decision.projected_spend_usd,
+                "forecast_status": decision.forecast_status,
+                "reservation_created": decision.reservation_created,
+            },
+        )
+    )
+    if decision.decision in {"pause", "stop"}:
+        raise AppError(
+            code=f"browser_use_daily_spend_{decision.decision}",
+            message="Canonical daily spend reached the configured browser-use limit",
+            retryable=decision.decision == "pause",
+            context={
+                "provider": provider,
+                "model": model,
+                "projected_spend_usd": decision.projected_spend_usd,
+                "decision": decision.decision,
+            },
+        )
+    return reservation_key
+
+
+def _release_browser_use_spend(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    reservation_key: str,
+) -> None:
+    try:
+        release_daily_spend_reservation(
+            LLMUsageSpendReservationReleaseRequest(
+                schema_version="1.0",
+                db_path=request.settings.usage_db_path,
+                reservation_key=reservation_key,
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        logger.error(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_spend_release_failed",
+                module=logger.name,
+                fields={"code": exc.code, "reservation_key": reservation_key},
+            )
+        )
 
 
 def _configure_browser_use_usage_recorder(

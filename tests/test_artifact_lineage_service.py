@@ -5,11 +5,13 @@ from pathlib import Path
 from src.contracts.artifact_lineage import (
     ARTIFACT_LINEAGE_SCHEMA_VERSION,
     ArtifactInvalidationRequest,
+    ArtifactLineageBackfillRequest,
     ArtifactLineageRegistrationRequest,
     ArtifactLineageTraceRequest,
     ArtifactReuseCheckRequest,
 )
 from src.services.report_store_service import (
+    backfill_artifact_lineage,
     check_artifact_reuse,
     invalidate_artifacts,
     record_artifact_lineage,
@@ -240,3 +242,41 @@ def test_selective_invalidation_preserves_analysis_for_render_only_changes(
         rendered.record.artifact_id,
         validation.record.artifact_id,
     }
+
+
+def test_backfill_reads_legacy_checkpoint_artifact_refs_from_workspace_root(
+    tmp_path: Path, run_context
+) -> None:
+    workspace = tmp_path / "workspace"
+    checkpoint_root = workspace / "out" / ".checkpoints" / "report_generation"
+    checkpoint_dir = checkpoint_root / "report-1"
+    checkpoint_dir.mkdir(parents=True)
+    source_path = workspace / "cache" / "report-1.pdf"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_bytes(b"source")
+    artifacts_path = (
+        workspace / "out" / "report-1" / "report_analysis" / "artifacts.json"
+    )
+    artifacts_path.parent.mkdir(parents=True)
+    artifacts_path.write_text("{}", encoding="utf-8")
+    (checkpoint_dir / "analysis_complete.json").write_text(
+        '{"file_id":"report-1","stage_name":"analysis_complete","artifact_refs":'
+        '{"source_pdf":"cache/report-1.pdf","analysis_pdf":"cache/report-1.pdf",'
+        '"artifacts":"out/report-1/report_analysis/artifacts.json"}}',
+        encoding="utf-8",
+    )
+
+    result = backfill_artifact_lineage(
+        ArtifactLineageBackfillRequest(
+            schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+            db_path=str(workspace / "state" / "reports.sqlite"),
+            checkpoint_root=str(checkpoint_root),
+            dry_run=False,
+        ),
+        run_context,
+    )
+
+    assert result.scanned_checkpoints == 1
+    assert result.eligible_artifacts == 3
+    assert result.created_artifacts == 3
+    assert result.skipped_artifacts == 0

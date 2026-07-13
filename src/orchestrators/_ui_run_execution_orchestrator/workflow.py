@@ -42,6 +42,7 @@ from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
 )
 from src.orchestrators.signal_post_orchestrator import run_signal_post_workflow
+from src.orchestrators import workflow_control_orchestrator as workflow_control
 from src.services.config_service import (
     build_ingest_settings,
     load_browser_download_settings,
@@ -159,7 +160,7 @@ def resolve_ui_run_config_snapshot(
     )
 
 
-def execute_ui_run(
+def _execute_ui_run_action(
     worker_request: UiRunWorkerRequest, ctx: RunContext
 ) -> UiRunExecutionResponse:
     payload = worker_request.request_payload
@@ -718,6 +719,130 @@ def execute_ui_run(
         )
     )
     return response
+
+
+def execute_ui_run(
+    worker_request: UiRunWorkerRequest, ctx: RunContext
+) -> UiRunExecutionResponse:
+    """Run a validated UI action through the canonical supervisor dispatcher."""
+    try:
+        _validate_ui_run_payload(
+            run_type=worker_request.run_type,
+            payload=worker_request.request_payload,
+        )
+    except AppError:
+        # Preserve the existing typed payload response and avoid creating a
+        # control-plane observation for a request that was never executable.
+        return _execute_ui_run_action(worker_request, ctx)
+
+    app_settings = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
+    control_payload = worker_request.request_payload.get("workflow_control")
+    control = control_payload if isinstance(control_payload, dict) else {}
+    workflow_name = str(control.get("workflow") or worker_request.run_type).strip()
+    health_gate = workflow_control.evaluate_run_health_gate(
+        workflow_control.RunHealthGateInput(
+            schema_version="1.0",
+            workflow=workflow_name,
+            scorecard={"run_id": str(worker_request.run_id), "warnings": []},
+        ),
+        ctx=ctx,
+    )
+    plan = workflow_control.plan_autonomous_run(
+        workflow_control.AutonomousRunSupervisorInput(
+            schema_version="1.0",
+            workflow=workflow_name,
+            run_id=str(worker_request.run_id),
+            current_state="ready",
+            latest_safe_checkpoint="",
+            idempotency_scope="ui_run",
+            idempotency_key=f"ui_run:{worker_request.run_id}",
+            preflight_passed=str(control.get("status") or "resolved") != "blocked",
+            validation_status="pass",
+            health_gate=health_gate,
+            blockers=list(control.get("blockers") or []),
+            publish_allowed=worker_request.run_type in {"publish", "publish_wp"},
+        ),
+        ctx=ctx,
+    )
+    response_holder: dict[str, UiRunExecutionResponse] = {}
+
+    def _run_action(_plan, action_ctx: RunContext) -> str:
+        response = _execute_ui_run_action(worker_request, action_ctx)
+        response_holder["response"] = response
+        if response.status != "succeeded":
+            raise AppError(
+                code=response.error_code or "ui_run_execution_failed",
+                message=response.error_message or "UI run execution failed",
+                retryable=response.error_retryable,
+                severity=response.error_severity,
+            )
+        return response.status
+
+    action_handlers = {
+        action: _run_action
+        for action in {"start", "resume", "retry", "repair", "publish"}
+    }
+    if plan.selected_action not in action_handlers:
+        response = _execution_response(
+            worker_request=worker_request,
+            status="failed",
+            result_summary={"supervisor_action": plan.selected_action},
+            artifact_paths=[],
+            config_snapshot={
+                "run_type": worker_request.run_type,
+                "workflow": workflow_name,
+                "supervisor_blockers": list(plan.blockers),
+            },
+            error_code=f"ui_run_supervisor_{plan.selected_action}",
+            error_message="Workflow supervisor prevented UI run execution",
+            error_retryable=False,
+            error_severity="error",
+        )
+        response_holder["response"] = response
+        action_handlers[plan.selected_action] = lambda _plan, _ctx: "blocked"
+    execution = workflow_control.dispatch_autonomous_run(
+        plan,
+        state_db=app_settings.state_db,
+        action_handlers=action_handlers,
+        ctx=ctx,
+    )
+    if execution.status == "failed":
+        return response_holder.get(
+            "response",
+            _execution_response(
+                worker_request=worker_request,
+                status="failed",
+                result_summary={"supervisor_action": plan.selected_action},
+                artifact_paths=[],
+                config_snapshot={
+                    "run_type": worker_request.run_type,
+                    "workflow": workflow_name,
+                },
+                error_code=execution.error_code or "ui_run_supervisor_failed",
+                error_message="Workflow supervisor dispatch failed",
+                error_retryable=False,
+                error_severity="error",
+            ),
+        )
+    response = response_holder.get("response")
+    if response is not None:
+        return response
+    return _execution_response(
+        worker_request=worker_request,
+        status="failed",
+        result_summary={"supervisor_action": plan.selected_action},
+        artifact_paths=[],
+        config_snapshot={
+            "run_type": worker_request.run_type,
+            "workflow": workflow_name,
+        },
+        error_code="ui_run_supervisor_response_missing",
+        error_message="Workflow supervisor completed without a UI run response",
+        error_retryable=False,
+        error_severity="error",
+    )
 
 
 __all__ = [

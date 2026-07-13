@@ -9,6 +9,7 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pipeline_preflight import PipelinePreflightReport
 from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_context import RunContext
+from src.contracts.regeneration import LineageRegenerationPlan
 from src.contracts.workflow_control import WorkflowControlSettings
 from src.orchestrators.report_generation_orchestrator import (
     run_report_generation as generate_report_orchestrator,
@@ -23,6 +24,7 @@ from src.services import llm_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.coercion import coerce_int
+from src.utils.lineage_regeneration import plan_lineage_regeneration
 
 logger = logging.getLogger("market_lense.report_pipeline_orchestrator")
 
@@ -95,6 +97,8 @@ def run_report_pipeline(
     preflight_fn: Optional[Callable[..., PipelinePreflightReport]] = None,
     workflow_control_settings: WorkflowControlSettings | None = None,
     auto_resume_from_latest_safe: bool = False,
+    lineage_change_kind: str = "",
+    lineage_available: bool = False,
 ) -> IngestOutcome:
     report_fn = generate_report_fn or generate_report_orchestrator
     preflight_report = (
@@ -139,10 +143,20 @@ def run_report_pipeline(
         retry_policy = resolved_policy.policy
         retry_policy_id = resolved_policy.policy_id
         configured_retries = retry_policy.retries
+    lineage_plan: LineageRegenerationPlan | None = None
+    if lineage_change_kind:
+        lineage_plan = plan_lineage_regeneration(
+            change_kind=lineage_change_kind,
+            lineage_available=lineage_available,
+        )
     effective_resume_from_stage = (
         resume_from_stage
         if resume_from_stage
-        else ("latest_safe" if auto_resume_from_latest_safe else None)
+        else (
+            lineage_plan.resume_from_stage
+            if lineage_plan is not None and lineage_plan.resume_from_stage
+            else ("latest_safe" if auto_resume_from_latest_safe else None)
+        )
     )
     evidence_openai_client = llm_service.build_client_for_settings(
         settings,
@@ -225,6 +239,17 @@ def run_report_pipeline(
                 "artifact_global_min_interval_ms": artifact_min_interval_ms,
                 "resume_from_stage": effective_resume_from_stage or "",
                 "auto_resume_from_latest_safe": bool(auto_resume_from_latest_safe),
+                "lineage_regeneration_plan": (
+                    {
+                        "change_kind": lineage_plan.change_kind,
+                        "full_regeneration_required": lineage_plan.full_regeneration_required,
+                        "reused_stages": lineage_plan.reused_stages,
+                        "regenerated_stages": lineage_plan.regenerated_stages,
+                        "avoided_work": lineage_plan.avoided_work,
+                    }
+                    if lineage_plan is not None
+                    else {}
+                ),
             },
         )
     )

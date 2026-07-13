@@ -10,9 +10,9 @@ from src.contracts.crop_qa_escalation import (
     CropQaEscalationPolicy,
     CropQaEscalationRequest,
 )
+from src.contracts.run_context import RunContext
 from src.generators.crop_qa_escalation_generator import escalate_crop_qa
 from src.utils.errors import AppError
-from src.contracts.run_context import RunContext
 
 
 def _ctx() -> RunContext:
@@ -37,7 +37,9 @@ class _ImageModelClient:
         )
 
 
-def _write_crop(tmp_path: Path, name: str, score: float, defects: list[str]) -> tuple[str, str]:
+def _write_crop(
+    tmp_path: Path, name: str, score: float, defects: list[str]
+) -> tuple[str, str]:
     crop_path = tmp_path / name
     Image.new("RGB", (220, 120), "white").save(crop_path)
     sidecar_path = crop_path.with_suffix(crop_path.suffix + ".qa.json")
@@ -93,9 +95,7 @@ def test_crop_qa_escalation_default_is_deterministic_no_model(tmp_path: Path) ->
 def test_crop_qa_escalation_calls_model_for_bounded_low_confidence_crop(
     tmp_path: Path,
 ) -> None:
-    crop_path, sidecar_path = _write_crop(
-        tmp_path, "borderline.png", 76.0, ["chart_axis_clipped"]
-    )
+    crop_path, sidecar_path = _write_crop(tmp_path, "borderline.png", 76.0, [])
     model_client = _ImageModelClient(
         {
             "decision": "repair",
@@ -126,6 +126,13 @@ def test_crop_qa_escalation_calls_model_for_bounded_low_confidence_crop(
                 max_repairs=1,
                 model="gpt-5-mini",
                 api_key="test-key",
+                model_pricing={
+                    "gpt-5-mini": {
+                        "input_tokens_per_1k_usd": 0.001,
+                        "output_tokens_per_1k_usd": 0.002,
+                        "tool_call_usd": 0.0,
+                    }
+                },
             ),
         ),
         _ctx(),
@@ -139,7 +146,47 @@ def test_crop_qa_escalation_calls_model_for_bounded_low_confidence_crop(
     assert response.decisions[0].decision == "repair"
     assert response.decisions[0].provider_request_id == "req-crop-1"
     assert response.decisions[0].defects == ["axis_clipped"]
+    assert response.decisions[0].estimated_cost_usd == 0.000129
     assert model_client.requests[0].image_paths == [crop_path]
+
+
+def test_crop_qa_escalation_rejects_high_risk_defects_without_a_model(
+    tmp_path: Path,
+) -> None:
+    crop_path, sidecar_path = _write_crop(
+        tmp_path, "clipped.png", 76.0, ["chart_axis_clipped"]
+    )
+    model_client = _ImageModelClient({"decision": "accept"})
+
+    response = escalate_crop_qa(
+        CropQaEscalationRequest(
+            schema_version="1.0",
+            output_dir=str(tmp_path),
+            crops=[
+                {
+                    "candidate_id": "chart-2",
+                    "image_path": crop_path,
+                    "qa_sidecar_path": sidecar_path,
+                    "quality_profile": "publication_strict",
+                }
+            ],
+            policy=CropQaEscalationPolicy(
+                schema_version="1.0",
+                enabled=True,
+                low_confidence_min_score=72.0,
+                low_confidence_max_score=82.0,
+                api_key="test-key",
+            ),
+        ),
+        _ctx(),
+        llm_client=model_client,
+    )
+
+    assert response.model_call_count == 0
+    assert response.reject_count == 1
+    assert response.decisions[0].decision == "reject"
+    assert response.decisions[0].reason == "high_risk_defect_deterministically_rejected"
+    assert model_client.requests == []
 
 
 def test_crop_qa_escalation_requires_model_client_when_enabled(tmp_path: Path) -> None:

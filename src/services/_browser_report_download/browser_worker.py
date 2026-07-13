@@ -169,6 +169,9 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         model_pricing=(
             model_pricing_payload if isinstance(model_pricing_payload, dict) else {}
         ),
+        daily_spend_warn_usd=float(payload.get("daily_spend_warn_usd", 3.0)),
+        daily_spend_pause_usd=float(payload.get("daily_spend_pause_usd", 5.0)),
+        daily_spend_stop_usd=float(payload.get("daily_spend_stop_usd", 6.0)),
     )
 
 

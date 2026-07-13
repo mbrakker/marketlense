@@ -321,7 +321,12 @@ def run_report_generation(
             },
         )
         vector_state = start_vector_store_indexing(runtime, source, deps.analysis)
-        selection = select_report_figures(runtime, source, deps.selection)
+        selection = select_report_figures(
+            runtime,
+            source,
+            deps.selection,
+            crop_qa_llm_client=figure_caption_openai_client,
+        )
         _write_stage_checkpoint(
             runtime,
             stage_name=STAGE_SELECTION_COMPLETE,

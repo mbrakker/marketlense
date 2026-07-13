@@ -972,6 +972,29 @@
         "cost_ledger_path": {
           "type": "string"
         },
+        "daily_spend_pause_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "daily_spend_stop_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "daily_spend_warn_usd": {
+          "type": "number"
+        },
         "drive_upload_auth_mode": {
           "type": "string"
         },
@@ -12458,6 +12481,21 @@
         "cover_style_path": {
           "type": "string"
         },
+        "crop_qa_escalation_enabled": {
+          "type": "boolean"
+        },
+        "crop_qa_escalation_max_calls": {
+          "type": "integer"
+        },
+        "crop_qa_escalation_max_repairs": {
+          "type": "integer"
+        },
+        "crop_qa_escalation_max_score": {
+          "type": "number"
+        },
+        "crop_qa_escalation_min_score": {
+          "type": "number"
+        },
         "crop_refine_enabled": {
           "type": "boolean"
         },
@@ -17732,6 +17770,21 @@
         },
         "cover_style_path": {
           "type": "string"
+        },
+        "crop_qa_escalation_enabled": {
+          "type": "boolean"
+        },
+        "crop_qa_escalation_max_calls": {
+          "type": "integer"
+        },
+        "crop_qa_escalation_max_repairs": {
+          "type": "integer"
+        },
+        "crop_qa_escalation_max_score": {
+          "type": "number"
+        },
+        "crop_qa_escalation_min_score": {
+          "type": "number"
         },
         "crop_refine_enabled": {
           "type": "boolean"
@@ -23365,6 +23418,51 @@
       },
       "required": [
         "updated_artifacts"
+      ],
+      "type": "object"
+    },
+    "src.contracts.regeneration.LineageRegenerationPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "avoided_work": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "change_kind": {
+          "type": "string"
+        },
+        "full_regeneration_required": {
+          "type": "boolean"
+        },
+        "regenerated_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "resume_from_stage": {
+          "type": "string"
+        },
+        "reused_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "change_kind",
+        "resume_from_stage",
+        "full_regeneration_required",
+        "reused_stages",
+        "regenerated_stages",
+        "avoided_work"
       ],
       "type": "object"
     },

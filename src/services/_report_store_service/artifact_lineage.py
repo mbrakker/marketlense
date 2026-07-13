@@ -400,6 +400,7 @@ def backfill_artifact_lineage(
     request: ArtifactLineageBackfillRequest, ctx: RunContext
 ) -> ArtifactLineageBackfillResponse:
     root = Path(request.checkpoint_root).expanduser()
+    workspace_root = root.parent.parent.parent
     checkpoint_paths = sorted(root.glob("*/*.json"))[: max(0, request.limit)]
     scanned = eligible = created = skipped = 0
     for checkpoint_path in checkpoint_paths:
@@ -409,7 +410,12 @@ def backfill_artifact_lineage(
             checkpoint = dict(payload.get("checkpoint") or payload)
             inner = dict(checkpoint.get("payload") or {})
             registry = dict(inner.get("artifact_registry") or {})
-            refs = list(registry.get("refs") or [])
+            refs = _checkpoint_artifact_refs(
+                registry=registry,
+                artifact_refs=checkpoint.get("artifact_refs"),
+                workspace_root=workspace_root,
+                stage_name=str(checkpoint.get("stage_name") or "checkpoint_backfill"),
+            )
             file_id = str(checkpoint.get("file_id") or "")
             known: dict[str, str] = {}
             for ref in refs:
@@ -466,6 +472,54 @@ def backfill_artifact_lineage(
         created_artifacts=created,
         skipped_artifacts=skipped,
         dry_run=request.dry_run,
+    )
+
+
+def _checkpoint_artifact_refs(
+    *,
+    registry: dict[str, object],
+    artifact_refs: object,
+    workspace_root: Path,
+    stage_name: str,
+) -> list[dict[str, object]]:
+    registry_refs = registry.get("refs")
+    if isinstance(registry_refs, list) and registry_refs:
+        return [dict(ref) for ref in registry_refs if isinstance(ref, dict)]
+    if not isinstance(artifact_refs, dict):
+        return []
+    refs: list[dict[str, object]] = []
+    for artifact_name, raw_path in artifact_refs.items():
+        name = str(artifact_name or "").strip()
+        storage_ref = str(raw_path or "").strip()
+        if not name or not storage_ref:
+            continue
+        path = Path(storage_ref).expanduser()
+        if not path.is_absolute():
+            path = workspace_root / path
+        refs.append(
+            {
+                "artifact_id": name,
+                "path": str(path),
+                "producer_step": stage_name,
+                "schema_version": "1.0",
+            }
+        )
+    dependency_order = {
+        "source_pdf": 0,
+        "analysis_pdf": 1,
+        "contents_image": 2,
+        "preview_image": 2,
+        "doc_map": 3,
+        "artifacts": 4,
+        "validation": 5,
+        "rendered_html": 6,
+    }
+    return sorted(
+        refs,
+        key=lambda ref: (
+            dependency_order.get(str(ref.get("artifact_id") or ""), 3),
+            str(ref.get("artifact_id") or ""),
+        ),
     )
 
 

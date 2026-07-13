@@ -5,6 +5,10 @@ from pathlib import Path
 from typing import Any, Optional
 
 from src.contracts.candidates import Candidate
+from src.contracts.crop_qa_escalation import (
+    CropQaEscalationPolicy,
+    CropQaEscalationRequest,
+)
 from src.contracts.ingest import IngestSettings
 from src.contracts.report_assets import (
     CropItem,
@@ -195,6 +199,103 @@ def _crop_metadata_by_id(crop_response: object) -> dict[str, dict[str, Any]]:
             ),
         }
     return metadata
+
+
+def _apply_crop_qa_escalation(
+    *,
+    paths: list[str],
+    candidates: list[Candidate],
+    crop_metadata_by_id: dict[str, dict[str, Any]],
+    runtime: ReportRuntimeState,
+    dependencies: ReportSelectionDependencies,
+    llm_client: Any | None,
+) -> tuple[list[str], list[Candidate]]:
+    if not runtime.settings.crop_qa_escalation_enabled or not paths or not candidates:
+        return paths, candidates
+    crops: list[dict[str, Any]] = []
+    paired: list[tuple[str, Candidate]] = []
+    for path, candidate in zip(paths, candidates, strict=False):
+        candidate_id = str(candidate.id or "").strip()
+        metadata = crop_metadata_by_id.get(candidate_id, {})
+        if not candidate_id or not bool(metadata.get("crop_qa_accepted")):
+            continue
+        crops.append(
+            {
+                "candidate_id": candidate_id,
+                "image_path": str(path or "").strip(),
+                "qa_sidecar_path": str(
+                    metadata.get("crop_qa_sidecar_path") or ""
+                ).strip(),
+                "quality_profile": str(
+                    metadata.get("crop_quality_profile") or ""
+                ).strip(),
+                "score": metadata.get("crop_qa_score"),
+                "defects": list(metadata.get("crop_qa_defects") or []),
+            }
+        )
+        paired.append((str(path or "").strip(), candidate))
+    if not crops:
+        return paths, candidates
+    response = dependencies.crop_qa_escalation(
+        CropQaEscalationRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            crops=crops,
+            policy=CropQaEscalationPolicy(
+                schema_version="1.0",
+                enabled=True,
+                low_confidence_min_score=(
+                    runtime.settings.crop_qa_escalation_min_score
+                ),
+                low_confidence_max_score=(
+                    runtime.settings.crop_qa_escalation_max_score
+                ),
+                max_escalations=runtime.settings.crop_qa_escalation_max_calls,
+                max_repairs=runtime.settings.crop_qa_escalation_max_repairs,
+                model=runtime.settings.rank_model or runtime.settings.openai_model,
+                temperature=runtime.settings.rank_temperature,
+                seed=runtime.settings.rank_seed,
+                timeout_seconds=runtime.settings.rank_timeout_seconds,
+                api_key=runtime.settings.openai_api_key,
+                cost_ledger_path=runtime.settings.cost_ledger_path,
+                cost_daily_path=runtime.settings.cost_daily_path,
+                model_pricing=runtime.settings.model_pricing,
+            ),
+        ),
+        runtime.ctx,
+        llm_client=llm_client,
+    )
+    accepted_ids = {
+        decision.candidate_id
+        for decision in response.decisions
+        if decision.decision in {"not_escalated", "accept"}
+    }
+    selected = [
+        (path, candidate)
+        for path, candidate in paired
+        if str(candidate.id or "").strip() in accepted_ids
+    ]
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="generator",
+            event="figure_crop_qa_escalation_applied",
+            module=logger.name,
+            fields={
+                "evaluated_count": len(crops),
+                "model_call_count": response.model_call_count,
+                "repair_count": response.repair_count,
+                "reject_count": response.reject_count,
+                "selected_count": len(selected),
+                "rejected_candidate_ids": sorted(
+                    decision.candidate_id
+                    for decision in response.decisions
+                    if decision.decision in {"repair", "reject"}
+                ),
+            },
+        )
+    )
+    return [path for path, _ in selected], [candidate for _, candidate in selected]
 
 
 def _candidate_extraction_output_path(
@@ -505,6 +606,8 @@ def select_report_figures(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
     dependencies: ReportSelectionDependencies,
+    *,
+    crop_qa_llm_client: Any | None = None,
 ) -> ReportSelectionState:
     data = source.payload
     fig_resp: FigureExtractResponse = _empty_figure_response()
@@ -905,6 +1008,14 @@ def select_report_figures(
                             },
                         )
                     )
+        sliced_paths, figure_candidates = _apply_crop_qa_escalation(
+            paths=sliced_paths,
+            candidates=figure_candidates,
+            crop_metadata_by_id=figure_crop_metadata_by_id,
+            runtime=runtime,
+            dependencies=dependencies,
+            llm_client=crop_qa_llm_client,
+        )
         if figure_candidates:
             _apply_figure_candidate_metadata(data, figure_candidates[0])
         if not sliced_paths:

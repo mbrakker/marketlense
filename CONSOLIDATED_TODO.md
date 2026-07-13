@@ -33,6 +33,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | A6 | Day/run/publisher spend guardrails | One pipeline-wide budget outcome. |
 | Active | A7 | Budget-aware model routing, compaction, and failure-class fallback | One stable LLM-policy outcome. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
+| Active | A9 | Source publication-metadata capture for retained regeneration | Source-supported render metadata outcome. |
 | Active | P1 | Publish snapshot naming and synchronous idempotent publishing | Publish Readiness outcome. |
 | Active | P2 | Stop WordPress intelligence/freshness/authority synthesis | Approved-projection rendering outcome. |
 | Active | P3 | Hosted HTTPS, safe errors, and public trust checks | Hosted trust outcome. |
@@ -188,6 +189,19 @@ All work is listed below in one register. `Active` items have detailed completio
 - The command compares deterministic fields, schema validity, prompt hashes, and selected evidence without provider calls by default.
 - Output is bounded, reproducible, and links regressions to artifact family and remediation.
 - Tests cover equivalent, changed, missing, and malformed bundles, including deterministic output ordering and zero-provider-call default execution.
+
+#### A9. Capture source-supported publication metadata at acquisition
+
+- **Title:** Capture source-supported publication metadata at acquisition
+- **Impact 5 / effort: 2**
+- **Context:** Retained report regeneration can safely reuse PDF, model, and render checkpoints, but older acquisitions may lack a source-supported publication date and therefore fail the report-card gate during an otherwise render-only recovery.
+- **Benefit:** Acquisition provenance directly enables reliable low-cost regeneration and avoids broad reruns caused solely by absent public-card metadata.
+- **Risks to avoid:** Persist only source-page evidence with its URL and retrieval timestamp; never infer a date from a filename, file mtime, or report title.
+- **Success criteria:**
+
+- Acquisition records normalized source publication date, source URL, retrieval timestamp, and evidence locator when the publisher exposes them.
+- Render and regeneration consume the persisted source-backed metadata without an operator override; missing or contradictory evidence still fails closed.
+- Retained-source tests cover metadata extraction, persistence, render-only recovery, absent evidence, and conflicting dates.
 
 ### 2. Public Trust and Publishing
 

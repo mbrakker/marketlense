@@ -577,6 +577,15 @@ def load_browser_download_settings(
         cost_ledger_path=cost_ledger_path,
         cost_daily_path=cost_daily_path,
         usage_db_path=usage_db_path,
+        daily_spend_warn_usd=_to_float(
+            cost_cfg.get("daily_spend_warn_usd"), 3.0
+        ),
+        daily_spend_pause_usd=_to_float(
+            cost_cfg.get("daily_spend_pause_usd"), 5.0
+        ),
+        daily_spend_stop_usd=_to_float(
+            cost_cfg.get("daily_spend_stop_usd"), 6.0
+        ),
         accounting_queue_size=max(
             _to_int(
                 browser_download.get("accounting_queue_size")

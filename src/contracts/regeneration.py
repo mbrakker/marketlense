@@ -84,6 +84,31 @@ class RegenerationPlan:
 
 
 @dataclass(frozen=True)
+class LineageRegenerationPlan:
+    schema_version: str = field(
+        metadata={"doc": "Lineage regeneration plan schema version."}
+    )
+    change_kind: str = field(
+        metadata={"doc": "Source, prompt, template, crop, or validator change."}
+    )
+    resume_from_stage: str = field(
+        metadata={"doc": "Earliest checkpoint stage safe to reuse."}
+    )
+    full_regeneration_required: bool = field(
+        metadata={"doc": "Whether source provenance requires a fresh pipeline run."}
+    )
+    reused_stages: List[str] = field(
+        metadata={"doc": "Ordered valid stages retained without recomputation."}
+    )
+    regenerated_stages: List[str] = field(
+        metadata={"doc": "Ordered stages that must be recomputed."}
+    )
+    avoided_work: List[str] = field(
+        metadata={"doc": "Expensive work families safely avoided by the plan."}
+    )
+
+
+@dataclass(frozen=True)
 class RegenerationAttemptResult:
     attempt_index: int = field(
         metadata={"doc": "One-based regeneration attempt index."}

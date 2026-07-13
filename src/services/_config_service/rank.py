@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Any
 
 from src.services._config_service.common import (
-    _SettingSpec,
     _default_config_value,
     _opt_int,
     _resolve_allowed_string,
     _resolve_scalar_settings,
+    _SettingSpec,
     _to_config_bool,
     _to_float,
     _to_int,
@@ -105,6 +105,61 @@ def _resolve_rank_settings(
                 default=_to_int(
                     _default_config_value("rank", "final_crop_dpi", fallback=216),
                     216,
+                ),
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="crop_qa_escalation_enabled",
+                config_key="crop_qa_escalation_enabled",
+                default=_to_config_bool(
+                    _default_config_value(
+                        "rank", "crop_qa_escalation_enabled", fallback=False
+                    ),
+                    False,
+                ),
+                coerce=_to_config_bool,
+            ),
+            _SettingSpec(
+                field_name="crop_qa_escalation_min_score",
+                config_key="crop_qa_escalation_min_score",
+                default=_to_float(
+                    _default_config_value(
+                        "rank", "crop_qa_escalation_min_score", fallback=72.0
+                    ),
+                    72.0,
+                ),
+                coerce=_to_float,
+            ),
+            _SettingSpec(
+                field_name="crop_qa_escalation_max_score",
+                config_key="crop_qa_escalation_max_score",
+                default=_to_float(
+                    _default_config_value(
+                        "rank", "crop_qa_escalation_max_score", fallback=82.0
+                    ),
+                    82.0,
+                ),
+                coerce=_to_float,
+            ),
+            _SettingSpec(
+                field_name="crop_qa_escalation_max_calls",
+                config_key="crop_qa_escalation_max_calls",
+                default=_to_int(
+                    _default_config_value(
+                        "rank", "crop_qa_escalation_max_calls", fallback=2
+                    ),
+                    2,
+                ),
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="crop_qa_escalation_max_repairs",
+                config_key="crop_qa_escalation_max_repairs",
+                default=_to_int(
+                    _default_config_value(
+                        "rank", "crop_qa_escalation_max_repairs", fallback=1
+                    ),
+                    1,
                 ),
                 coerce=_to_int,
             ),

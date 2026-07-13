@@ -501,6 +501,18 @@ class BrowserDownloadSettings:
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite usage ledger path shared with report calls."},
     )
+    daily_spend_warn_usd: float = field(
+        default=3.0,
+        metadata={"doc": "UTC daily browser-model spend warning threshold."},
+    )
+    daily_spend_pause_usd: float | None = field(
+        default=5.0,
+        metadata={"doc": "UTC daily browser-model spend pause threshold."},
+    )
+    daily_spend_stop_usd: float | None = field(
+        default=6.0,
+        metadata={"doc": "UTC daily browser-model spend hard-stop threshold."},
+    )
     accounting_queue_size: int = field(
         default=256,
         metadata={"doc": "Bounded browser-use usage-event queue capacity."},

@@ -250,6 +250,28 @@ class IngestSettings:
             )
         },
     )
+    crop_qa_escalation_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether bounded model-backed QA may review borderline final crops."
+        },
+    )
+    crop_qa_escalation_min_score: float = field(
+        default=72.0,
+        metadata={"doc": "Inclusive QA-score floor for crop escalation."},
+    )
+    crop_qa_escalation_max_score: float = field(
+        default=82.0,
+        metadata={"doc": "Inclusive QA-score ceiling for crop escalation."},
+    )
+    crop_qa_escalation_max_calls: int = field(
+        default=2,
+        metadata={"doc": "Maximum model-backed crop QA calls per report."},
+    )
+    crop_qa_escalation_max_repairs: int = field(
+        default=1,
+        metadata={"doc": "Maximum crop repair recommendations per report."},
+    )
     crop_refine_temperature: float = field(
         default=0.0,
         metadata={"doc": "Sampling temperature for crop refinement model calls."},
