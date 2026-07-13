@@ -3,10 +3,12 @@ from __future__ import annotations
 import os
 
 import typer
-from rich.table import Table
 from rich import box
+from rich.table import Table
 
-from src.utils.errors import AppError
+from src._cli.app import cli_app, console
+from src._cli.common import _utc_now
+from src._cli.runtime import sync_cli_patch_points
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.files import ReadJsonRequest
 from src.contracts.logging import LoggingSetupRequest
@@ -22,29 +24,26 @@ from src.contracts.ui_run_replay import (
     UiRunReplayCaptureRequest,
     UiRunReplayRequest,
 )
+from src.orchestrators.ui_run_control_orchestrator import reap_dead_letter_runs
 from src.orchestrators.ui_run_execution_orchestrator import (
     PROMPT_TREE_ROOT,
     SOURCE_TREE_ROOT,
     execute_ui_run,
 )
 from src.orchestrators.ui_run_replay_orchestrator import replay_ui_run
-from src.orchestrators.ui_run_control_orchestrator import reap_dead_letter_runs
 from src.services.config_service import (
     load_settings,
 )
+from src.services.file_service import read_json
 from src.services.logging_service import setup_logging
 from src.services.run_registry_service import (
     default_ui_run_registry_path,
     get_ui_run_record,
     write_ui_run_record,
 )
-from src.services.file_service import read_json
 from src.services.ui_run_replay_service import write_ui_run_replay_manifest
+from src.utils.errors import AppError
 from src.utils.logging import new_run_context
-
-from src._cli.app import cli_app, console
-from src._cli.common import _utc_now
-from src._cli.runtime import sync_cli_patch_points
 
 _CLI_PATCH_POINTS = (
     "authorize_oauth_user",
@@ -258,6 +257,11 @@ def reap_ui_dead_letters(
         300, min=0, help="Minimum failed-run age before an automated retry."
     ),
     limit: int = typer.Option(10, min=1, help="Maximum replacement workers to launch."),
+    max_recovery_attempts: int = typer.Option(
+        3,
+        min=1,
+        help="Maximum automated replacement launches for one recovery chain.",
+    ),
 ):
     _sync_cli_patch_points()
     ctx = new_run_context(task_id="cli_reap_ui_dead_letters")
@@ -273,6 +277,7 @@ def reap_ui_dead_letters(
             workspace_root=os.getcwd(),
             cooldown_seconds=cooldown_seconds,
             limit=limit,
+            max_recovery_attempts=max_recovery_attempts,
         ),
         ctx,
     )

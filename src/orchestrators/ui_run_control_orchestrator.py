@@ -9,14 +9,6 @@ from uuid import uuid4
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
-    UiRunDeadLetterActionListRequest,
-    UiRunDeadLetterActionListResponse,
-    UiRunDeadLetterActionRequest,
-    UiRunDeadLetterActionResponse,
-    UiRunDeadLetterReapRequest,
-    UiRunDeadLetterReapResponse,
-    UiRunDeadLetterListRequest,
-    UiRunDeadLetterListResponse,
     ProcessLaunchRequest,
     ProcessOutputChunk,
     ProcessOutputReadRequest,
@@ -24,6 +16,14 @@ from src.contracts.ui_run_control import (
     ProcessTerminateRequest,
     UiRunCancelRequest,
     UiRunCancelResponse,
+    UiRunDeadLetterActionListRequest,
+    UiRunDeadLetterActionListResponse,
+    UiRunDeadLetterActionRequest,
+    UiRunDeadLetterActionResponse,
+    UiRunDeadLetterListRequest,
+    UiRunDeadLetterListResponse,
+    UiRunDeadLetterReapRequest,
+    UiRunDeadLetterReapResponse,
     UiRunLaunchRequest,
     UiRunLaunchResponse,
     UiRunListRequest,
@@ -479,6 +479,11 @@ def reap_dead_letter_runs(
             held.append(dead_letter.run_id)
             continue
         payload = dict(stored.request_payload)
+        recovery_attempt = _recovery_attempt(payload)
+        if recovery_attempt >= max(0, request.max_recovery_attempts):
+            held.append(dead_letter.run_id)
+            continue
+        payload["_workflow_control_recovery_attempt"] = recovery_attempt + 1
         if classification.resume_stage:
             payload["resume_from_stage"] = classification.resume_stage
         replacement = launch_run(
@@ -535,3 +540,11 @@ def _dead_letter_is_cooled_down(
     except ValueError:
         return False
     return (now - failed_at).total_seconds() >= max(0, cooldown_seconds)
+
+
+def _recovery_attempt(payload: dict[str, object]) -> int:
+    value = payload.get("_workflow_control_recovery_attempt", 0)
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return 0

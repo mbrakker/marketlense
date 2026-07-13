@@ -665,6 +665,12 @@ class UiRunDeadLetterReapRequest:
     limit: int = field(
         default=10, metadata={"doc": "Maximum recovery launches in one reaper pass."}
     )
+    max_recovery_attempts: int = field(
+        default=3,
+        metadata={
+            "doc": "Maximum recovery launches permitted across one replacement chain."
+        },
+    )
     actor: str = field(
         default="system",
         metadata={"doc": "Actor recorded for automated recovery actions."},

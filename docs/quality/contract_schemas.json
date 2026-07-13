@@ -30066,6 +30066,9 @@
         "limit": {
           "type": "integer"
         },
+        "max_recovery_attempts": {
+          "type": "integer"
+        },
         "registry_path": {
           "type": "string"
         },
