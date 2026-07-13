@@ -30152,6 +30152,9 @@
         "recovery_run_id": {
           "type": "string"
         },
+        "remediation": {
+          "$ref": "#/$defs/src.contracts.ui_run_control.UiRunDeadLetterRemediation"
+        },
         "result_summary": {
           "additionalProperties": {},
           "type": "object"
@@ -30194,7 +30197,52 @@
         "updated_at_utc",
         "error_taxonomy",
         "identity",
-        "artifact_links"
+        "artifact_links",
+        "remediation"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_control.UiRunDeadLetterRemediation": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_context": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "checkpoint_stage": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "input_checksum": {
+          "type": "string"
+        },
+        "remediation_code": {
+          "type": "string"
+        },
+        "runbook_link": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "step_id": {
+          "type": "string"
+        },
+        "workflow_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow_id",
+        "step_id",
+        "checkpoint_stage",
+        "input_checksum",
+        "idempotency_key",
+        "remediation_code",
+        "runbook_link"
       ],
       "type": "object"
     },

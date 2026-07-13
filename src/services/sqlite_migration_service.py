@@ -84,6 +84,7 @@ from ._sqlite_migration.ui_runs import (
     _UI_RUNS_TABLE_SQL,
     _ui_run_registry_001_create_ui_runs,
     _ui_run_registry_002_add_dead_letter_ledger,
+    _ui_run_registry_003_add_remediation_context,
 )
 
 

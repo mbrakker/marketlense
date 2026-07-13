@@ -207,6 +207,38 @@ class UiRunDeadLetterArtifactLinks:
 
 
 @dataclass(frozen=True)
+class UiRunDeadLetterRemediation:
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter remediation-context schema version."}
+    )
+    workflow_id: str = field(
+        metadata={"doc": "Stable workflow identifier that owns remediation."}
+    )
+    step_id: str = field(metadata={"doc": "Stable failed workflow step identifier."})
+    checkpoint_stage: str = field(
+        metadata={"doc": "Latest safe checkpoint stage available for recovery."}
+    )
+    input_checksum: str = field(
+        metadata={"doc": "SHA-256 checksum of the persisted request payload."}
+    )
+    idempotency_key: str = field(
+        metadata={"doc": "Idempotency key guarding replacement side effects."}
+    )
+    remediation_code: str = field(
+        metadata={"doc": "Typed remediation action selected from failure evidence."}
+    )
+    runbook_link: str = field(
+        metadata={
+            "doc": "Repository runbook path and optional failure-specific anchor."
+        }
+    )
+    budget_context: dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Resolved workflow budget context when the run supplied one."},
+    )
+
+
+@dataclass(frozen=True)
 class UiRunDeadLetterRecord(SemanticIdContract):
     schema_version: str = field(
         metadata={"doc": "UI-run dead-letter record schema version."}
@@ -248,6 +280,11 @@ class UiRunDeadLetterRecord(SemanticIdContract):
     )
     artifact_links: UiRunDeadLetterArtifactLinks = field(
         metadata={"doc": "Known artifact and evidence links for the failed run."}
+    )
+    remediation: UiRunDeadLetterRemediation = field(
+        metadata={
+            "doc": "Workflow checkpoint, idempotency, budget, and runbook remediation context."
+        }
     )
     result_summary: dict[str, Any] = field(
         default_factory=dict,

@@ -9,9 +9,11 @@ from src.contracts.ui_run_control import (
     UiRunDeadLetterErrorTaxonomy,
     UiRunDeadLetterIdentity,
     UiRunDeadLetterRecord,
+    UiRunDeadLetterRemediation,
     UiRunFailureClassification,
     UiRunRecord,
 )
+from src.utils.cache_utils import sha256_json
 
 DEAD_LETTER_TRIAGE_STATUSES = {
     "open",
@@ -31,6 +33,16 @@ DEAD_LETTER_CATEGORIES = {
     "content_gap",
     "workflow_bug",
     "unknown",
+}
+
+_DEFAULT_RUNBOOK_LINK = "docs/ops/top_failure_runbooks.md"
+_RUNBOOK_LINKS_BY_FAILURE_CODE = {
+    "pdf_text_unextractable": f"{_DEFAULT_RUNBOOK_LINK}#pdf_text_unextractable",
+    "pdf_text_ocr_failed": f"{_DEFAULT_RUNBOOK_LINK}#pdf_text_ocr_failed",
+    "browser_download_timeout": f"{_DEFAULT_RUNBOOK_LINK}#browser_download_timeout",
+    "publisher_inventory_http_empty": (
+        f"{_DEFAULT_RUNBOOK_LINK}#publisher_inventory_http_empty"
+    ),
 }
 
 
@@ -222,6 +234,61 @@ def _resume_stage(
     return ""
 
 
+def _runbook_link(error_code: str) -> str:
+    code = _normalized_text(error_code).lower()
+    if code in _RUNBOOK_LINKS_BY_FAILURE_CODE:
+        return _RUNBOOK_LINKS_BY_FAILURE_CODE[code]
+    if code.startswith("browser_download_") or code.startswith("report_download_"):
+        return _RUNBOOK_LINKS_BY_FAILURE_CODE["browser_download_timeout"]
+    if code.startswith("publisher_inventory_"):
+        return _RUNBOOK_LINKS_BY_FAILURE_CODE["publisher_inventory_http_empty"]
+    return _DEFAULT_RUNBOOK_LINK
+
+
+def infer_dead_letter_remediation(
+    *,
+    record: UiRunRecord,
+    classification: UiRunFailureClassification,
+    step_id: str,
+) -> UiRunDeadLetterRemediation:
+    payload = dict(record.request_payload or {})
+    summary = dict(record.result_summary or {})
+    control = payload.get("workflow_control")
+    workflow_control = control if isinstance(control, dict) else {}
+    execution_plan = workflow_control.get("execution_plan")
+    plan = execution_plan if isinstance(execution_plan, dict) else {}
+    workflow_id = _normalized_text(
+        workflow_control.get("workflow")
+    ) or _normalized_text(record.run_type)
+    checkpoint_stage = classification.resume_stage or _resume_stage(
+        record=record,
+        checkpoints=[],
+    )
+    idempotency_key = _normalized_text(plan.get("idempotency_key")) or _normalized_text(
+        workflow_control.get("idempotency_key")
+    )
+    if not idempotency_key:
+        idempotency_key = f"ui_run:{record.run_id}"
+    budget_context = {
+        key: workflow_control[key]
+        for key in ("budget_profile", "budget_limit", "budget_status")
+        if key in workflow_control
+    }
+    if "budget_context" in summary and isinstance(summary["budget_context"], dict):
+        budget_context.update(summary["budget_context"])
+    return UiRunDeadLetterRemediation(
+        schema_version="1.0",
+        workflow_id=workflow_id,
+        step_id=_normalized_text(step_id),
+        checkpoint_stage=checkpoint_stage,
+        input_checksum=sha256_json(payload),
+        idempotency_key=idempotency_key,
+        remediation_code=classification.action,
+        runbook_link=_runbook_link(record.error_code),
+        budget_context=budget_context,
+    )
+
+
 def classify_ui_run_failure(
     *,
     record: UiRunRecord,
@@ -403,6 +470,11 @@ def build_dead_letter_record(
         artifact_links=infer_dead_letter_artifact_links(
             registry_path=registry_path,
             record=record,
+        ),
+        remediation=infer_dead_letter_remediation(
+            record=record,
+            classification=classification,
+            step_id=stage,
         ),
         result_summary=result_summary,
         recovery_run_id=_normalized_text(recovery_run_id),
