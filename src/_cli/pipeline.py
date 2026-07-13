@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 import time
+from dataclasses import asdict
 
 import typer
 from rich.table import Table
@@ -209,6 +210,36 @@ def _record_cli_workflow_feedback(
         ),
         ctx,
     )
+
+
+@cli_app.command("plan")
+def plan_execution(
+    intent: str = typer.Argument(..., help="Requested workflow outcome to plan"),
+    subject: str = typer.Option("", help="Optional report, URL, or task subject"),
+    publisher: str = typer.Option("", help="Optional publisher context"),
+    report_id: str = typer.Option("", help="Optional report identifier"),
+):
+    """Print a side-effect-free execution plan without launching a workflow."""
+    _sync_cli_patch_points()
+    ctx = new_run_context(task_id="cli_execution_plan")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    settings = workflow_control.default_workflow_control_settings()
+    plan = workflow_control.build_pipeline_execution_plan(
+        workflow_control.RunIntent(
+            schema_version="1.0",
+            intent=intent,
+            subject=subject,
+            publisher=publisher,
+            report_id=report_id,
+            requested_side_effects=[],
+            dry_run=True,
+            allow_automation=False,
+            metadata={"source": "cli_plan"},
+        ),
+        settings,
+        ctx=ctx,
+    )
+    console.print_json(data=asdict(plan))
 
 
 @cli_app.command("ingest")

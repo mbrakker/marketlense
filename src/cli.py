@@ -139,6 +139,7 @@ from src._cli.pipeline import (
     extract_candidates,
     generate_covers,
     ingest,
+    plan_execution,
     publish_wp,
     recategorize,
     update_wp_categories,
