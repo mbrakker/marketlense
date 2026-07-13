@@ -131,6 +131,7 @@ from src._cli.ui_runs import (
     _load_ui_run_worker_request,
     _update_ui_run_record,
     replay_run,
+    reap_ui_dead_letters,
     ui_run_worker,
 )
 from src._cli.pipeline import (
