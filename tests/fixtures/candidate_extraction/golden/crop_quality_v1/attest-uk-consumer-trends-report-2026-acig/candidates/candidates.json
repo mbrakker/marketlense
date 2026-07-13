@@ -1,0 +1,323 @@
+{
+  "schema_version": "1.0",
+  "report_id": "attest-uk-consumer-trends-report-2026-acig",
+  "report_name": "attest-uk-consumer-trends-report-2026-acig",
+  "pdf_path": "C:\\Programing\\Market lense\\cache\\ATTEST - UK-consumer-trends-report-2026_ACIG.pdf",
+  "candidate_count": 13,
+  "chart_count": 13,
+  "table_count": 0,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-4-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 4,
+      "bbox": [
+        0.0,
+        302.0602111816406,
+        841.8900146484375,
+        541.9974951171876
+      ],
+      "preview_text": "Consumers\u2019 top concerns for 2026",
+      "caption": "Consumers\u2019 top concerns for 2026",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-4-0.png",
+      "meta": {
+        "area_frac": 0.355,
+        "aspect": 3.4,
+        "text_lines": 20,
+        "text_chars": 199,
+        "text_ratio": 0.276
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-6-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 6,
+      "bbox": [
+        418.80525146484376,
+        87.4301986694336,
+        796.1663122558593,
+        504.42352392578124
+      ],
+      "preview_text": "Year-on-year growth in brand switching behaviour",
+      "caption": "Year-on-year growth in brand switching behaviour",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-6-0.png",
+      "meta": {
+        "area_frac": 0.249,
+        "aspect": 0.83,
+        "text_lines": 8,
+        "text_chars": 68,
+        "text_ratio": 0.11
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-8-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 8,
+      "bbox": [
+        369.0991784667969,
+        111.43029022216797,
+        823.1094091796875,
+        541.9974951171876
+      ],
+      "preview_text": "Consumer appetite for brand messaging",
+      "caption": "Consumer appetite for brand messaging",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-8-0.png",
+      "meta": {
+        "area_frac": 0.291,
+        "aspect": 0.85,
+        "text_lines": 7,
+        "text_chars": 134,
+        "text_ratio": 0.199
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-12-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 12,
+      "bbox": [
+        0.0,
+        313.3987121582031,
+        841.8900146484375,
+        541.9974951171876
+      ],
+      "preview_text": "Prevalence of sustainable behaviours among UK adults",
+      "caption": "Prevalence of sustainable behaviours among UK adults",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-12-0.png",
+      "meta": {
+        "area_frac": 0.326,
+        "aspect": 3.7,
+        "text_lines": 29,
+        "text_chars": 281,
+        "text_ratio": 0.344
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-15-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 15,
+      "bbox": [
+        293.9088146972656,
+        111.4301986694336,
+        821.1688122558594,
+        545.7689858398437
+      ],
+      "preview_text": "UK adults interacting with brands on social media",
+      "caption": "UK adults interacting with brands on social media",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-15-0.png",
+      "meta": {
+        "area_frac": 0.346,
+        "aspect": 0.97,
+        "text_lines": 19,
+        "text_chars": 155,
+        "text_ratio": 0.239
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-18-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 18,
+      "bbox": [
+        31.26610122680664,
+        109.43020629882812,
+        363.86076416015624,
+        514.9988107910157
+      ],
+      "preview_text": "assistant or customer service bot (by age)",
+      "caption": "assistant or customer service bot (by age)",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-18-0.png",
+      "meta": {
+        "area_frac": 0.237,
+        "aspect": 0.84,
+        "text_lines": 8,
+        "text_chars": 98,
+        "text_ratio": 0.104
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-22-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 22,
+      "bbox": [
+        419.61259399414064,
+        87.43029022216797,
+        809.6034094238281,
+        477.77179052734374
+      ],
+      "preview_text": "Consumer response to shrinkflation",
+      "caption": "Consumer response to shrinkflation",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-22-0.png",
+      "meta": {
+        "area_frac": 0.249,
+        "aspect": 0.95,
+        "text_lines": 12,
+        "text_chars": 140,
+        "text_ratio": 0.167
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-24-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 24,
+      "bbox": [
+        30.61769805908203,
+        95.43029022216797,
+        420.54206909179686,
+        505.7866220703125
+      ],
+      "preview_text": "Consumer support for restrictive measures around ultra-processed foods",
+      "caption": "Consumer support for restrictive measures around ultra-processed foods",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-24-0.png",
+      "meta": {
+        "area_frac": 0.267,
+        "aspect": 0.88,
+        "text_lines": 19,
+        "text_chars": 230,
+        "text_ratio": 0.238
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-25-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 25,
+      "bbox": [
+        419.61259399414064,
+        95.43029022216797,
+        762.0233923339844,
+        501.48993017578124
+      ],
+      "preview_text": "Likelihood to purchase smaller food portions if priced proportionally",
+      "caption": "Likelihood to purchase smaller food portions if priced proportionally",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-25-0.png",
+      "meta": {
+        "area_frac": 0.25,
+        "aspect": 0.84,
+        "text_lines": 13,
+        "text_chars": 145,
+        "text_ratio": 0.199
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-32-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 32,
+      "bbox": [
+        419.61259399414064,
+        95.43029022216797,
+        791.3172155761719,
+        545.8792124023438
+      ],
+      "preview_text": "Consumer response to unexpected fees from a financial services provider",
+      "caption": "Consumer response to unexpected fees from a financial services provider",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-32-0.png",
+      "meta": {
+        "area_frac": 0.272,
+        "aspect": 0.74,
+        "text_lines": 11,
+        "text_chars": 155,
+        "text_ratio": 0.179
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-33-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 33,
+      "bbox": [
+        446.7684899902344,
+        111.43029022216797,
+        841.8900146484375,
+        541.9974951171876
+      ],
+      "preview_text": "Consumer likelihood to use Buy Now, Pay Later loans in 2026",
+      "caption": "Consumer likelihood to use Buy Now, Pay Later loans in 2026",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-33-0.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 0.7,
+        "text_lines": 11,
+        "text_chars": 118,
+        "text_ratio": 0.116
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-38-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 38,
+      "bbox": [
+        0.0,
+        111.43029022216797,
+        470.5542797851562,
+        548.5963720703126
+      ],
+      "preview_text": "Consumer likelihood to cancel subscriptions in 2026",
+      "caption": "Consumer likelihood to cancel subscriptions in 2026",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-38-0.png",
+      "meta": {
+        "area_frac": 0.315,
+        "aspect": 0.9,
+        "text_lines": 13,
+        "text_chars": 129,
+        "text_ratio": 0.189
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-42-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 42,
+      "bbox": [
+        31.266200408935546,
+        87.4301986694336,
+        413.3436437988281,
+        543.1068125
+      ],
+      "preview_text": "Impact of subscription auto-renewals on consumer trust",
+      "caption": "Impact of subscription auto-renewals on consumer trust",
+      "thumb_path": "",
+      "crop_path": "attest-uk-consumer-trends-report-2026-acig/candidates/attest-uk-consumer-trends-report-2026-acig-chart-42-0.png",
+      "meta": {
+        "area_frac": 0.306,
+        "aspect": 0.84,
+        "text_lines": 10,
+        "text_chars": 87,
+        "text_ratio": 0.122
+      }
+    }
+  ]
+}

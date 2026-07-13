@@ -1,0 +1,333 @@
+{
+  "schema_version": "1.0",
+  "report_id": "julius-baer-secular-outlook-2026-acig",
+  "report_name": "julius-baer-secular-outlook-2026-acig",
+  "pdf_path": "C:\\Programing\\Market lense\\cache\\JULIUS BAER - Secular-outlook-2026_ACIG.pdf",
+  "candidate_count": 13,
+  "chart_count": 11,
+  "table_count": 2,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-3-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 3,
+      "bbox": [
+        58.960478515625,
+        420.6778259277344,
+        536.3145153808593,
+        779.0742797851562
+      ],
+      "preview_text": "chart 1: decade opportunity set \u2013 total return of key asset classes in local currency since the start of",
+      "caption": "chart 1: decade opportunity set \u2013 total return of key asset classes in local currency since the start of",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-3-0.png",
+      "meta": {
+        "area_frac": 0.319,
+        "aspect": 1.36,
+        "text_lines": 41,
+        "text_chars": 839,
+        "text_ratio": 0.336
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-8-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 8,
+      "bbox": [
+        58.960577697753905,
+        454.4778137207031,
+        528.8507702636718,
+        779.0742797851562
+      ],
+      "preview_text": "chart 3: trade finds a way \u2013 china rerouted its exports in response to us trade tensions",
+      "caption": "chart 3: trade finds a way \u2013 china rerouted its exports in response to us trade tensions",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-8-0.png",
+      "meta": {
+        "area_frac": 0.245,
+        "aspect": 1.28,
+        "text_lines": 39,
+        "text_chars": 577,
+        "text_ratio": 0.357
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-10-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 10,
+      "bbox": [
+        58.960577697753905,
+        454.4778137207031,
+        520.8588269042968,
+        779.0742797851562
+      ],
+      "preview_text": "chart 4: the us is continuing on the path of procyclical fiscal deficits",
+      "caption": "chart 4: the us is continuing on the path of procyclical fiscal deficits",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-10-0.png",
+      "meta": {
+        "area_frac": 0.219,
+        "aspect": 1.15,
+        "text_lines": 25,
+        "text_chars": 350,
+        "text_ratio": 0.213
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-14-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 14,
+      "bbox": [
+        58.960577697753905,
+        454.4778137207031,
+        521.2720349121093,
+        779.0742797851562
+      ],
+      "preview_text": "chart 5: data centre vs general office construction in the us",
+      "caption": "chart 5: data centre vs general office construction in the us",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-14-0.png",
+      "meta": {
+        "area_frac": 0.277,
+        "aspect": 1.45,
+        "text_lines": 27,
+        "text_chars": 275,
+        "text_ratio": 0.133
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-15-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 15,
+      "bbox": [
+        58.960478515625,
+        454.4778137207031,
+        536.3145153808593,
+        779.0742797851562
+      ],
+      "preview_text": "chart 6: china\u2019s consumer confidence has not recovered from the real estate shock",
+      "caption": "chart 6: china\u2019s consumer confidence has not recovered from the real estate shock",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-15-0.png",
+      "meta": {
+        "area_frac": 0.287,
+        "aspect": 1.5,
+        "text_lines": 26,
+        "text_chars": 296,
+        "text_ratio": 0.144
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-18-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 18,
+      "bbox": [
+        58.960577697753905,
+        420.6778259277344,
+        530.3623669433593,
+        779.0742797851562
+      ],
+      "preview_text": "chart 7: the us has seen divergent private and public sector leverage trends since the 2008 global",
+      "caption": "chart 7: the us has seen divergent private and public sector leverage trends since the 2008 global",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-18-0.png",
+      "meta": {
+        "area_frac": 0.312,
+        "aspect": 1.33,
+        "text_lines": 33,
+        "text_chars": 649,
+        "text_ratio": 0.35
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-22-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 22,
+      "bbox": [
+        58.960577697753905,
+        454.4778137207031,
+        536.3151257324218,
+        779.0742797851562
+      ],
+      "preview_text": "chart 8: european gdp per capita has stagnated since the gfc",
+      "caption": "chart 8: european gdp per capita has stagnated since the gfc",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-22-0.png",
+      "meta": {
+        "area_frac": 0.287,
+        "aspect": 1.5,
+        "text_lines": 31,
+        "text_chars": 310,
+        "text_ratio": 0.125
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-24-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 24,
+      "bbox": [
+        58.960577697753905,
+        444.07781982421875,
+        524.0740368652343,
+        779.0742797851562
+      ],
+      "preview_text": "chart 9: indian equities have outperformed global peers",
+      "caption": "chart 9: indian equities have outperformed global peers",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-24-0.png",
+      "meta": {
+        "area_frac": 0.289,
+        "aspect": 1.42,
+        "text_lines": 25,
+        "text_chars": 427,
+        "text_ratio": 0.219
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-25-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 25,
+      "bbox": [
+        58.960478515625,
+        411.0936279296875,
+        536.3145153808593,
+        740.7434692382812
+      ],
+      "preview_text": "chart 10: gold decoupled from its habitual drivers following the weaponisation of the usd-based",
+      "caption": "chart 10: gold decoupled from its habitual drivers following the weaponisation of the usd-based",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-25-0.png",
+      "meta": {
+        "area_frac": 0.309,
+        "aspect": 1.4,
+        "text_lines": 37,
+        "text_chars": 586,
+        "text_ratio": 0.385
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-28-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 28,
+      "bbox": [
+        58.960577697753905,
+        444.07781982421875,
+        530.3621228027343,
+        779.0742797851562
+      ],
+      "preview_text": "chart 11: the swiss labour market stays competitive, in part thanks to its flexibility",
+      "caption": "chart 11: the swiss labour market stays competitive, in part thanks to its flexibility",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-28-0.png",
+      "meta": {
+        "area_frac": 0.29,
+        "aspect": 1.42,
+        "text_lines": 32,
+        "text_chars": 499,
+        "text_ratio": 0.181
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-29-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 29,
+      "bbox": [
+        58.960577697753905,
+        454.4778137207031,
+        527.8355725097656,
+        779.0742797851562
+      ],
+      "preview_text": "chart 12: the swiss government is one of the least indebted in the world",
+      "caption": "chart 12: the swiss government is one of the least indebted in the world",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-chart-29-0.png",
+      "meta": {
+        "area_frac": 0.239,
+        "aspect": 1.25,
+        "text_lines": 59,
+        "text_chars": 614,
+        "text_ratio": 0.464
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-5-0",
+      "kind": "table",
+      "type": "table",
+      "page": 5,
+      "bbox": [
+        70.86599731445312,
+        340.0657043457031,
+        524.4089965820312,
+        763.9578857421875
+      ],
+      "preview_text": "State-sponsored\nBretton Woods Neoliberal era (globalisation, financialisaton, digitalisation)\ncapitalism\nBretton Woods Floating exchange Disinflation Fall of the European Economic Managed Multipolarity and\nrates Berlin Wall and Monetary Union deleveraging in strategic reshoring\nPlaza Accord Western private\nOil shock currency agreement Globalisation China joins WTO sectors Active industrial and\nfis",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-table-5-0.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 3,
+        "cols": 6,
+        "non_empty_cells": 13,
+        "numeric_ratio": 0.041,
+        "avg_words_per_cell": 16.92,
+        "index_page_ratio": 0.0,
+        "text_len": 1252,
+        "area_frac": 0.3078,
+        "aspect": 1.33
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-35-0",
+      "kind": "table",
+      "type": "table",
+      "page": 35,
+      "bbox": [
+        134.6457061767578,
+        658.3515014648438,
+        449.0116882324219,
+        755.6034545898438
+      ],
+      "preview_text": "JULIUS BAER GROUP | The Julius Baer | Group is | present\n | 60 locations wo | rldwide, i | ncludin\nHead Office | (Head Office), | Bangkok, | Dubai,",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "julius-baer-secular-outlook-2026-acig/candidates/julius-baer-secular-outlook-2026-acig-table-35-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 10,
+        "cols": 4,
+        "non_empty_cells": 36,
+        "numeric_ratio": 0.115,
+        "avg_words_per_cell": 2.19,
+        "index_page_ratio": 0.0,
+        "text_len": 406,
+        "area_frac": 0.0542,
+        "aspect": 2.87
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+attest-uk-consumer-trends-report-2026-acig: +0 / -0 / ~0
+capgemini-2026-retail-trends-acig: +0 / -0 / ~0
+deloitte-tech-trends-2026-acig: +0 / -0 / ~0
+ias-industry-pulse-report-2026-acig: +0 / -0 / ~0
+julius-baer-secular-outlook-2026-acig: +0 / -0 / ~0
+kantar-media-reactions-2025-apac-webinar-deck-acig-pdf: +0 / -0 / ~0
+oecd-economic-outlook-acig-pdf: +0 / -0 / ~4
+  changed: oecd-economic-outlook-acig-pdf-chart-116-0.png, oecd-economic-outlook-acig-pdf-chart-137-0.png, oecd-economic-outlook-acig-pdf-chart-176-0.png, oecd-economic-outlook-acig-pdf-chart-190-0.png
+oecd-health-at-a-glance-2025-acig-pdf: +0 / -0 / ~0
+worldpanel-brand-footprint-2025-acig: +0 / -0 / ~0

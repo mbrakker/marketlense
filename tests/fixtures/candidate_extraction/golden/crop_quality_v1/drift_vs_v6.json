@@ -1,0 +1,88 @@
+[
+  {
+    "report_id": "attest-uk-consumer-trends-report-2026-acig",
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "candidate_count": 13,
+    "chart_count": 13,
+    "table_count": 0
+  },
+  {
+    "report_id": "capgemini-2026-retail-trends-acig",
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "candidate_count": 12,
+    "chart_count": 12,
+    "table_count": 0
+  },
+  {
+    "report_id": "deloitte-tech-trends-2026-acig",
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "candidate_count": 10,
+    "chart_count": 10,
+    "table_count": 0
+  },
+  {
+    "report_id": "ias-industry-pulse-report-2026-acig",
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "candidate_count": 13,
+    "chart_count": 13,
+    "table_count": 0
+  },
+  {
+    "report_id": "julius-baer-secular-outlook-2026-acig",
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "candidate_count": 13,
+    "chart_count": 11,
+    "table_count": 2
+  },
+  {
+    "report_id": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf",
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "candidate_count": 20,
+    "chart_count": 9,
+    "table_count": 11
+  },
+  {
+    "report_id": "oecd-economic-outlook-acig-pdf",
+    "added": [],
+    "removed": [],
+    "changed": [
+      "oecd-economic-outlook-acig-pdf-chart-116-0.png",
+      "oecd-economic-outlook-acig-pdf-chart-137-0.png",
+      "oecd-economic-outlook-acig-pdf-chart-176-0.png",
+      "oecd-economic-outlook-acig-pdf-chart-190-0.png"
+    ],
+    "candidate_count": 116,
+    "chart_count": 61,
+    "table_count": 55
+  },
+  {
+    "report_id": "oecd-health-at-a-glance-2025-acig-pdf",
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "candidate_count": 229,
+    "chart_count": 216,
+    "table_count": 13
+  },
+  {
+    "report_id": "worldpanel-brand-footprint-2025-acig",
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "candidate_count": 12,
+    "chart_count": 10,
+    "table_count": 2
+  }
+]

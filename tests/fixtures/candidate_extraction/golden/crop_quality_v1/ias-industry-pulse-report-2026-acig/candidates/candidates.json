@@ -1,0 +1,323 @@
+{
+  "schema_version": "1.0",
+  "report_id": "ias-industry-pulse-report-2026-acig",
+  "report_name": "ias-industry-pulse-report-2026-acig",
+  "pdf_path": "C:\\Programing\\Market lense\\cache\\IAS - Industry_Pulse_Report_2026_ACIG.pdf",
+  "candidate_count": 13,
+  "chart_count": 13,
+  "table_count": 0,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-5-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 5,
+      "bbox": [
+        21.24094467163086,
+        208.3020446777344,
+        363.4108154296875,
+        357.1550085449219
+      ],
+      "preview_text": "Top Digital Environments",
+      "caption": "Top Digital Environments",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-5-0.png",
+      "meta": {
+        "area_frac": 0.15,
+        "aspect": 2.46,
+        "text_lines": 22,
+        "text_chars": 158,
+        "text_ratio": 0.242
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-5-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 5,
+      "bbox": [
+        21.24094467163086,
+        3.0352706909179688,
+        705.8220703125,
+        211.9739227294922
+      ],
+      "preview_text": "TOP MEDIA PRIORITIES IN 2026",
+      "caption": "TOP MEDIA PRIORITIES IN 2026",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-5-1.png",
+      "meta": {
+        "area_frac": 0.751,
+        "aspect": 2.05,
+        "text_lines": 15,
+        "text_chars": 249,
+        "text_ratio": 0.382
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-6-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 6,
+      "bbox": [
+        21.24094467163086,
+        3.0352706909179688,
+        705.8220703125,
+        405.0
+      ],
+      "preview_text": "MEDIA TYPES FACING THE BIGGEST CHALLENGES",
+      "caption": "MEDIA TYPES FACING THE BIGGEST CHALLENGES",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-6-0.png",
+      "meta": {
+        "area_frac": 0.869,
+        "aspect": 1.77,
+        "text_lines": 38,
+        "text_chars": 891,
+        "text_ratio": 1.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-7-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 7,
+      "bbox": [
+        21.24094467163086,
+        2.2352733612060547,
+        705.8220703125,
+        339.5847265625
+      ],
+      "preview_text": "TOP ANTICIPATED MEDIA CHALLENGES BY COMPANY TYPE",
+      "caption": "TOP ANTICIPATED MEDIA CHALLENGES BY COMPANY TYPE",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-7-0.png",
+      "meta": {
+        "area_frac": 0.711,
+        "aspect": 2.17,
+        "text_lines": 29,
+        "text_chars": 435,
+        "text_ratio": 0.629
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-8-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 8,
+      "bbox": [
+        21.24094467163086,
+        87.08526306152343,
+        698.61015625,
+        338.40534423828126
+      ],
+      "preview_text": "Top Media Types with Potential for Innovation",
+      "caption": "Top Media Types with Potential for Innovation",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-8-0.png",
+      "meta": {
+        "area_frac": 0.423,
+        "aspect": 2.3,
+        "text_lines": 16,
+        "text_chars": 149,
+        "text_ratio": 0.348
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-10-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 10,
+      "bbox": [
+        19.544094848632813,
+        10.235273361206055,
+        705.8358032226563,
+        333.65372680664063
+      ],
+      "preview_text": "MEDIA EXPERTS GENERALLY FEEL POSITIVELY ABOUT ADVERTISING NEAR GENERATIVE AI CONTENT",
+      "caption": "MEDIA EXPERTS GENERALLY FEEL POSITIVELY ABOUT ADVERTISING NEAR GENERATIVE AI CONTENT",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-10-0.png",
+      "meta": {
+        "area_frac": 0.699,
+        "aspect": 2.21,
+        "text_lines": 33,
+        "text_chars": 985,
+        "text_ratio": 0.806
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-11-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 11,
+      "bbox": [
+        21.24094467163086,
+        2.2552722930908224,
+        705.8358032226563,
+        326.13959716796876
+      ],
+      "preview_text": "NONETHELESS, MEDIA EXPERTS ARE APPROACHING WITH CAUTION , AND ARE DISCERNING OF ADJACENCIES TO UNSUITABLE GEN AI CONTENT",
+      "caption": "NONETHELESS, MEDIA EXPERTS ARE APPROACHING WITH CAUTION , AND ARE DISCERNING OF ADJACENCIES TO UNSUITABLE GEN AI CONTENT",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-11-0.png",
+      "meta": {
+        "area_frac": 0.68,
+        "aspect": 2.27,
+        "text_lines": 37,
+        "text_chars": 862,
+        "text_ratio": 0.631
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-12-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 12,
+      "bbox": [
+        21.24094467163086,
+        3.0352706909179688,
+        705.8358032226563,
+        339.44513916015626
+      ],
+      "preview_text": "GEN AI CONTENT THAT CONTAINS INACCURATE",
+      "caption": "GEN AI CONTENT THAT CONTAINS INACCURATE",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-12-0.png",
+      "meta": {
+        "area_frac": 0.711,
+        "aspect": 2.17,
+        "text_lines": 48,
+        "text_chars": 930,
+        "text_ratio": 0.836
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-15-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 15,
+      "bbox": [
+        19.544094848632813,
+        2.2552722930908224,
+        705.8358032226563,
+        319.9742529296875
+      ],
+      "preview_text": "MEASURING MEDIA QUALITY ON SOCIAL MEDIA WILL REMAIN IMPORTANT IN ENSURING ADVERTISING MADE AN IMPACT",
+      "caption": "MEASURING MEDIA QUALITY ON SOCIAL MEDIA WILL REMAIN IMPORTANT IN ENSURING ADVERTISING MADE AN IMPACT",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-15-0.png",
+      "meta": {
+        "area_frac": 0.668,
+        "aspect": 2.32,
+        "text_lines": 27,
+        "text_chars": 754,
+        "text_ratio": 0.712
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-16-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 16,
+      "bbox": [
+        21.24094467163086,
+        10.235273361206055,
+        705.8358032226563,
+        303.4880163574219
+      ],
+      "preview_text": "INFLUENCER MARKETING IS BECOMING INCREASINGLY IMPORTANT IN SOCIAL MEDIA",
+      "caption": "INFLUENCER MARKETING IS BECOMING INCREASINGLY IMPORTANT IN SOCIAL MEDIA",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-16-0.png",
+      "meta": {
+        "area_frac": 0.628,
+        "aspect": 2.45,
+        "text_lines": 25,
+        "text_chars": 643,
+        "text_ratio": 0.7
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-17-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 17,
+      "bbox": [
+        20.500786590576173,
+        10.235273361206055,
+        705.8358032226563,
+        320.8187353515625
+      ],
+      "preview_text": "INCREASING GEN AI CONTENT ON SOCIAL MEDIA IS A SIGNIFICANT CONCERN",
+      "caption": "INCREASING GEN AI CONTENT ON SOCIAL MEDIA IS A SIGNIFICANT CONCERN",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-17-0.png",
+      "meta": {
+        "area_frac": 0.669,
+        "aspect": 2.31,
+        "text_lines": 24,
+        "text_chars": 761,
+        "text_ratio": 0.813
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-20-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 20,
+      "bbox": [
+        21.24094467163086,
+        2.2552722930908224,
+        705.8358032226563,
+        326.13959716796876
+      ],
+      "preview_text": "BRAND SAFETY AND SUITABILITY OF DIGITAL VIDEO CONTENT WILL BE IMPERATIVE \u2014 ESPECIALLY AMONG INFLUENCERS",
+      "caption": "BRAND SAFETY AND SUITABILITY OF DIGITAL VIDEO CONTENT WILL BE IMPERATIVE \u2014 ESPECIALLY AMONG INFLUENCERS",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-20-0.png",
+      "meta": {
+        "area_frac": 0.68,
+        "aspect": 2.27,
+        "text_lines": 35,
+        "text_chars": 800,
+        "text_ratio": 0.813
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-28-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 28,
+      "bbox": [
+        21.24094467163086,
+        10.235273361206055,
+        705.8358032226563,
+        303.4880163574219
+      ],
+      "preview_text": "MEDIA QUALITY IS WIDELY CONSIDERED A FACTOR IN SUCCESS IN RETAIL MEDIA NETWORKS",
+      "caption": "MEDIA QUALITY IS WIDELY CONSIDERED A FACTOR IN SUCCESS IN RETAIL MEDIA NETWORKS",
+      "thumb_path": "",
+      "crop_path": "ias-industry-pulse-report-2026-acig/candidates/ias-industry-pulse-report-2026-acig-chart-28-0.png",
+      "meta": {
+        "area_frac": 0.628,
+        "aspect": 2.45,
+        "text_lines": 32,
+        "text_chars": 666,
+        "text_ratio": 0.792
+      }
+    }
+  ]
+}

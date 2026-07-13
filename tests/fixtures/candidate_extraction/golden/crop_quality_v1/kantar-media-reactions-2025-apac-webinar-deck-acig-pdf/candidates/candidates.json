@@ -1,0 +1,546 @@
+{
+  "schema_version": "1.0",
+  "report_id": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf",
+  "report_name": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf",
+  "pdf_path": "C:\\Programing\\Market lense\\cache\\KANTAR - Media Reactions 2025 APAC Webinar Deck_ACIG.pdf",
+  "candidate_count": 20,
+  "chart_count": 9,
+  "table_count": 11,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-3-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 3,
+      "bbox": [
+        257.7099914550781,
+        33.319984436035156,
+        941.0699462890625,
+        540.0
+      ],
+      "preview_text": "Average brand impact delta %",
+      "caption": "Average brand impact delta %",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-chart-3-0.png",
+      "meta": {
+        "area_frac": 0.473,
+        "aspect": 1.32,
+        "text_lines": 14,
+        "text_chars": 539,
+        "text_ratio": 0.874
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-7-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 7,
+      "bbox": [
+        18.743999862670897,
+        111.97698974609375,
+        502.9448181152344,
+        462.195
+      ],
+      "preview_text": "Average media channel receptivity among APAC consumers",
+      "caption": "Average media channel receptivity among APAC consumers",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-chart-7-0.png",
+      "meta": {
+        "area_frac": 0.289,
+        "aspect": 1.44,
+        "text_lines": 15,
+        "text_chars": 92,
+        "text_ratio": 0.52
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-10-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 10,
+      "bbox": [
+        0.0,
+        111.91999816894531,
+        344.48625049591067,
+        447.7529833984375
+      ],
+      "preview_text": "Advertising equity",
+      "caption": "Advertising equity",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-chart-10-0.png",
+      "meta": {
+        "area_frac": 0.199,
+        "aspect": 1.09,
+        "text_lines": 9,
+        "text_chars": 72,
+        "text_ratio": 0.121
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-10-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 10,
+      "bbox": [
+        375.4981240272522,
+        119.79449462890625,
+        949.2300048828125,
+        494.77501708984374
+      ],
+      "preview_text": "Advertising attitudes",
+      "caption": "Advertising attitudes",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-chart-10-1.png",
+      "meta": {
+        "area_frac": 0.447,
+        "aspect": 1.84,
+        "text_lines": 15,
+        "text_chars": 230,
+        "text_ratio": 0.387
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-14-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 14,
+      "bbox": [
+        10.545999908447266,
+        111.91999816894531,
+        940.8459716796875,
+        480.7730029296875
+      ],
+      "preview_text": "Changes in budget/resource allocation (% net positive)",
+      "caption": "Changes in budget/resource allocation (% net positive)",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-chart-14-0.png",
+      "meta": {
+        "area_frac": 0.598,
+        "aspect": 2.68,
+        "text_lines": 77,
+        "text_chars": 530,
+        "text_ratio": 0.639
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-17-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 17,
+      "bbox": [
+        18.743999862670897,
+        112.90000915527344,
+        472.1460205078125,
+        471.89501220703124
+      ],
+      "preview_text": "Trustworthy Ads",
+      "caption": "Trustworthy Ads",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-chart-17-0.png",
+      "meta": {
+        "area_frac": 0.277,
+        "aspect": 1.31,
+        "text_lines": 2,
+        "text_chars": 18,
+        "text_ratio": 0.055
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-17-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 17,
+      "bbox": [
+        472.84300842285154,
+        112.90000915527344,
+        941.2500244140625,
+        471.89501220703124
+      ],
+      "preview_text": "Better Quality Ads",
+      "caption": "Better Quality Ads",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-chart-17-1.png",
+      "meta": {
+        "area_frac": 0.31,
+        "aspect": 1.47,
+        "text_lines": 2,
+        "text_chars": 21,
+        "text_ratio": 0.064
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-24-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 24,
+      "bbox": [
+        472.04999389648435,
+        130.0561981201172,
+        788.1863647460938,
+        437.55123229980467
+      ],
+      "preview_text": "Consumer attitudes towards GenAI",
+      "caption": "Consumer attitudes towards GenAI",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-chart-24-0.png",
+      "meta": {
+        "area_frac": 0.16,
+        "aspect": 1.06,
+        "text_lines": 8,
+        "text_chars": 119,
+        "text_ratio": 0.298
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-24-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 24,
+      "bbox": [
+        109.70999755859376,
+        130.0561981201172,
+        457.34999755859377,
+        421.95125671386717
+      ],
+      "preview_text": "Marketer attitudes towards GenAI",
+      "caption": "Marketer attitudes towards GenAI",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-chart-24-1.png",
+      "meta": {
+        "area_frac": 0.167,
+        "aspect": 1.25,
+        "text_lines": 7,
+        "text_chars": 120,
+        "text_ratio": 0.301
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-9-0",
+      "kind": "table",
+      "type": "table",
+      "page": 9,
+      "bbox": [
+        29.270999908447266,
+        143.53378295898438,
+        499.80999755859375,
+        430.84503173828125
+      ],
+      "preview_text": "Preference APAC Consumer ad equity Change in rank\nranking \u2013 all media channels from 2024\n1 Digital Out of Home ads (+2)\n2 In-person Sponsored Events* (-1)\n3 Out of Home ads (-1)\n4 Cinema ads New to Top 5!\nPoint of Sale ads No change",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-9-0.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 3,
+        "non_empty_cells": 15,
+        "numeric_ratio": 0.069,
+        "avg_words_per_cell": 3.07,
+        "index_page_ratio": 0.0,
+        "text_len": 232,
+        "area_frac": 0.2608,
+        "aspect": 1.64
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-12-0",
+      "kind": "table",
+      "type": "table",
+      "page": 12,
+      "bbox": [
+        28.34600067138672,
+        127.43000793457031,
+        448.7799987792969,
+        428.6499938964844
+      ],
+      "preview_text": "Change in rank\nConsumers\u2019 Preference Rankings\nfrom 2024\n1 Digital Out of Home ads (+2)\n2 In-person Sponsored Events* (-1)\n3 Out of Home ads (-1)\n4 Cinema ads New to Top 5!\nPoint of Sale ads No change",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-12-0.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 4,
+        "non_empty_cells": 20,
+        "numeric_ratio": 0.081,
+        "avg_words_per_cell": 1.95,
+        "index_page_ratio": 0.0,
+        "text_len": 199,
+        "area_frac": 0.2443,
+        "aspect": 1.4
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-12-1",
+      "kind": "table",
+      "type": "table",
+      "page": 12,
+      "bbox": [
+        510.8500061035156,
+        127.43000793457031,
+        931.280029296875,
+        428.6499938964844
+      ],
+      "preview_text": "Change in rank\nMarketers\u2019 Preference Rankings\nfrom 2024\n1 Digital Out of Home ads New to Top 5!\n2 Online Video ads (-1)\n3 Display ads New to Top 5!\n4 In-person Sponsored Events* New to Top 5!\nSocial Media Stories (-3)",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-12-1.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 4,
+        "non_empty_cells": 20,
+        "numeric_ratio": 0.079,
+        "avg_words_per_cell": 2.1,
+        "index_page_ratio": 0.0,
+        "text_len": 217,
+        "area_frac": 0.2443,
+        "aspect": 1.4
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-13-0",
+      "kind": "table",
+      "type": "table",
+      "page": 13,
+      "bbox": [
+        28.34600067138672,
+        141.12620544433594,
+        448.7799987792969,
+        441.6600036621094
+      ],
+      "preview_text": "Consumers\u2019 Preference Rankings\nChange in rank\n(Online Channels) from 2024\n1 Online Sponsored Events New to Top 5!\n2 Online Newspaper/ Magazines New to Top 5!\n3 Podcasts (-2)\n4 Influencer Content (-2)\n5\nEcommerce (-2)",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-13-0.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 4,
+        "non_empty_cells": 20,
+        "numeric_ratio": 0.084,
+        "avg_words_per_cell": 1.8,
+        "index_page_ratio": 0.0,
+        "text_len": 216,
+        "area_frac": 0.2437,
+        "aspect": 1.4
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-13-1",
+      "kind": "table",
+      "type": "table",
+      "page": 13,
+      "bbox": [
+        508.8500061035156,
+        141.12620544433594,
+        929.280029296875,
+        441.6600036621094
+      ],
+      "preview_text": "Marketers\u2019 Preference Rankings\nChange in rank\n(Online Channels) from 2024\n1 Online Video ads No change\n2 Display ads New to Top 5!\n3 Social Media Stories (-1)\n4 Social Commerce New to Top 5!\n5\nEcommerce No change",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-13-1.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 4,
+        "non_empty_cells": 20,
+        "numeric_ratio": 0.072,
+        "avg_words_per_cell": 1.95,
+        "index_page_ratio": 0.0,
+        "text_len": 212,
+        "area_frac": 0.2437,
+        "aspect": 1.4
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-16-0",
+      "kind": "table",
+      "type": "table",
+      "page": 16,
+      "bbox": [
+        29.270999908447266,
+        152.8199920654297,
+        553.3499755859375,
+        464.6759948730469
+      ],
+      "preview_text": "Ad Equity ranking APAC 2025 - All Media Brands (Global brands)\nPreference APAC consumers Also #1 in\n1 OTT Japan, Korea\n2 E-commerce -\nAustralia, Indonesia,\n3\nSocial\nSingapore, Thailand\nIndia, Philippines\n4 Search\n-\nOTT",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-16-0.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 3,
+        "non_empty_cells": 15,
+        "numeric_ratio": 0.053,
+        "avg_words_per_cell": 2.4,
+        "index_page_ratio": 0.0,
+        "text_len": 218,
+        "area_frac": 0.3153,
+        "aspect": 1.68
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-19-0",
+      "kind": "table",
+      "type": "table",
+      "page": 19,
+      "bbox": [
+        29.270999908447266,
+        157.2637939453125,
+        930.4600219726562,
+        433.6399841308594
+      ],
+      "preview_text": "Preference APAC Consumers \u2013 Video APAC Consumers \u2013 Social\n1\n2\n3\n4",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-19-0.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 2,
+        "non_empty_cells": 10,
+        "numeric_ratio": 0.078,
+        "avg_words_per_cell": 1.3,
+        "index_page_ratio": 0.0,
+        "text_len": 65,
+        "area_frac": 0.4805,
+        "aspect": 3.26
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-20-0",
+      "kind": "table",
+      "type": "table",
+      "page": 20,
+      "bbox": [
+        29.270999908447266,
+        157.2637939453125,
+        930.4600219726562,
+        433.6399841308594
+      ],
+      "preview_text": "Preference APAC Consumers \u2013 Video APAC Consumers \u2013 Social APAC Consumer \u2013 E-commerce\n1\n2\n3\n4",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-20-0.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 2,
+        "non_empty_cells": 10,
+        "numeric_ratio": 0.056,
+        "avg_words_per_cell": 1.7,
+        "index_page_ratio": 0.0,
+        "text_len": 92,
+        "area_frac": 0.4805,
+        "aspect": 3.26
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-21-0",
+      "kind": "table",
+      "type": "table",
+      "page": 21,
+      "bbox": [
+        28.34600067138672,
+        121.63448333740234,
+        932.2100219726562,
+        524.3663940429688
+      ],
+      "preview_text": "Changes in budget/resource Changes in budget/resource\nTop 5\nallocation for 2025 (% net positive) allocation for 2026 (% net positive)\n1\n2\n3\n4\n5\nQ: How do you expect allocation of your budget and/or resource to change, in 2025/2026? Indicate whether you expect budget and/or\n\u00a9 Kantar 2025 | 22",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-21-0.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 3,
+        "non_empty_cells": 15,
+        "numeric_ratio": 0.124,
+        "avg_words_per_cell": 3.33,
+        "index_page_ratio": 0.0,
+        "text_len": 292,
+        "area_frac": 0.7022,
+        "aspect": 2.24
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-22-0",
+      "kind": "table",
+      "type": "table",
+      "page": 22,
+      "bbox": [
+        489.54998779296875,
+        145.97120666503906,
+        934.4000244140625,
+        425.75
+      ],
+      "preview_text": "Preference APAC marketers\n1 #1 Capturing attention\n2 #2 Capturing attention\n3\n4\n5",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-22-0.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 2,
+        "non_empty_cells": 10,
+        "numeric_ratio": 0.106,
+        "avg_words_per_cell": 1.4,
+        "index_page_ratio": 0.0,
+        "text_len": 81,
+        "area_frac": 0.2401,
+        "aspect": 1.59
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-22-1",
+      "kind": "table",
+      "type": "table",
+      "page": 22,
+      "bbox": [
+        27.902000427246094,
+        146.7711944580078,
+        472.75,
+        425.75
+      ],
+      "preview_text": "Preference APAC consumers\n1\n2\n3\n4\n5",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "kantar-media-reactions-2025-apac-webinar-deck-acig-pdf/candidates/kantar-media-reactions-2025-apac-webinar-deck-acig-pdf-table-22-1.png",
+      "meta": {
+        "method": "ranked",
+        "rows": 5,
+        "cols": 2,
+        "non_empty_cells": 10,
+        "numeric_ratio": 0.179,
+        "avg_words_per_cell": 0.8,
+        "index_page_ratio": 0.0,
+        "text_len": 35,
+        "area_frac": 0.2394,
+        "aspect": 1.59
+      }
+    }
+  ]
+}

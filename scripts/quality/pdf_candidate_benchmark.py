@@ -32,6 +32,7 @@ class PdfCandidateBenchmarkBaselineEntry:
     baseline_median_seconds: float
     runtime_warn_percent: float = 25.0
     runtime_fail_percent: float = 75.0
+    expected_pdf_sha256: str = ""
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class PdfCandidateBenchmarkObservation:
     degraded_page_count: int
     durations_seconds: tuple[float, ...]
     median_seconds: float
+    pdf_sha256: str = ""
 
 
 @dataclass(frozen=True)
@@ -58,6 +60,8 @@ class PdfCandidateBenchmarkRow:
     report_name: str
     expected_candidate_count: int
     actual_candidate_count: int | None
+    expected_pdf_sha256: str
+    actual_pdf_sha256: str | None
     expected_signature: str
     actual_signature: str | None
     expected_degraded_page_count: int
@@ -110,6 +114,7 @@ def load_benchmark_baseline(
             baseline_median_seconds=float(entry["baseline_median_seconds"]),
             runtime_warn_percent=float(entry.get("runtime_warn_percent", 25.0)),
             runtime_fail_percent=float(entry.get("runtime_fail_percent", 75.0)),
+            expected_pdf_sha256=str(entry.get("expected_pdf_sha256", "")),
         )
         for entry in entries
     )
@@ -157,6 +162,21 @@ def compare_benchmark_observations(
                     detail=(
                         f"expected {entry.expected_candidate_count}, "
                         f"observed {observation.candidate_count}"
+                    ),
+                )
+            )
+        if (
+            entry.expected_pdf_sha256
+            and observation.pdf_sha256 != entry.expected_pdf_sha256
+        ):
+            row_status = "failed"
+            failures.append(
+                PdfCandidateBenchmarkIssue(
+                    pdf_path=entry.pdf_path,
+                    reason="pdf_sha256_changed",
+                    detail=(
+                        f"expected {entry.expected_pdf_sha256}, "
+                        f"observed {observation.pdf_sha256}"
                     ),
                 )
             )
@@ -227,8 +247,10 @@ def compare_benchmark_observations(
             PdfCandidateBenchmarkRow(
                 pdf_path=entry.pdf_path,
                 report_name=entry.report_name,
-                expected_candidate_count=entry.expected_candidate_count,
-                actual_candidate_count=observation.candidate_count,
+            expected_candidate_count=entry.expected_candidate_count,
+            actual_candidate_count=observation.candidate_count,
+            expected_pdf_sha256=entry.expected_pdf_sha256,
+            actual_pdf_sha256=observation.pdf_sha256,
                 expected_signature=entry.expected_signature,
                 actual_signature=observation.signature,
                 expected_degraded_page_count=entry.expected_degraded_page_count,
@@ -290,6 +312,7 @@ def observe_benchmark_entry(
         degraded_page_count=degraded_page_count,
         durations_seconds=tuple(round(value, 6) for value in durations),
         median_seconds=round(float(statistics.median(durations)), 6),
+        pdf_sha256=_file_sha256(pdf_path),
     )
 
 
@@ -360,6 +383,8 @@ def _missing_row(entry: PdfCandidateBenchmarkBaselineEntry) -> PdfCandidateBench
         report_name=entry.report_name,
         expected_candidate_count=entry.expected_candidate_count,
         actual_candidate_count=None,
+        expected_pdf_sha256=entry.expected_pdf_sha256,
+        actual_pdf_sha256=None,
         expected_signature=entry.expected_signature,
         actual_signature=None,
         expected_degraded_page_count=entry.expected_degraded_page_count,
@@ -414,6 +439,7 @@ def _baseline_payload_from_observations(
                 "pdf_path": observation.pdf_path,
                 "report_name": observation.report_name,
                 "expected_candidate_count": observation.candidate_count,
+                "expected_pdf_sha256": observation.pdf_sha256,
                 "expected_signature": observation.signature,
                 "expected_degraded_page_count": observation.degraded_page_count,
                 "baseline_median_seconds": observation.median_seconds,
@@ -423,6 +449,14 @@ def _baseline_payload_from_observations(
             for observation in observations
         ],
     }
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -33,6 +33,9 @@ tests/fixtures/*
 !tests/fixtures/candidate_extraction/
 !tests/fixtures/candidate_extraction/golden/
 !tests/fixtures/candidate_extraction/golden/**
+!tests/fixtures/pdf_benchmark/
+!tests/fixtures/pdf_benchmark/golden/
+!tests/fixtures/pdf_benchmark/golden/**
 htmlcov/
 
 # Editor directories and files

@@ -1,0 +1,309 @@
+{
+  "schema_version": "1.0",
+  "report_id": "worldpanel-brand-footprint-2025-acig",
+  "report_name": "worldpanel-brand-footprint-2025-acig",
+  "pdf_path": "C:\\Programing\\Market lense\\cache\\WORLDPANEL - Brand-footprint-2025 - ACIG.pdf",
+  "candidate_count": 12,
+  "chart_count": 10,
+  "table_count": 2,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-2-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 2,
+      "bbox": [
+        301.8627014160156,
+        251.09991455078125,
+        813.2481689453125,
+        413.7204895019531
+      ],
+      "preview_text": "Welcome to Brand Footprint\n2025, where we decode the\nmathematics of the 50:50 game\nand show you how to win it.",
+      "caption": "Welcome to Brand Footprint\n2025, where we decode the\nmathematics of the 50:50 game\nand show you how to win it.",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-2-0.png",
+      "meta": {
+        "area_frac": 0.166,
+        "aspect": 3.14,
+        "text_lines": 0,
+        "text_chars": 0,
+        "text_ratio": 0.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-4-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 4,
+      "bbox": [
+        301.8627014160156,
+        332.30987548828125,
+        813.2481689453125,
+        510.5277099609375
+      ],
+      "preview_text": "",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-4-0.png",
+      "meta": {
+        "area_frac": 0.182,
+        "aspect": 2.87,
+        "text_lines": 0,
+        "text_chars": 0,
+        "text_ratio": 0.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-6-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 6,
+      "bbox": [
+        34.02000045776367,
+        267.29986572265625,
+        546.67822265625,
+        510.29986572265625
+      ],
+      "preview_text": "",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-6-0.png",
+      "meta": {
+        "area_frac": 0.249,
+        "aspect": 2.11,
+        "text_lines": 0,
+        "text_chars": 0,
+        "text_ratio": 0.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-9-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 9,
+      "bbox": [
+        569.7054443359375,
+        137.69989013671875,
+        817.2981567382812,
+        510.2998962402344
+      ],
+      "preview_text": "",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-9-0.png",
+      "meta": {
+        "area_frac": 0.184,
+        "aspect": 0.66,
+        "text_lines": 0,
+        "text_chars": 0,
+        "text_ratio": 0.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-12-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 12,
+      "bbox": [
+        33.8811149597168,
+        283.4998779296875,
+        547.0032958984375,
+        510.29986572265625
+      ],
+      "preview_text": "",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-12-0.png",
+      "meta": {
+        "area_frac": 0.232,
+        "aspect": 2.26,
+        "text_lines": 0,
+        "text_chars": 0,
+        "text_ratio": 0.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-14-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 14,
+      "bbox": [
+        34.02000045776367,
+        283.70989990234375,
+        549.4745483398438,
+        510.5098876953125
+      ],
+      "preview_text": "Against this backdrop, here are the Top 50\nmost chosen brands in 2024.",
+      "caption": "Against this backdrop, here are the Top 50\nmost chosen brands in 2024.",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-14-0.png",
+      "meta": {
+        "area_frac": 0.233,
+        "aspect": 2.27,
+        "text_lines": 0,
+        "text_chars": 0,
+        "text_ratio": 0.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-18-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 18,
+      "bbox": [
+        423.31111328125,
+        79.0792007446289,
+        821.6589489746094,
+        498.862119140625
+      ],
+      "preview_text": "The serial successes",
+      "caption": "The serial successes",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-18-0.png",
+      "meta": {
+        "area_frac": 0.308,
+        "aspect": 0.94,
+        "text_lines": 17,
+        "text_chars": 808,
+        "text_ratio": 0.995
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-19-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 19,
+      "bbox": [
+        301.8627014160156,
+        121.4998779296875,
+        653.5323486328125,
+        510.2998962402344
+      ],
+      "preview_text": "",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-19-0.png",
+      "meta": {
+        "area_frac": 0.273,
+        "aspect": 0.9,
+        "text_lines": 0,
+        "text_chars": 0,
+        "text_ratio": 0.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-21-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 21,
+      "bbox": [
+        630.5850219726562,
+        132.94815063476562,
+        813.2400512695312,
+        515.4717407226562
+      ],
+      "preview_text": "",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-21-0.png",
+      "meta": {
+        "area_frac": 0.139,
+        "aspect": 0.48,
+        "text_lines": 0,
+        "text_chars": 0,
+        "text_ratio": 0.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-24-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 24,
+      "bbox": [
+        629.5320434570312,
+        121.4998779296875,
+        813.2400512695312,
+        510.2998962402344
+      ],
+      "preview_text": "",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-chart-24-0.png",
+      "meta": {
+        "area_frac": 0.143,
+        "aspect": 0.47,
+        "text_lines": 0,
+        "text_chars": 0,
+        "text_ratio": 0.0
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-15-0",
+      "kind": "table",
+      "type": "table",
+      "page": 15,
+      "bbox": [
+        0.8100000619888306,
+        49.40997314453125,
+        841.8897705078125,
+        556.4383544921875
+      ],
+      "preview_text": "",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-table-15-0.png",
+      "meta": {
+        "method": "image",
+        "rows": 44,
+        "cols": 20,
+        "non_empty_cells": 880,
+        "numeric_ratio": 0.0,
+        "avg_words_per_cell": 0.0,
+        "index_page_ratio": 0.0,
+        "text_len": 0,
+        "area_frac": 0.8509,
+        "aspect": 1.66
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-16-0",
+      "kind": "table",
+      "type": "table",
+      "page": 16,
+      "bbox": [
+        0.8100000619888306,
+        48.21075439453125,
+        841.8897705078125,
+        555.2391357421875
+      ],
+      "preview_text": "",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "worldpanel-brand-footprint-2025-acig/candidates/worldpanel-brand-footprint-2025-acig-table-16-0.png",
+      "meta": {
+        "method": "image",
+        "rows": 46,
+        "cols": 39,
+        "non_empty_cells": 1794,
+        "numeric_ratio": 0.0,
+        "avg_words_per_cell": 0.0,
+        "index_page_ratio": 0.0,
+        "text_len": 0,
+        "area_frac": 0.8509,
+        "aspect": 1.66
+      }
+    }
+  ]
+}

@@ -1,0 +1,3070 @@
+{
+  "schema_version": "1.0",
+  "report_id": "oecd-economic-outlook-acig-pdf",
+  "report_name": "oecd-economic-outlook-acig-pdf",
+  "pdf_path": "C:\\Programing\\Market lense\\cache\\OECD - Economic Outlook_ACIG.pdf",
+  "candidate_count": 116,
+  "chart_count": 61,
+  "table_count": 55,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-15-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 15,
+      "bbox": [
+        53.256476135253905,
+        290.66851806640625,
+        539.1398937988281,
+        540.586669921875
+      ],
+      "preview_text": "figure 1.1. global growth has remained resilient",
+      "caption": "figure 1.1. global growth has remained resilient",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-15-0.png",
+      "meta": {
+        "area_frac": 0.248,
+        "aspect": 1.92,
+        "text_lines": 5,
+        "text_chars": 360,
+        "text_ratio": 0.108
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-16-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 16,
+      "bbox": [
+        53.256476135253905,
+        397.468505859375,
+        539.1398937988281,
+        721.8004760742188
+      ],
+      "preview_text": "figure 1.3. strong tech-related demand is supporting trade, particularly in asia",
+      "caption": "figure 1.3. strong tech-related demand is supporting trade, particularly in asia",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-16-0.png",
+      "meta": {
+        "area_frac": 0.309,
+        "aspect": 1.54,
+        "text_lines": 11,
+        "text_chars": 1277,
+        "text_ratio": 0.515
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-17-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 17,
+      "bbox": [
+        52.1052424621582,
+        60.766908203125,
+        543.5107434082031,
+        659.896728515625
+      ],
+      "preview_text": "figure 1.4. strong ict investment has supported economic growth",
+      "caption": "figure 1.4. strong ict investment has supported economic growth",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-17-0.png",
+      "meta": {
+        "area_frac": 0.354,
+        "aspect": 1.36,
+        "text_lines": 27,
+        "text_chars": 2562,
+        "text_ratio": 0.97
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-18-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 18,
+      "bbox": [
+        46.1524836730957,
+        135.05906494140623,
+        549.2235729980468,
+        486.00048828125
+      ],
+      "preview_text": "figure 1.5. global industrial production and trade are being supported by activity in the ict sector",
+      "caption": "figure 1.5. global industrial production and trade are being supported by activity in the ict sector",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-18-0.png",
+      "meta": {
+        "area_frac": 0.391,
+        "aspect": 1.31,
+        "text_lines": 14,
+        "text_chars": 1642,
+        "text_ratio": 0.469
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-19-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 19,
+      "bbox": [
+        53.256476135253905,
+        303.5690899658203,
+        539.1398937988281,
+        585.2567138671875
+      ],
+      "preview_text": "figure 1.6. consumer sentiment remains subdued and some indicators of economic activity have",
+      "caption": "figure 1.6. consumer sentiment remains subdued and some indicators of economic activity have",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-19-0.png",
+      "meta": {
+        "area_frac": 0.28,
+        "aspect": 1.7,
+        "text_lines": 8,
+        "text_chars": 741,
+        "text_ratio": 0.232
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-20-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 20,
+      "bbox": [
+        53.256476135253905,
+        134.57908447265623,
+        538.5817883300781,
+        464.1466979980469
+      ],
+      "preview_text": "figure 1.7. the impact of us tariffs is increasingly being felt",
+      "caption": "figure 1.7. the impact of us tariffs is increasingly being felt",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-20-0.png",
+      "meta": {
+        "area_frac": 0.327,
+        "aspect": 1.4,
+        "text_lines": 12,
+        "text_chars": 1377,
+        "text_ratio": 0.405
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-24-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 24,
+      "bbox": [
+        53.256476135253905,
+        229.70849609375,
+        539.1398937988281,
+        507.2266845703125
+      ],
+      "preview_text": "figure 1.11. labour demand has slowed and unemployment rates have generally drifted higher",
+      "caption": "figure 1.11. labour demand has slowed and unemployment rates have generally drifted higher",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-24-0.png",
+      "meta": {
+        "area_frac": 0.276,
+        "aspect": 1.72,
+        "text_lines": 6,
+        "text_chars": 556,
+        "text_ratio": 0.222
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-27-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 27,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        539.1398937988281,
+        394.1492614746094
+      ],
+      "preview_text": "figure 1.14. underlying inflation and short-term inflation expectations have risen in some",
+      "caption": "figure 1.14. underlying inflation and short-term inflation expectations have risen in some",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-27-0.png",
+      "meta": {
+        "area_frac": 0.343,
+        "aspect": 1.39,
+        "text_lines": 11,
+        "text_chars": 1127,
+        "text_ratio": 0.368
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-28-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 28,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        539.1398937988281,
+        338.2467041015625
+      ],
+      "preview_text": "figure 1.15. elevated equity valuations are supported by the higher expected earnings of",
+      "caption": "figure 1.15. elevated equity valuations are supported by the higher expected earnings of",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-28-0.png",
+      "meta": {
+        "area_frac": 0.279,
+        "aspect": 1.7,
+        "text_lines": 5,
+        "text_chars": 399,
+        "text_ratio": 0.158
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-29-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 29,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        539.1398937988281,
+        395.2467041015625
+      ],
+      "preview_text": "figure 1.16. sustained debt issuance and declining bank lending rates",
+      "caption": "figure 1.16. sustained debt issuance and declining bank lending rates",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-29-0.png",
+      "meta": {
+        "area_frac": 0.337,
+        "aspect": 1.41,
+        "text_lines": 11,
+        "text_chars": 1339,
+        "text_ratio": 0.404
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-30-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 30,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        539.1398937988281,
+        465.3466796875
+      ],
+      "preview_text": "figure 1.17. global growth is projected to weaken before recovering gradually",
+      "caption": "figure 1.17. global growth is projected to weaken before recovering gradually",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-30-0.png",
+      "meta": {
+        "area_frac": 0.414,
+        "aspect": 1.15,
+        "text_lines": 8,
+        "text_chars": 766,
+        "text_ratio": 0.294
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-32-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 32,
+      "bbox": [
+        53.256476135253905,
+        212.63848876953125,
+        539.1398937988281,
+        518.626708984375
+      ],
+      "preview_text": "figure 1.18. trade patterns are evolving with emerging markets becoming a key driver of growth",
+      "caption": "figure 1.18. trade patterns are evolving with emerging markets becoming a key driver of growth",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-32-0.png",
+      "meta": {
+        "area_frac": 0.304,
+        "aspect": 1.56,
+        "text_lines": 8,
+        "text_chars": 739,
+        "text_ratio": 0.28
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-33-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 33,
+      "bbox": [
+        53.256476135253905,
+        238.4990673828125,
+        539.1398937988281,
+        549.586669921875
+      ],
+      "preview_text": "figure 1.19. inflation is projected to move towards central bank targets",
+      "caption": "figure 1.19. inflation is projected to move towards central bank targets",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-33-0.png",
+      "meta": {
+        "area_frac": 0.31,
+        "aspect": 1.54,
+        "text_lines": 8,
+        "text_chars": 685,
+        "text_ratio": 0.235
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-35-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 35,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        538.5817883300781,
+        397.8484802246094
+      ],
+      "preview_text": "figure 1.20. global production and demand for rare earths is highly dependent on china",
+      "caption": "figure 1.20. global production and demand for rare earths is highly dependent on china",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-35-0.png",
+      "meta": {
+        "area_frac": 0.341,
+        "aspect": 1.39,
+        "text_lines": 9,
+        "text_chars": 959,
+        "text_ratio": 0.475
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-35-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 35,
+      "bbox": [
+        53.256476135253905,
+        406.8484802246094,
+        539.1398937988281,
+        737.7103271484375
+      ],
+      "preview_text": "figure 1.21. tariffs on pharmaceutical products or semiconductors would hit output in many",
+      "caption": "figure 1.21. tariffs on pharmaceutical products or semiconductors would hit output in many",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-35-1.png",
+      "meta": {
+        "area_frac": 0.318,
+        "aspect": 1.49,
+        "text_lines": 10,
+        "text_chars": 980,
+        "text_ratio": 0.486
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-40-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 40,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        539.1398937988281,
+        385.6466979980469
+      ],
+      "preview_text": "figure 1.25. strong growth of listed ai technology firms has had spillovers across the economy",
+      "caption": "figure 1.25. strong growth of listed ai technology firms has had spillovers across the economy",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-40-0.png",
+      "meta": {
+        "area_frac": 0.333,
+        "aspect": 1.42,
+        "text_lines": 11,
+        "text_chars": 1269,
+        "text_ratio": 0.373
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-41-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 41,
+      "bbox": [
+        53.256476135253905,
+        348.62847900390625,
+        538.5817883300781,
+        686.8804931640625
+      ],
+      "preview_text": "figure 1.26. the rise of nbfis and banks\u2019 increasing exposure to the sector",
+      "caption": "figure 1.26. the rise of nbfis and banks\u2019 increasing exposure to the sector",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-41-0.png",
+      "meta": {
+        "area_frac": 0.323,
+        "aspect": 1.47,
+        "text_lines": 11,
+        "text_chars": 1239,
+        "text_ratio": 0.364
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-43-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 43,
+      "bbox": [
+        52.22524139404297,
+        61.0068984375,
+        543.7507336425781,
+        705.0264892578125
+      ],
+      "preview_text": "figure 1.28. stablecoins transactions and holdings of us treasury bills are rising",
+      "caption": "figure 1.28. stablecoins transactions and holdings of us treasury bills are rising",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-43-0.png",
+      "meta": {
+        "area_frac": 0.313,
+        "aspect": 1.54,
+        "text_lines": 19,
+        "text_chars": 2068,
+        "text_ratio": 0.963
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-45-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 45,
+      "bbox": [
+        53.256476135253905,
+        147.5391064453125,
+        539.1398937988281,
+        439.66668701171875
+      ],
+      "preview_text": "figure 1.29. emerging-market economies have benefitted from resilient capital flows but face",
+      "caption": "figure 1.29. emerging-market economies have benefitted from resilient capital flows but face",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-45-0.png",
+      "meta": {
+        "area_frac": 0.291,
+        "aspect": 1.64,
+        "text_lines": 7,
+        "text_chars": 624,
+        "text_ratio": 0.208
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-47-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 47,
+      "bbox": [
+        53.256476135253905,
+        264.62847900390625,
+        538.0837414550781,
+        538.3067016601562
+      ],
+      "preview_text": "figure 1.30. real short-term interest rates have eased",
+      "caption": "figure 1.30. real short-term interest rates have eased",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-47-0.png",
+      "meta": {
+        "area_frac": 0.265,
+        "aspect": 1.79,
+        "text_lines": 5,
+        "text_chars": 575,
+        "text_ratio": 0.185
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-48-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 48,
+      "bbox": [
+        53.256476135253905,
+        254.09910400390626,
+        538.5817883300781,
+        547.6666870117188
+      ],
+      "preview_text": "figure 1.31. policy rate reductions are projected to end next year in many advanced economies",
+      "caption": "figure 1.31. policy rate reductions are projected to end next year in many advanced economies",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-48-0.png",
+      "meta": {
+        "area_frac": 0.28,
+        "aspect": 1.7,
+        "text_lines": 5,
+        "text_chars": 337,
+        "text_ratio": 0.136
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-51-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 51,
+      "bbox": [
+        53.256476135253905,
+        205.4990673828125,
+        539.1398937988281,
+        603.4967041015625
+      ],
+      "preview_text": "figure 1.33. primary deficits, net interest payments and change in public debt ratios",
+      "caption": "figure 1.33. primary deficits, net interest payments and change in public debt ratios",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-51-0.png",
+      "meta": {
+        "area_frac": 0.391,
+        "aspect": 1.22,
+        "text_lines": 6,
+        "text_chars": 483,
+        "text_ratio": 0.228
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-52-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 52,
+      "bbox": [
+        53.256476135253905,
+        108.5391064453125,
+        538.5817883300781,
+        445.0492858886719
+      ],
+      "preview_text": "figure 1.34. military spending is increasing at different rates across countries",
+      "caption": "figure 1.34. military spending is increasing at different rates across countries",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-52-0.png",
+      "meta": {
+        "area_frac": 0.335,
+        "aspect": 1.41,
+        "text_lines": 10,
+        "text_chars": 1137,
+        "text_ratio": 0.344
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-55-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 55,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        539.1398937988281,
+        379.0292663574219
+      ],
+      "preview_text": "figure 1.35. net purchases of sovereign bonds by investor type in selected advanced economies",
+      "caption": "figure 1.35. net purchases of sovereign bonds by investor type in selected advanced economies",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-55-0.png",
+      "meta": {
+        "area_frac": 0.326,
+        "aspect": 1.46,
+        "text_lines": 9,
+        "text_chars": 845,
+        "text_ratio": 0.303
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-56-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 56,
+      "bbox": [
+        53.256476135253905,
+        221.09910400390626,
+        538.5817883300781,
+        541.3067016601562
+      ],
+      "preview_text": "figure 1.36. lower policy rates are projected in many emerging-market economies as inflation",
+      "caption": "figure 1.36. lower policy rates are projected in many emerging-market economies as inflation",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-56-0.png",
+      "meta": {
+        "area_frac": 0.318,
+        "aspect": 1.49,
+        "text_lines": 7,
+        "text_chars": 565,
+        "text_ratio": 0.218
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-57-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 57,
+      "bbox": [
+        53.256476135253905,
+        225.5391064453125,
+        539.1398937988281,
+        533.626708984375
+      ],
+      "preview_text": "figure 1.37. fiscal balances are expected to improve in most emerging-market economies",
+      "caption": "figure 1.37. fiscal balances are expected to improve in most emerging-market economies",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-57-0.png",
+      "meta": {
+        "area_frac": 0.307,
+        "aspect": 1.55,
+        "text_lines": 8,
+        "text_chars": 768,
+        "text_ratio": 0.233
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-58-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 58,
+      "bbox": [
+        53.256476135253905,
+        431.6884765625,
+        539.1398937988281,
+        732.3604736328125
+      ],
+      "preview_text": "figure 1.38. productivity growth and economic dynamism have slowed",
+      "caption": "figure 1.38. productivity growth and economic dynamism have slowed",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-58-0.png",
+      "meta": {
+        "area_frac": 0.286,
+        "aspect": 1.66,
+        "text_lines": 8,
+        "text_chars": 850,
+        "text_ratio": 0.254
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-60-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 60,
+      "bbox": [
+        53.256476135253905,
+        445.7284851074219,
+        539.1398937988281,
+        737.7103271484375
+      ],
+      "preview_text": "figure 1.39. simplifying regulations is a reform priority in many economies",
+      "caption": "figure 1.39. simplifying regulations is a reform priority in many economies",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-60-0.png",
+      "meta": {
+        "area_frac": 0.28,
+        "aspect": 1.7,
+        "text_lines": 7,
+        "text_chars": 550,
+        "text_ratio": 0.183
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-61-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 61,
+      "bbox": [
+        53.256476135253905,
+        329.6684875488281,
+        539.1398937988281,
+        604.8905029296875
+      ],
+      "preview_text": "figure 1.40. there is room to improve the regulatory framework for trade",
+      "caption": "figure 1.40. there is room to improve the regulatory framework for trade",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-61-0.png",
+      "meta": {
+        "area_frac": 0.275,
+        "aspect": 1.73,
+        "text_lines": 5,
+        "text_chars": 331,
+        "text_ratio": 0.13
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-69-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 69,
+      "bbox": [
+        53.256476135253905,
+        217.4990673828125,
+        538.5817883300781,
+        510.586669921875
+      ],
+      "preview_text": "figure 2.1. productivity and economic dynamism have slowed in the last 20 years",
+      "caption": "figure 2.1. productivity and economic dynamism have slowed in the last 20 years",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-69-0.png",
+      "meta": {
+        "area_frac": 0.291,
+        "aspect": 1.63,
+        "text_lines": 6,
+        "text_chars": 575,
+        "text_ratio": 0.219
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-72-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 72,
+      "bbox": [
+        53.256476135253905,
+        160.4990673828125,
+        544.4693615722656,
+        478.66668701171875
+      ],
+      "preview_text": "figure 2.2. the share of labour costs devoted to regulatory tasks has increased in many us states",
+      "caption": "figure 2.2. the share of labour costs devoted to regulatory tasks has increased in many us states",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-72-0.png",
+      "meta": {
+        "area_frac": 0.32,
+        "aspect": 1.52,
+        "text_lines": 7,
+        "text_chars": 450,
+        "text_ratio": 0.237
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-75-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 75,
+      "bbox": [
+        41.232481689453124,
+        63.39849090576172,
+        554.3835461425781,
+        496.5604553222656
+      ],
+      "preview_text": "figure 2.4. the costs of regulation in europe and australia are similar to the united states",
+      "caption": "figure 2.4. the costs of regulation in europe and australia are similar to the united states",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-75-0.png",
+      "meta": {
+        "area_frac": 0.479,
+        "aspect": 1.11,
+        "text_lines": 8,
+        "text_chars": 847,
+        "text_ratio": 0.336
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-77-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 77,
+      "bbox": [
+        53.256476135253905,
+        186.5391064453125,
+        544.7474987792968,
+        707.0404663085938
+      ],
+      "preview_text": "figure 2.6. rising regulatory compliance costs have suppressed productivity and business",
+      "caption": "figure 2.6. rising regulatory compliance costs have suppressed productivity and business",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-77-0.png",
+      "meta": {
+        "area_frac": 0.512,
+        "aspect": 0.95,
+        "text_lines": 7,
+        "text_chars": 549,
+        "text_ratio": 0.382
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-77-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 77,
+      "bbox": [
+        23.492674865722652,
+        163.2000791015625,
+        574.511300048828,
+        419.817583984375
+      ],
+      "preview_text": "dynamism in the United States over the past decade",
+      "caption": "dynamism in the United States over the past decade",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-77-1.png",
+      "meta": {
+        "area_frac": 0.177,
+        "aspect": 2.61,
+        "text_lines": 4,
+        "text_chars": 332,
+        "text_ratio": 0.231
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-79-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 79,
+      "bbox": [
+        41.232481689453124,
+        63.39849090576172,
+        554.3835461425781,
+        442.32049560546875
+      ],
+      "preview_text": "figure 2.7. increases in resources devoted to regulation gradually reduce productivity and business",
+      "caption": "figure 2.7. increases in resources devoted to regulation gradually reduce productivity and business",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-79-0.png",
+      "meta": {
+        "area_frac": 0.429,
+        "aspect": 1.24,
+        "text_lines": 13,
+        "text_chars": 1356,
+        "text_ratio": 0.521
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-80-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 80,
+      "bbox": [
+        53.256476135253905,
+        250.70849609375,
+        541.9855358886718,
+        450.92926025390625
+      ],
+      "preview_text": "figure 2.8. a regulatory reset to restore productivity and dynamism prospects",
+      "caption": "figure 2.8. a regulatory reset to restore productivity and dynamism prospects",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-80-0.png",
+      "meta": {
+        "area_frac": 0.193,
+        "aspect": 2.49,
+        "text_lines": 15,
+        "text_chars": 469,
+        "text_ratio": 0.143
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-84-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 84,
+      "bbox": [
+        53.256476135253905,
+        290.6091290283203,
+        544.2954113769531,
+        599.1593017578125
+      ],
+      "preview_text": "figure 2.10. most countries still lack comprehensive legislation on lobbying activities and fail to",
+      "caption": "figure 2.10. most countries still lack comprehensive legislation on lobbying activities and fail to",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-84-0.png",
+      "meta": {
+        "area_frac": 0.311,
+        "aspect": 1.56,
+        "text_lines": 7,
+        "text_chars": 538,
+        "text_ratio": 0.177
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-86-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 86,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        539.1398937988281,
+        404.6266784667969
+      ],
+      "preview_text": "figure 2.11. deregulation has recently slowed, yet large regulatory barriers remain in services",
+      "caption": "figure 2.11. deregulation has recently slowed, yet large regulatory barriers remain in services",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-86-0.png",
+      "meta": {
+        "area_frac": 0.352,
+        "aspect": 1.35,
+        "text_lines": 9,
+        "text_chars": 742,
+        "text_ratio": 0.412
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-88-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 88,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        539.1398937988281,
+        437.1292724609375
+      ],
+      "preview_text": "figure 2.12. labour productivity gains from easing regulations in retail and professional services",
+      "caption": "figure 2.12. labour productivity gains from easing regulations in retail and professional services",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-88-0.png",
+      "meta": {
+        "area_frac": 0.356,
+        "aspect": 1.33,
+        "text_lines": 12,
+        "text_chars": 1130,
+        "text_ratio": 0.504
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-89-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 89,
+      "bbox": [
+        53.256476135253905,
+        256.70849609375,
+        539.1398937988281,
+        536.1292724609375
+      ],
+      "preview_text": "figure 2.13. insolvency regimes are more dynamism-friendly in some countries than others",
+      "caption": "figure 2.13. insolvency regimes are more dynamism-friendly in some countries than others",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-89-0.png",
+      "meta": {
+        "area_frac": 0.278,
+        "aspect": 1.71,
+        "text_lines": 6,
+        "text_chars": 441,
+        "text_ratio": 0.151
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-90-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 90,
+      "bbox": [
+        53.256476135253905,
+        108.5391064453125,
+        538.5817883300781,
+        390.5666809082031
+      ],
+      "preview_text": "figure 2.14. the extent of labour protection varies across countries",
+      "caption": "figure 2.14. the extent of labour protection varies across countries",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-90-0.png",
+      "meta": {
+        "area_frac": 0.28,
+        "aspect": 1.69,
+        "text_lines": 4,
+        "text_chars": 282,
+        "text_ratio": 0.106
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-93-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 93,
+      "bbox": [
+        53.256476135253905,
+        58.064753021240236,
+        538.5817883300781,
+        385.6466979980469
+      ],
+      "preview_text": "figure 2.15. digital investment has outpaced other investment types across the oecd, most",
+      "caption": "figure 2.15. digital investment has outpaced other investment types across the oecd, most",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-93-0.png",
+      "meta": {
+        "area_frac": 0.327,
+        "aspect": 1.45,
+        "text_lines": 8,
+        "text_chars": 659,
+        "text_ratio": 0.213
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-113-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 113,
+      "bbox": [
+        59.20923614501953,
+        492.5891094970703,
+        533.1871337890625,
+        737.7103271484375
+      ],
+      "preview_text": "Austria",
+      "caption": "Austria",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-113-0.png",
+      "meta": {
+        "area_frac": 0.174,
+        "aspect": 2.48,
+        "text_lines": 3,
+        "text_chars": 87,
+        "text_ratio": 0.041
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-116-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 116,
+      "bbox": [
+        59.20923614501953,
+        423.7284851074219,
+        532.6290283203125,
+        717.240478515625
+      ],
+      "preview_text": "Belgium",
+      "caption": "Belgium",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-116-0.png",
+      "meta": {
+        "area_frac": 0.138,
+        "aspect": 3.07,
+        "text_lines": 4,
+        "text_chars": 288,
+        "text_ratio": 0.147
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-126-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 126,
+      "bbox": [
+        59.20923614501953,
+        475.7284851074219,
+        532.6290283203125,
+        733.5604858398438
+      ],
+      "preview_text": "Canada 1",
+      "caption": "Canada 1",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-126-0.png",
+      "meta": {
+        "area_frac": 0.099,
+        "aspect": 1.3,
+        "text_lines": 4,
+        "text_chars": 115,
+        "text_ratio": 0.051
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-137-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 137,
+      "bbox": [
+        59.20923614501953,
+        449.64849853515625,
+        532.6290283203125,
+        726.8404541015625
+      ],
+      "preview_text": "Colombia",
+      "caption": "Colombia",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-137-0.png",
+      "meta": {
+        "area_frac": 0.136,
+        "aspect": 3.04,
+        "text_lines": 3,
+        "text_chars": 249,
+        "text_ratio": 0.122
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-140-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 140,
+      "bbox": [
+        59.20923614501953,
+        444.5891094970703,
+        532.6290283203125,
+        733.2005004882812
+      ],
+      "preview_text": "Costa Rica",
+      "caption": "Costa Rica",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-140-0.png",
+      "meta": {
+        "area_frac": 0.158,
+        "aspect": 2.78,
+        "text_lines": 6,
+        "text_chars": 475,
+        "text_ratio": 0.211
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-149-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 149,
+      "bbox": [
+        59.20923614501953,
+        476.6291180419922,
+        532.6290283203125,
+        737.7103271484375
+      ],
+      "preview_text": "Denmark",
+      "caption": "Denmark",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-149-0.png",
+      "meta": {
+        "area_frac": 0.186,
+        "aspect": 2.37,
+        "text_lines": 4,
+        "text_chars": 110,
+        "text_ratio": 0.053
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-152-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 152,
+      "bbox": [
+        59.209234924316405,
+        463.5491009521484,
+        538.5817883300781,
+        721.2005004882812
+      ],
+      "preview_text": "Estonia",
+      "caption": "Estonia",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-152-0.png",
+      "meta": {
+        "area_frac": 0.183,
+        "aspect": 2.41,
+        "text_lines": 4,
+        "text_chars": 101,
+        "text_ratio": 0.052
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-156-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 156,
+      "bbox": [
+        59.20923614501953,
+        58.064753021240236,
+        532.6290283203125,
+        356.9084777832031
+      ],
+      "preview_text": "Euro area 1",
+      "caption": "Euro area 1",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-156-0.png",
+      "meta": {
+        "area_frac": 0.094,
+        "aspect": 1.41,
+        "text_lines": 8,
+        "text_chars": 486,
+        "text_ratio": 0.229
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-176-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 176,
+      "bbox": [
+        59.20923614501953,
+        456.7284851074219,
+        532.6290283203125,
+        729.240478515625
+      ],
+      "preview_text": "Iceland",
+      "caption": "Iceland",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-176-0.png",
+      "meta": {
+        "area_frac": 0.128,
+        "aspect": 3.23,
+        "text_lines": 4,
+        "text_chars": 316,
+        "text_ratio": 0.135
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-190-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 190,
+      "bbox": [
+        65.16199493408203,
+        439.6884765625,
+        532.6290283203125,
+        722.1604614257812
+      ],
+      "preview_text": "Israel",
+      "caption": "Israel",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-190-0.png",
+      "meta": {
+        "area_frac": 0.113,
+        "aspect": 3.0,
+        "text_lines": 3,
+        "text_chars": 231,
+        "text_ratio": 0.115
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-201-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 201,
+      "bbox": [
+        59.20923614501953,
+        445.7284851074219,
+        532.6290283203125,
+        730.2005004882812
+      ],
+      "preview_text": "Korea",
+      "caption": "Korea",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-201-0.png",
+      "meta": {
+        "area_frac": 0.186,
+        "aspect": 2.37,
+        "text_lines": 4,
+        "text_chars": 124,
+        "text_ratio": 0.063
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-222-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 222,
+      "bbox": [
+        59.20923614501953,
+        457.7284851074219,
+        532.6290283203125,
+        730.2005004882812
+      ],
+      "preview_text": "Netherlands",
+      "caption": "Netherlands",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-222-0.png",
+      "meta": {
+        "area_frac": 0.186,
+        "aspect": 2.37,
+        "text_lines": 4,
+        "text_chars": 118,
+        "text_ratio": 0.065
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-226-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 226,
+      "bbox": [
+        59.20923614501953,
+        58.064753021240236,
+        532.6290283203125,
+        322.8284912109375
+      ],
+      "preview_text": "New Zealand",
+      "caption": "New Zealand",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-226-0.png",
+      "meta": {
+        "area_frac": 0.102,
+        "aspect": 1.3,
+        "text_lines": 3,
+        "text_chars": 115,
+        "text_ratio": 0.083
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-237-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 237,
+      "bbox": [
+        59.20923614501953,
+        451.5491009521484,
+        532.6290283203125,
+        736.1964721679688
+      ],
+      "preview_text": "Poland",
+      "caption": "Poland",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-237-0.png",
+      "meta": {
+        "area_frac": 0.186,
+        "aspect": 2.37,
+        "text_lines": 4,
+        "text_chars": 106,
+        "text_ratio": 0.054
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-240-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 240,
+      "bbox": [
+        59.20923614501953,
+        442.7284851074219,
+        532.6290283203125,
+        716.1604614257812
+      ],
+      "preview_text": "Portugal",
+      "caption": "Portugal",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-240-0.png",
+      "meta": {
+        "area_frac": 0.186,
+        "aspect": 2.37,
+        "text_lines": 3,
+        "text_chars": 86,
+        "text_ratio": 0.046
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-243-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 243,
+      "bbox": [
+        59.209234924316405,
+        473.6291180419922,
+        538.5817883300781,
+        734.5205078125
+      ],
+      "preview_text": "Romania",
+      "caption": "Romania",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-243-0.png",
+      "meta": {
+        "area_frac": 0.186,
+        "aspect": 2.36,
+        "text_lines": 4,
+        "text_chars": 124,
+        "text_ratio": 0.057
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-247-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 247,
+      "bbox": [
+        59.20923614501953,
+        58.064753021240236,
+        532.6290283203125,
+        328.8284912109375
+      ],
+      "preview_text": "Slovak Republic",
+      "caption": "Slovak Republic",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-247-0.png",
+      "meta": {
+        "area_frac": 0.106,
+        "aspect": 1.26,
+        "text_lines": 3,
+        "text_chars": 130,
+        "text_ratio": 0.076
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-264-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 264,
+      "bbox": [
+        59.20923614501953,
+        432.5691204833984,
+        532.6290283203125,
+        727.2005004882812
+      ],
+      "preview_text": "Thailand",
+      "caption": "Thailand",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-264-0.png",
+      "meta": {
+        "area_frac": 0.172,
+        "aspect": 2.55,
+        "text_lines": 6,
+        "text_chars": 442,
+        "text_ratio": 0.197
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-270-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 270,
+      "bbox": [
+        59.20923614501953,
+        435.5891094970703,
+        532.6290283203125,
+        709.2005004882812
+      ],
+      "preview_text": "Ukraine",
+      "caption": "Ukraine",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-chart-270-0.png",
+      "meta": {
+        "area_frac": 0.174,
+        "aspect": 2.5,
+        "text_lines": 3,
+        "text_chars": 128,
+        "text_ratio": 0.067
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-14-0",
+      "kind": "table",
+      "type": "table",
+      "page": 14,
+      "bbox": [
+        65.16199493408203,
+        66.67845916748047,
+        530.14501953125,
+        484.7304992675781
+      ],
+      "preview_text": "Table 1.1. Global | GDP growth | is projecte | d to mo | derate nex | t yea\n |  |  |  |  | \n |  | A v e ra g e |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-14-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 53,
+        "cols": 9,
+        "non_empty_cells": 334,
+        "numeric_ratio": 0.113,
+        "avg_words_per_cell": 3.47,
+        "index_page_ratio": 0.02,
+        "text_len": 3562,
+        "area_frac": 0.6783,
+        "aspect": 0.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-108-0",
+      "kind": "table",
+      "type": "table",
+      "page": 108,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.093994140625,
+        332.9104919433594
+      ],
+      "preview_text": "Argent | ina: Demand, o | utput and pric | es |  | \n |  |  |  |  | \n |  |  |  | 2 0 2 2 2 | 0 2 3",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-108-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 46,
+        "cols": 10,
+        "non_empty_cells": 361,
+        "numeric_ratio": 0.09,
+        "avg_words_per_cell": 3.02,
+        "index_page_ratio": 0.13,
+        "text_len": 3644,
+        "area_frac": 0.6776,
+        "aspect": 0.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-111-0",
+      "kind": "table",
+      "type": "table",
+      "page": 111,
+      "bbox": [
+        65.16199493408203,
+        344.8684997558594,
+        530.052001953125,
+        675.8004760742188
+      ],
+      "preview_text": "11 | 0 \uf07c |  |  |  | \n |  |  |  |  | \nA | ustralia |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-111-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 34,
+        "cols": 11,
+        "non_empty_cells": 245,
+        "numeric_ratio": 0.196,
+        "avg_words_per_cell": 1.37,
+        "index_page_ratio": 0.0,
+        "text_len": 1617,
+        "area_frac": 0.6212,
+        "aspect": 0.57
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-114-0",
+      "kind": "table",
+      "type": "table",
+      "page": 114,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        529.9920654296875,
+        427.490478515625
+      ],
+      "preview_text": "Aust | ria: Demand, output and | pri | ces |  | \n |  |  |  |  | \n |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-114-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 50,
+        "cols": 14,
+        "non_empty_cells": 506,
+        "numeric_ratio": 0.086,
+        "avg_words_per_cell": 3.08,
+        "index_page_ratio": 0.1,
+        "text_len": 4407,
+        "area_frac": 0.678,
+        "aspect": 0.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-117-0",
+      "kind": "table",
+      "type": "table",
+      "page": 117,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.1345825195312,
+        418.25048828125
+      ],
+      "preview_text": "1 | 16 \uf07c |  |  |  | \n |  |  |  |  | \nB | elgium: Demand, outpu | t and pri | ces |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-117-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 12,
+        "non_empty_cells": 360,
+        "numeric_ratio": 0.097,
+        "avg_words_per_cell": 3.86,
+        "index_page_ratio": 0.0,
+        "text_len": 3889,
+        "area_frac": 0.7027,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-120-0",
+      "kind": "table",
+      "type": "table",
+      "page": 120,
+      "bbox": [
+        65.16199493408203,
+        341.8684997558594,
+        529.9410400390625,
+        641.720458984375
+      ],
+      "preview_text": "Brazil 1 |  |  |  |  | \n |  |  |  |  | \n1. Moving qua | rte | rly data. |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-120-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 30,
+        "cols": 11,
+        "non_empty_cells": 212,
+        "numeric_ratio": 0.161,
+        "avg_words_per_cell": 3.53,
+        "index_page_ratio": 0.59,
+        "text_len": 1827,
+        "area_frac": 0.5971,
+        "aspect": 0.59
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-124-0",
+      "kind": "table",
+      "type": "table",
+      "page": 124,
+      "bbox": [
+        65.16199493408203,
+        361.3085021972656,
+        530.0640869140625,
+        713.00048828125
+      ],
+      "preview_text": "1. Insuf | ficient Foreign Demand indicato | r represents | the p | erc | ent\nfactor t | o their production growth. |  |  |  | \n2. 3-mo | nth moving average. |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-124-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 36,
+        "cols": 13,
+        "non_empty_cells": 269,
+        "numeric_ratio": 0.115,
+        "avg_words_per_cell": 3.89,
+        "index_page_ratio": 0.08,
+        "text_len": 2484,
+        "area_frac": 0.4097,
+        "aspect": 0.84
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-127-0",
+      "kind": "table",
+      "type": "table",
+      "page": 127,
+      "bbox": [
+        65.16199493408203,
+        66.67845916748047,
+        530.0580444335938,
+        398.7904968261719
+      ],
+      "preview_text": "126 \uf07c |  |  |  |  | \n |  |  |  |  | \nCanada: | Demand, out | put a | nd pric | es | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-127-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 34,
+        "cols": 10,
+        "non_empty_cells": 205,
+        "numeric_ratio": 0.147,
+        "avg_words_per_cell": 4.18,
+        "index_page_ratio": 0.0,
+        "text_len": 2123,
+        "area_frac": 0.6246,
+        "aspect": 0.57
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-131-0",
+      "kind": "table",
+      "type": "table",
+      "page": 131,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.1231689453125,
+        378.1504821777344
+      ],
+      "preview_text": "130 \uf07c |  |  |  |  | \n |  |  |  |  | \nChile: Deman | d, output a | nd pric | es |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-131-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 12,
+        "non_empty_cells": 377,
+        "numeric_ratio": 0.106,
+        "avg_words_per_cell": 1.98,
+        "index_page_ratio": 0.0,
+        "text_len": 3328,
+        "area_frac": 0.7057,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-134-0",
+      "kind": "table",
+      "type": "table",
+      "page": 134,
+      "bbox": [
+        65.16199493408203,
+        339.8284912109375,
+        529.9920654296875,
+        631.5205078125
+      ],
+      "preview_text": "C | hin | a 1 |  |  | \n |  |  |  |  | \nSo | urc | e: CEIC. |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-134-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 27,
+        "cols": 22,
+        "non_empty_cells": 308,
+        "numeric_ratio": 0.089,
+        "avg_words_per_cell": 3.01,
+        "index_page_ratio": 0.0,
+        "text_len": 2123,
+        "area_frac": 0.5962,
+        "aspect": 0.59
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-138-0",
+      "kind": "table",
+      "type": "table",
+      "page": 138,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.0908813476562,
+        378.1504821777344
+      ],
+      "preview_text": " |  |  |  |  | \n |  |  |  |  | \nColombia: Dem | and, outp | ut | and pr | ices | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-138-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 11,
+        "non_empty_cells": 370,
+        "numeric_ratio": 0.112,
+        "avg_words_per_cell": 1.89,
+        "index_page_ratio": 0.0,
+        "text_len": 3232,
+        "area_frac": 0.7056,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-141-0",
+      "kind": "table",
+      "type": "table",
+      "page": 141,
+      "bbox": [
+        65.16199493408203,
+        66.67845916748047,
+        530.1119995117188,
+        387.1504821777344
+      ],
+      "preview_text": "140 \uf07c |  |  |  |  | \n |  |  |  |  | \nCosta Rica: | Demand, | output | and prices |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-141-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 10,
+        "non_empty_cells": 323,
+        "numeric_ratio": 0.109,
+        "avg_words_per_cell": 2.18,
+        "index_page_ratio": 0.0,
+        "text_len": 3216,
+        "area_frac": 0.7057,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-144-0",
+      "kind": "table",
+      "type": "table",
+      "page": 144,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        529.9920654296875,
+        430.25048828125
+      ],
+      "preview_text": " |  |  |  |  | \n |  |  |  |  | \nCroatia: Dem | and, output and p | rices |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-144-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 50,
+        "cols": 11,
+        "non_empty_cells": 391,
+        "numeric_ratio": 0.092,
+        "avg_words_per_cell": 3.53,
+        "index_page_ratio": 0.0,
+        "text_len": 4025,
+        "area_frac": 0.7054,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-147-0",
+      "kind": "table",
+      "type": "table",
+      "page": 147,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.1661376953125,
+        418.25048828125
+      ],
+      "preview_text": "Czec | hia: Demand, output a | nd prices |  |  | \n |  |  |  |  | \n |  |  |  |  | 2 0 2",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-147-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 10,
+        "non_empty_cells": 345,
+        "numeric_ratio": 0.094,
+        "avg_words_per_cell": 3.99,
+        "index_page_ratio": 0.1,
+        "text_len": 3981,
+        "area_frac": 0.6785,
+        "aspect": 0.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-150-0",
+      "kind": "table",
+      "type": "table",
+      "page": 150,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.0460815429688,
+        418.25048828125
+      ],
+      "preview_text": "Denmark: Demand | , output and pr | ices |  |  | \n |  |  |  |  | \n |  |  |  | 2 0 2 2 | 2 0 2 3 2",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-150-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 10,
+        "non_empty_cells": 352,
+        "numeric_ratio": 0.091,
+        "avg_words_per_cell": 3.82,
+        "index_page_ratio": 0.0,
+        "text_len": 3898,
+        "area_frac": 0.6783,
+        "aspect": 0.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-153-0",
+      "kind": "table",
+      "type": "table",
+      "page": 153,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.1060180664062,
+        418.25048828125
+      ],
+      "preview_text": "152 \uf07c |  |  |  |  | \n |  |  |  |  | \nEstonia: Demand, | output and pri | ces |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-153-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 47,
+        "cols": 10,
+        "non_empty_cells": 327,
+        "numeric_ratio": 0.087,
+        "avg_words_per_cell": 4.13,
+        "index_page_ratio": 0.42,
+        "text_len": 3864,
+        "area_frac": 0.7055,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-156-0",
+      "kind": "table",
+      "type": "table",
+      "page": 156,
+      "bbox": [
+        65.16199493408203,
+        367.9084777832031,
+        530.2562866210938,
+        721.0364990234375
+      ],
+      "preview_text": " |  |  |  |  | \n |  |  |  |  | \nEuro ar | ea 1 |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-156-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 40,
+        "cols": 14,
+        "non_empty_cells": 323,
+        "numeric_ratio": 0.14,
+        "avg_words_per_cell": 1.44,
+        "index_page_ratio": 0.0,
+        "text_len": 2216,
+        "area_frac": 0.7059,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-160-0",
+      "kind": "table",
+      "type": "table",
+      "page": 160,
+      "bbox": [
+        65.16199493408203,
+        315.8284912109375,
+        530.0970458984375,
+        707.9605102539062
+      ],
+      "preview_text": "ourc | e: Statistics Finland; a | nd OECD ST | EP 118 dat | abase. | \n |  |  |  |  | \n |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-160-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 33,
+        "cols": 17,
+        "non_empty_cells": 321,
+        "numeric_ratio": 0.129,
+        "avg_words_per_cell": 3.23,
+        "index_page_ratio": 0.0,
+        "text_len": 2529,
+        "area_frac": 0.4657,
+        "aspect": 0.96
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-163-0",
+      "kind": "table",
+      "type": "table",
+      "page": 163,
+      "bbox": [
+        65.16199493408203,
+        316.1884765625,
+        530.0100708007812,
+        677.1204833984375
+      ],
+      "preview_text": "162 \uf07c |  |  |  |  | \n |  |  |  |  | \nFran | ce 1 |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-163-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 36,
+        "cols": 16,
+        "non_empty_cells": 293,
+        "numeric_ratio": 0.129,
+        "avg_words_per_cell": 3.85,
+        "index_page_ratio": 0.0,
+        "text_len": 2653,
+        "area_frac": 0.6246,
+        "aspect": 0.57
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-167-0",
+      "kind": "table",
+      "type": "table",
+      "page": 167,
+      "bbox": [
+        65.16199493408203,
+        339.8284912109375,
+        530.0100708007812,
+        711.5604858398438
+      ],
+      "preview_text": "166 \uf07c |  |  |  |  | \n |  |  |  |  | \nGermany | 1 |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-167-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 36,
+        "cols": 11,
+        "non_empty_cells": 256,
+        "numeric_ratio": 0.189,
+        "avg_words_per_cell": 1.44,
+        "index_page_ratio": 0.0,
+        "text_len": 1841,
+        "area_frac": 0.6195,
+        "aspect": 0.57
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-171-0",
+      "kind": "table",
+      "type": "table",
+      "page": 171,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.093994140625,
+        444.05047607421875
+      ],
+      "preview_text": "170 \uf07c |  |  |  |  | \n |  |  |  |  | \nGreece: Demand, | output and prices |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-171-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 52,
+        "cols": 8,
+        "non_empty_cells": 289,
+        "numeric_ratio": 0.092,
+        "avg_words_per_cell": 5.16,
+        "index_page_ratio": 0.0,
+        "text_len": 4295,
+        "area_frac": 0.7053,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-174-0",
+      "kind": "table",
+      "type": "table",
+      "page": 174,
+      "bbox": [
+        65.16199493408203,
+        66.67845916748047,
+        530.122314453125,
+        427.25048828125
+      ],
+      "preview_text": " |  |  |  |  | \n |  |  |  |  | \nHung | ary: Demand, outpu | t and pri | ce | s | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-174-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 12,
+        "non_empty_cells": 382,
+        "numeric_ratio": 0.103,
+        "avg_words_per_cell": 3.64,
+        "index_page_ratio": 0.0,
+        "text_len": 3915,
+        "area_frac": 0.7057,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-177-0",
+      "kind": "table",
+      "type": "table",
+      "page": 177,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.1019287109375,
+        388.4704895019531
+      ],
+      "preview_text": "176 \uf07c |  |  |  |  | \n |  |  |  |  | \nIceland | : Demand, output a | nd prices |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-177-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 11,
+        "non_empty_cells": 365,
+        "numeric_ratio": 0.095,
+        "avg_words_per_cell": 3.36,
+        "index_page_ratio": 0.0,
+        "text_len": 3718,
+        "area_frac": 0.7056,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-180-0",
+      "kind": "table",
+      "type": "table",
+      "page": 180,
+      "bbox": [
+        65.16199493408203,
+        372.8284912109375,
+        530.112060546875,
+        702.4404907226562
+      ],
+      "preview_text": "1. Year-on-year growt | h rates. T | he su | m of components m | ay d | eviate from observed\nprocedures and direct/ | indirect se | asona | l adjustment method | s. | \n2. Year-on-year growt | h rates. Th | e shad | ed area correspond | s to | the tolerance band aro",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-180-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 33,
+        "cols": 11,
+        "non_empty_cells": 235,
+        "numeric_ratio": 0.167,
+        "avg_words_per_cell": 1.55,
+        "index_page_ratio": 0.0,
+        "text_len": 1786,
+        "area_frac": 0.4082,
+        "aspect": 0.86
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-184-0",
+      "kind": "table",
+      "type": "table",
+      "page": 184,
+      "bbox": [
+        65.16199493408203,
+        372.8284912109375,
+        530.093994140625,
+        681.6804809570312
+      ],
+      "preview_text": "1. Year-on-year | growth rates. Th | e sum of components may d | eviate from observed | GDP gr | owth be\nprocedures and d | irect/indirect sea | sonal adjustment methods. |  |  | \n2. Annual rates. T | he shaded area | corresponds to the central ba | nk\u2019s inflation tolerance | band. | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-184-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 31,
+        "cols": 9,
+        "non_empty_cells": 197,
+        "numeric_ratio": 0.192,
+        "avg_words_per_cell": 1.58,
+        "index_page_ratio": 0.0,
+        "text_len": 1562,
+        "area_frac": 0.4082,
+        "aspect": 0.86
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-188-0",
+      "kind": "table",
+      "type": "table",
+      "page": 188,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.2562866210938,
+        448.25048828125
+      ],
+      "preview_text": " |  |  |  |  | \n |  |  |  |  | \nIreland: Demand, o | utput and pri | ces |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-188-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 52,
+        "cols": 11,
+        "non_empty_cells": 393,
+        "numeric_ratio": 0.086,
+        "avg_words_per_cell": 3.94,
+        "index_page_ratio": 0.0,
+        "text_len": 4421,
+        "area_frac": 0.7059,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-191-0",
+      "kind": "table",
+      "type": "table",
+      "page": 191,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.1271362304688,
+        378.1504821777344
+      ],
+      "preview_text": "190 \uf07c |  |  |  |  | \n |  |  |  |  | \nIsrael: Dema | nd, output | and prices |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-191-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 49,
+        "cols": 10,
+        "non_empty_cells": 374,
+        "numeric_ratio": 0.114,
+        "avg_words_per_cell": 1.94,
+        "index_page_ratio": 0.0,
+        "text_len": 3416,
+        "area_frac": 0.7057,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-194-0",
+      "kind": "table",
+      "type": "table",
+      "page": 194,
+      "bbox": [
+        65.16199493408203,
+        333.8284912109375,
+        529.9949951171875,
+        691.5205078125
+      ],
+      "preview_text": "urce: OECD Econ | omic Outlook 118 | database. |  |  | \n |  |  |  |  | \n |  |  |  |  | St",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-194-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 33,
+        "cols": 9,
+        "non_empty_cells": 217,
+        "numeric_ratio": 0.196,
+        "avg_words_per_cell": 1.52,
+        "index_page_ratio": 0.0,
+        "text_len": 1698,
+        "area_frac": 0.4004,
+        "aspect": 0.84
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-198-0",
+      "kind": "table",
+      "type": "table",
+      "page": 198,
+      "bbox": [
+        65.16199493408203,
+        341.50848388671875,
+        530.0339965820312,
+        664.6405029296875
+      ],
+      "preview_text": "Japan 1 |  |  |  |  | \n |  |  |  |  | \n1. The diffusi | on index subtracts the | num | ber | of | firms r",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-198-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 33,
+        "cols": 13,
+        "non_empty_cells": 249,
+        "numeric_ratio": 0.142,
+        "avg_words_per_cell": 3.49,
+        "index_page_ratio": 0.56,
+        "text_len": 2163,
+        "area_frac": 0.5971,
+        "aspect": 0.59
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-202-0",
+      "kind": "table",
+      "type": "table",
+      "page": 202,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.0640869140625,
+        389.7904968261719
+      ],
+      "preview_text": "orea: Demand, output | an | d | prices |  | \n |  |  |  |  | \n |  |  |  |  | 2 0 2 2",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-202-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 47,
+        "cols": 10,
+        "non_empty_cells": 328,
+        "numeric_ratio": 0.09,
+        "avg_words_per_cell": 3.65,
+        "index_page_ratio": 0.0,
+        "text_len": 3691,
+        "area_frac": 0.6666,
+        "aspect": 0.66
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-205-0",
+      "kind": "table",
+      "type": "table",
+      "page": 205,
+      "bbox": [
+        65.16199493408203,
+        376.7884826660156,
+        530.1060180664062,
+        728.4765014648438
+      ],
+      "preview_text": "Note: Core inflatio | n ref | ers to the h | armonised index of | consumer prices | excluding food,\nmonthly wages a | nd sal | aries of em | ployees. The right | -hand panel sho | ws the projected\nFacility funds and | defe | nce spendi | ng in line with Latv | ia\u2019s national esc | ape clause from",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-205-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 38,
+        "cols": 11,
+        "non_empty_cells": 301,
+        "numeric_ratio": 0.136,
+        "avg_words_per_cell": 1.52,
+        "index_page_ratio": 0.0,
+        "text_len": 2211,
+        "area_frac": 0.408,
+        "aspect": 0.86
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-208-0",
+      "kind": "table",
+      "type": "table",
+      "page": 208,
+      "bbox": [
+        65.16199493408203,
+        352.7884826660156,
+        530.0969848632812,
+        704.48046875
+      ],
+      "preview_text": "Lithuania |  |  |  |  | \n |  |  |  |  | \n1. Harmonised | index of consume | r prices excluding food, energ | y, alcohol and tobacco. |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-208-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 36,
+        "cols": 9,
+        "non_empty_cells": 231,
+        "numeric_ratio": 0.166,
+        "avg_words_per_cell": 1.55,
+        "index_page_ratio": 0.0,
+        "text_len": 1866,
+        "area_frac": 0.5955,
+        "aspect": 0.59
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-211-0",
+      "kind": "table",
+      "type": "table",
+      "page": 211,
+      "bbox": [
+        65.16199493408203,
+        333.8284912109375,
+        530.091064453125,
+        685.5205078125
+      ],
+      "preview_text": "21 | 0 \uf07c |  |  |  | \n |  |  |  |  | \nLu | xembourg |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-211-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 35,
+        "cols": 11,
+        "non_empty_cells": 248,
+        "numeric_ratio": 0.182,
+        "avg_words_per_cell": 1.43,
+        "index_page_ratio": 0.0,
+        "text_len": 1734,
+        "area_frac": 0.6212,
+        "aspect": 0.57
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-214-0",
+      "kind": "table",
+      "type": "table",
+      "page": 214,
+      "bbox": [
+        65.16199493408203,
+        66.67845916748047,
+        530.11083984375,
+        375.510498046875
+      ],
+      "preview_text": "Malaysi | a: Demand, output a | nd prices |  |  | \n |  |  |  |  | \n |  |  | 2 0 2 2 |  | 2 0 2 3",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-214-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 43,
+        "cols": 12,
+        "non_empty_cells": 387,
+        "numeric_ratio": 0.098,
+        "avg_words_per_cell": 2.85,
+        "index_page_ratio": 0.0,
+        "text_len": 3312,
+        "area_frac": 0.6783,
+        "aspect": 0.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-217-0",
+      "kind": "table",
+      "type": "table",
+      "page": 217,
+      "bbox": [
+        65.16199493408203,
+        349.7884826660156,
+        529.9470825195312,
+        697.0404663085938
+      ],
+      "preview_text": "216 \uf07c |  |  |  |  | \n |  |  |  |  | \nMexi | co |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-217-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 36,
+        "cols": 14,
+        "non_empty_cells": 259,
+        "numeric_ratio": 0.131,
+        "avg_words_per_cell": 3.79,
+        "index_page_ratio": 0.06,
+        "text_len": 2385,
+        "area_frac": 0.6221,
+        "aspect": 0.57
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-220-0",
+      "kind": "table",
+      "type": "table",
+      "page": 220,
+      "bbox": [
+        65.16199493408203,
+        344.8684997558594,
+        530.010009765625,
+        602.00048828125
+      ],
+      "preview_text": "1. Four quarters movi | ng average. |  |  |  | \nSource: OECD Econo | mic Outloo | k 118 database; and | Haut commissaria | t a | u Plan, DCN.\n |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-220-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 32,
+        "cols": 11,
+        "non_empty_cells": 216,
+        "numeric_ratio": 0.124,
+        "avg_words_per_cell": 3.44,
+        "index_page_ratio": 0.0,
+        "text_len": 2187,
+        "area_frac": 0.4658,
+        "aspect": 0.98
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-223-0",
+      "kind": "table",
+      "type": "table",
+      "page": 223,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.1300048828125,
+        427.490478515625
+      ],
+      "preview_text": "Neth | erlands: Demand, outpu | t and price | s |  | \n |  |  |  |  | \n |  |  |  | 2 0 2 2 | 2 0 2 3",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-223-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 47,
+        "cols": 12,
+        "non_empty_cells": 385,
+        "numeric_ratio": 0.094,
+        "avg_words_per_cell": 3.71,
+        "index_page_ratio": 0.09,
+        "text_len": 3936,
+        "area_frac": 0.6783,
+        "aspect": 0.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-226-0",
+      "kind": "table",
+      "type": "table",
+      "page": 226,
+      "bbox": [
+        65.16199493408203,
+        333.8284912109375,
+        530.112060546875,
+        656.96044921875
+      ],
+      "preview_text": "New Zeal | and |  |  |  | \n |  |  |  |  | \nSource: Stati | stics New Zealand; R | ese | rve | Ban | k of Ne",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-226-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 30,
+        "cols": 13,
+        "non_empty_cells": 230,
+        "numeric_ratio": 0.148,
+        "avg_words_per_cell": 3.65,
+        "index_page_ratio": 0.53,
+        "text_len": 2031,
+        "area_frac": 0.5971,
+        "aspect": 0.59
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-229-0",
+      "kind": "table",
+      "type": "table",
+      "page": 229,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.0490112304688,
+        418.9704895019531
+      ],
+      "preview_text": "228 \uf07c |  |  |  |  | \n |  |  |  |  | \nNorw | ay: Demand, output | and pr | ices |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-229-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 50,
+        "cols": 13,
+        "non_empty_cells": 446,
+        "numeric_ratio": 0.098,
+        "avg_words_per_cell": 3.15,
+        "index_page_ratio": 0.0,
+        "text_len": 3977,
+        "area_frac": 0.7055,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-232-0",
+      "kind": "table",
+      "type": "table",
+      "page": 232,
+      "bbox": [
+        65.16199493408203,
+        350.8684997558594,
+        529.9170532226562,
+        680.48046875
+      ],
+      "preview_text": "ote: | Inflation refers to | Metro | politan L | ima area. | Data\nourc | e: INEI; and BCRP | . |  |  | \n |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-232-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 31,
+        "cols": 12,
+        "non_empty_cells": 226,
+        "numeric_ratio": 0.137,
+        "avg_words_per_cell": 3.81,
+        "index_page_ratio": 0.03,
+        "text_len": 2074,
+        "area_frac": 0.4033,
+        "aspect": 0.85
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-235-0",
+      "kind": "table",
+      "type": "table",
+      "page": 235,
+      "bbox": [
+        65.16199493408203,
+        355.7884826660156,
+        530.0940551757812,
+        644.720458984375
+      ],
+      "preview_text": "234 \uf07c |  |  |  |  | \n |  |  |  |  | \nPhilippines |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-235-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 31,
+        "cols": 9,
+        "non_empty_cells": 184,
+        "numeric_ratio": 0.2,
+        "avg_words_per_cell": 1.54,
+        "index_page_ratio": 0.0,
+        "text_len": 1423,
+        "area_frac": 0.6197,
+        "aspect": 0.57
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-238-0",
+      "kind": "table",
+      "type": "table",
+      "page": 238,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.0100708007812,
+        406.7104797363281
+      ],
+      "preview_text": "P | ola | nd: Demand, output a | nd prices |  | \n |  |  |  |  | \n |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-238-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 13,
+        "non_empty_cells": 435,
+        "numeric_ratio": 0.097,
+        "avg_words_per_cell": 3.2,
+        "index_page_ratio": 0.0,
+        "text_len": 3838,
+        "area_frac": 0.6566,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-241-0",
+      "kind": "table",
+      "type": "table",
+      "page": 241,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.175048828125,
+        427.490478515625
+      ],
+      "preview_text": "240 \uf07c |  |  |  |  | \n |  |  |  |  | \nPortugal: Demand, outp | ut and prices |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-241-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 51,
+        "cols": 11,
+        "non_empty_cells": 379,
+        "numeric_ratio": 0.096,
+        "avg_words_per_cell": 3.84,
+        "index_page_ratio": 0.0,
+        "text_len": 4221,
+        "area_frac": 0.7056,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-244-0",
+      "kind": "table",
+      "type": "table",
+      "page": 244,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.1420288085938,
+        425.81048583984375
+      ],
+      "preview_text": "Romania: Demand | , output a | n | d prices |  | \n |  |  |  |  | \n |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-244-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 11,
+        "non_empty_cells": 348,
+        "numeric_ratio": 0.105,
+        "avg_words_per_cell": 3.84,
+        "index_page_ratio": 0.0,
+        "text_len": 3939,
+        "area_frac": 0.6784,
+        "aspect": 0.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-247-0",
+      "kind": "table",
+      "type": "table",
+      "page": 247,
+      "bbox": [
+        65.16199493408203,
+        339.8284912109375,
+        530.0130615234375,
+        700.5205078125
+      ],
+      "preview_text": "24 | 6 \uf07c |  |  |  | \n |  |  |  |  | \nSl | ovak Republic |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-247-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 35,
+        "cols": 11,
+        "non_empty_cells": 247,
+        "numeric_ratio": 0.176,
+        "avg_words_per_cell": 1.47,
+        "index_page_ratio": 0.0,
+        "text_len": 1799,
+        "area_frac": 0.6212,
+        "aspect": 0.57
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-250-0",
+      "kind": "table",
+      "type": "table",
+      "page": 250,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.2562866210938,
+        418.25048828125
+      ],
+      "preview_text": " |  |  |  |  | \n |  |  |  |  | \nSlove | nia: Demand, output and | prices |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-250-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 50,
+        "cols": 8,
+        "non_empty_cells": 279,
+        "numeric_ratio": 0.09,
+        "avg_words_per_cell": 4.92,
+        "index_page_ratio": 0.0,
+        "text_len": 4146,
+        "area_frac": 0.7059,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-253-0",
+      "kind": "table",
+      "type": "table",
+      "page": 253,
+      "bbox": [
+        65.16199493408203,
+        66.67845916748047,
+        530.0580444335938,
+        375.510498046875
+      ],
+      "preview_text": "252 \uf07c |  |  |  |  | \n |  |  |  |  | \nSouth Africa | : Demand, out | put and price | s |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-253-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 8,
+        "non_empty_cells": 296,
+        "numeric_ratio": 0.099,
+        "avg_words_per_cell": 3.98,
+        "index_page_ratio": 0.35,
+        "text_len": 3749,
+        "area_frac": 0.6859,
+        "aspect": 0.63
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-256-0",
+      "kind": "table",
+      "type": "table",
+      "page": 256,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.0821533203125,
+        418.25048828125
+      ],
+      "preview_text": "Spain: Demand, | outp | ut and price | s |  | \n |  |  |  |  | \n |  |  |  |  | 2 0 2",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-256-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 46,
+        "cols": 12,
+        "non_empty_cells": 383,
+        "numeric_ratio": 0.098,
+        "avg_words_per_cell": 3.57,
+        "index_page_ratio": 0.42,
+        "text_len": 3829,
+        "area_frac": 0.6783,
+        "aspect": 0.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-259-0",
+      "kind": "table",
+      "type": "table",
+      "page": 259,
+      "bbox": [
+        65.16199493408203,
+        66.67845916748047,
+        529.9859619140625,
+        436.490478515625
+      ],
+      "preview_text": "258 \uf07c |  |  |  |  | \n |  |  |  |  | \nSwed | en: Demand, output and p | rices |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-259-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 10,
+        "non_empty_cells": 313,
+        "numeric_ratio": 0.101,
+        "avg_words_per_cell": 4.27,
+        "index_page_ratio": 0.0,
+        "text_len": 3793,
+        "area_frac": 0.6887,
+        "aspect": 0.63
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-262-0",
+      "kind": "table",
+      "type": "table",
+      "page": 262,
+      "bbox": [
+        65.16199493408203,
+        361.9084777832031,
+        529.9410400390625,
+        713.9605102539062
+      ],
+      "preview_text": "1. The | series represent the movem | ent | s in | the Swis | s fra\n(the rea | l indexes are the nominal i | nde | xes | adjusted | for\nSource | : FSO; and SNB. |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-262-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 34,
+        "cols": 13,
+        "non_empty_cells": 254,
+        "numeric_ratio": 0.135,
+        "avg_words_per_cell": 3.65,
+        "index_page_ratio": 0.15,
+        "text_len": 2291,
+        "area_frac": 0.4102,
+        "aspect": 0.86
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-265-0",
+      "kind": "table",
+      "type": "table",
+      "page": 265,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.1268920898438,
+        307.95050048828125
+      ],
+      "preview_text": "264 \uf07c |  |  |  |  | \n |  |  |  |  | \nThailand: De | mand, o | utput an | d prices |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-265-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 47,
+        "cols": 9,
+        "non_empty_cells": 330,
+        "numeric_ratio": 0.075,
+        "avg_words_per_cell": 2.21,
+        "index_page_ratio": 0.0,
+        "text_len": 3433,
+        "area_frac": 0.7057,
+        "aspect": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-268-0",
+      "kind": "table",
+      "type": "table",
+      "page": 268,
+      "bbox": [
+        65.16199493408203,
+        321.8284912109375,
+        529.9949951171875,
+        660.4404907226562
+      ],
+      "preview_text": "T\u00fcrkiye: De | mand | , outp | ut and | prices | \n |  |  |  |  | \n |  |  |  |  | 2022",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-268-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 28,
+        "cols": 11,
+        "non_empty_cells": 211,
+        "numeric_ratio": 0.235,
+        "avg_words_per_cell": 1.42,
+        "index_page_ratio": 0.0,
+        "text_len": 1382,
+        "area_frac": 0.3743,
+        "aspect": 0.94
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-274-0",
+      "kind": "table",
+      "type": "table",
+      "page": 274,
+      "bbox": [
+        65.16199493408203,
+        332.8684997558594,
+        530.10302734375,
+        665.00048828125
+      ],
+      "preview_text": "1. Survey measur | es of one-year | ahead CPI inflat | ion expectatio | ns. | \nSource: Bank of E | ngland; Office | for National Stat | istics; and You | Gov/Citigroup. | \n |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-274-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 31,
+        "cols": 10,
+        "non_empty_cells": 216,
+        "numeric_ratio": 0.193,
+        "avg_words_per_cell": 1.53,
+        "index_page_ratio": 0.0,
+        "text_len": 1631,
+        "area_frac": 0.4134,
+        "aspect": 0.85
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-278-0",
+      "kind": "table",
+      "type": "table",
+      "page": 278,
+      "bbox": [
+        65.16199493408203,
+        350.8684997558594,
+        530.1210327148438,
+        683.00048828125
+      ],
+      "preview_text": "1. Real GDP grow | th | ex. AI covers | real GDP gr | owth excluding in | formation processing\nSource: Bureau o | f La | bor Statistic | s; and Burea | u of Economic An | alysis.\n |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-278-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 31,
+        "cols": 11,
+        "non_empty_cells": 248,
+        "numeric_ratio": 0.193,
+        "avg_words_per_cell": 1.47,
+        "index_page_ratio": 0.0,
+        "text_len": 1674,
+        "area_frac": 0.4082,
+        "aspect": 0.86
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-282-0",
+      "kind": "table",
+      "type": "table",
+      "page": 282,
+      "bbox": [
+        65.16199493408203,
+        66.55846405029297,
+        530.2562866210938,
+        373.8304748535156
+      ],
+      "preview_text": " |  |  |  |  | \n |  |  |  |  | \nViet Nam: D | emand, output | and prices |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-economic-outlook-acig-pdf/candidates/oecd-economic-outlook-acig-pdf-table-282-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 9,
+        "non_empty_cells": 324,
+        "numeric_ratio": 0.089,
+        "avg_words_per_cell": 3.84,
+        "index_page_ratio": 0.0,
+        "text_len": 3868,
+        "area_frac": 0.7059,
+        "aspect": 0.65
+      }
+    }
+  ]
+}

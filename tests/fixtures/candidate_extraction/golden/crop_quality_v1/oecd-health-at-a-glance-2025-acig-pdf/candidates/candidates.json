@@ -1,0 +1,5572 @@
+{
+  "schema_version": "1.0",
+  "report_id": "oecd-health-at-a-glance-2025-acig-pdf",
+  "report_name": "oecd-health-at-a-glance-2025-acig-pdf",
+  "pdf_path": "C:\\Programing\\Market lense\\cache\\OECD - Health at a Glance 2025_ACIG.pdf",
+  "candidate_count": 229,
+  "chart_count": 216,
+  "table_count": 13,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-8-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 8,
+      "bbox": [
+        30.552481384277343,
+        361.5471496582031,
+        577.4426892089843,
+        721.3489379882812
+      ],
+      "preview_text": "figure 1. mapping health at a glance indicators to the oecd health system performance assessment framework",
+      "caption": "figure 1. mapping health at a glance indicators to the oecd health system performance assessment framework",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-8-0.png",
+      "meta": {
+        "area_frac": 0.397,
+        "aspect": 1.44,
+        "text_lines": 34,
+        "text_chars": 819,
+        "text_ratio": 0.453
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-13-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 13,
+      "bbox": [
+        36.50524017333984,
+        59.77115484619141,
+        556.8236096191406,
+        712.61321875
+      ],
+      "preview_text": "infographic 1. key facts and figures",
+      "caption": "infographic 1. key facts and figures",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-13-0.png",
+      "meta": {
+        "area_frac": 0.686,
+        "aspect": 0.75,
+        "text_lines": 144,
+        "text_chars": 2212,
+        "text_ratio": 0.983
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-16-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 16,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        315.948486328125
+      ],
+      "preview_text": "figure 1.1. interpretation of quadrant charts: health expenditure and health outcome variables",
+      "caption": "figure 1.1. interpretation of quadrant charts: health expenditure and health outcome variables",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-16-0.png",
+      "meta": {
+        "area_frac": 0.591,
+        "aspect": 0.96,
+        "text_lines": 21,
+        "text_chars": 528,
+        "text_ratio": 0.248
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-17-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 17,
+      "bbox": [
+        30.552481384277343,
+        158.6271209716797,
+        560.7426159667968,
+        389.030517578125
+      ],
+      "preview_text": "figure 1.2. health status across the oecd, 2023 (or nearest year)",
+      "caption": "figure 1.2. health status across the oecd, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-17-0.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 2.31,
+        "text_lines": 59,
+        "text_chars": 1023,
+        "text_ratio": 0.28
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-19-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 19,
+      "bbox": [
+        30.552481384277343,
+        136.54710388183594,
+        560.8132946777343,
+        380.3905029296875
+      ],
+      "preview_text": "figure 1.3. risk factors for health across the oecd, 2023 (or nearest year)",
+      "caption": "figure 1.3. risk factors for health across the oecd, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-19-0.png",
+      "meta": {
+        "area_frac": 0.261,
+        "aspect": 2.18,
+        "text_lines": 61,
+        "text_chars": 1101,
+        "text_ratio": 0.294
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-21-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 21,
+      "bbox": [
+        30.552481384277343,
+        169.54710388183594,
+        560.7511608886718,
+        410.510498046875
+      ],
+      "preview_text": "figure 1.4. access to care across the oecd, 2023 (or nearest year)",
+      "caption": "figure 1.4. access to care across the oecd, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-21-0.png",
+      "meta": {
+        "area_frac": 0.258,
+        "aspect": 2.21,
+        "text_lines": 59,
+        "text_chars": 1198,
+        "text_ratio": 0.34
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-23-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 23,
+      "bbox": [
+        30.552481384277343,
+        158.6271209716797,
+        523.8496105957031,
+        415.9104919433594
+      ],
+      "preview_text": "figure 1.5. quality of care across the oecd, 2023 (or nearest year)",
+      "caption": "figure 1.5. quality of care across the oecd, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-23-0.png",
+      "meta": {
+        "area_frac": 0.256,
+        "aspect": 1.92,
+        "text_lines": 72,
+        "text_chars": 1201,
+        "text_ratio": 0.31
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-25-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 25,
+      "bbox": [
+        30.552481384277343,
+        158.6271209716797,
+        560.7098400878906,
+        426.3504943847656
+      ],
+      "preview_text": "figure 1.6. health system capacity and resources across the oecd, 2023 (or nearest year)",
+      "caption": "figure 1.6. health system capacity and resources across the oecd, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-25-0.png",
+      "meta": {
+        "area_frac": 0.287,
+        "aspect": 1.98,
+        "text_lines": 69,
+        "text_chars": 990,
+        "text_ratio": 0.24
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-27-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 27,
+      "bbox": [
+        30.552481384277343,
+        210.58714294433594,
+        546.5683605957031,
+        469.48342749023436
+      ],
+      "preview_text": "figure 1.7. association between health spending and health outcome indicators",
+      "caption": "figure 1.7. association between health spending and health outcome indicators",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-27-0.png",
+      "meta": {
+        "area_frac": 0.262,
+        "aspect": 2.05,
+        "text_lines": 110,
+        "text_chars": 568,
+        "text_ratio": 0.187
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-28-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 28,
+      "bbox": [
+        30.552481384277343,
+        120.58714294433594,
+        548.8171398925781,
+        380.5884384765625
+      ],
+      "preview_text": "figure 1.8. association between health spending and access and quality indicators",
+      "caption": "figure 1.8. association between health spending and access and quality indicators",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-28-0.png",
+      "meta": {
+        "area_frac": 0.265,
+        "aspect": 2.05,
+        "text_lines": 107,
+        "text_chars": 648,
+        "text_ratio": 0.241
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-33-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 33,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.2847302246093,
+        359.6305236816406
+      ],
+      "preview_text": "figure 2.1. life expectancy differences at birth between women and men show more than three-fold variation across",
+      "caption": "figure 2.1. life expectancy differences at birth between women and men show more than three-fold variation across",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-33-0.png",
+      "meta": {
+        "area_frac": 0.342,
+        "aspect": 1.66,
+        "text_lines": 33,
+        "text_chars": 559,
+        "text_ratio": 0.352
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-33-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 33,
+      "bbox": [
+        30.55245849609375,
+        427.067138671875,
+        561.2907116699218,
+        721.3489379882812
+      ],
+      "preview_text": "figure 2.2. there is five-fold variation in the life expectancy gap at age 65 between men and women, from about 1 to",
+      "caption": "figure 2.2. there is five-fold variation in the life expectancy gap at age 65 between men and women, from about 1 to",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-33-1.png",
+      "meta": {
+        "area_frac": 0.328,
+        "aspect": 1.74,
+        "text_lines": 37,
+        "text_chars": 574,
+        "text_ratio": 0.362
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-34-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 34,
+      "bbox": [
+        30.552481384277343,
+        251.1471405029297,
+        567.1361706542968,
+        562.1722412109375
+      ],
+      "preview_text": "figure 2.3. gender life expectancy gaps narrowed in most oecd countries between 2013 and 2023, but widened in",
+      "caption": "figure 2.3. gender life expectancy gaps narrowed in most oecd countries between 2013 and 2023, but widened in",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-34-0.png",
+      "meta": {
+        "area_frac": 0.339,
+        "aspect": 1.72,
+        "text_lines": 16,
+        "text_chars": 385,
+        "text_ratio": 0.147
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-37-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 37,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.2877209472656,
+        337.3603820800781
+      ],
+      "preview_text": "figure 2.4. men face about 50% more cardiovascular disease mortality risk than women",
+      "caption": "figure 2.4. men face about 50% more cardiovascular disease mortality risk than women",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-37-0.png",
+      "meta": {
+        "area_frac": 0.318,
+        "aspect": 1.79,
+        "text_lines": 22,
+        "text_chars": 570,
+        "text_ratio": 0.269
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-37-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 37,
+      "bbox": [
+        30.552481384277343,
+        464.38714599609375,
+        561.2907116699218,
+        721.3489379882812
+      ],
+      "preview_text": "figure 2.5. cancer mortality across oecd countries, 2023 (or nearest year)",
+      "caption": "figure 2.5. cancer mortality across oecd countries, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-37-1.png",
+      "meta": {
+        "area_frac": 0.287,
+        "aspect": 1.98,
+        "text_lines": 23,
+        "text_chars": 467,
+        "text_ratio": 0.221
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-38-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 38,
+      "bbox": [
+        30.55245849609375,
+        252.2270965576172,
+        561.2907116699218,
+        498.5875244140625
+      ],
+      "preview_text": "figure 2.6. main causes of cancer mortality differ between men and women across oecd countries, 2023 (or nearest",
+      "caption": "figure 2.6. main causes of cancer mortality differ between men and women across oecd countries, 2023 (or nearest",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-38-0.png",
+      "meta": {
+        "area_frac": 0.271,
+        "aspect": 2.1,
+        "text_lines": 47,
+        "text_chars": 547,
+        "text_ratio": 0.157
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-39-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 39,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.7198498535156,
+        346.3603820800781
+      ],
+      "preview_text": "figure 2.7. the most common cancers vary by age group between men and women",
+      "caption": "figure 2.7. the most common cancers vary by age group between men and women",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-39-0.png",
+      "meta": {
+        "area_frac": 0.328,
+        "aspect": 1.74,
+        "text_lines": 80,
+        "text_chars": 1298,
+        "text_ratio": 0.405
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-40-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 40,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        342.59051513671875
+      ],
+      "preview_text": "figure 2.8. suicide rates remain two to eight times higher for men than women",
+      "caption": "figure 2.8. suicide rates remain two to eight times higher for men than women",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-40-0.png",
+      "meta": {
+        "area_frac": 0.324,
+        "aspect": 1.76,
+        "text_lines": 28,
+        "text_chars": 560,
+        "text_ratio": 0.3
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-40-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 40,
+      "bbox": [
+        30.552481384277343,
+        430.6671447753906,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 2.9. women are more likely to be admitted to hospital due to self-harm",
+      "caption": "figure 2.9. women are more likely to be admitted to hospital due to self-harm",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-40-1.png",
+      "meta": {
+        "area_frac": 0.324,
+        "aspect": 1.76,
+        "text_lines": 27,
+        "text_chars": 601,
+        "text_ratio": 0.322
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-42-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 42,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        631.8403930664062
+      ],
+      "preview_text": "figure 2.10. life expectancy with activity limitation and healthy life years at age 60, 2021",
+      "caption": "figure 2.10. life expectancy with activity limitation and healthy life years at age 60, 2021",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-42-0.png",
+      "meta": {
+        "area_frac": 0.642,
+        "aspect": 0.89,
+        "text_lines": 269,
+        "text_chars": 1581,
+        "text_ratio": 0.683
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-43-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 43,
+      "bbox": [
+        30.552481384277343,
+        377.30712890625,
+        561.7198498535156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 2.11. women report lower levels of well-being compared to men in most countries participating in paris",
+      "caption": "figure 2.11. women report lower levels of well-being compared to men in most countries participating in paris",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-43-0.png",
+      "meta": {
+        "area_frac": 0.37,
+        "aspect": 1.54,
+        "text_lines": 29,
+        "text_chars": 942,
+        "text_ratio": 0.278
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-44-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 44,
+      "bbox": [
+        30.552481384277343,
+        122.02714538574219,
+        566.2868054199218,
+        446.2705078125
+      ],
+      "preview_text": "figure 2.12. women report lower levels of social functioning compared to men in most countries participating in paris",
+      "caption": "figure 2.12. women report lower levels of social functioning compared to men in most countries participating in paris",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-44-0.png",
+      "meta": {
+        "area_frac": 0.36,
+        "aspect": 1.61,
+        "text_lines": 35,
+        "text_chars": 983,
+        "text_ratio": 0.263
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-45-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 45,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.7155163574218,
+        423.4704895019531
+      ],
+      "preview_text": "figure 2.13. moderate or severe symptoms of depression are more common in women across all countries, 2019 (or",
+      "caption": "figure 2.13. moderate or severe symptoms of depression are more common in women across all countries, 2019 (or",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-45-0.png",
+      "meta": {
+        "area_frac": 0.413,
+        "aspect": 1.38,
+        "text_lines": 29,
+        "text_chars": 1541,
+        "text_ratio": 0.521
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-46-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 46,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        485.13226318359375
+      ],
+      "preview_text": "figure 2.14. related chronic conditions are more common in men, whereas unrelated chronic conditions predominate",
+      "caption": "figure 2.14. related chronic conditions are more common in men, whereas unrelated chronic conditions predominate",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-46-0.png",
+      "meta": {
+        "area_frac": 0.473,
+        "aspect": 1.21,
+        "text_lines": 63,
+        "text_chars": 1780,
+        "text_ratio": 0.491
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-49-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 49,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        565.8024914550781,
+        415.72039794921875
+      ],
+      "preview_text": "figure 2.15. differences in general health between mid/high and low education levels vary more than four-fold between",
+      "caption": "figure 2.15. differences in general health between mid/high and low education levels vary more than four-fold between",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-49-0.png",
+      "meta": {
+        "area_frac": 0.408,
+        "aspect": 1.42,
+        "text_lines": 21,
+        "text_chars": 1044,
+        "text_ratio": 0.384
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-50-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 50,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        344.38714599609375
+      ],
+      "preview_text": "figure 2.16. heart attack 30-day mortality rates, 2023 (or nearest year)",
+      "caption": "figure 2.16. heart attack 30-day mortality rates, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-50-0.png",
+      "meta": {
+        "area_frac": 0.32,
+        "aspect": 1.78,
+        "text_lines": 30,
+        "text_chars": 696,
+        "text_ratio": 0.49
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-50-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 50,
+      "bbox": [
+        30.552481384277343,
+        342.6257611083984,
+        561.7198498535156,
+        644.2734985351562
+      ],
+      "preview_text": "figure 2.17. ischaemic stroke 30-day mortality rates, 2023 (or nearest year)",
+      "caption": "figure 2.17. ischaemic stroke 30-day mortality rates, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-50-1.png",
+      "meta": {
+        "area_frac": 0.314,
+        "aspect": 1.82,
+        "text_lines": 28,
+        "text_chars": 684,
+        "text_ratio": 0.482
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-51-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 51,
+      "bbox": [
+        30.552481384277343,
+        293.62713623046875,
+        567.4798596191406,
+        661.4334716796875
+      ],
+      "preview_text": "figure 2.18. while gender differences in experiences with quality of care are small, fewer women than men have trust",
+      "caption": "figure 2.18. while gender differences in experiences with quality of care are small, fewer women than men have trust",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-51-0.png",
+      "meta": {
+        "area_frac": 0.391,
+        "aspect": 1.49,
+        "text_lines": 23,
+        "text_chars": 1040,
+        "text_ratio": 0.302
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-60-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 60,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        590.6202404785156,
+        703.3134765625
+      ],
+      "preview_text": "figure 3.1. life expectancy at birth (2023 or nearest year) and changes over time (2010-2019 and 2019-2023)",
+      "caption": "figure 3.1. life expectancy at birth (2023 or nearest year) and changes over time (2010-2019 and 2019-2023)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-60-0.png",
+      "meta": {
+        "area_frac": 0.741,
+        "aspect": 0.86,
+        "text_lines": 176,
+        "text_chars": 1359,
+        "text_ratio": 0.973
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-62-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 62,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        480.1071472167969
+      ],
+      "preview_text": "figure 3.2. main causes of mortality across 37 oecd countries, 2023 (or nearest year)",
+      "caption": "figure 3.2. main causes of mortality across 37 oecd countries, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-62-0.png",
+      "meta": {
+        "area_frac": 0.476,
+        "aspect": 1.2,
+        "text_lines": 7,
+        "text_chars": 343,
+        "text_ratio": 0.392
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-62-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 62,
+      "bbox": [
+        30.552481384277343,
+        484.3444500732422,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 3.3. main causes of mortality by country, 2023 (or nearest year)",
+      "caption": "figure 3.3. main causes of mortality by country, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-62-1.png",
+      "meta": {
+        "area_frac": 0.254,
+        "aspect": 2.23,
+        "text_lines": 63,
+        "text_chars": 494,
+        "text_ratio": 0.565
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-64-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 64,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        269.50714111328125
+      ],
+      "preview_text": "figure 3.4. mortality from avoidable causes, 2023 (or nearest year)",
+      "caption": "figure 3.4. mortality from avoidable causes, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-64-0.png",
+      "meta": {
+        "area_frac": 0.244,
+        "aspect": 2.33,
+        "text_lines": 63,
+        "text_chars": 481,
+        "text_ratio": 0.406
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-64-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 64,
+      "bbox": [
+        30.552481384277343,
+        276.8644696044922,
+        561.2817395019531,
+        492.34710693359375
+      ],
+      "preview_text": "figure 3.5. mortality from preventable causes, 2023 and 2013 (or nearest year)",
+      "caption": "figure 3.5. mortality from preventable causes, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-64-1.png",
+      "meta": {
+        "area_frac": 0.239,
+        "aspect": 2.39,
+        "text_lines": 18,
+        "text_chars": 339,
+        "text_ratio": 0.286
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-64-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 64,
+      "bbox": [
+        30.552481384277343,
+        499.7044354248047,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 3.6. mortality from treatable causes, 2023 and 2013 (or nearest year)",
+      "caption": "figure 3.6. mortality from treatable causes, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-64-2.png",
+      "meta": {
+        "area_frac": 0.24,
+        "aspect": 2.36,
+        "text_lines": 15,
+        "text_chars": 328,
+        "text_ratio": 0.277
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-66-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 66,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        524.3934936523438
+      ],
+      "preview_text": "figure 3.7. mortality from circulatory diseases, 2023 and 2013 (or nearest year)",
+      "caption": "figure 3.7. mortality from circulatory diseases, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-66-0.png",
+      "meta": {
+        "area_frac": 0.502,
+        "aspect": 1.12,
+        "text_lines": 196,
+        "text_chars": 1380,
+        "text_ratio": 0.973
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-68-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 68,
+      "bbox": [
+        30.552481384277343,
+        284.5444622802734,
+        561.2787487792968,
+        501.46710205078125
+      ],
+      "preview_text": "figure 3.9. cancer incidence, 2022",
+      "caption": "figure 3.9. cancer incidence, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-68-0.png",
+      "meta": {
+        "area_frac": 0.24,
+        "aspect": 2.37,
+        "text_lines": 64,
+        "text_chars": 521,
+        "text_ratio": 0.294
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-68-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 68,
+      "bbox": [
+        30.552481384277343,
+        505.8237286376953,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 3.10. cancer mortality, 2023 (or nearest year)",
+      "caption": "figure 3.10. cancer mortality, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-68-1.png",
+      "meta": {
+        "area_frac": 0.239,
+        "aspect": 2.36,
+        "text_lines": 61,
+        "text_chars": 436,
+        "text_ratio": 0.246
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-70-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 70,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        321.47998046875
+      ],
+      "preview_text": "figure 3.11. maternal mortality, 2021-2023 and 2011-2013 (or nearest year)",
+      "caption": "figure 3.11. maternal mortality, 2021-2023 and 2011-2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-70-0.png",
+      "meta": {
+        "area_frac": 0.305,
+        "aspect": 1.87,
+        "text_lines": 61,
+        "text_chars": 478,
+        "text_ratio": 0.442
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-70-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 70,
+      "bbox": [
+        30.552481384277343,
+        329.1844464111328,
+        561.2787487792968,
+        610.7935180664062
+      ],
+      "preview_text": "figure 3.12. infant mortality, 2021-2023 and 2011-2013 (or nearest year)",
+      "caption": "figure 3.12. infant mortality, 2021-2023 and 2011-2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-70-1.png",
+      "meta": {
+        "area_frac": 0.29,
+        "aspect": 1.94,
+        "text_lines": 66,
+        "text_chars": 566,
+        "text_ratio": 0.523
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-72-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 72,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        273.4671325683594
+      ],
+      "preview_text": "figure 3.13. share of 15-year-olds reporting multiple health complaints, 2022 and 2014",
+      "caption": "figure 3.13. share of 15-year-olds reporting multiple health complaints, 2022 and 2014",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-72-0.png",
+      "meta": {
+        "area_frac": 0.249,
+        "aspect": 2.29,
+        "text_lines": 14,
+        "text_chars": 231,
+        "text_ratio": 0.31
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-72-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 72,
+      "bbox": [
+        30.552481384277343,
+        277.7045574951172,
+        561.2757580566406,
+        503.38714599609375
+      ],
+      "preview_text": "figure 3.14. share of 15-year-olds reporting multiple health complaints, 2022",
+      "caption": "figure 3.14. share of 15-year-olds reporting multiple health complaints, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-72-1.png",
+      "meta": {
+        "area_frac": 0.25,
+        "aspect": 2.28,
+        "text_lines": 19,
+        "text_chars": 235,
+        "text_ratio": 0.316
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-72-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 72,
+      "bbox": [
+        30.552481384277343,
+        507.7437420654297,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 3.15. who-5 mental well-being score, 15-year-olds, 2022",
+      "caption": "figure 3.15. who-5 mental well-being score, 15-year-olds, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-72-2.png",
+      "meta": {
+        "area_frac": 0.235,
+        "aspect": 2.4,
+        "text_lines": 17,
+        "text_chars": 238,
+        "text_ratio": 0.32
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-74-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 74,
+      "bbox": [
+        30.552481384277343,
+        280.4637127685547,
+        561.2757580566406,
+        487.9071350097656
+      ],
+      "preview_text": "figure 3.17. type 1 and 2 diabetes prevalence among adults, 2022 and 2012",
+      "caption": "figure 3.17. type 1 and 2 diabetes prevalence among adults, 2022 and 2012",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-74-0.png",
+      "meta": {
+        "area_frac": 0.23,
+        "aspect": 2.48,
+        "text_lines": 14,
+        "text_chars": 347,
+        "text_ratio": 0.306
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-74-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 74,
+      "bbox": [
+        30.552481384277343,
+        495.26373107910155,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 3.18. primary care users aged 45 and over and number of chronic conditions, 2024",
+      "caption": "figure 3.18. primary care users aged 45 and over and number of chronic conditions, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-74-1.png",
+      "meta": {
+        "area_frac": 0.242,
+        "aspect": 2.33,
+        "text_lines": 18,
+        "text_chars": 443,
+        "text_ratio": 0.391
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-76-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 76,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        566.3996594238281,
+        283.5471496582031
+      ],
+      "preview_text": "figure 3.19. who-5 well-being score among primary care users aged 45 and over, with and without chronic conditions,",
+      "caption": "figure 3.19. who-5 well-being score among primary care users aged 45 and over, with and without chronic conditions,",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-76-0.png",
+      "meta": {
+        "area_frac": 0.262,
+        "aspect": 2.21,
+        "text_lines": 14,
+        "text_chars": 524,
+        "text_ratio": 0.421
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-76-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 76,
+      "bbox": [
+        30.552481384277343,
+        504.3844281005859,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 3.21. hospitalisations due to self-harm, 2023",
+      "caption": "figure 3.21. hospitalisations due to self-harm, 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-76-1.png",
+      "meta": {
+        "area_frac": 0.245,
+        "aspect": 2.33,
+        "text_lines": 19,
+        "text_chars": 394,
+        "text_ratio": 0.316
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-78-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 78,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        268.067138671875
+      ],
+      "preview_text": "figure 3.22. people aged 15 and over rating their own health as bad or very bad, 2024 (or nearest year)",
+      "caption": "figure 3.22. people aged 15 and over rating their own health as bad or very bad, 2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-78-0.png",
+      "meta": {
+        "area_frac": 0.243,
+        "aspect": 2.35,
+        "text_lines": 59,
+        "text_chars": 569,
+        "text_ratio": 0.36
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-78-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 78,
+      "bbox": [
+        30.552481384277343,
+        277.067138671875,
+        561.2787487792968,
+        497.86712646484375
+      ],
+      "preview_text": "figure 3.23. people aged 15 and over rating their own health as good or very good, by income quintile, 2023 (or",
+      "caption": "figure 3.23. people aged 15 and over rating their own health as good or very good, by income quintile, 2023 (or",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-78-1.png",
+      "meta": {
+        "area_frac": 0.244,
+        "aspect": 2.33,
+        "text_lines": 19,
+        "text_chars": 478,
+        "text_ratio": 0.302
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-78-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 78,
+      "bbox": [
+        30.552481384277343,
+        506.86712646484375,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 3.24. primary care users aged 45 and over reporting their health as good, very good or excellent, 2024",
+      "caption": "figure 3.24. primary care users aged 45 and over reporting their health as good, very good or excellent, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-78-2.png",
+      "meta": {
+        "area_frac": 0.232,
+        "aspect": 2.45,
+        "text_lines": 14,
+        "text_chars": 498,
+        "text_ratio": 0.315
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-82-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 82,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        267.9471435546875
+      ],
+      "preview_text": "figure 4.1. daily smokers among people aged 15 and over, 2023 (or nearest year)",
+      "caption": "figure 4.1. daily smokers among people aged 15 and over, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-82-0.png",
+      "meta": {
+        "area_frac": 0.243,
+        "aspect": 2.35,
+        "text_lines": 15,
+        "text_chars": 277,
+        "text_ratio": 0.319
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-82-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 82,
+      "bbox": [
+        30.552481384277343,
+        276.9471435546875,
+        561.2817395019531,
+        483.7071533203125
+      ],
+      "preview_text": "figure 4.2. daily smoking rates among people aged 15 and over, 2023 and 2013 (or nearest year)",
+      "caption": "figure 4.2. daily smoking rates among people aged 15 and over, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-82-1.png",
+      "meta": {
+        "area_frac": 0.229,
+        "aspect": 2.49,
+        "text_lines": 15,
+        "text_chars": 306,
+        "text_ratio": 0.352
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-82-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 82,
+      "bbox": [
+        30.552481384277343,
+        492.7071533203125,
+        561.2817395019531,
+        717.593505859375
+      ],
+      "preview_text": "figure 4.3. regular use of vaping products among people aged 15 and over, 2023 and 2016 (or nearest year)",
+      "caption": "figure 4.3. regular use of vaping products among people aged 15 and over, 2023 and 2016 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-82-2.png",
+      "meta": {
+        "area_frac": 0.228,
+        "aspect": 2.47,
+        "text_lines": 16,
+        "text_chars": 250,
+        "text_ratio": 0.288
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-84-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 84,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        266.74713134765625
+      ],
+      "preview_text": "figure 4.4. illicit drug use in the last 12 months among people aged 15-64, 2023 (or nearest year)",
+      "caption": "figure 4.4. illicit drug use in the last 12 months among people aged 15-64, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-84-0.png",
+      "meta": {
+        "area_frac": 0.241,
+        "aspect": 2.36,
+        "text_lines": 14,
+        "text_chars": 347,
+        "text_ratio": 0.356
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-84-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 84,
+      "bbox": [
+        30.552481384277343,
+        275.74713134765625,
+        561.2817395019531,
+        483.2271423339844
+      ],
+      "preview_text": "figure 4.5. cocaine use in the last 12 months among people aged 15-64, 2023 (or nearest year)",
+      "caption": "figure 4.5. cocaine use in the last 12 months among people aged 15-64, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-84-1.png",
+      "meta": {
+        "area_frac": 0.23,
+        "aspect": 2.48,
+        "text_lines": 14,
+        "text_chars": 289,
+        "text_ratio": 0.296
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-84-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 84,
+      "bbox": [
+        30.552481384277343,
+        490.4644451904297,
+        561.2787487792968,
+        718.553466796875
+      ],
+      "preview_text": "figure 4.6. opioid use in the last 12 months among people aged 15-64, 2023 (or nearest year)",
+      "caption": "figure 4.6. opioid use in the last 12 months among people aged 15-64, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-84-2.png",
+      "meta": {
+        "area_frac": 0.232,
+        "aspect": 2.43,
+        "text_lines": 13,
+        "text_chars": 303,
+        "text_ratio": 0.311
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-86-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 86,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        268.067138671875
+      ],
+      "preview_text": "figure 4.7. cigarette smoking among 15-year-olds, 2022 and 2014",
+      "caption": "figure 4.7. cigarette smoking among 15-year-olds, 2022 and 2014",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-86-0.png",
+      "meta": {
+        "area_frac": 0.243,
+        "aspect": 2.35,
+        "text_lines": 47,
+        "text_chars": 269,
+        "text_ratio": 0.312
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-86-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 86,
+      "bbox": [
+        30.552480697631836,
+        275.3044720458984,
+        561.2787475585938,
+        718.6735229492188
+      ],
+      "preview_text": "figure 4.8. vaping among 15-year-olds, 2022",
+      "caption": "figure 4.8. vaping among 15-year-olds, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-86-1.png",
+      "meta": {
+        "area_frac": 0.232,
+        "aspect": 2.45,
+        "text_lines": 63,
+        "text_chars": 556,
+        "text_ratio": 0.646
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-88-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 88,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        347.14715576171875
+      ],
+      "preview_text": "figure 4.10. overall alcohol consumption among people aged 15 and over, 2023 and 2013 (or nearest year)",
+      "caption": "figure 4.10. overall alcohol consumption among people aged 15 and over, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-88-0.png",
+      "meta": {
+        "area_frac": 0.33,
+        "aspect": 1.73,
+        "text_lines": 65,
+        "text_chars": 467,
+        "text_ratio": 0.451
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-88-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 88,
+      "bbox": [
+        30.552481384277343,
+        351.3844281005859,
+        561.2786877441406,
+        665.5134887695312
+      ],
+      "preview_text": "figure 4.11. heavy episodic drinking among people aged 15 and over, 2023 (or nearest year)",
+      "caption": "figure 4.11. heavy episodic drinking among people aged 15 and over, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-88-1.png",
+      "meta": {
+        "area_frac": 0.326,
+        "aspect": 1.73,
+        "text_lines": 22,
+        "text_chars": 528,
+        "text_ratio": 0.51
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-90-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 90,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        348.9471435546875
+      ],
+      "preview_text": "figure 4.12. alcohol consumption among adolescents, 2022",
+      "caption": "figure 4.12. alcohol consumption among adolescents, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-90-0.png",
+      "meta": {
+        "area_frac": 0.332,
+        "aspect": 1.72,
+        "text_lines": 17,
+        "text_chars": 242,
+        "text_ratio": 0.472
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-90-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 90,
+      "bbox": [
+        30.552481384277343,
+        353.1844464111328,
+        561.7265637207031,
+        661.7935180664062
+      ],
+      "preview_text": "figure 4.13. repeated drunkenness among 15-year-olds, 2022",
+      "caption": "figure 4.13. repeated drunkenness among 15-year-olds, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-90-1.png",
+      "meta": {
+        "area_frac": 0.32,
+        "aspect": 1.76,
+        "text_lines": 19,
+        "text_chars": 234,
+        "text_ratio": 0.456
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-92-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 92,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        278.9871520996094
+      ],
+      "preview_text": "figure 4.14. daily vegetable consumption among people aged 15 and over, 2023 (or nearest year)",
+      "caption": "figure 4.14. daily vegetable consumption among people aged 15 and over, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-92-0.png",
+      "meta": {
+        "area_frac": 0.255,
+        "aspect": 2.24,
+        "text_lines": 55,
+        "text_chars": 356,
+        "text_ratio": 0.343
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-92-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 92,
+      "bbox": [
+        30.552481384277343,
+        287.9871520996094,
+        561.2787487792968,
+        487.067138671875
+      ],
+      "preview_text": "figure 4.15. daily consumption of sugary soft drinks among people aged 15 and over, 2023 (or nearest year)",
+      "caption": "figure 4.15. daily consumption of sugary soft drinks among people aged 15 and over, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-92-1.png",
+      "meta": {
+        "area_frac": 0.221,
+        "aspect": 2.58,
+        "text_lines": 29,
+        "text_chars": 290,
+        "text_ratio": 0.279
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-92-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 92,
+      "bbox": [
+        30.552481384277343,
+        494.4244366455078,
+        561.2787487792968,
+        717.353515625
+      ],
+      "preview_text": "figure 4.16. insufficient physical activity among adults, 2022",
+      "caption": "figure 4.16. insufficient physical activity among adults, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-92-2.png",
+      "meta": {
+        "area_frac": 0.226,
+        "aspect": 2.5,
+        "text_lines": 17,
+        "text_chars": 353,
+        "text_ratio": 0.34
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-94-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 94,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        563.7536633300781,
+        274.4271545410156
+      ],
+      "preview_text": "figure 4.17. share of 15-year-olds reporting at least one hour of moderate-to-vigorous physical activity daily, 2022 and",
+      "caption": "figure 4.17. share of 15-year-olds reporting at least one hour of moderate-to-vigorous physical activity daily, 2022 and",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-94-0.png",
+      "meta": {
+        "area_frac": 0.251,
+        "aspect": 2.29,
+        "text_lines": 46,
+        "text_chars": 295,
+        "text_ratio": 0.348
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-94-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 94,
+      "bbox": [
+        30.552481384277343,
+        281.7844525146484,
+        561.2817395019531,
+        486.5871276855469
+      ],
+      "preview_text": "figure 4.18. share of 15-year-olds not consuming any vegetables daily, 2022 and 2014",
+      "caption": "figure 4.18. share of 15-year-olds not consuming any vegetables daily, 2022 and 2014",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-94-1.png",
+      "meta": {
+        "area_frac": 0.227,
+        "aspect": 2.51,
+        "text_lines": 49,
+        "text_chars": 267,
+        "text_ratio": 0.315
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-94-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 94,
+      "bbox": [
+        30.552481384277343,
+        493.9444561767578,
+        561.2757580566406,
+        717.4735107421875
+      ],
+      "preview_text": "figure 4.19. share of 15-year-olds consuming sugary soft drinks daily, 2022 and 2014",
+      "caption": "figure 4.19. share of 15-year-olds consuming sugary soft drinks daily, 2022 and 2014",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-94-2.png",
+      "meta": {
+        "area_frac": 0.227,
+        "aspect": 2.49,
+        "text_lines": 47,
+        "text_chars": 249,
+        "text_ratio": 0.294
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-96-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 96,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        266.0271301269531
+      ],
+      "preview_text": "figure 4.20. trends in self-reported obesity rates among people aged 15 and over",
+      "caption": "figure 4.20. trends in self-reported obesity rates among people aged 15 and over",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-96-0.png",
+      "meta": {
+        "area_frac": 0.241,
+        "aspect": 2.37,
+        "text_lines": 13,
+        "text_chars": 290,
+        "text_ratio": 0.217
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-96-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 96,
+      "bbox": [
+        30.552481384277343,
+        275.0271301269531,
+        561.2818005371093,
+        489.8271484375
+      ],
+      "preview_text": "figure 4.21. self-reported overweight and obesity rates among people aged 15 and over, 2023 (or nearest year)",
+      "caption": "figure 4.21. self-reported overweight and obesity rates among people aged 15 and over, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-96-1.png",
+      "meta": {
+        "area_frac": 0.238,
+        "aspect": 2.4,
+        "text_lines": 20,
+        "text_chars": 486,
+        "text_ratio": 0.364
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-96-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 96,
+      "bbox": [
+        30.552481384277343,
+        498.8271484375,
+        561.2818005371093,
+        718.7935180664062
+      ],
+      "preview_text": "figure 4.22. measured overweight and obesity rates among people aged 15 and over, 2023 (or nearest year)",
+      "caption": "figure 4.22. measured overweight and obesity rates among people aged 15 and over, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-96-2.png",
+      "meta": {
+        "area_frac": 0.223,
+        "aspect": 2.53,
+        "text_lines": 49,
+        "text_chars": 523,
+        "text_ratio": 0.392
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-98-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 98,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        346.1871337890625
+      ],
+      "preview_text": "figure 4.23. self-reported overweight and obesity rates among 15-year-olds, 2022",
+      "caption": "figure 4.23. self-reported overweight and obesity rates among 15-year-olds, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-98-0.png",
+      "meta": {
+        "area_frac": 0.329,
+        "aspect": 1.73,
+        "text_lines": 26,
+        "text_chars": 288,
+        "text_ratio": 0.445
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-98-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 98,
+      "bbox": [
+        30.552481384277343,
+        355.1871337890625,
+        561.7265637207031,
+        648.9534912109375
+      ],
+      "preview_text": "figure 4.24. self-reported overweight and obesity rates among adolescents by family affluence, 2022",
+      "caption": "figure 4.24. self-reported overweight and obesity rates among adolescents by family affluence, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-98-1.png",
+      "meta": {
+        "area_frac": 0.305,
+        "aspect": 1.87,
+        "text_lines": 17,
+        "text_chars": 322,
+        "text_ratio": 0.498
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-100-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 100,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8461315917968,
+        333.5871276855469
+      ],
+      "preview_text": "figure 4.25. mean population-weighted exposure to ambient particulate matter (pm 2.5 ), 2020",
+      "caption": "figure 4.25. mean population-weighted exposure to ambient particulate matter (pm 2.5 ), 2020",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-100-0.png",
+      "meta": {
+        "area_frac": 0.315,
+        "aspect": 1.81,
+        "text_lines": 37,
+        "text_chars": 413,
+        "text_ratio": 0.346
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-100-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 100,
+      "bbox": [
+        30.552481384277343,
+        337.9444561767578,
+        561.2787487792968,
+        659.3934936523438
+      ],
+      "preview_text": "figure 4.26. share of all greenhouse gas emissions related to healthcare demand, 2018",
+      "caption": "figure 4.26. share of all greenhouse gas emissions related to healthcare demand, 2018",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-100-1.png",
+      "meta": {
+        "area_frac": 0.335,
+        "aspect": 1.7,
+        "text_lines": 19,
+        "text_chars": 733,
+        "text_ratio": 0.615
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-104-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 104,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        250.547119140625
+      ],
+      "preview_text": "figure 5.1. population coverage for a core set of services, 2024 (or nearest year)",
+      "caption": "figure 5.1. population coverage for a core set of services, 2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-104-0.png",
+      "meta": {
+        "area_frac": 0.224,
+        "aspect": 2.55,
+        "text_lines": 24,
+        "text_chars": 456,
+        "text_ratio": 0.289
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-104-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 104,
+      "bbox": [
+        30.552481384277343,
+        479.50714111328125,
+        561.7265637207031,
+        717.593505859375
+      ],
+      "preview_text": "figure 5.3. voluntary private health insurance coverage by type, 2023-2024 and 2014 (or nearest year)",
+      "caption": "figure 5.3. voluntary private health insurance coverage by type, 2023-2024 and 2014 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-104-1.png",
+      "meta": {
+        "area_frac": 0.244,
+        "aspect": 2.34,
+        "text_lines": 48,
+        "text_chars": 679,
+        "text_ratio": 0.431
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-106-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 106,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        290.38714599609375
+      ],
+      "preview_text": "figure 5.4. population reporting unmet needs for medical care, by main reason, 2024",
+      "caption": "figure 5.4. population reporting unmet needs for medical care, by main reason, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-106-0.png",
+      "meta": {
+        "area_frac": 0.267,
+        "aspect": 2.13,
+        "text_lines": 48,
+        "text_chars": 496,
+        "text_ratio": 0.401
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-106-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 106,
+      "bbox": [
+        30.552481384277343,
+        299.38714599609375,
+        561.2757580566406,
+        503.50714111328125
+      ],
+      "preview_text": "figure 5.5. population reporting unmet needs for medical care, by income level, 2024 (or nearest year)",
+      "caption": "figure 5.5. population reporting unmet needs for medical care, by income level, 2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-106-1.png",
+      "meta": {
+        "area_frac": 0.226,
+        "aspect": 2.52,
+        "text_lines": 18,
+        "text_chars": 370,
+        "text_ratio": 0.299
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-106-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 106,
+      "bbox": [
+        30.552481384277343,
+        512.5071411132812,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 5.6. population reporting unmet needs for dental care, by income level, 2024 (or nearest year)",
+      "caption": "figure 5.6. population reporting unmet needs for dental care, by income level, 2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-106-2.png",
+      "meta": {
+        "area_frac": 0.23,
+        "aspect": 2.45,
+        "text_lines": 19,
+        "text_chars": 334,
+        "text_ratio": 0.27
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-108-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 108,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        689.9934692382812
+      ],
+      "preview_text": "figure 5.7. extent of financial coverage, 2023 (or nearest year)",
+      "caption": "figure 5.7. extent of financial coverage, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-108-0.png",
+      "meta": {
+        "area_frac": 0.686,
+        "aspect": 0.83,
+        "text_lines": 234,
+        "text_chars": 1316,
+        "text_ratio": 0.971
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-110-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 110,
+      "bbox": [
+        30.552481384277343,
+        258.4671630859375,
+        561.7265637207031,
+        479.62713623046875
+      ],
+      "preview_text": "figure 5.9. composition of out-of-pocket spending on health, by type of service, 2023 (or nearest year)",
+      "caption": "figure 5.9. composition of out-of-pocket spending on health, by type of service, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-110-0.png",
+      "meta": {
+        "area_frac": 0.245,
+        "aspect": 2.33,
+        "text_lines": 108,
+        "text_chars": 880,
+        "text_ratio": 0.507
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-110-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 110,
+      "bbox": [
+        30.552481384277343,
+        488.62713623046875,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 5.10. share of households with catastrophic health spending by consumption quintile, latest year available",
+      "caption": "figure 5.10. share of households with catastrophic health spending by consumption quintile, latest year available",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-110-1.png",
+      "meta": {
+        "area_frac": 0.247,
+        "aspect": 2.28,
+        "text_lines": 53,
+        "text_chars": 415,
+        "text_ratio": 0.239
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-112-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 112,
+      "bbox": [
+        30.552481384277343,
+        279.5044232177734,
+        561.2817395019531,
+        484.1871337890625
+      ],
+      "preview_text": "figure 5.12. waiting times for hip replacement surgery",
+      "caption": "figure 5.12. waiting times for hip replacement surgery",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-112-0.png",
+      "meta": {
+        "area_frac": 0.227,
+        "aspect": 2.51,
+        "text_lines": 44,
+        "text_chars": 515,
+        "text_ratio": 0.321
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-112-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 112,
+      "bbox": [
+        30.552481384277343,
+        488.5437298583984,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 5.13. waiting times for appointment with a gp or nurse, or a specialist, 2023",
+      "caption": "figure 5.13. waiting times for appointment with a gp or nurse, or a specialist, 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-112-1.png",
+      "meta": {
+        "area_frac": 0.253,
+        "aspect": 2.23,
+        "text_lines": 88,
+        "text_chars": 577,
+        "text_ratio": 0.36
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-114-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 114,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        353.86712646484375
+      ],
+      "preview_text": "figure 5.14. physician density, metropolitan and remote areas, 2023-2024 (or nearest year)",
+      "caption": "figure 5.14. physician density, metropolitan and remote areas, 2023-2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-114-0.png",
+      "meta": {
+        "area_frac": 0.337,
+        "aspect": 1.69,
+        "text_lines": 52,
+        "text_chars": 547,
+        "text_ratio": 0.512
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-114-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 114,
+      "bbox": [
+        30.552481384277343,
+        358.22503479003905,
+        561.7198498535156,
+        677.2734985351562
+      ],
+      "preview_text": "figure 5.15. people unable to reach a hospital within 45 minutes\u2019 drive, by locality, 2023",
+      "caption": "figure 5.15. people unable to reach a hospital within 45 minutes\u2019 drive, by locality, 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-114-1.png",
+      "meta": {
+        "area_frac": 0.331,
+        "aspect": 1.7,
+        "text_lines": 50,
+        "text_chars": 483,
+        "text_ratio": 0.452
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-116-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 116,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        274.4271545410156
+      ],
+      "preview_text": "figure 5.16. in-person doctor consultations per person, 2023, 2019 and 2013 (or nearest year)",
+      "caption": "figure 5.16. in-person doctor consultations per person, 2023, 2019 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-116-0.png",
+      "meta": {
+        "area_frac": 0.25,
+        "aspect": 2.28,
+        "text_lines": 54,
+        "text_chars": 492,
+        "text_ratio": 0.331
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-116-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 116,
+      "bbox": [
+        30.552481384277343,
+        281.7837200927734,
+        561.2817395019531,
+        495.22711181640625
+      ],
+      "preview_text": "figure 5.17. doctor consultations, in-person vs. remote, 2023 (or nearest year)",
+      "caption": "figure 5.17. doctor consultations, in-person vs. remote, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-116-1.png",
+      "meta": {
+        "area_frac": 0.236,
+        "aspect": 2.41,
+        "text_lines": 39,
+        "text_chars": 374,
+        "text_ratio": 0.252
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-116-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 116,
+      "bbox": [
+        30.552481384277343,
+        502.5837384033203,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 5.18. estimated number of in-person consultations per doctor, 2023 (or nearest year)",
+      "caption": "figure 5.18. estimated number of in-person consultations per doctor, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-116-2.png",
+      "meta": {
+        "area_frac": 0.24,
+        "aspect": 2.35,
+        "text_lines": 53,
+        "text_chars": 582,
+        "text_ratio": 0.392
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-118-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 118,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        274.4271545410156
+      ],
+      "preview_text": "figure 5.19. hospital beds, 2023 and 2013 (or nearest year)",
+      "caption": "figure 5.19. hospital beds, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-118-0.png",
+      "meta": {
+        "area_frac": 0.25,
+        "aspect": 2.28,
+        "text_lines": 18,
+        "text_chars": 507,
+        "text_ratio": 0.373
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-118-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 118,
+      "bbox": [
+        30.552481384277343,
+        281.7837200927734,
+        561.2817395019531,
+        495.22711181640625
+      ],
+      "preview_text": "figure 5.20. occupancy rate of curative acute care beds, 2023 and 2013 (or nearest year)",
+      "caption": "figure 5.20. occupancy rate of curative acute care beds, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-118-1.png",
+      "meta": {
+        "area_frac": 0.236,
+        "aspect": 2.41,
+        "text_lines": 51,
+        "text_chars": 331,
+        "text_ratio": 0.243
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-118-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 118,
+      "bbox": [
+        30.552481384277343,
+        502.5837384033203,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 5.21. adult intensive care beds, 2023 and 2019 (or nearest year)",
+      "caption": "figure 5.21. adult intensive care beds, 2023 and 2019 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-118-2.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 2.3,
+        "text_lines": 54,
+        "text_chars": 485,
+        "text_ratio": 0.356
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-120-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 120,
+      "bbox": [
+        30.552481384277343,
+        288.5871276855469,
+        562.7460949707031,
+        505.54718017578125
+      ],
+      "preview_text": "figure 5.23. average length of stay in hospital for curative (acute) care, 2023 and 2019 (or nearest year)",
+      "caption": "figure 5.23. average length of stay in hospital for curative (acute) care, 2023 and 2019 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-120-0.png",
+      "meta": {
+        "area_frac": 0.241,
+        "aspect": 2.38,
+        "text_lines": 62,
+        "text_chars": 535,
+        "text_ratio": 0.337
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-120-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 120,
+      "bbox": [
+        30.552481384277343,
+        512.7857647705077,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 5.24 . emergency department visits, 2023 and 2019",
+      "caption": "figure 5.24 . emergency department visits, 2023 and 2019",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-120-1.png",
+      "meta": {
+        "area_frac": 0.23,
+        "aspect": 2.45,
+        "text_lines": 44,
+        "text_chars": 422,
+        "text_ratio": 0.266
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-122-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 122,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        524.0334777832031
+      ],
+      "preview_text": "figure 5.25. hip and knee replacement surgery, 2023 and 2013 (or nearest year)",
+      "caption": "figure 5.25. hip and knee replacement surgery, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-122-0.png",
+      "meta": {
+        "area_frac": 0.502,
+        "aspect": 1.12,
+        "text_lines": 182,
+        "text_chars": 1288,
+        "text_ratio": 0.971
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-124-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 124,
+      "bbox": [
+        30.552481384277343,
+        469.30712890625,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 5.27. trends in surgical procedures carried out as ambulatory cases, selected countries, 2013-2023",
+      "caption": "figure 5.27. trends in surgical procedures carried out as ambulatory cases, selected countries, 2013-2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-124-0.png",
+      "meta": {
+        "area_frac": 0.281,
+        "aspect": 2.03,
+        "text_lines": 43,
+        "text_chars": 449,
+        "text_ratio": 0.301
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-124-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 124,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        460.30712890625
+      ],
+      "preview_text": "figure 5.26. share of surgical procedures carried out as ambulatory cases, 2023 (or nearest year)",
+      "caption": "figure 5.26. share of surgical procedures carried out as ambulatory cases, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-124-1.png",
+      "meta": {
+        "area_frac": 0.454,
+        "aspect": 1.25,
+        "text_lines": 170,
+        "text_chars": 1003,
+        "text_ratio": 0.673
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-128-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 128,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        345.7071533203125
+      ],
+      "preview_text": "figure 6.1. percentage of eligible children who have received two doses of a measles-containing vaccine and three",
+      "caption": "figure 6.1. percentage of eligible children who have received two doses of a measles-containing vaccine and three",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-128-0.png",
+      "meta": {
+        "area_frac": 0.328,
+        "aspect": 1.74,
+        "text_lines": 21,
+        "text_chars": 465,
+        "text_ratio": 0.451
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-128-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 128,
+      "bbox": [
+        30.552481384277343,
+        354.7071533203125,
+        561.2757580566406,
+        646.1934814453125
+      ],
+      "preview_text": "figure 6.2. percentage of population aged 65 and over vaccinated against influenza, 2024 and 2019 (or nearest year)",
+      "caption": "figure 6.2. percentage of population aged 65 and over vaccinated against influenza, 2024 and 2019 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-128-1.png",
+      "meta": {
+        "area_frac": 0.302,
+        "aspect": 1.88,
+        "text_lines": 34,
+        "text_chars": 527,
+        "text_ratio": 0.512
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-130-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 130,
+      "bbox": [
+        30.552480697631836,
+        281.7857342529297,
+        570.1279907226562,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.4. cervical cancer screening coverage, 2023 (or nearest year)",
+      "caption": "figure 6.4. cervical cancer screening coverage, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-130-0.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 2.39,
+        "text_lines": 64,
+        "text_chars": 928,
+        "text_ratio": 0.563
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-132-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 132,
+      "bbox": [
+        30.552481384277343,
+        39.908905029296875,
+        561.8422863769531,
+        278.9871520996094
+      ],
+      "preview_text": "figure 6.6. total volume of antibiotics prescribed in the community setting, 2023 and 2013 (or nearest year)",
+      "caption": "figure 6.6. total volume of antibiotics prescribed in the community setting, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-132-0.png",
+      "meta": {
+        "area_frac": 0.264,
+        "aspect": 2.15,
+        "text_lines": 47,
+        "text_chars": 586,
+        "text_ratio": 0.401
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-132-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 132,
+      "bbox": [
+        30.552481384277343,
+        287.9871520996094,
+        561.2787487792968,
+        494.86712646484375
+      ],
+      "preview_text": "figure 6.7. total volume of opioids prescribed in the adult population, 2023 and 2013 (or nearest year)",
+      "caption": "figure 6.7. total volume of opioids prescribed in the adult population, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-132-1.png",
+      "meta": {
+        "area_frac": 0.229,
+        "aspect": 2.49,
+        "text_lines": 37,
+        "text_chars": 335,
+        "text_ratio": 0.229
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-132-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 132,
+      "bbox": [
+        30.552481384277343,
+        502.2237225341797,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.8. polypharmacy among primary care users with chronic conditions, 2024",
+      "caption": "figure 6.8. polypharmacy among primary care users with chronic conditions, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-132-2.png",
+      "meta": {
+        "area_frac": 0.244,
+        "aspect": 2.31,
+        "text_lines": 54,
+        "text_chars": 506,
+        "text_ratio": 0.347
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-134-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 134,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        282.2271423339844
+      ],
+      "preview_text": "figure 6.9. asthma and chronic obstructive pulmonary disease hospital admissions in adults, 2023 and 2013 (or",
+      "caption": "figure 6.9. asthma and chronic obstructive pulmonary disease hospital admissions in adults, 2023 and 2013 (or",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-134-0.png",
+      "meta": {
+        "area_frac": 0.258,
+        "aspect": 2.2,
+        "text_lines": 21,
+        "text_chars": 470,
+        "text_ratio": 0.345
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-134-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 134,
+      "bbox": [
+        30.552481384277343,
+        291.2271423339844,
+        561.2818005371093,
+        494.74713134765625
+      ],
+      "preview_text": "figure 6.10. congestive heart failure hospital admissions in adults, 2023 and 2013 (or nearest year)",
+      "caption": "figure 6.10. congestive heart failure hospital admissions in adults, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-134-1.png",
+      "meta": {
+        "area_frac": 0.225,
+        "aspect": 2.53,
+        "text_lines": 26,
+        "text_chars": 445,
+        "text_ratio": 0.326
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-134-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 134,
+      "bbox": [
+        30.552481384277343,
+        502.1037274169922,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.11. diabetes hospital admissions in adults, 2023 and 2013 (or nearest year)",
+      "caption": "figure 6.11. diabetes hospital admissions in adults, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-134-2.png",
+      "meta": {
+        "area_frac": 0.228,
+        "aspect": 2.48,
+        "text_lines": 37,
+        "text_chars": 411,
+        "text_ratio": 0.302
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-136-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 136,
+      "bbox": [
+        30.552481384277343,
+        298.7871398925781,
+        561.7265637207031,
+        492.58709716796875
+      ],
+      "preview_text": "figure 6.13. major and minor lower extremity amputation in adults with diabetes, 2023 (or nearest year)",
+      "caption": "figure 6.13. major and minor lower extremity amputation in adults with diabetes, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-136-0.png",
+      "meta": {
+        "area_frac": 0.215,
+        "aspect": 2.66,
+        "text_lines": 40,
+        "text_chars": 354,
+        "text_ratio": 0.275
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-136-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 136,
+      "bbox": [
+        30.552481384277343,
+        496.8231182861328,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.14. primary care users who are confident in self-management, 2024",
+      "caption": "figure 6.14. primary care users who are confident in self-management, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-136-1.png",
+      "meta": {
+        "area_frac": 0.249,
+        "aspect": 2.27,
+        "text_lines": 54,
+        "text_chars": 573,
+        "text_ratio": 0.445
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-138-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 138,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        271.5471496582031
+      ],
+      "preview_text": "figure 6.15. experienced quality of primary care, 2024",
+      "caption": "figure 6.15. experienced quality of primary care, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-138-0.png",
+      "meta": {
+        "area_frac": 0.247,
+        "aspect": 2.31,
+        "text_lines": 59,
+        "text_chars": 578,
+        "text_ratio": 0.311
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-138-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 138,
+      "bbox": [
+        30.552481384277343,
+        278.9049969482422,
+        561.2818005371093,
+        496.1871337890625
+      ],
+      "preview_text": "figure 6.16 . trust in healthcare professionals among primary care users, 2024",
+      "caption": "figure 6.16 . trust in healthcare professionals among primary care users, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-138-1.png",
+      "meta": {
+        "area_frac": 0.241,
+        "aspect": 2.37,
+        "text_lines": 59,
+        "text_chars": 600,
+        "text_ratio": 0.323
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-138-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 138,
+      "bbox": [
+        30.552481384277343,
+        505.1871337890625,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.17. person-centredness and experienced co-ordination among primary care users with chronic conditions, 2024",
+      "caption": "figure 6.17. person-centredness and experienced co-ordination among primary care users with chronic conditions, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-138-2.png",
+      "meta": {
+        "area_frac": 0.242,
+        "aspect": 2.37,
+        "text_lines": 37,
+        "text_chars": 643,
+        "text_ratio": 0.346
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-140-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 140,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        259.5471496582031
+      ],
+      "preview_text": "figure 6.18. health workers\u2019 perceptions of handoffs and information exchange, 2023 (or nearest year)",
+      "caption": "figure 6.18. health workers\u2019 perceptions of handoffs and information exchange, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-140-0.png",
+      "meta": {
+        "area_frac": 0.234,
+        "aspect": 2.44,
+        "text_lines": 35,
+        "text_chars": 464,
+        "text_ratio": 0.292
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-140-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 140,
+      "bbox": [
+        30.552481384277343,
+        268.5471496582031,
+        561.2757580566406,
+        485.14715576171875
+      ],
+      "preview_text": "figure 6.19. health workers\u2019 perceptions of adequate staff levels and work pace, by job category, 2023 (or nearest",
+      "caption": "figure 6.19. health workers\u2019 perceptions of adequate staff levels and work pace, by job category, 2023 (or nearest",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-140-1.png",
+      "meta": {
+        "area_frac": 0.24,
+        "aspect": 2.38,
+        "text_lines": 38,
+        "text_chars": 528,
+        "text_ratio": 0.332
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-140-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 140,
+      "bbox": [
+        30.552481384277343,
+        494.14715576171875,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.20. primary care users reporting that something went wrong over the course of their care in the last",
+      "caption": "figure 6.20. primary care users reporting that something went wrong over the course of their care in the last",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-140-2.png",
+      "meta": {
+        "area_frac": 0.249,
+        "aspect": 2.26,
+        "text_lines": 35,
+        "text_chars": 557,
+        "text_ratio": 0.35
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-142-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 142,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        287.50714111328125
+      ],
+      "preview_text": "figure 6.21. hip fracture surgery initiation for patients aged 65 and over within two days of hospital admission, 2023",
+      "caption": "figure 6.21. hip fracture surgery initiation for patients aged 65 and over within two days of hospital admission, 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-142-0.png",
+      "meta": {
+        "area_frac": 0.264,
+        "aspect": 2.16,
+        "text_lines": 43,
+        "text_chars": 414,
+        "text_ratio": 0.303
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-142-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 142,
+      "bbox": [
+        30.552481384277343,
+        296.50714111328125,
+        561.2817395019531,
+        510.10711669921875
+      ],
+      "preview_text": "figure 6.22. obstetric trauma in vaginal delivery without instrument assistance, 2023 (or nearest year)",
+      "caption": "figure 6.22. obstetric trauma in vaginal delivery without instrument assistance, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-142-1.png",
+      "meta": {
+        "area_frac": 0.236,
+        "aspect": 2.41,
+        "text_lines": 45,
+        "text_chars": 414,
+        "text_ratio": 0.303
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-142-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 142,
+      "bbox": [
+        30.552481384277343,
+        519.1071166992188,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.23. healthcare workers\u2019 perceptions of fairness of response to error, 2024 (or nearest year)",
+      "caption": "figure 6.23. healthcare workers\u2019 perceptions of fairness of response to error, 2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-142-2.png",
+      "meta": {
+        "area_frac": 0.224,
+        "aspect": 2.52,
+        "text_lines": 36,
+        "text_chars": 499,
+        "text_ratio": 0.365
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-144-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 144,
+      "bbox": [
+        30.55247375488281,
+        59.77115484619141,
+        561.8422863769531,
+        274.187255859375
+      ],
+      "preview_text": "figure 6.24. thirty-day mortality after admission to hospital for acute myocardial infarction based on unlinked data,",
+      "caption": "figure 6.24. thirty-day mortality after admission to hospital for acute myocardial infarction based on unlinked data,",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-144-0.png",
+      "meta": {
+        "area_frac": 0.25,
+        "aspect": 2.28,
+        "text_lines": 23,
+        "text_chars": 524,
+        "text_ratio": 0.331
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-144-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 144,
+      "bbox": [
+        30.55247375488281,
+        283.187255859375,
+        562.1842053222656,
+        504.7071533203125
+      ],
+      "preview_text": "figure 6.25. thirty-day mortality after admission to hospital for acute myocardial infarction based on linked data, 2023",
+      "caption": "figure 6.25. thirty-day mortality after admission to hospital for acute myocardial infarction based on linked data, 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-144-1.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 2.33,
+        "text_lines": 39,
+        "text_chars": 537,
+        "text_ratio": 0.34
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-144-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 144,
+      "bbox": [
+        30.552481384277343,
+        513.7071533203125,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.26. mortality within 24 hours and 30 days of admission to hospital for acute myocardial infarction based on",
+      "caption": "figure 6.26. mortality within 24 hours and 30 days of admission to hospital for acute myocardial infarction based on",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-144-2.png",
+      "meta": {
+        "area_frac": 0.231,
+        "aspect": 2.45,
+        "text_lines": 32,
+        "text_chars": 481,
+        "text_ratio": 0.304
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-146-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 146,
+      "bbox": [
+        30.55247375488281,
+        59.77115484619141,
+        561.8422863769531,
+        352.30712890625
+      ],
+      "preview_text": "figure 6.27. thirty-day mortality after admission to hospital for ischaemic stroke based on unlinked data, 2023 and",
+      "caption": "figure 6.27. thirty-day mortality after admission to hospital for ischaemic stroke based on unlinked data, 2023 and",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-146-0.png",
+      "meta": {
+        "area_frac": 0.335,
+        "aspect": 1.7,
+        "text_lines": 22,
+        "text_chars": 514,
+        "text_ratio": 0.475
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-146-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 146,
+      "bbox": [
+        30.55247375488281,
+        361.30712890625,
+        561.2757580566406,
+        671.1535034179688
+      ],
+      "preview_text": "figure 6.28. thirty-day mortality after admission to hospital for ischaemic stroke based on linked data, 2023 and 2013",
+      "caption": "figure 6.28. thirty-day mortality after admission to hospital for ischaemic stroke based on linked data, 2023 and 2013",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-146-1.png",
+      "meta": {
+        "area_frac": 0.321,
+        "aspect": 1.76,
+        "text_lines": 37,
+        "text_chars": 528,
+        "text_ratio": 0.488
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-148-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 148,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        274.4271545410156
+      ],
+      "preview_text": "figure 6.29. suicide following hospitalisation for a psychiatric disorder, within one year of discharge, 2023 and 2013",
+      "caption": "figure 6.29. suicide following hospitalisation for a psychiatric disorder, within one year of discharge, 2023 and 2013",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-148-0.png",
+      "meta": {
+        "area_frac": 0.25,
+        "aspect": 2.28,
+        "text_lines": 33,
+        "text_chars": 393,
+        "text_ratio": 0.269
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-148-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 148,
+      "bbox": [
+        30.552480697631836,
+        283.4271545410156,
+        561.2787475585938,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.30. excess mortality from bipolar disorder and schizophrenia compared to the general population, 2023 (or",
+      "caption": "figure 6.30. excess mortality from bipolar disorder and schizophrenia compared to the general population, 2023 (or",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-148-1.png",
+      "meta": {
+        "area_frac": 0.242,
+        "aspect": 2.36,
+        "text_lines": 90,
+        "text_chars": 1031,
+        "text_ratio": 0.705
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-150-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 150,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        270.7071533203125
+      ],
+      "preview_text": "figure 6.32. patient-reported outcomes before and after hip replacement surgery, disease-specific measure, 2024 (or",
+      "caption": "figure 6.32. patient-reported outcomes before and after hip replacement surgery, disease-specific measure, 2024 (or",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-150-0.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 2.32,
+        "text_lines": 36,
+        "text_chars": 460,
+        "text_ratio": 0.282
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-150-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 150,
+      "bbox": [
+        30.552481384277343,
+        279.7071533203125,
+        563.3992321777343,
+        492.22711181640625
+      ],
+      "preview_text": "figure 6.33. patient-reported outcomes before and after knee replacement surgery, disease-specific measure, 2024 (or",
+      "caption": "figure 6.33. patient-reported outcomes before and after knee replacement surgery, disease-specific measure, 2024 (or",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-150-1.png",
+      "meta": {
+        "area_frac": 0.236,
+        "aspect": 2.43,
+        "text_lines": 36,
+        "text_chars": 462,
+        "text_ratio": 0.283
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-150-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 150,
+      "bbox": [
+        30.552481384277343,
+        501.22711181640625,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.34. patient-reported quality of life before and after hip and knee replacement surgery, generic measure, 2024",
+      "caption": "figure 6.34. patient-reported quality of life before and after hip and knee replacement surgery, generic measure, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-150-2.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 2.29,
+        "text_lines": 68,
+        "text_chars": 673,
+        "text_ratio": 0.412
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-152-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 152,
+      "bbox": [
+        30.552481384277343,
+        436.1871337890625,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 6.36. patients receiving at least one antihypertensive and antithrombotic prescription in the 18 months",
+      "caption": "figure 6.36. patients receiving at least one antihypertensive and antithrombotic prescription in the 18 months",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-152-0.png",
+      "meta": {
+        "area_frac": 0.307,
+        "aspect": 1.85,
+        "text_lines": 49,
+        "text_chars": 532,
+        "text_ratio": 0.357
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-152-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 152,
+      "bbox": [
+        30.541441650390624,
+        59.77115484619141,
+        561.8422863769531,
+        427.1871337890625
+      ],
+      "preview_text": "figure 6.35. patients with adverse outcomes within one year of discharge after ischaemic stroke and congestive heart",
+      "caption": "figure 6.35. patients with adverse outcomes within one year of discharge after ischaemic stroke and congestive heart",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-152-1.png",
+      "meta": {
+        "area_frac": 0.418,
+        "aspect": 1.37,
+        "text_lines": 60,
+        "text_chars": 920,
+        "text_ratio": 0.617
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-156-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 156,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        276.7071533203125
+      ],
+      "preview_text": "figure 7.1. health expenditure as a share of gdp, 2024 (or nearest year)",
+      "caption": "figure 7.1. health expenditure as a share of gdp, 2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-156-0.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 2.32,
+        "text_lines": 68,
+        "text_chars": 494,
+        "text_ratio": 0.494
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-156-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 156,
+      "bbox": [
+        30.552481384277343,
+        285.7071533203125,
+        561.7155163574218,
+        498.8271484375
+      ],
+      "preview_text": "figure 7.2. annual real growth in per capita health expenditure and gdp, oecd average, 2006-2024",
+      "caption": "figure 7.2. annual real growth in per capita health expenditure and gdp, oecd average, 2006-2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-156-1.png",
+      "meta": {
+        "area_frac": 0.23,
+        "aspect": 2.49,
+        "text_lines": 25,
+        "text_chars": 231,
+        "text_ratio": 0.231
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-156-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 156,
+      "bbox": [
+        30.552481384277343,
+        500.1831341552734,
+        564.4865734863281,
+        721.3489379882812
+      ],
+      "preview_text": "figure 7.3. health expenditure as a share of gdp, selected countries, 2006-2024",
+      "caption": "figure 7.3. health expenditure as a share of gdp, selected countries, 2006-2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-156-2.png",
+      "meta": {
+        "area_frac": 0.245,
+        "aspect": 2.36,
+        "text_lines": 23,
+        "text_chars": 238,
+        "text_ratio": 0.238
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-158-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 158,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        345.1071472167969
+      ],
+      "preview_text": "figure 7.4. health expenditure per capita, 2024 (or nearest year)",
+      "caption": "figure 7.4. health expenditure per capita, 2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-158-0.png",
+      "meta": {
+        "area_frac": 0.321,
+        "aspect": 1.78,
+        "text_lines": 66,
+        "text_chars": 519,
+        "text_ratio": 0.521
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-158-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 158,
+      "bbox": [
+        30.552481384277343,
+        354.1071472167969,
+        561.2757580566406,
+        645.4735107421875
+      ],
+      "preview_text": "figure 7.5. annual growth in health expenditure per capita (real terms), 2014-2019 and 2019-2024",
+      "caption": "figure 7.5. annual growth in health expenditure per capita (real terms), 2014-2019 and 2019-2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-158-1.png",
+      "meta": {
+        "area_frac": 0.301,
+        "aspect": 1.87,
+        "text_lines": 54,
+        "text_chars": 439,
+        "text_ratio": 0.441
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-160-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 160,
+      "bbox": [
+        30.552481384277343,
+        481.1871337890625,
+        561.7265637207031,
+        698.8734741210938
+      ],
+      "preview_text": "figure 7.8. healthcare price levels compared to economy-wide price levels, 2023 (oecd average = 100)",
+      "caption": "figure 7.8. healthcare price levels compared to economy-wide price levels, 2023 (oecd average = 100)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-160-0.png",
+      "meta": {
+        "area_frac": 0.222,
+        "aspect": 2.57,
+        "text_lines": 62,
+        "text_chars": 411,
+        "text_ratio": 0.322
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-162-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 162,
+      "bbox": [
+        30.552481384277343,
+        366.7071533203125,
+        561.2817395019531,
+        651.3534545898438
+      ],
+      "preview_text": "figure 7.10 . annual growth in per capita health expenditure by type of financing (real terms), oecd average,",
+      "caption": "figure 7.10 . annual growth in per capita health expenditure by type of financing (real terms), oecd average,",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-162-0.png",
+      "meta": {
+        "area_frac": 0.294,
+        "aspect": 1.92,
+        "text_lines": 34,
+        "text_chars": 426,
+        "text_ratio": 0.318
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-162-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 162,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        357.7071533203125
+      ],
+      "preview_text": "figure 7.9. health expenditure by type of financing, 2023 (or nearest year)",
+      "caption": "figure 7.9. health expenditure by type of financing, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-162-1.png",
+      "meta": {
+        "area_frac": 0.335,
+        "aspect": 1.7,
+        "text_lines": 108,
+        "text_chars": 876,
+        "text_ratio": 0.653
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-164-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 164,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        277.5471496582031
+      ],
+      "preview_text": "figure 7.11. health expenditure from public sources as a share of total health expenditure, 2023 (or nearest year)",
+      "caption": "figure 7.11. health expenditure from public sources as a share of total health expenditure, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-164-0.png",
+      "meta": {
+        "area_frac": 0.247,
+        "aspect": 2.31,
+        "text_lines": 69,
+        "text_chars": 586,
+        "text_ratio": 0.331
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-164-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 164,
+      "bbox": [
+        30.552481384277343,
+        286.5471496582031,
+        561.2817395019531,
+        497.38714599609375
+      ],
+      "preview_text": "figure 7.12. health expenditure from public sources as a share of total government expenditure, 2013 and 2023 (or",
+      "caption": "figure 7.12. health expenditure from public sources as a share of total government expenditure, 2013 and 2023 (or",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-164-1.png",
+      "meta": {
+        "area_frac": 0.227,
+        "aspect": 2.51,
+        "text_lines": 17,
+        "text_chars": 544,
+        "text_ratio": 0.307
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-164-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 164,
+      "bbox": [
+        30.552481384277343,
+        498.6257611083984,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 7.13. financing sources of compulsory health insurance, 2023 (or nearest year)",
+      "caption": "figure 7.13. financing sources of compulsory health insurance, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-164-2.png",
+      "meta": {
+        "area_frac": 0.247,
+        "aspect": 2.31,
+        "text_lines": 89,
+        "text_chars": 606,
+        "text_ratio": 0.342
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-166-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 166,
+      "bbox": [
+        30.551512451171874,
+        372.9471435546875,
+        566.6461804199218,
+        678.3534545898438
+      ],
+      "preview_text": "figure 7.15. annual growth in health expenditure for selected services (real terms), oecd average, 2017 \u2011 19, 2019-2021,",
+      "caption": "figure 7.15. annual growth in health expenditure for selected services (real terms), oecd average, 2017 \u2011 19, 2019-2021,",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-166-0.png",
+      "meta": {
+        "area_frac": 0.467,
+        "aspect": 1.25,
+        "text_lines": 41,
+        "text_chars": 474,
+        "text_ratio": 0.306
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-166-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 166,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        363.9471435546875
+      ],
+      "preview_text": "figure 7.14. health expenditure by type of service, 2023 (or nearest year)",
+      "caption": "figure 7.14. health expenditure by type of service, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-166-1.png",
+      "meta": {
+        "area_frac": 0.342,
+        "aspect": 1.67,
+        "text_lines": 114,
+        "text_chars": 1033,
+        "text_ratio": 0.667
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-168-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 168,
+      "bbox": [
+        30.552481384277343,
+        353.74713134765625,
+        561.5940563964843,
+        649.1934814453125
+      ],
+      "preview_text": "figure 7.17. spending on prevention as a share of current health expenditure, 2013, 2021 and 2023 (or nearest year)",
+      "caption": "figure 7.17. spending on prevention as a share of current health expenditure, 2013, 2021 and 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-168-0.png",
+      "meta": {
+        "area_frac": 0.305,
+        "aspect": 1.85,
+        "text_lines": 53,
+        "text_chars": 291,
+        "text_ratio": 0.384
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-168-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 168,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        344.74713134765625
+      ],
+      "preview_text": "figure 7.16. spending on primary healthcare services as a share of current health expenditure, 2023 (or nearest year)",
+      "caption": "figure 7.16. spending on primary healthcare services as a share of current health expenditure, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-168-1.png",
+      "meta": {
+        "area_frac": 0.321,
+        "aspect": 1.78,
+        "text_lines": 44,
+        "text_chars": 429,
+        "text_ratio": 0.566
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-170-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 170,
+      "bbox": [
+        30.552481384277343,
+        357.2663555908203,
+        561.7155773925781,
+        679.4334716796875
+      ],
+      "preview_text": "figure 7.19. hospital expenditure by type of service, 2023 (or nearest year)",
+      "caption": "figure 7.19. hospital expenditure by type of service, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-170-0.png",
+      "meta": {
+        "area_frac": 0.336,
+        "aspect": 1.7,
+        "text_lines": 109,
+        "text_chars": 699,
+        "text_ratio": 0.395
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-170-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 170,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        361.9071350097656
+      ],
+      "preview_text": "figure 7.18. health expenditure by provider, 2023 (or nearest year)",
+      "caption": "figure 7.18. health expenditure by provider, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-170-1.png",
+      "meta": {
+        "area_frac": 0.339,
+        "aspect": 1.68,
+        "text_lines": 99,
+        "text_chars": 1031,
+        "text_ratio": 0.583
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-172-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 172,
+      "bbox": [
+        30.552481384277343,
+        376.30712890625,
+        561.2757580566406,
+        674.3934936523438
+      ],
+      "preview_text": "figure 7.21. trends in capital expenditure as a share of gdp, oecd and selected countries, 2013-2023",
+      "caption": "figure 7.21. trends in capital expenditure as a share of gdp, oecd and selected countries, 2013-2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-172-0.png",
+      "meta": {
+        "area_frac": 0.308,
+        "aspect": 1.83,
+        "text_lines": 41,
+        "text_chars": 400,
+        "text_ratio": 0.39
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-172-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 172,
+      "bbox": [
+        30.552427978515624,
+        59.77115484619141,
+        561.8422863769531,
+        367.30712890625
+      ],
+      "preview_text": "figure 7.20. annual capital expenditure in health and social work as a share of gdp, average 2021-2024 (or nearest",
+      "caption": "figure 7.20. annual capital expenditure in health and social work as a share of gdp, average 2021-2024 (or nearest",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-172-1.png",
+      "meta": {
+        "area_frac": 0.345,
+        "aspect": 1.65,
+        "text_lines": 21,
+        "text_chars": 587,
+        "text_ratio": 0.573
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-174-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 174,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        283.1871337890625
+      ],
+      "preview_text": "figure 7.22. estimated domestic spending on prevention, preparedness and response per capita, 2013, 2019 and 2023",
+      "caption": "figure 7.22. estimated domestic spending on prevention, preparedness and response per capita, 2013, 2019 and 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-174-0.png",
+      "meta": {
+        "area_frac": 0.253,
+        "aspect": 2.25,
+        "text_lines": 19,
+        "text_chars": 432,
+        "text_ratio": 0.402
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-174-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 174,
+      "bbox": [
+        30.552481384277343,
+        498.38311584472655,
+        578.8717053222656,
+        721.3489379882812
+      ],
+      "preview_text": "figure 7.24. bilateral oda commitments for health, 2023",
+      "caption": "figure 7.24. bilateral oda commitments for health, 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-174-1.png",
+      "meta": {
+        "area_frac": 0.258,
+        "aspect": 2.36,
+        "text_lines": 20,
+        "text_chars": 251,
+        "text_ratio": 0.234
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-174-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 174,
+      "bbox": [
+        30.552481384277343,
+        292.1871337890625,
+        578.8717053222656,
+        510.02716064453125
+      ],
+      "preview_text": "figure 7.23. estimated spending on prevention, preparedness and response per capita, by country income group, 2022",
+      "caption": "figure 7.23. estimated spending on prevention, preparedness and response per capita, by country income group, 2022",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-174-2.png",
+      "meta": {
+        "area_frac": 0.492,
+        "aspect": 1.24,
+        "text_lines": 23,
+        "text_chars": 353,
+        "text_ratio": 0.329
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-176-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 176,
+      "bbox": [
+        30.552481384277343,
+        289.7031536865234,
+        561.2787487792968,
+        496.54718017578125
+      ],
+      "preview_text": "figure 7.26. observed and projected health spending from public sources as a share of gdp",
+      "caption": "figure 7.26. observed and projected health spending from public sources as a share of gdp",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-176-0.png",
+      "meta": {
+        "area_frac": 0.222,
+        "aspect": 2.56,
+        "text_lines": 16,
+        "text_chars": 184,
+        "text_ratio": 0.195
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-176-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 176,
+      "bbox": [
+        30.552481384277343,
+        505.54718017578125,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 7.27. projected increase of health spending from public sources in 2045 under different projection scenarios",
+      "caption": "figure 7.27. projected increase of health spending from public sources in 2045 under different projection scenarios",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-176-1.png",
+      "meta": {
+        "area_frac": 0.235,
+        "aspect": 2.42,
+        "text_lines": 33,
+        "text_chars": 337,
+        "text_ratio": 0.357
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-180-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 180,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        277.9071350097656
+      ],
+      "preview_text": "figure 8.1. employment in health and social work as a share of total employment, 2023 and 2013 (or nearest year)",
+      "caption": "figure 8.1. employment in health and social work as a share of total employment, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-180-0.png",
+      "meta": {
+        "area_frac": 0.253,
+        "aspect": 2.24,
+        "text_lines": 55,
+        "text_chars": 483,
+        "text_ratio": 0.37
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-180-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 180,
+      "bbox": [
+        30.552481384277343,
+        282.2644329833984,
+        560.8227551269531,
+        497.50714111328125
+      ],
+      "preview_text": "figure 8.2. employment growth by sector, oecd average, 2013-2023 (or nearest year)",
+      "caption": "figure 8.2. employment growth by sector, oecd average, 2013-2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-180-1.png",
+      "meta": {
+        "area_frac": 0.238,
+        "aspect": 2.39,
+        "text_lines": 26,
+        "text_chars": 388,
+        "text_ratio": 0.297
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-180-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 180,
+      "bbox": [
+        30.552481384277343,
+        449.817138671875,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "Total",
+      "caption": "Total",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-180-2.png",
+      "meta": {
+        "area_frac": 0.239,
+        "aspect": 2.36,
+        "text_lines": 48,
+        "text_chars": 398,
+        "text_ratio": 0.305
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-182-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 182,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        337.7871398925781
+      ],
+      "preview_text": "figure 8.4. practising doctors per 1 000 population, 2023 and 2013 (or nearest year)",
+      "caption": "figure 8.4. practising doctors per 1 000 population, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-182-0.png",
+      "meta": {
+        "area_frac": 0.319,
+        "aspect": 1.78,
+        "text_lines": 23,
+        "text_chars": 712,
+        "text_ratio": 0.506
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-182-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 182,
+      "bbox": [
+        30.552481384277343,
+        342.1463604736328,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 8.5. doctor density by territorial level 2 regions, 2023 (or nearest year)",
+      "caption": "figure 8.5. doctor density by territorial level 2 regions, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-182-1.png",
+      "meta": {
+        "area_frac": 0.411,
+        "aspect": 1.37,
+        "text_lines": 58,
+        "text_chars": 650,
+        "text_ratio": 0.462
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-184-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 184,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        279.9471435546875
+      ],
+      "preview_text": "figure 8.6. share of doctors aged 55 and older, 2023 and 2013 (or nearest year)",
+      "caption": "figure 8.6. share of doctors aged 55 and older, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-184-0.png",
+      "meta": {
+        "area_frac": 0.256,
+        "aspect": 2.22,
+        "text_lines": 30,
+        "text_chars": 349,
+        "text_ratio": 0.266
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-184-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 184,
+      "bbox": [
+        30.552481384277343,
+        287.1844158935547,
+        560.8197644042968,
+        505.66717529296875
+      ],
+      "preview_text": "figure 8.7. share of female doctors, 2023 and 2013 (or nearest year)",
+      "caption": "figure 8.7. share of female doctors, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-184-1.png",
+      "meta": {
+        "area_frac": 0.242,
+        "aspect": 2.35,
+        "text_lines": 18,
+        "text_chars": 357,
+        "text_ratio": 0.272
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-184-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 184,
+      "bbox": [
+        30.552481384277343,
+        513.0244427490234,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 8.8. share of different categories of doctors, 2023 (or nearest year)",
+      "caption": "figure 8.8. share of different categories of doctors, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-184-2.png",
+      "meta": {
+        "area_frac": 0.229,
+        "aspect": 2.47,
+        "text_lines": 116,
+        "text_chars": 568,
+        "text_ratio": 0.433
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-186-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 186,
+      "bbox": [
+        30.552481384277343,
+        356.85870361328125,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "Australia",
+      "caption": "Australia",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-186-0.png",
+      "meta": {
+        "area_frac": 0.314,
+        "aspect": 1.8,
+        "text_lines": 58,
+        "text_chars": 538,
+        "text_ratio": 0.325
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-186-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 186,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        425.9871520996094
+      ],
+      "preview_text": "figure 8.9. remuneration of general practitioners, 2023 (or nearest year)",
+      "caption": "figure 8.9. remuneration of general practitioners, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-186-1.png",
+      "meta": {
+        "area_frac": 0.416,
+        "aspect": 1.37,
+        "text_lines": 161,
+        "text_chars": 1072,
+        "text_ratio": 0.648
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-188-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 188,
+      "bbox": [
+        30.552481384277343,
+        449.38714599609375,
+        561.7177746582031,
+        717.4735107421875
+      ],
+      "preview_text": "figure 8.12. remuneration of different categories of specialists compared to general practitioners, 2023 (or nearest year)",
+      "caption": "figure 8.12. remuneration of different categories of specialists compared to general practitioners, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-188-0.png",
+      "meta": {
+        "area_frac": 0.277,
+        "aspect": 2.06,
+        "text_lines": 17,
+        "text_chars": 611,
+        "text_ratio": 0.326
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-188-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 188,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        440.38714599609375
+      ],
+      "preview_text": "figure 8.11. remuneration of specialists, 2023 (or nearest year)",
+      "caption": "figure 8.11. remuneration of specialists, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-188-1.png",
+      "meta": {
+        "area_frac": 0.432,
+        "aspect": 1.32,
+        "text_lines": 193,
+        "text_chars": 1219,
+        "text_ratio": 0.65
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-190-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 190,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        371.14715576171875
+      ],
+      "preview_text": "figure 8.13. practising nurses per 1 000 population, 2023 and 2013 (or nearest year)",
+      "caption": "figure 8.13. practising nurses per 1 000 population, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-190-0.png",
+      "meta": {
+        "area_frac": 0.356,
+        "aspect": 1.6,
+        "text_lines": 30,
+        "text_chars": 950,
+        "text_ratio": 0.537
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-190-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 190,
+      "bbox": [
+        30.552481384277343,
+        375.3876629638672,
+        560.8227551269531,
+        692.3934936523438
+      ],
+      "preview_text": "figure 8.14. ratio of nurses per doctor, 2023 (or nearest year)",
+      "caption": "figure 8.14. ratio of nurses per doctor, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-190-1.png",
+      "meta": {
+        "area_frac": 0.329,
+        "aspect": 1.71,
+        "text_lines": 19,
+        "text_chars": 781,
+        "text_ratio": 0.441
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-192-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 192,
+      "bbox": [
+        30.55245849609375,
+        415.7871398925781,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 8.16. average annual growth in remuneration of hospital nurses (real terms), 2019-2023 and 2013-2019 (or",
+      "caption": "figure 8.16. average annual growth in remuneration of hospital nurses (real terms), 2019-2023 and 2013-2019 (or",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-192-0.png",
+      "meta": {
+        "area_frac": 0.324,
+        "aspect": 1.74,
+        "text_lines": 27,
+        "text_chars": 613,
+        "text_ratio": 0.325
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-192-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 192,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        406.7871398925781
+      ],
+      "preview_text": "figure 8.15. remuneration of hospital nurses, 2023 (or nearest year)",
+      "caption": "figure 8.15. remuneration of hospital nurses, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-192-1.png",
+      "meta": {
+        "area_frac": 0.395,
+        "aspect": 1.44,
+        "text_lines": 164,
+        "text_chars": 1211,
+        "text_ratio": 0.642
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-194-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 194,
+      "bbox": [
+        30.552481384277343,
+        353.4257489013672,
+        560.8197644042968,
+        652.6735229492188
+      ],
+      "preview_text": "figure 8.18. growth in number of hospital nurses, selected oecd countries, 2013-2023",
+      "caption": "figure 8.18. growth in number of hospital nurses, selected oecd countries, 2013-2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-194-0.png",
+      "meta": {
+        "area_frac": 0.31,
+        "aspect": 1.82,
+        "text_lines": 34,
+        "text_chars": 447,
+        "text_ratio": 0.366
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-194-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 194,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        349.1871337890625
+      ],
+      "preview_text": "figure 8.17. hospital workforce per 1 000 population, 2023 (or nearest year)",
+      "caption": "figure 8.17. hospital workforce per 1 000 population, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-194-1.png",
+      "meta": {
+        "area_frac": 0.332,
+        "aspect": 1.71,
+        "text_lines": 22,
+        "text_chars": 737,
+        "text_ratio": 0.603
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-196-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 196,
+      "bbox": [
+        30.552481384277343,
+        350.1850567626953,
+        561.2787487792968,
+        658.073486328125
+      ],
+      "preview_text": "figure 8.20. share of postgraduate training places in general medicine, 2023",
+      "caption": "figure 8.20. share of postgraduate training places in general medicine, 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-196-0.png",
+      "meta": {
+        "area_frac": 0.319,
+        "aspect": 1.77,
+        "text_lines": 37,
+        "text_chars": 432,
+        "text_ratio": 0.391
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-196-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 196,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        345.8271484375
+      ],
+      "preview_text": "figure 8.19. medical graduates, 2023 and 2013 (or nearest year)",
+      "caption": "figure 8.19. medical graduates, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-196-1.png",
+      "meta": {
+        "area_frac": 0.329,
+        "aspect": 1.74,
+        "text_lines": 32,
+        "text_chars": 635,
+        "text_ratio": 0.575
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-198-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 198,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        336.1071472167969
+      ],
+      "preview_text": "figure 8.21. nursing graduates, 2023 and 2013 (or nearest year)",
+      "caption": "figure 8.21. nursing graduates, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-198-0.png",
+      "meta": {
+        "area_frac": 0.317,
+        "aspect": 1.79,
+        "text_lines": 38,
+        "text_chars": 382,
+        "text_ratio": 0.476
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-198-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 198,
+      "bbox": [
+        30.552481384277343,
+        340.4644451904297,
+        561.7265637207031,
+        635.3934936523438
+      ],
+      "preview_text": "figure 8.22. interest in a nursing career among 15-year-old students, 2022 and 2018",
+      "caption": "figure 8.22. interest in a nursing career among 15-year-old students, 2022 and 2018",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-198-1.png",
+      "meta": {
+        "area_frac": 0.307,
+        "aspect": 1.86,
+        "text_lines": 16,
+        "text_chars": 383,
+        "text_ratio": 0.477
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-200-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 200,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        298.7871398925781
+      ],
+      "preview_text": "figure 8.23. share of foreign-trained doctors, 2023 and 2010 (or nearest years)",
+      "caption": "figure 8.23. share of foreign-trained doctors, 2023 and 2010 (or nearest years)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-200-0.png",
+      "meta": {
+        "area_frac": 0.277,
+        "aspect": 2.06,
+        "text_lines": 43,
+        "text_chars": 316,
+        "text_ratio": 0.294
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-200-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 200,
+      "bbox": [
+        30.552481384277343,
+        517.4271850585938,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 8.25. evolution of annual inflows of foreign-trained doctors, selected oecd countries, 2010 2023",
+      "caption": "figure 8.25. evolution of annual inflows of foreign-trained doctors, selected oecd countries, 2010 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-200-1.png",
+      "meta": {
+        "area_frac": 0.229,
+        "aspect": 2.46,
+        "text_lines": 26,
+        "text_chars": 380,
+        "text_ratio": 0.353
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-202-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 202,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        278.26715087890625
+      ],
+      "preview_text": "figure 8.26. share of foreign-trained nurses, 2023 and 2010 (or nearest years)",
+      "caption": "figure 8.26. share of foreign-trained nurses, 2023 and 2010 (or nearest years)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-202-0.png",
+      "meta": {
+        "area_frac": 0.254,
+        "aspect": 2.24,
+        "text_lines": 43,
+        "text_chars": 275,
+        "text_ratio": 0.276
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-202-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 202,
+      "bbox": [
+        30.552480697631836,
+        287.26715087890625,
+        563.3406372070312,
+        721.3489379882812
+      ],
+      "preview_text": "figure 8.27. contribution of foreign-trained nurses to nursing workforce growth, 2010-2023 (or nearest years)",
+      "caption": "figure 8.27. contribution of foreign-trained nurses to nursing workforce growth, 2010-2023 (or nearest years)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-202-1.png",
+      "meta": {
+        "area_frac": 0.242,
+        "aspect": 2.37,
+        "text_lines": 61,
+        "text_chars": 683,
+        "text_ratio": 0.686
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-206-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 206,
+      "bbox": [
+        30.552481384277343,
+        278.9044476318359,
+        561.2817395019531,
+        495.8271484375
+      ],
+      "preview_text": "figure 9.2. expenditure on retail pharmaceuticals by type of financing, 2023 (or nearest year)",
+      "caption": "figure 9.2. expenditure on retail pharmaceuticals by type of financing, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-206-0.png",
+      "meta": {
+        "area_frac": 0.24,
+        "aspect": 2.37,
+        "text_lines": 31,
+        "text_chars": 560,
+        "text_ratio": 0.41
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-206-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 206,
+      "bbox": [
+        30.552481384277343,
+        504.8271484375,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 9.3. non-retail pharmaceutical expenditures as a share of total pharmaceutical expenditure, 2023 and 2013 (or",
+      "caption": "figure 9.3. non-retail pharmaceutical expenditures as a share of total pharmaceutical expenditure, 2023 and 2013 (or",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-206-1.png",
+      "meta": {
+        "area_frac": 0.232,
+        "aspect": 2.43,
+        "text_lines": 47,
+        "text_chars": 330,
+        "text_ratio": 0.241
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-208-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 208,
+      "bbox": [
+        30.552481384277343,
+        330.98504455566405,
+        561.2757580566406,
+        592.4334716796875
+      ],
+      "preview_text": "figure 9.5. community pharmacies, 2023 (or nearest year)",
+      "caption": "figure 9.5. community pharmacies, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-208-0.png",
+      "meta": {
+        "area_frac": 0.268,
+        "aspect": 2.1,
+        "text_lines": 44,
+        "text_chars": 352,
+        "text_ratio": 0.388
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-210-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 210,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        693.83349609375
+      ],
+      "preview_text": "figure 9.6. consumption of medicines for selected chronic conditions, 2023 and 2013 (or nearest year)",
+      "caption": "figure 9.6. consumption of medicines for selected chronic conditions, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-210-0.png",
+      "meta": {
+        "area_frac": 0.688,
+        "aspect": 0.82,
+        "text_lines": 316,
+        "text_chars": 2049,
+        "text_ratio": 0.981
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-212-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 212,
+      "bbox": [
+        30.552481384277343,
+        503.9044476318359,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 9.9. market share of biosimilars in biologic market in ten key therapy areas, 2023",
+      "caption": "figure 9.9. market share of biosimilars in biologic market in ten key therapy areas, 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-212-0.png",
+      "meta": {
+        "area_frac": 0.242,
+        "aspect": 2.35,
+        "text_lines": 76,
+        "text_chars": 477,
+        "text_ratio": 0.356
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-214-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 214,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        263.50714111328125
+      ],
+      "preview_text": "figure 9.10. ct scanners, mri units and pet scanners, 2023 (or nearest year)",
+      "caption": "figure 9.10. ct scanners, mri units and pet scanners, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-214-0.png",
+      "meta": {
+        "area_frac": 0.238,
+        "aspect": 2.39,
+        "text_lines": 22,
+        "text_chars": 621,
+        "text_ratio": 0.349
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-214-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 214,
+      "bbox": [
+        30.552481384277343,
+        270.8650341796875,
+        560.8167736816406,
+        474.7071533203125
+      ],
+      "preview_text": "figure 9.11. ct, mri and pet exams, 2023 (or nearest year)",
+      "caption": "figure 9.11. ct, mri and pet exams, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-214-1.png",
+      "meta": {
+        "area_frac": 0.226,
+        "aspect": 2.52,
+        "text_lines": 21,
+        "text_chars": 603,
+        "text_ratio": 0.339
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-214-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 214,
+      "bbox": [
+        30.552481384277343,
+        482.0650616455078,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 9.12. trends in use of diagnostic technologies, selected countries, 2013-2023",
+      "caption": "figure 9.12. trends in use of diagnostic technologies, selected countries, 2013-2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-214-2.png",
+      "meta": {
+        "area_frac": 0.262,
+        "aspect": 2.16,
+        "text_lines": 35,
+        "text_chars": 517,
+        "text_ratio": 0.291
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-216-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 216,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        273.4671325683594
+      ],
+      "preview_text": "figure 9.13. access to electronic health records, 2024",
+      "caption": "figure 9.13. access to electronic health records, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-216-0.png",
+      "meta": {
+        "area_frac": 0.249,
+        "aspect": 2.29,
+        "text_lines": 42,
+        "text_chars": 269,
+        "text_ratio": 0.243
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-216-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 216,
+      "bbox": [
+        30.552481384277343,
+        282.4671325683594,
+        560.8197644042968,
+        496.90716552734375
+      ],
+      "preview_text": "figure 9.14. digital health literacy scores by education among primary care users aged 45 and over, 2024",
+      "caption": "figure 9.14. digital health literacy scores by education among primary care users aged 45 and over, 2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-216-1.png",
+      "meta": {
+        "area_frac": 0.237,
+        "aspect": 2.4,
+        "text_lines": 15,
+        "text_chars": 498,
+        "text_ratio": 0.451
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-216-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 216,
+      "bbox": [
+        30.552481384277343,
+        501.2650433349609,
+        560.8197644042968,
+        719.3934936523438
+      ],
+      "preview_text": "figure 9.15. doctor teleconsultations per person, 2023, 2021 and 2019",
+      "caption": "figure 9.15. doctor teleconsultations per person, 2023, 2021 and 2019",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-216-2.png",
+      "meta": {
+        "area_frac": 0.221,
+        "aspect": 2.55,
+        "text_lines": 15,
+        "text_chars": 300,
+        "text_ratio": 0.271
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-218-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 218,
+      "bbox": [
+        30.552481384277343,
+        487.5844403076172,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 9.18. top health categories for medicines in active development worldwide, 2013-2023",
+      "caption": "figure 9.18. top health categories for medicines in active development worldwide, 2013-2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-218-0.png",
+      "meta": {
+        "area_frac": 0.255,
+        "aspect": 2.24,
+        "text_lines": 30,
+        "text_chars": 581,
+        "text_ratio": 0.368
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-222-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 222,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        501.7135009765625
+      ],
+      "preview_text": "figure 10.1. share of the population aged 65 and over and 80 and over, 2050 and 2023",
+      "caption": "figure 10.1. share of the population aged 65 and over and 80 and over, 2050 and 2023",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-222-0.png",
+      "meta": {
+        "area_frac": 0.478,
+        "aspect": 1.18,
+        "text_lines": 301,
+        "text_chars": 1733,
+        "text_ratio": 0.978
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-224-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 224,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        280.7871398925781
+      ],
+      "preview_text": "figure 10.2. life expectancy at age 65, 2023 and 2013 (or nearest year)",
+      "caption": "figure 10.2. life expectancy at age 65, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-224-0.png",
+      "meta": {
+        "area_frac": 0.257,
+        "aspect": 2.22,
+        "text_lines": 52,
+        "text_chars": 477,
+        "text_ratio": 0.177
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-224-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 224,
+      "bbox": [
+        30.552481384277343,
+        285.0244427490234,
+        561.2817395019531,
+        711.1134643554688
+      ],
+      "preview_text": "figure 10.3. healthy life expectancy at age 60, 2021",
+      "caption": "figure 10.3. healthy life expectancy at age 60, 2021",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-224-1.png",
+      "meta": {
+        "area_frac": 0.448,
+        "aspect": 1.26,
+        "text_lines": 418,
+        "text_chars": 2172,
+        "text_ratio": 0.808
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-226-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 226,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        566.6416027832031,
+        266.0271301269531
+      ],
+      "preview_text": "figure 10.4. people aged 65 and over rating their health as poor or very poor, by income quintile, 2024 (or nearest year)",
+      "caption": "figure 10.4. people aged 65 and over rating their health as poor or very poor, by income quintile, 2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-226-0.png",
+      "meta": {
+        "area_frac": 0.243,
+        "aspect": 2.39,
+        "text_lines": 38,
+        "text_chars": 327,
+        "text_ratio": 0.212
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-226-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 226,
+      "bbox": [
+        30.552427978515624,
+        275.0271301269531,
+        561.2818005371093,
+        490.54718017578125
+      ],
+      "preview_text": "figure 10.5. activities of daily living and instrumental activities of daily living limitations in adults aged 65 and over,",
+      "caption": "figure 10.5. activities of daily living and instrumental activities of daily living limitations in adults aged 65 and over,",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-226-1.png",
+      "meta": {
+        "area_frac": 0.239,
+        "aspect": 2.39,
+        "text_lines": 106,
+        "text_chars": 622,
+        "text_ratio": 0.403
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-226-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 226,
+      "bbox": [
+        30.541441650390624,
+        499.54718017578125,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 10.6. primary care users aged 65 and over with at least one chronic condition reporting their social functioning",
+      "caption": "figure 10.6. primary care users aged 65 and over with at least one chronic condition reporting their social functioning",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-226-2.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 2.32,
+        "text_lines": 31,
+        "text_chars": 556,
+        "text_ratio": 0.361
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-228-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 228,
+      "bbox": [
+        30.552481384277343,
+        377.0709210205078,
+        561.7155163574218,
+        701.9934692382812
+      ],
+      "preview_text": "figure 10.8. antipsychotic prescribing rates, 2024 (or nearest year)",
+      "caption": "figure 10.8. antipsychotic prescribing rates, 2024 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-228-0.png",
+      "meta": {
+        "area_frac": 0.34,
+        "aspect": 1.68,
+        "text_lines": 32,
+        "text_chars": 320,
+        "text_ratio": 0.174
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-230-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 230,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        260.86712646484375
+      ],
+      "preview_text": "figure 10.9. prevalence of healthcare-associated infections per 100 residents in long-term care facilities, 2023-2024",
+      "caption": "figure 10.9. prevalence of healthcare-associated infections per 100 residents in long-term care facilities, 2023-2024",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-230-0.png",
+      "meta": {
+        "area_frac": 0.235,
+        "aspect": 2.43,
+        "text_lines": 28,
+        "text_chars": 303,
+        "text_ratio": 0.278
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-230-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 230,
+      "bbox": [
+        30.552480697631836,
+        269.86712646484375,
+        561.2787475585938,
+        485.6671447753906
+      ],
+      "preview_text": "figure 10.10. benzodiazepine use per 1 000 patients aged 65 and over, 2024 and 2014 (or nearest year)",
+      "caption": "figure 10.10. benzodiazepine use per 1 000 patients aged 65 and over, 2024 and 2014 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-230-1.png",
+      "meta": {
+        "area_frac": 0.231,
+        "aspect": 2.46,
+        "text_lines": 60,
+        "text_chars": 470,
+        "text_ratio": 0.431
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-230-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 230,
+      "bbox": [
+        30.552481384277343,
+        487.6671447753906,
+        565.3167736816406,
+        694.1934814453125
+      ],
+      "preview_text": "figure 10.11. people aged 75 and over taking more than five medications concurrently, 2024 and 2014 (or nearest year)",
+      "caption": "figure 10.11. people aged 75 and over taking more than five medications concurrently, 2024 and 2014 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-230-2.png",
+      "meta": {
+        "area_frac": 0.211,
+        "aspect": 2.74,
+        "text_lines": 29,
+        "text_chars": 281,
+        "text_ratio": 0.258
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-232-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 232,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        284.62713623046875
+      ],
+      "preview_text": "figure 10.12. people aged 65 and over receiving long-term care, 2023 and 2013 (or nearest year)",
+      "caption": "figure 10.12. people aged 65 and over receiving long-term care, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-232-0.png",
+      "meta": {
+        "area_frac": 0.261,
+        "aspect": 2.18,
+        "text_lines": 49,
+        "text_chars": 607,
+        "text_ratio": 0.427
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-232-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 232,
+      "bbox": [
+        30.552481384277343,
+        293.62713623046875,
+        561.3099377441406,
+        495.10711669921875
+      ],
+      "preview_text": "figure 10.13. long-term care recipients aged 65 and over receiving care at home, 2023 and 2013 (or nearest year)",
+      "caption": "figure 10.13. long-term care recipients aged 65 and over receiving care at home, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-232-1.png",
+      "meta": {
+        "area_frac": 0.223,
+        "aspect": 2.55,
+        "text_lines": 35,
+        "text_chars": 328,
+        "text_ratio": 0.23
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-232-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 232,
+      "bbox": [
+        30.541441650390624,
+        504.10711669921875,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 10.14. unmet long-term care needs among people living at home aged 65 and above with some limitations in",
+      "caption": "figure 10.14. unmet long-term care needs among people living at home aged 65 and above with some limitations in",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-232-2.png",
+      "meta": {
+        "area_frac": 0.23,
+        "aspect": 2.45,
+        "text_lines": 57,
+        "text_chars": 451,
+        "text_ratio": 0.317
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-234-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 234,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        282.2271423339844
+      ],
+      "preview_text": "figure 10.15. people aged 50 and above providing informal care, 2021-2022 (or nearest year)",
+      "caption": "figure 10.15. people aged 50 and above providing informal care, 2021-2022 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-234-0.png",
+      "meta": {
+        "area_frac": 0.258,
+        "aspect": 2.2,
+        "text_lines": 67,
+        "text_chars": 748,
+        "text_ratio": 0.495
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-234-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 234,
+      "bbox": [
+        30.552481384277343,
+        258.7809753417969,
+        561.2817395019531,
+        501.34710693359375
+      ],
+      "preview_text": "United States.",
+      "caption": "United States.",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-234-1.png",
+      "meta": {
+        "area_frac": 0.238,
+        "aspect": 2.4,
+        "text_lines": 41,
+        "text_chars": 414,
+        "text_ratio": 0.274
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-234-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 234,
+      "bbox": [
+        30.552481384277343,
+        477.8996887207031,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "United States.",
+      "caption": "United States.",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-234-2.png",
+      "meta": {
+        "area_frac": 0.23,
+        "aspect": 2.46,
+        "text_lines": 40,
+        "text_chars": 313,
+        "text_ratio": 0.207
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-236-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 236,
+      "bbox": [
+        30.552480697631836,
+        286.3072509765625,
+        561.28173828125,
+        479.067138671875
+      ],
+      "preview_text": "figure 10.19. share of long-term care workers who work part time or on fixed-term contracts, 2023 (or nearest year)",
+      "caption": "figure 10.19. share of long-term care workers who work part time or on fixed-term contracts, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-236-0.png",
+      "meta": {
+        "area_frac": 0.206,
+        "aspect": 2.77,
+        "text_lines": 88,
+        "text_chars": 520,
+        "text_ratio": 0.374
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-236-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 236,
+      "bbox": [
+        30.552481384277343,
+        476.3044415283203,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 10.20. share of long-term care workers who are foreign-born, 2024 and 2014",
+      "caption": "figure 10.20. share of long-term care workers who are foreign-born, 2024 and 2014",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-236-1.png",
+      "meta": {
+        "area_frac": 0.262,
+        "aspect": 2.18,
+        "text_lines": 72,
+        "text_chars": 441,
+        "text_ratio": 0.317
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-238-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 238,
+      "bbox": [
+        30.552481384277343,
+        358.9444561767578,
+        561.2757580566406,
+        662.5134887695312
+      ],
+      "preview_text": "figure 10.22. long-term care beds by ownership, 2023 (or nearest year)",
+      "caption": "figure 10.22. long-term care beds by ownership, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-238-0.png",
+      "meta": {
+        "area_frac": 0.314,
+        "aspect": 1.8,
+        "text_lines": 68,
+        "text_chars": 329,
+        "text_ratio": 0.399
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-238-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 238,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        354.5871276855469
+      ],
+      "preview_text": "figure 10.21. long-term care beds in institutions and hospitals, 2023 and 2013 (or nearest year)",
+      "caption": "figure 10.21. long-term care beds in institutions and hospitals, 2023 and 2013 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-238-1.png",
+      "meta": {
+        "area_frac": 0.338,
+        "aspect": 1.69,
+        "text_lines": 35,
+        "text_chars": 458,
+        "text_ratio": 0.555
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-240-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 240,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        280.067138671875
+      ],
+      "preview_text": "figure 10.23. total long-term care spending as a share of gross domestic product, 2023 (or nearest year)",
+      "caption": "figure 10.23. total long-term care spending as a share of gross domestic product, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-240-0.png",
+      "meta": {
+        "area_frac": 0.256,
+        "aspect": 2.22,
+        "text_lines": 21,
+        "text_chars": 585,
+        "text_ratio": 0.321
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-240-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 240,
+      "bbox": [
+        30.552481384277343,
+        284.4250164794922,
+        561.2787487792968,
+        485.0271301269531
+      ],
+      "preview_text": "figure 10.24. total long-term care spending by provider, 2023 (or nearest year)",
+      "caption": "figure 10.24. total long-term care spending by provider, 2023 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-240-1.png",
+      "meta": {
+        "area_frac": 0.222,
+        "aspect": 2.56,
+        "text_lines": 18,
+        "text_chars": 425,
+        "text_ratio": 0.233
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-240-2",
+      "kind": "chart",
+      "type": "chart",
+      "page": 240,
+      "bbox": [
+        30.54142639160156,
+        494.0271301269531,
+        563.2843029785156,
+        721.3489379882812
+      ],
+      "preview_text": "figure 10.25. costs of long-term care for people aged 65 and over with severe needs, as a share of median income,",
+      "caption": "figure 10.25. costs of long-term care for people aged 65 and over with severe needs, as a share of median income,",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-240-2.png",
+      "meta": {
+        "area_frac": 0.255,
+        "aspect": 2.23,
+        "text_lines": 45,
+        "text_chars": 774,
+        "text_ratio": 0.425
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-242-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 242,
+      "bbox": [
+        30.552481384277343,
+        341.3057537841797,
+        561.2786877441406,
+        625.9105224609375
+      ],
+      "preview_text": "figure 10.27. place of death, 2019-2020 (or nearest year)",
+      "caption": "figure 10.27. place of death, 2019-2020 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-242-0.png",
+      "meta": {
+        "area_frac": 0.312,
+        "aspect": 1.81,
+        "text_lines": 22,
+        "text_chars": 308,
+        "text_ratio": 0.381
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-242-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 242,
+      "bbox": [
+        30.552481384277343,
+        59.77115484619141,
+        561.8422863769531,
+        337.067138671875
+      ],
+      "preview_text": "figure 10.26. share of deaths occurring in hospitals, 2023 and 2018 (or nearest year)",
+      "caption": "figure 10.26. share of deaths occurring in hospitals, 2023 and 2018 (or nearest year)",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-chart-242-1.png",
+      "meta": {
+        "area_frac": 0.319,
+        "aspect": 1.79,
+        "text_lines": 49,
+        "text_chars": 460,
+        "text_ratio": 0.569
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-10-0",
+      "kind": "table",
+      "type": "table",
+      "page": 10,
+      "bbox": [
+        42.45800018310547,
+        189.54710388183594,
+        458.76055908203125,
+        451.9905090332031
+      ],
+      "preview_text": "AUS | Japan\nAUT | Korea\nBEL | Latvia",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-10-0.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 19,
+        "cols": 2,
+        "non_empty_cells": 38,
+        "numeric_ratio": 0.0,
+        "avg_words_per_cell": 1.18,
+        "index_page_ratio": 0.0,
+        "text_len": 278,
+        "area_frac": 0.1337,
+        "aspect": 1.09
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-10-1",
+      "kind": "table",
+      "type": "table",
+      "page": 10,
+      "bbox": [
+        42.45800018310547,
+        468.7871398925781,
+        458.40057373046875,
+        566.8305053710938
+      ],
+      "preview_text": "ARG | Indonesia\nBRA | Peru\nBGR | Romania",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-10-1.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 6,
+        "cols": 2,
+        "non_empty_cells": 11,
+        "numeric_ratio": 0.0,
+        "avg_words_per_cell": 1.09,
+        "index_page_ratio": 0.0,
+        "text_len": 68,
+        "area_frac": 0.0425,
+        "aspect": 3.42
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-13-0",
+      "kind": "table",
+      "type": "table",
+      "page": 13,
+      "bbox": [
+        311.62640380859375,
+        297.9181823730469,
+        528.9872436523438,
+        453.98553466796875
+      ],
+      "preview_text": "OECD | 19.0 | 8.5 | 14.8\n | 22.2 | 10.3 | \nKorea | 5.1 | 7.8 | 15.3",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-13-0.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 6,
+        "cols": 4,
+        "non_empty_cells": 18,
+        "numeric_ratio": 0.6,
+        "avg_words_per_cell": 1.0,
+        "index_page_ratio": 0.0,
+        "text_len": 113,
+        "area_frac": 0.0365,
+        "aspect": 2.67
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-18-0",
+      "kind": "table",
+      "type": "table",
+      "page": 18,
+      "bbox": [
+        42.420196533203125,
+        64.62712097167969,
+        554.853271484375,
+        711.7392578125
+      ],
+      "preview_text": "Life expectancy\u00b9 |  |  |  |  | \nYears of life at birth |  |  |  |  | \n | 81.1 |  |  | + | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-18-0.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 41,
+        "cols": 24,
+        "non_empty_cells": 320,
+        "numeric_ratio": 0.432,
+        "avg_words_per_cell": 1.09,
+        "index_page_ratio": 0.0,
+        "text_len": 1287,
+        "area_frac": 0.4918,
+        "aspect": 0.84
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-20-0",
+      "kind": "table",
+      "type": "table",
+      "page": 20,
+      "bbox": [
+        42.428707122802734,
+        64.62712097167969,
+        554.8720092773438,
+        713.6978759765625
+      ],
+      "preview_text": "Smoking\u00b9 |  |  |  |  | \nDaily smokers\n(% population aged 15+) |  |  |  |  | \n | 14.8 |  |  | + | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-20-0.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 41,
+        "cols": 24,
+        "non_empty_cells": 320,
+        "numeric_ratio": 0.411,
+        "avg_words_per_cell": 1.12,
+        "index_page_ratio": 0.0,
+        "text_len": 1362,
+        "area_frac": 0.487,
+        "aspect": 0.86
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-22-0",
+      "kind": "table",
+      "type": "table",
+      "page": 22,
+      "bbox": [
+        42.428680419921875,
+        64.62712097167969,
+        554.8558959960938,
+        711.7392578125
+      ],
+      "preview_text": " | Population coverage, eligibility\n(2024) \u00b9 |  |  |  | \n | Population eligible for core\nservices (% population) |  |  |  | \nOECD |  | 98 |  |  | +",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-22-0.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 41,
+        "cols": 25,
+        "non_empty_cells": 359,
+        "numeric_ratio": 0.268,
+        "avg_words_per_cell": 1.13,
+        "index_page_ratio": 0.0,
+        "text_len": 1684,
+        "area_frac": 0.5683,
+        "aspect": 0.97
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-24-0",
+      "kind": "table",
+      "type": "table",
+      "page": 24,
+      "bbox": [
+        42.45775604248047,
+        64.62712097167969,
+        554.7238159179688,
+        719.0861206054688
+      ],
+      "preview_text": "Safe primary care1 |  |  |  |  | \nAntibiotics prescribed\n(defined daily dose per\n1 000 people |  |  |  |  | \n |  |  |  |  | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-24-0.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 42,
+        "cols": 27,
+        "non_empty_cells": 360,
+        "numeric_ratio": 0.377,
+        "avg_words_per_cell": 1.12,
+        "index_page_ratio": 0.0,
+        "text_len": 1623,
+        "area_frac": 0.5044,
+        "aspect": 0.83
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-26-0",
+      "kind": "table",
+      "type": "table",
+      "page": 26,
+      "bbox": [
+        42.431488037109375,
+        64.62712097167969,
+        554.8119506835938,
+        700.2222900390625
+      ],
+      "preview_text": "Health spending (2024) |  |  |  |  | \nPer capita (USD\nbased on purchasing\npower parities) |  |  |  |  | \n | 5 967 |  |  | + | ",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-26-0.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 41,
+        "cols": 30,
+        "non_empty_cells": 397,
+        "numeric_ratio": 0.472,
+        "avg_words_per_cell": 1.15,
+        "index_page_ratio": 0.0,
+        "text_len": 1524,
+        "area_frac": 0.4979,
+        "aspect": 0.85
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-29-0",
+      "kind": "table",
+      "type": "table",
+      "page": 29,
+      "bbox": [
+        47.858001708984375,
+        69.21977996826172,
+        540.9605712890625,
+        561.5722045898438
+      ],
+      "preview_text": "able 1.7. Possible indicators on c | ross-cutti | ng dimensions | of efficie | ncy, equity, susta | inability\n |  |  |  |  | \nDimension | Indicator/s |  |  |  | Where to",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-29-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 39,
+        "cols": 10,
+        "non_empty_cells": 285,
+        "numeric_ratio": 0.074,
+        "avg_words_per_cell": 2.0,
+        "index_page_ratio": 0.0,
+        "text_len": 3058,
+        "area_frac": 0.5667,
+        "aspect": 0.82
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-35-0",
+      "kind": "table",
+      "type": "table",
+      "page": 35,
+      "bbox": [
+        42.432373046875,
+        64.62712097167969,
+        554.7581176757812,
+        360.531982421875
+      ],
+      "preview_text": "Absolute\ndifference in rate\nper 100 000 (men\n\u2013 women) | Men\n(rate per 100 000) | Share2 (ranking)\nof mortality rates\namong men | Women\n(rate per 100 000)\n93 | 319 | 32% (1) | 226\n78 | 229 | 23% (2) | 151",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-35-0.png",
+      "meta": {
+        "method": "lattice",
+        "rows": 12,
+        "cols": 4,
+        "non_empty_cells": 47,
+        "numeric_ratio": 0.409,
+        "avg_words_per_cell": 1.72,
+        "index_page_ratio": 0.0,
+        "text_len": 327,
+        "area_frac": 0.1116,
+        "aspect": 1.53
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-36-0",
+      "kind": "table",
+      "type": "table",
+      "page": 36,
+      "bbox": [
+        42.44095993041992,
+        77.22373962402344,
+        554.7666015625,
+        393.8932800292969
+      ],
+      "preview_text": " |  |  |  |  | \n |  |  |  |  | \nTable 2.2. Measured | in po | tential ye | ars of life | lost, ca | ncer in",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-36-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 48,
+        "cols": 11,
+        "non_empty_cells": 384,
+        "numeric_ratio": 0.073,
+        "avg_words_per_cell": 2.29,
+        "index_page_ratio": 0.0,
+        "text_len": 4133,
+        "area_frac": 0.7748,
+        "aspect": 0.71
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-47-0",
+      "kind": "table",
+      "type": "table",
+      "page": 47,
+      "bbox": [
+        0.0,
+        291.187255859375,
+        595.2760009765625,
+        724.3661499023438
+      ],
+      "preview_text": "46 | |  |  |  |  | \n |  |  |  |  | \n3. Men ha | ve higher ov | e | rweight r | ates in all OECD | countries, w",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-47-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 57,
+        "cols": 12,
+        "non_empty_cells": 511,
+        "numeric_ratio": 0.218,
+        "avg_words_per_cell": 1.6,
+        "index_page_ratio": 0.0,
+        "text_len": 3516,
+        "area_frac": 0.7749,
+        "aspect": 0.71
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-48-0",
+      "kind": "table",
+      "type": "table",
+      "page": 48,
+      "bbox": [
+        0.0,
+        54.81916046142578,
+        595.2760009765625,
+        431.0997619628906
+      ],
+      "preview_text": " |  |  |  |  | \n |  |  |  |  | \nCountry | Smo | Hea\nking (%) | Risk factors\nvy episodic | Ove | rweight (%)",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "oecd-health-at-a-glance-2025-acig-pdf/candidates/oecd-health-at-a-glance-2025-acig-pdf-table-48-0.png",
+      "meta": {
+        "method": "stream",
+        "rows": 58,
+        "cols": 11,
+        "non_empty_cells": 505,
+        "numeric_ratio": 0.098,
+        "avg_words_per_cell": 2.09,
+        "index_page_ratio": 0.0,
+        "text_len": 4906,
+        "area_frac": 0.7748,
+        "aspect": 0.71
+      }
+    }
+  ]
+}

@@ -82,7 +82,7 @@ jobs:
       - name: Quality non-regression gate
         run: python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden
       - name: PDF candidate benchmark gate
-        run: python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_candidate_benchmark_ci.json
+        run: python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json
       - name: PDF crop-refine benchmark gate
         run: python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_crop_refine_benchmark_ci.json
       - name: PDF benchmark trend gate
@@ -145,7 +145,7 @@ jobs:
             --expected-schema llm_accounting_reconciliation=1.0 \
             --artifact-command coverage="python scripts/ci/check_coverage.py --coverage-xml coverage.xml" \
             --artifact-command mutation="python scripts/ci/run_mutation_gate.py --json-out mutation_results.json" \
-            --artifact-command pdf_candidate="python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_candidate_benchmark_ci.json" \
+            --artifact-command pdf_candidate="python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json" \
             --artifact-command pdf_crop_refine="python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --allow-missing-assets --output-json out/pdf_crop_refine_benchmark_ci.json" \
             --artifact-command pdf_trends="python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs" \
             --artifact-command health_scorecard="python scripts/quality/run_health_scorecard.py out/ci_health_events.jsonl --run-id ci-release-evidence --output-json out/run_health_scorecard_ci.json" \

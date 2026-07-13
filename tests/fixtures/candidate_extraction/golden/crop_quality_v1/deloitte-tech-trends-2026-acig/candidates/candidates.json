@@ -1,0 +1,251 @@
+{
+  "schema_version": "1.0",
+  "report_id": "deloitte-tech-trends-2026-acig",
+  "report_name": "deloitte-tech-trends-2026-acig",
+  "pdf_path": "C:\\Programing\\Market lense\\cache\\DELOITTE - Tech-trends-2026_ACIG.pdf",
+  "candidate_count": 10,
+  "chart_count": 10,
+  "table_count": 0,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-6-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 6,
+      "bbox": [
+        41.760000000000005,
+        88.86083221435547,
+        588.24,
+        461.68359375
+      ],
+      "preview_text": "figure 1",
+      "caption": "figure 1",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-6-0.png",
+      "meta": {
+        "area_frac": 0.408,
+        "aspect": 1.44,
+        "text_lines": 25,
+        "text_chars": 726,
+        "text_ratio": 0.361
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-11-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 11,
+      "bbox": [
+        23.7599991607666,
+        485.4686279296875,
+        570.2399951171875,
+        691.3942260742188
+      ],
+      "preview_text": "figure 1",
+      "caption": "figure 1",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-11-0.png",
+      "meta": {
+        "area_frac": 0.225,
+        "aspect": 2.61,
+        "text_lines": 13,
+        "text_chars": 378,
+        "text_ratio": 0.132
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-12-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 12,
+      "bbox": [
+        41.76000106811524,
+        430.7837219238281,
+        588.2399951171875,
+        691.1033325195312
+      ],
+      "preview_text": "figure 2",
+      "caption": "figure 2",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-12-0.png",
+      "meta": {
+        "area_frac": 0.286,
+        "aspect": 2.06,
+        "text_lines": 37,
+        "text_chars": 790,
+        "text_ratio": 0.257
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-23-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 23,
+      "bbox": [
+        23.759999999999998,
+        88.86058807373047,
+        570.24,
+        473.89752197265625
+      ],
+      "preview_text": "figure 1",
+      "caption": "figure 1",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-23-0.png",
+      "meta": {
+        "area_frac": 0.425,
+        "aspect": 1.39,
+        "text_lines": 7,
+        "text_chars": 269,
+        "text_ratio": 0.151
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-37-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 37,
+      "bbox": [
+        23.759999999999998,
+        365.4695129394531,
+        570.24,
+        694.7476196289062
+      ],
+      "preview_text": "figure 1",
+      "caption": "figure 1",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-37-0.png",
+      "meta": {
+        "area_frac": 0.358,
+        "aspect": 1.64,
+        "text_lines": 40,
+        "text_chars": 1193,
+        "text_ratio": 0.388
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-45-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 45,
+      "bbox": [
+        33.51350296020508,
+        89.76819648742676,
+        560.255986328125,
+        484.69232177734375
+      ],
+      "preview_text": "figure 1",
+      "caption": "figure 1",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-45-0.png",
+      "meta": {
+        "area_frac": 0.402,
+        "aspect": 1.36,
+        "text_lines": 48,
+        "text_chars": 869,
+        "text_ratio": 0.4
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-55-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 55,
+      "bbox": [
+        23.7599991607666,
+        174.5557098388672,
+        570.2399951171875,
+        397.0
+      ],
+      "preview_text": "figure 1",
+      "caption": "figure 1",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-55-0.png",
+      "meta": {
+        "area_frac": 0.251,
+        "aspect": 2.35,
+        "text_lines": 19,
+        "text_chars": 837,
+        "text_ratio": 0.403
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-55-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 55,
+      "bbox": [
+        23.7599991607666,
+        407.1857165527344,
+        570.2399951171875,
+        635.041259765625
+      ],
+      "preview_text": "figure 2",
+      "caption": "figure 2",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-55-1.png",
+      "meta": {
+        "area_frac": 0.246,
+        "aspect": 2.4,
+        "text_lines": 17,
+        "text_chars": 751,
+        "text_ratio": 0.362
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-56-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 56,
+      "bbox": [
+        41.760000000000005,
+        174.5558319091797,
+        588.24,
+        373.0010070800781
+      ],
+      "preview_text": "figure 3",
+      "caption": "figure 3",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-56-0.png",
+      "meta": {
+        "area_frac": 0.225,
+        "aspect": 2.62,
+        "text_lines": 17,
+        "text_chars": 733,
+        "text_ratio": 0.308
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-56-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 56,
+      "bbox": [
+        41.76000106811524,
+        385.43580810546877,
+        588.2399951171875,
+        632.791259765625
+      ],
+      "preview_text": "figure 4",
+      "caption": "figure 4",
+      "thumb_path": "",
+      "crop_path": "deloitte-tech-trends-2026-acig/candidates/deloitte-tech-trends-2026-acig-chart-56-1.png",
+      "meta": {
+        "area_frac": 0.27,
+        "aspect": 2.18,
+        "text_lines": 26,
+        "text_chars": 1139,
+        "text_ratio": 0.479
+      }
+    }
+  ]
+}

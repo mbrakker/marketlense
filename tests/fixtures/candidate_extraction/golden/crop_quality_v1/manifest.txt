@@ -1,0 +1,9 @@
+attest-uk-consumer-trends-report-2026-acig: 13 candidates = 13 charts, 0 tables
+capgemini-2026-retail-trends-acig: 12 candidates = 12 charts, 0 tables
+deloitte-tech-trends-2026-acig: 10 candidates = 10 charts, 0 tables
+ias-industry-pulse-report-2026-acig: 13 candidates = 13 charts, 0 tables
+julius-baer-secular-outlook-2026-acig: 13 candidates = 11 charts, 2 tables
+kantar-media-reactions-2025-apac-webinar-deck-acig-pdf: 20 candidates = 9 charts, 11 tables
+oecd-economic-outlook-acig-pdf: 116 candidates = 61 charts, 55 tables
+oecd-health-at-a-glance-2025-acig-pdf: 229 candidates = 216 charts, 13 tables
+worldpanel-brand-footprint-2025-acig: 12 candidates = 10 charts, 2 tables

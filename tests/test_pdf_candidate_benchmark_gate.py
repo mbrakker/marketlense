@@ -19,6 +19,7 @@ def _baseline(**overrides) -> PdfCandidateBenchmarkBaselineEntry:
         "baseline_median_seconds": 10.0,
         "runtime_warn_percent": 10.0,
         "runtime_fail_percent": 50.0,
+        "expected_pdf_sha256": "expected-pdf-hash",
     }
     values.update(overrides)
     return PdfCandidateBenchmarkBaselineEntry(**values)
@@ -33,6 +34,7 @@ def _observation(**overrides) -> PdfCandidateBenchmarkObservation:
         "degraded_page_count": 0,
         "durations_seconds": (10.2, 10.4, 10.3),
         "median_seconds": 10.3,
+        "pdf_sha256": "expected-pdf-hash",
     }
     values.update(overrides)
     return PdfCandidateBenchmarkObservation(**values)
@@ -86,6 +88,16 @@ def test_compare_benchmark_observations_fails_candidate_equivalence_drift() -> N
         "candidate_signature_changed",
         "degraded_page_count_changed",
     }
+
+
+def test_compare_benchmark_observations_fails_pdf_hash_drift() -> None:
+    result = compare_benchmark_observations(
+        baseline_entries=(_baseline(),),
+        observations=(_observation(pdf_sha256="changed-pdf-hash"),),
+    )
+
+    assert result.passed is False
+    assert [failure.reason for failure in result.failures] == ["pdf_sha256_changed"]
 
 
 def test_compare_benchmark_observations_warns_and_optionally_fails_runtime_regression() -> (

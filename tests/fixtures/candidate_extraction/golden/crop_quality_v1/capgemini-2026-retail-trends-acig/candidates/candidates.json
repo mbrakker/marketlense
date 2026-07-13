@@ -1,0 +1,299 @@
+{
+  "schema_version": "1.0",
+  "report_id": "capgemini-2026-retail-trends-acig",
+  "report_name": "capgemini-2026-retail-trends-acig",
+  "pdf_path": "C:\\Programing\\Market lense\\cache\\CAPGEMINI - 2026-Retail-Trends_ACIG.pdf",
+  "candidate_count": 12,
+  "chart_count": 12,
+  "table_count": 0,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-1-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 1,
+      "bbox": [
+        48.13093826293945,
+        311.4406000976563,
+        571.5632336425781,
+        766.238171875
+      ],
+      "preview_text": "Trust as a profit",
+      "caption": "Trust as a profit",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-1-0.png",
+      "meta": {
+        "area_frac": 0.341,
+        "aspect": 1.48,
+        "text_lines": 36,
+        "text_chars": 392,
+        "text_ratio": 0.533
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-2-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 2,
+      "bbox": [
+        36.56693908691406,
+        506.07147216796875,
+        558.7087414550781,
+        787.9321416015625
+      ],
+      "preview_text": "3 ways retailers should respond to the experience economy",
+      "caption": "3 ways retailers should respond to the experience economy",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-2-0.png",
+      "meta": {
+        "area_frac": 0.265,
+        "aspect": 1.96,
+        "text_lines": 33,
+        "text_chars": 734,
+        "text_ratio": 0.484
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-3-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 3,
+      "bbox": [
+        36.56693908691406,
+        127.46279907226562,
+        558.7087414550781,
+        512.4781315917969
+      ],
+      "preview_text": "Experience over ownership",
+      "caption": "Experience over ownership",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-3-0.png",
+      "meta": {
+        "area_frac": 0.371,
+        "aspect": 1.4,
+        "text_lines": 22,
+        "text_chars": 428,
+        "text_ratio": 0.534
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-4-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 4,
+      "bbox": [
+        36.56693908691406,
+        503.13995361328125,
+        558.7087414550781,
+        791.832166015625
+      ],
+      "preview_text": "Private labels go premium",
+      "caption": "Private labels go premium",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-4-0.png",
+      "meta": {
+        "area_frac": 0.272,
+        "aspect": 1.91,
+        "text_lines": 14,
+        "text_chars": 512,
+        "text_ratio": 0.401
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-5-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 5,
+      "bbox": [
+        36.56693908691406,
+        135.097765625,
+        558.7087414550781,
+        440.3361333007812
+      ],
+      "preview_text": "3 ways retailers can capitalize on the shift to private labels",
+      "caption": "3 ways retailers can capitalize on the shift to private labels",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-5-0.png",
+      "meta": {
+        "area_frac": 0.297,
+        "aspect": 1.75,
+        "text_lines": 14,
+        "text_chars": 597,
+        "text_ratio": 0.502
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-6-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 6,
+      "bbox": [
+        36.56693908691406,
+        548.447265625,
+        558.7417614746093,
+        791.833142578125
+      ],
+      "preview_text": "3 ways retailers can prepare for a searchless future:",
+      "caption": "3 ways retailers can prepare for a searchless future:",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-6-0.png",
+      "meta": {
+        "area_frac": 0.224,
+        "aspect": 2.32,
+        "text_lines": 28,
+        "text_chars": 592,
+        "text_ratio": 0.463
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-6-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 6,
+      "bbox": [
+        36.56693908691406,
+        318.9652404785156,
+        558.7084362792968,
+        540.2909672851563
+      ],
+      "preview_text": "of shoppers make purchases based on AI",
+      "caption": "of shoppers make purchases based on AI",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-6-1.png",
+      "meta": {
+        "area_frac": 0.224,
+        "aspect": 2.32,
+        "text_lines": 8,
+        "text_chars": 247,
+        "text_ratio": 0.193
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-8-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 8,
+      "bbox": [
+        35.19894287109375,
+        352.2582092285156,
+        558.9296887207031,
+        573.460828125
+      ],
+      "preview_text": "56% who said",
+      "caption": "56% who said",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-8-0.png",
+      "meta": {
+        "area_frac": 0.136,
+        "aspect": 1.88,
+        "text_lines": 13,
+        "text_chars": 264,
+        "text_ratio": 0.387
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-9-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 9,
+      "bbox": [
+        36.56693908691406,
+        512.4472045898438,
+        558.7417614746093,
+        791.833142578125
+      ],
+      "preview_text": "3 ways retailers can win with invisible AI experiences",
+      "caption": "3 ways retailers can win with invisible AI experiences",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-9-0.png",
+      "meta": {
+        "area_frac": 0.261,
+        "aspect": 1.99,
+        "text_lines": 12,
+        "text_chars": 618,
+        "text_ratio": 0.517
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-9-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 9,
+      "bbox": [
+        36.56693908691406,
+        283.9652099609375,
+        558.7084362792968,
+        505.2909672851562
+      ],
+      "preview_text": "are concerned about the lack of clarity in",
+      "caption": "are concerned about the lack of clarity in",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-9-1.png",
+      "meta": {
+        "area_frac": 0.224,
+        "aspect": 2.32,
+        "text_lines": 8,
+        "text_chars": 279,
+        "text_ratio": 0.233
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-11-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 11,
+      "bbox": [
+        36.56693908691406,
+        520.4472045898438,
+        558.7417614746093,
+        791.833142578125
+      ],
+      "preview_text": "4 keys to building trust for retailers",
+      "caption": "4 keys to building trust for retailers",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-11-0.png",
+      "meta": {
+        "area_frac": 0.253,
+        "aspect": 2.05,
+        "text_lines": 13,
+        "text_chars": 553,
+        "text_ratio": 0.486
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "chart-11-1",
+      "kind": "chart",
+      "type": "chart",
+      "page": 11,
+      "bbox": [
+        36.56693908691406,
+        291.9652099609375,
+        558.7084362792968,
+        513.2909672851563
+      ],
+      "preview_text": "trust products and suggestions shared by",
+      "caption": "trust products and suggestions shared by",
+      "thumb_path": "",
+      "crop_path": "capgemini-2026-retail-trends-acig/candidates/capgemini-2026-retail-trends-acig-chart-11-1.png",
+      "meta": {
+        "area_frac": 0.224,
+        "aspect": 2.32,
+        "text_lines": 8,
+        "text_chars": 233,
+        "text_ratio": 0.205
+      }
+    }
+  ]
+}
