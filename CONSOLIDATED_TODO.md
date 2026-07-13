@@ -45,7 +45,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | E1 | Claim-embedding freshness, retention, and cost controls | Embedding operations outcome. |
 | Active | E2 | Semantic-preselection quality/cost benchmark | Evidence-selection measurement outcome. |
 | Active | E3 | Lineage-driven selective regeneration and cost reporting | Compatibility-aware reuse outcome. |
-| Active | E4 | Executable retained PDF benchmark corpus in CI | Release-evidence outcome. |
+| Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
 | Active | E5 | Crop QA sidecars, rendered visual metrics, profiles, and HTML visual smoke | Visual-evidence quality outcome. |
 | Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome. |
 | Active | R2 | Role-mixing, import-graph, facade, direct-I/O, mutation-selection, and hygiene enforcement | Architecture enforcement outcome. |
@@ -349,19 +349,6 @@ All work is listed below in one register. `Active` items have detailed completio
 - Report and cross-report workflows consult valid lineage before model, PDF, crop, render, and publication work.
 - Regression tests prove render-only reuse and prohibit reuse after source invalidation; quality output reports fan-out, reuse, avoided work, and missing-lineage failures.
 
-#### E4. Make retained PDF benchmark evidence executable in CI
-
-- **Title:** Make retained PDF benchmark evidence executable in CI
-- **Impact 5 / effort: 3**
-- **Context:** CI currently permits missing retained PDF/crop assets, producing warnings and expiry-dated waivers instead of independently executable candidate and crop-refine evidence.
-- **Benefit:** Candidate/crop equivalence, runtime, and model-work regressions are independently verified on every release SHA.
-- **Risks to avoid:** Keep the corpus licensed, non-secret, bounded, and hash-pinned; never replace it with synthetic passing evidence.
-- **Success criteria:**
-
-- CI securely materializes the approved source/crop corpus with license/retention metadata, SHA-256 hashes, and expected paths.
-- Missing or hash-mismatched evidence fails; candidate, crop-refine, trend, scorecard, manifest, and review run without missing-asset warnings.
-- A CI run for the release SHA publishes passing benchmark evidence and retires the temporary PDF waiver entries.
-
 #### E5. Promote crop-QA sidecars to scorecards and selection telemetry
 
 - **Title:** Promote crop-QA sidecars to scorecards and selection telemetry
@@ -508,7 +495,7 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 - Workflow-control intent/preflight, UI dead letters, mailbox acquisition, resume checkpoints, prompt dry runs, provider decisions, and deterministic JSON-chat compaction are present.
 - Public report rendering exposes approved advisory/metric-spine data while redacting canonical IDs; strict crop acceptance emits typed QA sidecars.
 - WordPress report, briefing, and signal entities have REST draft/readback verification; `sync-wordpress-intelligence` now projects 64 retained local public entities (47 reports, 5 briefings, 12 signals, and 29 publishers) through the authenticated plugin route, while missing/invalid projections render neutral values. Hosted HTTPS/error handling, intake, responsive UI, and editorial leakage remain active public-site gaps.
-- CI runs formatting, typing, architecture/import checks, forbidden-patching checks, hygiene, coverage, mutation, prompt regression, release-evidence archival, and WordPress staging verification when configured. PDF benchmark evidence remains temporarily waived when retained assets are unavailable.
+- CI runs formatting, typing, architecture/import checks, forbidden-patching checks, hygiene, coverage, mutation, prompt regression, release-evidence archival, hash-pinned PDF candidate/crop/trend gates, public report-quality gates, and WordPress staging verification when configured.
 
 ## Audit Notes
 
