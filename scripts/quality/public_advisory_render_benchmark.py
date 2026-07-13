@@ -20,6 +20,15 @@ _INTERNAL_ID_PATTERN = re.compile(
     r"\b(?:canonical_claim_id|report:[a-z0-9_.:-]+|[a-z]+-internal-\d+)\b",
     re.IGNORECASE,
 )
+_PLACEHOLDER_PATTERN = re.compile(
+    r"\{\{[^{}]+\}\}|\[\[[^\[\]]+\]\]|\b(?:TODO|FIXME)\b"
+)
+_RAW_FRAGMENT_PATTERN = re.compile(
+    r"\ufffd|(?:&lt;|&gt;){2,}|[\x00-\x08\x0b\x0c\x0e-\x1f]"
+)
+_IMAGE_SOURCE_PATTERN = re.compile(
+    r"<img\b[^>]*\bsrc\s*=\s*(['\"])(?P<src>.*?)\1", re.IGNORECASE
+)
 
 
 @dataclass(frozen=True)
@@ -47,6 +56,15 @@ class PublicAdvisoryRenderBenchmarkRow:
     internal_id_leak_count: int = field(
         metadata={"doc": "Internal identifier leak count in rendered HTML."}
     )
+    placeholder_count: int = field(
+        metadata={"doc": "Unresolved public template placeholder count."}
+    )
+    raw_fragment_count: int = field(
+        metadata={"doc": "Malformed raw extraction fragment count in rendered HTML."}
+    )
+    broken_asset_count: int = field(
+        metadata={"doc": "Locally referenced rendered image assets that are absent."}
+    )
     remediation_targets: list[dict[str, str]] = field(
         metadata={
             "doc": "Benchmark failures with report, field, rule, and remediation."
@@ -63,6 +81,15 @@ class PublicAdvisoryRenderBenchmarkReport:
     now_what_coverage: float = field(metadata={"doc": "Share with now_what coverage."})
     internal_id_leak_count: int = field(
         metadata={"doc": "Total rendered internal ID leaks."}
+    )
+    placeholder_count: int = field(
+        metadata={"doc": "Total unresolved public template placeholders."}
+    )
+    raw_fragment_count: int = field(
+        metadata={"doc": "Total malformed raw extraction fragments."}
+    )
+    broken_asset_count: int = field(
+        metadata={"doc": "Total missing locally referenced rendered image assets."}
     )
     screenshot_paths: tuple[str, ...] = field(
         metadata={"doc": "Optional Playwright screenshot paths retained for the run."}
@@ -123,6 +150,9 @@ def build_public_advisory_render_benchmark(
         so_what_coverage=_coverage(rows, lambda row: row.so_what_available),
         now_what_coverage=_coverage(rows, lambda row: row.now_what_available),
         internal_id_leak_count=sum(row.internal_id_leak_count for row in rows),
+        placeholder_count=sum(row.placeholder_count for row in rows),
+        raw_fragment_count=sum(row.raw_fragment_count for row in rows),
+        broken_asset_count=sum(row.broken_asset_count for row in rows),
         screenshot_paths=tuple(screenshot_paths),
         rows=rows,
         remediation_targets=remediation_targets,
@@ -193,6 +223,10 @@ def _benchmark_row(
         else []
     )
     leaks = _INTERNAL_ID_PATTERN.findall(html)
+    quality_issues = public_html_quality_issues(html=html, html_path=html_path)
+    placeholders = quality_issues["placeholders"]
+    raw_fragments = quality_issues["raw_fragments"]
+    broken_assets = quality_issues["broken_assets"]
     targets: list[dict[str, str]] = []
     if leaks:
         targets.append(
@@ -201,6 +235,37 @@ def _benchmark_row(
                 "field": "html",
                 "rule": "public_render.internal_id_leak",
                 "remediation": "Render public source labels instead of internal IDs.",
+            }
+        )
+    if placeholders:
+        targets.append(
+            {
+                "report_id": report_id,
+                "field": "html",
+                "rule": "public_render.unresolved_placeholder",
+                "remediation": "Resolve template placeholders before public rendering.",
+            }
+        )
+    if raw_fragments:
+        targets.append(
+            {
+                "report_id": report_id,
+                "field": "html",
+                "rule": "public_render.raw_extraction_fragment",
+                "remediation": (
+                    "Repair or omit malformed extraction fragments before rendering."
+                ),
+            }
+        )
+    if broken_assets:
+        targets.append(
+            {
+                "report_id": report_id,
+                "field": "html",
+                "rule": "public_render.broken_local_asset",
+                "remediation": (
+                    "Regenerate or remove missing locally referenced public assets."
+                ),
             }
         )
     so_what_available = any(
@@ -227,8 +292,32 @@ def _benchmark_row(
         now_what_coverage=1.0 if now_what_available else 0.0,
         public_label_count=html.count("Source-backed") + html.count("Chart-backed"),
         internal_id_leak_count=len(leaks),
+        placeholder_count=len(placeholders),
+        raw_fragment_count=len(raw_fragments),
+        broken_asset_count=len(broken_assets),
         remediation_targets=targets,
     )
+
+
+def _broken_local_image_sources(*, html: str, html_path: str) -> list[str]:
+    html_dir = Path(html_path).resolve().parent
+    broken: list[str] = []
+    for match in _IMAGE_SOURCE_PATTERN.finditer(html):
+        source = str(match.group("src") or "").strip()
+        if not source or source.startswith(("https://", "http://", "data:")):
+            continue
+        if not (html_dir / source).resolve().is_file():
+            broken.append(source)
+    return broken
+
+
+def public_html_quality_issues(*, html: str, html_path: str) -> dict[str, list[str]]:
+    """Return deterministic public-render defects without changing the rendered file."""
+    return {
+        "placeholders": _PLACEHOLDER_PATTERN.findall(html),
+        "raw_fragments": _RAW_FRAGMENT_PATTERN.findall(html),
+        "broken_assets": _broken_local_image_sources(html=html, html_path=html_path),
+    }
 
 
 def _coverage(

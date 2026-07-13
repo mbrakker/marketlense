@@ -44,7 +44,7 @@ def run_public_report_quality_gate(
         json.dumps(payload, ensure_ascii=True, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
-    return 1 if report.internal_id_leak_count or report.remediation_targets else 0
+    return 1 if report.remediation_targets else 0
 
 
 def main() -> int:
