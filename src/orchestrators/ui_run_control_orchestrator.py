@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import sys
+from datetime import UTC, datetime
+from typing import Callable
 from uuid import uuid4
 
 from src.contracts.run_context import RunContext
@@ -11,6 +13,8 @@ from src.contracts.ui_run_control import (
     UiRunDeadLetterActionListResponse,
     UiRunDeadLetterActionRequest,
     UiRunDeadLetterActionResponse,
+    UiRunDeadLetterReapRequest,
+    UiRunDeadLetterReapResponse,
     UiRunDeadLetterListRequest,
     UiRunDeadLetterListResponse,
     ProcessLaunchRequest,
@@ -424,3 +428,110 @@ def apply_dead_letter_action(
     request: UiRunDeadLetterActionRequest, ctx: RunContext
 ) -> UiRunDeadLetterActionResponse:
     return record_ui_run_dead_letter_action(request, ctx)
+
+
+def reap_dead_letter_runs(
+    request: UiRunDeadLetterReapRequest,
+    ctx: RunContext,
+    *,
+    launch_run: Callable[
+        [UiRunLaunchRequest, RunContext], UiRunLaunchResponse
+    ] = launch_ui_run,
+) -> UiRunDeadLetterReapResponse:
+    """Launch one idempotent replacement only for cooled-down retryable dead letters."""
+    records = list_dead_letter_runs(
+        UiRunDeadLetterListRequest(
+            schema_version="1.0",
+            registry_path=request.registry_path,
+            triage_statuses=["open"],
+            limit=max(1, request.limit),
+        ),
+        ctx,
+    ).records
+    now = datetime.now(UTC)
+    recovered: list[RunId] = []
+    held: list[RunId] = []
+    for dead_letter in records:
+        if not dead_letter.error_taxonomy.retryable or not _dead_letter_is_cooled_down(
+            dead_letter.failed_at_utc,
+            now=now,
+            cooldown_seconds=request.cooldown_seconds,
+        ):
+            held.append(dead_letter.run_id)
+            continue
+        stored = get_ui_run_record(
+            UiRunRecordGetRequest(
+                schema_version="1.0",
+                registry_path=request.registry_path,
+                run_id=dead_letter.run_id,
+            ),
+            ctx,
+        ).record
+        if stored is None or stored.status != "failed":
+            held.append(dead_letter.run_id)
+            continue
+        classification = classify_ui_run_failure(record=stored)
+        if not classification.retryable or classification.action not in {
+            "retry_now",
+            "retry_later",
+            "resume_from_checkpoint",
+        }:
+            held.append(dead_letter.run_id)
+            continue
+        payload = dict(stored.request_payload)
+        if classification.resume_stage:
+            payload["resume_from_stage"] = classification.resume_stage
+        replacement = launch_run(
+            UiRunLaunchRequest(
+                schema_version="1.0",
+                registry_path=request.registry_path,
+                workspace_root=request.workspace_root,
+                run_type=stored.run_type,
+                display_name=f"Recovery: {stored.display_name}",
+                request_payload=payload,
+            ),
+            ctx,
+        )
+        apply_dead_letter_action(
+            UiRunDeadLetterActionRequest(
+                schema_version="1.0",
+                registry_path=request.registry_path,
+                run_id=dead_letter.run_id,
+                action="retry_requested",
+                actor=request.actor,
+                note=f"automatic_recovery:{classification.action}",
+                related_run_id=str(replacement.record.run_id),
+            ),
+            ctx,
+        )
+        recovered.append(dead_letter.run_id)
+    response = UiRunDeadLetterReapResponse(
+        schema_version="1.0",
+        inspected_count=len(records),
+        recovered_run_ids=recovered,
+        held_run_ids=held,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="ui_run_dead_letter_reap_complete",
+            module=logger.name,
+            fields={
+                "inspected_count": response.inspected_count,
+                "recovered_count": len(response.recovered_run_ids),
+                "held_count": len(response.held_run_ids),
+            },
+        )
+    )
+    return response
+
+
+def _dead_letter_is_cooled_down(
+    failed_at_utc: str, *, now: datetime, cooldown_seconds: int
+) -> bool:
+    try:
+        failed_at = datetime.fromisoformat(failed_at_utc.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return (now - failed_at).total_seconds() >= max(0, cooldown_seconds)

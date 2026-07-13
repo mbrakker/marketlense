@@ -11,7 +11,9 @@ from src.contracts.ui_run_control import (
     ProcessPollResponse,
     ProcessTerminateResponse,
     UiRunCancelRequest,
+    UiRunDeadLetterReapRequest,
     UiRunLaunchRequest,
+    UiRunLaunchResponse,
     UiRunPollRequest,
     UiRunRecord,
     UiRunRecordWriteRequest,
@@ -314,3 +316,66 @@ def test_poll_ui_run_promotes_live_queued_worker_to_running(
     assert response.record.status == "running"
     assert response.record.started_at_utc
     assert persisted == response.record
+
+
+def test_dead_letter_reaper_launches_one_recovery_then_suppresses_duplicates(
+    tmp_path: Path,
+) -> None:
+    registry_path = _registry_path(tmp_path)
+    failed = UiRunRecord(
+        schema_version="1.0",
+        run_id="retryable-run",
+        run_type="report_download",
+        display_name="Download report",
+        status="failed",
+        request_payload={"url": "https://example.com/report"},
+        command=["python", "-m", "src.cli"],
+        created_at_utc="2026-01-01T00:00:00+00:00",
+        updated_at_utc="2026-01-01T00:01:00+00:00",
+        finished_at_utc="2026-01-01T00:01:00+00:00",
+        output_path="out.log",
+        request_path="request.json",
+        error_code="browser_download_request_failed",
+        error_message="temporary request failure",
+        error_retryable=True,
+        error_severity="error",
+    )
+    write_ui_run_record(
+        UiRunRecordWriteRequest(
+            schema_version="1.0", registry_path=registry_path, record=failed
+        ),
+        _ctx(),
+    )
+    launches: list[UiRunLaunchRequest] = []
+
+    def launch(request: UiRunLaunchRequest, ctx) -> UiRunLaunchResponse:
+        launches.append(request)
+        return UiRunLaunchResponse(
+            schema_version="1.0",
+            record=UiRunRecord(
+                schema_version="1.0",
+                run_id="recovery-run",
+                run_type=request.run_type,
+                display_name=request.display_name,
+                status="queued",
+                request_payload=request.request_payload,
+                command=[],
+                created_at_utc="2026-01-01T00:02:00+00:00",
+                updated_at_utc="2026-01-01T00:02:00+00:00",
+            ),
+        )
+
+    request = UiRunDeadLetterReapRequest(
+        schema_version="1.0",
+        registry_path=registry_path,
+        workspace_root=str(tmp_path),
+        cooldown_seconds=0,
+    )
+    first = orchestrator.reap_dead_letter_runs(request, _ctx(), launch_run=launch)
+    second = orchestrator.reap_dead_letter_runs(request, _ctx(), launch_run=launch)
+
+    assert first.recovered_run_ids == ["retryable-run"]
+    assert first.held_run_ids == []
+    assert second.recovered_run_ids == []
+    assert launches[0].request_payload == {"url": "https://example.com/report"}
+    assert len(launches) == 1

@@ -646,6 +646,48 @@ class UiRunDeadLetterActionResponse:
 
 
 @dataclass(frozen=True)
+class UiRunDeadLetterReapRequest:
+    schema_version: str = field(
+        metadata={"doc": "Dead-letter reaper request schema version."}
+    )
+    registry_path: str = field(
+        metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
+    )
+    workspace_root: str = field(
+        metadata={"doc": "Workspace root used for replacement workers."}
+    )
+    cooldown_seconds: int = field(
+        default=300,
+        metadata={
+            "doc": "Minimum age of an open retryable dead letter before recovery."
+        },
+    )
+    limit: int = field(
+        default=10, metadata={"doc": "Maximum recovery launches in one reaper pass."}
+    )
+    actor: str = field(
+        default="system",
+        metadata={"doc": "Actor recorded for automated recovery actions."},
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterReapResponse:
+    schema_version: str = field(
+        metadata={"doc": "Dead-letter reaper response schema version."}
+    )
+    inspected_count: int = field(
+        metadata={"doc": "Open dead-letter records inspected."}
+    )
+    recovered_run_ids: list[RunId] = field(
+        metadata={"doc": "Original run IDs that launched one replacement run."}
+    )
+    held_run_ids: list[RunId] = field(
+        metadata={"doc": "Original run IDs intentionally not retried."}
+    )
+
+
+@dataclass(frozen=True)
 class ProcessLaunchRequest:
     schema_version: str = field(
         metadata={"doc": "Background-process launch request schema version."}
