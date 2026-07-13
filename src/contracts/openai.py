@@ -125,6 +125,12 @@ class OpenAIUsageAccountingRequest:
         default=None,
         metadata={"doc": "Application action name; defaults to step_name."},
     )
+    reservation_operation: str = field(
+        default="",
+        metadata={
+            "doc": "Provider operation used to release the matching in-flight spend reservation."
+        },
+    )
     total_tokens: Optional[int] = field(
         default=None,
         metadata={"doc": "Provider total token count, if reported."},

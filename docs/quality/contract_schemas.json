@@ -20823,6 +20823,9 @@
             }
           ]
         },
+        "reservation_operation": {
+          "type": "string"
+        },
         "schema_validation_status": {
           "type": "string"
         },
@@ -30048,6 +30051,65 @@
       "required": [
         "schema_version",
         "records"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_control.UiRunDeadLetterReapRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "type": "string"
+        },
+        "cooldown_seconds": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "registry_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "workspace_root": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "registry_path",
+        "workspace_root"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_control.UiRunDeadLetterReapResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "held_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "inspected_count": {
+          "type": "integer"
+        },
+        "recovered_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "inspected_count",
+        "recovered_run_ids",
+        "held_run_ids"
       ],
       "type": "object"
     },

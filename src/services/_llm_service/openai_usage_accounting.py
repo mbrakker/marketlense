@@ -40,6 +40,7 @@ def record_usage_accounting(
     cached_input_tokens: int | None = None,
     provider: str = "openai",
     action: str | None = None,
+    reservation_operation: str = "",
     total_tokens: int | None = None,
     source_request: Any | None = None,
     call_ordinal: int = 0,
@@ -73,6 +74,7 @@ def record_usage_accounting(
             provider=provider,
             action=action
             or _semantic_usage_action(step_name=step_name, source_request=source),
+            reservation_operation=reservation_operation or step_name,
             usage_db_path=str(
                 getattr(source, "usage_db_path", "") or "./state/llm_usage.sqlite"
             ),
