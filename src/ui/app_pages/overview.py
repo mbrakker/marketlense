@@ -131,6 +131,7 @@ def build_dead_letter_rows(records: list[Any]) -> list[dict[str, str]]:
     for record in records:
         taxonomy = getattr(record, "error_taxonomy", None)
         identity = getattr(record, "identity", None)
+        remediation = getattr(record, "remediation", None)
         rows.append(
             {
                 "workflow": str(getattr(record, "display_name", "")),
@@ -140,6 +141,9 @@ def build_dead_letter_rows(records: list[Any]) -> list[dict[str, str]]:
                 "error_code": str(getattr(taxonomy, "error_code", "")),
                 "publisher_name": str(getattr(identity, "publisher_name", "")),
                 "report_url": str(getattr(identity, "report_url", "")),
+                "remediation_code": str(getattr(remediation, "remediation_code", "")),
+                "checkpoint_stage": str(getattr(remediation, "checkpoint_stage", "")),
+                "runbook_link": str(getattr(remediation, "runbook_link", "")),
                 "failed_at_utc": str(getattr(record, "failed_at_utc", "")),
                 "age": _age_hours_label(getattr(record, "failed_at_utc", "")),
             }
@@ -389,6 +393,9 @@ def render_cockpit_overview() -> None:
                     "stage": "Stage",
                     "error_code": "Error code",
                     "publisher_name": "Publisher",
+                    "remediation_code": "Remediation",
+                    "checkpoint_stage": "Checkpoint",
+                    "runbook_link": "Runbook",
                     "age": "Age",
                 },
             )
@@ -603,6 +610,9 @@ def render_run_center() -> None:
                     "triage_category": "Category",
                     "stage": "Stage",
                     "publisher_name": "Publisher",
+                    "remediation_code": "Remediation",
+                    "checkpoint_stage": "Checkpoint",
+                    "runbook_link": "Runbook",
                     "age": "Age",
                 },
             )

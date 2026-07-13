@@ -113,6 +113,11 @@ def test_build_dead_letter_rows_and_age_buckets() -> None:
             publisher_name="Example Publisher",
             report_url="https://example.com/report",
         ),
+        remediation=SimpleNamespace(
+            remediation_code="retry_now",
+            checkpoint_stage="analysis_complete",
+            runbook_link="docs/ops/top_failure_runbooks.md",
+        ),
     )
 
     rows = overview.build_dead_letter_rows([record])
@@ -123,5 +128,8 @@ def test_build_dead_letter_rows_and_age_buckets() -> None:
     assert rows[0]["stage"] == "publisher_discovery"
     assert rows[0]["publisher_name"] == "Example Publisher"
     assert rows[0]["report_url"] == "https://example.com/report"
+    assert rows[0]["remediation_code"] == "retry_now"
+    assert rows[0]["checkpoint_stage"] == "analysis_complete"
+    assert rows[0]["runbook_link"] == "docs/ops/top_failure_runbooks.md"
     assert rows[0]["age"].endswith("h")
     assert len(trend) == 4
