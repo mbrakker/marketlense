@@ -459,6 +459,10 @@ class OpenAIResponseRequest:
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
     )
+    same_provider_fallback: bool = field(
+        default=False,
+        metadata={"doc": "Whether retry fallback must remain with the selected provider."},
+    )
 
 
 @dataclass(frozen=True)
@@ -568,6 +572,10 @@ class OpenAIJSONPromptRequest:
     daily_spend_stop_usd: float = field(
         default=6.0,
         metadata={"doc": "UTC canonical-spend threshold that hard-stops this call."},
+    )
+    same_provider_fallback: bool = field(
+        default=False,
+        metadata={"doc": "Whether retry fallback must remain with the selected provider."},
     )
 
 

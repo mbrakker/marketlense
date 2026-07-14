@@ -106,6 +106,7 @@ def render_artifact_json_model(
                 source_url=source_url,
                 prompt_namespace=namespace,
                 prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
             ),
             ctx,
         )
@@ -129,6 +130,7 @@ def render_artifact_json_model(
                 source_url=source_url,
                 prompt_namespace=namespace,
                 prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
             ),
             ctx,
         )

@@ -58,6 +58,8 @@ def test_prepare_prompt_bundle_loads_renders_and_resolves_model(
     assert bundle.system_prompt == "System market"
     assert bundle.user_prompt == "User analyst"
     assert bundle.resolved_model == "gpt-artifacts"
+    assert bundle.routing_decision.policy_source == "report_vs/artifacts"
+    assert bundle.routing_decision.same_provider_fallback is True
     assert prompt_client.load_requests[0][0].namespace == "report_vs/artifacts/summary"
     assert_no_defaulted_required_fields(bundle)
 
