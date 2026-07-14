@@ -9,7 +9,10 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pipeline_preflight import PipelinePreflightReport
 from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_context import RunContext
-from src.contracts.regeneration import LineageRegenerationPlan
+from src.contracts.regeneration import (
+    LineageRegenerationPlan,
+    LineageRegenerationQualityReport,
+)
 from src.contracts.workflow_control import WorkflowControlSettings
 from src.orchestrators.report_generation_orchestrator import (
     run_report_generation as generate_report_orchestrator,
@@ -24,7 +27,10 @@ from src.services import llm_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.coercion import coerce_int
-from src.utils.lineage_regeneration import plan_lineage_regeneration
+from src.utils.lineage_regeneration import (
+    build_lineage_regeneration_quality_report,
+    plan_lineage_regeneration,
+)
 
 logger = logging.getLogger("market_lense.report_pipeline_orchestrator")
 
@@ -144,11 +150,13 @@ def run_report_pipeline(
         retry_policy_id = resolved_policy.policy_id
         configured_retries = retry_policy.retries
     lineage_plan: LineageRegenerationPlan | None = None
+    lineage_quality: LineageRegenerationQualityReport | None = None
     if lineage_change_kind:
         lineage_plan = plan_lineage_regeneration(
             change_kind=lineage_change_kind,
             lineage_available=lineage_available,
         )
+        lineage_quality = build_lineage_regeneration_quality_report(lineage_plan)
     effective_resume_from_stage = (
         resume_from_stage
         if resume_from_stage
@@ -252,17 +260,15 @@ def run_report_pipeline(
                 ),
                 "lineage_quality": (
                     {
-                        "fan_out": len(lineage_plan.reused_stages)
-                        + len(lineage_plan.regenerated_stages),
-                        "reused_stage_count": len(lineage_plan.reused_stages),
-                        "regenerated_stage_count": len(
-                            lineage_plan.regenerated_stages
-                        ),
-                        "avoided_work": lineage_plan.avoided_work,
-                        "avoided_work_count": len(lineage_plan.avoided_work),
-                        "cost_status": "unpriced",
+                        "fan_out": lineage_quality.fan_out,
+                        "reused_stage_count": lineage_quality.reused_stage_count,
+                        "regenerated_stage_count": lineage_quality.regenerated_stage_count,
+                        "avoided_work": lineage_quality.avoided_work,
+                        "avoided_work_count": len(lineage_quality.avoided_work),
+                        "estimated_avoided_cost_usd": lineage_quality.estimated_avoided_cost_usd,
+                        "cost_status": lineage_quality.cost_status,
                     }
-                    if lineage_plan is not None
+                    if lineage_quality is not None
                     else {}
                 ),
             },

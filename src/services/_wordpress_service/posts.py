@@ -19,6 +19,7 @@ from src.contracts.wordpress import (
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.run_budget import evaluate_proposed_side_effect_budget
 
 from .transport import (
     _execute_request,
@@ -41,9 +42,24 @@ _ORIGINAL_REQUEST_CALLS: dict[str, Any] = {
 }
 
 
+def _assert_wordpress_write_budget(request: Any, ctx: RunContext, *, operation: str) -> None:
+    decision = evaluate_proposed_side_effect_budget(
+        getattr(request, "run_budget", None), getattr(request, "run_budget_usage", None),
+        metric="wordpress_writes", override_actor=getattr(request, "budget_override_actor", ""),
+        override_reason=getattr(request, "budget_override_reason", ""),
+    )
+    if decision is None:
+        return
+    budget = request.run_budget
+    logger.info(log_event(ctx, role="service", event="wordpress_write_budget_evaluated", module=logger.name, fields={"operation": operation, "decision": decision.decision, "breached_metrics": decision.breached_metrics, "side_effect_allowed": decision.side_effect_allowed, "run_id": budget.run_id, "day_utc": budget.day_utc, "publisher_name": budget.publisher_name, "override_actor": decision.override_actor}))
+    if not decision.side_effect_allowed:
+        raise AppError(code=f"wordpress_{operation}_budget_{decision.decision}", message="WordPress write was blocked by the configured run budget", retryable=False, context={"decision": decision.decision, "breached_metrics": decision.breached_metrics})
+
+
 def upload_media(
     request: WordPressMediaUploadRequest, ctx: RunContext
 ) -> WordPressMediaUploadResponse:
+    _assert_wordpress_write_budget(request, ctx, operation="media_upload")
     logger.info(
         log_event(
             ctx,
@@ -173,6 +189,7 @@ def upload_media(
 def create_post(
     request: WordPressPostCreateRequest, ctx: RunContext
 ) -> WordPressPostCreateResponse:
+    _assert_wordpress_write_budget(request, ctx, operation="post_create")
     post_type_endpoint = _post_type_endpoint(request.post_type)
     logger.info(
         log_event(
@@ -296,6 +313,7 @@ def create_post(
 def update_card(
     request: WordPressCardUpdateRequest, ctx: RunContext
 ) -> WordPressPostUpdateResponse:
+    _assert_wordpress_write_budget(request, ctx, operation="card_update")
     post_type_endpoint = _post_type_endpoint(request.post_type)
     logger.info(
         log_event(

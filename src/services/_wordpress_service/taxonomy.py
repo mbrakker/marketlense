@@ -15,6 +15,7 @@ from src.contracts.wordpress import (
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.run_budget import evaluate_proposed_side_effect_budget
 
 from .transport import (
     _execute_request,
@@ -553,6 +554,15 @@ def ensure_tags(
 def update_post_categories(
     request: WordPressPostUpdateRequest, ctx: RunContext
 ) -> WordPressPostUpdateResponse:
+    budget_decision = evaluate_proposed_side_effect_budget(
+        request.run_budget, request.run_budget_usage, metric="wordpress_writes",
+        override_actor=request.budget_override_actor,
+        override_reason=request.budget_override_reason,
+    )
+    if budget_decision is not None:
+        logger.info(log_event(ctx, role="service", event="wordpress_write_budget_evaluated", module=logger.name, fields={"operation": "post_update", "decision": budget_decision.decision, "breached_metrics": budget_decision.breached_metrics, "side_effect_allowed": budget_decision.side_effect_allowed, "run_id": request.run_budget.run_id, "day_utc": request.run_budget.day_utc, "publisher_name": request.run_budget.publisher_name, "override_actor": budget_decision.override_actor}))
+        if not budget_decision.side_effect_allowed:
+            raise AppError(code=f"wordpress_post_update_budget_{budget_decision.decision}", message="WordPress write was blocked by the configured run budget", retryable=False, context={"decision": budget_decision.decision, "breached_metrics": budget_decision.breached_metrics})
     post_type_endpoint = _post_type_endpoint(request.post_type)
     logger.info(
         log_event(

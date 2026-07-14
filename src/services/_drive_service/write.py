@@ -11,6 +11,7 @@ from .auth import (
     _resolve_drive_credentials,
 )
 from .client_cache import _get_drive_client
+from src.utils.run_budget import evaluate_proposed_side_effect_budget
 
 
 def preflight_drive_write_access(
@@ -553,6 +554,17 @@ def upload_bytes(
     request: DriveUploadBytesRequest, ctx: RunContext
 ) -> DriveUploadBytesResponse:
     auth_mode = _request_auth_mode(request)
+    budget_decision = evaluate_proposed_side_effect_budget(
+        request.run_budget,
+        request.run_budget_usage,
+        metric="drive_writes",
+        override_actor=request.budget_override_actor,
+        override_reason=request.budget_override_reason,
+    )
+    if budget_decision is not None:
+        logger.info(log_event(ctx, role="service", event="drive_upload_budget_evaluated", module=logger.name, fields={"decision": budget_decision.decision, "breached_metrics": budget_decision.breached_metrics, "side_effect_allowed": budget_decision.side_effect_allowed, "run_id": request.run_budget.run_id, "day_utc": request.run_budget.day_utc, "publisher_name": request.run_budget.publisher_name, "override_actor": budget_decision.override_actor}))
+        if not budget_decision.side_effect_allowed:
+            raise AppError(code=f"drive_upload_budget_{budget_decision.decision}", message="Drive upload was blocked by the configured run budget", retryable=False, context={"decision": budget_decision.decision, "breached_metrics": budget_decision.breached_metrics})
     logger.info(
         log_event(
             ctx,
@@ -730,6 +742,10 @@ def upload_local_file(
             auth_mode=request.auth_mode,
             oauth_client_path=request.oauth_client_path,
             oauth_token_path=request.oauth_token_path,
+            run_budget=request.run_budget,
+            run_budget_usage=request.run_budget_usage,
+            budget_override_actor=request.budget_override_actor,
+            budget_override_reason=request.budget_override_reason,
         ),
         ctx,
     )

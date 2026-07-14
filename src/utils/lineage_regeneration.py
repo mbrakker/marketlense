@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from src.contracts.regeneration import LineageRegenerationPlan
+from src.contracts.regeneration import (
+    LineageRegenerationPlan,
+    LineageRegenerationQualityReport,
+)
 from src.utils.errors import AppError
 
 _PLANS: dict[str, tuple[str, bool, list[str], list[str], list[str]]] = {
@@ -98,4 +101,36 @@ def plan_lineage_regeneration(
     )
 
 
-__all__ = ["plan_lineage_regeneration"]
+def build_lineage_regeneration_quality_report(
+    plan: LineageRegenerationPlan,
+    *,
+    avoided_work_costs_usd: dict[str, float] | None = None,
+) -> LineageRegenerationQualityReport:
+    """Summarize only defensibly priced avoided work; unknown prices stay explicit."""
+    costs = avoided_work_costs_usd if isinstance(avoided_work_costs_usd, dict) else {}
+    priced_values: list[float] = []
+    for work in plan.avoided_work:
+        value = costs.get(work)
+        if isinstance(value, (int, float)) and value >= 0:
+            priced_values.append(float(value))
+    all_avoided_work_priced = bool(plan.avoided_work) and len(priced_values) == len(
+        plan.avoided_work
+    )
+    return LineageRegenerationQualityReport(
+        schema_version="1.0",
+        change_kind=plan.change_kind,
+        fan_out=len(plan.reused_stages) + len(plan.regenerated_stages),
+        reused_stage_count=len(plan.reused_stages),
+        regenerated_stage_count=len(plan.regenerated_stages),
+        avoided_work=list(plan.avoided_work),
+        estimated_avoided_cost_usd=(
+            round(sum(priced_values), 6) if all_avoided_work_priced else None
+        ),
+        cost_status="known" if all_avoided_work_priced else "unpriced",
+    )
+
+
+__all__ = [
+    "build_lineage_regeneration_quality_report",
+    "plan_lineage_regeneration",
+]

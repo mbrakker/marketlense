@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from src.contracts.llm import LLMRoutingPolicy
-from src.utils.model_resolver import resolve_routing_policy
+from src.utils.model_resolver import resolve_routing_policy, routing_policies_from_config
 
 
 def test_routing_policy_uses_longest_namespace_prefix() -> None:
@@ -36,3 +36,43 @@ def test_routing_policy_defaults_without_cross_provider_fallback() -> None:
     assert decision.policy_source == "default"
     assert decision.model == "gpt-5"
     assert decision.same_provider_fallback is True
+
+
+def test_yaml_policy_owns_the_selected_model_without_a_legacy_override() -> None:
+    policies = routing_policies_from_config(
+        {
+            "report_vs/evidence_packs": {
+                "model": "gpt-5-mini",
+                "tier": "evidence_sensitive",
+                "max_input_tokens": 64_000,
+                "compaction_enabled": True,
+                "quality_threshold": 0.9,
+                "same_provider_fallback": True,
+            }
+        },
+        model_overrides={},
+    )
+
+    decision = resolve_routing_policy(
+        "report_vs/evidence_packs/findings",
+        policies,
+        default_model="gpt-5",
+    )
+
+    assert decision.model == "gpt-5-mini"
+    assert decision.tier == "evidence_sensitive"
+    assert decision.max_input_tokens == 64_000
+
+
+def test_specific_model_override_inherits_nearest_policy_quality_controls() -> None:
+    policies = routing_policies_from_config(
+        {"report_vs/artifacts": {"tier": "routine", "max_input_tokens": 48_000, "compaction_enabled": True, "quality_threshold": 0.8, "same_provider_fallback": True}},
+        model_overrides={"report_vs/artifacts/summary": "gpt-5-mini"},
+    )
+
+    decision = resolve_routing_policy("report_vs/artifacts/summary", policies, default_model="gpt-5")
+
+    assert decision.model == "gpt-5-mini"
+    assert decision.tier == "routine"
+    assert decision.compaction_enabled is True
+    assert decision.quality_threshold == 0.8

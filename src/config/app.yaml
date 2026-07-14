@@ -120,18 +120,21 @@ openai_models:
 
 llm_routing:
   report_vs/artifacts:
+    model: "gpt-5-mini"
     tier: routine_structured
     max_input_tokens: 48000
     compaction_enabled: true
     quality_threshold: 0.80
     same_provider_fallback: true
   report_vs/evidence_packs:
+    model: "gpt-5-mini"
     tier: evidence_sensitive
     max_input_tokens: 64000
     compaction_enabled: true
     quality_threshold: 0.90
     same_provider_fallback: true
   rank_candidates:
+    model: "gpt-5-mini"
     tier: quality_ranked
     max_input_tokens: 32000
     compaction_enabled: true

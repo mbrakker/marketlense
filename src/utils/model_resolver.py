@@ -87,20 +87,35 @@ def routing_policies_from_config(
 ) -> Dict[str, LLMRoutingPolicy]:
     """Adapt validated config mappings into explicit policy contracts."""
     policies: dict[str, LLMRoutingPolicy] = {}
+    raw_mapping = raw_policies if isinstance(raw_policies, dict) else {}
+    normalized_config = {
+        _normalize_namespace(str(raw_key)): raw_value
+        for raw_key, raw_value in raw_mapping.items()
+        if _normalize_namespace(str(raw_key)) and isinstance(raw_value, dict)
+    }
+
+    def config_for(namespace: str) -> dict:
+        parts = namespace.split("/")
+        for index in range(len(parts), 0, -1):
+            value = normalized_config.get("/".join(parts[:index]))
+            if value is not None:
+                return value
+        return {}
+
     for raw_key, raw_model in model_overrides.items():
         namespace = _normalize_namespace(str(raw_key))
         model = str(raw_model or "").strip()
         if namespace and model:
+            config = config_for(namespace)
             policies[namespace] = LLMRoutingPolicy(
                 schema_version="1.0",
                 model=model,
-                tier="default",
-                max_input_tokens=0,
-                compaction_enabled=False,
-                quality_threshold=0.0,
-                same_provider_fallback=True,
+                tier=str(config.get("tier") or "default").strip() or "default",
+                max_input_tokens=max(0, int(config.get("max_input_tokens") or 0)),
+                compaction_enabled=bool(config.get("compaction_enabled", False)),
+                quality_threshold=float(config.get("quality_threshold") or 0.0),
+                same_provider_fallback=bool(config.get("same_provider_fallback", True)),
             )
-    raw_mapping = raw_policies if isinstance(raw_policies, dict) else {}
     for raw_key, raw_value in raw_mapping.items():
         if not isinstance(raw_value, dict):
             continue
