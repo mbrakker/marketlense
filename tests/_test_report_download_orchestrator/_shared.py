@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 from pathlib import Path as _SplitPath
-__file__ = str(_SplitPath(__file__).resolve().parent.parent / "test_report_download_orchestrator.py")
+
+__file__ = str(
+    _SplitPath(__file__).resolve().parent.parent
+    / "test_report_download_orchestrator.py"
+)
 
 import json
 
@@ -11,6 +15,8 @@ import logging
 import hashlib
 
 import sqlite3
+
+import time
 
 from dataclasses import replace
 
@@ -48,7 +54,10 @@ from src.contracts.drive import (
 from src.contracts.files import FileHashResponse
 
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
-from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings, MailboxSearchResult
+from src.contracts.mailbox_acquisition import (
+    MailboxAcquisitionSettings,
+    MailboxSearchResult,
+)
 
 from src.contracts.report_store import (
     PublisherPrivateApiCandidateObservationRecordResponse,
@@ -91,6 +100,7 @@ from src.services.config_service import upsert_browser_download_identity_fields
 
 from src.utils.errors import AppError
 
+
 def _settings(tmp_path: Path) -> BrowserDownloadSettings:
     return BrowserDownloadSettings(
         schema_version="1.0",
@@ -122,6 +132,11 @@ def _settings(tmp_path: Path) -> BrowserDownloadSettings:
         retry_backoff_step_seconds=0.0,
         retry_jitter_seconds=0.0,
     )
+
+
+def _fresh_route_memory_updated_at() -> int:
+    return int(time.time())
+
 
 def _result(
     *, url: str, used_route_hint: bool, path: str | None
@@ -185,6 +200,7 @@ def _result(
         onsite_page_count=None,
         onsite_completeness_status=None,
     )
+
 
 def _captured_result(
     *,
@@ -255,6 +271,7 @@ def _captured_result(
         onsite_completeness_status="complete",
     )
 
+
 def _events(caplog, logger_name: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for record in caplog.records:
@@ -265,8 +282,10 @@ def _events(caplog, logger_name: str) -> list[dict[str, Any]]:
             rows.append(payload)
     return rows
 
+
 def _md5_for_path(path: Path) -> str:
     return hashlib.md5(path.read_bytes()).hexdigest()
+
 
 def _drive_enabled_settings(
     settings: BrowserDownloadSettings,
@@ -282,6 +301,7 @@ def _drive_enabled_settings(
         drive_upload_include_items_from_all_drives=True,
     )
 
+
 def _successful_drive_preflight(req, ctx) -> DriveWritePreflightResponse:
     return DriveWritePreflightResponse(
         schema_version="1.0",
@@ -292,6 +312,7 @@ def _successful_drive_preflight(req, ctx) -> DriveWritePreflightResponse:
         folder_access_verified=True,
         write_access_verified=True,
     )
+
 
 def _private_api_promotion_candidate() -> BrowserRoutePrivateApiPromotionCandidate:
     return BrowserRoutePrivateApiPromotionCandidate(
@@ -312,6 +333,7 @@ def _private_api_promotion_candidate() -> BrowserRoutePrivateApiPromotionCandida
         route_kind="pdf_download",
         evidence_labels=["browser_network_private_api"],
     )
+
 
 def _private_api_promotion_dependencies(
     tmp_path: Path,
@@ -353,6 +375,7 @@ def _private_api_promotion_dependencies(
         sleep_fn=lambda seconds: None,
     )
 
+
 def _evaluate_private_api_side_path(
     tmp_path: Path,
     run_context,
@@ -387,14 +410,20 @@ def _evaluate_private_api_side_path(
     )
 
 
-
 __all__ = [
     name
     for name in globals()
     if name
     not in {
-        '__name__', '__annotations__', '__doc__', '__spec__',
-        '__file__', '__package__', '__loader__', '__cached__',
-        '__builtins__', '_SplitPath',
+        "__name__",
+        "__annotations__",
+        "__doc__",
+        "__spec__",
+        "__file__",
+        "__package__",
+        "__loader__",
+        "__cached__",
+        "__builtins__",
+        "_SplitPath",
     }
 ]

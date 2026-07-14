@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_route_plan_recovery_classes_cover_allowed_blocked_and_deferred(
     run_context,
     caplog,
@@ -103,6 +104,7 @@ def test_route_plan_recovery_classes_cover_allowed_blocked_and_deferred(
     ]
     assert len(blocked_events) == 2
 
+
 def test_run_report_download_rejects_mixed_content_hub_candidate(
     tmp_path: Path,
     caplog,
@@ -185,6 +187,7 @@ def test_run_report_download_rejects_mixed_content_hub_candidate(
         in rejection_events[-1]["fields"]["readiness_signals"]
     )
 
+
 def test_run_report_download_uses_memory_and_records_route(
     tmp_path: Path,
     caplog,
@@ -239,7 +242,7 @@ def test_run_report_download_uses_memory_and_records_route(
             browser_had_structured_result=True,
             used_candidate_pdf_url=False,
             used_candidate_source_page=False,
-            updated_at=1,
+            updated_at=_fresh_route_memory_updated_at(),
             candidate_pdf_url=None,
             candidate_source_page_urls=[],
             candidate_discovery_provenances=[],
@@ -329,6 +332,7 @@ def test_run_report_download_uses_memory_and_records_route(
     assert_logs_have_required_fields(
         _events(caplog, "market_lense.report_download_orchestrator")
     )
+
 
 def test_run_report_download_auto_promotes_private_api_after_threshold(
     tmp_path: Path,
@@ -467,6 +471,7 @@ def test_run_report_download_auto_promotes_private_api_after_threshold(
     assert events
     assert events[-1]["fields"]["promotion_status"] == "created"
 
+
 def test_private_api_observation_app_error_does_not_abort_successful_download_side_path(
     tmp_path: Path,
     caplog,
@@ -498,6 +503,7 @@ def test_private_api_observation_app_error_does_not_abort_successful_download_si
     ]
     assert events[-1]["fields"]["skip_reason"] == "candidate_observation_app_error"
     assert events[-1]["fields"]["error_code"] == "private_api_candidate_record_failed"
+
 
 def test_private_api_promotion_mark_app_error_does_not_abort_successful_download_side_path(
     tmp_path: Path,
@@ -540,6 +546,7 @@ def test_private_api_promotion_mark_app_error_does_not_abort_successful_download
     ]
     assert events[-1]["fields"]["skip_reason"] == "promotion_mark_app_error"
     assert events[-1]["fields"]["error_code"] == "private_api_candidate_mark_failed"
+
 
 def test_run_report_download_falls_back_after_memory_failure_and_retries(
     tmp_path: Path,
@@ -610,7 +617,7 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
             browser_had_structured_result=True,
             used_candidate_pdf_url=False,
             used_candidate_source_page=False,
-            updated_at=1,
+            updated_at=_fresh_route_memory_updated_at(),
             candidate_pdf_url=None,
             candidate_source_page_urls=[],
             candidate_discovery_provenances=[],
@@ -699,6 +706,7 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
     assert_logs_have_required_fields(
         _events(caplog, "market_lense.report_download_orchestrator")
     )
+
 
 __all__ = [
     "test_route_plan_recovery_classes_cover_allowed_blocked_and_deferred",

@@ -26,6 +26,7 @@ from src.services.run_registry_service import (
     record_ui_run_dead_letter_action,
     write_ui_run_record,
 )
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import new_run_context
 
@@ -127,10 +128,11 @@ def test_run_registry_service_write_get_and_list(
             ORDER BY version ASC
             """
         ).fetchall()
-    assert schema_version == (2,)
+    assert schema_version == (3,)
     assert ledger_rows == [
         ("ui_run_registry_001_create_ui_runs",),
         ("ui_run_registry_002_add_dead_letter_ledger",),
+        ("ui_run_registry_003_add_remediation_context",),
     ]
     assert_logs_have_required_fields(caplog.records)
 
@@ -230,7 +232,14 @@ def test_run_registry_service_auto_triages_failed_runs_and_logs_actions(
         run_type="publisher_discovery",
         display_name="Publisher discovery",
         status="failed",
-        request_payload={"insights_url": "https://example.com/insights"},
+        request_payload={
+            "insights_url": "https://example.com/insights",
+            "workflow_control": {
+                "workflow": "report_generation",
+                "budget_profile": "safe_default",
+                "execution_plan": {"idempotency_key": "plan:example-publisher"},
+            },
+        },
         command=["python", "-m", "src.cli"],
         created_at_utc="2026-04-29T09:00:00+00:00",
         updated_at_utc="2026-04-29T09:05:00+00:00",
@@ -239,7 +248,11 @@ def test_run_registry_service_auto_triages_failed_runs_and_logs_actions(
         output_path="out.log",
         request_path="request.json",
         artifact_paths=["out/report.json"],
-        result_summary={"publisher_name": "Example Publisher"},
+        result_summary={
+            "publisher_name": "Example Publisher",
+            "latest_safe_resume_stage": "analysis_complete",
+            "budget_context": {"remaining_usd": 12.5},
+        },
         error_code="publisher_inventory_browser_timeout",
         error_message="Discovery timed out",
         error_retryable=True,
@@ -279,7 +292,10 @@ def test_run_registry_service_auto_triages_failed_runs_and_logs_actions(
     assert dead_letters[0].triage_category == "external_dependency"
     assert dead_letters[0].error_taxonomy.stage == "publisher_discovery"
     assert dead_letters[0].identity.publisher_name == "Example Publisher"
-    assert dead_letters[0].identity.publisher_insights_url == "https://example.com/insights"
+    assert (
+        dead_letters[0].identity.publisher_insights_url
+        == "https://example.com/insights"
+    )
     assert dead_letters[0].artifact_links.output_path == "out.log"
     assert dead_letters[0].artifact_links.request_path == "request.json"
     assert dead_letters[0].artifact_links.artifact_paths == ["out/report.json"]
@@ -288,8 +304,87 @@ def test_run_registry_service_auto_triages_failed_runs_and_logs_actions(
     ) or dead_letters[0].artifact_links.manifest_path.endswith(
         "ui_runs/run-dead-letter/replay_manifest.json"
     )
+    assert dead_letters[0].remediation.workflow_id == "report_generation"
+    assert dead_letters[0].remediation.step_id == "publisher_discovery"
+    assert dead_letters[0].remediation.checkpoint_stage == "analysis_complete"
+    assert dead_letters[0].remediation.input_checksum == sha256_json(
+        failed.request_payload
+    )
+    assert dead_letters[0].remediation.idempotency_key == "plan:example-publisher"
+    assert dead_letters[0].remediation.remediation_code == "retry_now"
+    assert dead_letters[0].remediation.runbook_link.endswith(
+        "#publisher_inventory_http_empty"
+    )
+    assert dead_letters[0].remediation.budget_context == {
+        "budget_profile": "safe_default",
+        "remaining_usd": 12.5,
+    }
     assert actions[0].action == "auto_triaged"
     assert actions[0].actor == "system"
+
+
+def test_run_registry_service_backfills_remediation_for_migrated_dead_letters(
+    tmp_path: Path,
+) -> None:
+    registry_path = tmp_path / "state" / "ui_runs.sqlite"
+    failed = UiRunRecord(
+        schema_version="1.0",
+        run_id="run-migrated-dead-letter",
+        run_type="report_generation",
+        display_name="Report generation",
+        status="failed",
+        request_payload={"workflow_control": {"workflow": "report_generation"}},
+        command=["python", "-m", "src.cli"],
+        created_at_utc="2026-04-29T09:00:00+00:00",
+        updated_at_utc="2026-04-29T09:05:00+00:00",
+        finished_at_utc="2026-04-29T09:05:00+00:00",
+        error_code="openai_request_failed",
+        error_message="Provider timed out",
+        error_retryable=True,
+        error_severity="error",
+    )
+    write_ui_run_record(
+        UiRunRecordWriteRequest(
+            schema_version="1.0",
+            registry_path=str(registry_path),
+            record=failed,
+        ),
+        _ctx(),
+    )
+    with sqlite3.connect(registry_path) as conn:
+        conn.execute(
+            """
+            UPDATE ui_run_dead_letters
+            SET workflow_id='', step_id='', checkpoint_stage='', input_checksum='',
+                idempotency_key='', remediation_code='', runbook_link='',
+                budget_context_json='{}'
+            WHERE run_id=?
+            """,
+            (str(failed.run_id),),
+        )
+
+    dead_letters = list_ui_run_dead_letters(
+        UiRunDeadLetterListRequest(
+            schema_version="1.0",
+            registry_path=str(registry_path),
+            triage_statuses=["open"],
+            limit=10,
+        ),
+        _ctx(),
+    ).records
+
+    assert len(dead_letters) == 1
+    assert dead_letters[0].remediation.workflow_id == "report_generation"
+    assert dead_letters[0].remediation.input_checksum == sha256_json(
+        failed.request_payload
+    )
+    assert (
+        dead_letters[0].remediation.idempotency_key == "ui_run:run-migrated-dead-letter"
+    )
+    assert dead_letters[0].remediation.remediation_code == "retry_now"
+    assert (
+        dead_letters[0].remediation.runbook_link == "docs/ops/top_failure_runbooks.md"
+    )
 
 
 def test_run_registry_service_records_recovery_and_discard_actions(

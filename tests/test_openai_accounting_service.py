@@ -11,8 +11,13 @@ from src.contracts.openai import (
     OpenAIUsageAccountingResponse,
     OpenAIUsageOutcomeUpdateRequest,
 )
+from src.contracts.llm_usage import (
+    LLMUsageMedianRebuildRequest,
+    LLMUsageSpendGuardrailRequest,
+)
 from src.contracts.run_context import RunContext
 from src.services import openai_accounting_service as svc
+from src.services import llm_usage_ledger_service
 from src.utils.errors import AppError
 
 
@@ -118,6 +123,53 @@ def test_record_usage_defers_compatibility_exports_until_projection_interval(
         "openai_usage_accounting_complete",
     ]
     assert_logs_have_required_fields(records)
+
+
+def test_record_usage_releases_operation_reservation_when_action_is_namespaced(
+    tmp_path: Path,
+) -> None:
+    request = replace(
+        _request(tmp_path),
+        action="artifacts:summary",
+        reservation_operation="openai_chat_json",
+        request_id="reserved-request",
+        prompt_namespace="report_vs/artifacts/summary",
+    )
+    warmup = svc.record_usage(replace(request, request_id="warmup-request"), _ctx())
+    llm_usage_ledger_service.rebuild_usage_medians(
+        LLMUsageMedianRebuildRequest(
+            schema_version="1.0", db_path=request.usage_db_path
+        ),
+        _ctx(),
+    )
+    reservation = llm_usage_ledger_service.evaluate_daily_spend_guardrail(
+        LLMUsageSpendGuardrailRequest(
+            schema_version="1.0",
+            db_path=request.usage_db_path,
+            warn_usd=10.0,
+            provider="openai",
+            task="artifacts:summary",
+            action="artifacts:summary",
+            model=request.model,
+            prompt_namespace="report_vs/artifacts/summary",
+            reservation_key="openai:openai_chat_json:r:t:s",
+            reserve_in_flight=True,
+        ),
+        _ctx(),
+    )
+
+    response = svc.record_usage(request, _ctx())
+
+    assert warmup.usage_db_recorded is True
+    assert reservation.median_forecast_usd == 2.5
+    assert reservation.reservation_created is True
+    assert response.usage_db_recorded is True
+    with sqlite3.connect(request.usage_db_path) as conn:
+        status = conn.execute(
+            "select status from llm_usage_spend_reservations where reservation_key=?",
+            ("openai:openai_chat_json:r:t:s",),
+        ).fetchone()
+    assert status == ("released",)
 
 
 def test_record_usage_projects_compatibility_exports_on_twentieth_event(

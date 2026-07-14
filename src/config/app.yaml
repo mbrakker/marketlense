@@ -118,6 +118,26 @@ openai_models:
   rank_candidates: "gpt-5-mini"
   rank_candidates/crop_refine: "gpt-5-mini"
 
+llm_routing:
+  report_vs/artifacts:
+    tier: routine_structured
+    max_input_tokens: 48000
+    compaction_enabled: true
+    quality_threshold: 0.80
+    same_provider_fallback: true
+  report_vs/evidence_packs:
+    tier: evidence_sensitive
+    max_input_tokens: 64000
+    compaction_enabled: true
+    quality_threshold: 0.90
+    same_provider_fallback: true
+  rank_candidates:
+    tier: quality_ranked
+    max_input_tokens: 32000
+    compaction_enabled: true
+    quality_threshold: 0.85
+    same_provider_fallback: true
+
 rank:
   model: "gpt-5-mini"
   temperature: 1.0
@@ -192,6 +212,7 @@ browser_download:
     timeout_seconds: 120
   route_playbook_dir: "./src/playbooks/browser_routes"
   route_playbook_stale_policy: "fallback"
+  route_memory_ttl_seconds: 2592000
   route_playbook_promotion_mode: "write"
   private_api_playbook_promotion_mode: "write"
   private_api_playbook_min_success_count: 3

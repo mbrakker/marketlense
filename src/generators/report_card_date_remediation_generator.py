@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from copy import deepcopy
 from typing import Any
 
 from src.contracts.report_card_remediation import (
@@ -10,7 +11,7 @@ from src.contracts.report_card_remediation import (
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 
-_REQUIRED_REGISTRY_IDS = {"doc_map", "artifacts", "validation", "rendered_html"}
+_REQUIRED_REGISTRY_IDS = {"doc_map", "artifacts", "validation"}
 
 
 def _normalize_iso_date(value: object) -> str:
@@ -95,7 +96,7 @@ def remediate_report_card_publication_date(
             severity="error",
             context={"file_id": request.file_id, "missing_refs": missing_refs},
         )
-    if ref_paths["rendered_html"] != request.rendered_html_path:
+    if request.rendered_html_path and ref_paths.get("rendered_html") != request.rendered_html_path:
         raise AppError(
             code="report_card_publication_date_registry_mismatch",
             message="Rendered HTML path must come from the typed artifact registry",
@@ -167,3 +168,20 @@ def remediate_report_card_publication_date(
         resume_stage=request.resume_stage,
         idempotency_key=idempotency_key,
     )
+
+
+def apply_report_card_publication_date_remediation(
+    artifacts_payload: dict[str, Any],
+    result: ReportCardPublicationDateRemediationResult,
+) -> dict[str, Any]:
+    """Project an audited repair into canonical artifacts for a render-only resume."""
+    payload = deepcopy(artifacts_payload)
+    payload["publication_date"] = result.publication_date
+    payload["report_card_publication_date_remediation"] = {
+        "schema_version": result.schema_version,
+        "date_source": result.date_source,
+        "audit_fields": dict(result.audit_fields),
+        "idempotency_key": result.idempotency_key,
+        "resume_stage": result.resume_stage,
+    }
+    return payload

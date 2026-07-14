@@ -70,6 +70,9 @@ class LLMServiceClient:
                         "operation": operation_name,
                         "scope": self._policy.scope,
                         "provider_decision": "openai_primary",
+                        "same_provider_fallback": bool(
+                            getattr(request, "same_provider_fallback", False)
+                        ),
                         "provider": "openai",
                         "model": str(getattr(request, "model", "") or ""),
                         "timeout_seconds": getattr(request, "timeout_seconds", None),
@@ -144,7 +147,12 @@ class LLMServiceClient:
             )
         except AppError as exc:
             fallback = getattr(self._base_client, "openrouter_chat_json", None)
-            if fallback is None or not callable(fallback) or not exc.retryable:
+            if (
+                bool(getattr(req, "same_provider_fallback", False))
+                or fallback is None
+                or not callable(fallback)
+                or not exc.retryable
+            ):
                 raise
             logger.info(
                 log_event(

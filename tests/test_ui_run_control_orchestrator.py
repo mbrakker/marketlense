@@ -11,9 +11,13 @@ from src.contracts.ui_run_control import (
     ProcessPollResponse,
     ProcessTerminateResponse,
     UiRunCancelRequest,
+    UiRunDeadLetterListRequest,
+    UiRunDeadLetterReapRequest,
     UiRunLaunchRequest,
+    UiRunLaunchResponse,
     UiRunPollRequest,
     UiRunRecord,
+    UiRunRecordGetRequest,
     UiRunRecordWriteRequest,
 )
 from src.orchestrators import ui_run_control_orchestrator as orchestrator
@@ -21,7 +25,6 @@ from src.services.run_registry_service import (
     get_ui_run_record,
     write_ui_run_record,
 )
-from src.contracts.ui_run_control import UiRunRecordGetRequest
 from src.utils.logging import new_run_context
 
 
@@ -314,3 +317,185 @@ def test_poll_ui_run_promotes_live_queued_worker_to_running(
     assert response.record.status == "running"
     assert response.record.started_at_utc
     assert persisted == response.record
+
+
+def test_dead_letter_reaper_launches_one_recovery_then_suppresses_duplicates(
+    tmp_path: Path,
+) -> None:
+    registry_path = _registry_path(tmp_path)
+    failed = UiRunRecord(
+        schema_version="1.0",
+        run_id="retryable-run",
+        run_type="report_download",
+        display_name="Download report",
+        status="failed",
+        request_payload={"url": "https://example.com/report"},
+        command=["python", "-m", "src.cli"],
+        created_at_utc="2026-01-01T00:00:00+00:00",
+        updated_at_utc="2026-01-01T00:01:00+00:00",
+        finished_at_utc="2026-01-01T00:01:00+00:00",
+        output_path="out.log",
+        request_path="request.json",
+        error_code="browser_download_request_failed",
+        error_message="temporary request failure",
+        error_retryable=True,
+        error_severity="error",
+    )
+    write_ui_run_record(
+        UiRunRecordWriteRequest(
+            schema_version="1.0", registry_path=registry_path, record=failed
+        ),
+        _ctx(),
+    )
+    launches: list[UiRunLaunchRequest] = []
+
+    def launch(request: UiRunLaunchRequest, ctx) -> UiRunLaunchResponse:
+        launches.append(request)
+        return UiRunLaunchResponse(
+            schema_version="1.0",
+            record=UiRunRecord(
+                schema_version="1.0",
+                run_id="recovery-run",
+                run_type=request.run_type,
+                display_name=request.display_name,
+                status="queued",
+                request_payload=request.request_payload,
+                command=[],
+                created_at_utc="2026-01-01T00:02:00+00:00",
+                updated_at_utc="2026-01-01T00:02:00+00:00",
+            ),
+        )
+
+    request = UiRunDeadLetterReapRequest(
+        schema_version="1.0",
+        registry_path=registry_path,
+        workspace_root=str(tmp_path),
+        cooldown_seconds=0,
+    )
+    first = orchestrator.reap_dead_letter_runs(request, _ctx(), launch_run=launch)
+    second = orchestrator.reap_dead_letter_runs(request, _ctx(), launch_run=launch)
+
+    assert first.recovered_run_ids == ["retryable-run"]
+    assert first.held_run_ids == []
+    assert second.recovered_run_ids == []
+    assert launches[0].request_payload == {
+        "url": "https://example.com/report",
+        "_workflow_control_recovery_attempt": 1,
+    }
+    assert len(launches) == 1
+
+
+def test_dead_letter_reaper_holds_recovery_chain_at_attempt_budget(tmp_path) -> None:
+    registry_path = str(tmp_path / "ui_runs.sqlite")
+    failed = UiRunRecord(
+        schema_version="1.0",
+        run_id="exhausted-run",
+        run_type="browser_download",
+        display_name="Exhausted retry",
+        status="failed",
+        request_payload={
+            "url": "https://example.com/report",
+            "_workflow_control_recovery_attempt": 2,
+        },
+        command=["python", "-m", "src.cli"],
+        created_at_utc="2026-01-01T00:00:00+00:00",
+        updated_at_utc="2026-01-01T00:01:00+00:00",
+        finished_at_utc="2026-01-01T00:01:00+00:00",
+        output_path="out.log",
+        request_path="request.json",
+        error_code="browser_download_request_failed",
+        error_message="temporary request failure",
+        error_retryable=True,
+        error_severity="error",
+    )
+    write_ui_run_record(
+        UiRunRecordWriteRequest(
+            schema_version="1.0", registry_path=registry_path, record=failed
+        ),
+        _ctx(),
+    )
+    launches: list[UiRunLaunchRequest] = []
+
+    def launch(request: UiRunLaunchRequest, ctx) -> UiRunLaunchResponse:
+        launches.append(request)
+        raise AssertionError("attempt-exhausted recovery must not launch")
+
+    response = orchestrator.reap_dead_letter_runs(
+        UiRunDeadLetterReapRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            workspace_root=str(tmp_path),
+            cooldown_seconds=0,
+            max_recovery_attempts=2,
+        ),
+        _ctx(),
+        launch_run=launch,
+    )
+
+    assert response.recovered_run_ids == []
+    assert response.held_run_ids == ["exhausted-run"]
+    assert launches == []
+    escalated = orchestrator.list_dead_letter_runs(
+        UiRunDeadLetterListRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            triage_statuses=["escalated"],
+            limit=10,
+        ),
+        _ctx(),
+    ).records
+    assert [item.run_id for item in escalated] == ["exhausted-run"]
+    assert escalated[0].last_action == "escalated"
+    assert escalated[0].last_action_note == (
+        "automatic_escalation:recovery_attempt_budget_exhausted"
+    )
+
+
+def test_dead_letter_reaper_escalates_non_retryable_terminal_failure(tmp_path) -> None:
+    registry_path = str(tmp_path / "ui_runs.sqlite")
+    failed = UiRunRecord(
+        schema_version="1.0",
+        run_id="terminal-run",
+        run_type="report_download",
+        display_name="Terminal report download",
+        status="failed",
+        request_payload={"url": "https://example.com/report"},
+        command=["python", "-m", "src.cli"],
+        created_at_utc="2026-01-01T00:00:00+00:00",
+        updated_at_utc="2026-01-01T00:01:00+00:00",
+        finished_at_utc="2026-01-01T00:01:00+00:00",
+        error_code="validation_failed",
+        error_message="Source validation failed",
+        error_retryable=False,
+        error_severity="error",
+    )
+    write_ui_run_record(
+        UiRunRecordWriteRequest(
+            schema_version="1.0", registry_path=registry_path, record=failed
+        ),
+        _ctx(),
+    )
+
+    response = orchestrator.reap_dead_letter_runs(
+        UiRunDeadLetterReapRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            workspace_root=str(tmp_path),
+            cooldown_seconds=0,
+        ),
+        _ctx(),
+    )
+    escalated = orchestrator.list_dead_letter_runs(
+        UiRunDeadLetterListRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            triage_statuses=["escalated"],
+            limit=10,
+        ),
+        _ctx(),
+    ).records
+
+    assert response.recovered_run_ids == []
+    assert response.held_run_ids == ["terminal-run"]
+    assert [item.run_id for item in escalated] == ["terminal-run"]
+    assert escalated[0].last_action_note == "automatic_escalation:non_retryable_failure"

@@ -11,6 +11,7 @@ from src.utils.lineage_regeneration import plan_lineage_regeneration
     [
         ("template", "analysis_complete", "model_generation"),
         ("prompt", "selection_complete", "crop_rendering"),
+        ("model", "selection_complete", "crop_rendering"),
         ("crop", "source_prepared", "ocr"),
         ("source", "", ""),
     ],

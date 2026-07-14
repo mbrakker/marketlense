@@ -653,7 +653,9 @@ def _execute_ui_run_action(
         response = _execution_response(
             worker_request=worker_request,
             status="failed",
-            result_summary={},
+            result_summary={
+                "failure_context": _sanitize_snapshot(dict(exc.context or {})),
+            },
             artifact_paths=[],
             config_snapshot=config_snapshot,
             error_code=exc.code,

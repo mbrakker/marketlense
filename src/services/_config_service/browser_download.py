@@ -153,6 +153,15 @@ def load_browser_download_settings(
             "browser_download.route_playbook_stale_policy must be one of "
             "`fallback` or `fail`"
         )
+    route_memory_ttl_seconds = max(
+        _to_int(
+            browser_download.get("route_memory_ttl_seconds")
+            if not _is_missing(browser_download.get("route_memory_ttl_seconds"))
+            else _env_value("BROWSER_ROUTE_MEMORY_TTL_SECONDS"),
+            30 * 24 * 60 * 60,
+        ),
+        1,
+    )
     route_playbook_promotion_mode = (
         str(
             browser_download.get("route_playbook_promotion_mode")
@@ -530,6 +539,7 @@ def load_browser_download_settings(
         failure_forensics_policy=failure_forensics_policy,
         route_playbook_dir=route_playbook_dir,
         route_playbook_stale_policy=route_playbook_stale_policy,
+        route_memory_ttl_seconds=route_memory_ttl_seconds,
         route_playbook_promotion_mode=route_playbook_promotion_mode,
         private_api_playbook_promotion_mode=private_api_playbook_promotion_mode,
         private_api_playbook_min_success_count=private_api_playbook_min_success_count,
@@ -577,15 +587,9 @@ def load_browser_download_settings(
         cost_ledger_path=cost_ledger_path,
         cost_daily_path=cost_daily_path,
         usage_db_path=usage_db_path,
-        daily_spend_warn_usd=_to_float(
-            cost_cfg.get("daily_spend_warn_usd"), 3.0
-        ),
-        daily_spend_pause_usd=_to_float(
-            cost_cfg.get("daily_spend_pause_usd"), 5.0
-        ),
-        daily_spend_stop_usd=_to_float(
-            cost_cfg.get("daily_spend_stop_usd"), 6.0
-        ),
+        daily_spend_warn_usd=_to_float(cost_cfg.get("daily_spend_warn_usd"), 3.0),
+        daily_spend_pause_usd=_to_float(cost_cfg.get("daily_spend_pause_usd"), 5.0),
+        daily_spend_stop_usd=_to_float(cost_cfg.get("daily_spend_stop_usd"), 6.0),
         accounting_queue_size=max(
             _to_int(
                 browser_download.get("accounting_queue_size")
@@ -645,6 +649,7 @@ def load_browser_download_settings(
                 "failure_forensics_policy": settings.failure_forensics_policy,
                 "route_playbook_dir": settings.route_playbook_dir,
                 "route_playbook_stale_policy": settings.route_playbook_stale_policy,
+                "route_memory_ttl_seconds": settings.route_memory_ttl_seconds,
                 "route_playbook_promotion_mode": (
                     settings.route_playbook_promotion_mode
                 ),

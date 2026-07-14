@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
+
 def test_run_report_download_retries_timed_out_browser_step(
     tmp_path: Path,
     caplog,
@@ -108,6 +109,7 @@ def test_run_report_download_retries_timed_out_browser_step(
     assert failure_events[-1]["fields"]["code"] == "browser_download_agent_timeout"
     assert failure_events[-1]["fields"]["retryable"] is True
 
+
 def test_run_report_download_does_not_retry_failed_http_probe_before_browser_fallback(
     tmp_path: Path,
     caplog,
@@ -184,6 +186,7 @@ def test_run_report_download_does_not_retry_failed_http_probe_before_browser_fal
         if event.get("event") == "report_download_retry"
     ]
     assert retry_events == []
+
 
 @pytest.mark.parametrize(
     ("failure_forensics_policy", "expected_retention_action"),
@@ -338,6 +341,7 @@ def test_run_report_download_persists_failure_forensics_pack(
         == failure_forensics_policy
     )
 
+
 def test_run_report_download_retries_then_falls_back_after_memory_browser_timeout(
     tmp_path: Path,
     caplog,
@@ -416,7 +420,7 @@ def test_run_report_download_retries_then_falls_back_after_memory_browser_timeou
             browser_had_structured_result=True,
             used_candidate_pdf_url=False,
             used_candidate_source_page=False,
-            updated_at=1,
+            updated_at=_fresh_route_memory_updated_at(),
             candidate_pdf_url=None,
             candidate_source_page_urls=[],
             candidate_discovery_provenances=[],
@@ -513,6 +517,7 @@ def test_run_report_download_retries_then_falls_back_after_memory_browser_timeou
     assert step_failed_events[-1]["fields"]["attempt_retryable"] is True
     assert step_failed_events[-1]["fields"]["fallback_on_retryable_error"] is False
 
+
 def test_run_report_download_does_not_retry_weak_browser_route_summary(
     tmp_path: Path,
     caplog,
@@ -597,6 +602,7 @@ def test_run_report_download_does_not_retry_weak_browser_route_summary(
     ]
     assert browser_retry_events == []
 
+
 def test_run_report_download_does_not_fallback_after_non_retryable_memory_failure(
     tmp_path: Path,
     run_context,
@@ -655,7 +661,7 @@ def test_run_report_download_does_not_fallback_after_non_retryable_memory_failur
             browser_had_structured_result=True,
             used_candidate_pdf_url=False,
             used_candidate_source_page=False,
-            updated_at=1,
+            updated_at=_fresh_route_memory_updated_at(),
             candidate_pdf_url=None,
             candidate_source_page_urls=[],
             candidate_discovery_provenances=[],
@@ -714,6 +720,7 @@ def test_run_report_download_does_not_fallback_after_non_retryable_memory_failur
         code="browser_download_route_summary_invalid",
         retryable=False,
     )
+
 
 __all__ = [
     "test_run_report_download_retries_timed_out_browser_step",

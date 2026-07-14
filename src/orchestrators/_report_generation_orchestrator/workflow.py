@@ -307,7 +307,7 @@ def run_report_generation(
             deps.source,
             ocr_openai_client=source_openai_client,
         )
-        _write_stage_checkpoint(
+        analysis_checkpoint_path = _write_stage_checkpoint(
             runtime,
             stage_name=STAGE_SOURCE_PREPARED,
             artifact_refs={
@@ -327,7 +327,7 @@ def run_report_generation(
             deps.selection,
             crop_qa_llm_client=figure_caption_openai_client,
         )
-        _write_stage_checkpoint(
+        analysis_checkpoint_path = _write_stage_checkpoint(
             runtime,
             stage_name=STAGE_SELECTION_COMPLETE,
             artifact_refs={
@@ -368,14 +368,31 @@ def run_report_generation(
         )
         report_value_score = _score_ingested_report_source(runtime, analysis, deps)
         analysis = _analysis_with_report_value_score(analysis, report_value_score)
-        outcome = render_report_output(
-            runtime,
-            source,
-            selection,
-            analysis,
-            deps.render,
-            preview_resp=preview_resp,
-        )
+        try:
+            outcome = render_report_output(
+                runtime,
+                source,
+                selection,
+                analysis,
+                deps.render,
+                preview_resp=preview_resp,
+            )
+        except AppError as exc:
+            if exc.code != "card_publication_date_invalid":
+                raise
+            raise AppError(
+                code=exc.code,
+                message=exc.message,
+                cause=exc,
+                retryable=False,
+                severity=exc.severity,
+                context={
+                    **dict(exc.context or {}),
+                    "file_id": runtime.file.file_id,
+                    "analysis_checkpoint_path": analysis_checkpoint_path,
+                    "resume_stage": STAGE_ANALYSIS_COMPLETE,
+                },
+            ) from exc
         _write_stage_checkpoint(
             runtime,
             stage_name=STAGE_RENDER_COMPLETE,

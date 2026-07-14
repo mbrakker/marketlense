@@ -25,6 +25,13 @@ _PLANS: dict[str, tuple[str, bool, list[str], list[str], list[str]]] = {
         ["analysis_complete", "render_complete"],
         ["pdf_text", "ocr", "candidate_extraction", "crop_rendering"],
     ),
+    "model": (
+        "selection_complete",
+        False,
+        ["source_prepared", "selection_complete"],
+        ["analysis_complete", "render_complete"],
+        ["pdf_text", "ocr", "candidate_extraction", "crop_rendering"],
+    ),
     "template": (
         "analysis_complete",
         False,

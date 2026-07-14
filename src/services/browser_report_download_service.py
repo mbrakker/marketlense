@@ -37,6 +37,7 @@ from src.services._browser_report_download.dev_diagnostics import (
 )
 from src.services._browser_report_download import http as http_runtime
 from src.services._browser_report_download.budgets import apply_browser_route_budget
+from src.utils.run_budget import evaluate_run_budget
 from src.services._browser_report_download.http import try_direct_pdf_download
 from src.services._browser_report_download.http import try_direct_onsite_capture
 from src.services._browser_report_download.http import try_http_access_challenge_probe
@@ -1052,6 +1053,41 @@ def download_report_with_browser_use(
         ctx=ctx,
         normalized_url=normalized_url,
     )
+    if request.run_budget is not None:
+        prior_usage = request.run_budget_usage
+        if prior_usage is None:
+            raise AppError(
+                code="browser_run_budget_usage_missing",
+                message="A browser run budget requires explicit current usage",
+                retryable=False,
+            )
+        budget_decision = evaluate_run_budget(
+            request.run_budget,
+            replace(
+                prior_usage,
+                browser_launches=prior_usage.browser_launches + 1,
+            ),
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_run_budget_evaluated",
+                module=logger.name,
+                fields={
+                    "decision": budget_decision.decision,
+                    "breached_metrics": budget_decision.breached_metrics,
+                    "side_effect_allowed": budget_decision.side_effect_allowed,
+                },
+            )
+        )
+        if not budget_decision.side_effect_allowed:
+            raise AppError(
+                code="browser_run_budget_stopped",
+                message="Browser launch blocked by the shared run budget",
+                retryable=False,
+                context={"breached_metrics": budget_decision.breached_metrics},
+            )
     validate_browser_runtime_settings(request)
     browser_preflight_response = try_browser_preflight_probe(
         request=request,

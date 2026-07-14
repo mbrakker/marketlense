@@ -30,6 +30,8 @@ from src.contracts.workflow_control import (
     OperationalMemoryRecommendation,
     OperationalMemoryRecord,
     OperationalObservation,
+    PipelineExecutionAuthorization,
+    PipelineExecutionAuthorizationRequest,
     PreLlmDataQualityDecision,
     PreLlmDataQualityInput,
     PreflightRemediationAction,
@@ -72,6 +74,7 @@ from src.services.state_service import (
     mark_mail_delivery_request_attempt,
     write_workflow_control_observation,
 )
+from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.workflow_control_orchestrator")
 _T = TypeVar("_T")
@@ -676,6 +679,68 @@ def build_pipeline_execution_plan(
         )
     )
     return plan
+
+
+def authorize_pipeline_execution(
+    request: PipelineExecutionAuthorizationRequest,
+    *,
+    ctx: RunContext,
+) -> PipelineExecutionAuthorization:
+    """Authorize a concrete workflow only when its inspected plan permits it."""
+    plan = request.plan
+    expected_workflow = _key(request.expected_workflow)
+    requested_side_effects = sorted(
+        {_key(value) for value in request.requested_side_effects if _key(value)}
+    )
+    allowed_side_effects = sorted(
+        {_key(value) for value in plan.planned_side_effects if _key(value)}
+    )
+    reason = ""
+    if not plan.executable:
+        reason = "plan_not_executable"
+    elif plan.workflow != expected_workflow:
+        reason = "workflow_mismatch"
+    elif plan.blockers or plan.blocked_steps:
+        reason = "plan_has_blockers"
+    elif not plan.idempotency_key or len(plan.idempotency_key) != 64:
+        reason = "plan_idempotency_key_invalid"
+    elif any(value not in allowed_side_effects for value in requested_side_effects):
+        reason = "requested_side_effect_not_planned"
+    plan_checksum = sha256_json(asdict(plan))
+    fields = {
+        "workflow": plan.workflow,
+        "expected_workflow": expected_workflow,
+        "plan_checksum": plan_checksum,
+        "requested_side_effects": requested_side_effects,
+        "allowed_side_effects": allowed_side_effects,
+        "reason": reason or "authorized",
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="workflow_pipeline_execution_authorized"
+            if not reason
+            else "workflow_pipeline_execution_denied",
+            module=logger.name,
+            fields=fields,
+        )
+    )
+    if reason:
+        raise AppError(
+            code="workflow_execution_plan_denied",
+            message="Pipeline execution is not authorized by the inspected plan",
+            retryable=False,
+            severity="warning",
+            context=fields,
+        )
+    return PipelineExecutionAuthorization(
+        schema_version="1.0",
+        workflow=plan.workflow,
+        idempotency_key=plan.idempotency_key,
+        plan_checksum=plan_checksum,
+        allowed_side_effects=allowed_side_effects,
+    )
 
 
 def evaluate_publish_policy(
@@ -1664,6 +1729,8 @@ __all__ = [
     "PreflightRemediationAction",
     "PreflightRemediationArtifact",
     "PipelineExecutionPlan",
+    "PipelineExecutionAuthorization",
+    "PipelineExecutionAuthorizationRequest",
     "PublishRemediationTarget",
     "PublishRemediationWorkflow",
     "PublishPolicyDecision",
@@ -1684,6 +1751,7 @@ __all__ = [
     "build_publish_remediation_from_validation",
     "build_preflight_remediation_artifact",
     "build_pipeline_execution_plan",
+    "authorize_pipeline_execution",
     "build_workflow_preflight_request",
     "default_workflow_control_settings",
     "evaluate_pre_llm_data_quality",

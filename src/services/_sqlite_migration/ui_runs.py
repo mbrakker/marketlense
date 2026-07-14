@@ -51,6 +51,14 @@ CREATE TABLE IF NOT EXISTS ui_run_dead_letters (
   manifest_path TEXT NOT NULL DEFAULT '',
   artifact_paths_json TEXT NOT NULL DEFAULT '[]',
   result_summary_json TEXT NOT NULL DEFAULT '{}',
+  workflow_id TEXT NOT NULL DEFAULT '',
+  step_id TEXT NOT NULL DEFAULT '',
+  checkpoint_stage TEXT NOT NULL DEFAULT '',
+  input_checksum TEXT NOT NULL DEFAULT '',
+  idempotency_key TEXT NOT NULL DEFAULT '',
+  remediation_code TEXT NOT NULL DEFAULT '',
+  runbook_link TEXT NOT NULL DEFAULT '',
+  budget_context_json TEXT NOT NULL DEFAULT '{}',
   first_failed_at_utc TEXT NOT NULL,
   last_failed_at_utc TEXT NOT NULL,
   updated_at_utc TEXT NOT NULL,
@@ -108,6 +116,25 @@ def _ui_run_registry_002_add_dead_letter_ledger(conn: sqlite3.Connection) -> Non
     )
 
 
+def _ui_run_registry_003_add_remediation_context(conn: sqlite3.Connection) -> None:
+    for column_name, column_type in (
+        ("workflow_id", "TEXT NOT NULL DEFAULT ''"),
+        ("step_id", "TEXT NOT NULL DEFAULT ''"),
+        ("checkpoint_stage", "TEXT NOT NULL DEFAULT ''"),
+        ("input_checksum", "TEXT NOT NULL DEFAULT ''"),
+        ("idempotency_key", "TEXT NOT NULL DEFAULT ''"),
+        ("remediation_code", "TEXT NOT NULL DEFAULT ''"),
+        ("runbook_link", "TEXT NOT NULL DEFAULT ''"),
+        ("budget_context_json", "TEXT NOT NULL DEFAULT '{}'"),
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="ui_run_dead_letters",
+            column_name=column_name,
+            column_type=column_type,
+        )
+
+
 _UI_RUN_REGISTRY_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="ui_run_registry_001_create_ui_runs",
@@ -118,5 +145,10 @@ _UI_RUN_REGISTRY_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="ui_run_registry_002_add_dead_letter_ledger",
         version=2,
         apply_fn=_ui_run_registry_002_add_dead_letter_ledger,
+    ),
+    _MigrationSpec(
+        migration_id="ui_run_registry_003_add_remediation_context",
+        version=3,
+        apply_fn=_ui_run_registry_003_add_remediation_context,
     ),
 )

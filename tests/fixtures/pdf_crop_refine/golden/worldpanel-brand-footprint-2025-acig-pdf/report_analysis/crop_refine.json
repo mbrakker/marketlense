@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "107e508cd57ba60dbdfb7d89926cba594cffbd4bbfad58b22c3c2e8635e1cade",
+    "md5": "7ec3f1565cde8da7fee6e49c245a7613",
+    "model": "gpt-5-mini",
+    "temperature": 0.0,
+    "seed": null,
+    "mode": "adaptive",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "a876ed2c2827ddef501f6f988e17fbf3185ce58bc85b1dcf9db07d0457378302"
+  },
+  "results": []
+}

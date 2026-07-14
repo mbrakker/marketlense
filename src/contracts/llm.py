@@ -7,6 +7,46 @@ from src.contracts.run_context import RunContext
 
 
 @dataclass(frozen=True)
+class LLMRoutingPolicy:
+    schema_version: str = field(
+        metadata={"doc": "LLM routing-policy schema version."}
+    )
+    model: str = field(metadata={"doc": "Provider-local model selected for scope."})
+    tier: str = field(metadata={"doc": "Quality/cost tier selected for scope."})
+    max_input_tokens: int = field(
+        metadata={"doc": "Maximum input-token budget before deterministic compaction."}
+    )
+    compaction_enabled: bool = field(
+        metadata={"doc": "Whether anchor-preserving compaction is permitted."}
+    )
+    quality_threshold: float = field(
+        metadata={"doc": "Minimum quality threshold required for the selected tier."}
+    )
+    same_provider_fallback: bool = field(
+        metadata={"doc": "Whether retry fallback must remain with the selected provider."}
+    )
+
+
+@dataclass(frozen=True)
+class LLMRoutingDecision:
+    schema_version: str = field(
+        metadata={"doc": "Resolved LLM routing-decision schema version."}
+    )
+    namespace: str = field(metadata={"doc": "Normalized prompt namespace."})
+    model: str = field(metadata={"doc": "Resolved provider-local model."})
+    tier: str = field(metadata={"doc": "Resolved routing tier."})
+    max_input_tokens: int = field(metadata={"doc": "Resolved input-token budget."})
+    compaction_enabled: bool = field(metadata={"doc": "Resolved compaction permission."})
+    quality_threshold: float = field(metadata={"doc": "Resolved quality threshold."})
+    same_provider_fallback: bool = field(
+        metadata={"doc": "Resolved provider-fallback constraint."}
+    )
+    policy_source: str = field(
+        metadata={"doc": "Longest-prefix policy key or default source."}
+    )
+
+
+@dataclass(frozen=True)
 class LLMContextCompactionPolicy:
     schema_version: str = field(
         metadata={"doc": "LLM context-compaction policy schema version."}

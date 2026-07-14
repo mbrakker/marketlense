@@ -49,6 +49,15 @@ def _delta(field_name: str, original_value: Any, replay_value: Any) -> UiRunRepl
     )
 
 
+def _result_summary_delta(original_value: Any, replay_value: Any) -> UiRunReplayDelta:
+    """Keep legacy replay manifests comparable after additive remediation context."""
+    original = dict(original_value) if isinstance(original_value, dict) else original_value
+    replay = dict(replay_value) if isinstance(replay_value, dict) else replay_value
+    if original == {} and isinstance(replay, dict) and set(replay) == {"failure_context"}:
+        return _delta("result_summary", original, original)
+    return _delta("result_summary", original, replay)
+
+
 def _artifact_payload(items: list[Any]) -> list[dict[str, Any]]:
     return [asdict(item) for item in items]
 
@@ -236,8 +245,7 @@ def replay_ui_run(request: UiRunReplayRequest, ctx: RunContext) -> UiRunReplayRe
             manifest_response.manifest.error_message,
             execution.error_message,
         ),
-        _delta(
-            "result_summary",
+        _result_summary_delta(
             manifest_response.manifest.result_summary,
             execution.result_summary,
         ),

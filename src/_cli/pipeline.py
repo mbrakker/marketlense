@@ -1,41 +1,52 @@
 from __future__ import annotations
 
-
 import time
+from dataclasses import asdict
 
 import typer
-from rich.table import Table
 from rich import box
+from rich.table import Table
 
-from src.utils.errors import AppError
-from src.contracts.costs import CostReportRequest, CostReportingRequest
+from src._cli.app import cli_app, console, logger
+from src._cli.runtime import sync_cli_patch_points
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.costs import CostReportingRequest, CostReportRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.semantic_ids import RunId
 from src.contracts.state import WorkflowControlObservationWriteRequest
-from src.contracts.workflow_control import WorkflowControlObservation
-from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
-from src.orchestrators.ingest_orchestrator import run_ingest
+from src.contracts.wordpress_intelligence_projection import (
+    WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+    WordPressIntelligenceSourceReadRequest,
+    WordPressIntelligenceSyncRequest,
+)
+from src.contracts.workflow_control import (
+    PipelineExecutionAuthorizationRequest,
+    WorkflowControlObservation,
+)
+from src.orchestrators import workflow_control_orchestrator as workflow_control
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
+from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
+from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
-from src.orchestrators import workflow_control_orchestrator as workflow_control
+from src.orchestrators.wordpress_intelligence_projection_orchestrator import (
+    sync_wordpress_intelligence_projection,
+)
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.config_service import (
     build_ingest_settings,
-    load_settings,
     load_publish_settings,
+    load_settings,
 )
-from src.services.state_service import write_workflow_control_observation
 from src.services.logging_service import setup_logging
+from src.services.state_service import write_workflow_control_observation
 from src.utils.clock import utc_now_iso
+from src.utils.errors import AppError
 from src.utils.logging import log_event, new_run_context
-
-from src._cli.app import cli_app, console, logger
-from src._cli.runtime import sync_cli_patch_points
+from src.utils.wp_auth import build_auth_header
 
 _CLI_PATCH_POINTS = (
     "authorize_oauth_user",
@@ -75,6 +86,45 @@ _CLI_PATCH_POINTS = (
 
 def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
+
+
+@cli_app.command("sync-wordpress-intelligence")
+def sync_wordpress_intelligence() -> None:
+    """Rebuild WordPress homepage intelligence from approved published entities."""
+    _sync_cli_patch_points()
+    ctx = new_run_context(task_id="cli_sync_wordpress_intelligence")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    settings = load_publish_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
+    auth_header = build_auth_header(
+        username=settings.wp.username,
+        app_password=settings.wp.app_password,
+        bearer_token=settings.wp.bearer_token,
+    )
+    outcome = sync_wordpress_intelligence_projection(
+        WordPressIntelligenceSyncRequest(
+            schema_version=WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+            source_request=WordPressIntelligenceSourceReadRequest(
+                schema_version=WORDPRESS_INTELLIGENCE_SCHEMA_VERSION,
+                base_url=settings.wp.site_url,
+                auth_header=auth_header,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
+            ),
+            generated_at_utc=utc_now_iso(),
+        ),
+        ctx,
+    )
+    table = Table(title="WordPress Intelligence Projection", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Approved entities", str(outcome.entity_count))
+    table.add_row("Reports", str(outcome.projection.homepage_metrics.report_count))
+    table.add_row("Briefings", str(outcome.projection.homepage_metrics.briefing_count))
+    table.add_row("Signals", str(outcome.projection.homepage_metrics.signal_count))
+    table.add_row("Generated", outcome.write_response.generated_at_utc)
+    console.print(table)
 
 
 def _resolve_cli_workflow_control(
@@ -117,6 +167,15 @@ def _resolve_cli_workflow_control(
         settings,
         ctx=ctx,
     )
+    authorization = workflow_control.authorize_pipeline_execution(
+        PipelineExecutionAuthorizationRequest(
+            schema_version="1.0",
+            plan=plan,
+            expected_workflow=resolved.workflow,
+            requested_side_effects=list(requested_side_effects or []),
+        ),
+        ctx=ctx,
+    )
     retry_policy_id = ""
     if resolved.workflow:
         step_name = (
@@ -143,6 +202,10 @@ def _resolve_cli_workflow_control(
         "alternatives": list(resolved.alternatives),
         "blockers": list(resolved.blockers),
         "execution_plan": {
+            "schema_version": plan.schema_version,
+            "intent_key": plan.intent_key,
+            "workflow": plan.workflow,
+            "profile": plan.profile,
             "ordered_steps": list(plan.ordered_steps),
             "skipped_steps": list(plan.skipped_steps),
             "blocked_steps": list(plan.blocked_steps),
@@ -152,7 +215,9 @@ def _resolve_cli_workflow_control(
             "planned_side_effects": list(plan.planned_side_effects),
             "idempotency_key": plan.idempotency_key,
             "executable": plan.executable,
+            "blockers": list(plan.blockers),
         },
+        "execution_authority": asdict(authorization),
     }
     logger.info(
         log_event(
@@ -211,6 +276,36 @@ def _record_cli_workflow_feedback(
     )
 
 
+@cli_app.command("plan")
+def plan_execution(
+    intent: str = typer.Argument(..., help="Requested workflow outcome to plan"),
+    subject: str = typer.Option("", help="Optional report, URL, or task subject"),
+    publisher: str = typer.Option("", help="Optional publisher context"),
+    report_id: str = typer.Option("", help="Optional report identifier"),
+):
+    """Print a side-effect-free execution plan without launching a workflow."""
+    _sync_cli_patch_points()
+    ctx = new_run_context(task_id="cli_execution_plan")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    settings = workflow_control.default_workflow_control_settings()
+    plan = workflow_control.build_pipeline_execution_plan(
+        workflow_control.RunIntent(
+            schema_version="1.0",
+            intent=intent,
+            subject=subject,
+            publisher=publisher,
+            report_id=report_id,
+            requested_side_effects=[],
+            dry_run=True,
+            allow_automation=False,
+            metadata={"source": "cli_plan"},
+        ),
+        settings,
+        ctx=ctx,
+    )
+    console.print_json(data=asdict(plan))
+
+
 @cli_app.command("ingest")
 def ingest(
     folder: str = typer.Option(None, help="Override Drive folder ID"),
@@ -239,17 +334,16 @@ def ingest(
             fields={},
         )
     )
-    s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
-    settings = build_ingest_settings(
-        IngestSettingsBuildRequest(schema_version="1.0", app_settings=s),
-        ctx,
-    )
     _resolve_cli_workflow_control(
         intent="ingest new reports",
         ctx=ctx,
         requested_side_effects=["pdf", "model"],
     )
-
+    s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    settings = build_ingest_settings(
+        IngestSettingsBuildRequest(schema_version="1.0", app_settings=s),
+        ctx,
+    )
     console.print("[cyan]Running ingest pipeline...[/cyan]")
     started_at = time.perf_counter()
     try:
@@ -397,13 +491,13 @@ def publish_wp(
             fields={},
         )
     )
-    settings = load_publish_settings(
-        ConfigLoadRequest(schema_version="1.0", path=""), ctx
-    )
     _resolve_cli_workflow_control(
         intent="publish ready reports",
         ctx=ctx,
         requested_side_effects=["wordpress", "publish"],
+    )
+    settings = load_publish_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
     )
 
     console.print("[cyan]Publishing reports to WordPress...[/cyan]")

@@ -5,6 +5,7 @@ from typing import Optional
 
 from src.contracts.drive import DriveFile
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
+from src.contracts.run_budget import RunBudget, RunBudgetUsage
 
 from .identity import BrowserDownloadRequiredSelectEvidence, BrowserDownloadSettings
 from .playbooks import BrowserRoutePlaybookSelection
@@ -416,6 +417,14 @@ class BrowserReportDownloadRequest:
     publisher_name: str = field(
         default="",
         metadata={"doc": "Publisher name associated with this browser-use action."},
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional shared pre-side-effect budget for this browser launch."},
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None,
+        metadata={"doc": "Current shared budget usage before this browser launch."},
     )
 
 

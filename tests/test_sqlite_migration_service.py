@@ -178,7 +178,7 @@ def test_ui_run_registry_migrations_are_idempotent_on_rerun(tmp_path: Path) -> N
         schema_version="1.0",
         database_key="ui_run_registry",
         db_path=str(db_path),
-        target_version=2,
+        target_version=3,
         ctx=_ctx(),
     )
 
@@ -198,14 +198,15 @@ def test_ui_run_registry_migrations_are_idempotent_on_rerun(tmp_path: Path) -> N
             """
         ).fetchall()
 
-    assert first.current_version == 2
+    assert first.current_version == 3
     assert [step.migration_id for step in first.applied_steps] == [
         "ui_run_registry_001_create_ui_runs",
         "ui_run_registry_002_add_dead_letter_ledger",
+        "ui_run_registry_003_add_remediation_context",
     ]
-    assert second.current_version == 2
+    assert second.current_version == 3
     assert second.applied_steps == ()
-    assert ledger_count == 2
+    assert ledger_count == 3
     assert dead_letter_tables == [
         ("ui_run_dead_letter_actions",),
         ("ui_run_dead_letters",),

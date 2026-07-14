@@ -131,6 +131,7 @@ from src._cli.ui_runs import (
     _load_ui_run_worker_request,
     _update_ui_run_record,
     replay_run,
+    reap_ui_dead_letters,
     ui_run_worker,
 )
 from src._cli.pipeline import (
@@ -139,8 +140,10 @@ from src._cli.pipeline import (
     extract_candidates,
     generate_covers,
     ingest,
+    plan_execution,
     publish_wp,
     recategorize,
+    sync_wordpress_intelligence,
     update_wp_categories,
 )
 from src._cli.browser import browser_doctor, download_report, poll_mail_report

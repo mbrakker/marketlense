@@ -23,6 +23,7 @@ from src.contracts.ui_run_control import (
     UiRunDeadLetterListRequest,
     UiRunDeadLetterListResponse,
     UiRunDeadLetterRecord,
+    UiRunDeadLetterRemediation,
     UiRunRecord,
     UiRunRecordGetRequest,
     UiRunRecordGetResponse,
@@ -85,10 +86,15 @@ def _registry_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="ui_run_registry",
                     db_path=path,
-                    target_version=2,
+                    target_version=3,
                     ctx=ctx,
                 ),
                 conn,
+            )
+            _backfill_dead_letter_remediation_context(
+                conn,
+                registry_path=path,
+                ctx=ctx,
             )
             conn.commit()
         yield conn
@@ -155,8 +161,42 @@ def _row_to_record(row: sqlite3.Row) -> UiRunRecord:
 
 
 def _dead_letter_from_row(row: sqlite3.Row) -> UiRunDeadLetterRecord:
+    result_summary = json.loads(str(row["result_summary_json"]) or "{}")
+    remediation_fields = set(row.keys())
+    workflow_id = (
+        str(row["workflow_id"] or "") if "workflow_id" in remediation_fields else ""
+    )
+    step_id = str(row["step_id"] or "") if "step_id" in remediation_fields else ""
+    checkpoint_stage = (
+        str(row["checkpoint_stage"] or "")
+        if "checkpoint_stage" in remediation_fields
+        else ""
+    )
+    input_checksum = (
+        str(row["input_checksum"] or "")
+        if "input_checksum" in remediation_fields
+        else ""
+    )
+    idempotency_key = (
+        str(row["idempotency_key"] or "")
+        if "idempotency_key" in remediation_fields
+        else ""
+    )
+    remediation_code = (
+        str(row["remediation_code"] or "")
+        if "remediation_code" in remediation_fields
+        else ""
+    )
+    runbook_link = (
+        str(row["runbook_link"] or "") if "runbook_link" in remediation_fields else ""
+    )
+    budget_context = (
+        json.loads(str(row["budget_context_json"]) or "{}")
+        if "budget_context_json" in remediation_fields
+        else {}
+    )
     return UiRunDeadLetterRecord(
-        schema_version="1.0",
+        schema_version="1.1",
         run_id=RunId(str(row["run_id"])),
         run_type=str(row["run_type"] or ""),
         display_name=str(row["display_name"] or ""),
@@ -187,7 +227,18 @@ def _dead_letter_from_row(row: sqlite3.Row) -> UiRunDeadLetterRecord:
             manifest_path=str(row["manifest_path"] or ""),
             artifact_paths=json.loads(str(row["artifact_paths_json"]) or "[]"),
         ),
-        result_summary=json.loads(str(row["result_summary_json"]) or "{}"),
+        remediation=UiRunDeadLetterRemediation(
+            schema_version="1.0",
+            workflow_id=workflow_id,
+            step_id=step_id,
+            checkpoint_stage=checkpoint_stage,
+            input_checksum=input_checksum,
+            idempotency_key=idempotency_key,
+            remediation_code=remediation_code,
+            runbook_link=runbook_link,
+            budget_context=budget_context,
+        ),
+        result_summary=result_summary,
         recovery_run_id=str(row["recovery_run_id"] or ""),
         last_action=str(row["last_action"] or ""),
         last_action_note=str(row["last_action_note"] or ""),
@@ -205,6 +256,65 @@ def _dead_letter_action_from_row(row: sqlite3.Row) -> UiRunDeadLetterActionRecor
         related_run_id=str(row["related_run_id"] or ""),
         created_at_utc=str(row["created_at_utc"] or ""),
     )
+
+
+def _backfill_dead_letter_remediation_context(
+    conn: sqlite3.Connection,
+    *,
+    registry_path: str,
+    ctx: RunContext,
+) -> None:
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT ui_runs.*, ui_run_dead_letters.first_failed_at_utc
+        FROM ui_run_dead_letters
+        INNER JOIN ui_runs ON ui_runs.run_id = ui_run_dead_letters.run_id
+        WHERE ui_run_dead_letters.input_checksum = ''
+           OR ui_run_dead_letters.idempotency_key = ''
+           OR ui_run_dead_letters.remediation_code = ''
+           OR ui_run_dead_letters.runbook_link = ''
+        """
+    ).fetchall()
+    for row in rows:
+        record = _row_to_record(row)
+        dead_letter = build_dead_letter_record(
+            registry_path=registry_path,
+            record=record,
+            failed_at_utc=str(row["first_failed_at_utc"] or record.updated_at_utc),
+            updated_at_utc=record.updated_at_utc,
+        )
+        remediation = dead_letter.remediation
+        conn.execute(
+            """
+            UPDATE ui_run_dead_letters
+            SET workflow_id=?, step_id=?, checkpoint_stage=?, input_checksum=?,
+                idempotency_key=?, remediation_code=?, runbook_link=?,
+                budget_context_json=?
+            WHERE run_id=?
+            """,
+            (
+                remediation.workflow_id,
+                remediation.step_id,
+                remediation.checkpoint_stage,
+                remediation.input_checksum,
+                remediation.idempotency_key,
+                remediation.remediation_code,
+                remediation.runbook_link,
+                json.dumps(remediation.budget_context, ensure_ascii=True),
+                str(record.run_id),
+            ),
+        )
+    if rows:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="ui_run_dead_letter_remediation_backfill_complete",
+                module=logger.name,
+                fields={"registry_path": registry_path, "backfilled_count": len(rows)},
+            )
+        )
 
 
 def _upsert_dead_letter_for_failed_record(
@@ -256,9 +366,11 @@ def _upsert_dead_letter_for_failed_record(
           triage_reason, error_code, error_message, error_retryable, error_severity,
           error_stage, publisher_name, publisher_insights_url, report_url, output_path,
           request_path, manifest_path, artifact_paths_json, result_summary_json,
+          workflow_id, step_id, checkpoint_stage, input_checksum, idempotency_key,
+          remediation_code, runbook_link, budget_context_json,
           first_failed_at_utc, last_failed_at_utc, updated_at_utc, recovery_run_id,
           last_action, last_action_note, last_action_at_utc
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(run_id) DO UPDATE SET
           run_type=excluded.run_type,
           display_name=excluded.display_name,
@@ -278,6 +390,14 @@ def _upsert_dead_letter_for_failed_record(
           manifest_path=excluded.manifest_path,
           artifact_paths_json=excluded.artifact_paths_json,
           result_summary_json=excluded.result_summary_json,
+          workflow_id=excluded.workflow_id,
+          step_id=excluded.step_id,
+          checkpoint_stage=excluded.checkpoint_stage,
+          input_checksum=excluded.input_checksum,
+          idempotency_key=excluded.idempotency_key,
+          remediation_code=excluded.remediation_code,
+          runbook_link=excluded.runbook_link,
+          budget_context_json=excluded.budget_context_json,
           last_failed_at_utc=excluded.last_failed_at_utc,
           updated_at_utc=excluded.updated_at_utc
         """,
@@ -302,6 +422,14 @@ def _upsert_dead_letter_for_failed_record(
             dead_letter.artifact_links.manifest_path,
             json.dumps(dead_letter.artifact_links.artifact_paths, ensure_ascii=True),
             json.dumps(dead_letter.result_summary, ensure_ascii=True),
+            dead_letter.remediation.workflow_id,
+            dead_letter.remediation.step_id,
+            dead_letter.remediation.checkpoint_stage,
+            dead_letter.remediation.input_checksum,
+            dead_letter.remediation.idempotency_key,
+            dead_letter.remediation.remediation_code,
+            dead_letter.remediation.runbook_link,
+            json.dumps(dead_letter.remediation.budget_context, ensure_ascii=True),
             dead_letter.failed_at_utc,
             dead_letter.updated_at_utc,
             dead_letter.updated_at_utc,
@@ -583,7 +711,7 @@ def record_ui_run_dead_letter_action(
     if action not in DEAD_LETTER_ACTIONS - {"auto_triaged"}:
         raise AppError(
             code="ui_run_dead_letter_action_invalid",
-            message="Dead-letter action must be retry_requested or discarded",
+            message="Dead-letter action must be retry_requested, discarded, or escalated",
             retryable=False,
             context={"action": request.action},
         )
@@ -618,7 +746,13 @@ def record_ui_run_dead_letter_action(
                 },
             )
         existing = _dead_letter_from_row(row)
-        triage_status = "discarded" if action == "discarded" else "recovery_requested"
+        triage_status = (
+            "discarded"
+            if action == "discarded"
+            else "escalated"
+            if action == "escalated"
+            else "recovery_requested"
+        )
         if triage_status not in DEAD_LETTER_TRIAGE_STATUSES:
             raise AppError(
                 code="ui_run_dead_letter_status_invalid",

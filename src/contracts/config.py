@@ -124,6 +124,12 @@ class AppSettings:
             "doc": "Per-namespace OpenAI model overrides keyed by namespace/prefix."
         },
     )
+    llm_routing: Dict[str, Dict[str, object]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Per-namespace quality, token, compaction, and provider-fallback routing policies."
+        },
+    )
     ingest_lock_ttl_seconds: float = field(
         default=7200.0,
         metadata={

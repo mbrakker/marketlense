@@ -29,9 +29,15 @@ final class Intelligence_Stats
 
     private Report_View_Model_Builder $view_model_builder;
 
-    public function __construct(Report_View_Model_Builder $view_model_builder)
+    private Intelligence_Projection $intelligence_projection;
+
+    public function __construct(
+        Report_View_Model_Builder $view_model_builder,
+        Intelligence_Projection $intelligence_projection
+    )
     {
         $this->view_model_builder = $view_model_builder;
+        $this->intelligence_projection = $intelligence_projection;
     }
 
     /**
@@ -59,52 +65,43 @@ final class Intelligence_Stats
      */
     public function homepage_metrics(): array
     {
-        $latest = $this->latest_report();
-        $report_ids = $this->published_report_ids();
-        $latest_label = __('No reports yet', 'marketlense-core');
-
-        if ($latest instanceof \WP_Post) {
-            $timestamp = get_post_timestamp($latest, 'date');
-            if (is_int($timestamp) && $timestamp > 0) {
-                $age = current_time('timestamp') - $timestamp;
-                $latest_label = $age <= \DAY_IN_SECONDS
-                    ? __('Updated today', 'marketlense-core')
-                    : sprintf(
-                        /* translators: %s is a formatted date. */
-                        __('Updated %s', 'marketlense-core'),
-                        wp_date('F j, Y', $timestamp)
-                    );
-            }
+        $projection = $this->intelligence_projection->current();
+        if (is_array($projection) && is_array($projection['homepage_metrics'] ?? null)) {
+            return $projection['homepage_metrics'];
         }
 
-        $citation_count = 0;
-        $derived_signal_count = 0;
-        foreach ($report_ids as $report_id) {
-            $post = get_post($report_id);
-            if (! ($post instanceof \WP_Post)) {
-                continue;
-            }
+        return $this->neutral_homepage_metrics();
+    }
 
-            $report = $this->view_model_builder->build($post);
-            $citation_count += max(0, (int) ($report['citations_count'] ?? 0));
-            if (! empty($report['full_key_metrics'])) {
-                $derived_signal_count++;
-            }
-        }
-
-        $published_signal_count = $this->published_post_type_count(Post_Type::SIGNAL_POST_TYPE);
-
+    /**
+     * Returns a deliberately neutral state when the pipeline has not approved a projection.
+     *
+     * @return array<string,int|string>
+     */
+    private function neutral_homepage_metrics(): array
+    {
         return [
-            'report_count' => count($report_ids),
-            'publisher_count' => count($this->content_backed_terms(Taxonomies::PUBLISHER_TAXONOMY)),
-            'topic_count' => count($this->content_backed_terms(Taxonomies::CATEGORY_TAXONOMY)),
-            'briefing_count' => $this->published_post_type_count(Post_Type::BRIEFING_POST_TYPE),
-            'signal_count' => $published_signal_count > 0 ? $published_signal_count : $derived_signal_count,
-            'signal_label' => $published_signal_count > 0
-                ? __('Published signals', 'marketlense-core')
-                : __('Report signals', 'marketlense-core'),
-            'citation_count' => $citation_count,
-            'latest_label' => $latest_label,
+            'report_count' => 0,
+            'publisher_count' => 0,
+            'topic_count' => 0,
+            'briefing_count' => 0,
+            'signal_count' => 0,
+            'signal_label' => __('Published signals', 'marketlense-core'),
+            'citation_count' => 0,
+            'latest_label' => '',
+        ];
+    }
+
+    /**
+     * @return array{window_label:string,trending_topics:list<array<string,mixed>>,emerging_themes:list<array<string,mixed>>,top_publishers:list<array<string,mixed>>}
+     */
+    private function neutral_weekly_signals(): array
+    {
+        return [
+            'window_label' => '',
+            'trending_topics' => [],
+            'emerging_themes' => [],
+            'top_publishers' => [],
         ];
     }
 
@@ -379,55 +376,16 @@ final class Intelligence_Stats
      */
     public function weekly_signals(int $limit = 5): array
     {
-        $window = $this->selected_window();
-        $current_topic_counts = $this->count_terms_for_posts($window['current_ids'], Taxonomies::CATEGORY_TAXONOMY);
-        $previous_topic_map = $this->counts_to_slug_map(
-            $this->count_terms_for_posts($window['previous_ids'], Taxonomies::CATEGORY_TAXONOMY)
-        );
-        $current_publisher_counts = $this->count_terms_for_posts($window['current_ids'], Taxonomies::PUBLISHER_TAXONOMY);
-        $previous_publisher_map = $this->counts_to_slug_map(
-            $this->count_terms_for_posts($window['previous_ids'], Taxonomies::PUBLISHER_TAXONOMY)
-        );
-
-        $trending_topics = $this->decorate_term_counts($current_topic_counts, $previous_topic_map, $limit, true);
-        $emerging_themes = array_values(
-            array_filter(
-                $trending_topics,
-                static fn (array $item): bool => isset($item['delta']) && (int) $item['delta'] > 0
-            )
-        );
-
-        usort(
-            $emerging_themes,
-            static function (array $left, array $right): int {
-                $delta_compare = ((int) ($right['delta'] ?? 0)) <=> ((int) ($left['delta'] ?? 0));
-                if ($delta_compare !== 0) {
-                    return $delta_compare;
-                }
-
-                return ((int) $right['count']) <=> ((int) $left['count']);
-            }
-        );
-
-        if ($emerging_themes === []) {
-            $emerging_themes = array_slice($trending_topics, 0, $limit);
-        } else {
-            $emerging_themes = array_slice($emerging_themes, 0, $limit);
-        }
+        $projection = $this->intelligence_projection->current();
+        $signals = is_array($projection) && is_array($projection['weekly_signals'] ?? null)
+            ? $projection['weekly_signals']
+            : $this->neutral_weekly_signals();
 
         return [
-            'window_label' => sprintf(
-                /* translators: %d is a day count. */
-                __('Past %d days', 'marketlense-core'),
-                $window['days']
-            ),
-            'trending_topics' => array_slice($trending_topics, 0, $limit),
-            'emerging_themes' => $emerging_themes,
-            'top_publishers' => array_slice(
-                $this->decorate_term_counts($current_publisher_counts, $previous_publisher_map, $limit, false),
-                0,
-                $limit
-            ),
+            'window_label' => (string) ($signals['window_label'] ?? ''),
+            'trending_topics' => array_slice((array) ($signals['trending_topics'] ?? []), 0, $limit),
+            'emerging_themes' => array_slice((array) ($signals['emerging_themes'] ?? []), 0, $limit),
+            'top_publishers' => array_slice((array) ($signals['top_publishers'] ?? []), 0, $limit),
         ];
     }
 
@@ -436,20 +394,9 @@ final class Intelligence_Stats
      */
     public function strategic_themes(int $limit = 6): array
     {
-        $overall = $this->count_terms_for_posts($this->published_report_ids(), Taxonomies::CATEGORY_TAXONOMY);
-        $window = $this->selected_window();
-        $current_map = $this->counts_to_slug_map(
-            $this->count_terms_for_posts($window['current_ids'], Taxonomies::CATEGORY_TAXONOMY)
-        );
-        $previous_map = $this->counts_to_slug_map(
-            $this->count_terms_for_posts($window['previous_ids'], Taxonomies::CATEGORY_TAXONOMY)
-        );
-
-        return array_slice(
-            $this->decorate_term_counts($overall, $previous_map, $limit, true, $current_map),
-            0,
-            $limit
-        );
+        $projection = $this->intelligence_projection->current();
+        $themes = is_array($projection) ? (array) ($projection['strategic_themes'] ?? []) : [];
+        return array_slice($themes, 0, $limit);
     }
 
     /**
@@ -457,23 +404,9 @@ final class Intelligence_Stats
      */
     public function publisher_authority(int $limit = 12): array
     {
-        $counts = $this->count_terms_for_posts($this->published_report_ids(), Taxonomies::PUBLISHER_TAXONOMY);
-        $items = [];
-        foreach (array_slice($counts, 0, $limit) as $item) {
-            $term = $item['term'];
-            if (! ($term instanceof \WP_Term)) {
-                continue;
-            }
-
-            $items[] = [
-                'name' => $term->name,
-                'count' => (int) $item['count'],
-                'url' => $this->safe_term_link($term),
-                'homepage' => (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_HOMEPAGE_META, true),
-            ];
-        }
-
-        return $items;
+        $projection = $this->intelligence_projection->current();
+        $publishers = is_array($projection) ? (array) ($projection['publisher_authority'] ?? []) : [];
+        return array_slice($publishers, 0, $limit);
     }
 
     /**

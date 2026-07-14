@@ -5,9 +5,11 @@ from typing import Any, Dict, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
+from src.contracts.llm import LLMContextCompactionPolicy
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.run_context import RunContext
 from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.utils.costing import estimate_cost_usd, estimate_text_tokens, resolve_model_pricing
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.artifact_generator")
@@ -34,6 +36,19 @@ def render_artifact_json_model(
         prompt_client=prompt_client,
         system_variables=variables,
         user_variables=variables,
+    )
+    expected_input_tokens = estimate_text_tokens(
+        f"{prompt_bundle.system_prompt}\n{prompt_bundle.user_prompt}"
+    )
+    pricing_resolution = resolve_model_pricing(
+        prompt_bundle.resolved_model, settings.model_pricing
+    )
+    expected_cost_usd = estimate_cost_usd(
+        prompt_bundle.resolved_model,
+        expected_input_tokens,
+        0,
+        0,
+        settings.model_pricing,
     )
     logger.info(
         log_event(
@@ -74,6 +89,15 @@ def render_artifact_json_model(
             fields={
                 "namespace": namespace,
                 "model": prompt_bundle.resolved_model,
+                "routing_tier": prompt_bundle.routing_decision.tier,
+                "routing_policy_source": prompt_bundle.routing_decision.policy_source,
+                "routing_quality_threshold": prompt_bundle.routing_decision.quality_threshold,
+                "same_provider_fallback": prompt_bundle.routing_decision.same_provider_fallback,
+                "compaction_enabled": prompt_bundle.routing_decision.compaction_enabled,
+                "compaction_max_input_tokens": prompt_bundle.routing_decision.max_input_tokens,
+                "expected_input_tokens": expected_input_tokens,
+                "expected_cost_usd": expected_cost_usd,
+                "pricing_status": pricing_resolution.status,
                 "temperature": settings.temperature,
                 "seed": settings.openai_seed,
                 "retrieval_mode": (
@@ -106,6 +130,13 @@ def render_artifact_json_model(
                 source_url=source_url,
                 prompt_namespace=namespace,
                 prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
+                context_compaction_policy=LLMContextCompactionPolicy(
+                    schema_version="1.0",
+                    enabled=prompt_bundle.routing_decision.compaction_enabled,
+                    max_input_tokens=prompt_bundle.routing_decision.max_input_tokens
+                    or None,
+                ),
             ),
             ctx,
         )
@@ -129,6 +160,13 @@ def render_artifact_json_model(
                 source_url=source_url,
                 prompt_namespace=namespace,
                 prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
+                context_compaction_policy=LLMContextCompactionPolicy(
+                    schema_version="1.0",
+                    enabled=prompt_bundle.routing_decision.compaction_enabled,
+                    max_input_tokens=prompt_bundle.routing_decision.max_input_tokens
+                    or None,
+                ),
             ),
             ctx,
         )

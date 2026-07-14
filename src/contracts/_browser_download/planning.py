@@ -271,6 +271,15 @@ class PublisherDownloadRouteMemory:
             "doc": "Remembered on-site completeness verdict when the route kind is `onsite_report`."
         },
     )
+    updated_at: int = field(
+        default=0,
+        metadata={
+            "doc": (
+                "Unix timestamp of the evidence-backed route observation used for "
+                "expiry checks."
+            )
+        },
+    )
     route_policy: list[PublisherDownloadRoutePolicySignal] = field(
         default_factory=list,
         metadata={

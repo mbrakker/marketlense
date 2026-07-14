@@ -125,6 +125,12 @@ class OpenAIUsageAccountingRequest:
         default=None,
         metadata={"doc": "Application action name; defaults to step_name."},
     )
+    reservation_operation: str = field(
+        default="",
+        metadata={
+            "doc": "Provider operation used to release the matching in-flight spend reservation."
+        },
+    )
     total_tokens: Optional[int] = field(
         default=None,
         metadata={"doc": "Provider total token count, if reported."},
@@ -453,6 +459,10 @@ class OpenAIResponseRequest:
         default="./state/llm_usage.sqlite",
         metadata={"doc": "Canonical SQLite usage ledger path for this provider call."},
     )
+    same_provider_fallback: bool = field(
+        default=False,
+        metadata={"doc": "Whether retry fallback must remain with the selected provider."},
+    )
 
 
 @dataclass(frozen=True)
@@ -562,6 +572,10 @@ class OpenAIJSONPromptRequest:
     daily_spend_stop_usd: float = field(
         default=6.0,
         metadata={"doc": "UTC canonical-spend threshold that hard-stops this call."},
+    )
+    same_provider_fallback: bool = field(
+        default=False,
+        metadata={"doc": "Whether retry fallback must remain with the selected provider."},
     )
 
 

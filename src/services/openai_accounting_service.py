@@ -238,7 +238,9 @@ def record_usage(
                 schema_version="1.0",
                 db_path=request.usage_db_path,
                 reservation_key=spend_reservation_key(
-                    ctx, provider=request.provider, operation=action
+                    ctx,
+                    provider=request.provider,
+                    operation=request.reservation_operation or action,
                 ),
             ),
             ctx,

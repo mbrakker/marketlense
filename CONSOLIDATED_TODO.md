@@ -25,17 +25,16 @@ All work is listed below in one register. `Active` items have detailed completio
 
 | Status | ID | Work item | Current outcome / merge target |
 | --- | --- | --- | --- |
-| Active | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | One plan-first execution outcome. |
+| Closed | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | Plan authorization is enforced by CLI/UI control payloads; retained plan run and full regression passed. |
 | Active | A2 | `fast_ingest` and other config-driven autopilot profiles | One typed profile outcome. |
 | Active | A3 | Durable dead letters, scheduled actions, full autonomous smoke, and side-effect idempotency | One recovery/remediation outcome. |
 | Active | A4 | Malformed-Drive-PDF quarantine | Standalone bounded source-recovery outcome. |
-| Active | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | One acquisition hard-blocker outcome. |
+| Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Active | A6 | Day/run/publisher spend guardrails | One pipeline-wide budget outcome. |
 | Active | A7 | Budget-aware model routing, compaction, and failure-class fallback | One stable LLM-policy outcome. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
 | Active | A9 | Source publication-metadata capture for retained regeneration | Source-supported render metadata outcome. |
 | Active | P1 | Publish snapshot naming and synchronous idempotent publishing | Publish Readiness outcome. |
-| Active | P2 | Stop WordPress intelligence/freshness/authority synthesis | Approved-projection rendering outcome. |
 | Active | P3 | Hosted HTTPS, safe errors, and public trust checks | Hosted trust outcome. |
 | Active | P4 | Briefing, correction, and submission CTAs | Public intake outcome. |
 | Active | P5 | Archive/search facets, mobile navigation, and responsive workflows | Responsive public-workflow outcome. |
@@ -46,7 +45,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | E1 | Claim-embedding freshness, retention, and cost controls | Embedding operations outcome. |
 | Active | E2 | Semantic-preselection quality/cost benchmark | Evidence-selection measurement outcome. |
 | Active | E3 | Lineage-driven selective regeneration and cost reporting | Compatibility-aware reuse outcome. |
-| Active | E4 | Executable retained PDF benchmark corpus in CI | Release-evidence outcome. |
+| Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
 | Active | E5 | Crop QA sidecars, rendered visual metrics, profiles, and HTML visual smoke | Visual-evidence quality outcome. |
 | Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome. |
 | Active | R2 | Role-mixing, import-graph, facade, direct-I/O, mutation-selection, and hygiene enforcement | Architecture enforcement outcome. |
@@ -80,19 +79,6 @@ All work is listed below in one register. `Active` items have detailed completio
 ## Active Backlog
 
 ### 1. Autonomous Safety and Cost Control
-
-#### A1. Plan-first pipeline execution
-
-- **Title:** Plan-first pipeline execution
-- **Impact 5 / effort: 3**
-- **Context:** `AutonomousRunSupervisorPlan` already emits typed workflow-control decisions, but callers still lack one public, side-effect-free contract that explains the safest next action across CLI and UI entrypoints.
-- **Benefit:** Operators can request an intent, inspect all planned side effects, and approve an execution path instead of manually assembling implementation flags.
-- **Risks to avoid:** Do not create a second orchestrator or embed generator domain logic in planning.
-- **Success criteria:**
-
-- Plans list ordered and skipped steps, blockers, credentials, side effects, checkpoints, idempotency keys, and expected artifacts.
-- Ready, partial, failed, missing-credential, and publish-only states are covered without side effects during planning.
-- Tests assert the plan contract, structured logs, and execution through canonical orchestration paths; a plan-only run proves no external mutation occurred.
 
 #### A2. Configured run profiles
 
@@ -132,19 +118,6 @@ All work is listed below in one register. `Active` items have detailed completio
 - State records file identity, checksum/size, typed error, and next action after PDF-integrity failure.
 - Default ingest skips quarantined files; explicit rescan/revalidation clears only a valid replacement.
 - CLI or dashboard exposes quarantined inputs and remediation guidance, with tests for write, skip, revalidation, and valid-replacement transitions.
-
-#### A5. Persist acquisition hard-blocker policy
-
-- **Title:** Persist acquisition hard-blocker policy
-- **Impact 4 / effort: 2**
-- **Context:** Live publishers can reject personal delivery domains or impose CAPTCHA/403 controls after browser work has already begun; those outcomes currently require repeated operator interpretation.
-- **Benefit:** Browser and mailbox budget is spent only on routes that can still complete unattended, with retained evidence for why work was skipped.
-- **Risks to avoid:** Keep decisions publisher-scoped and TTL-bound; never infer identity facts or suppress valid alternate routes.
-- **Success criteria:**
-
-- Publisher-scoped, TTL-bound policy records observed form/access-control evidence and the permitted alternate route.
-- Identity/mailbox domain alignment is checked before email-form submission; automation uses only configured, verified facts.
-- Policy avoids browser launches and mailbox polls when blocked, supports an eligible-mailbox/revalidation override, and has tests for TTL, publisher/URL scope, and avoided-work telemetry.
 
 #### A6. Pipeline-wide budget manager
 
@@ -217,19 +190,6 @@ All work is listed below in one register. `Active` items have detailed completio
 - `publish_queue_orchestrator.py` terminology is replaced by `Publish Readiness` at public/operator boundaries without creating a queue or outbox.
 - The output retains validation, evidence, health, duplicate-suppression, and review blockers; publishing remains draft/review-required by default.
 - Failure-injection tests cover restart, retry, duplicate dispatch, and partial WordPress failure, with retained findings for any future outbox decision.
-
-#### P2. Move public intelligence claims out of WordPress runtime synthesis
-
-- **Title:** Move public intelligence claims out of WordPress runtime synthesis
-- **Impact 5 / effort: 3**
-- **Context:** Some shortcode/stat surfaces still derive weekly signals, strategic themes, freshness-style movement, or publisher authority from WordPress counts and dates despite the pipeline owning approved projections.
-- **Benefit:** Analytical claims remain reproducible, source-grounded, and owned by the Python pipeline rather than mutable runtime queries.
-- **Risks to avoid:** Fail closed when projections are unavailable; do not invent neutral-looking claims from WordPress data.
-- **Success criteria:**
-
-- Signal, freshness, strategic-theme, and publisher-authority modules use an approved source contract.
-- Missing projections fail closed with neutral UI or an admin-visible diagnostic.
-- Tests prove no claim is generated solely from WordPress counts/dates, and README maps each intelligence surface to its projection source.
 
 #### P3. Resolve hosted-site trust blockers
 
@@ -362,19 +322,6 @@ All work is listed below in one register. `Active` items have detailed completio
 - Typed planning maps source, prompt, template, crop, and validator changes to the smallest required checkpoint stage.
 - Report and cross-report workflows consult valid lineage before model, PDF, crop, render, and publication work.
 - Regression tests prove render-only reuse and prohibit reuse after source invalidation; quality output reports fan-out, reuse, avoided work, and missing-lineage failures.
-
-#### E4. Make retained PDF benchmark evidence executable in CI
-
-- **Title:** Make retained PDF benchmark evidence executable in CI
-- **Impact 5 / effort: 3**
-- **Context:** CI currently permits missing retained PDF/crop assets, producing warnings and expiry-dated waivers instead of independently executable candidate and crop-refine evidence.
-- **Benefit:** Candidate/crop equivalence, runtime, and model-work regressions are independently verified on every release SHA.
-- **Risks to avoid:** Keep the corpus licensed, non-secret, bounded, and hash-pinned; never replace it with synthetic passing evidence.
-- **Success criteria:**
-
-- CI securely materializes the approved source/crop corpus with license/retention metadata, SHA-256 hashes, and expected paths.
-- Missing or hash-mismatched evidence fails; candidate, crop-refine, trend, scorecard, manifest, and review run without missing-asset warnings.
-- A CI run for the release SHA publishes passing benchmark evidence and retires the temporary PDF waiver entries.
 
 #### E5. Promote crop-QA sidecars to scorecards and selection telemetry
 
@@ -516,13 +463,15 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 
 ## Current-State Evidence
 
+- A1 plan-first authority is now typed and checksum-bound across CLI/UI control payloads. A retained publish plan emitted no external mutation; a live zero-item publish invocation authorized before correctly failing local missing-credential validation; the full suite passed 3,888 tests in 461.92 seconds.
+- A5 acquisition hard-blocker policy now reuses TTL-bound publisher route history, checks configured identity/mailbox facts, and avoids browser/mailbox work for fresh exact CAPTCHA/domain blocks unless `revalidate_route_policy` is explicitly requested. A retained CAPTCHA record confirmed the behavior; focused route/acquisition tests passed 40/40.
 - Canonical LLM accounting uses SQLite with deterministic JSONL/daily projections, reconciliation, replay suppression, task-median forecasting, and configured OpenAI day guardrails.
 - The retained CI accounting corpus now includes valid, invalid, replay-suppressed, and real cached-provider (`provider_hit`) events; cached-token tampering is rejected by reconciliation tests. This closes the former cached-provider corpus task.
 - Claim embeddings, stale/no-embedding fallback, bounded semantic preselection, durable Signal artifacts, artifact lineage storage, and lineage invalidation are present.
 - Workflow-control intent/preflight, UI dead letters, mailbox acquisition, resume checkpoints, prompt dry runs, provider decisions, and deterministic JSON-chat compaction are present.
 - Public report rendering exposes approved advisory/metric-spine data while redacting canonical IDs; strict crop acceptance emits typed QA sidecars.
-- WordPress report, briefing, and signal entities have REST draft/readback verification; hosted SEO/social/performance gate exists. Hosted HTTPS/error handling, intake, responsive UI, and editorial leakage remain active public-site gaps.
-- CI runs formatting, typing, architecture/import checks, forbidden-patching checks, hygiene, coverage, mutation, prompt regression, release-evidence archival, and WordPress staging verification when configured. PDF benchmark evidence remains temporarily waived when retained assets are unavailable.
+- WordPress report, briefing, and signal entities have REST draft/readback verification; `sync-wordpress-intelligence` now projects 64 retained local public entities (47 reports, 5 briefings, 12 signals, and 29 publishers) through the authenticated plugin route, while missing/invalid projections render neutral values. Hosted HTTPS/error handling, intake, responsive UI, and editorial leakage remain active public-site gaps.
+- CI runs formatting, typing, architecture/import checks, forbidden-patching checks, hygiene, coverage, mutation, prompt regression, release-evidence archival, hash-pinned PDF candidate/crop/trend gates, public report-quality gates, and WordPress staging verification when configured.
 
 ## Audit Notes
 

@@ -52,6 +52,9 @@ def test_ui_background_launch_embeds_workflow_control_resolution(monkeypatch) ->
     assert payload["workflow_control"]["workflow"] == "report_download"
     assert payload["workflow_control"]["preflight_profile"] == "report_download"
     assert payload["workflow_control"]["status"] == "resolved"
+    authority = payload["workflow_control"]["execution_authority"]
+    assert authority["workflow"] == "report_download"
+    assert len(authority["plan_checksum"]) == 64
 
 
 def test_ui_run_replay_type_resolves_workflow_control_payload() -> None:

@@ -168,7 +168,9 @@ class BrowserDownloadRequiredSelectEvidence:
     )
     classifier_confidence: float = field(
         default=0.0,
-        metadata={"doc": "Confidence that the select was live, required, and relevant."},
+        metadata={
+            "doc": "Confidence that the select was live, required, and relevant."
+        },
     )
 
 
@@ -181,12 +183,16 @@ class BrowserDownloadRequiredSelectOverrideProposal:
     field_key: str = field(metadata={"doc": "Identity field key to persist."})
     field_label: str = field(metadata={"doc": "Observed field label."})
     selected_value: str = field(metadata={"doc": "Visible option value selected."})
-    option_alias: str = field(metadata={"doc": "Observed option label accepted as alias."})
+    option_alias: str = field(
+        metadata={"doc": "Observed option label accepted as alias."}
+    )
     semantic_family: str = field(
         metadata={"doc": "Safe semantic family matched for the required select."}
     )
     match_source: str = field(
-        metadata={"doc": "Selection source: identity_fact, approved_default, or refused."}
+        metadata={
+            "doc": "Selection source: identity_fact, approved_default, or refused."
+        }
     )
     status: str = field(
         metadata={"doc": "Proposal status: applied, unchanged, or refused."}
@@ -200,7 +206,9 @@ class BrowserDownloadRequiredSelectOverrideRequest:
         metadata={"doc": "Required-select override request schema version."}
     )
     path: str = field(
-        metadata={"doc": "Absolute YAML path used to persist browser identity overrides."}
+        metadata={
+            "doc": "Absolute YAML path used to persist browser identity overrides."
+        }
     )
     evidence: list[BrowserDownloadRequiredSelectEvidence] = field(
         metadata={"doc": "Live gated-form required-select evidence rows."}
@@ -221,8 +229,12 @@ class BrowserDownloadRequiredSelectOverrideResponse:
         metadata={"doc": "Per-evidence proposal outcomes."}
     )
     applied_count: int = field(metadata={"doc": "Override values newly written."})
-    refused_count: int = field(metadata={"doc": "Evidence rows refused for safety or ambiguity."})
-    unchanged_count: int = field(metadata={"doc": "Evidence rows already represented exactly."})
+    refused_count: int = field(
+        metadata={"doc": "Evidence rows refused for safety or ambiguity."}
+    )
+    unchanged_count: int = field(
+        metadata={"doc": "Evidence rows already represented exactly."}
+    )
 
 
 @dataclass(frozen=True)
@@ -429,6 +441,15 @@ class BrowserDownloadSettings:
             "doc": "Behavior for matching stale route playbooks: `fallback` logs and uses normal discovery, `fail` raises a typed AppError."
         },
     )
+    route_memory_ttl_seconds: int = field(
+        default=2592000,
+        metadata={
+            "doc": (
+                "Maximum age of persisted publisher route memory before the planner "
+                "falls back to fresh discovery."
+            )
+        },
+    )
     route_playbook_promotion_mode: str = field(
         default="disabled",
         metadata={
@@ -491,15 +512,21 @@ class BrowserDownloadSettings:
     )
     cost_ledger_path: str = field(
         default="./out/cost-ledger.jsonl",
-        metadata={"doc": "Configured compatibility JSONL export path for usage events."},
+        metadata={
+            "doc": "Configured compatibility JSONL export path for usage events."
+        },
     )
     cost_daily_path: str = field(
         default="./out/cost-daily.json",
-        metadata={"doc": "Configured compatibility daily-rollup path for usage events."},
+        metadata={
+            "doc": "Configured compatibility daily-rollup path for usage events."
+        },
     )
     usage_db_path: str = field(
         default="./state/llm_usage.sqlite",
-        metadata={"doc": "Canonical SQLite usage ledger path shared with report calls."},
+        metadata={
+            "doc": "Canonical SQLite usage ledger path shared with report calls."
+        },
     )
     daily_spend_warn_usd: float = field(
         default=3.0,

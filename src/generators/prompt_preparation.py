@@ -5,7 +5,11 @@ from typing import Any, Dict, Optional
 
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest, PromptSet
 from src.contracts.run_context import RunContext
-from src.utils.model_resolver import resolve_model
+from src.contracts.llm import LLMRoutingDecision
+from src.utils.model_resolver import (
+    resolve_routing_policy,
+    routing_policies_from_config,
+)
 
 
 @dataclass(frozen=True)
@@ -20,6 +24,9 @@ class PreparedPromptBundle:
     system_prompt: str = field(metadata={"doc": "Rendered system prompt text."})
     user_prompt: str = field(metadata={"doc": "Rendered user prompt text."})
     resolved_model: str = field(metadata={"doc": "Resolved model identifier."})
+    routing_decision: LLMRoutingDecision = field(
+        metadata={"doc": "Deterministic quality/cost routing decision."}
+    )
 
 
 def prepare_prompt_bundle(
@@ -60,10 +67,13 @@ def prepare_prompt_bundle(
         ctx,
     )
     fallback_model = str(default_model or getattr(settings, "openai_model", "") or "")
-    resolved_model = resolve_model(
+    routing_decision = resolve_routing_policy(
         namespace,
-        getattr(settings, "openai_models", {}),
-        fallback_model,
+        routing_policies_from_config(
+            getattr(settings, "llm_routing", {}),
+            model_overrides=getattr(settings, "openai_models", {}),
+        ),
+        default_model=fallback_model,
     )
     return PreparedPromptBundle(
         schema_version="1.0",
@@ -71,5 +81,6 @@ def prepare_prompt_bundle(
         prompt_set=prompt_set,
         system_prompt=rendered_system.text,
         user_prompt=rendered_user.text,
-        resolved_model=resolved_model,
+        resolved_model=routing_decision.model,
+        routing_decision=routing_decision,
     )

@@ -3,15 +3,18 @@ from __future__ import annotations
 import os
 
 import typer
-from rich.table import Table
 from rich import box
+from rich.table import Table
 
-from src.utils.errors import AppError
+from src._cli.app import cli_app, console
+from src._cli.common import _utc_now
+from src._cli.runtime import sync_cli_patch_points
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.files import ReadJsonRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
+    UiRunDeadLetterReapRequest,
     UiRunRecord,
     UiRunRecordGetRequest,
     UiRunRecordWriteRequest,
@@ -21,6 +24,7 @@ from src.contracts.ui_run_replay import (
     UiRunReplayCaptureRequest,
     UiRunReplayRequest,
 )
+from src.orchestrators.ui_run_control_orchestrator import reap_dead_letter_runs
 from src.orchestrators.ui_run_execution_orchestrator import (
     PROMPT_TREE_ROOT,
     SOURCE_TREE_ROOT,
@@ -30,19 +34,16 @@ from src.orchestrators.ui_run_replay_orchestrator import replay_ui_run
 from src.services.config_service import (
     load_settings,
 )
+from src.services.file_service import read_json
 from src.services.logging_service import setup_logging
 from src.services.run_registry_service import (
     default_ui_run_registry_path,
     get_ui_run_record,
     write_ui_run_record,
 )
-from src.services.file_service import read_json
 from src.services.ui_run_replay_service import write_ui_run_replay_manifest
+from src.utils.errors import AppError
 from src.utils.logging import new_run_context
-
-from src._cli.app import cli_app, console
-from src._cli.common import _utc_now
-from src._cli.runtime import sync_cli_patch_points
 
 _CLI_PATCH_POINTS = (
     "authorize_oauth_user",
@@ -244,6 +245,49 @@ def replay_run(
     console.print(table)
     if not result.report.matched:
         raise typer.Exit(code=1)
+
+
+@cli_app.command("reap-ui-dead-letters")
+def reap_ui_dead_letters(
+    registry_path: str | None = typer.Option(
+        None,
+        help="Optional UI-run registry path. Defaults to the configured state DB sibling.",
+    ),
+    cooldown_seconds: int = typer.Option(
+        300, min=0, help="Minimum failed-run age before an automated retry."
+    ),
+    limit: int = typer.Option(10, min=1, help="Maximum replacement workers to launch."),
+    max_recovery_attempts: int = typer.Option(
+        3,
+        min=1,
+        help="Maximum automated replacement launches for one recovery chain.",
+    ),
+):
+    _sync_cli_patch_points()
+    ctx = new_run_context(task_id="cli_reap_ui_dead_letters")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    resolved_registry_path = str(registry_path or "").strip()
+    if not resolved_registry_path:
+        settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+        resolved_registry_path = default_ui_run_registry_path(settings.state_db)
+    result = reap_dead_letter_runs(
+        UiRunDeadLetterReapRequest(
+            schema_version="1.0",
+            registry_path=resolved_registry_path,
+            workspace_root=os.getcwd(),
+            cooldown_seconds=cooldown_seconds,
+            limit=limit,
+            max_recovery_attempts=max_recovery_attempts,
+        ),
+        ctx,
+    )
+    table = Table(title="UI Dead-letter Reaper", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Inspected", str(result.inspected_count))
+    table.add_row("Recovered", str(len(result.recovered_run_ids)))
+    table.add_row("Held", str(len(result.held_run_ids)))
+    console.print(table)
 
 
 @cli_app.command("ui-run-worker", hidden=True)

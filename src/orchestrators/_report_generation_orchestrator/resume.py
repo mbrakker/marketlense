@@ -1,27 +1,31 @@
 from __future__ import annotations
+
+import logging
 from dataclasses import asdict, replace
 from datetime import datetime, timezone
-import logging
 from typing import Callable, Optional
 from urllib.parse import urlsplit
+
 from src.contracts.analytics_projection import (
-    AnalyticsProjectionRunRequest,
     PROJECTION_SCHEMA_VERSION,
+    AnalyticsProjectionRunRequest,
 )
-from src.utils.clock import utc_now_iso as _utc_now_iso
-from src.contracts.report_analysis import AnalysisStorePackRequest
+from src.contracts.artifact_lineage import (
+    ARTIFACT_LINEAGE_SCHEMA_VERSION,
+    ArtifactReuseCheckRequest,
+)
 from src.contracts.files import (
     FileStatRequest,
     PipelineCheckpointReadRequest,
     PipelineStageCheckpoint,
 )
-from src.contracts.report_artifacts import artifact_registry_from_payload
 from src.contracts.ingest import IngestOutcome
+from src.contracts.report_analysis import AnalysisStorePackRequest
+from src.contracts.report_artifacts import artifact_registry_from_payload
 from src.contracts.report_generation import (
     ReportAnalysisState,
     ReportRuntimeState,
 )
-from src.contracts.semantic_ids import ReportId
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
@@ -30,6 +34,7 @@ from src.contracts.report_store import (
     ReportValueScoreRequest,
     ReportValueScoreResponse,
 )
+from src.contracts.semantic_ids import ReportId
 from src.contracts.vector_store import VectorStoreDeleteRequest
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import ReportGenerationDependencies
@@ -38,7 +43,6 @@ from src.generators.report_render_generator import (
     render_report_output,
 )
 from src.generators.report_selection_generator import select_report_figures
-from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.generators.report_signal_artifact_generator import (
     SIGNAL_ARTIFACT_PACK_NAME,
     build_ingestion_signal_artifact_payload,
@@ -46,10 +50,13 @@ from src.generators.report_signal_artifact_generator import (
     planned_signal_artifact_path,
 )
 from src.orchestrators.analytics_projection_orchestrator import run_analytics_projection
+from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.services.file_service import (
     file_stat,
     read_pipeline_checkpoint,
 )
+from src.services.report_store_service import check_artifact_reuse
+from src.utils.clock import utc_now_iso as _utc_now_iso
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
@@ -415,6 +422,7 @@ def _validate_checkpoint_artifacts(
     checkpoint_path: str,
 ) -> None:
     _validate_checkpoint_artifact_registry(runtime, checkpoint, checkpoint_path)
+    _validate_checkpoint_artifact_lineage(runtime, checkpoint, checkpoint_path)
     raw_integrity = checkpoint.payload.get("artifact_integrity")
     if not isinstance(raw_integrity, dict):
         return
@@ -520,6 +528,49 @@ def _validate_checkpoint_artifacts(
             },
         )
     )
+
+
+def _validate_checkpoint_artifact_lineage(
+    runtime: ReportRuntimeState,
+    checkpoint: PipelineStageCheckpoint,
+    checkpoint_path: str,
+) -> None:
+    raw_lineage = checkpoint.payload.get("artifact_lineage")
+    if raw_lineage is None:
+        return
+    if not isinstance(raw_lineage, dict):
+        raise AppError(
+            code="report_pipeline_checkpoint_invalid",
+            message="Checkpoint artifact lineage payload must be an object",
+            retryable=False,
+            context={"checkpoint_path": checkpoint_path},
+        )
+    for artifact_name, artifact_id in raw_lineage.items():
+        reuse = check_artifact_reuse(
+            ArtifactReuseCheckRequest(
+                schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
+                db_path=runtime.settings.reports_db,
+                artifact_id=str(artifact_id or "").strip(),
+                expected_schema_version="1.0",
+                expected_processing_version="report_generation_checkpoint_v1",
+            ),
+            runtime.ctx,
+        )
+        if reuse.reusable:
+            continue
+        raise AppError(
+            code="report_pipeline_checkpoint_lineage_not_reusable",
+            message="Checkpoint artifact lineage cannot be reused",
+            retryable=False,
+            context={
+                "file_id": runtime.file.file_id,
+                "stage_name": checkpoint.stage_name,
+                "artifact_name": str(artifact_name),
+                "artifact_id": str(artifact_id or ""),
+                "reason": reuse.reason,
+                "checkpoint_path": checkpoint_path,
+            },
+        )
 
 
 def _validate_checkpoint_artifact_registry(
