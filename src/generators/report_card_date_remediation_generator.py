@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from copy import deepcopy
 from typing import Any
 
 from src.contracts.report_card_remediation import (
@@ -167,3 +168,20 @@ def remediate_report_card_publication_date(
         resume_stage=request.resume_stage,
         idempotency_key=idempotency_key,
     )
+
+
+def apply_report_card_publication_date_remediation(
+    artifacts_payload: dict[str, Any],
+    result: ReportCardPublicationDateRemediationResult,
+) -> dict[str, Any]:
+    """Project an audited repair into canonical artifacts for a render-only resume."""
+    payload = deepcopy(artifacts_payload)
+    payload["publication_date"] = result.publication_date
+    payload["report_card_publication_date_remediation"] = {
+        "schema_version": result.schema_version,
+        "date_source": result.date_source,
+        "audit_fields": dict(result.audit_fields),
+        "idempotency_key": result.idempotency_key,
+        "resume_stage": result.resume_stage,
+    }
+    return payload

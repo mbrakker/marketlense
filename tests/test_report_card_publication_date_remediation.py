@@ -7,6 +7,7 @@ from src.contracts.report_card_remediation import (
     ReportCardPublicationDateRemediationRequest,
 )
 from src.generators.report_card_date_remediation_generator import (
+    apply_report_card_publication_date_remediation,
     remediate_report_card_publication_date,
 )
 from src.utils.errors import AppError
@@ -73,6 +74,14 @@ def test_remediates_before_rendered_html_exists() -> None:
     )
 
     assert result.publication_date == "2026-06-09"
+
+
+def test_applies_audited_date_for_render_only_resume() -> None:
+    result = remediate_report_card_publication_date(_request())
+    artifacts = apply_report_card_publication_date_remediation({"summary": {}}, result)
+
+    assert artifacts["publication_date"] == "2026-06-09"
+    assert artifacts["report_card_publication_date_remediation"]["idempotency_key"] == result.idempotency_key
 
 
 def test_absent_source_date_fails_closed_without_operator_override() -> None:
