@@ -203,6 +203,8 @@ Current control-plane modules in `src/orchestrators/` include:
 - Report generation and report analysis are intentionally entered through those orchestrators; deprecated generator-level sequencing stubs have been removed so callers do not depend on a misleading compatibility API.
 - `publish_orchestrator.py`: publish workflow and publish-state transitions.
 - `publish_queue_orchestrator.py`: Publish Readiness snapshot assembly for UI/ops surfaces; it remains a read-only pre-publication view, not a durable queue.
+- Retained LLM routing evidence: `scripts/quality/llm_routing_retained_benchmark.py` runs the configured routing and anchor-preserving compaction path against the checked-in report corpus without provider calls. It fails if any retained insight evidence ID would be lost and is a required CI gate.
+- Archive-browser query efficiency: identical facet-ID queries are memoized only for the current request, preventing repeated database work on unfiltered archive pages without retaining stale public results across requests. `Wordpress/scripts/audit-archive-browser-facet-cache.php` exercises the actual cache key and is part of the WordPress CI check.
 - `report_download_orchestrator.py`: local browser-use report acquisition with per-URL route memory, retry-aware fallback from remembered route to fresh discovery, early non-report readiness rejection, and typed outcome classification (`pdf_download`, `email_delivery`, or `onsite_report`).
 - `cost_reporting_orchestrator.py`: filtered cost report + rollup orchestration.
 - `ops_dashboard_orchestrator.py`: dashboard snapshot aggregation (reports/state/lock/storage).

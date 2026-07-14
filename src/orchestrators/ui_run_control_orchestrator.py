@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import sys
 from datetime import UTC, datetime
-from typing import Callable
+from typing import Callable, cast
 from uuid import uuid4
 
 from src.contracts.run_context import RunContext
@@ -586,6 +586,6 @@ def _dead_letter_is_cooled_down(
 def _recovery_attempt(payload: dict[str, object]) -> int:
     value = payload.get("_workflow_control_recovery_attempt", 0)
     try:
-        return max(0, int(value))
+        return max(0, int(cast(str | bytes | int | float, value)))
     except (TypeError, ValueError):
         return 0

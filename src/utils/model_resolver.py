@@ -54,17 +54,17 @@ def resolve_routing_policy(
                 normalized[key] = policy
     for index in range(len(base.split("/")), 0, -1):
         source = "/".join(base.split("/")[:index])
-        policy = normalized.get(source)
-        if policy is not None:
+        matched_policy = normalized.get(source)
+        if matched_policy is not None:
             return LLMRoutingDecision(
                 schema_version="1.0",
                 namespace=base,
-                model=policy.model,
-                tier=policy.tier,
-                max_input_tokens=policy.max_input_tokens,
-                compaction_enabled=policy.compaction_enabled,
-                quality_threshold=policy.quality_threshold,
-                same_provider_fallback=policy.same_provider_fallback,
+                model=matched_policy.model,
+                tier=matched_policy.tier,
+                max_input_tokens=matched_policy.max_input_tokens,
+                compaction_enabled=matched_policy.compaction_enabled,
+                quality_threshold=matched_policy.quality_threshold,
+                same_provider_fallback=matched_policy.same_provider_fallback,
                 policy_source=source,
             )
     return LLMRoutingDecision(
@@ -120,7 +120,9 @@ def routing_policies_from_config(
         if not isinstance(raw_value, dict):
             continue
         namespace = _normalize_namespace(str(raw_key))
-        model = str(raw_value.get("model") or model_overrides.get(namespace) or "").strip()
+        model = str(
+            raw_value.get("model") or model_overrides.get(namespace) or ""
+        ).strip()
         if not namespace or not model:
             continue
         policies[namespace] = LLMRoutingPolicy(
