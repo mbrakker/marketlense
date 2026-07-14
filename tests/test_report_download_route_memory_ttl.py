@@ -7,6 +7,7 @@ from src.contracts.browser_download import (
 from src.contracts.report_store import PublisherDownloadRouteResponse
 from src.orchestrators._report_download_orchestrator.workflow import (
     _remembered_route_memory,
+    _should_avoid_mailbox_preflight_for_remembered_blocker,
 )
 
 
@@ -73,6 +74,34 @@ def test_route_memory_fails_closed_when_evidence_is_stale_or_unverifiable() -> N
             now_seconds=1_000,
         )
         is None
+    )
+
+
+def test_fresh_hard_blocker_avoids_mailbox_preflight_unless_revalidation_is_explicit() -> None:
+    memory = _route_memory(updated_at=900)
+    memory = PublisherDownloadRouteResponse(
+        **{
+            **memory.__dict__,
+            "terminal_evidence": DownloadTerminalEvidence(
+                **{
+                    **memory.terminal_evidence.__dict__,
+                    "evidence_labels": ["blocked_captcha"],
+                }
+            ),
+        }
+    )
+
+    assert _should_avoid_mailbox_preflight_for_remembered_blocker(
+        memory,
+        ttl_seconds=120,
+        revalidate_route_policy=False,
+        now_seconds=1_000,
+    )
+    assert not _should_avoid_mailbox_preflight_for_remembered_blocker(
+        memory,
+        ttl_seconds=120,
+        revalidate_route_policy=True,
+        now_seconds=1_000,
     )
     assert (
         _remembered_route_memory(

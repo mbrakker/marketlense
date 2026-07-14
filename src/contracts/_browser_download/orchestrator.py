@@ -86,6 +86,12 @@ class ReportDownloadOrchestratorRequest:
             "doc": "Optional mailbox settings enabling autonomous deferred mail acquisition."
         },
     )
+    revalidate_route_policy: bool = field(
+        default=False,
+        metadata={
+            "doc": "Explicit operator override that permits browser and mailbox revalidation of a fresh remembered hard blocker."
+        },
+    )
 
 
 @dataclass(frozen=True)
