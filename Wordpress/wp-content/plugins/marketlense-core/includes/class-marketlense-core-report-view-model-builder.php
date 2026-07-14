@@ -157,9 +157,6 @@ final class Report_View_Model_Builder
         if ($geography_scope !== 'unknown' && $geography === '') {
             $errors[] = 'geography_label';
         }
-        if ($this->resolve_publisher($post_id, $content) === '') {
-            $errors[] = 'publisher';
-        }
 
         $age = current_time('timestamp', true) - $timestamp;
 

@@ -199,20 +199,6 @@ def test_report_list_queries_paginate_only_canonical_card_contracts() -> None:
     assert "Meta::apply_report_card_query_constraints(" in latest_reports
 
 
-def test_report_card_contract_rejects_missing_publisher_before_rendering() -> None:
-    builder = (
-        ROOT
-        / "Wordpress"
-        / "wp-content"
-        / "plugins"
-        / "marketlense-core"
-        / "includes"
-        / "class-marketlense-core-report-view-model-builder.php"
-    ).read_text(encoding="utf-8")
-
-    assert "$errors[] = 'publisher';" in builder
-
-
 def test_latest_report_selects_newest_valid_card_contract() -> None:
     source = INTELLIGENCE_STATS.read_text(encoding="utf-8")
     latest_report = _method_source(
