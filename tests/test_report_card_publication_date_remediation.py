@@ -64,6 +64,17 @@ def test_remediates_publication_date_from_source_artifacts() -> None:
     assert result.resume_stage == "analysis_complete"
 
 
+def test_remediates_before_rendered_html_exists() -> None:
+    result = remediate_report_card_publication_date(
+        _request(
+            artifact_registry=_registry(omit="rendered_html"),
+            rendered_html_path="",
+        )
+    )
+
+    assert result.publication_date == "2026-06-09"
+
+
 def test_absent_source_date_fails_closed_without_operator_override() -> None:
     with pytest.raises(AppError) as exc_info:
         remediate_report_card_publication_date(

@@ -10,7 +10,7 @@ from src.contracts.report_card_remediation import (
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 
-_REQUIRED_REGISTRY_IDS = {"doc_map", "artifacts", "validation", "rendered_html"}
+_REQUIRED_REGISTRY_IDS = {"doc_map", "artifacts", "validation"}
 
 
 def _normalize_iso_date(value: object) -> str:
@@ -95,7 +95,7 @@ def remediate_report_card_publication_date(
             severity="error",
             context={"file_id": request.file_id, "missing_refs": missing_refs},
         )
-    if ref_paths["rendered_html"] != request.rendered_html_path:
+    if request.rendered_html_path and ref_paths.get("rendered_html") != request.rendered_html_path:
         raise AppError(
             code="report_card_publication_date_registry_mismatch",
             message="Rendered HTML path must come from the typed artifact registry",
