@@ -50,9 +50,9 @@ from src.services.wordpress_service import (
 from src.utils.errors import AppError
 from src.utils.html_utils import (
     build_publish_html_snapshot,
-    extract_file_id,
     replace_image_sources,
     strip_image_srcset_and_sizes,
+    strip_publication_internal_metadata,
 )
 from src.utils.logging import log_event
 from src.utils.slugify import slugify
@@ -344,19 +344,16 @@ def publish_html(
     # Proxy-backed digest images stay more reliable on the WP frontend without
     # responsive srcset/sizes candidates that still point at synthetic query URLs.
     rendered_body_html = strip_image_srcset_and_sizes(rendered_body_html)
-    body_html, file_id_marker_inserted = _ensure_hidden_file_id_marker(
-        rendered_body_html,
-        file_id,
-    )
+    body_html = strip_publication_internal_metadata(rendered_body_html)
     logger.info(
         log_event(
             ctx,
             role="generator",
-            event="publish_file_id_marker",
+            event="publish_public_content_redacted",
             module=logger.name,
             fields={
                 "file_id": file_id,
-                "inserted": file_id_marker_inserted,
+                "removed_internal_publication_metadata": body_html != rendered_body_html,
             },
         )
     )
@@ -368,7 +365,7 @@ def publish_html(
     )
     slug = str(request.slug or "").strip() or slugify(title)
 
-    post_meta = (
+    card_post_meta = (
         _report_card_post_meta(
             card_manifest,
             card_media_ids,
@@ -381,6 +378,7 @@ def publish_html(
         if signal_card
         else None
     )
+    post_meta = {"ml_file_id": file_id, **(card_post_meta or {})}
     create_resp = create_post(
         WordPressPostCreateRequest(
             schema_version="1.0",
@@ -1303,15 +1301,6 @@ def _wordpress_media_proxy_url(media_id: int) -> str:
     # Same-origin proxy URLs avoid mixed-scheme failures when WP still emits
     # frontend pages on http while media proxy requests are forced to https.
     return f"/?ml_media={int(media_id)}"
-
-
-def _ensure_hidden_file_id_marker(content_html: str, file_id: str) -> Tuple[str, bool]:
-    if extract_file_id(content_html) == file_id:
-        return content_html, False
-    marker = f"<p hidden>Drive fileId: {html.escape(file_id, quote=True)}</p>"
-    if not content_html:
-        return marker, True
-    return f"{content_html}\n{marker}", True
 
 
 def _media_upload_request(

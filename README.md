@@ -899,7 +899,7 @@ If root config disables WordPress TLS verification (`publish.wp.ssl_verify: fals
 
 When the hosting layer blocks direct `/wp-content/uploads/...` access, the plugin serves attachments through a frontend proxy route (`/?ml_media=<attachment_id>`) and rewrites frontend digest content/thumbnail URLs to that proxy so uploaded media still renders publicly.
 
-The Python publisher appends a hidden `Drive fileId: ...` marker to post content when the rendered HTML lacks one so plugin backfill and REST lookup remain deterministic for digest posts created under the core `post` type.
+The Python publisher persists the source artifact ID in the registered, authenticated `ml_file_id` post meta field and strips hidden markers plus machine-only publication JSON before WordPress receives public content. The plugin supports the same authenticated meta lookup for reports, briefings, and signals, so idempotent publication does not expose internal IDs to readers.
 
 During publish, the pipeline writes native category IDs for report topics and `ml_publisher` term IDs for report publishers through the WordPress REST API so archive filters and directory pages stay aligned with uploaded reports.
 
@@ -1113,7 +1113,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 5. **Publishing (per file)**
    - `src/orchestrators/publish_orchestrator.py` now builds one publish-run preflight snapshot for the selected HTML set: file IDs, validation state, processed-state presence, existing WordPress post lookups, and resolved category/tag/publisher term IDs are prepared once before per-file publish decisions run.
    - The preflight validates `PublishEntityMetadata` before any WordPress call. Supported routes are `report -> ml_report`, `briefing -> ml_briefing`, and `signal -> ml_signal`; missing, unknown, ineligible, or mismatched metadata produces a typed publish error and a structured log event.
-   - `src/generators/publish_generator.py` consumes the orchestrator-resolved WordPress auth header, accepts optional pre-resolved WordPress term IDs from that preflight snapshot, uploads report images with bounded parallelism, swaps image URLs to the site-side media proxy route, injects a hidden `Drive fileId` marker when the rendered HTML does not already contain one, and creates a WordPress post.
+   - `src/generators/publish_generator.py` consumes the orchestrator-resolved WordPress auth header, accepts optional pre-resolved WordPress term IDs from that preflight snapshot, uploads report images with bounded parallelism, swaps image URLs to the site-side media proxy route, stores the source artifact ID in authenticated `ml_file_id` meta, removes machine-only publication metadata from the public body, and creates a WordPress post.
   - `src/services/wordpress_service.py` handles media and post API calls through one shared internal request executor. The executor reuses pooled `requests.Session` connections per host when direct request transports are not patched, preserves the existing `requests.get/post` test seam, and carries pooled-session metadata plus bounded/sanitized response diagnostics into structured logs and retryable `AppError.context` for publish, taxonomy, tag, and media flows.
 
 6. **State record**

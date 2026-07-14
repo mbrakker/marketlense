@@ -86,6 +86,7 @@ def test_publish_html_uploads_three_card_covers_and_sends_registered_meta(
         "Global Economic Conditions Quarterly Update"
     )
     assert post_call.json_data["meta"] == {
+        "ml_file_id": "file123",
         "ml_time_period": "Q2 2026",
         "ml_region": "Global",
         "ml_publisher_name": "McKinsey & Company",

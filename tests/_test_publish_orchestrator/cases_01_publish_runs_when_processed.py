@@ -41,7 +41,8 @@ def test_publish_runs_when_processed(
     assert results[0].status == "published"
     assert results[0].file_id == "file123"
     assert post_call.json_data["status"] == "publish"
-    assert "Drive fileId: file123" in post_call.json_data["content"]
+    assert "Drive fileId:" not in post_call.json_data["content"]
+    assert post_call.json_data["meta"]["ml_file_id"] == "file123"
     assert publish_row is not None
     assert publish_row.wp_post_id == 10
     assert publish_row.wp_post_url == "https://example.com/post/10"
@@ -547,7 +548,8 @@ def test_publish_prefers_reports_db_file_id_mapping(
     assert len(results) == 1
     assert results[0].status == "published"
     assert results[0].file_id == "file_from_db"
-    assert "Drive fileId: file_from_db" in post_call.json_data["content"]
+    assert "Drive fileId:" not in post_call.json_data["content"]
+    assert post_call.json_data["meta"]["ml_file_id"] == "file_from_db"
 
 
 def test_publish_reuses_preloaded_html_snapshot_after_preflight_read(

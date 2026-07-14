@@ -175,6 +175,24 @@ final class Meta
             }
         }
 
+        foreach ([Post_Type::BRIEFING_POST_TYPE, Post_Type::SIGNAL_POST_TYPE] as $post_type) {
+            foreach ($keys as $key) {
+                register_post_meta(
+                    $post_type,
+                    $key,
+                    [
+                        'single'            => true,
+                        'type'              => 'string',
+                        'show_in_rest'      => true,
+                        'sanitize_callback' => 'sanitize_text_field',
+                        'auth_callback'     => static function (): bool {
+                            return current_user_can('edit_posts');
+                        },
+                    ]
+                );
+            }
+        }
+
         foreach (['ml_briefing_card_schema_version', 'ml_briefing_card_summary_compact', 'ml_briefing_card_summary_standard', 'ml_briefing_card_decision_focus'] as $key) {
             register_post_meta(Post_Type::BRIEFING_POST_TYPE, $key, [
                 'single' => true, 'type' => 'string', 'show_in_rest' => true,
@@ -213,6 +231,40 @@ final class Meta
                 'sanitize_callback' => [self::class, 'sanitize_card_media_id'],
                 'auth_callback' => static fn (): bool => current_user_can('edit_posts'),
             ]);
+        }
+    }
+
+    /**
+     * Register the operator-only file-id lookup used for idempotent publishing.
+     *
+     * The value is accepted only on authenticated REST requests and is never
+     * emitted into public post content.
+     */
+    public function register_rest_file_id_query(): void
+    {
+        foreach ([...Post_Type::report_post_types(), Post_Type::BRIEFING_POST_TYPE, Post_Type::SIGNAL_POST_TYPE] as $post_type) {
+            add_filter('rest_' . $post_type . '_collection_params', static function (array $params): array {
+                $params['ml_file_id'] = [
+                    'description' => 'Operator-only Market Lense source artifact identifier.',
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ];
+                return $params;
+            });
+            add_filter('rest_' . $post_type . '_query', static function (array $args, \WP_REST_Request $request): array {
+                if (! current_user_can('edit_posts')) {
+                    return $args;
+                }
+                $file_id = sanitize_text_field((string) $request->get_param('ml_file_id'));
+                if ($file_id !== '') {
+                    $args['meta_query'] = [[
+                        'key' => self::META_FILE_ID,
+                        'value' => $file_id,
+                        'compare' => '=',
+                    ]];
+                }
+                return $args;
+            }, 10, 2);
         }
     }
 
