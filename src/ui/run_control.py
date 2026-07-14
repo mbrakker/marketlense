@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +21,10 @@ from src.contracts.ui_run_control import (
     UiRunPollResponse,
 )
 from src.contracts.semantic_ids import RunId
-from src.contracts.workflow_control import RunIntent
+from src.contracts.workflow_control import (
+    PipelineExecutionAuthorizationRequest,
+    RunIntent,
+)
 from src.orchestrators.ui_run_control_orchestrator import (
     apply_dead_letter_action,
     cancel_ui_run,
@@ -116,6 +120,15 @@ def _resolve_ui_workflow_control_payload(
         settings,
         ctx=ctx,
     )
+    authorization = workflow_control.authorize_pipeline_execution(
+        PipelineExecutionAuthorizationRequest(
+            schema_version="1.0",
+            plan=plan,
+            expected_workflow=resolved.workflow,
+            requested_side_effects=[],
+        ),
+        ctx=ctx,
+    )
     retry_policy_id = ""
     if resolved.workflow:
         step_name = (
@@ -143,6 +156,10 @@ def _resolve_ui_workflow_control_payload(
         "alternatives": list(resolved.alternatives),
         "blockers": list(resolved.blockers),
         "execution_plan": {
+            "schema_version": plan.schema_version,
+            "intent_key": plan.intent_key,
+            "workflow": plan.workflow,
+            "profile": plan.profile,
             "ordered_steps": list(plan.ordered_steps),
             "skipped_steps": list(plan.skipped_steps),
             "blocked_steps": list(plan.blocked_steps),
@@ -152,7 +169,9 @@ def _resolve_ui_workflow_control_payload(
             "planned_side_effects": list(plan.planned_side_effects),
             "idempotency_key": plan.idempotency_key,
             "executable": plan.executable,
+            "blockers": list(plan.blockers),
         },
+        "execution_authority": asdict(authorization),
     }
 
 

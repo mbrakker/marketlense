@@ -21,7 +21,10 @@ from src.contracts.wordpress_intelligence_projection import (
     WordPressIntelligenceSourceReadRequest,
     WordPressIntelligenceSyncRequest,
 )
-from src.contracts.workflow_control import WorkflowControlObservation
+from src.contracts.workflow_control import (
+    PipelineExecutionAuthorizationRequest,
+    WorkflowControlObservation,
+)
 from src.orchestrators import workflow_control_orchestrator as workflow_control
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
@@ -164,6 +167,15 @@ def _resolve_cli_workflow_control(
         settings,
         ctx=ctx,
     )
+    authorization = workflow_control.authorize_pipeline_execution(
+        PipelineExecutionAuthorizationRequest(
+            schema_version="1.0",
+            plan=plan,
+            expected_workflow=resolved.workflow,
+            requested_side_effects=list(requested_side_effects or []),
+        ),
+        ctx=ctx,
+    )
     retry_policy_id = ""
     if resolved.workflow:
         step_name = (
@@ -190,6 +202,10 @@ def _resolve_cli_workflow_control(
         "alternatives": list(resolved.alternatives),
         "blockers": list(resolved.blockers),
         "execution_plan": {
+            "schema_version": plan.schema_version,
+            "intent_key": plan.intent_key,
+            "workflow": plan.workflow,
+            "profile": plan.profile,
             "ordered_steps": list(plan.ordered_steps),
             "skipped_steps": list(plan.skipped_steps),
             "blocked_steps": list(plan.blocked_steps),
@@ -199,7 +215,9 @@ def _resolve_cli_workflow_control(
             "planned_side_effects": list(plan.planned_side_effects),
             "idempotency_key": plan.idempotency_key,
             "executable": plan.executable,
+            "blockers": list(plan.blockers),
         },
+        "execution_authority": asdict(authorization),
     }
     logger.info(
         log_event(
@@ -316,17 +334,16 @@ def ingest(
             fields={},
         )
     )
-    s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
-    settings = build_ingest_settings(
-        IngestSettingsBuildRequest(schema_version="1.0", app_settings=s),
-        ctx,
-    )
     _resolve_cli_workflow_control(
         intent="ingest new reports",
         ctx=ctx,
         requested_side_effects=["pdf", "model"],
     )
-
+    s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    settings = build_ingest_settings(
+        IngestSettingsBuildRequest(schema_version="1.0", app_settings=s),
+        ctx,
+    )
     console.print("[cyan]Running ingest pipeline...[/cyan]")
     started_at = time.perf_counter()
     try:
@@ -474,13 +491,13 @@ def publish_wp(
             fields={},
         )
     )
-    settings = load_publish_settings(
-        ConfigLoadRequest(schema_version="1.0", path=""), ctx
-    )
     _resolve_cli_workflow_control(
         intent="publish ready reports",
         ctx=ctx,
         requested_side_effects=["wordpress", "publish"],
+    )
+    settings = load_publish_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
     )
 
     console.print("[cyan]Publishing reports to WordPress...[/cyan]")

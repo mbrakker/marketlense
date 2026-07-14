@@ -25,7 +25,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 | Status | ID | Work item | Current outcome / merge target |
 | --- | --- | --- | --- |
-| Active | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | One plan-first execution outcome. |
+| Closed | A1 | Single autonomous supervisor, read-only `PipelinePlan`, and mandatory workflow-control authority | Plan authorization is enforced by CLI/UI control payloads; retained plan run and full regression passed. |
 | Active | A2 | `fast_ingest` and other config-driven autopilot profiles | One typed profile outcome. |
 | Active | A3 | Durable dead letters, scheduled actions, full autonomous smoke, and side-effect idempotency | One recovery/remediation outcome. |
 | Active | A4 | Malformed-Drive-PDF quarantine | Standalone bounded source-recovery outcome. |
@@ -79,19 +79,6 @@ All work is listed below in one register. `Active` items have detailed completio
 ## Active Backlog
 
 ### 1. Autonomous Safety and Cost Control
-
-#### A1. Plan-first pipeline execution
-
-- **Title:** Plan-first pipeline execution
-- **Impact 5 / effort: 3**
-- **Context:** `AutonomousRunSupervisorPlan` already emits typed workflow-control decisions, but callers still lack one public, side-effect-free contract that explains the safest next action across CLI and UI entrypoints.
-- **Benefit:** Operators can request an intent, inspect all planned side effects, and approve an execution path instead of manually assembling implementation flags.
-- **Risks to avoid:** Do not create a second orchestrator or embed generator domain logic in planning.
-- **Success criteria:**
-
-- Plans list ordered and skipped steps, blockers, credentials, side effects, checkpoints, idempotency keys, and expected artifacts.
-- Ready, partial, failed, missing-credential, and publish-only states are covered without side effects during planning.
-- Tests assert the plan contract, structured logs, and execution through canonical orchestration paths; a plan-only run proves no external mutation occurred.
 
 #### A2. Configured run profiles
 
@@ -489,6 +476,7 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 
 ## Current-State Evidence
 
+- A1 plan-first authority is now typed and checksum-bound across CLI/UI control payloads. A retained publish plan emitted no external mutation; a live zero-item publish invocation authorized before correctly failing local missing-credential validation; the full suite passed 3,888 tests in 461.92 seconds.
 - Canonical LLM accounting uses SQLite with deterministic JSONL/daily projections, reconciliation, replay suppression, task-median forecasting, and configured OpenAI day guardrails.
 - The retained CI accounting corpus now includes valid, invalid, replay-suppressed, and real cached-provider (`provider_hit`) events; cached-token tampering is rejected by reconciliation tests. This closes the former cached-provider corpus task.
 - Claim embeddings, stale/no-embedding fallback, bounded semantic preselection, durable Signal artifacts, artifact lineage storage, and lineage invalidation are present.

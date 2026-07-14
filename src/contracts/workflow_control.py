@@ -383,6 +383,39 @@ class PipelineExecutionPlan:
 
 
 @dataclass(frozen=True)
+class PipelineExecutionAuthorizationRequest:
+    schema_version: str = field(
+        metadata={"doc": "Execution-plan authorization request schema version."}
+    )
+    plan: PipelineExecutionPlan = field(
+        metadata={"doc": "Side-effect-free plan proposed for execution."}
+    )
+    expected_workflow: str = field(
+        metadata={"doc": "Canonical workflow the caller is about to execute."}
+    )
+    requested_side_effects: list[str] = field(
+        metadata={"doc": "External side-effect families requested by the caller."}
+    )
+
+
+@dataclass(frozen=True)
+class PipelineExecutionAuthorization:
+    schema_version: str = field(
+        metadata={"doc": "Execution-plan authorization result schema version."}
+    )
+    workflow: str = field(metadata={"doc": "Authorized canonical workflow."})
+    idempotency_key: str = field(
+        metadata={"doc": "Stable key carried from the approved execution plan."}
+    )
+    plan_checksum: str = field(
+        metadata={"doc": "Deterministic checksum of the approved plan contract."}
+    )
+    allowed_side_effects: list[str] = field(
+        metadata={"doc": "Side-effect families authorized by the approved plan."}
+    )
+
+
+@dataclass(frozen=True)
 class PublishPolicyInput:
     schema_version: str = field(
         metadata={"doc": "Publish policy input schema version."}
