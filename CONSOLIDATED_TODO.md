@@ -51,6 +51,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | R2 | Role-mixing, import-graph, facade, direct-I/O, mutation-selection, and hygiene enforcement | Architecture enforcement outcome. |
 | Active | R3 | Service-quality coverage recovery | Retained-baseline outcome. |
 | Active | R4 | Projection-lag status in budget/release decisions | Canonical-accounting outcome. |
+| Active | R5 | Hash-verified dependency lock artifacts | Supply-chain reproducibility outcome. |
 | Active | S1 | Canonical external-service boundaries | Service-entrypoint simplification outcome. |
 | Active | S2 | Publish/ingest and other control-plane hotspot decomposition | Movement-only orchestration outcome. |
 | Active | S3 | PDF facade, rendering cache, and visual-heuristics simplification | Canonical PDF-boundary outcome. |
@@ -378,6 +379,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Run-budget and release evidence either account for pending usage or require an explicit fresh projection.
 - Structured outcomes distinguish normal lag, threshold projection, missing/stalled checkpoint, and invalid exports.
 - Tests prove those cases, required log fields, and that ordinary status reads do not rebuild exports.
+
+#### R5. Add hash-verified dependency lock artifacts
+
+- **Title:** Add hash-verified dependency lock artifacts
+- **Impact 4 / effort: 2**
+- **Context:** The canonical lock now prevents version drift across runtime, development, vendored browser-use, and documented security pins, but it does not yet verify downloaded artifact hashes.
+- **Benefit:** Clean installations become resistant to a substituted distribution artifact while retaining the single-lock workflow and the current exact-version convergence gate.
+- **Risks to avoid:** Preserve Python 3.12 and the one canonical lock; do not introduce a dependency-manager migration or broaden package upgrades.
+- **Success criteria:**
+
+- Lock generation records valid hashes for every resolved distribution selected on supported CI platforms.
+- CI installs with `--require-hashes` and proves a changed hash fails before execution.
+- Documentation retains the approved no-unrelated-upgrade regeneration flow and records any platform-wheel constraints.
 
 ### 5. Boundary Simplification
 

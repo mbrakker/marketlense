@@ -24,7 +24,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          pip install -r requirements.lock
+      - name: Dependency manifest consistency
+        run: python scripts/ci/check_dependency_consistency.py
       - name: Format check
         run: python scripts/ci/check_formatting.py
       - name: Ruff lint check

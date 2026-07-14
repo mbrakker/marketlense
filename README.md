@@ -1345,10 +1345,23 @@ Test suites live under `tests/` (unit + contract + integration marker support):
 Install dev/test tooling:
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.lock
 ```
 
-The dev requirements include third-party type stub packages used by the full-repo mypy gate and the narrow browser-use support dependencies exercised by default unit tests, including `pydantic-settings` for vendored browser-use configuration imports and `aiohttp` for the local browser watchdog CDP readiness probe; run this install before local `scripts/ci/run_type_check.py` or `pytest` checks so local dependency state matches CI.
+`requirements.txt` is the canonical runtime top-level manifest. `requirements-dev.txt` is the canonical development top-level manifest. Exact pins in `tools/browser-use/pyproject.toml` remain the canonical compatibility declarations for the vendored browser-use runtime; its security-critical `pydantic-settings` development pin is validated too. `requirements.lock` is the sole resolved graph installed by CI and by clean local environments. The dev requirements include third-party type stub packages used by the full-repo mypy gate and the narrow browser-use support dependencies exercised by default unit tests, including `pydantic-settings` for vendored browser-use configuration imports and `aiohttp` for the local browser watchdog CDP readiness probe; run this install before local `scripts/ci/run_type_check.py` or `pytest` checks so local dependency state matches CI.
+
+For a reproducible production or development environment, install `requirements.lock`. To update an approved exact top-level pin without unrelated upgrades, run:
+
+```powershell
+py -3.12 -m venv .lock-venv
+.\.lock-venv\Scripts\python.exe -m pip install --upgrade pip
+.\.lock-venv\Scripts\python.exe -m pip install --upgrade --upgrade-strategy only-if-needed -r requirements.lock
+.\.lock-venv\Scripts\python.exe -m pip install --upgrade --upgrade-strategy only-if-needed -r requirements.txt -r requirements-dev.txt
+.\.lock-venv\Scripts\python.exe -m pip freeze | Sort-Object | Set-Content -Encoding utf8 requirements.lock
+Remove-Item -Recurse -Force .lock-venv
+```
+
+Review the generated diff, retain only the intended dependency closure, and run `python scripts/ci/check_dependency_consistency.py` before committing the manifest and lock changes together.
 
 ### Local browser-use
 
