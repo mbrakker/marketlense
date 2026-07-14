@@ -540,6 +540,10 @@ class BrowserDownloadSettings:
         default=None,
         metadata={"doc": "Maximum governed PDF acquisitions per run, day, and publisher scope."},
     )
+    run_budget_max_drive_writes: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum governed Drive writes per run, day, and publisher scope."},
+    )
     run_budget_limit_decision: str = field(
         default="stop",
         metadata={"doc": "Action when a canonical browser run-budget limit is reached."},

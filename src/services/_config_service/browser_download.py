@@ -599,6 +599,11 @@ def load_browser_download_settings(
             if not _is_missing(run_budget_cfg.get("max_pdfs"))
             else None
         ),
+        run_budget_max_drive_writes=(
+            max(_to_int(run_budget_cfg.get("max_drive_writes"), 0), 1)
+            if not _is_missing(run_budget_cfg.get("max_drive_writes"))
+            else None
+        ),
         run_budget_limit_decision=(
             str(run_budget_cfg.get("limit_decision") or "stop").strip().lower()
         ),

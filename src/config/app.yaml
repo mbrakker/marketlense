@@ -186,6 +186,7 @@ browser_download:
     enabled: true
     max_browser_launches: 30
     max_pdfs: 30
+    max_drive_writes: 30
     limit_decision: "stop"
   route_budgets:
     browser_email_form:
