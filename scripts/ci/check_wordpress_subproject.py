@@ -83,6 +83,16 @@ def lint_shell_scripts() -> None:
         _run([bash_bin, "-n", relative_path], cwd=REPO_ROOT)
 
 
+def run_archive_browser_facet_cache_audit() -> None:
+    php_bin = shutil.which("php")
+    if php_bin is None:
+        raise SystemExit("PHP CLI is required for WordPress subproject checks.")
+    _run(
+        [php_bin, "Wordpress/scripts/audit-archive-browser-facet-cache.php"],
+        cwd=REPO_ROOT,
+    )
+
+
 def maybe_run_smoke_test() -> None:
     if os.environ.get("RUN_WORDPRESS_SMOKE") != "1":
         return
@@ -98,6 +108,7 @@ def main() -> None:
     assert_legacy_topic_archive_removed()
     lint_php_files()
     lint_shell_scripts()
+    run_archive_browser_facet_cache_audit()
     maybe_run_smoke_test()
     print("WordPress subproject checks passed.")
 

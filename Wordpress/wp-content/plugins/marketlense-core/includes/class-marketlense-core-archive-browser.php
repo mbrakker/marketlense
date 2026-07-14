@@ -23,6 +23,9 @@ final class Archive_Browser
 
     private const DEFAULT_PER_PAGE = 12;
 
+    /** @var array<string,list<int>> Per-request facet query results keyed by canonical arguments. */
+    private array $facet_id_cache = [];
+
     /**
      * @param array<string,mixed> $attrs
      */
@@ -286,7 +289,18 @@ final class Archive_Browser
         return ($signal['card_contract_valid'] ?? false) === true ? $this->signal_card_renderer->render($signal, $card_size) : '';
     }
 
-    private function facet_ids(array $definition, array $filters, string $exclude): array { $args = $this->query_args($definition, $filters, -1, 1, 'latest', $exclude); $args['fields'] = 'ids'; $args['no_found_rows'] = true; $query = new \WP_Query($args); return array_map('intval', $query->posts); }
+    private function facet_ids(array $definition, array $filters, string $exclude): array
+    {
+        $args = $this->query_args($definition, $filters, -1, 1, 'latest', $exclude);
+        $args['fields'] = 'ids';
+        $args['no_found_rows'] = true;
+        $cache_key = md5((string) wp_json_encode($args));
+        if (isset($this->facet_id_cache[$cache_key])) {
+            return $this->facet_id_cache[$cache_key];
+        }
+        $query = new \WP_Query($args);
+        return $this->facet_id_cache[$cache_key] = array_map('intval', $query->posts);
+    }
     private function facet_terms(array $definition, array $filters, string $exclude): array
     {
         $items = [];

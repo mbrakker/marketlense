@@ -89,6 +89,8 @@ jobs:
         run: python scripts/ci/check_pdf_benchmark_trends.py --candidate-json out/pdf_candidate_benchmark_ci.json --crop-refine-json out/pdf_crop_refine_benchmark_ci.json --history-json out/pdf_benchmark_trend_history_ci.json --output-json out/pdf_benchmark_trends_ci.json --update-history --allow-missing-inputs
       - name: Public report render-quality gate
         run: python scripts/ci/check_public_report_quality.py --minimum-reports 15 --output-dir out/public_report_quality_ci --output-json out/public_report_quality_ci.json
+      - name: Retained LLM-routing evidence gate
+        run: python scripts/quality/llm_routing_retained_benchmark.py --minimum-reports 15 --output-json out/llm_routing_retained_benchmark_ci.json
       - name: Build CI health scorecard
         run: |
           mkdir -p out

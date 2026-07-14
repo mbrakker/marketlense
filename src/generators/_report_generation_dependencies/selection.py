@@ -69,9 +69,7 @@ class ReportSelectionDependencies:
     read_json_object_cache: Callable[[JsonObjectCacheReadRequest, RunContext], Any] = (
         read_json_object_cache
     )
-    crop_qa_escalation: Callable[
-        [CropQaEscalationRequest, RunContext], CropQaEscalationResponse
-    ] = escalate_crop_qa
+    crop_qa_escalation: Callable[..., CropQaEscalationResponse] = escalate_crop_qa
 
     @classmethod
     def default(cls) -> "ReportSelectionDependencies":

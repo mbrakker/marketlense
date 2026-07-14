@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-12
+Last audited: 2026-07-14
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -31,10 +31,10 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | A4 | Malformed-Drive-PDF quarantine | Standalone bounded source-recovery outcome. |
 | Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Active | A6 | Day/run/publisher spend guardrails | One pipeline-wide budget outcome. |
-| Active | A7 | Budget-aware model routing, compaction, and failure-class fallback | One stable LLM-policy outcome. |
+| Closed | A7 | Budget-aware model routing, compaction, and failure-class fallback | YAML routing, anchor-preserving compaction, same-provider fallback, retained-corpus evidence gate, and regression coverage are active. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
 | Active | A9 | Source publication-metadata capture for retained regeneration | Source-supported render metadata outcome. |
-| Active | P1 | Publish snapshot naming and synchronous idempotent publishing | Publish Readiness outcome. |
+| Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology now says Publish Readiness; the compatibility alias preserves callers and synchronous review-gated publishing remains unchanged. |
 | Active | P3 | Hosted HTTPS, safe errors, and public trust checks | Hosted trust outcome. |
 | Active | P4 | Briefing, correction, and submission CTAs | Public intake outcome. |
 | Active | P5 | Archive/search facets, mobile navigation, and responsive workflows | Responsive public-workflow outcome. |
@@ -75,6 +75,11 @@ All work is listed below in one register. `Active` items have detailed completio
 | Excluded | X1 | Draft HTML published before enrichment | Public progressive enrichment is not permitted. |
 | Excluded | X2 | Automatic lower private-API promotion thresholds | Conservative thresholds remain mandatory. |
 | Excluded | X3 | Invented acquisition-form identity facts or public pipeline diagnostics | Only verified identity facts may be mapped; diagnostics remain operator-only. |
+
+## Recently Closed
+
+- **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
+- **P1 (2026-07-14):** `build_publish_readiness_snapshot` is the canonical UI/ops boundary, with the old queue-named callable retained only as a compatibility alias. Publish remains synchronous, idempotent, and review-gated; focused tests and the full suite pass.
 
 ## Active Backlog
 
@@ -137,19 +142,6 @@ All work is listed below in one register. `Active` items have detailed completio
 - Overrides are YAML-backed, expiry-bound, and require actor, reason, and scope; each is durably logged and reconciled to actual canonical cost.
 - Health scorecards retain usage, avoided calls, breaches, and overrides; tests cover all outcomes, required log fields, and the absence of side effects after a stop/defer decision.
 
-#### A7. Policy-driven LLM routing, compaction, and same-provider fallback
-
-- **Title:** Policy-driven LLM routing, compaction, and same-provider fallback
-- **Impact 5 / effort: 4**
-- **Context:** JSON chat has deterministic compaction and provider decisions, but model selection is mostly static by namespace and lacks a policy tying difficulty, budget, evidence retention, and recoverable failure together.
-- **Benefit:** The pipeline reduces cost and latency on routine work while keeping difficult-artifact recovery and prompt-size decisions reproducible.
-- **Risks to avoid:** Preserve evidence anchors and same-model replay constraints; do not leak provider payloads into generators.
-- **Success criteria:**
-
-- YAML maps task/artifact families to model tier, input budget, compaction policy, quality threshold, and same-provider fallback constraints.
-- Routing, compaction, evidence anchors, fallback reason, and expected cost are logged in the stable LLM contract.
-- Fixed-corpus benchmarks prove retained citations/evidence and no material quality regression; tests cover primary success, fallback, exhaustion, replay-forbidden cases, and typed failure output.
-
 #### A8. Compare retained model-call replay bundles
 
 - **Title:** Compare retained model-call replay bundles
@@ -177,19 +169,6 @@ All work is listed below in one register. `Active` items have detailed completio
 - Retained-source tests cover metadata extraction, persistence, render-only recovery, absent evidence, and conflicting dates.
 
 ### 2. Public Trust and Publishing
-
-#### P1. Rename the read-only publish snapshot to Publish Readiness
-
-- **Title:** Rename the read-only publish snapshot to Publish Readiness
-- **Impact 4 / effort: 2**
-- **Context:** `publish_queue_orchestrator.py` is used by UI and operations flows, but it only builds a read-only snapshot from HTML files and publish state; its queue name promises durability it does not provide.
-- **Benefit:** Operators receive truthful workflow terminology and review evidence without prematurely introducing queue/outbox infrastructure.
-- **Risks to avoid:** Keep public publishing synchronous, idempotent, and draft/review-required until operating evidence justifies durable jobs.
-- **Success criteria:**
-
-- `publish_queue_orchestrator.py` terminology is replaced by `Publish Readiness` at public/operator boundaries without creating a queue or outbox.
-- The output retains validation, evidence, health, duplicate-suppression, and review blockers; publishing remains draft/review-required by default.
-- Failure-injection tests cover restart, retry, duplicate dispatch, and partial WordPress failure, with retained findings for any future outbox decision.
 
 #### P3. Resolve hosted-site trust blockers
 

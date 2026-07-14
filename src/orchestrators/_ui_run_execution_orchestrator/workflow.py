@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
 
-from typing import Any
+from typing import Any, Callable
 
 from src.contracts.acquisition_audit import AcquisitionAuditBatchRequest
 from src.contracts.browser_download import ReportDownloadOrchestratorRequest
@@ -737,9 +737,7 @@ def execute_ui_run(
         # control-plane observation for a request that was never executable.
         return _execute_ui_run_action(worker_request, ctx)
 
-    app_settings = load_settings(
-        ConfigLoadRequest(schema_version="1.0", path=""), ctx
-    )
+    app_settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
     control_payload = worker_request.request_payload.get("workflow_control")
     control = control_payload if isinstance(control_payload, dict) else {}
     workflow_name = str(control.get("workflow") or worker_request.run_type).strip()
@@ -768,9 +766,11 @@ def execute_ui_run(
         ),
         ctx=ctx,
     )
-    response_holder: dict[str, UiRunExecutionResponse] = {}
+    response_holder: dict[str, UiRunExecutionResponse | None] = {}
 
-    def _run_action(_plan, action_ctx: RunContext) -> str:
+    def _run_action(
+        _plan: workflow_control.AutonomousRunSupervisorPlan, action_ctx: RunContext
+    ) -> str:
         response = _execute_ui_run_action(worker_request, action_ctx)
         response_holder["response"] = response
         if response.status != "succeeded":
@@ -782,7 +782,9 @@ def execute_ui_run(
             )
         return response.status
 
-    action_handlers = {
+    action_handlers: dict[
+        str, Callable[[workflow_control.AutonomousRunSupervisorPlan, RunContext], str]
+    ] = {
         action: _run_action
         for action in {"start", "resume", "retry", "repair", "publish"}
     }
@@ -811,26 +813,26 @@ def execute_ui_run(
         ctx=ctx,
     )
     if execution.status == "failed":
-        return response_holder.get(
-            "response",
-            _execution_response(
-                worker_request=worker_request,
-                status="failed",
-                result_summary={"supervisor_action": plan.selected_action},
-                artifact_paths=[],
-                config_snapshot={
-                    "run_type": worker_request.run_type,
-                    "workflow": workflow_name,
-                },
-                error_code=execution.error_code or "ui_run_supervisor_failed",
-                error_message="Workflow supervisor dispatch failed",
-                error_retryable=False,
-                error_severity="error",
-            ),
+        failed_response = response_holder.get("response")
+        if failed_response is not None:
+            return failed_response
+        return _execution_response(
+            worker_request=worker_request,
+            status="failed",
+            result_summary={"supervisor_action": plan.selected_action},
+            artifact_paths=[],
+            config_snapshot={
+                "run_type": worker_request.run_type,
+                "workflow": workflow_name,
+            },
+            error_code=execution.error_code or "ui_run_supervisor_failed",
+            error_message="Workflow supervisor dispatch failed",
+            error_retryable=False,
+            error_severity="error",
         )
-    response = response_holder.get("response")
-    if response is not None:
-        return response
+    completed_response = response_holder.get("response")
+    if completed_response is not None:
+        return completed_response
     return _execution_response(
         worker_request=worker_request,
         status="failed",

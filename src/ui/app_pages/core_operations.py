@@ -17,7 +17,7 @@ from src.contracts.categories import CategoryMappingLoadRequest, RecategorizeReq
 from src.contracts.cover_images import CoverStyleLoadRequest
 from src.contracts.files import FileExistsRequest
 from src.contracts.publish import PublishQueueRequest
-from src.orchestrators.publish_queue_orchestrator import build_publish_queue_snapshot
+from src.orchestrators.publish_queue_orchestrator import build_publish_readiness_snapshot
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.category_mapping_service import load_mappings
@@ -435,7 +435,7 @@ def _render_publishing_control(
         "Publish Readiness",
         status_label="Ready" if can_publish else "Config Missing",
         status_level="success" if can_publish else "error",
-        primary_action="Publish Queue",
+        primary_action="Start publishing",
         primary_help=_tip(
             "Publish HTML reports that pass validation using the configured WordPress status.",
             "Use the CLI --draft option when review-only drafts are required.",
@@ -467,7 +467,7 @@ def _render_publishing_control(
 
     queue_rows: list[dict[str, Any]] = []
     try:
-        queue_snapshot = build_publish_queue_snapshot(
+        queue_snapshot = build_publish_readiness_snapshot(
             PublishQueueRequest(
                 schema_version="1.0",
                 output_dir=settings.output_dir,
@@ -479,7 +479,7 @@ def _render_publishing_control(
                     else "ml_report"
                 ),
             ),
-            _ctx("publish_queue"),
+            _ctx("publish_readiness"),
         )
         queue_rows = row_dicts(queue_snapshot.items)
     except AppError:
