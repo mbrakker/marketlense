@@ -62,3 +62,17 @@ def test_yaml_policy_owns_the_selected_model_without_a_legacy_override() -> None
     assert decision.model == "gpt-5-mini"
     assert decision.tier == "evidence_sensitive"
     assert decision.max_input_tokens == 64_000
+
+
+def test_specific_model_override_inherits_nearest_policy_quality_controls() -> None:
+    policies = routing_policies_from_config(
+        {"report_vs/artifacts": {"tier": "routine", "max_input_tokens": 48_000, "compaction_enabled": True, "quality_threshold": 0.8, "same_provider_fallback": True}},
+        model_overrides={"report_vs/artifacts/summary": "gpt-5-mini"},
+    )
+
+    decision = resolve_routing_policy("report_vs/artifacts/summary", policies, default_model="gpt-5")
+
+    assert decision.model == "gpt-5-mini"
+    assert decision.tier == "routine"
+    assert decision.compaction_enabled is True
+    assert decision.quality_threshold == 0.8
