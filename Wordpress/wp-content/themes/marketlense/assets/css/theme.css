@@ -4069,6 +4069,73 @@ body {
   margin-top: 1.15rem;
 }
 
+.ml-intake {
+  margin-top: clamp(1.5rem, 3vw, 2.5rem);
+  max-width: 48rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--wp--preset--color--line, #d7dce3);
+  border-radius: 0.9rem;
+  background: var(--wp--preset--color--surface, #fff);
+}
+
+.ml-intake__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.ml-intake__field {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.ml-intake__field input,
+.ml-intake__field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--wp--preset--color--line, #8791a1);
+  border-radius: 0.45rem;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+}
+
+.ml-intake__field textarea {
+  resize: vertical;
+}
+
+.ml-intake__field input:focus-visible,
+.ml-intake__field textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--wp--preset--color--primary, #244a70) 36%, transparent);
+  outline-offset: 2px;
+}
+
+.ml-intake__status {
+  margin: 1rem 0;
+  padding: 0.75rem 0.9rem;
+  border-left: 4px solid currentColor;
+}
+
+.ml-intake__status--success {
+  color: #1e6a45;
+  background: #edf8f1;
+}
+
+.ml-intake__status--error {
+  color: #8b2a2a;
+  background: #fff1f1;
+}
+
+.ml-intake__honeypot {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
+}
+
 .ml-publisher-profile {
   margin-top: 1rem;
 }

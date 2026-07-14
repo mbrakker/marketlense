@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 1.6.9
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -42,7 +42,8 @@ Market Bearing Core provides the WordPress data model required by the Market Bea
   * `[ml_topics_directory]`
   * `[ml_publishers_directory]`
   * `[ml_publisher_profile]`
-  * `[ml_archive_metric]`
+* `[ml_archive_metric]`
+  * `[ml_intake_form type="briefing|correction|submission"]` (nonce-protected public intake persisted privately for operator review)
 
 This plugin is intended to be used together with the `marketlense` block theme.
 
@@ -54,6 +55,10 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report`, `/wp-json/wp/v2/ml_signal`, and `/wp-json/wp/v2/ml_briefing` are reachable.
 
 == Changelog ==
+
+= 1.7.0 =
+* Adds private, nonce-protected briefing, correction, and source-submission intake with validation, honeypot rejection, and redacted event logging.
+* Makes malformed legacy report-card models fail closed rather than producing a public PHP error.
 
 = 1.6.9 =
 * Emits public meta descriptions, canonical URLs, Open Graph tags, and Twitter card metadata for homepage, archives, categories, report/detail entities, and trust pages.

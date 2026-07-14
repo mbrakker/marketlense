@@ -99,3 +99,6 @@ Build the release archives only after verification:
 powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\build-plugin-zip.ps1
 bash Wordpress/scripts/build-theme-zip.sh
 ```
+# Public intake and safe cards
+
+`marketlense-core` 1.7.0 adds `[ml_intake_form type="briefing|correction|submission"]` for the contact and submit pages. Each form uses a WordPress nonce, validates only the necessary fields, rejects a honeypot response, persists the request as a private `ml_intake` record, and logs only the request ID, request type, and outcome. Malformed legacy report-card models now fail closed instead of exposing a public PHP error.

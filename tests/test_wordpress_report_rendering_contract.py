@@ -88,7 +88,7 @@ def test_wordpress_plugin_emits_public_seo_and_social_metadata() -> None:
     plugin_source = PLUGIN_BOOTSTRAP.read_text(encoding="utf-8")
     main_source = PLUGIN_MAIN.read_text(encoding="utf-8")
 
-    assert "Version: 1.6.9" in main_source
+    assert "Version: 1.7.0" in main_source
     assert "add_action('wp_head', [self::class, 'render_public_metadata'], 1)" in plugin_source
     assert 'meta name="description"' in plugin_source
     assert 'rel="canonical"' in plugin_source

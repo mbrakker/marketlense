@@ -472,7 +472,7 @@ Wordpress/
 
 Plugin slug: `marketlense-core`
 
-Current plugin package version: `1.6.9`. Deploy this package or newer when the
+Current plugin package version: `1.7.0`. Deploy this package or newer when the
 live WordPress REST schema must expose `ml_signal`, `ml_briefing`, and governed
 native-category Topic semantics; older or stale deployed payloads can still
 report the same plugin slug while exposing only earlier entity or term-meta
@@ -514,7 +514,7 @@ Primary responsibilities:
 
 ### Live WordPress Entity REST Verification
 
-After deploying or activating `marketlense-core` `1.6.9` or newer on a hosted
+After deploying or activating `marketlense-core` `1.7.0` or newer on a hosted
 WordPress site, verify the public entity REST contract with existing generated
 artifacts:
 

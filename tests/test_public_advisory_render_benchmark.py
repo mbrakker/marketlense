@@ -35,6 +35,15 @@ def test_public_advisory_render_benchmark_uses_retained_artifact_without_id_leak
     assert report.rows[0].raw_fragment_count == 0
     assert report.rows[0].broken_asset_count == 0
     assert report.rows[0].remediation_targets == []
+    assert {target["field"] for target in report.rows[0].advisory_remediation_targets} == {
+        "coverage_role",
+        "now_what",
+        "report_type_lens",
+        "score",
+        "so_what",
+    }
+    assert report.remediation_targets == []
+    assert len(report.advisory_remediation_targets) == 5
     assert report.rows[0].html_path.endswith(
         "ias-industry-pulse-report-2026-acig-pdf.html"
     )
