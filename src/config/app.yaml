@@ -182,6 +182,11 @@ browser_download:
   temperature: 0.0
   timeout_seconds: 180
   max_steps: 30
+  run_budget:
+    enabled: true
+    max_browser_launches: 30
+    max_pdfs: 30
+    limit_decision: "stop"
   route_budgets:
     browser_email_form:
       timeout_seconds: 120

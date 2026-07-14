@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
@@ -20,11 +21,13 @@ from src.contracts.report_store import (
     PublisherDownloadRouteResponse,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.run_budget import RunBudget, RunBudgetUsageReadRequest
 from src.contracts.state import (
     MailDeliveryRequestUpsertRequest,
     WorkflowControlObservationWriteRequest,
 )
 from src.contracts.workflow_control import WorkflowControlObservation
+from src.services.llm_usage_ledger_service import read_run_budget_usage
 from src.orchestrators._report_download_orchestrator.candidate_readiness import (
     assert_candidate_download_ready,
 )
@@ -65,6 +68,25 @@ from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
 
 logger = logging.getLogger("market_lense.report_download_orchestrator")
+
+
+def _browser_run_budget(
+    request: ReportDownloadOrchestratorRequest, ctx: RunContext
+) -> RunBudget | None:
+    settings = request.settings
+    if not settings.run_budget_enabled:
+        return None
+    return RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name=request.publisher_name,
+        usage_db_path=settings.usage_db_path,
+        day_utc=datetime.now(timezone.utc).date().isoformat(),
+        max_spend_usd=settings.daily_spend_stop_usd,
+        max_browser_launches=settings.run_budget_max_browser_launches,
+        max_pdfs=settings.run_budget_max_pdfs,
+        limit_decision=settings.run_budget_limit_decision,
+    )
 
 
 def run_report_download(
@@ -419,6 +441,15 @@ def _run_download_attempt(
     dependencies: ReportDownloadDependencies,
     planned_step: ReportDownloadRoutePlanStep,
 ) -> BrowserReportDownloadResult:
+    run_budget = _browser_run_budget(request, ctx)
+    run_budget_usage = (
+        read_run_budget_usage(
+            RunBudgetUsageReadRequest(schema_version="1.0", budget=run_budget),
+            ctx,
+        ).usage
+        if run_budget is not None
+        else None
+    )
     service_request = BrowserReportDownloadRequest(
         schema_version="1.0",
         url=request.url,
@@ -435,6 +466,8 @@ def _run_download_attempt(
         source_page_url_hint=planned_step.source_page_url_hint,
         report_title=request.report_title,
         publisher_name=request.publisher_name,
+        run_budget=run_budget,
+        run_budget_usage=run_budget_usage,
     )
 
     def _attempt_operation() -> BrowserReportDownloadResult:

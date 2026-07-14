@@ -127,3 +127,20 @@ def test_checkpoint_lineage_validation_rejects_invalidated_artifact(
 
     assert exc_info.value.code == "report_pipeline_checkpoint_lineage_not_reusable"
     assert exc_info.value.retryable is False
+
+
+def test_selective_regeneration_rejects_checkpoint_without_lineage(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    checkpoint = _checkpoint(artifact_id="")
+    checkpoint = replace(checkpoint, payload={})
+
+    with pytest.raises(AppError) as exc_info:
+        _validate_checkpoint_artifact_lineage(
+            runtime,
+            checkpoint,
+            "checkpoint.json",
+            require_artifact_lineage=True,
+        )
+
+    assert exc_info.value.code == "report_pipeline_checkpoint_lineage_missing"
+    assert exc_info.value.retryable is False

@@ -180,6 +180,7 @@ def run_report_generation(
         Callable[[AnalyticsProjectionRunRequest], object]
     ] = None,
     resume_from_stage: Optional[str] = None,
+    require_artifact_lineage: bool = False,
 ) -> IngestOutcome:
     deps = (
         _with_signal_candidate_orchestrator(dependencies)
@@ -265,6 +266,7 @@ def run_report_generation(
             deps,
             analytics_projection_fn,
             requested_resume_stage=requested_resume_stage,
+            require_artifact_lineage=require_artifact_lineage,
             taxonomy_openai_client=taxonomy_openai_client,
             category_fit_openai_client=category_fit_openai_client,
             evidence_pack_openai_client=evidence_pack_openai_client,

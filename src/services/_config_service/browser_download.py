@@ -39,6 +39,7 @@ def load_browser_download_settings(
     session_reuse_cfg = browser_download.get("session_reuse", {}) or {}
     warm_worker_pool_cfg = browser_download.get("warm_worker_pool", {}) or {}
     captcha_handoff_cfg = browser_download.get("captcha_handoff", {}) or {}
+    run_budget_cfg = browser_download.get("run_budget", {}) or {}
     route_budgets_cfg = browser_download.get("route_budgets", {}) or {}
     retry_cfg = browser_download.get("retry", {}) or {}
     drive_upload_enabled = _to_bool(
@@ -587,6 +588,20 @@ def load_browser_download_settings(
         cost_ledger_path=cost_ledger_path,
         cost_daily_path=cost_daily_path,
         usage_db_path=usage_db_path,
+        run_budget_enabled=_to_bool(run_budget_cfg.get("enabled"), True),
+        run_budget_max_browser_launches=(
+            max(_to_int(run_budget_cfg.get("max_browser_launches"), 0), 1)
+            if not _is_missing(run_budget_cfg.get("max_browser_launches"))
+            else None
+        ),
+        run_budget_max_pdfs=(
+            max(_to_int(run_budget_cfg.get("max_pdfs"), 0), 1)
+            if not _is_missing(run_budget_cfg.get("max_pdfs"))
+            else None
+        ),
+        run_budget_limit_decision=(
+            str(run_budget_cfg.get("limit_decision") or "stop").strip().lower()
+        ),
         daily_spend_warn_usd=_to_float(cost_cfg.get("daily_spend_warn_usd"), 3.0),
         daily_spend_pause_usd=_to_float(cost_cfg.get("daily_spend_pause_usd"), 5.0),
         daily_spend_stop_usd=_to_float(cost_cfg.get("daily_spend_stop_usd"), 6.0),
