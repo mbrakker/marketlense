@@ -250,6 +250,21 @@ def run_report_pipeline(
                     if lineage_plan is not None
                     else {}
                 ),
+                "lineage_quality": (
+                    {
+                        "fan_out": len(lineage_plan.reused_stages)
+                        + len(lineage_plan.regenerated_stages),
+                        "reused_stage_count": len(lineage_plan.reused_stages),
+                        "regenerated_stage_count": len(
+                            lineage_plan.regenerated_stages
+                        ),
+                        "avoided_work": lineage_plan.avoided_work,
+                        "avoided_work_count": len(lineage_plan.avoided_work),
+                        "cost_status": "unpriced",
+                    }
+                    if lineage_plan is not None
+                    else {}
+                ),
             },
         )
     )
