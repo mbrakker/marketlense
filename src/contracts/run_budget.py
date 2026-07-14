@@ -10,6 +10,7 @@ class RunBudget:
     schema_version: str = field(metadata={"doc": "Run-budget schema version."})
     run_id: str = field(metadata={"doc": "Stable run identifier governed by this budget."})
     publisher_name: str = field(metadata={"doc": "Publisher scope, or empty for global work."})
+    day_utc: str = field(default="", metadata={"doc": "UTC day scope in YYYY-MM-DD form."})
     max_spend_usd: float | None = field(default=None, metadata={"doc": "Maximum spend before a stop decision."})
     max_tokens: int | None = field(default=None, metadata={"doc": "Maximum token count before a stop decision."})
     max_runtime_seconds: int | None = field(default=None, metadata={"doc": "Maximum elapsed runtime before a stop decision."})
@@ -18,6 +19,8 @@ class RunBudget:
     max_drive_writes: int | None = field(default=None, metadata={"doc": "Maximum Drive writes before a stop decision."})
     max_wordpress_writes: int | None = field(default=None, metadata={"doc": "Maximum WordPress writes before a stop decision."})
     max_pdfs: int | None = field(default=None, metadata={"doc": "Maximum PDFs processed before a stop decision."})
+    warning_fraction: float = field(default=0.8, metadata={"doc": "Fraction of any configured limit that emits a warn decision."})
+    limit_decision: str = field(default="stop", metadata={"doc": "pause, defer, or stop decision applied once a limit is reached."})
 
 
 @dataclass(frozen=True)
@@ -42,3 +45,4 @@ class RunBudgetDecision:
     reason: str = field(metadata={"doc": "Human-readable bounded decision reason."})
     override_actor: str = field(default="", metadata={"doc": "Authorized override actor when used."})
     override_reason: str = field(default="", metadata={"doc": "Authorized override reason when used."})
+    proposed_usage: RunBudgetUsage | None = field(default=None, metadata={"doc": "Usage including the requested side effect, when evaluated."})
