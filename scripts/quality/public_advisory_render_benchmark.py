@@ -50,6 +50,12 @@ class PublicAdvisoryRenderBenchmarkRow:
     )
     so_what_coverage: float = field(metadata={"doc": "Per-row so_what coverage."})
     now_what_coverage: float = field(metadata={"doc": "Per-row now_what coverage."})
+    insight_count: int = field(metadata={"doc": "Number of retained public insights inspected."})
+    coverage_role_count: int = field(metadata={"doc": "Distinct non-empty retained insight coverage roles."})
+    duplicate_insight_count: int = field(metadata={"doc": "Exact normalized duplicate insight texts."})
+    report_lens_available: bool = field(metadata={"doc": "Whether a retained report lens is available."})
+    score_calibration_coverage: float = field(metadata={"doc": "Share of insights with a numeric score in the unit interval."})
+    evidence_linkage_coverage: float = field(metadata={"doc": "Share of insights carrying a retained evidence identifier."})
     public_label_count: int = field(
         metadata={"doc": "Count of public support/confidence labels."}
     )
@@ -68,6 +74,11 @@ class PublicAdvisoryRenderBenchmarkRow:
     remediation_targets: list[dict[str, str]] = field(
         metadata={
             "doc": "Benchmark failures with report, field, rule, and remediation."
+        }
+    )
+    advisory_remediation_targets: list[dict[str, str]] = field(
+        metadata={
+            "doc": "Non-blocking, source-grounded advisory repair targets for retained artifacts."
         }
     )
 
@@ -99,6 +110,11 @@ class PublicAdvisoryRenderBenchmarkReport:
     )
     remediation_targets: list[dict[str, str]] = field(
         metadata={"doc": "Flattened remediation targets for failed fields."}
+    )
+    advisory_remediation_targets: list[dict[str, str]] = field(
+        metadata={
+            "doc": "Flattened advisory repair targets; these remain non-blocking until grounded regeneration supplies evidence."
+        }
     )
 
 
@@ -143,6 +159,9 @@ def build_public_advisory_render_benchmark(
         rows.append(row)
     report_count = len(rows)
     remediation_targets = [target for row in rows for target in row.remediation_targets]
+    advisory_remediation_targets = [
+        target for row in rows for target in row.advisory_remediation_targets
+    ]
     return PublicAdvisoryRenderBenchmarkReport(
         schema_version="1.0",
         report_count=report_count,
@@ -156,6 +175,7 @@ def build_public_advisory_render_benchmark(
         screenshot_paths=tuple(screenshot_paths),
         rows=rows,
         remediation_targets=remediation_targets,
+        advisory_remediation_targets=advisory_remediation_targets,
     )
 
 
@@ -228,6 +248,7 @@ def _benchmark_row(
     raw_fragments = quality_issues["raw_fragments"]
     broken_assets = quality_issues["broken_assets"]
     targets: list[dict[str, str]] = []
+    advisory_targets: list[dict[str, str]] = []
     if leaks:
         targets.append(
             {
@@ -278,6 +299,42 @@ def _benchmark_row(
         for item in insights
         if isinstance(item, dict)
     )
+    insight_rows = [item for item in insights if isinstance(item, dict)]
+    normalized_texts = [
+        " ".join(str(item.get("text") or "").casefold().split())
+        for item in insight_rows
+        if str(item.get("text") or "").strip()
+    ]
+    duplicate_insight_count = len(normalized_texts) - len(set(normalized_texts))
+    coverage_roles = {
+        str(item.get("coverage_role") or "").strip()
+        for item in insight_rows
+        if str(item.get("coverage_role") or "").strip()
+    }
+    report_lens_available = any(
+        str(item.get("report_type_lens") or "").strip() for item in insight_rows
+    )
+    calibrated_scores = sum(
+        1
+        for item in insight_rows
+        if isinstance(item.get("score"), (int, float))
+        and 0.0 <= float(item["score"]) <= 1.0
+    )
+    evidence_linked = sum(
+        1 for item in insight_rows if str(item.get("evidence_id") or "").strip()
+    )
+    if insight_rows and not so_what_available:
+        advisory_targets.append(_advisory_target(report_id, "so_what"))
+    if insight_rows and not now_what_available:
+        advisory_targets.append(_advisory_target(report_id, "now_what"))
+    if insight_rows and not coverage_roles:
+        advisory_targets.append(_advisory_target(report_id, "coverage_role"))
+    if insight_rows and not report_lens_available:
+        advisory_targets.append(_advisory_target(report_id, "report_type_lens"))
+    if insight_rows and calibrated_scores != len(insight_rows):
+        advisory_targets.append(_advisory_target(report_id, "score"))
+    if insight_rows and evidence_linked != len(insight_rows):
+        advisory_targets.append(_advisory_target(report_id, "evidence_id"))
     return PublicAdvisoryRenderBenchmarkRow(
         schema_version="1.0",
         report_id=report_id,
@@ -290,12 +347,19 @@ def _benchmark_row(
         now_what_available=now_what_available,
         so_what_coverage=1.0 if so_what_available else 0.0,
         now_what_coverage=1.0 if now_what_available else 0.0,
+        insight_count=len(insight_rows),
+        coverage_role_count=len(coverage_roles),
+        duplicate_insight_count=duplicate_insight_count,
+        report_lens_available=report_lens_available,
+        score_calibration_coverage=_share(calibrated_scores, len(insight_rows)),
+        evidence_linkage_coverage=_share(evidence_linked, len(insight_rows)),
         public_label_count=html.count("Source-backed") + html.count("Chart-backed"),
         internal_id_leak_count=len(leaks),
         placeholder_count=len(placeholders),
         raw_fragment_count=len(raw_fragments),
         broken_asset_count=len(broken_assets),
         remediation_targets=targets,
+        advisory_remediation_targets=advisory_targets,
     )
 
 
@@ -327,6 +391,22 @@ def _coverage(
     if not rows:
         return 0.0
     return round(sum(1 for row in rows if predicate(row)) / len(rows), 6)
+
+
+def _share(numerator: int, denominator: int) -> float:
+    return round(numerator / denominator, 6) if denominator else 0.0
+
+
+def _advisory_target(report_id: str, field: str) -> dict[str, str]:
+    return {
+        "report_id": report_id,
+        "field": field,
+        "rule": "public_advisory.source_grounded_repair_required",
+        "remediation": (
+            "Regenerate only this advisory field from retained source evidence; "
+            "record an abstention when evidence is insufficient."
+        ),
+    }
 
 
 def main() -> int:
