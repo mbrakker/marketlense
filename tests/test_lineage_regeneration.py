@@ -3,7 +3,10 @@ from __future__ import annotations
 import pytest
 
 from src.utils.errors import AppError
-from src.utils.lineage_regeneration import plan_lineage_regeneration
+from src.utils.lineage_regeneration import (
+    build_lineage_regeneration_quality_report,
+    plan_lineage_regeneration,
+)
 
 
 @pytest.mark.parametrize(
@@ -40,3 +43,20 @@ def test_lineage_regeneration_fails_closed_when_lineage_is_missing() -> None:
 
     assert exc_info.value.code == "lineage_regeneration_lineage_missing"
     assert exc_info.value.retryable is False
+
+
+def test_lineage_quality_reports_known_avoided_cost_only_when_complete() -> None:
+    plan = plan_lineage_regeneration(change_kind="template", lineage_available=True)
+
+    unpriced = build_lineage_regeneration_quality_report(plan)
+    priced = build_lineage_regeneration_quality_report(
+        plan,
+        avoided_work_costs_usd={work: 0.01 for work in plan.avoided_work},
+    )
+
+    assert unpriced.cost_status == "unpriced"
+    assert unpriced.estimated_avoided_cost_usd is None
+    assert priced.cost_status == "known"
+    assert priced.estimated_avoided_cost_usd == 0.05
+    assert priced.reused_stage_count == 3
+    assert priced.regenerated_stage_count == 1

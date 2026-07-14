@@ -109,6 +109,36 @@ class LineageRegenerationPlan:
 
 
 @dataclass(frozen=True)
+class LineageRegenerationQualityReport:
+    """Auditable quality and cost visibility for a selective regeneration plan."""
+
+    schema_version: str = field(
+        metadata={"doc": "Lineage regeneration quality-report schema version."}
+    )
+    change_kind: str = field(
+        metadata={"doc": "Normalized change family used for invalidation."}
+    )
+    fan_out: int = field(
+        metadata={"doc": "Total checkpoint stages considered by the plan."}
+    )
+    reused_stage_count: int = field(
+        metadata={"doc": "Number of proven-compatible stages retained."}
+    )
+    regenerated_stage_count: int = field(
+        metadata={"doc": "Number of stages scheduled for recomputation."}
+    )
+    avoided_work: List[str] = field(
+        metadata={"doc": "Expensive work families safely avoided."}
+    )
+    estimated_avoided_cost_usd: float | None = field(
+        metadata={"doc": "Known avoided cost, or null when no defensible price is available."}
+    )
+    cost_status: str = field(
+        metadata={"doc": "known or unpriced; unpriced never represents free work."}
+    )
+
+
+@dataclass(frozen=True)
 class RegenerationAttemptResult:
     attempt_index: int = field(
         metadata={"doc": "One-based regeneration attempt index."}
