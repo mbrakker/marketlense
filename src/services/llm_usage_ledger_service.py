@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
 from statistics import median
-from typing import Any
+from typing import Any, cast
 
 from src.contracts.files import AppendBytesRequest, WriteBytesRequest
 from src.contracts.llm_usage import (
@@ -33,6 +33,14 @@ from src.contracts.llm_usage import (
     LLMUsageSpendGuardrailResponse,
     LLMUsageSpendReservationReleaseRequest,
     LLMUsageSpendReservationReleaseResponse,
+)
+from src.contracts.run_budget import (
+    RunBudget,
+    RunBudgetEventAppendRequest,
+    RunBudgetEventAppendResponse,
+    RunBudgetUsage,
+    RunBudgetUsageReadRequest,
+    RunBudgetUsageReadResponse,
 )
 from src.contracts.run_context import RunContext
 from src.services import file_service
@@ -69,6 +77,13 @@ _ERROR_CODE_STAGES = {
     "openrouter_response_invalid_json": "output_validation",
 }
 _ERROR_STAGES = {"", *set(_ERROR_CODE_STAGES.values())}
+_RUN_BUDGET_EVENT_METRICS = {
+    "retries",
+    "browser_launches",
+    "drive_writes",
+    "wordpress_writes",
+    "pdfs",
+}
 
 
 def _validate_error_taxonomy(*, error_stage: str, error_code: str) -> None:
@@ -284,6 +299,29 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     )
     conn.execute(
         """
+        create table if not exists run_budget_side_effect_events (
+            event_key text primary key,
+            schema_version text not null,
+            timestamp_utc text not null,
+            run_id text not null,
+            publisher_name text not null,
+            day_utc text not null,
+            metric text not null,
+            quantity integer not null,
+            decision text not null,
+            override_actor text not null default '',
+            override_reason text not null default ''
+        )
+        """
+    )
+    conn.execute(
+        """
+        create index if not exists idx_run_budget_side_effect_events_scope
+        on run_budget_side_effect_events(run_id, day_utc, publisher_name, metric)
+        """
+    )
+    conn.execute(
+        """
         create table if not exists llm_usage_export_checkpoints (
             ledger_path text not null,
             daily_path text not null,
@@ -365,6 +403,164 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         """
     )
     ensure_projection_state_schema(conn)
+
+
+def _validate_run_budget(budget: RunBudget) -> None:
+    if budget.schema_version != "1.0":
+        raise AppError(
+            code="run_budget_schema_version_invalid",
+            message="Run-budget schema version is unsupported",
+            retryable=False,
+            context={"schema_version": budget.schema_version},
+        )
+    if not str(budget.run_id or "").strip():
+        raise AppError(
+            code="run_budget_run_id_missing",
+            message="Run-budget run_id is required for canonical accounting",
+            retryable=False,
+        )
+    if not str(budget.usage_db_path or "").strip():
+        raise AppError(
+            code="run_budget_usage_db_path_missing",
+            message="Run-budget usage_db_path is required for canonical accounting",
+            retryable=False,
+        )
+
+
+def _budget_day_utc(budget: RunBudget) -> str:
+    value = str(budget.day_utc or "").strip()
+    if value:
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date().isoformat()
+        except ValueError as exc:
+            raise AppError(
+                code="run_budget_day_utc_invalid",
+                message="Run-budget day_utc must use YYYY-MM-DD",
+                cause=exc,
+                retryable=False,
+                context={"day_utc": value},
+            ) from exc
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _usage_from_row(row: sqlite3.Row | tuple[object, ...] | None) -> RunBudgetUsage:
+    values = row or (0.0, 0, 0, 0, 0, 0, 0)
+    return RunBudgetUsage(
+        schema_version="1.0",
+        spend_usd=float(cast(Any, values[0]) or 0.0),
+        tokens=int(cast(Any, values[1]) or 0),
+        retries=int(cast(Any, values[2]) or 0),
+        browser_launches=int(cast(Any, values[3]) or 0),
+        drive_writes=int(cast(Any, values[4]) or 0),
+        wordpress_writes=int(cast(Any, values[5]) or 0),
+        pdfs=int(cast(Any, values[6]) or 0),
+    )
+
+
+def _read_budget_usage_for_scope(
+    conn: sqlite3.Connection, *, llm_where: str, llm_params: tuple[object, ...], event_where: str, event_params: tuple[object, ...]
+) -> RunBudgetUsage:
+    llm = conn.execute(
+        f"""
+        select coalesce(sum(estimated_cost_usd), 0.0), coalesce(sum(total_tokens), 0)
+        from llm_usage_events where {llm_where}
+        """,
+        llm_params,
+    ).fetchone()
+    events = conn.execute(
+        f"""
+        select
+            coalesce(sum(case when metric = 'retries' then quantity else 0 end), 0),
+            coalesce(sum(case when metric = 'browser_launches' then quantity else 0 end), 0),
+            coalesce(sum(case when metric = 'drive_writes' then quantity else 0 end), 0),
+            coalesce(sum(case when metric = 'wordpress_writes' then quantity else 0 end), 0),
+            coalesce(sum(case when metric = 'pdfs' then quantity else 0 end), 0)
+        from run_budget_side_effect_events where {event_where}
+        """,
+        event_params,
+    ).fetchone()
+    return _usage_from_row((*(llm or (0.0, 0)), *(events or (0, 0, 0, 0, 0))))
+
+
+def _merge_budget_usage(*usages: RunBudgetUsage) -> RunBudgetUsage:
+    fields = (
+        "spend_usd", "tokens", "runtime_seconds", "retries", "browser_launches",
+        "drive_writes", "wordpress_writes", "pdfs",
+    )
+    return RunBudgetUsage(
+        schema_version="1.0",
+        **{field: max(getattr(usage, field) for usage in usages) for field in fields},
+    )
+
+
+def read_run_budget_usage(
+    request: RunBudgetUsageReadRequest, ctx: RunContext
+) -> RunBudgetUsageReadResponse:
+    """Read one conservative usage snapshot from the canonical LLM ledger.
+
+    A configured run budget applies to every configured scope. Taking the
+    metric-wise maximum prevents a run/day/publisher overlap from being counted
+    twice while ensuring no scope can be silently ignored.
+    """
+    if request.schema_version != "1.0":
+        raise AppError(code="run_budget_usage_read_schema_version_invalid", message="Run-budget usage-read schema version is unsupported", retryable=False)
+    _validate_run_budget(request.budget)
+    budget = request.budget
+    day_utc = _budget_day_utc(budget)
+    path = Path(budget.usage_db_path)
+    logger.info(log_event(ctx, role="service", event="run_budget_usage_read_start", module=logger.name, fields={"db_path": str(path), "run_id": budget.run_id, "day_utc": day_utc, "publisher_name": budget.publisher_name}))
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with _LOCK, sqlite3.connect(path) as conn:
+            _ensure_schema(conn)
+            run_usage = _read_budget_usage_for_scope(conn, llm_where="run_id = ?", llm_params=(budget.run_id,), event_where="run_id = ?", event_params=(budget.run_id,))
+            day_usage = _read_budget_usage_for_scope(conn, llm_where="substr(timestamp_utc, 1, 10) = ?", llm_params=(day_utc,), event_where="day_utc = ?", event_params=(day_utc,))
+            publisher_usage = _read_budget_usage_for_scope(conn, llm_where="publisher_name = ? and substr(timestamp_utc, 1, 10) = ?", llm_params=(budget.publisher_name, day_utc), event_where="publisher_name = ? and day_utc = ?", event_params=(budget.publisher_name, day_utc)) if budget.publisher_name else RunBudgetUsage(schema_version="1.0")
+            event_count = int(conn.execute("select count(*) from run_budget_side_effect_events where run_id = ? or day_utc = ? or (publisher_name = ? and day_utc = ?)", (budget.run_id, day_utc, budget.publisher_name, day_utc)).fetchone()[0])
+    except sqlite3.Error as exc:
+        raise AppError(code="run_budget_usage_read_failed", message=f"Could not read canonical budget usage from {path}", cause=exc, retryable=False, context={"db_path": str(path)}) from exc
+    response = RunBudgetUsageReadResponse(schema_version="1.0", usage=_merge_budget_usage(run_usage, day_usage, publisher_usage), run_usage=run_usage, day_usage=day_usage, publisher_usage=publisher_usage, event_count=event_count)
+    logger.info(log_event(ctx, role="service", event="run_budget_usage_read_complete", module=logger.name, fields={"run_id": budget.run_id, "day_utc": day_utc, "publisher_name": budget.publisher_name, "event_count": response.event_count, "usage": response.usage.__dict__}))
+    return response
+
+
+def append_run_budget_side_effect(
+    request: RunBudgetEventAppendRequest, ctx: RunContext
+) -> RunBudgetEventAppendResponse:
+    """Persist a completed external side effect in the canonical LLM ledger."""
+    if request.schema_version != "1.0":
+        raise AppError(code="run_budget_event_schema_version_invalid", message="Run-budget event schema version is unsupported", retryable=False)
+    _validate_run_budget(request.budget)
+    if request.metric not in _RUN_BUDGET_EVENT_METRICS:
+        raise AppError(code="run_budget_event_metric_invalid", message="Run-budget event metric is unsupported", retryable=False, context={"metric": request.metric})
+    if not str(request.event_key or "").strip() or int(request.quantity) <= 0:
+        raise AppError(code="run_budget_event_invalid", message="Run-budget event requires an idempotency key and positive quantity", retryable=False)
+    if bool(str(request.override_actor or "").strip()) != bool(str(request.override_reason or "").strip()):
+        raise AppError(code="run_budget_override_audit_missing", message="Budget overrides require both actor and reason", retryable=False)
+    budget = request.budget
+    day_utc = _budget_day_utc(budget)
+    path = Path(budget.usage_db_path)
+    logger.info(log_event(ctx, role="service", event="run_budget_side_effect_append_start", module=logger.name, fields={"event_key": request.event_key, "metric": request.metric, "quantity": request.quantity, "run_id": budget.run_id, "day_utc": day_utc, "publisher_name": budget.publisher_name, "decision": request.decision, "override_actor": request.override_actor}))
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with _LOCK, sqlite3.connect(path) as conn:
+            _ensure_schema(conn)
+            cursor = conn.execute(
+                """
+                insert into run_budget_side_effect_events (
+                    event_key, schema_version, timestamp_utc, run_id, publisher_name,
+                    day_utc, metric, quantity, decision, override_actor, override_reason
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                on conflict(event_key) do nothing
+                """,
+                (request.event_key, "1.0", datetime.now(timezone.utc).isoformat(), budget.run_id, budget.publisher_name, day_utc, request.metric, int(request.quantity), request.decision, request.override_actor, request.override_reason),
+            )
+            inserted = cursor.rowcount == 1
+    except sqlite3.Error as exc:
+        raise AppError(code="run_budget_event_append_failed", message=f"Could not persist canonical budget event to {path}", cause=exc, retryable=False, context={"db_path": str(path), "event_key": request.event_key}) from exc
+    response = RunBudgetEventAppendResponse(schema_version="1.0", event_key=request.event_key, inserted=inserted)
+    logger.info(log_event(ctx, role="service", event="run_budget_side_effect_append_complete", module=logger.name, fields={"event_key": response.event_key, "inserted": response.inserted, "metric": request.metric, "run_id": budget.run_id}))
+    return response
 
 
 def _event_key(entry: LLMUsageLedgerEntry) -> str:

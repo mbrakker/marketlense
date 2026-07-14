@@ -95,3 +95,12 @@ def test_wordpress_plugin_emits_public_seo_and_social_metadata() -> None:
     assert 'property="og:title"' in plugin_source
     assert 'name="twitter:card"' in plugin_source
     assert "post_public_description" in plugin_source
+
+
+def test_wordpress_plugin_redacts_legacy_operator_metadata_from_public_content() -> None:
+    plugin_source = PLUGIN_BOOTSTRAP.read_text(encoding="utf-8")
+
+    assert "add_filter('the_content', [self::class, 'redact_publication_operator_metadata'], 8)" in plugin_source
+    assert "data-market-lense-(?:publish-entity|cross-report-metadata)" in plugin_source
+    assert "Drive fileId:" in plugin_source
+    assert "Post_Type::report_post_types()" in plugin_source

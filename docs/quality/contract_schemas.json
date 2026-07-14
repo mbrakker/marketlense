@@ -1137,6 +1137,42 @@
         "route_playbook_stale_policy": {
           "type": "string"
         },
+        "run_budget_enabled": {
+          "type": "boolean"
+        },
+        "run_budget_limit_decision": {
+          "type": "string"
+        },
+        "run_budget_max_browser_launches": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_max_drive_writes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_max_pdfs": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -1253,6 +1289,9 @@
         },
         "reports_db": {
           "type": "string"
+        },
+        "revalidate_route_policy": {
+          "type": "boolean"
         },
         "schema_version": {
           "type": "string"
@@ -2896,6 +2935,26 @@
             "$ref": "#/$defs/src.contracts._browser_download.runtime.BrowserDownloadRouteStep"
           },
           "type": "array"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -12685,6 +12744,13 @@
         "llm_retry_retries": {
           "type": "integer"
         },
+        "llm_routing": {
+          "additionalProperties": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "object"
+        },
         "model_pricing": {
           "type": "string"
         },
@@ -15561,6 +15627,12 @@
         "auth_mode": {
           "type": "string"
         },
+        "budget_override_actor": {
+          "type": "string"
+        },
+        "budget_override_reason": {
+          "type": "string"
+        },
         "content": {
           "contentEncoding": "base64",
           "type": "string"
@@ -15588,6 +15660,26 @@
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
             },
             {
               "type": "null"
@@ -15651,6 +15743,12 @@
         "auth_mode": {
           "type": "string"
         },
+        "budget_override_actor": {
+          "type": "string"
+        },
+        "budget_override_reason": {
+          "type": "string"
+        },
         "file_name": {
           "anyOf": [
             {
@@ -15681,6 +15779,26 @@
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
             },
             {
               "type": "null"
@@ -18357,6 +18475,86 @@
       ],
       "type": "object"
     },
+    "src.contracts.llm.LLMRoutingDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "compaction_enabled": {
+          "type": "boolean"
+        },
+        "max_input_tokens": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "policy_source": {
+          "type": "string"
+        },
+        "quality_threshold": {
+          "type": "number"
+        },
+        "same_provider_fallback": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "namespace",
+        "model",
+        "tier",
+        "max_input_tokens",
+        "compaction_enabled",
+        "quality_threshold",
+        "same_provider_fallback",
+        "policy_source"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.LLMRoutingPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "compaction_enabled": {
+          "type": "boolean"
+        },
+        "max_input_tokens": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "quality_threshold": {
+          "type": "number"
+        },
+        "same_provider_fallback": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "model",
+        "tier",
+        "max_input_tokens",
+        "compaction_enabled",
+        "quality_threshold",
+        "same_provider_fallback"
+      ],
+      "type": "object"
+    },
     "src.contracts.llm_usage.LLMUsageExportRebuildRequest": {
       "additionalProperties": false,
       "properties": {
@@ -20328,6 +20526,9 @@
             }
           ]
         },
+        "same_provider_fallback": {
+          "type": "boolean"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -20580,6 +20781,9 @@
               "type": "null"
             }
           ]
+        },
+        "same_provider_fallback": {
+          "type": "boolean"
         },
         "schema_version": {
           "type": "string"
@@ -23083,6 +23287,26 @@
             }
           ]
         },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -23152,10 +23376,29 @@
         "reports_db": {
           "type": "string"
         },
+        "run_budget_enabled": {
+          "type": "boolean"
+        },
+        "run_budget_limit_decision": {
+          "type": "string"
+        },
+        "run_budget_max_wordpress_writes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
         "state_db": {
+          "type": "string"
+        },
+        "usage_db_path": {
           "type": "string"
         },
         "validation_policy": {
@@ -23472,6 +23715,56 @@
         "reused_stages",
         "regenerated_stages",
         "avoided_work"
+      ],
+      "type": "object"
+    },
+    "src.contracts.regeneration.LineageRegenerationQualityReport": {
+      "additionalProperties": false,
+      "properties": {
+        "avoided_work": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "change_kind": {
+          "type": "string"
+        },
+        "cost_status": {
+          "type": "string"
+        },
+        "estimated_avoided_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fan_out": {
+          "type": "integer"
+        },
+        "regenerated_stage_count": {
+          "type": "integer"
+        },
+        "reused_stage_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "change_kind",
+        "fan_out",
+        "reused_stage_count",
+        "regenerated_stage_count",
+        "avoided_work",
+        "estimated_avoided_cost_usd",
+        "cost_status"
       ],
       "type": "object"
     },
@@ -24950,6 +25243,70 @@
       ],
       "type": "object"
     },
+    "src.contracts.report_card_remediation.ReportCardCheckpointRemediationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_root": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "operator_date": {
+          "type": "string"
+        },
+        "operator_id": {
+          "type": "string"
+        },
+        "operator_reason": {
+          "type": "string"
+        },
+        "reports_db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "checkpoint_root",
+        "file_id",
+        "reports_db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_card_remediation.ReportCardCheckpointRemediationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_lineage_id": {
+          "type": "string"
+        },
+        "artifacts_path": {
+          "type": "string"
+        },
+        "checkpoint_path": {
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/src.contracts.report_card_remediation.ReportCardPublicationDateRemediationResult"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "result",
+        "checkpoint_path",
+        "artifacts_path",
+        "artifact_lineage_id"
+      ],
+      "type": "object"
+    },
     "src.contracts.report_card_remediation.ReportCardPublicationDateRemediationRequest": {
       "additionalProperties": false,
       "properties": {
@@ -26192,6 +26549,305 @@
         "estimated_wasted_calls",
         "estimated_avoided_calls",
         "final_outcomes"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.RunBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "day_utc": {
+          "type": "string"
+        },
+        "limit_decision": {
+          "type": "string"
+        },
+        "max_browser_launches": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_drive_writes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_pdfs": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_retries": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_runtime_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_spend_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_wordpress_writes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        },
+        "warning_fraction": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "publisher_name"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.RunBudgetDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "breached_metrics": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "override_actor": {
+          "type": "string"
+        },
+        "override_reason": {
+          "type": "string"
+        },
+        "proposed_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "side_effect_allowed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "decision",
+        "breached_metrics",
+        "side_effect_allowed",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.RunBudgetEventAppendRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "budget": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "event_key": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "override_actor": {
+          "type": "string"
+        },
+        "override_reason": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "budget",
+        "event_key",
+        "metric"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.RunBudgetEventAppendResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "event_key": {
+          "type": "string"
+        },
+        "inserted": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "event_key",
+        "inserted"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.RunBudgetUsage": {
+      "additionalProperties": false,
+      "properties": {
+        "browser_launches": {
+          "type": "integer"
+        },
+        "drive_writes": {
+          "type": "integer"
+        },
+        "pdfs": {
+          "type": "integer"
+        },
+        "retries": {
+          "type": "integer"
+        },
+        "runtime_seconds": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "spend_usd": {
+          "type": "number"
+        },
+        "tokens": {
+          "type": "integer"
+        },
+        "wordpress_writes": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.RunBudgetUsageReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "budget": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "budget"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.RunBudgetUsageReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "day_usage": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+        },
+        "event_count": {
+          "type": "integer"
+        },
+        "publisher_usage": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+        },
+        "run_usage": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "usage": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage",
+        "run_usage",
+        "day_usage",
+        "publisher_usage",
+        "event_count"
       ],
       "type": "object"
     },
@@ -32525,6 +33181,12 @@
         "base_url": {
           "type": "string"
         },
+        "budget_override_actor": {
+          "type": "string"
+        },
+        "budget_override_reason": {
+          "type": "string"
+        },
         "ca_bundle_path": {
           "anyOf": [
             {
@@ -32547,6 +33209,26 @@
         },
         "post_type": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -32650,6 +33332,12 @@
         "base_url": {
           "type": "string"
         },
+        "budget_override_actor": {
+          "type": "string"
+        },
+        "budget_override_reason": {
+          "type": "string"
+        },
         "ca_bundle_path": {
           "anyOf": [
             {
@@ -32669,6 +33357,26 @@
         },
         "mime_type": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -32714,6 +33422,12 @@
           "type": "string"
         },
         "base_url": {
+          "type": "string"
+        },
+        "budget_override_actor": {
+          "type": "string"
+        },
+        "budget_override_reason": {
           "type": "string"
         },
         "ca_bundle_path": {
@@ -32765,6 +33479,26 @@
         },
         "post_type": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -33075,6 +33809,12 @@
         "base_url": {
           "type": "string"
         },
+        "budget_override_actor": {
+          "type": "string"
+        },
+        "budget_override_reason": {
+          "type": "string"
+        },
         "ca_bundle_path": {
           "anyOf": [
             {
@@ -33096,6 +33836,26 @@
         },
         "post_type": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -34783,6 +35543,64 @@
         "failure_signature",
         "pdf_extractable",
         "credential_required"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.PipelineExecutionAuthorization": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "plan_checksum": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "workflow",
+        "idempotency_key",
+        "plan_checksum",
+        "allowed_side_effects"
+      ],
+      "type": "object"
+    },
+    "src.contracts.workflow_control.PipelineExecutionAuthorizationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_workflow": {
+          "type": "string"
+        },
+        "plan": {
+          "$ref": "#/$defs/src.contracts.workflow_control.PipelineExecutionPlan"
+        },
+        "requested_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "plan",
+        "expected_workflow",
+        "requested_side_effects"
       ],
       "type": "object"
     },

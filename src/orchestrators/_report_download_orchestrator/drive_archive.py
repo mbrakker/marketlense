@@ -25,6 +25,11 @@ from src.contracts.run_context import RunContext
 from src.orchestrators._report_download_orchestrator.dependencies import (
     ReportDownloadDependencies,
 )
+from src.orchestrators._report_download_orchestrator.budget import (
+    build_report_download_budget,
+    read_report_download_budget_usage,
+    record_report_download_budget_event,
+)
 from src.orchestrators._report_download_orchestrator.persistence import (
     _idempotency_key_with_checksum,
     _lookup_idempotency_record,
@@ -470,6 +475,8 @@ def archive_single_artifact(
             ctx=ctx,
         )
         return upload
+    run_budget = build_report_download_budget(request, ctx)
+    run_budget_usage = read_report_download_budget_usage(run_budget, ctx)
     upload_response = run_with_retry(
         step_name="report_download_drive_upload",
         operation=lambda: dependencies.upload_local_file(
@@ -484,6 +491,8 @@ def archive_single_artifact(
                 auth_mode=request.settings.drive_upload_auth_mode,
                 oauth_client_path=request.settings.drive_upload_oauth_client_path,
                 oauth_token_path=request.settings.drive_upload_oauth_token_path,
+                run_budget=run_budget,
+                run_budget_usage=run_budget_usage,
             ),
             ctx,
         ),
@@ -494,6 +503,12 @@ def archive_single_artifact(
         retry_event="report_download_drive_upload_retry",
         failure_event="report_download_drive_upload_failed",
         sleep_fn=dependencies.sleep_fn,
+    )
+    record_report_download_budget_event(
+        budget=run_budget,
+        event_key=f"drive:{ctx.run_id}:{upload_key}",
+        metric="drive_writes",
+        ctx=ctx,
     )
     upload = ReportDownloadDriveUpload(
         schema_version="1.0",

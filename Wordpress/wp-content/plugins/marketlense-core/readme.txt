@@ -125,7 +125,7 @@ This plugin is intended to be used together with the `marketlense` block theme.
 
 = 1.2.9 =
 * Restored digest visibility for generated core `post` entries by persisting a dedicated `ml_is_digest` contract during metadata backfill instead of requiring `ml_file_id` to exist up front.
-* Added `Geography` fallback parsing for region metadata and preserved hidden `Drive fileId` markers from the Python publisher so digest lookup/backfill remain deterministic.
+* Added `Geography` fallback parsing for region metadata and authenticated `ml_file_id` lookup so digest lookup/backfill remain deterministic without public hidden identifiers.
 * Added a frontend media proxy that rewrites digest image URLs away from blocked `/wp-content/uploads/...` paths so uploaded covers render publicly on hosts with direct-upload restrictions.
 
 = 1.2.7 =

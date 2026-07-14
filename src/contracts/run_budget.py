@@ -10,6 +10,10 @@ class RunBudget:
     schema_version: str = field(metadata={"doc": "Run-budget schema version."})
     run_id: str = field(metadata={"doc": "Stable run identifier governed by this budget."})
     publisher_name: str = field(metadata={"doc": "Publisher scope, or empty for global work."})
+    usage_db_path: str = field(
+        default="./state/llm_usage.sqlite",
+        metadata={"doc": "Canonical SQLite ledger for LLM and side-effect budget usage."},
+    )
     day_utc: str = field(default="", metadata={"doc": "UTC day scope in YYYY-MM-DD form."})
     max_spend_usd: float | None = field(default=None, metadata={"doc": "Maximum spend before a stop decision."})
     max_tokens: int | None = field(default=None, metadata={"doc": "Maximum token count before a stop decision."})
@@ -46,3 +50,46 @@ class RunBudgetDecision:
     override_actor: str = field(default="", metadata={"doc": "Authorized override actor when used."})
     override_reason: str = field(default="", metadata={"doc": "Authorized override reason when used."})
     proposed_usage: RunBudgetUsage | None = field(default=None, metadata={"doc": "Usage including the requested side effect, when evaluated."})
+
+
+@dataclass(frozen=True)
+class RunBudgetUsageReadRequest:
+    """Read canonical budget usage across the governed run, day, and publisher."""
+
+    schema_version: str = field(metadata={"doc": "Usage-read request schema version."})
+    budget: RunBudget = field(metadata={"doc": "Budget scopes and canonical ledger path."})
+
+
+@dataclass(frozen=True)
+class RunBudgetUsageReadResponse:
+    """Conservative merged usage plus the contributing scope snapshots."""
+
+    schema_version: str = field(metadata={"doc": "Usage-read response schema version."})
+    usage: RunBudgetUsage = field(metadata={"doc": "Metric-wise maximum across configured scopes."})
+    run_usage: RunBudgetUsage = field(metadata={"doc": "Usage for the exact run identifier."})
+    day_usage: RunBudgetUsage = field(metadata={"doc": "Usage for the UTC day."})
+    publisher_usage: RunBudgetUsage = field(metadata={"doc": "Usage for the publisher in the UTC day."})
+    event_count: int = field(metadata={"doc": "Durable non-LLM side-effect events contributing to the read."})
+
+
+@dataclass(frozen=True)
+class RunBudgetEventAppendRequest:
+    """Idempotently persist one completed non-LLM budget side effect."""
+
+    schema_version: str = field(metadata={"doc": "Budget-event request schema version."})
+    budget: RunBudget = field(metadata={"doc": "Budget identity and canonical ledger path."})
+    event_key: str = field(metadata={"doc": "Stable idempotency key for the completed side effect."})
+    metric: str = field(metadata={"doc": "Budget metric consumed by this completed side effect."})
+    quantity: int = field(default=1, metadata={"doc": "Positive integer quantity consumed."})
+    decision: str = field(default="allow", metadata={"doc": "Pre-side-effect budget decision."})
+    override_actor: str = field(default="", metadata={"doc": "Authorized override actor, when used."})
+    override_reason: str = field(default="", metadata={"doc": "Authorized override reason, when used."})
+
+
+@dataclass(frozen=True)
+class RunBudgetEventAppendResponse:
+    """Durable outcome for a non-LLM budget event write."""
+
+    schema_version: str = field(metadata={"doc": "Budget-event response schema version."})
+    event_key: str = field(metadata={"doc": "Stable event idempotency key."})
+    inserted: bool = field(metadata={"doc": "Whether this call created a new durable event."})

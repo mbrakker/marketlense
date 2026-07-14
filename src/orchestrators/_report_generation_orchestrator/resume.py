@@ -377,6 +377,7 @@ def _read_validated_checkpoint(
     runtime: ReportRuntimeState,
     *,
     stage_name: str,
+    require_artifact_lineage: bool = False,
 ) -> tuple[PipelineStageCheckpoint, str]:
     response = read_pipeline_checkpoint(
         PipelineCheckpointReadRequest(
@@ -412,7 +413,12 @@ def _read_validated_checkpoint(
                 "checkpoint_path": response.checkpoint_path,
             },
         )
-    _validate_checkpoint_artifacts(runtime, checkpoint, response.checkpoint_path)
+    _validate_checkpoint_artifacts(
+        runtime,
+        checkpoint,
+        response.checkpoint_path,
+        require_artifact_lineage=require_artifact_lineage,
+    )
     return checkpoint, response.checkpoint_path
 
 
@@ -420,9 +426,16 @@ def _validate_checkpoint_artifacts(
     runtime: ReportRuntimeState,
     checkpoint: PipelineStageCheckpoint,
     checkpoint_path: str,
+    *,
+    require_artifact_lineage: bool = False,
 ) -> None:
     _validate_checkpoint_artifact_registry(runtime, checkpoint, checkpoint_path)
-    _validate_checkpoint_artifact_lineage(runtime, checkpoint, checkpoint_path)
+    _validate_checkpoint_artifact_lineage(
+        runtime,
+        checkpoint,
+        checkpoint_path,
+        require_artifact_lineage=require_artifact_lineage,
+    )
     raw_integrity = checkpoint.payload.get("artifact_integrity")
     if not isinstance(raw_integrity, dict):
         return
@@ -534,9 +547,22 @@ def _validate_checkpoint_artifact_lineage(
     runtime: ReportRuntimeState,
     checkpoint: PipelineStageCheckpoint,
     checkpoint_path: str,
+    *,
+    require_artifact_lineage: bool = False,
 ) -> None:
     raw_lineage = checkpoint.payload.get("artifact_lineage")
     if raw_lineage is None:
+        if require_artifact_lineage:
+            raise AppError(
+                code="report_pipeline_checkpoint_lineage_missing",
+                message="Selective regeneration requires retained artifact lineage",
+                retryable=False,
+                context={
+                    "file_id": runtime.file.file_id,
+                    "stage_name": checkpoint.stage_name,
+                    "checkpoint_path": checkpoint_path,
+                },
+            )
         return
     if not isinstance(raw_lineage, dict):
         raise AppError(
@@ -1003,6 +1029,7 @@ def _resume_from_checkpoint_stage(
     ],
     *,
     requested_resume_stage: str,
+    require_artifact_lineage: bool = False,
     taxonomy_openai_client=None,
     category_fit_openai_client=None,
     evidence_pack_openai_client=None,
@@ -1027,6 +1054,12 @@ def _resume_from_checkpoint_stage(
                     LATEST_SAFE_RESTART_STAGE,
                 ],
             },
+        )
+    if require_artifact_lineage:
+        _read_validated_checkpoint(
+            runtime,
+            stage_name=stage_name,
+            require_artifact_lineage=True,
         )
     if stage_name == STAGE_SOURCE_PREPARED:
         return _resume_from_source_checkpoint(

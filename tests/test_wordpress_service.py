@@ -301,15 +301,16 @@ def test_find_post_by_file_id_keeps_insecure_request_warning_when_ssl_verify_ena
 
 def test_find_posts_by_file_id_batch_collects_found_and_missing(wordpress_http) -> None:
     def _lookup(call: RecordedHttpRequest) -> FakeHttpResponse:
-        search = str(call.params.get("search") or "")
-        if "file-1" in search:
+        file_id = str(call.params.get("ml_file_id") or "")
+        if file_id == "file-1":
             return FakeHttpResponse.from_payload(
                 status_code=200,
                 payload=[
                     {
                         "id": 11,
                         "link": "https://site/p/11",
-                        "content": {"rendered": "Drive fileId: file-1"},
+                        "content": {"rendered": "Public report content"},
+                        "meta": {"ml_file_id": "file-1"},
                     }
                 ],
             )
@@ -339,8 +340,8 @@ def test_find_posts_by_file_id_batch_captures_item_errors(
     wordpress_http, assert_app_error
 ) -> None:
     def _lookup(call: RecordedHttpRequest) -> FakeHttpResponse:
-        search = str(call.params.get("search") or "")
-        if "file-bad" in search:
+        file_id = str(call.params.get("ml_file_id") or "")
+        if file_id == "file-bad":
             return FakeHttpResponse.from_payload(
                 status_code=503,
                 payload={"message": "retry"},
@@ -762,15 +763,16 @@ def test_batch_lookup_reuses_pooled_session(
 
         def request(self, method: str, url: str, **kwargs: Any) -> FakeHttpResponse:
             self.calls.append({"method": method, "url": url, **kwargs})
-            search = str((kwargs.get("params") or {}).get("search") or "")
-            if "file-1" in search:
+            file_id = str((kwargs.get("params") or {}).get("ml_file_id") or "")
+            if file_id == "file-1":
                 return FakeHttpResponse.from_payload(
                     status_code=200,
                     payload=[
                         {
                             "id": 11,
                             "link": "https://pooled.test/p/11",
-                            "content": {"rendered": "Drive fileId: file-1"},
+                            "content": {"rendered": "Public report content"},
+                            "meta": {"ml_file_id": "file-1"},
                         }
                     ],
                 )

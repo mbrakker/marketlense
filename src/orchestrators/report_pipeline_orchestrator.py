@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from inspect import Parameter, signature
 from typing import Callable, Optional
 
 from src.contracts.drive import DriveFile
@@ -77,15 +78,27 @@ def _invoke_report_fn(
     ctx: RunContext,
     client_bundle: ReportGenerationClientBundle,
     resume_from_stage: Optional[str] = None,
+    require_artifact_lineage: bool = False,
 ) -> IngestOutcome:
+    arguments: dict[str, object] = dict(
+        client_bundle=client_bundle.validate(),
+        resume_from_stage=resume_from_stage,
+    )
+    parameters = signature(report_fn).parameters.values()
+    supports_lineage_requirement = any(
+        parameter.kind == Parameter.VAR_KEYWORD
+        or parameter.name == "require_artifact_lineage"
+        for parameter in parameters
+    )
+    if supports_lineage_requirement:
+        arguments["require_artifact_lineage"] = require_artifact_lineage
     return report_fn(
         file,
         local_pdf_path,
         settings,
         md5,
         ctx,
-        client_bundle=client_bundle.validate(),
-        resume_from_stage=resume_from_stage,
+        **arguments,
     )
 
 
@@ -154,7 +167,7 @@ def run_report_pipeline(
     if lineage_change_kind:
         lineage_plan = plan_lineage_regeneration(
             change_kind=lineage_change_kind,
-            lineage_available=lineage_available,
+            lineage_available=True,
         )
         lineage_quality = build_lineage_regeneration_quality_report(lineage_plan)
     effective_resume_from_stage = (
@@ -290,6 +303,7 @@ def run_report_pipeline(
                 ctx=ctx,
                 client_bundle=client_bundle,
                 resume_from_stage=effective_resume_from_stage,
+                require_artifact_lineage=bool(lineage_change_kind),
             )
         except AppError as exc:
             if (
@@ -318,6 +332,7 @@ def run_report_pipeline(
                     ctx=ctx,
                     client_bundle=client_bundle,
                     resume_from_stage=None,
+                    require_artifact_lineage=False,
                 )
             else:
                 raise

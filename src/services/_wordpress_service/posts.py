@@ -434,8 +434,10 @@ def find_post_by_file_id(
     )
     url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{post_type_endpoint}"
     params = {
+        "ml_file_id": request.file_id,
         "search": f"Drive fileId: {request.file_id}",
         "per_page": request.per_page,
+        "context": "edit",
     }
     headers = {"Authorization": request.auth_header}
     request_result = _execute_request(
@@ -501,7 +503,11 @@ def find_post_by_file_id(
     if isinstance(payload, list):
         for post in payload:
             content = (post or {}).get("content", {}).get("rendered", "")
-            if request.file_id and request.file_id in content:
+            meta = (post or {}).get("meta", {})
+            if request.file_id and (
+                str(meta.get("ml_file_id") or "") == request.file_id
+                or request.file_id in content
+            ):
                 post_id = post.get("id")
                 link = post.get("link")
                 break

@@ -528,6 +528,26 @@ class BrowserDownloadSettings:
             "doc": "Canonical SQLite usage ledger path shared with report calls."
         },
     )
+    run_budget_enabled: bool = field(
+        default=False,
+        metadata={"doc": "Whether browser report runs enforce the canonical run budget."},
+    )
+    run_budget_max_browser_launches: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum governed browser launches per run, day, and publisher scope."},
+    )
+    run_budget_max_pdfs: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum governed PDF acquisitions per run, day, and publisher scope."},
+    )
+    run_budget_max_drive_writes: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum governed Drive writes per run, day, and publisher scope."},
+    )
+    run_budget_limit_decision: str = field(
+        default="stop",
+        metadata={"doc": "Action when a canonical browser run-budget limit is reached."},
+    )
     daily_spend_warn_usd: float = field(
         default=3.0,
         metadata={"doc": "UTC daily browser-model spend warning threshold."},

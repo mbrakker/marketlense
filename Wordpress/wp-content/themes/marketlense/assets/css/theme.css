@@ -7330,6 +7330,7 @@ a:hover{text-decoration:underline}
 }
 .ml-ingest-report-content .hero-intro{
   grid-column:1 / -1;
+  min-width:0;
 }
 .ml-ingest-report-content .hero-meta-block{
   align-self:start;
@@ -7348,7 +7349,7 @@ a:hover{text-decoration:underline}
   line-height:1;
   letter-spacing:0;
   max-width:930px;
-  overflow-wrap:break-word;
+  overflow-wrap:anywhere;
   margin:0;
 }
 .ml-ingest-report-content .hero-thesis{
@@ -7560,6 +7561,7 @@ a:hover{text-decoration:underline}
 .ml-ingest-report-content .toc{
   position:sticky;
   top:94px;
+  min-width:0;
   align-self:start;
   display:grid;
   gap:18px;
@@ -8300,15 +8302,15 @@ a:hover{text-decoration:underline}
   flex-wrap:wrap;
 }
 @media (max-width:1100px){
-  .hero-inner,
-  .page-grid,
-  .quote-board,
-  .summary-panel,
-  .claim-strip,
-  .report-intelligence-panel,
-  .advisory-suite,
-  .expert-panel,
-  .source-layout{grid-template-columns:1fr}
+  .ml-ingest-report-content .hero-inner,
+  .ml-ingest-report-content .page-grid,
+  .ml-ingest-report-content .quote-board,
+  .ml-ingest-report-content .summary-panel,
+  .ml-ingest-report-content .claim-strip,
+  .ml-ingest-report-content .report-intelligence-panel,
+  .ml-ingest-report-content .advisory-suite,
+  .ml-ingest-report-content .expert-panel,
+  .ml-ingest-report-content .source-layout{grid-template-columns:1fr}
 .ml-ingest-report-content .toc{
     position:static;
     overflow-x:auto;
@@ -8319,12 +8321,12 @@ a:hover{text-decoration:underline}
     gap:16px;
     min-width:max-content;
   }
-  .toc a{padding:6px 0}
-  .section-head{grid-template-columns:1fr;gap:12px}
-  .finding-list,
-  .tag-grid,
-  .intelligence-topic-list,
-  .chart-insight-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
+  .ml-ingest-report-content .toc a{padding:6px 0}
+  .ml-ingest-report-content .section-head{grid-template-columns:1fr;gap:12px}
+  .ml-ingest-report-content .finding-list,
+  .ml-ingest-report-content .tag-grid,
+  .ml-ingest-report-content .intelligence-topic-list,
+  .ml-ingest-report-content .chart-insight-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
 .ml-ingest-report-content .claim-strip article{
     border-right:0;
     border-bottom:1px solid var(--line);
@@ -8333,56 +8335,56 @@ a:hover{text-decoration:underline}
 }
 @media (max-width:720px){
   body{font-size:15px}
-  .header-inner,
-  .hero-inner,
-  .page-grid,
+  .ml-ingest-report-content .header-inner,
+  .ml-ingest-report-content .hero-inner,
+  .ml-ingest-report-content .page-grid,
 .ml-ingest-report-content .footer-inner{
     width:min(100% - 28px, 1480px);
   }
-  .header-inner{min-height:62px}
-  .top-nav,.header-meta{display:none}
-  .brand-mark{font-size:1.34rem}
-  .brand-rule{inline-size:122px}
-  .hero-inner{padding:46px 0 38px;gap:28px}
+  .ml-ingest-report-content .header-inner{min-height:62px}
+  .ml-ingest-report-content .top-nav,.ml-ingest-report-content .header-meta{display:none}
+  .ml-ingest-report-content .brand-mark{font-size:1.34rem}
+  .ml-ingest-report-content .brand-rule{inline-size:122px}
+  .ml-ingest-report-content .hero-inner{padding:46px 0 38px;gap:28px}
 .ml-ingest-report-content .hero h1{
     font-size:clamp(2.2rem, 10.5vw, 3.2rem);
     line-height:1.04;
     letter-spacing:0;
   }
-  .hero-thesis{font-size:1rem}
-  .meta-row{gap:8px}
+  .ml-ingest-report-content .hero-thesis{font-size:1rem}
+  .ml-ingest-report-content .meta-row{gap:8px}
 .ml-ingest-report-content .meta-pill{
     inline-size:100%;
     justify-content:flex-start;
   }
-  .signal-top{min-height:250px;padding:22px}
-  .signal-stat-grid,
-  .hero-score,
-  .finding-list,
-  .tag-grid,
-  .intelligence-topic-list,
-  .chart-insight-grid,
-  .key-figure-list div{grid-template-columns:1fr}
+  .ml-ingest-report-content .signal-top{min-height:250px;padding:22px}
+  .ml-ingest-report-content .signal-stat-grid,
+  .ml-ingest-report-content .hero-score,
+  .ml-ingest-report-content .finding-list,
+  .ml-ingest-report-content .tag-grid,
+  .ml-ingest-report-content .intelligence-topic-list,
+  .ml-ingest-report-content .chart-insight-grid,
+  .ml-ingest-report-content .key-figure-list div{grid-template-columns:1fr}
 .ml-ingest-report-content .hero-score-main{
     border-right:0;
     border-bottom:1px solid var(--line);
   }
-  .score-dimensions{grid-template-columns:1fr}
-  .metric-spine-grid{grid-template-columns:1fr}
+  .ml-ingest-report-content .score-dimensions{grid-template-columns:1fr}
+  .ml-ingest-report-content .metric-spine-grid{grid-template-columns:1fr}
 .ml-ingest-report-content .signal-stat{
     border-right:0;
     border-bottom:1px solid var(--line);
   }
   .signal-stat:last-child{border-bottom:0}
-  .page-grid{gap:28px;padding:24px 0 60px}
-  .section{padding:42px 0}
-  .candidate-toolbar{align-items:flex-start}
-  .visual-candidate-slide{flex-basis:92%}
-  .expert-aside,
-  .expert-copy{padding:22px}
-  .quote-feature{min-height:360px;padding:22px}
-  summary{padding:18px}
-  .topic-body{padding:0 18px 18px}
+  .ml-ingest-report-content .page-grid{gap:28px;padding:24px 0 60px}
+  .ml-ingest-report-content .section{padding:42px 0}
+  .ml-ingest-report-content .candidate-toolbar{align-items:flex-start}
+  .ml-ingest-report-content .visual-candidate-slide{flex-basis:92%}
+  .ml-ingest-report-content .expert-aside,
+  .ml-ingest-report-content .expert-copy{padding:22px}
+  .ml-ingest-report-content .quote-feature{min-height:360px;padding:22px}
+  .ml-ingest-report-content summary{padding:18px}
+  .ml-ingest-report-content .topic-body{padding:0 18px 18px}
 }
 @media print{
   .site-header,.toc{display:none}
@@ -11894,6 +11896,31 @@ body {
   align-self: stretch;
   aspect-ratio: auto;
   border-radius: 1rem 0 0 1rem;
+}
+
+/* Large briefing cards can appear in narrow editorial bands on wide screens. */
+.ml-briefing-card--large .ml-briefing-card__link {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ml-briefing-card--large .ml-briefing-card__media {
+  align-self: auto;
+  aspect-ratio: 16 / 10;
+  border-radius: 1rem 1rem 0 0;
+}
+
+@container (min-width: 28rem) {
+  .ml-briefing-card--large .ml-briefing-card__link {
+    grid-template-columns: minmax(16rem, 40%) minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .ml-briefing-card--large .ml-briefing-card__media {
+    align-self: stretch;
+    aspect-ratio: auto;
+    border-radius: 1rem 0 0 1rem;
+  }
 }
 
 .ml-card--medium .ml-card__cover,

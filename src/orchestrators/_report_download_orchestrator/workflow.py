@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from dataclasses import replace
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
@@ -25,6 +26,11 @@ from src.contracts.state import (
     WorkflowControlObservationWriteRequest,
 )
 from src.contracts.workflow_control import WorkflowControlObservation
+from src.orchestrators._report_download_orchestrator.budget import (
+    build_report_download_budget,
+    read_report_download_budget_usage,
+    record_report_download_budget_event,
+)
 from src.orchestrators._report_download_orchestrator.candidate_readiness import (
     assert_candidate_download_ready,
 )
@@ -419,6 +425,7 @@ def _run_download_attempt(
     dependencies: ReportDownloadDependencies,
     planned_step: ReportDownloadRoutePlanStep,
 ) -> BrowserReportDownloadResult:
+    run_budget = build_report_download_budget(request, ctx)
     service_request = BrowserReportDownloadRequest(
         schema_version="1.0",
         url=request.url,
@@ -436,10 +443,37 @@ def _run_download_attempt(
         report_title=request.report_title,
         publisher_name=request.publisher_name,
     )
+    attempt_number = 0
 
     def _attempt_operation() -> BrowserReportDownloadResult:
+        nonlocal attempt_number
+        attempt_number += 1
+        attempt_request = replace(
+            service_request,
+            run_budget=run_budget,
+            run_budget_usage=read_report_download_budget_usage(run_budget, ctx),
+        )
         try:
-            return dependencies.download_report_with_browser_use(service_request, ctx)
+            result = dependencies.download_report_with_browser_use(attempt_request, ctx)
+            if result.browser_had_structured_result:
+                record_report_download_budget_event(
+                    budget=run_budget,
+                    event_key=(
+                        f"browser:{ctx.run_id}:{planned_step.step_name}:{attempt_number}"
+                    ),
+                    metric="browser_launches",
+                    ctx=ctx,
+                )
+            if result.downloaded_file_path:
+                record_report_download_budget_event(
+                    budget=run_budget,
+                    event_key=(
+                        f"pdf:{ctx.run_id}:{planned_step.step_name}:{attempt_number}"
+                    ),
+                    metric="pdfs",
+                    ctx=ctx,
+                )
+            return result
         except AppError as exc:
             pack: FailedAcquisitionForensicsPack | None = None
             try:
