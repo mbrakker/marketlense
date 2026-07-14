@@ -157,3 +157,9 @@ def test_renderer_rejects_noncanonical_variant() -> None:
 
     assert result["html"] == ""
     assert result["error"].startswith("InvalidArgumentException:")
+
+
+def test_renderer_fails_closed_without_a_required_public_field() -> None:
+    result = _render("small", publisher="")
+
+    assert result == {"html": "", "error": ""}

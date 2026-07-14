@@ -28,21 +28,30 @@ final class Report_Card_Renderer
             throw new \InvalidArgumentException('Unsupported report card variant: ' . $variant);
         }
         if (($report['card_contract_valid'] ?? false) !== true) {
-            throw new \UnexpectedValueException('A valid report card contract is required');
+            return '';
         }
 
         $title = $this->required_text($report, 'title');
         $permalink = $this->required_text($report, 'permalink');
         $publisher = $this->required_text($report, 'publisher');
         $title_scale = $this->required_text($report, 'title_scale');
+        if (in_array('', [$title, $permalink, $publisher, $title_scale], true)) {
+            return '';
+        }
         $covers = is_array($report['covers'] ?? null) ? $report['covers'] : [];
         $cover_url = trim((string) ($covers[$variant] ?? ''));
         if ($cover_url === '') {
-            throw new \UnexpectedValueException('The report card cover is missing for variant: ' . $variant);
+            return '';
         }
 
         $tldr_key = $variant === 'small' ? 'tldr_compact' : 'tldr_standard';
         $tldr = $this->required_text($report, $tldr_key);
+        if ($tldr === '') {
+            return '';
+        }
+        if ($variant === 'large' && ! $this->has_complete_insights($report['key_insights'] ?? null)) {
+            return '';
+        }
         $date = trim((string) ($report['date'] ?? ''));
         $geography = trim((string) ($report['geography'] ?? ''));
         $geography_icon = trim((string) ($report['geography_icon'] ?? ''));
@@ -92,7 +101,7 @@ final class Report_Card_Renderer
     {
         $value = trim((string) ($report[$key] ?? ''));
         if ($value === '') {
-            throw new \UnexpectedValueException('Missing required report card value: ' . $key);
+            return '';
         }
 
         return $value;
@@ -131,16 +140,10 @@ final class Report_Card_Renderer
 
     private function render_insights(mixed $value): void
     {
-        if (! is_array($value) || count($value) !== 2) {
-            throw new \UnexpectedValueException('Large report cards require exactly two key insights');
-        }
         $insights = array_map(
             static fn (mixed $insight): string => trim((string) $insight),
             array_values($value)
         );
-        if ($insights[0] === '' || $insights[1] === '') {
-            throw new \UnexpectedValueException('Large report card insights must be complete');
-        }
         ?>
         <ul class="ml-card__insights">
             <?php foreach ($insights as $insight) : ?>
@@ -148,6 +151,20 @@ final class Report_Card_Renderer
             <?php endforeach; ?>
         </ul>
         <?php
+    }
+
+    private function has_complete_insights(mixed $value): bool
+    {
+        if (! is_array($value) || count($value) !== 2) {
+            return false;
+        }
+        foreach ($value as $insight) {
+            if (trim((string) $insight) === '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function icon(string $name): string

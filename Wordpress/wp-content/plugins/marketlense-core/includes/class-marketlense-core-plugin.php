@@ -35,6 +35,8 @@ final class Plugin
 
     private Intelligence_Projection $intelligence_projection;
 
+    private Intake $intake;
+
     private Report_Card_Renderer $report_card_renderer;
 
     private Briefing_Card_View_Model_Builder $briefing_card_view_model_builder;
@@ -57,6 +59,7 @@ final class Plugin
         $this->content_formatting = new Content_Formatting();
         $this->view_model_builder = new Report_View_Model_Builder($parser);
         $this->intelligence_projection = new Intelligence_Projection();
+        $this->intake = new Intake();
         $this->stats = new Intelligence_Stats($this->view_model_builder, $this->intelligence_projection);
         $this->report_card_renderer = new Report_Card_Renderer();
         $this->briefing_card_view_model_builder = new Briefing_Card_View_Model_Builder();
@@ -92,6 +95,7 @@ final class Plugin
         add_action('init', [$this->post_type, 'register'], 5);
         add_action('init', [$this->taxonomies, 'register'], 8);
         add_action('init', [$this->meta, 'register_meta_fields'], 11);
+        add_action('init', [$this->intake, 'register'], 11);
         add_action('init', [$this->shortcodes, 'register'], 12);
         $this->intelligence_projection->register();
         add_action('init', [$this->meta, 'backfill_report_contracts'], 13);
