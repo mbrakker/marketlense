@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Dict
 
+from src.contracts.llm import LLMRoutingDecision, LLMRoutingPolicy
+
 
 def _normalize_namespace(namespace: str) -> str:
     if not isinstance(namespace, str):
@@ -34,3 +36,85 @@ def resolve_model(namespace: str, overrides: Dict[str, str], default_model: str)
         if candidate in mapping:
             return mapping[candidate]
     return default_model
+
+
+def resolve_routing_policy(
+    namespace: str,
+    policies: Dict[str, LLMRoutingPolicy],
+    *,
+    default_model: str,
+) -> LLMRoutingDecision:
+    """Resolve a provider-local policy by deterministic longest namespace prefix."""
+    base = _normalize_namespace(namespace)
+    normalized: dict[str, LLMRoutingPolicy] = {}
+    if isinstance(policies, dict):
+        for raw_key, policy in policies.items():
+            key = _normalize_namespace(str(raw_key))
+            if key and isinstance(policy, LLMRoutingPolicy):
+                normalized[key] = policy
+    for index in range(len(base.split("/")), 0, -1):
+        source = "/".join(base.split("/")[:index])
+        policy = normalized.get(source)
+        if policy is not None:
+            return LLMRoutingDecision(
+                schema_version="1.0",
+                namespace=base,
+                model=policy.model,
+                tier=policy.tier,
+                max_input_tokens=policy.max_input_tokens,
+                compaction_enabled=policy.compaction_enabled,
+                quality_threshold=policy.quality_threshold,
+                same_provider_fallback=policy.same_provider_fallback,
+                policy_source=source,
+            )
+    return LLMRoutingDecision(
+        schema_version="1.0",
+        namespace=base,
+        model=default_model,
+        tier="default",
+        max_input_tokens=0,
+        compaction_enabled=False,
+        quality_threshold=0.0,
+        same_provider_fallback=True,
+        policy_source="default",
+    )
+
+
+def routing_policies_from_config(
+    raw_policies: object,
+    *,
+    model_overrides: Dict[str, str],
+) -> Dict[str, LLMRoutingPolicy]:
+    """Adapt validated config mappings into explicit policy contracts."""
+    policies: dict[str, LLMRoutingPolicy] = {}
+    for raw_key, raw_model in model_overrides.items():
+        namespace = _normalize_namespace(str(raw_key))
+        model = str(raw_model or "").strip()
+        if namespace and model:
+            policies[namespace] = LLMRoutingPolicy(
+                schema_version="1.0",
+                model=model,
+                tier="default",
+                max_input_tokens=0,
+                compaction_enabled=False,
+                quality_threshold=0.0,
+                same_provider_fallback=True,
+            )
+    raw_mapping = raw_policies if isinstance(raw_policies, dict) else {}
+    for raw_key, raw_value in raw_mapping.items():
+        if not isinstance(raw_value, dict):
+            continue
+        namespace = _normalize_namespace(str(raw_key))
+        model = str(raw_value.get("model") or model_overrides.get(namespace) or "").strip()
+        if not namespace or not model:
+            continue
+        policies[namespace] = LLMRoutingPolicy(
+            schema_version="1.0",
+            model=model,
+            tier=str(raw_value.get("tier") or "default").strip() or "default",
+            max_input_tokens=max(0, int(raw_value.get("max_input_tokens") or 0)),
+            compaction_enabled=bool(raw_value.get("compaction_enabled", False)),
+            quality_threshold=float(raw_value.get("quality_threshold") or 0.0),
+            same_provider_fallback=bool(raw_value.get("same_provider_fallback", True)),
+        )
+    return policies

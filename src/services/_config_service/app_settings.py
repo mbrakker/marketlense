@@ -41,6 +41,16 @@ from src.services._config_service.settings_resolvers import (
 )
 
 
+def _normalize_mapping(raw_value: object) -> dict[str, dict[str, object]]:
+    if not isinstance(raw_value, dict):
+        return {}
+    return {
+        str(key).strip(): dict(value)
+        for key, value in raw_value.items()
+        if str(key).strip() and isinstance(value, dict)
+    }
+
+
 def _to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
     payload = asdict(app_settings)
     allowed = {field.name for field in fields(IngestSettings)}
@@ -297,6 +307,10 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         openai_models=_normalize_openai_models(
             sections.data.get("openai_models")
             or _default_config_value("openai_models", fallback={})
+        ),
+        llm_routing=_normalize_mapping(
+            sections.data.get("llm_routing")
+            or _default_config_value("llm_routing", fallback={})
         ),
         batch_limit=ingest_runtime["batch_limit"],
         ingest_worker_limit=ingest_runtime["ingest_worker_limit"],

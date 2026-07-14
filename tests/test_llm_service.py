@@ -354,6 +354,36 @@ def test_llm_service_fails_over_to_openrouter_chat_json_contract(
     assert audits[-1]["fields"]["provider_decision"] == "openrouter_fallback"
 
 
+def test_llm_service_keeps_retryable_failure_within_selected_provider() -> None:
+    calls: list[str] = []
+    operations = LLMProviderOperations(
+        schema_version="1.0",
+        openai_chat_json=lambda req, ctx: (
+            calls.append("openai"),
+            (_ for _ in ()).throw(
+                AppError(
+                    code="openai_chat_failed",
+                    message="primary unavailable",
+                    retryable=True,
+                )
+            ),
+        )[1],
+        openrouter_chat_json=lambda req, ctx: calls.append("openrouter"),
+    )
+    client = llm_service.build_client(
+        base_client=operations,
+        policy=LLMClientPolicy(schema_version="1.0", scope="same-provider-test"),
+    )
+
+    with pytest.raises(AppError, match="primary unavailable"):
+        client.openai_chat_json(
+            SimpleNamespace(model="gpt-5-mini", same_provider_fallback=True),
+            _ctx(),
+        )
+
+    assert calls == ["openai"]
+
+
 def test_llm_service_failover_exhaustion_propagates_fallback_error(caplog) -> None:
     caplog.set_level(logging.INFO, logger="market_lense.llm_service")
     calls: list[str] = []
