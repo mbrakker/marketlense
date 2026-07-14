@@ -64,3 +64,28 @@ class ReportCardPublicationDateRemediationResult:
     idempotency_key: str = field(
         metadata={"doc": "Deterministic key for repeated remediation attempts."}
     )
+
+
+@dataclass(frozen=True)
+class ReportCardCheckpointRemediationRequest:
+    """Inputs for a checkpoint-backed, render-only publication-date repair."""
+
+    schema_version: str = field(metadata={"doc": "Checkpoint remediation request schema version."})
+    checkpoint_root: str = field(metadata={"doc": "Root directory containing report-generation checkpoints."})
+    file_id: str = field(metadata={"doc": "Source report file identifier."})
+    reports_db_path: str = field(metadata={"doc": "Canonical reports SQLite path for artifact lineage."})
+    source_id: str = field(default="", metadata={"doc": "Source content identifier used for lineage."})
+    operator_date: str = field(default="", metadata={"doc": "Audited operator date when source artifacts lack one."})
+    operator_id: str = field(default="", metadata={"doc": "Operator identifier required with operator_date."})
+    operator_reason: str = field(default="", metadata={"doc": "Operator reason required with operator_date."})
+
+
+@dataclass(frozen=True)
+class ReportCardCheckpointRemediationResponse:
+    """Persisted repair evidence that can safely resume from analysis_complete."""
+
+    schema_version: str = field(metadata={"doc": "Checkpoint remediation response schema version."})
+    result: ReportCardPublicationDateRemediationResult = field(metadata={"doc": "Audited publication-date repair decision."})
+    checkpoint_path: str = field(metadata={"doc": "Updated analysis checkpoint path."})
+    artifacts_path: str = field(metadata={"doc": "Updated canonical artifacts JSON path."})
+    artifact_lineage_id: str = field(metadata={"doc": "New immutable lineage identity for repaired artifacts."})
