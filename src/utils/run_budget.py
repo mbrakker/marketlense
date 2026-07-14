@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.contracts.workflow_control import RunBudget, RunBudgetDecision, RunBudgetUsage
+from src.contracts.run_budget import RunBudget, RunBudgetDecision, RunBudgetUsage
 from src.utils.errors import AppError
 
 
