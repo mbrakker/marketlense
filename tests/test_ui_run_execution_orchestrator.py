@@ -40,6 +40,7 @@ def test_execute_ui_run_reports_missing_report_download_url() -> None:
     assert response.status == "failed"
     assert response.error_code == "ui_run_payload_url_missing"
     assert response.config_snapshot["payload_error"]["field"] == "url"
+    assert response.result_summary["failure_context"]["field"] == "url"
 
 
 def test_resolve_ui_run_config_snapshot_is_deterministic_for_invalid_payload() -> None:
