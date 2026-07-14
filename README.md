@@ -901,6 +901,8 @@ When the hosting layer blocks direct `/wp-content/uploads/...` access, the plugi
 
 The Python publisher persists the source artifact ID in the registered, authenticated `ml_file_id` post meta field and strips hidden markers plus machine-only publication JSON before WordPress receives public content. The plugin supports the same authenticated meta lookup for reports, briefings, and signals, so idempotent publication does not expose internal IDs to readers.
 
+Run rendered responsive smoke checks against the real local or hosted site with `python scripts/quality/public_site_responsive_smoke.py --base-url http://localhost:8881 --path / --path /reports/ --path /reports/<representative-report>/ --output-json out/public_site_responsive_smoke.json`. The gate checks phone, tablet, and desktop viewports for horizontal overflow and visible broken images; it uses the installed Playwright CLI and does not create test content.
+
 During publish, the pipeline writes native category IDs for report topics and `ml_publisher` term IDs for report publishers through the WordPress REST API so archive filters and directory pages stay aligned with uploaded reports.
 
 ### Maintenance Rule
