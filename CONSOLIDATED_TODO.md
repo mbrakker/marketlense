@@ -29,7 +29,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | A2 | `fast_ingest` and other config-driven autopilot profiles | One typed profile outcome. |
 | Active | A3 | Durable dead letters, scheduled actions, full autonomous smoke, and side-effect idempotency | One recovery/remediation outcome. |
 | Active | A4 | Malformed-Drive-PDF quarantine | Standalone bounded source-recovery outcome. |
-| Active | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | One acquisition hard-blocker outcome. |
+| Closed | A5 | Business-email, CAPTCHA, anti-bot, terminal-evidence, and avoided-browser-spend route policy | TTL-bound route policy now avoids browser/mailbox work for retained hard blockers and allows explicit revalidation. |
 | Active | A6 | Day/run/publisher spend guardrails | One pipeline-wide budget outcome. |
 | Active | A7 | Budget-aware model routing, compaction, and failure-class fallback | One stable LLM-policy outcome. |
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
@@ -118,19 +118,6 @@ All work is listed below in one register. `Active` items have detailed completio
 - State records file identity, checksum/size, typed error, and next action after PDF-integrity failure.
 - Default ingest skips quarantined files; explicit rescan/revalidation clears only a valid replacement.
 - CLI or dashboard exposes quarantined inputs and remediation guidance, with tests for write, skip, revalidation, and valid-replacement transitions.
-
-#### A5. Persist acquisition hard-blocker policy
-
-- **Title:** Persist acquisition hard-blocker policy
-- **Impact 4 / effort: 2**
-- **Context:** Live publishers can reject personal delivery domains or impose CAPTCHA/403 controls after browser work has already begun; those outcomes currently require repeated operator interpretation.
-- **Benefit:** Browser and mailbox budget is spent only on routes that can still complete unattended, with retained evidence for why work was skipped.
-- **Risks to avoid:** Keep decisions publisher-scoped and TTL-bound; never infer identity facts or suppress valid alternate routes.
-- **Success criteria:**
-
-- Publisher-scoped, TTL-bound policy records observed form/access-control evidence and the permitted alternate route.
-- Identity/mailbox domain alignment is checked before email-form submission; automation uses only configured, verified facts.
-- Policy avoids browser launches and mailbox polls when blocked, supports an eligible-mailbox/revalidation override, and has tests for TTL, publisher/URL scope, and avoided-work telemetry.
 
 #### A6. Pipeline-wide budget manager
 
@@ -477,6 +464,7 @@ Automation may plan, resume, retry, repair, validate, render, draft, hold, and n
 ## Current-State Evidence
 
 - A1 plan-first authority is now typed and checksum-bound across CLI/UI control payloads. A retained publish plan emitted no external mutation; a live zero-item publish invocation authorized before correctly failing local missing-credential validation; the full suite passed 3,888 tests in 461.92 seconds.
+- A5 acquisition hard-blocker policy now reuses TTL-bound publisher route history, checks configured identity/mailbox facts, and avoids browser/mailbox work for fresh exact CAPTCHA/domain blocks unless `revalidate_route_policy` is explicitly requested. A retained CAPTCHA record confirmed the behavior; focused route/acquisition tests passed 40/40.
 - Canonical LLM accounting uses SQLite with deterministic JSONL/daily projections, reconciliation, replay suppression, task-median forecasting, and configured OpenAI day guardrails.
 - The retained CI accounting corpus now includes valid, invalid, replay-suppressed, and real cached-provider (`provider_hit`) events; cached-token tampering is rejected by reconciliation tests. This closes the former cached-provider corpus task.
 - Claim embeddings, stale/no-embedding fallback, bounded semantic preselection, durable Signal artifacts, artifact lineage storage, and lineage invalidation are present.

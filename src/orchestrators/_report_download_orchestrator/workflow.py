@@ -627,11 +627,15 @@ def _should_avoid_mailbox_preflight_for_remembered_blocker(
         str(label or "").strip().casefold()
         for label in remembered_route.terminal_evidence.evidence_labels
     }
+    blocker_reason = str(remembered_route.blocked_reason or "").strip().casefold()
     return bool(
         remembered_route.exact_route_found
         and str(remembered_route.route_family or "").strip()
         == "browser_email_form"
-        and {"blocked_captcha", "blocked_email_domain"} & evidence_labels
+        and (
+            blocker_reason in {"blocked_captcha", "blocked_email_domain"}
+            or {"blocked_captcha", "blocked_email_domain"} & evidence_labels
+        )
     )
 
 

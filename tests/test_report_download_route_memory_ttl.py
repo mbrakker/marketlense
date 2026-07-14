@@ -82,6 +82,7 @@ def test_fresh_hard_blocker_avoids_mailbox_preflight_unless_revalidation_is_expl
     memory = PublisherDownloadRouteResponse(
         **{
             **memory.__dict__,
+            "blocked_reason": "blocked_captcha",
             "terminal_evidence": DownloadTerminalEvidence(
                 **{
                     **memory.terminal_evidence.__dict__,
