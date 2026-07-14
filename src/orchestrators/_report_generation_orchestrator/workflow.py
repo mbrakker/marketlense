@@ -327,7 +327,7 @@ def run_report_generation(
             deps.selection,
             crop_qa_llm_client=figure_caption_openai_client,
         )
-        _write_stage_checkpoint(
+        analysis_checkpoint_path = _write_stage_checkpoint(
             runtime,
             stage_name=STAGE_SELECTION_COMPLETE,
             artifact_refs={
