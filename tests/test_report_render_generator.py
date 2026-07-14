@@ -883,7 +883,9 @@ def test_render_report_output_does_not_use_file_modified_time_for_card_date(tmp_
 
     deps = _deps(
         render_report=_render_report,
-        write_report_card_manifest=lambda req, ctx: writes.append(req),
+        write_report_card_manifest=lambda req, ctx: (
+            writes.append(req) or SimpleNamespace(manifest_path="report-card-manifest.json")
+        ),
     )
 
     outcome = render_report_output(
@@ -895,10 +897,10 @@ def test_render_report_output_does_not_use_file_modified_time_for_card_date(tmp_
         preview_resp=render_preview_asset(runtime, source, deps),
     )
 
-    assert writes == []
-    assert outcome.status == "error"
-    assert outcome.error
-    assert outcome.error.startswith("card_publication_date_invalid:")
+    assert len(writes) == 1
+    assert writes[0].manifest.published_date == ""
+    assert outcome.status == "processed"
+    assert outcome.error is None
 
 
 def test_render_report_output_does_not_write_manifest_after_cover_error(tmp_path):

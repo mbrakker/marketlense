@@ -68,13 +68,20 @@ def _publication_date(
             )
         )
         return normalized
-    raise AppError(
-        code="card_publication_date_invalid",
-        message=(
-            "A source-supported report publication date is required for report cards"
-        ),
-        retryable=False,
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="generator",
+            event="report_card_publication_date_absent",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "display_state": "omitted",
+                "reason": "source_metadata_absent",
+            },
+        )
     )
+    return ""
 
 
 def _relative_cover_assets(

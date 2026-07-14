@@ -401,6 +401,7 @@ class ReportCardManifest:
                 payload.get("published_date"),
                 code="cover_fingerprint_invalid",
                 field_name="published_date",
+                allow_empty=True,
             ),
             geography_label=_text(
                 payload.get("geography_label"),
