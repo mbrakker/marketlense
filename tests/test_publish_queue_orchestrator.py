@@ -15,7 +15,7 @@ def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
-def test_build_publish_queue_snapshot(
+def test_build_publish_readiness_snapshot(
     caplog,
     external_boundary_mocks_only,
     assert_logs_have_required_fields,
@@ -47,7 +47,7 @@ def test_build_publish_queue_snapshot(
         ),
     )
 
-    response = orch.build_publish_queue_snapshot(
+    response = orch.build_publish_readiness_snapshot(
         PublishQueueRequest(
             schema_version="1.0",
             output_dir="out",
@@ -68,7 +68,7 @@ def test_build_publish_queue_snapshot(
     assert_logs_have_required_fields(caplog.records)
 
 
-def test_build_publish_queue_snapshot_prefers_reports_db_mapping(
+def test_build_publish_readiness_snapshot_prefers_reports_db_mapping(
     external_boundary_mocks_only,
     tmp_path: Path,
 ) -> None:
@@ -124,7 +124,7 @@ def test_build_publish_queue_snapshot_prefers_reports_db_mapping(
         ),
     )
 
-    response = orch.build_publish_queue_snapshot(
+    response = orch.build_publish_readiness_snapshot(
         PublishQueueRequest(
             schema_version="1.0",
             output_dir=str(output_dir),
@@ -138,3 +138,25 @@ def test_build_publish_queue_snapshot_prefers_reports_db_mapping(
     assert len(response.items) == 2
     assert [item.file_id for item in response.items] == ["file_a", "file_b"]
     assert read_calls == [html_paths[1]]
+
+
+def test_legacy_publish_queue_snapshot_alias_preserves_readiness_behavior(
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        orch.file_service,
+        "list_html",
+        lambda req, ctx: SimpleNamespace(html_paths=[]),
+    )
+
+    response = orch.build_publish_queue_snapshot(
+        PublishQueueRequest(
+            schema_version="1.0",
+            output_dir="out",
+            state_db="state.sqlite",
+            post_type="ml_report",
+        ),
+        _ctx(),
+    )
+
+    assert response.items == []

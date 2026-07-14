@@ -202,7 +202,7 @@ Current control-plane modules in `src/orchestrators/` include:
 - `report_analysis_orchestrator.py`: vector-store analysis control including taxonomy/evidence/artifacts/validation and the bounded validation-regeneration loop.
 - Report generation and report analysis are intentionally entered through those orchestrators; deprecated generator-level sequencing stubs have been removed so callers do not depend on a misleading compatibility API.
 - `publish_orchestrator.py`: publish workflow and publish-state transitions.
-- `publish_queue_orchestrator.py`: publish queue snapshot assembly for UI/ops surfaces.
+- `publish_queue_orchestrator.py`: Publish Readiness snapshot assembly for UI/ops surfaces; it remains a read-only pre-publication view, not a durable queue.
 - `report_download_orchestrator.py`: local browser-use report acquisition with per-URL route memory, retry-aware fallback from remembered route to fresh discovery, early non-report readiness rejection, and typed outcome classification (`pdf_download`, `email_delivery`, or `onsite_report`).
 - `cost_reporting_orchestrator.py`: filtered cost report + rollup orchestration.
 - `ops_dashboard_orchestrator.py`: dashboard snapshot aggregation (reports/state/lock/storage).

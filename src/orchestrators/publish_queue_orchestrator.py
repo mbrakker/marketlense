@@ -23,14 +23,14 @@ from src.utils.logging import child_context, log_event
 logger = logging.getLogger("market_lense.publish_queue_orchestrator")
 
 
-def build_publish_queue_snapshot(
+def build_publish_readiness_snapshot(
     request: PublishQueueRequest, ctx: RunContext
 ) -> PublishQueueResponse:
     logger.info(
         log_event(
             ctx,
             role="orchestrator",
-            event="publish_queue_start",
+            event="publish_readiness_start",
             module=logger.name,
             fields={
                 "output_dir": request.output_dir,
@@ -45,7 +45,7 @@ def build_publish_queue_snapshot(
         ctx,
     )
     html_file_id_map: dict[str, str] = {}
-    map_ctx = child_context(ctx, task_id="publish_queue_file_id_map")
+    map_ctx = child_context(ctx, task_id="publish_readiness_file_id_map")
     try:
         html_file_id_map = load_html_file_id_map(request.reports_db, map_ctx)
     except Exception as exc:
@@ -53,7 +53,7 @@ def build_publish_queue_snapshot(
             log_event(
                 map_ctx,
                 role="orchestrator",
-                event="publish_queue_file_id_map_failed",
+                event="publish_readiness_file_id_map_failed",
                 module=logger.name,
                 fields={"reports_db": request.reports_db, "error": str(exc)},
             )
@@ -75,7 +75,7 @@ def build_publish_queue_snapshot(
                     log_event(
                         row_ctx,
                         role="orchestrator",
-                        event="publish_queue_read_failed",
+                        event="publish_readiness_read_failed",
                         module=logger.name,
                         fields={"html_path": html_path, "error": exc.message},
                     )
@@ -87,7 +87,7 @@ def build_publish_queue_snapshot(
                     log_event(
                         row_ctx,
                         role="orchestrator",
-                        event="publish_queue_file_id_resolved",
+                        event="publish_readiness_file_id_resolved",
                         module=logger.name,
                         fields={
                             "html_path": html_path,
@@ -101,7 +101,7 @@ def build_publish_queue_snapshot(
                 log_event(
                     row_ctx,
                     role="orchestrator",
-                    event="publish_queue_file_id_resolved",
+                    event="publish_readiness_file_id_resolved",
                     module=logger.name,
                     fields={
                         "html_path": html_path,
@@ -140,9 +140,16 @@ def build_publish_queue_snapshot(
         log_event(
             ctx,
             role="orchestrator",
-            event="publish_queue_complete",
+            event="publish_readiness_complete",
             module=logger.name,
             fields={"count": len(items)},
         )
     )
     return PublishQueueResponse(schema_version="1.0", items=items)
+
+
+def build_publish_queue_snapshot(
+    request: PublishQueueRequest, ctx: RunContext
+) -> PublishQueueResponse:
+    """Compatibility alias for the former queue-named read-only snapshot."""
+    return build_publish_readiness_snapshot(request, ctx)
