@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
+from src.contracts.llm import LLMContextCompactionPolicy
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.run_context import RunContext
 from src.generators.prompt_preparation import prepare_prompt_bundle
@@ -107,6 +108,12 @@ def render_artifact_json_model(
                 prompt_namespace=namespace,
                 prompt_hash=prompt_bundle.prompt_set.user.sha256,
                 same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
+                context_compaction_policy=LLMContextCompactionPolicy(
+                    schema_version="1.0",
+                    enabled=prompt_bundle.routing_decision.compaction_enabled,
+                    max_input_tokens=prompt_bundle.routing_decision.max_input_tokens
+                    or None,
+                ),
             ),
             ctx,
         )
@@ -131,6 +138,12 @@ def render_artifact_json_model(
                 prompt_namespace=namespace,
                 prompt_hash=prompt_bundle.prompt_set.user.sha256,
                 same_provider_fallback=prompt_bundle.routing_decision.same_provider_fallback,
+                context_compaction_policy=LLMContextCompactionPolicy(
+                    schema_version="1.0",
+                    enabled=prompt_bundle.routing_decision.compaction_enabled,
+                    max_input_tokens=prompt_bundle.routing_decision.max_input_tokens
+                    or None,
+                ),
             ),
             ctx,
         )
