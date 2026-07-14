@@ -94,6 +94,7 @@ final class Plugin
 
         add_action('init', [$this->post_type, 'register'], 5);
         add_action('init', [$this->taxonomies, 'register'], 8);
+        add_action('template_redirect', [$this->taxonomies, 'render_not_found_for_unextracted_publisher'], 0);
         add_action('init', [$this->meta, 'register_meta_fields'], 11);
         $this->meta->register_rest_file_id_query();
         add_action('init', [$this->intake, 'register'], 11);

@@ -33,6 +33,18 @@ require_http_200() {
   echo "$check_name passed (HTTP 200)."
 }
 
+require_http_404() {
+  local php_expr="$1"
+  local check_name="$2"
+  local status
+  status="$(wp_cli eval "$php_expr" | tr -d '[:space:]')"
+  if [[ "$status" != "404" ]]; then
+    echo "$check_name failed: expected HTTP 404, got '$status'" >&2
+    exit 1
+  fi
+  echo "$check_name passed (HTTP 404)."
+}
+
 require_php_true() {
   local php_expr="$1"
   local check_name="$2"
@@ -52,6 +64,18 @@ require_php_false() {
   result="$(wp_cli eval "$php_expr" | tr -d '[:space:]')"
   if [[ "$result" != "0" ]]; then
     echo "$check_name failed: expected falsy php expression, got '$result'" >&2
+    exit 1
+  fi
+  echo "$check_name passed."
+}
+
+require_no_public_diagnostics() {
+  local url="$1"
+  local check_name="$2"
+  local body
+  body="$(wp_cli eval "\$response = wp_remote_get('${url}'); echo wp_remote_retrieve_body(\$response);")"
+  if printf '%s' "$body" | grep -Eiq 'Fatal error|Uncaught (Error|Exception|Throwable)|Stack trace|thrown in|[A-Z]:\\\\|/(var/www|home|srv|app)/'; then
+    echo "$check_name failed: public response contains a stack or filesystem-path signature." >&2
     exit 1
   fi
   echo "$check_name passed."
@@ -165,6 +189,7 @@ for template in "${required_templates[@]}"; do
 done
 echo "Template presence checks passed."
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( home_url('/') ) );" "Front page request"
+require_http_404 "echo wp_remote_retrieve_response_code( wp_remote_get( home_url('/publisher/not-extracted/') ) );" "Missing publisher request"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/types/ml_report') ) );" "REST type ml_report"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/types/ml_signal') ) );" "REST type ml_signal"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/types/ml_briefing') ) );" "REST type ml_briefing"
@@ -250,5 +275,8 @@ require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(hom
 require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), 'Search the archive') !== false ? '1' : '0';" "Front page includes header search"
 require_php_false "echo preg_match('/\\[ml_[a-z0-9_\\-]+(?:\\s[^\\]]*)?\\]/', (string) wp_remote_retrieve_body(wp_remote_get(home_url('/')))) ? '1' : '0';" "Front page does not leak raw Market Lense shortcodes"
 require_php_false "echo preg_match('/\\[ml_[a-z0-9_\\-]+(?:\\s[^\\]]*)?\\]/', (string) wp_remote_retrieve_body(wp_remote_get(get_post_type_archive_link('ml_report')))) ? '1' : '0';" "Reports archive does not leak raw Market Lense shortcodes"
+require_no_public_diagnostics "$(wp_cli eval 'echo home_url("/");')" "Front page contains no public diagnostics"
+require_no_public_diagnostics "$(wp_cli eval 'echo get_post_type_archive_link("ml_report");')" "Reports archive contains no public diagnostics"
+require_no_public_diagnostics "$(wp_cli eval 'echo home_url("/publisher/not-extracted/");')" "Missing publisher response contains no public diagnostics"
 
 echo "Smoke test passed."

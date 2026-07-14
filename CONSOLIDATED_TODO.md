@@ -35,7 +35,8 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | A8 | Model-call replay drift comparison | Standalone read-only regression outcome. |
 | Active | A9 | Source publication-metadata capture for retained regeneration | Source-supported render metadata outcome. |
 | Closed | P1 | Publish snapshot naming and synchronous idempotent publishing | Public/UI terminology now says Publish Readiness; the compatibility alias preserves callers and synchronous review-gated publishing remains unchanged. |
-| Active | P3 | Hosted HTTPS, safe errors, and public trust checks | Hosted trust outcome. |
+| Active | P3 | Hosted HTTPS, sitemap, and public trust checks | Safe-error boundary completed; hosted trust outcome remains. |
+| Active | P10 | Correlated public-render failure observability | Hosted release-observability outcome. |
 | Active | P4 | Briefing, correction, and submission CTAs | Public intake outcome. |
 | Active | P5 | Archive/search facets, mobile navigation, and responsive workflows | Responsive public-workflow outcome. |
 | Active | P6 | Editorial report cards, exhibits, visual ranking, and premium copy | Public editorial presentation outcome. |
@@ -81,6 +82,7 @@ All work is listed below in one register. `Active` items have detailed completio
 
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
 - **P1 (2026-07-14):** `build_publish_readiness_snapshot` is the canonical UI/ops boundary, with the old queue-named callable retained only as a compatibility alias. Publish remains synchronous, idempotent, and review-gated; focused tests and the full suite pass.
+- **Public WordPress safe-error boundary (2026-07-14):** Public shortcode rendering now returns a branded correlated HTTP 500 section on forced report, publisher, archive, or generic shortcode exceptions, while the private structured event retains exception details. The real local Studio route `/publisher/not-extracted/` changed from an incorrect 200 report archive to the branded 404; homepage, reports, and publisher directory remained HTTP 200 with no public diagnostic signatures.
 
 ## Screenshot Baseline Completion Evidence
 
@@ -182,14 +184,26 @@ The original ten-item screenshot baseline is complete in the committed implement
 
 - **Title:** Resolve hosted-site trust blockers
 - **Impact 5 / effort: 2**
-- **Context:** Live public-site checks found HTTPS failure, HTTP sitemap URLs, a fatal `/publisher/not-extracted/` response exposing PHP paths, and no branded failure surface.
+- **Context:** Live public-site checks found HTTPS failure and HTTP sitemap URLs. The public rendering failure boundary and branded handling of the legacy `/publisher/not-extracted/` sentinel are complete.
 - **Benefit:** Transport, safe errors, and reliable navigation meet the baseline expected of a trust-positioned research product.
 - **Risks to avoid:** Verify staging and production separately and never disclose stack traces, paths, or diagnostics publicly.
 - **Success criteria:**
 
 - HTTP redirects to successful HTTPS; robots and sitemap URLs are canonical HTTPS.
-- Public failures expose no stack trace, plugin path, filesystem path, or troubleshooting internals.
-- Hosted smoke evidence covers transport, representative pages, sitemap, branded 404/500 pages, and safe error handling in both staging and production.
+- Hosted smoke evidence covers transport, representative pages, and sitemap behavior in both staging and production.
+
+#### P10. Operate correlated public-render failure telemetry
+
+- **Title:** Operate correlated public-render failure telemetry
+- **Impact 4 / effort: 2**
+- **Context:** The public shortcode boundary now emits the stable `marketlense_public_render_failure` event with a correlation ID, route, entity context, and private exception diagnostics, but hosted release evidence does not yet aggregate or alert on those events.
+- **Benefit:** A bad public projection can be identified and repaired from one correlation ID before it becomes a repeated visitor-facing outage, without publishing diagnostic detail.
+- **Risks to avoid:** Keep exception messages, traces, filesystem paths, and identifiers in private logs only; do not add a public diagnostics route.
+- **Success criteria:**
+
+- Hosted smoke records a bounded count of boundary failures and correlation IDs without serializing private exception fields into artifacts available to visitors.
+- Release evidence distinguishes zero failures, expected injected failures, and unexpected render failures by route/entity type.
+- Tests prove log redaction, deterministic aggregation, and that no public response or public artifact contains a stack/path signature.
 
 #### P4. Implement public briefing, correction, and submission intake
 

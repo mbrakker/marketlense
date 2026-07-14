@@ -68,6 +68,7 @@ final class Shortcodes
 
     private Archive_Browser $archive_browser;
     private Publisher_Directory $publisher_directory;
+    private Public_Render_Boundary $public_render_boundary;
 
     public function __construct(
         Report_View_Model_Builder $view_model_builder,
@@ -94,6 +95,7 @@ final class Shortcodes
             $signal_card_renderer
         );
         $this->publisher_directory = new Publisher_Directory($this->archive_browser, $stats);
+        $this->public_render_boundary = new Public_Render_Boundary();
     }
 
     /**
@@ -102,7 +104,15 @@ final class Shortcodes
     public function register(): void
     {
         foreach (self::SHORTCODE_METHODS as $tag => $method) {
-            add_shortcode($tag, [$this, $method]);
+            add_shortcode(
+                $tag,
+                function (array $attrs = []) use ($tag, $method): string {
+                    return $this->public_render_boundary->render_shortcode(
+                        $tag,
+                        fn (): string => (string) $this->{$method}($attrs)
+                    );
+                }
+            );
         }
 
         add_filter('render_block', [$this, 'render_registered_shortcodes_in_block'], 10, 2);

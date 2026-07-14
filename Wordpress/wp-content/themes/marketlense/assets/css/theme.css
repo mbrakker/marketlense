@@ -9707,7 +9707,15 @@ body {
   gap: 0.85rem;
 }
 
+.ml-publisher-directory-results > *,
+.ml-publisher-directory-list,
+.ml-publisher-directory-list > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
 .ml-publisher-directory-list {
+  inline-size: 100%;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
   gap: 1.5rem;
 }
@@ -12658,4 +12666,30 @@ body {
   .ml-archive-browser-page .ml-report-browser-grid { grid-template-columns: 1fr; }
   .ml-archive-browser-page .ml-briefing-card--small,
   .ml-archive-browser-page .ml-signal-card--small { block-size: auto; }
+}
+
+.ml-safe-render-error {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  border: 1px solid #b9cbe0;
+  border-left: 0.3rem solid #0d5a9f;
+  border-radius: 0.5rem;
+  background: #f5f9fd;
+  color: #102a43;
+}
+
+.ml-safe-render-error h2 {
+  margin: 0.2rem 0 0.5rem;
+}
+
+.ml-safe-render-error p {
+  margin: 0.35rem 0;
+}
+
+.ml-safe-render-error__eyebrow,
+.ml-safe-render-error__reference {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }

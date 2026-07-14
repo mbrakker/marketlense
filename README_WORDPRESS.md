@@ -93,6 +93,10 @@ The smoke test remains optional and requires `RUN_WORDPRESS_SMOKE=1` plus a conf
 RUN_WORDPRESS_SMOKE=1 python scripts/ci/check_wordpress_subproject.py
 ```
 
+### Public rendering failures
+
+All public Market Bearing shortcodes run through one render boundary. If a report, publisher, archive, or other shortcode throws, the visitor receives a branded neutral section with a correlation ID and HTTP 500; exception details, including the internal file and trace, are retained only in the private structured `marketlense_public_render_failure` event. Missing publisher routes and the legacy `publisher/not-extracted/` projection sentinel remain normal branded WordPress 404s. The boundary does not redirect HTTP to HTTPS or otherwise change sandbox transport behavior.
+
 Build the release archives only after verification:
 
 ```powershell

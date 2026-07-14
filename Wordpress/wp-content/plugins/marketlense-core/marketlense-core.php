@@ -43,6 +43,7 @@ require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-signal-car
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-signal-card-renderer.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-archive-browser.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-publisher-directory.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-public-render-boundary.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-shortcodes.php';
 
 register_activation_hook(__FILE__, ['\\MarketLense\\Core\\Plugin', 'activate']);

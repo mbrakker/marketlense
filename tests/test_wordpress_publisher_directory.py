@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "Wordpress" / "wp-content" / "plugins" / "marketlense-core"
 DIRECTORY = PLUGIN / "includes" / "class-marketlense-core-publisher-directory.php"
 ARCHIVE = PLUGIN / "includes" / "class-marketlense-core-archive-browser.php"
+THEME_CSS = ROOT / "Wordpress" / "wp-content" / "themes" / "marketlense" / "assets" / "css" / "theme.css"
 
 
 def test_publisher_directory_uses_the_report_archive_layout_without_a_publisher_select() -> None:
@@ -55,3 +56,11 @@ def test_publisher_directory_context_reads_only_its_namespaced_filter_parameters
 
     assert "$this->selected_publisher_directory_filters()" in context
     assert "$this->selected_filters()" not in context
+
+
+def test_publisher_directory_result_grid_can_shrink_inside_the_archive_layout() -> None:
+    css = THEME_CSS.read_text(encoding="utf-8")
+
+    assert ".ml-publisher-directory-results > *," in css
+    assert "min-inline-size: 0;" in css
+    assert ".ml-publisher-directory-list {\n  inline-size: 100%;" in css

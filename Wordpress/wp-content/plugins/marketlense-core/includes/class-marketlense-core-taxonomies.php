@@ -47,6 +47,8 @@ final class Taxonomies
     public const PUBLISHER_REPORT_VALUE_BAND_META = 'ml_publisher_report_value_band';
     public const PUBLISHER_REPORT_VALUE_SAMPLE_SIZE_META = 'ml_publisher_report_value_sample_size';
 
+    private const UNEXTRACTED_PUBLISHER_SLUGS = ['not-extracted'];
+
     public function register(): void
     {
         register_taxonomy(
@@ -251,6 +253,29 @@ final class Taxonomies
         register_taxonomy_for_object_type(self::CATEGORY_TAXONOMY, Post_Type::POST_TYPE);
         register_taxonomy_for_object_type('post_tag', Post_Type::POST_TYPE);
         register_taxonomy_for_object_type(self::PUBLISHER_TAXONOMY, Post_Type::CORE_POST_TYPE);
+    }
+
+    /**
+     * Converts legacy publisher projection sentinels into normal public 404 responses.
+     */
+    public function render_not_found_for_unextracted_publisher(): void
+    {
+        if (! is_tax(self::PUBLISHER_TAXONOMY)) {
+            return;
+        }
+
+        $term = get_queried_object();
+        if (! $term instanceof \WP_Term || ! in_array($term->slug, self::UNEXTRACTED_PUBLISHER_SLUGS, true)) {
+            return;
+        }
+
+        global $wp_query;
+        if ($wp_query instanceof \WP_Query) {
+            $wp_query->set_404();
+        }
+
+        status_header(404);
+        nocache_headers();
     }
 
     /**
