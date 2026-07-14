@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from src.contracts.wordpress import WordPressAuthSettings
+from src.contracts.run_budget import RunBudget, RunBudgetUsage
 
 
 @dataclass(frozen=True)
@@ -56,6 +57,22 @@ class PublishSettings:
         metadata={
             "doc": "Validation handling: block (skip publish on fail) or warn (log and continue)."
         },
+    )
+    run_budget_enabled: bool = field(
+        default=False,
+        metadata={"doc": "Whether final WordPress publication writes use the canonical run budget."},
+    )
+    usage_db_path: str = field(
+        default="",
+        metadata={"doc": "Canonical SQLite usage-ledger path for publication budgeting."},
+    )
+    run_budget_max_wordpress_writes: int | None = field(
+        default=None,
+        metadata={"doc": "Maximum final WordPress publication writes per governed scope."},
+    )
+    run_budget_limit_decision: str = field(
+        default="stop",
+        metadata={"doc": "Action when the WordPress publication budget is reached."},
     )
 
 
@@ -169,6 +186,14 @@ class PublishRequest:
         metadata={
             "doc": "Existing WordPress post ID to update in place during an explicit migration."
         },
+    )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Canonical budget evaluated before final WordPress publication writes."},
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None,
+        metadata={"doc": "Observed canonical usage supplied to final WordPress publication writes."},
     )
 
 

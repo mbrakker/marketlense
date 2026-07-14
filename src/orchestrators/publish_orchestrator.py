@@ -98,6 +98,11 @@ from src.orchestrators._publish_orchestrator.models import (
     _PublishEntityRoute,
     _PublishPreflightEntry,
 )
+from src.orchestrators._publish_orchestrator.budget import (
+    build_publish_budget,
+    read_publish_budget_usage,
+    record_publish_budget_write,
+)
 
 from src.orchestrators._publish_orchestrator.routing import (
     _metadata_index,
@@ -505,6 +510,7 @@ def run_publish(
     force_draft: bool = False,
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
+    publish_budget = build_publish_budget(settings, root_ctx)
     requested_post_status = str(settings.wp.post_status or "publish").strip().lower()
     effective_post_status = "draft" if force_draft else requested_post_status
     if requested_post_status != effective_post_status:
@@ -893,6 +899,10 @@ def run_publish(
                             html_snapshot=html_snapshot,
                             resolved_terms=resolved_terms,
                             existing_post_id=lookup_resp.post_id,
+                            run_budget=publish_budget,
+                            run_budget_usage=read_publish_budget_usage(
+                                publish_budget, file_ctx
+                            ),
                         ),
                         route_settings,
                         file_ctx,
@@ -903,6 +913,11 @@ def run_publish(
                         validation_issues,
                     )
                     if outcome.status == "published" and outcome.post_url:
+                        record_publish_budget_write(
+                            publish_budget,
+                            event_key=f"wordpress:{root_ctx.run_id}:{file_id}",
+                            ctx=file_ctx,
+                        )
                         state_record_publish(
                             StatePublishRecordRequest(
                                 schema_version="1.0",
@@ -974,12 +989,21 @@ def run_publish(
                     file_id=file_id,
                     html_snapshot=html_snapshot,
                     resolved_terms=resolved_terms,
+                    run_budget=publish_budget,
+                    run_budget_usage=read_publish_budget_usage(
+                        publish_budget, file_ctx
+                    ),
                 ),
                 route_settings,
                 file_ctx,
             )
             outcome = _with_validation(outcome, validation_status, validation_issues)
             if outcome.status == "published" and outcome.post_id and outcome.post_url:
+                record_publish_budget_write(
+                    publish_budget,
+                    event_key=f"wordpress:{root_ctx.run_id}:{file_id}",
+                    ctx=file_ctx,
+                )
                 state_record_publish(
                     StatePublishRecordRequest(
                         schema_version="1.0",

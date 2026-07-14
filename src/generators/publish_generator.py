@@ -246,6 +246,8 @@ def publish_html(
                 ssl_verify=settings.wp.ssl_verify,
                 ca_bundle_path=settings.wp.ca_bundle_path,
                 post_type=settings.wp.post_type,
+                run_budget=request.run_budget,
+                run_budget_usage=request.run_budget_usage,
             ),
             ctx,
         )
@@ -396,6 +398,8 @@ def publish_html(
             taxonomy_terms=resolved_terms.taxonomy_terms or None,
             meta=post_meta,
             post_type=settings.wp.post_type,
+            run_budget=request.run_budget,
+            run_budget_usage=request.run_budget_usage,
         ),
         ctx,
     )

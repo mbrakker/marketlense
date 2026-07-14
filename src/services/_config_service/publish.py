@@ -37,6 +37,8 @@ def load_publish_settings(
     publish = data.get("publish", {}) or {}
     wp_cfg = publish.get("wp", {}) or {}
     validation_cfg = publish.get("validation", {}) or {}
+    run_budget_cfg = publish.get("run_budget", {}) or {}
+    cost_cfg = data.get("cost", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(
         Path(__file__).resolve().parents[2] / "config" / "category-mappings.yaml"
     )
@@ -116,6 +118,9 @@ def load_publish_settings(
         or _default_config_value("publish", "media_upload_workers", fallback=4)
     )
     media_upload_workers = max(_to_int(media_upload_workers_raw, 4), 1)
+    usage_db_path = _resolve_optional_path(
+        cost_cfg.get("usage_db_path"), base_path=config_path.parent
+    )
 
     if resolver.missing:
         logger.info(
@@ -142,6 +147,16 @@ def load_publish_settings(
         category_mapping_path=category_mapping_path,
         media_upload_workers=media_upload_workers,
         validation_policy=validation_policy,
+        run_budget_enabled=_to_bool(run_budget_cfg.get("enabled"), True),
+        usage_db_path=usage_db_path,
+        run_budget_max_wordpress_writes=(
+            max(_to_int(run_budget_cfg.get("max_wordpress_writes"), 0), 1)
+            if not _is_missing(run_budget_cfg.get("max_wordpress_writes"))
+            else None
+        ),
+        run_budget_limit_decision=str(
+            run_budget_cfg.get("limit_decision") or "stop"
+        ).strip().lower(),
         wp=wp,
     )
     logger.info(
