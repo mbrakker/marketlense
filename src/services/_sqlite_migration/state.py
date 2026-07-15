@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from .runner import _MigrationSpec, _add_column_if_missing
+from .runner import _add_column_if_missing, _MigrationSpec
 
 _STATE_PROCESSED_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS processed (
@@ -139,6 +139,65 @@ CREATE TABLE IF NOT EXISTS artifact_acquisition_cache (
 );
 """
 
+_STATE_REMEDIATION_RECORDS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS remediation_records (
+  remediation_id TEXT PRIMARY KEY,
+  dedupe_key TEXT NOT NULL UNIQUE,
+  schema_version TEXT NOT NULL,
+  workflow TEXT NOT NULL,
+  run_id TEXT NOT NULL,
+  task_id TEXT NOT NULL,
+  span_id TEXT NOT NULL,
+  report_id TEXT NOT NULL DEFAULT '',
+  source_id TEXT NOT NULL DEFAULT '',
+  publisher_id TEXT NOT NULL DEFAULT '',
+  input_checksum TEXT NOT NULL DEFAULT '',
+  failed_stage TEXT NOT NULL DEFAULT '',
+  operation TEXT NOT NULL DEFAULT '',
+  error_code TEXT NOT NULL DEFAULT '',
+  error_classification TEXT NOT NULL DEFAULT 'unknown',
+  retry_decision_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL,
+  checkpoint_json TEXT NOT NULL DEFAULT '{}',
+  reusable_artifacts_json TEXT NOT NULL DEFAULT '[]',
+  committed_side_effects_json TEXT NOT NULL DEFAULT '[]',
+  idempotency_keys_json TEXT NOT NULL DEFAULT '[]',
+  budget_json TEXT NOT NULL DEFAULT '{}',
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  max_attempts INTEGER NOT NULL DEFAULT 1,
+  cooldown_seconds INTEGER NOT NULL DEFAULT 0,
+  next_eligible_at_utc TEXT NOT NULL DEFAULT '',
+  action_code TEXT NOT NULL,
+  operator_next_action TEXT NOT NULL DEFAULT '',
+  runbook_ref TEXT NOT NULL DEFAULT '',
+  created_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  resolved_at_utc TEXT NOT NULL DEFAULT '',
+  lease_owner TEXT NOT NULL DEFAULT '',
+  lease_expires_at_utc TEXT NOT NULL DEFAULT '',
+  diagnostics_json TEXT NOT NULL DEFAULT '{}',
+  CHECK(
+    status IN (
+      'pending','leased','retrying','deferred','operator_action_required',
+      'terminal','resolved','superseded'
+    )
+  )
+);
+"""
+
+_STATE_REMEDIATION_TRANSITIONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS remediation_transitions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  remediation_id TEXT NOT NULL,
+  from_status TEXT NOT NULL,
+  to_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  created_at_utc TEXT NOT NULL,
+  FOREIGN KEY(remediation_id) REFERENCES remediation_records(remediation_id)
+);
+"""
+
 
 def _state_db_001_create_base_tables(conn: sqlite3.Connection) -> None:
     conn.execute(_STATE_PROCESSED_TABLE_SQL)
@@ -253,6 +312,23 @@ def _state_db_009_create_artifact_acquisition_cache(
     )
 
 
+def _state_db_010_create_remediation_ledger(conn: sqlite3.Connection) -> None:
+    conn.execute(_STATE_REMEDIATION_RECORDS_TABLE_SQL)
+    conn.execute(_STATE_REMEDIATION_TRANSITIONS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_remediation_records_eligible "
+        "ON remediation_records(status, next_eligible_at_utc, lease_expires_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_remediation_records_workflow_updated "
+        "ON remediation_records(workflow, updated_at_utc DESC)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_remediation_transitions_record_time "
+        "ON remediation_transitions(remediation_id, id DESC)"
+    )
+
+
 _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="state_db_001_create_base_tables",
@@ -298,5 +374,10 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_009_create_artifact_acquisition_cache",
         version=9,
         apply_fn=_state_db_009_create_artifact_acquisition_cache,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_010_create_remediation_ledger",
+        version=10,
+        apply_fn=_state_db_010_create_remediation_ledger,
     ),
 )

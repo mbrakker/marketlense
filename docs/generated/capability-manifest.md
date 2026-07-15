@@ -44,6 +44,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `src/orchestrators/publisher_inventory_orchestrator.py`
 - `src/orchestrators/publisher_sync_orchestrator.py`
 - `src/orchestrators/recategorize_orchestrator.py`
+- `src/orchestrators/remediation_orchestrator.py`
 - `src/orchestrators/report_analysis_orchestrator.py`
 - `src/orchestrators/report_card_date_remediation_orchestrator.py`
 - `src/orchestrators/report_download_orchestrator.py`
@@ -84,6 +85,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `publish-wp`
 - `reap-ui-dead-letters`
 - `recategorize`
+- `remediations`
 - `replay-run`
 - `sync-publishers`
 - `sync-wordpress-intelligence`

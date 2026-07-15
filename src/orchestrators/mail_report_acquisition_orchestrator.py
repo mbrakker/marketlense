@@ -16,14 +16,14 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorResult,
 )
 from src.contracts.mailbox_acquisition import (
-    MailReportAcquisitionRequest,
-    MailReportAcquisitionResult,
     MailboxMessage,
     MailboxSearchRequest,
     MailboxSearchResult,
+    MailReportAcquisitionRequest,
+    MailReportAcquisitionResult,
 )
-from src.contracts.run_context import RunContext
 from src.contracts.report_store import PublisherDownloadRouteRecordRequest
+from src.contracts.run_context import RunContext
 from src.contracts.state import (
     MailboxCandidateRejection,
     MailboxCandidateRejectionListRequest,
@@ -33,6 +33,7 @@ from src.generators.mail_report_acquisition_generator import (
     build_mailbox_query_terms,
     select_mail_report_link_candidates,
 )
+from src.orchestrators.remediation_orchestrator import record_workflow_failure
 from src.orchestrators.report_download_orchestrator import run_report_download
 from src.services.mailbox_acquisition_service import search_mailbox_messages
 from src.services.report_store_service import (
@@ -219,7 +220,7 @@ def run_mail_report_acquisition(
                     )
                 )
                 if exc.retryable:
-                    raise AppError(
+                    error = AppError(
                         code="mail_report_candidate_download_retryable_failed",
                         message="A selected mailbox report link failed with a retryable acquisition error",
                         cause=exc,
@@ -231,7 +232,19 @@ def run_mail_report_acquisition(
                             "candidate_url": candidate.url,
                             "candidate_error_code": exc.code,
                         },
-                    ) from exc
+                    )
+                    record_workflow_failure(
+                        state_db=request.browser_download_settings.state_db,
+                        workflow="mail_report_acquisition",
+                        stage="candidate_download",
+                        operation="download_mail_report_link",
+                        error=error,
+                        ctx=ctx,
+                        input_checksum=request.source_url,
+                        source_id=request.source_url,
+                        publisher_id=request.publisher_name,
+                    )
+                    raise error from exc
                 _record_mailbox_candidate_rejection(
                     request=request,
                     candidate=candidate,
@@ -285,6 +298,7 @@ def run_mail_report_acquisition(
                 poll_count=poll_count,
                 last_message_count=last_message_count,
                 last_candidate_count=last_candidate_count,
+                ctx=ctx,
             )
         sleep_seconds = min(max(settings.poll_interval_seconds, 0.0), remaining)
         if sleep_seconds <= 0:
@@ -293,6 +307,7 @@ def run_mail_report_acquisition(
                 poll_count=poll_count,
                 last_message_count=last_message_count,
                 last_candidate_count=last_candidate_count,
+                ctx=ctx,
             )
         logger.info(
             log_event(
@@ -799,8 +814,9 @@ def _raise_not_arrived(
     poll_count: int,
     last_message_count: int,
     last_candidate_count: int,
+    ctx: RunContext,
 ) -> None:
-    raise AppError(
+    error = AppError(
         code="mail_report_not_arrived_yet",
         message="The requested report email has not arrived within the configured mailbox polling window",
         retryable=True,
@@ -813,6 +829,18 @@ def _raise_not_arrived(
             "candidate_count": last_candidate_count,
         },
     )
+    record_workflow_failure(
+        state_db=request.browser_download_settings.state_db,
+        workflow="mail_report_acquisition",
+        stage="mailbox_poll",
+        operation="poll_mailbox_delivery",
+        error=error,
+        ctx=ctx,
+        input_checksum=request.source_url,
+        source_id=request.source_url,
+        publisher_id=request.publisher_name,
+    )
+    raise error
 
 
 __all__ = ["MailReportAcquisitionDependencies", "run_mail_report_acquisition"]

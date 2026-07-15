@@ -74,3 +74,7 @@ class OpsDashboardSnapshotResponse:
     storage_health: List[OpsStorageHealthItem] = field(
         metadata={"doc": "Storage and DB stat summary."}
     )
+    remediations: List[dict] = field(
+        default_factory=list,
+        metadata={"doc": "Concise canonical remediation rows for operators."},
+    )

@@ -11,6 +11,7 @@ from src.contracts.ops import (
     OpsLockSnapshot,
     OpsStorageHealthItem,
 )
+from src.contracts.remediation import RemediationListRequest
 from src.contracts.report_store import ReportMetadataListRequest
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateProcessedListRequest, StatePublishedListRequest
@@ -67,6 +68,37 @@ def collect_ops_dashboard_snapshot(
         child_context(ctx, task_id="ops:list_published"),
     )
     published = row_dicts(published_resp.rows, include_object_attrs=True)
+
+    remediation_resp = state_service.list_remediation_records(
+        RemediationListRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            statuses=[
+                "pending",
+                "leased",
+                "retrying",
+                "deferred",
+                "operator_action_required",
+                "terminal",
+            ],
+            limit=100,
+        ),
+        child_context(ctx, task_id="ops:list_remediations"),
+    )
+    remediations = [
+        {
+            "remediation_id": record.remediation_id,
+            "workflow": record.workflow,
+            "status": record.status,
+            "error_code": record.error_code,
+            "action": record.action_code,
+            "next_action": record.operator_next_action,
+            "attempts": f"{record.attempt_count}/{record.max_attempts}",
+            "checkpoint": record.checkpoint.path if record.checkpoint else "",
+            "blocker": record.runbook_ref,
+        }
+        for record in remediation_resp.records
+    ]
 
     lock_ctx = child_context(ctx, task_id="ops:get_lock")
     try:
@@ -140,6 +172,7 @@ def collect_ops_dashboard_snapshot(
                 "reports": len(reports),
                 "processed": len(processed),
                 "published": len(published),
+                "remediations": len(remediations),
                 "lock_found": lock.found,
                 "storage_targets": len(storage_health),
             },
@@ -152,4 +185,5 @@ def collect_ops_dashboard_snapshot(
         published=published,
         lock=lock,
         storage_health=storage_health,
+        remediations=remediations,
     )

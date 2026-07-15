@@ -8,18 +8,6 @@ from src.contracts.sqlite_migration import (
     SqliteMigrationApplyResponse,
 )
 
-from ._sqlite_migration.runner import (
-    _LEDGER_DDL,
-    _add_column_if_missing,
-    _applied_migration_ids,
-    _apply_migration_plan,
-    _current_version,
-    _fetch_columns,
-    _MigrationSpec,
-    _normalize_url_key,
-    _table_exists,
-    _utc_now,
-)
 from ._sqlite_migration.reports import (
     _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL,
     _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
@@ -40,11 +28,11 @@ from ._sqlite_migration.reports import (
     _REPORT_SOURCES_TABLE_SQL,
     _REPORT_TAGS_TABLE_SQL,
     _REPORTS_CORE_TABLE_SQL,
+    _REPORTS_DB_MIGRATIONS,
     _REPORTS_REQUIRED_COLUMNS,
     _SIGNAL_CANDIDATE_GROUPS_TABLE_SQL,
     _SIGNAL_CANDIDATES_TABLE_SQL,
     _VECTOR_PROJECTION_QUEUE_TABLE_SQL,
-    _REPORTS_DB_MIGRATIONS,
     _reports_db_001_create_reports_core,
     _reports_db_002_create_report_sources_base,
     _reports_db_003_normalize_report_sources,
@@ -62,13 +50,28 @@ from ._sqlite_migration.reports import (
     _reports_db_015_create_artifact_lineage_registry,
     _reports_db_016_add_claim_embedding_queue_controls,
 )
+from ._sqlite_migration.runner import (
+    _LEDGER_DDL,
+    _add_column_if_missing,
+    _applied_migration_ids,
+    _apply_migration_plan,
+    _current_version,
+    _fetch_columns,
+    _MigrationSpec,
+    _normalize_url_key,
+    _table_exists,
+    _utc_now,
+)
 from ._sqlite_migration.state import (
+    _STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL,
     _STATE_DB_MIGRATIONS,
     _STATE_DOWNLOAD_ROUTES_TABLE_SQL,
     _STATE_INGEST_STATE_TABLE_SQL,
     _STATE_MAIL_DELIVERY_REQUESTS_TABLE_SQL,
     _STATE_PROCESSED_TABLE_SQL,
     _STATE_PUBLISHED_TABLE_SQL,
+    _STATE_REMEDIATION_RECORDS_TABLE_SQL,
+    _STATE_REMEDIATION_TRANSITIONS_TABLE_SQL,
     _STATE_WORKFLOW_CONTROL_OBSERVATIONS_TABLE_SQL,
     _state_db_001_create_base_tables,
     _state_db_002_add_processed_vector_columns,
@@ -77,6 +80,9 @@ from ._sqlite_migration.state import (
     _state_db_005_add_report_download_final_page_url,
     _state_db_006_create_workflow_control_observations,
     _state_db_007_create_mail_delivery_requests,
+    _state_db_008_create_mailbox_candidate_rejections,
+    _state_db_009_create_artifact_acquisition_cache,
+    _state_db_010_create_remediation_ledger,
 )
 from ._sqlite_migration.ui_runs import (
     _UI_RUN_DEAD_LETTER_ACTIONS_TABLE_SQL,

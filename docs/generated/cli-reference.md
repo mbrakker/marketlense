@@ -27,6 +27,7 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `publish-wp` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
 | `reap-ui-dead-letters` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Public |
 | `recategorize` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
+| `remediations` | [`src/_cli/remediation.py`](../../src/_cli/remediation.py) | Public |
 | `replay-run` | [`src/_cli/ui_runs.py`](../../src/_cli/ui_runs.py) | Public |
 | `sync-publishers` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `sync-wordpress-intelligence` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |

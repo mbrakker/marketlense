@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Literal
 
 from src.contracts.browser_download import BrowserDownloadSettings
-from src.contracts.run_budget import RunBudget, RunBudgetDecision, RunBudgetUsage
 from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
+from src.contracts.run_budget import RunBudget, RunBudgetDecision, RunBudgetUsage
 
 WorkflowGateOutcome = Literal[
     "proceed",
@@ -210,6 +210,23 @@ class ConcurrencyDecision:
 
 
 @dataclass(frozen=True)
+class RemediationReaperSettings:
+    schema_version: str = field(
+        metadata={"doc": "Remediation reaper settings version."}
+    )
+    execution_enabled: bool = field(
+        default=False,
+        metadata={"doc": "Feature gate; false keeps the ledger read-only."},
+    )
+    max_records_per_run: int = field(
+        default=10, metadata={"doc": "Bounded records handled by one invocation."}
+    )
+    lease_seconds: int = field(
+        default=60, metadata={"doc": "Bounded remediation work lease duration."}
+    )
+
+
+@dataclass(frozen=True)
 class WorkflowControlSettings:
     schema_version: str = field(metadata={"doc": "Workflow control settings version."})
     preflight_profiles: dict[str, WorkflowPreflightProfile] = field(
@@ -229,6 +246,10 @@ class WorkflowControlSettings:
     )
     operational_memory_min_observations: int = field(
         metadata={"doc": "Minimum observations before high-confidence recommendations."}
+    )
+    remediation_reaper: RemediationReaperSettings = field(
+        default_factory=lambda: RemediationReaperSettings(schema_version="1.0"),
+        metadata={"doc": "Durable remediation reaper feature gate and bounds."},
     )
 
 

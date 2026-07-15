@@ -4,6 +4,7 @@ from src.contracts.config import ConfigLoadRequest
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import (
     ConcurrencyLimit,
+    RemediationReaperSettings,
     WorkflowContract,
     WorkflowControlSettings,
     WorkflowPreflightProfile,
@@ -70,6 +71,9 @@ def load_workflow_control_settings(
                 ),
                 2,
             ),
+        ),
+        remediation_reaper=_parse_remediation_reaper(
+            raw_control.get("remediation_reaper")
         ),
     )
     logger.info(
@@ -200,6 +204,16 @@ def _parse_concurrency(raw_concurrency: object) -> dict[str, ConcurrencyLimit]:
             low_latency_ms=max(0, _to_int(limit.get("low_latency_ms"), 1500)),
         )
     return limits
+
+
+def _parse_remediation_reaper(raw_reaper: object) -> RemediationReaperSettings:
+    reaper = _mapping(raw_reaper)
+    return RemediationReaperSettings(
+        schema_version=str(reaper.get("schema_version") or "1.0"),
+        execution_enabled=_to_bool(reaper.get("execution_enabled"), False),
+        max_records_per_run=max(1, _to_int(reaper.get("max_records_per_run"), 10)),
+        lease_seconds=max(1, _to_int(reaper.get("lease_seconds"), 60)),
+    )
 
 
 def _mapping(value: object) -> dict:

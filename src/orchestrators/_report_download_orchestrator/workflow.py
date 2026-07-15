@@ -60,6 +60,7 @@ from src.orchestrators._report_download_orchestrator.promotions import (
 from src.orchestrators._report_download_orchestrator.route_planner import (
     plan_report_download_routes,
 )
+from src.orchestrators.remediation_orchestrator import record_workflow_failure
 from src.orchestrators.retry_orchestrator import (
     RetryPolicy,
     is_retryable_app_error,
@@ -283,19 +284,64 @@ def run_report_download(
                 )
             )
             if not attempt_retryable:
+                record_workflow_failure(
+                    state_db=request.settings.state_db,
+                    workflow="report_download",
+                    stage=planned_step.step_name,
+                    operation="download_report",
+                    error=exc,
+                    ctx=ctx,
+                    input_checksum=normalized_url,
+                    source_id=normalized_url,
+                    publisher_id=request.publisher_name,
+                )
                 raise
             last_retryable_error = exc
             if not planned_step.fallback_on_retryable_error:
+                record_workflow_failure(
+                    state_db=request.settings.state_db,
+                    workflow="report_download",
+                    stage=planned_step.step_name,
+                    operation="download_report",
+                    error=exc,
+                    ctx=ctx,
+                    input_checksum=normalized_url,
+                    source_id=normalized_url,
+                    publisher_id=request.publisher_name,
+                )
                 raise
     if result is None:
         if last_retryable_error is not None:
+            record_workflow_failure(
+                state_db=request.settings.state_db,
+                workflow="report_download",
+                stage="route_plan",
+                operation="download_report",
+                error=last_retryable_error,
+                ctx=ctx,
+                input_checksum=normalized_url,
+                source_id=normalized_url,
+                publisher_id=request.publisher_name,
+            )
             raise last_retryable_error
-        raise AppError(
+        error = AppError(
             code="report_download_plan_exhausted",
             message="The report download route plan completed without a result",
             retryable=True,
             context={"normalized_url": normalized_url},
         )
+        record_workflow_failure(
+            state_db=request.settings.state_db,
+            workflow="report_download",
+            stage="route_plan",
+            operation="download_report",
+            error=error,
+            ctx=ctx,
+            input_checksum=normalized_url,
+            source_id=normalized_url,
+            publisher_id=request.publisher_name,
+        )
+        raise error
 
     route_record_reused = record_route_outcome(
         request=request,

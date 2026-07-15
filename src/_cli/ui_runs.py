@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 
 import typer
@@ -24,6 +25,7 @@ from src.contracts.ui_run_replay import (
     UiRunReplayCaptureRequest,
     UiRunReplayRequest,
 )
+from src.orchestrators.remediation_orchestrator import record_workflow_failure
 from src.orchestrators.ui_run_control_orchestrator import reap_dead_letter_runs
 from src.orchestrators.ui_run_execution_orchestrator import (
     PROMPT_TREE_ROOT,
@@ -43,7 +45,9 @@ from src.services.run_registry_service import (
 )
 from src.services.ui_run_replay_service import write_ui_run_replay_manifest
 from src.utils.errors import AppError
-from src.utils.logging import new_run_context
+from src.utils.logging import log_event, new_run_context
+
+logger = logging.getLogger("market_lense.cli.ui_runs")
 
 _CLI_PATCH_POINTS = (
     "authorize_oauth_user",
@@ -206,6 +210,41 @@ def _update_ui_run_record(
         ),
         run_ctx,
     )
+    if status == "failed":
+        try:
+            settings = load_settings(
+                ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
+            )
+            record_workflow_failure(
+                state_db=settings.state_db,
+                workflow=f"ui_{existing.run_type}",
+                stage="ui_run_worker",
+                operation="execute_ui_run",
+                error=AppError(
+                    code=error_code or "ui_run_worker_failed",
+                    message=error_message or "UI-run worker failed.",
+                    retryable=bool(error_retryable),
+                    severity=error_severity or "error",
+                ),
+                ctx=run_ctx,
+                workflow_run_id=str(existing.run_id),
+                input_checksum=str(existing.run_id),
+                report_id=str(existing.run_id),
+            )
+        except AppError as remediation_error:
+            logger.info(
+                log_event(
+                    run_ctx,
+                    role="cli",
+                    event="ui_remediation_projection_failed",
+                    module=logger.name,
+                    fields={
+                        "run_id": str(existing.run_id),
+                        "error_code": remediation_error.code,
+                        "error_retryable": remediation_error.retryable,
+                    },
+                )
+            )
     return updated
 
 

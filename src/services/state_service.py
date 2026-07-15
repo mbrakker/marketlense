@@ -5,6 +5,13 @@ from src.services._state_service.artifact_cache import (
     get_artifact_acquisition_cache,
     record_artifact_acquisition_cache,
 )
+from src.services._state_service.mail_delivery import (
+    list_due_mail_delivery_requests,
+    list_mailbox_candidate_rejections,
+    mark_mail_delivery_request_attempt,
+    record_mailbox_candidate_rejection,
+    upsert_mail_delivery_request,
+)
 from src.services._state_service.processed import (
     already_processed,
     already_processed_batch,
@@ -21,16 +28,16 @@ from src.services._state_service.publish import (
     list_published,
     record_publish,
 )
+from src.services._state_service.remediation import (
+    claim_next_remediation,
+    list_remediation_records,
+    release_expired_remediation_leases,
+    transition_remediation,
+    upsert_remediation_record,
+)
 from src.services._state_service.routes import (
     get_report_download_route,
     record_report_download_route,
-)
-from src.services._state_service.mail_delivery import (
-    list_mailbox_candidate_rejections,
-    list_due_mail_delivery_requests,
-    mark_mail_delivery_request_attempt,
-    record_mailbox_candidate_rejection,
-    upsert_mail_delivery_request,
 )
 from src.services._state_service.workflow_control import (
     list_workflow_control_observations,
@@ -42,6 +49,7 @@ __all__ = [
     "already_processed_batch",
     "already_published",
     "check_state_db_access",
+    "claim_next_remediation",
     "get",
     "get_artifact_acquisition_cache",
     "get_by_md5",
@@ -52,6 +60,7 @@ __all__ = [
     "list_mailbox_candidate_rejections",
     "list_processed",
     "list_published",
+    "list_remediation_records",
     "list_workflow_control_observations",
     "mark_mail_delivery_request_attempt",
     "record",
@@ -59,7 +68,10 @@ __all__ = [
     "record_mailbox_candidate_rejection",
     "record_publish",
     "record_report_download_route",
+    "release_expired_remediation_leases",
     "upsert_mail_delivery_request",
     "write_workflow_control_observation",
     "set_ingest_cursor",
+    "transition_remediation",
+    "upsert_remediation_record",
 ]

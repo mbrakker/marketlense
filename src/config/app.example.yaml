@@ -67,6 +67,11 @@ publisher_discovery:
     low_score_demotion_threshold: 45.0
 
 workflow_control:
+  remediation_reaper:
+    schema_version: "1.0"
+    execution_enabled: false
+    max_records_per_run: 10
+    lease_seconds: 60
   preflight_profiles:
     report_download:
       workflow: "report_download"

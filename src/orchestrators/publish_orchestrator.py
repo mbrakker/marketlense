@@ -3,15 +3,15 @@ from __future__ import annotations
 # This compatibility facade deliberately re-exports migration seams for callers/tests.
 # ruff: noqa: F401
 import copy
-from dataclasses import asdict, dataclass, field, replace
 import hashlib
+import json
 import logging
 import time
-import json
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Callable, List, Optional, TypedDict, cast
 from urllib.parse import urlparse
-from src.contracts.files import FileExistsRequest, ListHtmlRequest, ReadTextRequest
+
 from src.contracts.categories import CategoryMappingLoadRequest
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -21,6 +21,7 @@ from src.contracts.cross_report_analysis import (
     PublicationMode,
     validate_cross_report_contract,
 )
+from src.contracts.files import FileExistsRequest, ListHtmlRequest, ReadTextRequest
 from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
@@ -33,6 +34,7 @@ from src.contracts.publish import (
     PublishResolvedTerms,
     PublishSettings,
 )
+from src.contracts.remediation import RemediationIdempotencyKey
 from src.contracts.report_store import (
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
@@ -50,92 +52,22 @@ from src.contracts.wordpress import (
     WordPressPostLookupBatchRequest,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
+    WordPressTagEnsureRequest,
     WordPressTagEnsureResponse,
     WordPressTaxonomyEnsureRequest,
     WordPressTaxonomyEnsureResponse,
     WordPressTaxonomyTerm,
-    WordPressTagEnsureRequest,
 )
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
     SignalPublishProjection,
 )
-from src.services.category_mapping_service import (
-    load_mappings as load_category_mappings,
-)
-from src.services.file_service import file_exists, list_html, read_text
-from src.services.report_store_service import list_metadata
-from src.services.state_service import already_published as state_already_published
-from src.services.state_service import get as state_get
-from src.services.state_service import record_publish as state_record_publish
 from src.generators.publish_generator import publish_html
-from src.orchestrators.publish_shared import canonicalize_html_path
-from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
-from src.services import idempotency_service
-from src.services.wordpress_service import (
-    ensure_tags,
-    ensure_taxonomy_terms,
-    find_post_by_file_id,
-    find_posts_by_file_id_batch,
-)
-from src.utils.html_utils import build_publish_html_snapshot
-from src.utils.html_utils import ensure_publish_entity_metadata_html
-from src.utils.errors import AppError
-from src.utils.logging import child_context, log_event, new_run_context
-from src.utils.slugify import slugify
-from src.utils.validation import parse_validation_report_payload
-from src.utils.wp_auth import build_auth_header
-
-from src.orchestrators._publish_orchestrator.models import (
-    _CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE,
-    _CROSS_REPORT_WORDPRESS_POST_TYPES,
-    _CrossReportResultFields,
-    _CrossReportWordPressClassification,
-    _PUBLISH_ENTITY_ROUTES,
-    _PUBLISH_IDEMPOTENCY_SCOPE,
-    _PUBLISH_ROUTES_BY_INTENT,
-    _PublishCandidate,
-    _PublishEntityRoute,
-    _PublishPreflightEntry,
-)
 from src.orchestrators._publish_orchestrator.budget import (
     build_publish_budget,
     read_publish_budget_usage,
     record_publish_budget_write,
 )
-
-from src.orchestrators._publish_orchestrator.routing import (
-    _metadata_index,
-    _normalize_string_list,
-    _normalize_tag_slugs,
-    _publish_entity_error,
-    _publish_settings_for_post_type,
-    _require_publish_settings,
-    _resolve_publish_candidates,
-    _route_publish_entity_metadata,
-    _sort_auto_discovered_html_paths,
-)
-
-from src.orchestrators._publish_orchestrator.preflight import (
-    _batch_lookup_existing_posts,
-    _build_publish_preflight_entries,
-    _load_validation_report,
-    _resolve_batch_term_assignments,
-    _validation_paths,
-    _with_validation,
-)
-
-from src.orchestrators._publish_orchestrator.idempotency import (
-    _cross_report_publish_checksum,
-    _cross_report_publish_idempotency_key,
-    _lookup_cross_report_publish_idempotency,
-    _lookup_publish_idempotency,
-    _publish_checksum,
-    _publish_idempotency_key,
-    _record_cross_report_publish_idempotency,
-    _record_publish_idempotency,
-)
-
 from src.orchestrators._publish_orchestrator.cross_report import (
     _briefing_url_is_in_section,
     _cross_report_post_type_for_target_route,
@@ -150,6 +82,74 @@ from src.orchestrators._publish_orchestrator.cross_report import (
     _signal_url_is_in_section,
     _unique_terms_from_labels,
 )
+from src.orchestrators._publish_orchestrator.idempotency import (
+    _cross_report_publish_checksum,
+    _cross_report_publish_idempotency_key,
+    _lookup_cross_report_publish_idempotency,
+    _lookup_publish_idempotency,
+    _publish_checksum,
+    _publish_idempotency_key,
+    _record_cross_report_publish_idempotency,
+    _record_publish_idempotency,
+)
+from src.orchestrators._publish_orchestrator.models import (
+    _CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE,
+    _CROSS_REPORT_WORDPRESS_POST_TYPES,
+    _PUBLISH_ENTITY_ROUTES,
+    _PUBLISH_IDEMPOTENCY_SCOPE,
+    _PUBLISH_ROUTES_BY_INTENT,
+    _CrossReportResultFields,
+    _CrossReportWordPressClassification,
+    _PublishCandidate,
+    _PublishEntityRoute,
+    _PublishPreflightEntry,
+)
+from src.orchestrators._publish_orchestrator.preflight import (
+    _batch_lookup_existing_posts,
+    _build_publish_preflight_entries,
+    _load_validation_report,
+    _resolve_batch_term_assignments,
+    _validation_paths,
+    _with_validation,
+)
+from src.orchestrators._publish_orchestrator.routing import (
+    _metadata_index,
+    _normalize_string_list,
+    _normalize_tag_slugs,
+    _publish_entity_error,
+    _publish_settings_for_post_type,
+    _require_publish_settings,
+    _resolve_publish_candidates,
+    _route_publish_entity_metadata,
+    _sort_auto_discovered_html_paths,
+)
+from src.orchestrators.publish_shared import canonicalize_html_path
+from src.orchestrators.remediation_orchestrator import record_workflow_failure
+from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.services import idempotency_service
+from src.services.category_mapping_service import (
+    load_mappings as load_category_mappings,
+)
+from src.services.file_service import file_exists, list_html, read_text
+from src.services.report_store_service import list_metadata
+from src.services.state_service import already_published as state_already_published
+from src.services.state_service import get as state_get
+from src.services.state_service import record_publish as state_record_publish
+from src.services.wordpress_service import (
+    ensure_tags,
+    ensure_taxonomy_terms,
+    find_post_by_file_id,
+    find_posts_by_file_id_batch,
+)
+from src.utils.errors import AppError
+from src.utils.html_utils import (
+    build_publish_html_snapshot,
+    ensure_publish_entity_metadata_html,
+)
+from src.utils.logging import child_context, log_event, new_run_context
+from src.utils.slugify import slugify
+from src.utils.validation import parse_validation_report_payload
+from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
 
@@ -400,6 +400,25 @@ def publish_cross_report_package(
                 "attempt": attempt + 1,
                 "code": exc.code if isinstance(exc, AppError) else "",
             },
+            on_terminal_failure=lambda exc, decision: record_workflow_failure(
+                state_db=route_settings.state_db,
+                workflow="publishing",
+                stage="publish_cross_report_package",
+                operation="publish_html",
+                error=exc,
+                ctx=ctx,
+                retry_decision=decision,
+                input_checksum=checksum,
+                report_id=package.file_id,
+                idempotency_keys=[
+                    RemediationIdempotencyKey(
+                        schema_version="1.0",
+                        scope=_CROSS_REPORT_PUBLISH_IDEMPOTENCY_SCOPE,
+                        key=_cross_report_publish_idempotency_key(package, checksum),
+                        input_checksum=checksum,
+                    )
+                ],
+            ),
             is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
             sleep_fn=sleep_fn,
         )
@@ -1045,6 +1064,28 @@ def run_publish(
                     "attempt": attempt + 1,
                     "code": exc.code if isinstance(exc, AppError) else "",
                 },
+                on_terminal_failure=lambda exc, decision: record_workflow_failure(
+                    state_db=settings.state_db,
+                    workflow="publishing",
+                    stage="publish_html",
+                    operation="publish_html",
+                    error=exc,
+                    ctx=file_ctx,
+                    retry_decision=decision,
+                    input_checksum=publish_checksum,
+                    report_id=file_id,
+                    idempotency_keys=[
+                        RemediationIdempotencyKey(
+                            schema_version="1.0",
+                            scope=_PUBLISH_IDEMPOTENCY_SCOPE,
+                            key=_publish_idempotency_key(
+                                file_id=file_id,
+                                post_type=entity_route.post_type,
+                            ),
+                            input_checksum=publish_checksum,
+                        )
+                    ],
+                ),
                 is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
                 sleep_fn=time.sleep,
             )

@@ -8,30 +8,31 @@ from typing import Callable, Optional
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.pipeline_preflight import PipelinePreflightReport
-from src.contracts.report_generation import ReportGenerationClientBundle
-from src.contracts.run_context import RunContext
 from src.contracts.regeneration import (
     LineageRegenerationPlan,
     LineageRegenerationQualityReport,
 )
+from src.contracts.report_generation import ReportGenerationClientBundle
+from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import WorkflowControlSettings
+from src.orchestrators.pipeline_preflight_orchestrator import (
+    assert_expensive_side_effects_allowed,
+    preflight_report_pipeline,
+)
+from src.orchestrators.remediation_orchestrator import record_workflow_failure
 from src.orchestrators.report_generation_orchestrator import (
     run_report_generation as generate_report_orchestrator,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.orchestrators.workflow_control_orchestrator import resolve_retry_policy
-from src.orchestrators.pipeline_preflight_orchestrator import (
-    assert_expensive_side_effects_allowed,
-    preflight_report_pipeline,
-)
 from src.services import llm_service
-from src.utils.errors import AppError
-from src.utils.logging import log_event
 from src.utils.coercion import coerce_int
+from src.utils.errors import AppError
 from src.utils.lineage_regeneration import (
     build_lineage_regeneration_quality_report,
     plan_lineage_regeneration,
 )
+from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.report_pipeline_orchestrator")
 
@@ -387,7 +388,7 @@ def run_report_pipeline(
             )
         return outcome
 
-    return run_with_retry(
+    outcome = run_with_retry(
         step_name="report_pipeline",
         operation=_report_attempt,
         ctx=ctx,
@@ -408,6 +409,35 @@ def run_report_pipeline(
             "attempt": attempt,
             "retryable": retryable,
         },
+        on_terminal_failure=lambda exc, decision: record_workflow_failure(
+            state_db=settings.state_db,
+            workflow="report_generation",
+            stage="report_pipeline",
+            operation="generate_report",
+            error=exc,
+            ctx=ctx,
+            retry_decision=decision,
+            input_checksum=md5 or file.file_id,
+            report_id=file.file_id,
+            source_id=local_pdf_path,
+        ),
         is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
         sleep_fn=time.sleep,
     )
+    if outcome.status == "error":
+        record_workflow_failure(
+            state_db=settings.state_db,
+            workflow="report_generation",
+            stage="report_pipeline",
+            operation="generate_report",
+            error=AppError(
+                code="report_pipeline_outcome_error",
+                message=outcome.error or "Report pipeline returned an error outcome",
+                retryable=False,
+            ),
+            ctx=ctx,
+            input_checksum=md5 or file.file_id,
+            report_id=file.file_id,
+            source_id=local_pdf_path,
+        )
+    return outcome

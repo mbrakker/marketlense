@@ -16,6 +16,7 @@ T = TypeVar("T")
 RetryablePredicate = Callable[[Exception], bool]
 RetryFieldsBuilder = Callable[[Exception, int], dict[str, Any]]
 FailureFieldsBuilder = Callable[[Exception, int, bool], dict[str, Any]]
+TerminalFailureObserver = Callable[[Exception, RetryDecision], None]
 SleepFn = Callable[[float], None]
 
 
@@ -224,6 +225,7 @@ def run_with_retry(
     retry_fields_builder: Optional[RetryFieldsBuilder] = None,
     failure_event: Optional[str] = None,
     failure_fields_builder: Optional[FailureFieldsBuilder] = None,
+    on_terminal_failure: Optional[TerminalFailureObserver] = None,
     is_retryable: RetryablePredicate = is_retryable_app_error,
     sleep_fn: SleepFn = time.sleep,
 ) -> T:
@@ -257,6 +259,8 @@ def run_with_retry(
                             fields=fields,
                         )
                     )
+                if on_terminal_failure is not None:
+                    on_terminal_failure(exc, decision)
                 raise
             base_fields = (
                 retry_fields_builder(exc, attempt)

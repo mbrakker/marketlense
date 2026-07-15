@@ -306,6 +306,7 @@ def render_cockpit_overview() -> None:
     published = snapshot.published
     lock = asdict(snapshot.lock)
     health = [asdict(item) for item in snapshot.storage_health]
+    remediations = list(snapshot.remediations)
     logs = _discover_log_files()
     recent_paths = [row["path"] for row in logs[:2]]
     events = _load_log_events(recent_paths)
@@ -408,6 +409,23 @@ def render_cockpit_overview() -> None:
                 column_config={
                     "bucket": "Age bucket",
                     "count": "Open dead letters",
+                },
+            )
+        with st.container(border=True):
+            _render_table_card(
+                "Durable remediation ledger",
+                remediations[:10],
+                empty_title="No active remediation records",
+                empty_detail="Deferred, retryable, operator-action, and terminal failures will appear here with their safe next step.",
+                column_config={
+                    "workflow": "Workflow",
+                    "status": "State",
+                    "error_code": "Failure",
+                    "action": "Action",
+                    "next_action": "Next action",
+                    "attempts": "Attempts",
+                    "checkpoint": "Checkpoint",
+                    "blocker": "Runbook",
                 },
             )
         with st.container(border=True):

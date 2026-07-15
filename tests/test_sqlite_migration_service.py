@@ -8,8 +8,8 @@ import pytest
 
 from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.services.sqlite_migration_service import (
-    _MigrationSpec,
     _apply_migration_plan,
+    _MigrationSpec,
     apply_state_db_migrations,
     apply_ui_run_registry_migrations,
 )
@@ -35,7 +35,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
                 schema_version="1.0",
                 database_key="state_db",
                 db_path=str(db_path),
-                target_version=9,
+                target_version=10,
                 ctx=_ctx(),
             ),
             conn,
@@ -81,8 +81,15 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
             WHERE type='table' AND name='artifact_acquisition_cache'
             """
         ).fetchone()
+        remediation_table = conn.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='remediation_records'
+            """
+        ).fetchone()
 
-    assert response.current_version == 9
+    assert response.current_version == 10
     assert [step.migration_id for step in response.applied_steps] == [
         "state_db_001_create_base_tables",
         "state_db_002_add_processed_vector_columns",
@@ -93,6 +100,7 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         "state_db_007_create_mail_delivery_requests",
         "state_db_008_create_mailbox_candidate_rejections",
         "state_db_009_create_artifact_acquisition_cache",
+        "state_db_010_create_remediation_ledger",
     ]
     assert ledger_rows == [
         ("state_db_001_create_base_tables", 1),
@@ -104,12 +112,14 @@ def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
         ("state_db_007_create_mail_delivery_requests", 7),
         ("state_db_008_create_mailbox_candidate_rejections", 8),
         ("state_db_009_create_artifact_acquisition_cache", 9),
+        ("state_db_010_create_remediation_ledger", 10),
     ]
-    assert version_row == (9,)
+    assert version_row == (10,)
     assert workflow_table == ("workflow_control_observations",)
     assert mail_table == ("mail_delivery_requests",)
     assert rejection_table == ("mailbox_candidate_rejections",)
     assert artifact_cache_table == ("artifact_acquisition_cache",)
+    assert remediation_table == ("remediation_records",)
     assert_logs_have_required_fields(caplog.records)
 
 

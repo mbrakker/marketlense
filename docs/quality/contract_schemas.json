@@ -21970,6 +21970,12 @@
           },
           "type": "array"
         },
+        "remediations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "reports": {
           "items": {
             "type": "string"
@@ -24311,6 +24317,618 @@
       },
       "required": [
         "target_section"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationArtifactReference": {
+      "additionalProperties": false,
+      "properties": {
+        "checksum_sha256": {
+          "type": "string"
+        },
+        "lineage_ref": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "name",
+        "reference"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationBudgetSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "consumed": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "remaining": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "reserved": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationCheckpointReference": {
+      "additionalProperties": false,
+      "properties": {
+        "checksum_sha256": {
+          "type": "string"
+        },
+        "lineage_ref": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stage_name": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "stage_name",
+        "checksum_sha256",
+        "lineage_ref"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationClaimRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "lease_seconds": {
+          "type": "integer"
+        },
+        "now_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "worker_id",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationClaimResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.remediation.RemediationRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationExpiredLeaseReleaseRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "now_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationExpiredLeaseReleaseResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "released_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "released_ids"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationIdempotencyKey": {
+      "additionalProperties": false,
+      "properties": {
+        "input_checksum": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "scope",
+        "key",
+        "input_checksum"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationListRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "statuses": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationListResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "records": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.remediation.RemediationRecord"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "records"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationReaperRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_enabled": {
+          "type": "boolean"
+        },
+        "lease_seconds": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "now_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "worker_id",
+        "now_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationReaperResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "deferred_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "held_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "inspected_count": {
+          "type": "integer"
+        },
+        "released_lease_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "resolved_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "inspected_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "action_code": {
+          "enum": [
+            "resume_valid_checkpoint",
+            "retry_transient_service_call",
+            "rerun_targeted_artifact_family",
+            "revalidate_replaced_source",
+            "poll_mailbox_delivery",
+            "retry_idempotent_publication",
+            "defer_for_budget",
+            "escalate_credentials",
+            "mark_terminal_blocker"
+          ]
+        },
+        "attempt_count": {
+          "type": "integer"
+        },
+        "budget": {
+          "$ref": "#/$defs/src.contracts.remediation.RemediationBudgetSummary"
+        },
+        "checkpoint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.remediation.RemediationCheckpointReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "committed_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cooldown_seconds": {
+          "type": "integer"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "dedupe_key": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "error_classification": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "failed_stage": {
+          "type": "string"
+        },
+        "idempotency_keys": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.remediation.RemediationIdempotencyKey"
+          },
+          "type": "array"
+        },
+        "input_checksum": {
+          "type": "string"
+        },
+        "lease_expires_at_utc": {
+          "type": "string"
+        },
+        "lease_owner": {
+          "type": "string"
+        },
+        "max_attempts": {
+          "type": "integer"
+        },
+        "next_eligible_at_utc": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "operator_next_action": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "remediation_id": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "resolved_at_utc": {
+          "type": "string"
+        },
+        "retry_decision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.retry_decision.RetryDecision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reusable_artifacts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.remediation.RemediationArtifactReference"
+          },
+          "type": "array"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "runbook_ref": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "span_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "leased",
+            "retrying",
+            "deferred",
+            "operator_action_required",
+            "terminal",
+            "resolved",
+            "superseded"
+          ]
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "updated_at_utc": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "remediation_id",
+        "dedupe_key",
+        "workflow",
+        "run_id",
+        "task_id",
+        "span_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationTransitionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "type": "string"
+        },
+        "increment_attempt": {
+          "type": "boolean"
+        },
+        "next_eligible_at_utc": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "remediation_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "leased",
+            "retrying",
+            "deferred",
+            "operator_action_required",
+            "terminal",
+            "resolved",
+            "superseded"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "remediation_id",
+        "status",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationTransitionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "$ref": "#/$defs/src.contracts.remediation.RemediationRecord"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "record"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationUpsertRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "$ref": "#/$defs/src.contracts.remediation.RemediationRecord"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "record"
+      ],
+      "type": "object"
+    },
+    "src.contracts.remediation.RemediationUpsertResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "created": {
+          "type": "boolean"
+        },
+        "deduplicated": {
+          "type": "boolean"
+        },
+        "record": {
+          "$ref": "#/$defs/src.contracts.remediation.RemediationRecord"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "record",
+        "created",
+        "deduplicated"
       ],
       "type": "object"
     },
@@ -36436,6 +37054,27 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.RemediationReaperSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_enabled": {
+          "type": "boolean"
+        },
+        "lease_seconds": {
+          "type": "integer"
+        },
+        "max_records_per_run": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.workflow_control.ResolvedRetryPolicy": {
       "additionalProperties": false,
       "properties": {
@@ -36839,6 +37478,9 @@
             "$ref": "#/$defs/src.contracts.workflow_control.WorkflowPreflightProfile"
           },
           "type": "object"
+        },
+        "remediation_reaper": {
+          "$ref": "#/$defs/src.contracts.workflow_control.RemediationReaperSettings"
         },
         "retry_policies": {
           "additionalProperties": {

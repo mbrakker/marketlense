@@ -7,19 +7,19 @@ from src.contracts.run_context import RunContext
 from src.contracts.state import (
     MailboxCandidateRejectionListRequest,
     MailboxCandidateRejectionRecordRequest,
-    StateBatchCheckItem,
-    StateBatchCheckRequest,
+    MailDeliveryRequestListDueRequest,
+    MailDeliveryRequestMarkAttemptRequest,
+    MailDeliveryRequestUpsertRequest,
     StateArtifactAcquisitionCacheGetRequest,
     StateArtifactAcquisitionCacheRecordRequest,
+    StateBatchCheckItem,
+    StateBatchCheckRequest,
     StateCheckRequest,
     StateDbAccessRequest,
     StateGetByMd5Request,
     StateGetRequest,
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
-    MailDeliveryRequestListDueRequest,
-    MailDeliveryRequestMarkAttemptRequest,
-    MailDeliveryRequestUpsertRequest,
     StateProcessedListRequest,
     StatePublishedListRequest,
     StatePublishRecordRequest,
@@ -29,32 +29,32 @@ from src.contracts.state import (
     WorkflowControlObservationListRequest,
     WorkflowControlObservationWriteRequest,
 )
+from src.contracts.workflow_control import WorkflowControlObservation
 from src.services._state_service import common as state_common
 from src.services.state_service import (
-    already_processed_batch,
     already_processed,
+    already_processed_batch,
     check_state_db_access,
     get,
     get_artifact_acquisition_cache,
     get_by_md5,
     get_ingest_cursor,
     get_report_download_route,
-    list_mailbox_candidate_rejections,
     list_due_mail_delivery_requests,
+    list_mailbox_candidate_rejections,
     list_processed,
     list_published,
+    list_workflow_control_observations,
+    mark_mail_delivery_request_attempt,
     record,
     record_artifact_acquisition_cache,
     record_mailbox_candidate_rejection,
     record_publish,
     record_report_download_route,
-    list_workflow_control_observations,
-    mark_mail_delivery_request_attempt,
+    set_ingest_cursor,
     upsert_mail_delivery_request,
     write_workflow_control_observation,
-    set_ingest_cursor,
 )
-from src.contracts.workflow_control import WorkflowControlObservation
 from src.utils.errors import AppError
 
 
@@ -122,8 +122,8 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
-    assert schema_version == (9,)
-    assert ledger_count == 9
+    assert schema_version == (10,)
+    assert ledger_count == 10
 
 
 def test_record_and_get_with_defaults(tmp_path: Path) -> None:

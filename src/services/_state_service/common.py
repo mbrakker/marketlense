@@ -58,7 +58,7 @@ def _state_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="state_db",
                     db_path=path,
-                    target_version=9,
+                    target_version=10,
                     ctx=ctx,
                 ),
                 conn,

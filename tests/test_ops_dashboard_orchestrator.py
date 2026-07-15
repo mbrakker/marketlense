@@ -37,6 +37,26 @@ def test_collect_ops_dashboard_snapshot(
         lambda req, ctx: SimpleNamespace(rows=[SimpleNamespace(file_id="f1")]),
     )
     external_boundary_mocks_only.setattr(
+        orch.state_service,
+        "list_remediation_records",
+        lambda req, ctx: SimpleNamespace(
+            records=[
+                SimpleNamespace(
+                    remediation_id="rem-1",
+                    workflow="publishing",
+                    status="operator_action_required",
+                    error_code="wordpress_credentials_missing",
+                    action_code="escalate_credentials",
+                    operator_next_action="refresh credentials",
+                    attempt_count=1,
+                    max_attempts=2,
+                    checkpoint=None,
+                    runbook_ref="docs/ops/recovery.md",
+                )
+            ]
+        ),
+    )
+    external_boundary_mocks_only.setattr(
         orch.lock_service,
         "get_lock",
         lambda req, ctx: SimpleNamespace(
@@ -68,4 +88,17 @@ def test_collect_ops_dashboard_snapshot(
     assert response.lock.found is True
     assert response.lock.owner_id == "owner"
     assert len(response.storage_health) == 4
+    assert response.remediations == [
+        {
+            "remediation_id": "rem-1",
+            "workflow": "publishing",
+            "status": "operator_action_required",
+            "error_code": "wordpress_credentials_missing",
+            "action": "escalate_credentials",
+            "next_action": "refresh credentials",
+            "attempts": "1/2",
+            "checkpoint": "",
+            "blocker": "docs/ops/recovery.md",
+        }
+    ]
     assert_logs_have_required_fields(caplog.records)
