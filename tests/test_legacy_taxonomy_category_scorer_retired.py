@@ -28,9 +28,11 @@ def test_category_mapping_config_no_longer_exposes_scoring_policy() -> None:
         assert "tags" not in category
 
 
-def test_readme_describes_context_first_categories_without_legacy_scoring() -> None:
+def test_editorial_output_documents_context_first_categories() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    readme_text = (repo_root / "README.md").read_text(encoding="utf-8")
+    readme_text = (repo_root / "docs" / "product" / "editorial-output.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "legacy weighted tag-mapping" not in readme_text
     assert (

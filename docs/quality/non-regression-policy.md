@@ -1,5 +1,9 @@
 # Non-Regression Policy
 
+> **Documentation type:** Current reference
+> **Canonical topic:** Non-regression policy
+> **Update trigger:** Baseline, comparator, threshold, corpus, or allowlist changes.
+
 ## Baseline Snapshot
 
 Current baseline artifact:

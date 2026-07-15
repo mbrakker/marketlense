@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 README_WORDPRESS = ROOT / "README_WORDPRESS.md"
+WORDPRESS_OPERATIONS = ROOT / "docs" / "ops" / "wordpress.md"
+DEPLOYMENT_DOCUMENTATION = ROOT / "docs" / "ops" / "deployment.md"
 AUDIT_SCRIPT = ROOT / "Wordpress" / "scripts" / "audit-report-card-contracts.php"
 PLUGIN_BOOTSTRAP = (
     ROOT
@@ -290,8 +291,13 @@ def test_report_card_release_metadata_and_documentation_are_complete() -> None:
     plugin = PLUGIN_BOOTSTRAP.read_text(encoding="utf-8")
     plugin_readme = PLUGIN_README.read_text(encoding="utf-8")
     theme = THEME_STYLE.read_text(encoding="utf-8")
-    docs = README.read_text(encoding="utf-8") + README_WORDPRESS.read_text(
-        encoding="utf-8"
+    docs = "\n".join(
+        (
+            README.read_text(encoding="utf-8"),
+            README_WORDPRESS.read_text(encoding="utf-8"),
+            WORDPRESS_OPERATIONS.read_text(encoding="utf-8"),
+            DEPLOYMENT_DOCUMENTATION.read_text(encoding="utf-8"),
+        )
     )
 
     assert "Version: 1.7.0" in plugin

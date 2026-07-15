@@ -33,7 +33,7 @@
   "failure_codes": {
     "mail_report_not_arrived_yet": "docs/ops/top_failure_runbooks.md",
     "openai_chat_failed": "docs/ops/top_failure_runbooks.md",
-    "public_metadata_governance_blocked": "README.md"
+    "public_metadata_governance_blocked": "docs/workflows/publishing.md"
   },
   "schema_version": "1.0",
   "side_effects": {

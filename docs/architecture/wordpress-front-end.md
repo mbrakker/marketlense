@@ -1,12 +1,16 @@
 # WordPress Implementation Map
 
+> **Documentation type:** Architectural
+> **Canonical topic:** WordPress front-end implementation map
+> **Update trigger:** Theme template, shortcode ownership, CSS system, or template-sensitive verification changes.
+
 This map covers the WordPress front end in:
 
 - `Wordpress/wp-content/themes/marketlense`
 - `Wordpress/wp-content/plugins/marketlense-core`
 - `Wordpress/scripts`
 
-The WordPress-specific readme is `README_WORDPRESS.md`. The plugin package readme is `Wordpress/wp-content/plugins/marketlense-core/readme.txt`.
+The WordPress-specific reference is [`README_WORDPRESS.md`](../../README_WORDPRESS.md). The plugin package readme is `Wordpress/wp-content/plugins/marketlense-core/readme.txt`.
 
 ## 1. Homepage Patterns And Render Order
 

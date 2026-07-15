@@ -1,0 +1,17 @@
+# Troubleshooting
+
+> **Documentation type:** Operational procedure
+> **Canonical topic:** Troubleshooting
+> **Update trigger:** Operator-facing failure mode or diagnostic procedure changes.
+
+| Symptom | First action | Next reference |
+| --- | --- | --- |
+| Missing or invalid source PDF | Inspect the source outcome and retained acquisition evidence | [Report acquisition](../workflows/report-acquisition.md) |
+| OCR or text extraction failure | Confirm the source PDF and OCR policy before retrying | [Top failure runbooks](top_failure_runbooks.md) |
+| Browser acquisition issue | Run `python -m src.cli browser-doctor` and inspect the bounded diagnostic output | [Report acquisition](../workflows/report-acquisition.md) |
+| Mail delivery not found | Confirm mailbox configuration and request scope | [Mailbox acquisition](../workflows/mailbox-acquisition.md) |
+| Drive or WordPress authentication failure | Repair local credentials or secrets without logging them | [Credentials](credentials.md) |
+| Publish or public-site issue | Inspect publish validation and WordPress response context | [WordPress operations](wordpress.md) |
+| Stalled or failed UI job | Inspect the persisted run and dead-letter context | [Operator cockpit](../architecture/operator-cockpit.md) |
+
+Use `python -m src.cli --help` to confirm available commands. Avoid broad retries and destructive cleanup until the retained evidence identifies the affected workflow and side effect.

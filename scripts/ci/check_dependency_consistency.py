@@ -21,7 +21,6 @@ SOURCE_FILES = (
     Path("tools/browser-use/pyproject.toml"),
 )
 LOCK_FILE = Path("requirements.lock")
-README_FILE = Path("README.md")
 VENDORED_SECURITY_DEV_PACKAGES = frozenset({"pydantic-settings"})
 _LOCK_HASH_PATTERN = re.compile(r"\s+--hash=sha256:[0-9a-fA-F]{64}")
 _LOCK_HASH_VALUE_PATTERN = re.compile(r"--hash=sha256:[0-9a-fA-F]{64}")
@@ -199,26 +198,12 @@ def hash_lock_diagnostics(
     return tuple(diagnostics)
 
 
-def readme_security_pins(root: Path) -> tuple[tuple[str, str], ...]:
-    """Read explicitly documented pins from the README security-baseline sentence."""
-    for line in (root / README_FILE).read_text(encoding="utf-8").splitlines():
-        if "Dependency security baseline:" not in line:
-            continue
-        values: list[tuple[str, str]] = []
-        for fragment in line.split("`")[1::2]:
-            parts = fragment.split()
-            if len(parts) == 2:
-                values.append((canonicalize_name(parts[0]), parts[1]))
-        return tuple(values)
-    return ()
-
-
 def check_consistency(
     root: Path,
     *,
     environment: Mapping[str, str] | None = None,
 ) -> tuple[str, ...]:
-    """Return deterministic diagnostics for source, lock, and README pin drift."""
+    """Return deterministic diagnostics for source declaration and lock drift."""
     declarations = declared_exact_pins(root, environment=environment)
     lock, errors = locked_pins(root, environment=environment)
     diagnostics = list(errors)
@@ -253,16 +238,6 @@ def check_consistency(
                     f"locked {rendered_locked}"
                 )
 
-    for package, documented_version in readme_security_pins(root):
-        locked_version = lock.get(package)
-        if locked_version != documented_version:
-            rendered_locked = (
-                locked_version if locked_version is not None else "missing"
-            )
-            diagnostics.append(
-                f"README.md: {package} declared {documented_version}, "
-                f"locked {rendered_locked}"
-            )
     return tuple(diagnostics)
 
 

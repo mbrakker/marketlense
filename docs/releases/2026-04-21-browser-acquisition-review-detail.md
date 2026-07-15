@@ -1,5 +1,9 @@
 # Browser-use Random Report Download Probe
 
+> **Documentation type:** Release history
+> **Canonical topic:** 2026-04 browser acquisition review detail
+> **Update trigger:** Never; retained historical evidence.
+
 Date: 2026-04-21
 
 ## Scope

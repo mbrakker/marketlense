@@ -5,7 +5,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -21,6 +20,7 @@ def quality_gate_commands() -> tuple[tuple[str, ...], ...]:
         ("python", "scripts/ci/check_quality_ledger.py"),
         ("python", "scripts/ci/check_remediation_runbooks.py"),
         ("python", "scripts/ci/check_backlog_source.py"),
+        ("python", "scripts/ci/check_documentation.py", "--check-generated"),
         (
             "python",
             "scripts/ci/check_contract_schemas.py",

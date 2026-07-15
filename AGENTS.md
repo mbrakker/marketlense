@@ -922,7 +922,7 @@ CI SHOULD include static analysis checks to prevent:
 
 ## 9. Documentation Rules
 
-* Every meaningful change in code, architecture, settings options or setup must be documented in readme.
+* Every meaningful change in code, architecture, settings options, or setup must update its canonical documentation; the root `README.md` remains a concise entry point and must not become a change ledger.
 
 ## 10. Enforcement Rules
 
@@ -1043,10 +1043,10 @@ Live validation runs after refactors MUST isolate side effects:
 
 ### 11.6 Documentation Inventory Updates
 
-When decomposing a file listed in `long_scripts.md`:
+When decomposing a file covered by `scripts/count_long_files.py` or listed in `docs/quality/long-file-audit.md`:
 
 * Refresh the long-file inventory after the split.
-* Preserve any existing unstaged user edits in `long_scripts.md`.
+* Preserve any existing unstaged user edits in `docs/quality/long-file-audit.md`.
 
 ### 11.7 Completion Claims
 

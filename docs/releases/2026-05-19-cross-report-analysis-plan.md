@@ -1,5 +1,11 @@
 # Cross-Report Analysis Generation Plan
 
+> **Documentation type:** Historical planning note
+> **Canonical topic:** 2026-05 cross-report analysis plan
+> **Update trigger:** Never; implementation history only.
+
+Current workflow behavior is documented in [cross-report analysis](../workflows/cross-report-analysis.md). Active work is owned by [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md); this plan is not current architecture or backlog.
+
 Last compiled: 2026-05-19
 
 This file is the implementation planning note for cross-report analysis generation and publication flow. It replaces the earlier broad roadmap in this file and intentionally mirrors the structure of `CONSOLIDATED_TODO.md`.
@@ -8,10 +14,7 @@ Scope: generate cross-report analysis artifacts from already-produced report pro
 
 Evidence used for this consolidation:
 
-- `README.md` documents a mature single-report pipeline with contract-first services, generators, orchestrators, prompt namespaces, structured logs, typed errors, idempotency, and validation gates.
-- `README.md` documents the analytics projection foundation: `report_sections`, `report_findings`, `report_metrics`, `report_quotes`, `report_claims`, `report_tags`, `report_categories`, `report_figures`, and `vector_projection_queue`.
-- `README.md` states that `vector_projection_queue` stages future embedding work and does not implement global retrieval yet.
-- `README.md` documents canonical boundaries that this feature should reuse: `src/services/analytics_store_service.py`, `src/services/prompt_service.py`, `src/services/llm_service.py`, `src/services/file_service.py`, `src/services/idempotency_service.py`, `src/generators/publish_generator.py`, `src/orchestrators/publish_orchestrator.py`, and existing config/publish/report orchestration patterns.
+- The then-current architecture references documented a contract-first single-report pipeline, analytics projections, and canonical service and publication boundaries.
 - `AGENTS.md` requires strict role separation, dataclass contracts, prompt text in prompt namespaces only, structured logs with `run_id`, `task_id`, `span_id`, `role`, `module`, typed `AppError` failures, orchestrator-owned retries, and no architectural drift.
 - `CONSOLIDATED_TODO.md` requires backlog items to stay concise, measurable, and ordered by impact, effort, quality, speed, and cost.
 
@@ -20,7 +23,7 @@ How to use this planning note:
 - Use this file as a scoped planning note for cross-report analysis generation, theme choice, and publication flow.
 - Keep the first release small: deterministic projected-data retrieval, automatic theme choice inside the input-builder generator, one synthesis generator, one orchestrator, one CLI entrypoint, existing publication boundaries, and strong tests.
 - Update or remove sections after implementation lands.
-- Every implementation PR must update `README.md` when it changes code behavior, architecture, settings, commands, outputs, or setup.
+- Every implementation PR must update the canonical documentation for changed behavior, architecture, settings, commands, outputs, or setup.
 - No metric normalization is allowed in this phase. Raw metric values may be cited only with original value, unit, report, evidence id, and source context.
 
 Scoring rubric:

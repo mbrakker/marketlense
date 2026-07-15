@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ROOT = REPO_ROOT / "Wordpress" / "wp-content" / "plugins" / "marketlense-core"
 THEME_TEMPLATES = (
@@ -12,7 +11,10 @@ THEME_TEMPLATES = (
 POST_TYPE_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-post-type.php"
 SHORTCODES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-shortcodes.php"
 TAXONOMIES_PATH = PLUGIN_ROOT / "includes" / "class-marketlense-core-taxonomies.php"
-README_PATH = REPO_ROOT / "README.md"
+PUBLISHING_DOCUMENTATION_PATH = REPO_ROOT / "docs" / "workflows" / "publishing.md"
+WORKFLOW_DOCUMENTATION_PATH = (
+    REPO_ROOT / "docs" / "workflows" / "cross-report-analysis.md"
+)
 README_WORDPRESS_PATH = REPO_ROOT / "README_WORDPRESS.md"
 APP_CONFIG_PATH = REPO_ROOT / "src" / "config" / "app.yaml"
 APP_EXAMPLE_CONFIG_PATH = REPO_ROOT / "src" / "config" / "app.example.yaml"
@@ -37,7 +39,7 @@ def test_wordpress_registers_signal_and_briefing_destinations() -> None:
 
 def test_report_publish_contract_uses_ml_report_as_canonical_type() -> None:
     post_type_source = POST_TYPE_PATH.read_text(encoding="utf-8")
-    readme_source = README_PATH.read_text(encoding="utf-8")
+    readme_source = PUBLISHING_DOCUMENTATION_PATH.read_text(encoding="utf-8")
     app_config_source = APP_CONFIG_PATH.read_text(encoding="utf-8")
     app_example_source = APP_EXAMPLE_CONFIG_PATH.read_text(encoding="utf-8")
 
@@ -55,7 +57,7 @@ def test_report_publish_contract_uses_ml_report_as_canonical_type() -> None:
 
 def test_public_report_copy_uses_report_not_report_brief() -> None:
     sources = {
-        "README.md": README_PATH.read_text(encoding="utf-8"),
+        "publishing": PUBLISHING_DOCUMENTATION_PATH.read_text(encoding="utf-8"),
         "README_WORDPRESS.md": README_WORDPRESS_PATH.read_text(encoding="utf-8"),
         "shortcodes": SHORTCODES_PATH.read_text(encoding="utf-8"),
     }
@@ -125,7 +127,7 @@ def test_publisher_taxonomy_assigns_to_signal_and_briefing_destinations() -> Non
 def test_cross_report_publish_defaults_to_briefing_route() -> None:
     generator_source = GENERATOR_PATH.read_text(encoding="utf-8")
     contract_source = CROSS_REPORT_REQUEST_CONTRACT_PATH.read_text(encoding="utf-8")
-    readme_source = README_PATH.read_text(encoding="utf-8")
+    readme_source = WORKFLOW_DOCUMENTATION_PATH.read_text(encoding="utf-8")
 
     assert 'target_route: str = "wordpress:ml_briefing"' in generator_source
     assert 'default="wordpress:ml_briefing"' in contract_source

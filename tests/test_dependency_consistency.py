@@ -16,7 +16,6 @@ def _write_repository(
     browser_dependencies: str = '"browser-package==3.0.0"',
     browser_dev_dependencies: str = '"pydantic-settings==2.14.2"',
     lock: str | None = None,
-    readme_pin: str = "pydantic-settings 2.14.2",
 ) -> None:
     (root / "tools" / "browser-use").mkdir(parents=True)
     (root / "requirements.txt").write_text(runtime, encoding="utf-8")
@@ -48,9 +47,6 @@ def _write_repository(
             )
         ),
         encoding="utf-8",
-    )
-    (root / "README.md").write_text(
-        f"Dependency security baseline: `{readme_pin}`\n", encoding="utf-8"
     )
 
 
@@ -97,14 +93,6 @@ def test_inactive_environment_marker_does_not_require_a_lock_pin(
     )
 
     assert check_consistency(tmp_path, environment={"sys_platform": "win32"}) == ()
-
-
-def test_documented_security_pin_mismatch_identifies_readme(tmp_path: Path) -> None:
-    _write_repository(tmp_path, readme_pin="pydantic-settings 2.13.1")
-
-    assert check_consistency(tmp_path) == (
-        "README.md: pydantic-settings declared 2.13.1, locked 2.14.2",
-    )
 
 
 def test_hash_lock_diagnostics_require_active_linux_hashes(tmp_path: Path) -> None:

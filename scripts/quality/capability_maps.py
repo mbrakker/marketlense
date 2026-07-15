@@ -1,9 +1,10 @@
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import Any
-
 
 MAP_PATH = Path("docs/quality/capability_maps.json")
 
@@ -96,7 +97,7 @@ def build_capability_maps() -> dict[str, Any]:
         "failure_codes": {
             "mail_report_not_arrived_yet": "docs/ops/top_failure_runbooks.md",
             "openai_chat_failed": "docs/ops/top_failure_runbooks.md",
-            "public_metadata_governance_blocked": "README.md",
+            "public_metadata_governance_blocked": "docs/workflows/publishing.md",
         },
         "smoke_suites": {
             "autonomous_happy_path": {

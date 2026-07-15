@@ -25,7 +25,8 @@ def test_cover_cache_flag_is_removed_from_loader_ui_and_docs() -> None:
         repo_root / "src" / "services" / "_config_service" / "ingest.py",
         repo_root / "src" / "services" / "_config_service" / "app_settings.py",
         repo_root / "src" / "ui" / "_streamlit_pages" / "structured_config.py",
-        repo_root / "README.md",
+        repo_root / "docs" / "ops" / "configuration.md",
+        repo_root / "docs" / "generated" / "configuration-reference.md",
         repo_root / "CONSOLIDATED_TODO.md",
     ]
 

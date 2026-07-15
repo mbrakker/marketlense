@@ -1,5 +1,9 @@
 # Role Boundaries
 
+> **Documentation type:** Architectural
+> **Canonical topic:** Role-boundary rules
+> **Update trigger:** Role, import, I/O, prompt, or error-boundary changes.
+
 This project enforces strict module role boundaries:
 
 - `src/services/*`: external I/O boundaries only (filesystem, API, DB, network).

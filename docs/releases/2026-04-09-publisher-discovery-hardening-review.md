@@ -1,4 +1,12 @@
-# Publisher Discovery Success Playbook (2026-04-09)
+# Publisher Discovery Hardening Review (2026-04-09)
+
+> **Documentation type:** Release history
+>
+> **Canonical topic:** 2026-04 publisher discovery hardening review
+>
+> **Update trigger:** Never; retained historical evidence.
+
+This is a historical implementation and live-gate record. Current discovery behavior is documented in [report discovery](../workflows/report-discovery.md), and active follow-up work belongs in [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md).
 
 ## Why this playbook exists
 
@@ -19,7 +27,7 @@ The original version of this document was directionally right, but the current c
   - `src/contracts/publisher_inventory.py`
 - Current config and repo documentation:
   - `src/config/app.yaml`
-  - `README.md`
+  - current architecture and workflow documentation
   - `docs/quality/report-discovery-download-review-2026-03-30.md`
 - Current run-log validation window:
   - `logs/market_lense_2026-04-03.log`

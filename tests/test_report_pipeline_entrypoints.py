@@ -4,13 +4,12 @@ import ast
 import importlib
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 INGEST_ORCHESTRATOR = ROOT / "src" / "orchestrators" / "ingest_orchestrator.py"
 GENERATION_WORKFLOW = (
     ROOT / "src" / "orchestrators" / "_report_generation_orchestrator" / "workflow.py"
 )
-README = ROOT / "README.md"
+WORKFLOW_DOCUMENTATION = ROOT / "docs" / "workflows" / "report-processing.md"
 
 
 def _tree(path: Path) -> ast.Module:
@@ -65,8 +64,8 @@ def test_report_generation_routes_analysis_through_stage_entrypoint() -> None:
     )
 
 
-def test_readme_documents_report_pipeline_entrypoints() -> None:
-    text = README.read_text(encoding="utf-8")
+def test_workflow_documentation_documents_report_pipeline_entrypoints() -> None:
+    text = WORKFLOW_DOCUMENTATION.read_text(encoding="utf-8")
 
     expected_fragments = [
         "Canonical report workflow entrypoint",
@@ -75,7 +74,10 @@ def test_readme_documents_report_pipeline_entrypoints() -> None:
         "`src/orchestrators/report_pipeline_orchestrator.py::run_report_pipeline`",
         "`src/orchestrators/report_generation_orchestrator.py::run_report_generation`",
         "`src/orchestrators/report_analysis_orchestrator.py::run_report_analysis`",
-        "`resume_from_stage` supports `source_prepared`, `selection_complete`, `analysis_complete`, `render_complete`, and `latest_safe`",
+        (
+            "`resume_from_stage` supports `source_prepared`, `selection_complete`, "
+            "`analysis_complete`, `render_complete`, and `latest_safe`"
+        ),
     ]
 
     for fragment in expected_fragments:

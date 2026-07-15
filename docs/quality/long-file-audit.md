@@ -1,6 +1,10 @@
 # Long-File Audit and Refactor Targets
 
-Generated: 2026-06-13
+> **Documentation type:** Historical audit record
+> **Canonical topic:** Long-file audit history
+> **Update trigger:** Replace this snapshot only after a new documented audit review.
+
+Generated: 2026-06-13. The counts below are historical; run the documented scan command for current inventory.
 
 ## Purpose
 
@@ -231,7 +235,7 @@ All future long-file remediation must satisfy these controls:
 5. Preserve prompt namespaces and prompt-service ownership of prompt rendering.
 6. Add positive and negative behavior tests at public boundaries; do not patch private helpers or primary logic paths.
 7. Measure performance-targeted changes before and after implementation.
-8. Update `README.md` for any landed architecture or behavior change.
+8. Update the canonical documentation for any landed architecture or behavior change.
 
 ## Next Review Trigger
 

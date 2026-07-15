@@ -1,5 +1,9 @@
 # Top Failure Runbooks
 
+> **Documentation type:** Operational procedure
+> **Canonical topic:** Typed failure runbooks
+> **Update trigger:** Failure code, drill, alert label, or remediation command changes.
+
 Last drill date: 2026-04-25
 Owner: operations
 
