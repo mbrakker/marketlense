@@ -42,19 +42,13 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P6 | Editorial report cards, exhibits, visual ranking, and premium copy | Public editorial presentation outcome. |
 | Active | P7 | Hosted latency and public performance | Measured public-performance outcome. |
 | Active | P8 | Readable evidence spans, methodology/source-quality trust, and deterministic related content | Public evidence/discovery outcome. |
-| Active | P9 | Insight-quality benchmark and `so_what` / `now_what` remediation | Advisory quality/remediation outcome. |
 | Active | E1 | Claim-embedding freshness, retention, and cost controls | Embedding operations outcome. |
-| Active | E2 | Semantic-preselection quality/cost benchmark | Evidence-selection measurement outcome. |
-| Active | E3 | Lineage-driven selective regeneration and cost reporting | Compatibility-aware reuse outcome. |
+| Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
-| Active | E5 | Crop QA sidecars, rendered visual metrics, profiles, and HTML visual smoke | Visual-evidence quality outcome. |
 | Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome. |
 | Active | R2 | Role-mixing, import-graph, facade, direct-I/O, mutation-selection, and hygiene enforcement | Architecture enforcement outcome. |
 | Active | R3 | Service-quality coverage recovery | Retained-baseline outcome. |
-| Active | R4 | Projection-lag status in budget/release decisions | Canonical-accounting outcome. |
 | Closed | R5 | Hash-verified dependency lock artifacts | Native Ubuntu CPython 3.12 wheelhouse and offline hash-locked install are verified. |
-| Active | S1 | Canonical external-service boundaries | Service-entrypoint simplification outcome. |
-| Active | S2 | Publish/ingest and other control-plane hotspot decomposition | Movement-only orchestration outcome. |
 | Active | S3 | PDF facade, rendering cache, and visual-heuristics simplification | Canonical PDF-boundary outcome. |
 | Active | S4 | Semantic WordPress shortcode ownership | WordPress boundary outcome. |
 | Deferred | D1 | Full report-generation DAG scheduler | Revisit when profiling shows material idle dependency time beyond simple parallelism. |
@@ -82,6 +76,12 @@ All work is listed below in one register. `Active` items have detailed completio
 
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
 - **R5 (2026-07-15):** The canonical lock records SHA-256 hashes for all 177 active Ubuntu CPython 3.12 artifacts, including `numpy==2.4.2` from its official manylinux wheel. CI installs with `--require-hashes`; a native official-PyPI wheelhouse passed an offline clean install, while a tampered NumPy hash failed before package installation.
+- **R4 (2026-07-15):** Publication reads canonical SQLite usage plus projection status; normal bounded lag is accounted, while missing, invalid, or material lag stops the final public write without triggering a rebuild.
+- **E5 (2026-07-15):** Retained crop-QA sidecars now form operator-only scorecards and selection telemetry, including deterministic quality/clipping/storage comparisons with no public diagnostic rendering.
+- **E3 (2026-07-15):** Report selective regeneration now fails closed on absent lineage and logs stage fan-out, reuse, avoided work, and defensible avoided-cost status.
+- **E2 (2026-07-15):** The retained-artifact benchmark reports Briefing and Signal prompt/token deltas, overlap, source/citation coverage, and explicitly records the deterministic fallback when no retained embedding export exists.
+- **P9 (2026-07-15):** The retained public-advisory benchmark now compares a saved baseline and emits typed per-insight source-grounded repair proposals or explicit abstentions without altering public rendering.
+- **S1/S2 (2026-07-15):** Canonical service-boundary and publish/ingest facade audits remain CI-enforced; focused decomposition regression coverage preserves the existing routing, retries, state transitions, and external-effect contracts.
 - **P1 (2026-07-14):** `build_publish_readiness_snapshot` is the canonical UI/ops boundary, with the old queue-named callable retained only as a compatibility alias. Publish remains synchronous, idempotent, and review-gated; focused tests and the full suite pass.
 - **Public WordPress safe-error boundary (2026-07-14):** Public shortcode rendering now returns a branded correlated HTTP 500 section on forced report, publisher, archive, or generic shortcode exceptions, while the private structured event retains exception details. The real local Studio route `/publisher/not-extracted/` changed from an incorrect 200 report archive to the branded 404; homepage, reports, and publisher directory remained HTTP 200 with no public diagnostic signatures.
 
@@ -271,19 +271,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Methodology shows scope, source pages, material limitations, and evidence state.
 - Report pages start with deterministic related report, briefing, topic, and publisher links; tests prove redaction and fail-closed behavior when approved data is absent.
 
-#### P9. Close public-advisory quality gaps from retained evidence
-
-- **Title:** Close public-advisory quality gaps from retained evidence
-- **Impact 4 / effort: 3**
-- **Context:** The retained advisory benchmark measures claim support and basic advisory coverage, while older retained artifacts still have missing `so_what` / `now_what`, weak role diversity, or uncalibrated scores.
-- **Benefit:** Measured gaps become targeted, source-supported repairs instead of broad regeneration or cosmetic metadata.
-- **Risks to avoid:** Do not turn benchmark prose into brittle fixtures or populate unsupported advisory fields.
-- **Success criteria:**
-
-- Read-only benchmark measures role diversity, duplicate overlap, report lens, score calibration, evidence linkage, and advisory coverage against a saved baseline.
-- Missing fields create typed targets; regeneration fills them only with source support and records abstention otherwise.
-- Tests cover metrics, narrow-report fallback, grounded repair, abstention, unchanged rendering when evidence is insufficient, and baseline-stable output.
-
 ### 3. Evidence Quality and Reuse
 
 #### E1. Operate claim embeddings with freshness, retention, and cost visibility
@@ -299,44 +286,12 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Retention/pruning policy is documented and tested.
 - Unchanged rows are skipped with cost-avoidance telemetry; failures retain retry visibility; tests cover reporting, pruning, retries, and skip accounting.
 
-#### E2. Benchmark semantic evidence preselection
+#### E6. Retain a hash-pinned claim-embedding benchmark export
 
-- **Title:** Benchmark semantic evidence preselection
-- **Impact 4 / effort: 3**
-- **Context:** Briefing and Signal can use persisted claim embeddings for bounded semantic selection, but the cap and ranking policy have no retained-corpus measurement against lexical/category fallback.
-- **Benefit:** Prompt-size reductions become measurable without silently reducing citation recall, source-report coverage, or useful evidence diversity.
-- **Risks to avoid:** Use stable retained corpora and deterministic ordering; do not synthesize fixtures to prove quality.
-- **Success criteria:**
-
-- Read-only benchmark reports prompt/token deltas, evidence overlap, source coverage, and citation coverage for Briefing and Signal.
-- Coverage loss beyond a documented threshold warns or fails.
-- Results and fallback ordering are deterministic and tested against stale/no-embedding cases as well as populated embeddings.
-
-#### E3. Use artifact lineage for selective regeneration
-
-- **Title:** Use artifact lineage for selective regeneration
-- **Impact 5 / effort: 3**
-- **Context:** Artifact lineage already persists checkpoint artifacts, dependencies, compatibility metadata, and invalidation state, but workflows do not use it to calculate the smallest valid regeneration plan.
-- **Benefit:** Lineage reduces LLM/PDF/render cost and latency while preserving explainable source-to-publication traceability.
-- **Risks to avoid:** Never reuse invalidated or incompletely provenanced artifacts; missing lineage must fail closed.
-- **Success criteria:**
-
-- Typed planning maps source, prompt, template, crop, and validator changes to the smallest required checkpoint stage.
-- Report and cross-report workflows consult valid lineage before model, PDF, crop, render, and publication work.
-- Regression tests prove render-only reuse and prohibit reuse after source invalidation; quality output reports fan-out, reuse, avoided work, and missing-lineage failures.
-
-#### E5. Promote crop-QA sidecars to scorecards and selection telemetry
-
-- **Title:** Promote crop-QA sidecars to scorecards and selection telemetry
-- **Impact 5 / effort: 3**
-- **Context:** Final crop QA emits DPI, scores, defects, and detector diagnostics, but release evidence and selection summaries still rely mainly on candidate signatures and manual visual review.
-- **Benefit:** Crop regressions become measurable by report, candidate type, and profile rather than discovered only manually after publication work.
-- **Risks to avoid:** Keep unproven metrics diagnostic and never render raw QA diagnostics publicly.
-- **Success criteria:**
-
-- Scorecards aggregate accepted/rejected counts, quality, defects, detector confidence, DPI, and artifact-size deltas from `.qa.json` sidecars.
-- Selection telemetry retains the chosen profile, QA sidecar, total score, defects, and detector summary.
-- Existing-artifact benchmarks flag quality/clipping/storage/runtime regressions; tests cover aggregation, missing evidence, public redaction, stable profile comparison, and no-model default behavior.
+- **Impact 4 / effort: 2**
+- **Context:** The semantic-selection benchmark correctly falls back when a retained corpus has no persisted vectors, so it cannot yet measure real semantic ranking on the fixed corpus.
+- **Benefit:** A bounded, redacted export makes semantic quality and prompt savings reproducible without live embedding calls.
+- **Success criteria:** Persist a hash-pinned, retention-governed benchmark export containing only approved vector IDs/content hashes/vectors; benchmark it in CI and compare semantic coverage against lexical fallback without provider calls.
 
 ### 4. Release Integrity and Architectural Enforcement
 
@@ -379,22 +334,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 - Assertions cover returned contracts or persisted state, not coverage-only paths.
 - The quality baseline is refreshed only by a passing full CI run, records its exact SHA, and demonstrates no reduction in global/generator/orchestrator coverage.
 
-#### R4. Consume canonical LLM projection status in budget and release decisions
-
-- **Title:** Consume canonical LLM projection status in budget and release decisions
-- **Impact 5 / effort: 2**
-- **Context:** `get_projection_status` exposes the checkpoint, latest canonical event, pending count/cost, timestamp, and derived-file validity, but run-budget and release gates do not consume it.
-- **Benefit:** Incremental projection performance no longer makes spend or release decisions undercount actual canonical usage.
-- **Risks to avoid:** Distinguish normal bounded lag from missing/stalled/invalid projections without forcing routine rebuilds.
-
-**Current foundation:** `get_projection_status` already reports checkpoint, pending count/cost, timestamp, and derived-file validity without rebuilding exports.
-
-- **Success criteria:**
-
-- Run-budget and release evidence either account for pending usage or require an explicit fresh projection.
-- Structured outcomes distinguish normal lag, threshold projection, missing/stalled checkpoint, and invalid exports.
-- Tests prove those cases, required log fields, and that ordinary status reads do not rebuild exports.
-
 #### R5. Add hash-verified dependency lock artifacts
 
 - **Title:** Add hash-verified dependency lock artifacts
@@ -411,32 +350,6 @@ The original ten-item screenshot baseline is complete in the committed implement
 ### 5. Boundary Simplification
 
 All work in this lane is movement-only unless behavior change receives explicit approval. Public facades, order, retries, idempotency, logs, and side effects must remain stable.
-
-#### S1. Simplify canonical service entrypoints
-
-- **Title:** Simplify canonical service entrypoints
-- **Impact 4 / effort: 4**
-- **Context:** The repository has already split several oversized boundaries, but top-level service proliferation and internal capability modules can still become competing public entrypoints.
-- **Benefit:** Clear ownership prevents callers from choosing between duplicate paths to the same external system and lowers future navigation cost.
-- **Risks to avoid:** Do not create forwarding wrappers or split modules merely for file-size aesthetics.
-- **Success criteria:**
-
-- Audit identifies top-level service proliferation, duplicate public entrypoints, and ownership gaps.
-- Internal capabilities move behind the existing canonical boundary only where that reduces coupling.
-- Import/contract tests preserve public callers, prevent new competing entrypoints, and document semantic ownership for every retained layer.
-
-#### S2. Reduce control-plane hotspots, including publish orchestration
-
-- **Title:** Reduce control-plane hotspots, including publish orchestration
-- **Impact 5 / effort: 5**
-- **Context:** Publish and ingest coordinators still combine enough state filtering, materialization, worker coordination, term handling, and finalization logic to make control-flow changes high risk.
-- **Benefit:** High-risk control-plane behavior gains clearer ownership without forcing callers through a public behavior migration.
-- **Risks to avoid:** This is movement-only unless explicitly approved otherwise; preserve ordering, retries, idempotency, logs, and side effects.
-- **Success criteria:**
-
-- Review separates routing/retry/state control from generator domain decisions and service I/O.
-- `publish_orchestrator.py` and `ingest_orchestrator.py` remain canonical facades; any extraction has explicit semantic ownership.
-- Focused movement evidence preserves imports, retry counts, cursors, state transitions, logs, external effects, and existing test expectations.
 
 #### S3. Simplify the PDF visual-heuristics boundary
 

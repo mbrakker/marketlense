@@ -171,9 +171,7 @@ def _accepted_crop_path_by_id(
         }
     return {
         item.id: str(path or "").strip()
-        for item, path in zip(
-            items, getattr(crop_response, "paths", []), strict=False
-        )
+        for item, path in zip(items, getattr(crop_response, "paths", []), strict=False)
         if str(path or "").strip()
     }
 
@@ -187,6 +185,9 @@ def _crop_metadata_by_id(crop_response: object) -> dict[str, dict[str, Any]]:
         metadata[candidate_id] = {
             "crop_qa_score": float(_outcome_value(outcome, "score", 0.0) or 0.0),
             "crop_qa_defects": [str(item) for item in defects],
+            "crop_qa_detector_summary": dict(
+                _outcome_value(outcome, "detector_summary", {}) or {}
+            ),
             "crop_qa_accepted": bool(_outcome_value(outcome, "accepted", False)),
             "crop_qa_sidecar_path": str(
                 _outcome_value(outcome, "qa_sidecar_path", "") or ""
@@ -536,6 +537,9 @@ def _asset_from_candidate(
         caption_source=caption_source,
         crop_qa_score=float((crop_metadata or {}).get("crop_qa_score") or 0.0),
         crop_qa_defects=list((crop_metadata or {}).get("crop_qa_defects") or []),
+        crop_qa_detector_summary=dict(
+            (crop_metadata or {}).get("crop_qa_detector_summary") or {}
+        ),
         crop_qa_accepted=bool((crop_metadata or {}).get("crop_qa_accepted") or False),
         crop_qa_sidecar_path=str(
             (crop_metadata or {}).get("crop_qa_sidecar_path") or ""

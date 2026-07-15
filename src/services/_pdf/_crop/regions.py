@@ -752,6 +752,18 @@ def _crop_outcome(
         for label in (raw_defects if isinstance(raw_defects, list) else [])
         if str(label)
     ]
+    raw_detectors = qa.get("detectors")
+    detector_summary = (
+        {
+            str(name): float(value.get("confidence"))
+            for name, value in raw_detectors.items()
+            if isinstance(name, str)
+            and isinstance(value, dict)
+            and isinstance(value.get("confidence"), (int, float))
+        }
+        if isinstance(raw_detectors, dict)
+        else {}
+    )
     return CropOutcome(
         schema_version="1.0",
         candidate_id=str(item.id or ""),
@@ -760,6 +772,7 @@ def _crop_outcome(
         qa_sidecar_path=str(qa_sidecar_path or ""),
         score=score,
         defects=defects,
+        detector_summary=detector_summary,
         quality_profile=str(quality_profile or ""),
         rejection_reason=str(rejection_reason or ""),
     )

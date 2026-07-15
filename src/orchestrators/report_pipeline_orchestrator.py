@@ -167,7 +167,7 @@ def run_report_pipeline(
     if lineage_change_kind:
         lineage_plan = plan_lineage_regeneration(
             change_kind=lineage_change_kind,
-            lineage_available=True,
+            lineage_available=lineage_available,
         )
         lineage_quality = build_lineage_regeneration_quality_report(lineage_plan)
     effective_resume_from_stage = (

@@ -27,6 +27,7 @@ logger = logging.getLogger("market_lense.process_service")
 
 _MANAGED_PROCESSES: dict[int, subprocess.Popen[bytes]] = {}
 _MANAGED_PROCESSES_LOCK = threading.Lock()
+_TERMINATED_MANAGED_PIDS: set[int] = set()
 
 
 def _is_windows() -> bool:
@@ -55,9 +56,7 @@ def _poll_posix_process_running(pid: int) -> bool:
     except OSError:
         return True
     stat_suffix = stat_text.rsplit(")", 1)[-1].strip()
-    if stat_suffix.startswith("Z"):
-        return False
-    return True
+    return not stat_suffix.startswith("Z")
 
 
 def launch_process(
@@ -150,6 +149,7 @@ def launch_process(
     )
     with _MANAGED_PROCESSES_LOCK:
         _MANAGED_PROCESSES[response.pid] = process
+        _TERMINATED_MANAGED_PIDS.discard(response.pid)
     logger.info(
         log_event(
             ctx,
@@ -183,11 +183,16 @@ def poll_process(request: ProcessPollRequest, ctx: RunContext) -> ProcessPollRes
     try:
         with _MANAGED_PROCESSES_LOCK:
             process = _MANAGED_PROCESSES.get(pid)
+            terminated_managed_process = pid in _TERMINATED_MANAGED_PIDS
         if process is not None:
             running = process.poll() is None
             if not running:
                 with _MANAGED_PROCESSES_LOCK:
                     _MANAGED_PROCESSES.pop(pid, None)
+        elif terminated_managed_process:
+            # A later OS process can reuse a PID.  This poll concerns the
+            # managed child that was already terminated, never that newcomer.
+            running = False
         elif _is_windows():
             result = subprocess.run(
                 ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
@@ -241,6 +246,7 @@ def terminate_process(
             finally:
                 with _MANAGED_PROCESSES_LOCK:
                     _MANAGED_PROCESSES.pop(pid, None)
+                    _TERMINATED_MANAGED_PIDS.add(pid)
         elif _is_windows():
             result = subprocess.run(
                 ["taskkill", "/PID", str(pid), "/T", "/F"],
@@ -275,7 +281,9 @@ def terminate_process(
             if not callable(getpgid) or not callable(killpg):
                 raise AppError(
                     code="process_terminate_unsupported_platform",
-                    message="Process-group termination is not supported on this platform",
+                    message=(
+                        "Process-group termination is not supported on this platform"
+                    ),
                     retryable=False,
                     context={"pid": pid},
                 )

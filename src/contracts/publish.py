@@ -60,15 +60,39 @@ class PublishSettings:
     )
     run_budget_enabled: bool = field(
         default=False,
-        metadata={"doc": "Whether final WordPress publication writes use the canonical run budget."},
+        metadata={
+            "doc": "Whether final WordPress publication writes use the canonical run budget."
+        },
     )
     usage_db_path: str = field(
         default="",
-        metadata={"doc": "Canonical SQLite usage-ledger path for publication budgeting."},
+        metadata={
+            "doc": "Canonical SQLite usage-ledger path for publication budgeting."
+        },
+    )
+    projection_ledger_path: str = field(
+        default="",
+        metadata={
+            "doc": "Derived usage JSONL checked for publication release evidence."
+        },
+    )
+    projection_daily_path: str = field(
+        default="",
+        metadata={
+            "doc": "Derived daily usage rollup checked for publication release evidence."
+        },
+    )
+    projection_pending_event_threshold: int = field(
+        default=50,
+        metadata={
+            "doc": "Pending canonical events allowed as accounted normal projection lag."
+        },
     )
     run_budget_max_wordpress_writes: int | None = field(
         default=None,
-        metadata={"doc": "Maximum final WordPress publication writes per governed scope."},
+        metadata={
+            "doc": "Maximum final WordPress publication writes per governed scope."
+        },
     )
     run_budget_limit_decision: str = field(
         default="stop",
@@ -189,11 +213,15 @@ class PublishRequest:
     )
     run_budget: RunBudget | None = field(
         default=None,
-        metadata={"doc": "Canonical budget evaluated before final WordPress publication writes."},
+        metadata={
+            "doc": "Canonical budget evaluated before final WordPress publication writes."
+        },
     )
     run_budget_usage: RunBudgetUsage | None = field(
         default=None,
-        metadata={"doc": "Observed canonical usage supplied to final WordPress publication writes."},
+        metadata={
+            "doc": "Observed canonical usage supplied to final WordPress publication writes."
+        },
     )
 
 

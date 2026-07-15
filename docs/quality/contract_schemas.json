@@ -23373,6 +23373,15 @@
         "output_dir": {
           "type": "string"
         },
+        "projection_daily_path": {
+          "type": "string"
+        },
+        "projection_ledger_path": {
+          "type": "string"
+        },
+        "projection_pending_event_threshold": {
+          "type": "integer"
+        },
         "reports_db": {
           "type": "string"
         },
@@ -24126,6 +24135,12 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "detector_summary": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
         },
         "path": {
           "type": "string"
@@ -26193,6 +26208,12 @@
           },
           "type": "array"
         },
+        "crop_qa_detector_summary": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
         "crop_qa_score": {
           "type": "number"
         },
@@ -26641,6 +26662,15 @@
             }
           ]
         },
+        "projection_daily_path": {
+          "type": "string"
+        },
+        "projection_ledger_path": {
+          "type": "string"
+        },
+        "projection_pending_event_threshold": {
+          "type": "integer"
+        },
         "publisher_name": {
           "type": "string"
         },
@@ -26826,6 +26856,15 @@
           "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
         },
         "event_count": {
+          "type": "integer"
+        },
+        "projection_outcome": {
+          "type": "string"
+        },
+        "projection_pending_estimated_cost_usd": {
+          "type": "number"
+        },
+        "projection_pending_event_count": {
           "type": "integer"
         },
         "publisher_usage": {

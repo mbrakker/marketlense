@@ -177,6 +177,7 @@ publish:
   run_budget:
     enabled: true
     max_wordpress_writes: 30
+    projection_pending_event_threshold: 50
     limit_decision: "stop"
 
 browser_download:
@@ -330,6 +331,7 @@ cross_report_analysis:
     contradiction: 0.5
 
 cost:
+  ledger_path: "./out/cost-ledger.jsonl"
   daily_path: "./out/cost-daily.json"
   usage_db_path: "./state/llm_usage.sqlite"
   daily_spend_warn_usd: 3.0

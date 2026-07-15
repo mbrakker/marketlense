@@ -269,9 +269,7 @@ class CropResponse:
 class CropOutcome:
     schema_version: str = field(metadata={"doc": "Crop outcome schema version."})
     candidate_id: str = field(metadata={"doc": "Candidate identifier."})
-    path: str = field(
-        default="", metadata={"doc": "Relative crop path when accepted."}
-    )
+    path: str = field(default="", metadata={"doc": "Relative crop path when accepted."})
     accepted: bool = field(
         default=False, metadata={"doc": "Whether the crop is accepted for use."}
     )
@@ -283,6 +281,12 @@ class CropOutcome:
     )
     defects: List[str] = field(
         default_factory=list, metadata={"doc": "Final crop QA defect labels."}
+    )
+    detector_summary: dict[str, float] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Maximum detector confidence by detector for selection telemetry."
+        },
     )
     quality_profile: str = field(
         default="", metadata={"doc": "Crop quality profile or request mode."}

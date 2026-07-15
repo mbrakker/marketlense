@@ -762,7 +762,9 @@ def test_run_report_pipeline_passes_explicit_report_client_bundle() -> None:
     assert captured["resume_from_stage"] == "selection_complete"
 
 
-def test_run_report_pipeline_auto_resume_uses_latest_safe_when_stage_not_explicit() -> None:
+def test_run_report_pipeline_auto_resume_uses_latest_safe_when_stage_not_explicit() -> (
+    None
+):
     file = DriveFile(
         schema_version="1.0",
         file_id="f1",

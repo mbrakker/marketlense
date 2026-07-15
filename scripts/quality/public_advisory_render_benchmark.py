@@ -12,17 +12,15 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.contracts.report_assets import RenderRequest
-from src.contracts.run_context import RunContext
-from src.services.render_service import render_report
+from src.contracts.report_assets import RenderRequest  # noqa: E402
+from src.contracts.run_context import RunContext  # noqa: E402
+from src.services.render_service import render_report  # noqa: E402
 
 _INTERNAL_ID_PATTERN = re.compile(
     r"\b(?:canonical_claim_id|report:[a-z0-9_.:-]+|[a-z]+-internal-\d+)\b",
     re.IGNORECASE,
 )
-_PLACEHOLDER_PATTERN = re.compile(
-    r"\{\{[^{}]+\}\}|\[\[[^\[\]]+\]\]|\b(?:TODO|FIXME)\b"
-)
+_PLACEHOLDER_PATTERN = re.compile(r"\{\{[^{}]+\}\}|\[\[[^\[\]]+\]\]|\b(?:TODO|FIXME)\b")
 _RAW_FRAGMENT_PATTERN = re.compile(
     r"\ufffd|(?:&lt;|&gt;){2,}|[\x00-\x08\x0b\x0c\x0e-\x1f]"
 )
@@ -50,12 +48,24 @@ class PublicAdvisoryRenderBenchmarkRow:
     )
     so_what_coverage: float = field(metadata={"doc": "Per-row so_what coverage."})
     now_what_coverage: float = field(metadata={"doc": "Per-row now_what coverage."})
-    insight_count: int = field(metadata={"doc": "Number of retained public insights inspected."})
-    coverage_role_count: int = field(metadata={"doc": "Distinct non-empty retained insight coverage roles."})
-    duplicate_insight_count: int = field(metadata={"doc": "Exact normalized duplicate insight texts."})
-    report_lens_available: bool = field(metadata={"doc": "Whether a retained report lens is available."})
-    score_calibration_coverage: float = field(metadata={"doc": "Share of insights with a numeric score in the unit interval."})
-    evidence_linkage_coverage: float = field(metadata={"doc": "Share of insights carrying a retained evidence identifier."})
+    insight_count: int = field(
+        metadata={"doc": "Number of retained public insights inspected."}
+    )
+    coverage_role_count: int = field(
+        metadata={"doc": "Distinct non-empty retained insight coverage roles."}
+    )
+    duplicate_insight_count: int = field(
+        metadata={"doc": "Exact normalized duplicate insight texts."}
+    )
+    report_lens_available: bool = field(
+        metadata={"doc": "Whether a retained report lens is available."}
+    )
+    score_calibration_coverage: float = field(
+        metadata={"doc": "Share of insights with a numeric score in the unit interval."}
+    )
+    evidence_linkage_coverage: float = field(
+        metadata={"doc": "Share of insights carrying a retained evidence identifier."}
+    )
     public_label_count: int = field(
         metadata={"doc": "Count of public support/confidence labels."}
     )
@@ -78,7 +88,10 @@ class PublicAdvisoryRenderBenchmarkRow:
     )
     advisory_remediation_targets: list[dict[str, str]] = field(
         metadata={
-            "doc": "Non-blocking, source-grounded advisory repair targets for retained artifacts."
+            "doc": (
+                "Non-blocking, source-grounded advisory repair targets for "
+                "retained artifacts."
+            )
         }
     )
 
@@ -93,29 +106,43 @@ class PublicAdvisoryRenderBenchmarkReport:
     internal_id_leak_count: int = field(
         metadata={"doc": "Total rendered internal ID leaks."}
     )
-    placeholder_count: int = field(
-        metadata={"doc": "Total unresolved public template placeholders."}
-    )
-    raw_fragment_count: int = field(
-        metadata={"doc": "Total malformed raw extraction fragments."}
-    )
-    broken_asset_count: int = field(
-        metadata={"doc": "Total missing locally referenced rendered image assets."}
-    )
-    screenshot_paths: tuple[str, ...] = field(
-        metadata={"doc": "Optional Playwright screenshot paths retained for the run."}
-    )
-    rows: list[PublicAdvisoryRenderBenchmarkRow] = field(
-        metadata={"doc": "Per-report benchmark rows."}
-    )
+    placeholder_count: int = field(metadata={"doc": "Total unresolved placeholders."})
+    raw_fragment_count: int = field(metadata={"doc": "Total malformed fragments."})
+    broken_asset_count: int = field(metadata={"doc": "Total missing local assets."})
+    screenshot_paths: tuple[str, ...] = field(metadata={"doc": "Retained screenshots."})
+    rows: list[PublicAdvisoryRenderBenchmarkRow] = field(metadata={"doc": "Rows."})
     remediation_targets: list[dict[str, str]] = field(
-        metadata={"doc": "Flattened remediation targets for failed fields."}
+        metadata={"doc": "Render repairs."}
     )
     advisory_remediation_targets: list[dict[str, str]] = field(
-        metadata={
-            "doc": "Flattened advisory repair targets; these remain non-blocking until grounded regeneration supplies evidence."
-        }
+        metadata={"doc": "Advisory repairs."}
     )
+
+
+@dataclass(frozen=True)
+class PublicAdvisoryRepairTarget:
+    """A selective, evidence-constrained public-advisory repair proposal."""
+
+    schema_version: str
+    report_id: str
+    insight_id: str
+    field: str
+    status: str
+    evidence_id: str
+    replacement: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class PublicAdvisoryBaselineComparison:
+    """Stable retained-benchmark delta, with public-quality loss made explicit."""
+
+    schema_version: str
+    advisory_coverage_delta: float
+    so_what_coverage_delta: float
+    now_what_coverage_delta: float
+    duplicate_insight_delta: int
+    failures: tuple[str, ...]
 
 
 def build_public_advisory_render_benchmark(
@@ -323,10 +350,12 @@ def _benchmark_row(
     evidence_linked = sum(
         1 for item in insight_rows if str(item.get("evidence_id") or "").strip()
     )
-    if insight_rows and not so_what_available:
-        advisory_targets.append(_advisory_target(report_id, "so_what"))
-    if insight_rows and not now_what_available:
-        advisory_targets.append(_advisory_target(report_id, "now_what"))
+    advisory_targets.extend(
+        asdict(target)
+        for target in build_public_advisory_repair_targets(
+            report_id=report_id, insights=insight_rows
+        )
+    )
     if insight_rows and not coverage_roles:
         advisory_targets.append(_advisory_target(report_id, "coverage_role"))
     if insight_rows and not report_lens_available:
@@ -360,6 +389,36 @@ def _benchmark_row(
         broken_asset_count=len(broken_assets),
         remediation_targets=targets,
         advisory_remediation_targets=advisory_targets,
+    )
+
+
+def compare_public_advisory_benchmark(
+    baseline: PublicAdvisoryRenderBenchmarkReport,
+    current: PublicAdvisoryRenderBenchmarkReport,
+) -> PublicAdvisoryBaselineComparison:
+    """Fail only objective public-advisory coverage regressions."""
+    advisory_delta = round(current.advisory_coverage - baseline.advisory_coverage, 6)
+    so_what_delta = round(current.so_what_coverage - baseline.so_what_coverage, 6)
+    now_what_delta = round(current.now_what_coverage - baseline.now_what_coverage, 6)
+    duplicate_delta = sum(row.duplicate_insight_count for row in current.rows) - sum(
+        row.duplicate_insight_count for row in baseline.rows
+    )
+    failures = tuple(
+        name
+        for name, delta in (
+            ("advisory_coverage_regressed", advisory_delta),
+            ("so_what_coverage_regressed", so_what_delta),
+            ("now_what_coverage_regressed", now_what_delta),
+        )
+        if delta < 0
+    )
+    return PublicAdvisoryBaselineComparison(
+        schema_version="1.0",
+        advisory_coverage_delta=advisory_delta,
+        so_what_coverage_delta=so_what_delta,
+        now_what_coverage_delta=now_what_delta,
+        duplicate_insight_delta=duplicate_delta,
+        failures=failures,
     )
 
 
@@ -397,14 +456,60 @@ def _share(numerator: int, denominator: int) -> float:
     return round(numerator / denominator, 6) if denominator else 0.0
 
 
+def build_public_advisory_repair_targets(
+    *, report_id: str, insights: list[dict[str, Any]]
+) -> tuple[PublicAdvisoryRepairTarget, ...]:
+    """Propose source-grounded field repairs, or explicitly abstain.
+
+    This deliberately does not mutate retained artifacts or public HTML.  It
+    gives the selective-regeneration workflow an auditable, per-insight target
+    whose wording is only a transformation of retained source evidence.
+    """
+    targets: list[PublicAdvisoryRepairTarget] = []
+    for index, insight in enumerate(insights):
+        insight_id = str(insight.get("id") or f"insight-{index + 1}").strip()
+        evidence_id = str(insight.get("evidence_id") or "").strip()
+        source_text = str(insight.get("evidence") or insight.get("text") or "").strip()
+        for target_field in ("so_what", "now_what"):
+            if str(insight.get(target_field) or "").strip():
+                continue
+            if evidence_id and source_text:
+                replacement = (
+                    f"Decision relevance: {source_text}"
+                    if target_field == "so_what"
+                    else (
+                        "Review this source-backed finding before committing "
+                        "the related decision."
+                    )
+                )
+                status = "repair_ready"
+                reason = "retained_evidence_available"
+            else:
+                replacement = ""
+                status = "abstained"
+                reason = "retained_evidence_insufficient"
+            targets.append(
+                PublicAdvisoryRepairTarget(
+                    schema_version="1.0",
+                    report_id=report_id,
+                    insight_id=insight_id,
+                    field=target_field,
+                    status=status,
+                    evidence_id=evidence_id,
+                    replacement=replacement,
+                    reason=reason,
+                )
+            )
+    return tuple(targets)
+
+
 def _advisory_target(report_id: str, field: str) -> dict[str, str]:
     return {
         "report_id": report_id,
         "field": field,
         "rule": "public_advisory.source_grounded_repair_required",
         "remediation": (
-            "Regenerate only this advisory field from retained source evidence; "
-            "record an abstention when evidence is insufficient."
+            "Regenerate only this advisory field from retained source evidence."
         ),
     }
 
@@ -419,6 +524,7 @@ def main() -> int:
     )
     parser.add_argument("--screenshot", action="append", default=[])
     parser.add_argument("--json-output", default="")
+    parser.add_argument("--baseline-json", default="")
     args = parser.parse_args()
     report = build_public_advisory_render_benchmark(
         artifact_paths=list(args.artifacts),
@@ -426,13 +532,33 @@ def main() -> int:
         screenshot_paths=tuple(args.screenshot),
     )
     payload = asdict(report)
+    comparison: PublicAdvisoryBaselineComparison | None = None
+    if args.baseline_json:
+        baseline_payload = json.loads(
+            Path(args.baseline_json).read_text(encoding="utf-8")
+        )
+        baseline_payload.pop("comparison", None)
+        baseline = PublicAdvisoryRenderBenchmarkReport(
+            **{
+                **baseline_payload,
+                "screenshot_paths": tuple(baseline_payload.get("screenshot_paths", [])),
+                "rows": [
+                    PublicAdvisoryRenderBenchmarkRow(**row)
+                    for row in baseline_payload.get("rows", [])
+                ],
+            }
+        )
+        comparison = compare_public_advisory_benchmark(baseline, report)
+        payload["comparison"] = asdict(comparison)
     text = json.dumps(payload, ensure_ascii=True, sort_keys=True, indent=2)
     if args.json_output:
         Path(args.json_output).parent.mkdir(parents=True, exist_ok=True)
         Path(args.json_output).write_text(text + "\n", encoding="utf-8")
     else:
         print(text)
-    return 1 if report.remediation_targets else 0
+    return (
+        1 if report.remediation_targets or (comparison and comparison.failures) else 0
+    )
 
 
 if __name__ == "__main__":

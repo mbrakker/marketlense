@@ -58,7 +58,7 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.llm_usage_ledger_service")
 _LOCK = threading.Lock()
 _MEDIAN_REBUILD_EXECUTOR = ThreadPoolExecutor(
-    max_workers=1, thread_name_prefix="llm_usage_median_rebuild"
+    max_workers=4, thread_name_prefix="llm_usage_median_rebuild"
 )
 _PENDING_MEDIAN_REBUILD_PATHS: set[str] = set()
 _PENDING_MEDIAN_REBUILD_LOCK = threading.Lock()
@@ -458,7 +458,12 @@ def _usage_from_row(row: sqlite3.Row | tuple[object, ...] | None) -> RunBudgetUs
 
 
 def _read_budget_usage_for_scope(
-    conn: sqlite3.Connection, *, llm_where: str, llm_params: tuple[object, ...], event_where: str, event_params: tuple[object, ...]
+    conn: sqlite3.Connection,
+    *,
+    llm_where: str,
+    llm_params: tuple[object, ...],
+    event_where: str,
+    event_params: tuple[object, ...],
 ) -> RunBudgetUsage:
     llm = conn.execute(
         f"""
@@ -484,13 +489,37 @@ def _read_budget_usage_for_scope(
 
 def _merge_budget_usage(*usages: RunBudgetUsage) -> RunBudgetUsage:
     fields = (
-        "spend_usd", "tokens", "runtime_seconds", "retries", "browser_launches",
-        "drive_writes", "wordpress_writes", "pdfs",
+        "spend_usd",
+        "tokens",
+        "runtime_seconds",
+        "retries",
+        "browser_launches",
+        "drive_writes",
+        "wordpress_writes",
+        "pdfs",
     )
     return RunBudgetUsage(
         schema_version="1.0",
         **{field: max(getattr(usage, field) for usage in usages) for field in fields},
     )
+
+
+def _budget_projection_outcome(
+    budget: RunBudget,
+    status: LLMUsageProjectionStatusResponse | None,
+) -> str:
+    """Classify projection freshness without rebuilding derived compatibility files."""
+    if status is None:
+        return "not_configured"
+    if not status.files_valid:
+        return "derived_files_invalid"
+    if status.latest_event_id and not status.projected_event_id:
+        return "checkpoint_missing"
+    if not status.pending_event_count:
+        return "current"
+    if status.pending_event_count <= max(0, budget.projection_pending_event_threshold):
+        return "bounded_lag_accounted"
+    return "fresh_projection_recommended"
 
 
 def read_run_budget_usage(
@@ -503,24 +532,116 @@ def read_run_budget_usage(
     twice while ensuring no scope can be silently ignored.
     """
     if request.schema_version != "1.0":
-        raise AppError(code="run_budget_usage_read_schema_version_invalid", message="Run-budget usage-read schema version is unsupported", retryable=False)
+        raise AppError(
+            code="run_budget_usage_read_schema_version_invalid",
+            message="Run-budget usage-read schema version is unsupported",
+            retryable=False,
+        )
     _validate_run_budget(request.budget)
     budget = request.budget
     day_utc = _budget_day_utc(budget)
     path = Path(budget.usage_db_path)
-    logger.info(log_event(ctx, role="service", event="run_budget_usage_read_start", module=logger.name, fields={"db_path": str(path), "run_id": budget.run_id, "day_utc": day_utc, "publisher_name": budget.publisher_name}))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="run_budget_usage_read_start",
+            module=logger.name,
+            fields={
+                "db_path": str(path),
+                "run_id": budget.run_id,
+                "day_utc": day_utc,
+                "publisher_name": budget.publisher_name,
+            },
+        )
+    )
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with _LOCK, sqlite3.connect(path) as conn:
             _ensure_schema(conn)
-            run_usage = _read_budget_usage_for_scope(conn, llm_where="run_id = ?", llm_params=(budget.run_id,), event_where="run_id = ?", event_params=(budget.run_id,))
-            day_usage = _read_budget_usage_for_scope(conn, llm_where="substr(timestamp_utc, 1, 10) = ?", llm_params=(day_utc,), event_where="day_utc = ?", event_params=(day_utc,))
-            publisher_usage = _read_budget_usage_for_scope(conn, llm_where="publisher_name = ? and substr(timestamp_utc, 1, 10) = ?", llm_params=(budget.publisher_name, day_utc), event_where="publisher_name = ? and day_utc = ?", event_params=(budget.publisher_name, day_utc)) if budget.publisher_name else RunBudgetUsage(schema_version="1.0")
-            event_count = int(conn.execute("select count(*) from run_budget_side_effect_events where run_id = ? or day_utc = ? or (publisher_name = ? and day_utc = ?)", (budget.run_id, day_utc, budget.publisher_name, day_utc)).fetchone()[0])
+            run_usage = _read_budget_usage_for_scope(
+                conn,
+                llm_where="run_id = ?",
+                llm_params=(budget.run_id,),
+                event_where="run_id = ?",
+                event_params=(budget.run_id,),
+            )
+            day_usage = _read_budget_usage_for_scope(
+                conn,
+                llm_where="substr(timestamp_utc, 1, 10) = ?",
+                llm_params=(day_utc,),
+                event_where="day_utc = ?",
+                event_params=(day_utc,),
+            )
+            publisher_usage = (
+                _read_budget_usage_for_scope(
+                    conn,
+                    llm_where="publisher_name = ? and substr(timestamp_utc, 1, 10) = ?",
+                    llm_params=(budget.publisher_name, day_utc),
+                    event_where="publisher_name = ? and day_utc = ?",
+                    event_params=(budget.publisher_name, day_utc),
+                )
+                if budget.publisher_name
+                else RunBudgetUsage(schema_version="1.0")
+            )
+            event_count = int(
+                conn.execute(
+                    "select count(*) from run_budget_side_effect_events where run_id = ? or day_utc = ? or (publisher_name = ? and day_utc = ?)",
+                    (budget.run_id, day_utc, budget.publisher_name, day_utc),
+                ).fetchone()[0]
+            )
     except sqlite3.Error as exc:
-        raise AppError(code="run_budget_usage_read_failed", message=f"Could not read canonical budget usage from {path}", cause=exc, retryable=False, context={"db_path": str(path)}) from exc
-    response = RunBudgetUsageReadResponse(schema_version="1.0", usage=_merge_budget_usage(run_usage, day_usage, publisher_usage), run_usage=run_usage, day_usage=day_usage, publisher_usage=publisher_usage, event_count=event_count)
-    logger.info(log_event(ctx, role="service", event="run_budget_usage_read_complete", module=logger.name, fields={"run_id": budget.run_id, "day_utc": day_utc, "publisher_name": budget.publisher_name, "event_count": response.event_count, "usage": response.usage.__dict__}))
+        raise AppError(
+            code="run_budget_usage_read_failed",
+            message=f"Could not read canonical budget usage from {path}",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path)},
+        ) from exc
+    projection_status = None
+    if budget.projection_ledger_path and budget.projection_daily_path:
+        projection_status = get_projection_status(
+            LLMUsageProjectionStatusRequest(
+                schema_version="1.0",
+                db_path=budget.usage_db_path,
+                ledger_path=budget.projection_ledger_path,
+                daily_path=budget.projection_daily_path,
+            ),
+            ctx,
+        )
+    response = RunBudgetUsageReadResponse(
+        schema_version="1.0",
+        usage=_merge_budget_usage(run_usage, day_usage, publisher_usage),
+        run_usage=run_usage,
+        day_usage=day_usage,
+        publisher_usage=publisher_usage,
+        event_count=event_count,
+        projection_outcome=_budget_projection_outcome(budget, projection_status),
+        projection_pending_event_count=(
+            projection_status.pending_event_count if projection_status else 0
+        ),
+        projection_pending_estimated_cost_usd=(
+            projection_status.pending_estimated_cost_usd if projection_status else 0.0
+        ),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="run_budget_usage_read_complete",
+            module=logger.name,
+            fields={
+                "run_id": budget.run_id,
+                "day_utc": day_utc,
+                "publisher_name": budget.publisher_name,
+                "event_count": response.event_count,
+                "usage": response.usage.__dict__,
+                "projection_outcome": response.projection_outcome,
+                "projection_pending_event_count": response.projection_pending_event_count,
+                "projection_pending_estimated_cost_usd": response.projection_pending_estimated_cost_usd,
+            },
+        )
+    )
     return response
 
 
@@ -529,18 +650,54 @@ def append_run_budget_side_effect(
 ) -> RunBudgetEventAppendResponse:
     """Persist a completed external side effect in the canonical LLM ledger."""
     if request.schema_version != "1.0":
-        raise AppError(code="run_budget_event_schema_version_invalid", message="Run-budget event schema version is unsupported", retryable=False)
+        raise AppError(
+            code="run_budget_event_schema_version_invalid",
+            message="Run-budget event schema version is unsupported",
+            retryable=False,
+        )
     _validate_run_budget(request.budget)
     if request.metric not in _RUN_BUDGET_EVENT_METRICS:
-        raise AppError(code="run_budget_event_metric_invalid", message="Run-budget event metric is unsupported", retryable=False, context={"metric": request.metric})
+        raise AppError(
+            code="run_budget_event_metric_invalid",
+            message="Run-budget event metric is unsupported",
+            retryable=False,
+            context={"metric": request.metric},
+        )
     if not str(request.event_key or "").strip() or int(request.quantity) <= 0:
-        raise AppError(code="run_budget_event_invalid", message="Run-budget event requires an idempotency key and positive quantity", retryable=False)
-    if bool(str(request.override_actor or "").strip()) != bool(str(request.override_reason or "").strip()):
-        raise AppError(code="run_budget_override_audit_missing", message="Budget overrides require both actor and reason", retryable=False)
+        raise AppError(
+            code="run_budget_event_invalid",
+            message="Run-budget event requires an idempotency key and positive quantity",
+            retryable=False,
+        )
+    if bool(str(request.override_actor or "").strip()) != bool(
+        str(request.override_reason or "").strip()
+    ):
+        raise AppError(
+            code="run_budget_override_audit_missing",
+            message="Budget overrides require both actor and reason",
+            retryable=False,
+        )
     budget = request.budget
     day_utc = _budget_day_utc(budget)
     path = Path(budget.usage_db_path)
-    logger.info(log_event(ctx, role="service", event="run_budget_side_effect_append_start", module=logger.name, fields={"event_key": request.event_key, "metric": request.metric, "quantity": request.quantity, "run_id": budget.run_id, "day_utc": day_utc, "publisher_name": budget.publisher_name, "decision": request.decision, "override_actor": request.override_actor}))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="run_budget_side_effect_append_start",
+            module=logger.name,
+            fields={
+                "event_key": request.event_key,
+                "metric": request.metric,
+                "quantity": request.quantity,
+                "run_id": budget.run_id,
+                "day_utc": day_utc,
+                "publisher_name": budget.publisher_name,
+                "decision": request.decision,
+                "override_actor": request.override_actor,
+            },
+        )
+    )
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with _LOCK, sqlite3.connect(path) as conn:
@@ -553,13 +710,46 @@ def append_run_budget_side_effect(
                 ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict(event_key) do nothing
                 """,
-                (request.event_key, "1.0", datetime.now(timezone.utc).isoformat(), budget.run_id, budget.publisher_name, day_utc, request.metric, int(request.quantity), request.decision, request.override_actor, request.override_reason),
+                (
+                    request.event_key,
+                    "1.0",
+                    datetime.now(timezone.utc).isoformat(),
+                    budget.run_id,
+                    budget.publisher_name,
+                    day_utc,
+                    request.metric,
+                    int(request.quantity),
+                    request.decision,
+                    request.override_actor,
+                    request.override_reason,
+                ),
             )
             inserted = cursor.rowcount == 1
     except sqlite3.Error as exc:
-        raise AppError(code="run_budget_event_append_failed", message=f"Could not persist canonical budget event to {path}", cause=exc, retryable=False, context={"db_path": str(path), "event_key": request.event_key}) from exc
-    response = RunBudgetEventAppendResponse(schema_version="1.0", event_key=request.event_key, inserted=inserted)
-    logger.info(log_event(ctx, role="service", event="run_budget_side_effect_append_complete", module=logger.name, fields={"event_key": response.event_key, "inserted": response.inserted, "metric": request.metric, "run_id": budget.run_id}))
+        raise AppError(
+            code="run_budget_event_append_failed",
+            message=f"Could not persist canonical budget event to {path}",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path), "event_key": request.event_key},
+        ) from exc
+    response = RunBudgetEventAppendResponse(
+        schema_version="1.0", event_key=request.event_key, inserted=inserted
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="run_budget_side_effect_append_complete",
+            module=logger.name,
+            fields={
+                "event_key": response.event_key,
+                "inserted": response.inserted,
+                "metric": request.metric,
+                "run_id": budget.run_id,
+            },
+        )
+    )
     return response
 
 

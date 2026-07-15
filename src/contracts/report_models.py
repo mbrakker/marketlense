@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 
 @dataclass
@@ -72,6 +72,12 @@ class ReportFigureAsset:
     crop_qa_defects: List[str] = field(
         default_factory=list,
         metadata={"doc": "Final crop QA defect labels for this figure crop."},
+    )
+    crop_qa_detector_summary: Dict[str, float] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Detector confidence summary retained for operator-only selection telemetry."
+        },
     )
     crop_qa_accepted: bool = field(
         default=False,

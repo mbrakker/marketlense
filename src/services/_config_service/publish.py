@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+# ruff: noqa: F403, F405
+
 from src.services._config_service.common import *
+
 
 def _normalize_site_url(site_url: str) -> str:
     return site_url.rstrip("/")
@@ -121,6 +124,12 @@ def load_publish_settings(
     usage_db_path = _resolve_optional_path(
         cost_cfg.get("usage_db_path"), base_path=config_path.parent
     )
+    projection_ledger_path = _resolve_optional_path(
+        cost_cfg.get("ledger_path"), base_path=config_path.parent
+    )
+    projection_daily_path = _resolve_optional_path(
+        cost_cfg.get("daily_path"), base_path=config_path.parent
+    )
 
     if resolver.missing:
         logger.info(
@@ -149,14 +158,20 @@ def load_publish_settings(
         validation_policy=validation_policy,
         run_budget_enabled=_to_bool(run_budget_cfg.get("enabled"), True),
         usage_db_path=usage_db_path,
+        projection_ledger_path=projection_ledger_path,
+        projection_daily_path=projection_daily_path,
+        projection_pending_event_threshold=max(
+            _to_int(run_budget_cfg.get("projection_pending_event_threshold"), 50),
+            0,
+        ),
         run_budget_max_wordpress_writes=(
             max(_to_int(run_budget_cfg.get("max_wordpress_writes"), 0), 1)
             if not _is_missing(run_budget_cfg.get("max_wordpress_writes"))
             else None
         ),
-        run_budget_limit_decision=str(
-            run_budget_cfg.get("limit_decision") or "stop"
-        ).strip().lower(),
+        run_budget_limit_decision=str(run_budget_cfg.get("limit_decision") or "stop")
+        .strip()
+        .lower(),
         wp=wp,
     )
     logger.info(
@@ -181,5 +196,6 @@ def load_publish_settings(
         )
     )
     return settings
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]
