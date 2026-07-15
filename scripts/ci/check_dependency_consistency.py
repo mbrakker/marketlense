@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import tomllib
 from collections.abc import Mapping
@@ -22,6 +23,8 @@ SOURCE_FILES = (
 LOCK_FILE = Path("requirements.lock")
 README_FILE = Path("README.md")
 VENDORED_SECURITY_DEV_PACKAGES = frozenset({"pydantic-settings"})
+_LOCK_HASH_PATTERN = re.compile(r"\s+--hash=sha256:[0-9a-fA-F]{64}")
+_LOCK_HASH_VALUE_PATTERN = re.compile(r"--hash=sha256:[0-9a-fA-F]{64}")
 
 
 def _marker_environment(
@@ -57,13 +60,24 @@ def _requirements_from_file(
     environment: Mapping[str, str],
 ) -> tuple[tuple[str, str], ...]:
     requirements: list[tuple[str, str]] = []
+    pending = ""
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.split("#", maxsplit=1)[0].strip()
         if not line or line.startswith(("-r", "--requirement", "-c", "--constraint")):
             continue
-        parsed = _active_exact_requirement(line, environment=environment)
+        if line.endswith("\\"):
+            pending += line[:-1].rstrip() + " "
+            continue
+        logical_line = (pending + line).strip()
+        pending = ""
+        parsed = _active_exact_requirement(
+            _LOCK_HASH_PATTERN.sub("", logical_line).strip(),
+            environment=environment,
+        )
         if parsed is not None:
             requirements.append(parsed)
+    if pending:
+        raise ValueError(f"{path}: unfinished line continuation")
     return tuple(requirements)
 
 
@@ -144,6 +158,47 @@ def locked_pins(
     return pins, tuple(errors)
 
 
+def hash_lock_diagnostics(
+    root: Path,
+    *,
+    environment: Mapping[str, str] | None = None,
+) -> tuple[str, ...]:
+    """Require SHA-256 evidence for every active exact lock pin."""
+    marker_environment = _marker_environment(environment)
+    diagnostics: list[str] = []
+    pending = ""
+    for raw_line in (root / LOCK_FILE).read_text(encoding="utf-8").splitlines():
+        line = raw_line.split("#", maxsplit=1)[0].strip()
+        if not line:
+            continue
+        if line.endswith("\\"):
+            pending += line[:-1].rstrip() + " "
+            continue
+        logical_line = (pending + line).strip()
+        pending = ""
+        if logical_line.startswith(("-r", "--requirement", "-c", "--constraint")):
+            continue
+        requirement = Requirement(_LOCK_HASH_PATTERN.sub("", logical_line).strip())
+        if requirement.marker is not None and not requirement.marker.evaluate(
+            marker_environment
+        ):
+            continue
+        exact_versions = [
+            specifier.version
+            for specifier in requirement.specifier
+            if specifier.operator == "=="
+        ]
+        if len(exact_versions) != 1 or len(requirement.specifier) != 1:
+            continue
+        if not _LOCK_HASH_VALUE_PATTERN.findall(logical_line):
+            diagnostics.append(
+                f"requirements.lock: {requirement.name} has no SHA-256 hash"
+            )
+    if pending:
+        diagnostics.append("requirements.lock: unfinished line continuation")
+    return tuple(diagnostics)
+
+
 def readme_security_pins(root: Path) -> tuple[tuple[str, str], ...]:
     """Read explicitly documented pins from the README security-baseline sentence."""
     for line in (root / README_FILE).read_text(encoding="utf-8").splitlines():
@@ -220,7 +275,17 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    diagnostics = check_consistency(_parse_args().root)
+    root = _parse_args().root
+    diagnostics = check_consistency(root) + hash_lock_diagnostics(
+        root,
+        environment={
+            "implementation_name": "cpython",
+            "platform_machine": "x86_64",
+            "platform_system": "Linux",
+            "python_version": "3.12",
+            "sys_platform": "linux",
+        },
+    )
     if diagnostics:
         print("Dependency manifest consistency check failed:")
         for diagnostic in diagnostics:

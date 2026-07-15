@@ -52,7 +52,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | R2 | Role-mixing, import-graph, facade, direct-I/O, mutation-selection, and hygiene enforcement | Architecture enforcement outcome. |
 | Active | R3 | Service-quality coverage recovery | Retained-baseline outcome. |
 | Active | R4 | Projection-lag status in budget/release decisions | Canonical-accounting outcome. |
-| Active | R5 | Hash-verified dependency lock artifacts | Supply-chain reproducibility outcome. |
+| Closed | R5 | Hash-verified dependency lock artifacts | Native Ubuntu CPython 3.12 wheelhouse and offline hash-locked install are verified. |
 | Active | S1 | Canonical external-service boundaries | Service-entrypoint simplification outcome. |
 | Active | S2 | Publish/ingest and other control-plane hotspot decomposition | Movement-only orchestration outcome. |
 | Active | S3 | PDF facade, rendering cache, and visual-heuristics simplification | Canonical PDF-boundary outcome. |
@@ -81,6 +81,7 @@ All work is listed below in one register. `Active` items have detailed completio
 ## Recently Closed
 
 - **A7 (2026-07-14):** The retained 15-report corpus is now a required no-provider routing gate across 30 configured prompt routes. It confirms explicit policy selection, same-provider constraints, and zero lost retained evidence IDs; focused routing/compaction/fallback tests and the full suite pass.
+- **R5 (2026-07-15):** The canonical lock records SHA-256 hashes for all 177 active Ubuntu CPython 3.12 artifacts, including `numpy==2.4.2` from its official manylinux wheel. CI installs with `--require-hashes`; a native official-PyPI wheelhouse passed an offline clean install, while a tampered NumPy hash failed before package installation.
 - **P1 (2026-07-14):** `build_publish_readiness_snapshot` is the canonical UI/ops boundary, with the old queue-named callable retained only as a compatibility alias. Publish remains synchronous, idempotent, and review-gated; focused tests and the full suite pass.
 - **Public WordPress safe-error boundary (2026-07-14):** Public shortcode rendering now returns a branded correlated HTTP 500 section on forced report, publisher, archive, or generic shortcode exceptions, while the private structured event retains exception details. The real local Studio route `/publisher/not-extracted/` changed from an incorrect 200 report archive to the branded 404; homepage, reports, and publisher directory remained HTTP 200 with no public diagnostic signatures.
 

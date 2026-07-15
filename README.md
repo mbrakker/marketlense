@@ -1345,21 +1345,26 @@ Test suites live under `tests/` (unit + contract + integration marker support):
 Install dev/test tooling:
 
 ```bash
-pip install -r requirements.lock
+python -m pip install --require-hashes -r requirements.lock
 ```
 
 `requirements.txt` is the canonical runtime top-level manifest. `requirements-dev.txt` is the canonical development top-level manifest. Exact pins in `tools/browser-use/pyproject.toml` remain the canonical compatibility declarations for the vendored browser-use runtime; its security-critical `pydantic-settings` development pin is validated too. `requirements.lock` is the sole resolved graph installed by CI and by clean local environments. The dev requirements include third-party type stub packages used by the full-repo mypy gate and the narrow browser-use support dependencies exercised by default unit tests, including `pydantic-settings` for vendored browser-use configuration imports and `aiohttp` for the local browser watchdog CDP readiness probe; run this install before local `scripts/ci/run_type_check.py` or `pytest` checks so local dependency state matches CI.
 
-For a reproducible production or development environment, install `requirements.lock`. To update an approved exact top-level pin without unrelated upgrades, run:
+For a reproducible production or development environment, install `requirements.lock` with `--require-hashes`. The lock records SHA-256 values for the exact artifacts selected by the Linux CPython 3.12 CI platform. Do not regenerate it with `pip freeze`, which loses artifact provenance and hashes.
+
+To update an approved exact top-level pin without unrelated upgrades, use a clean Ubuntu CPython 3.12 environment and run:
 
 ```powershell
-py -3.12 -m venv .lock-venv
-.\.lock-venv\Scripts\python.exe -m pip install --upgrade pip
-.\.lock-venv\Scripts\python.exe -m pip install --upgrade --upgrade-strategy only-if-needed -r requirements.lock
-.\.lock-venv\Scripts\python.exe -m pip install --upgrade --upgrade-strategy only-if-needed -r requirements.txt -r requirements-dev.txt
-.\.lock-venv\Scripts\python.exe -m pip freeze | Sort-Object | Set-Content -Encoding utf8 requirements.lock
-Remove-Item -Recurse -Force .lock-venv
+python -m pip download --no-cache-dir --only-binary=:all: \
+  --index-url https://pypi.org/simple --dest wheelhouse -r requirements.lock
+python scripts/dependencies/build_hash_locked_wheelhouse.py \
+  --lock requirements.lock --wheelhouse wheelhouse --from-existing-wheelhouse \
+  --python-version 3.12 --audit-json out/cp312_wheelhouse_audit.json \
+  --write-lock requirements.lock
+python -m pip install --no-index --find-links=wheelhouse --require-hashes -r requirements.lock
 ```
+
+The native Ubuntu interpreter is important: its compatible tags include both older `manylinux2014` wheels and newer `manylinux_2_27` wheels. Alpine requires a separately generated native-musllinux wheelhouse/lock audit; do not reuse the glibc wheel hashes there.
 
 Review the generated diff, retain only the intended dependency closure, and run `python scripts/ci/check_dependency_consistency.py` before committing the manifest and lock changes together.
 

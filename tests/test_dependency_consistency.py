@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.ci.check_dependency_consistency import check_consistency
+from scripts.ci.check_dependency_consistency import (
+    check_consistency,
+    hash_lock_diagnostics,
+)
 
 
 def _write_repository(
@@ -102,3 +105,26 @@ def test_documented_security_pin_mismatch_identifies_readme(tmp_path: Path) -> N
     assert check_consistency(tmp_path) == (
         "README.md: pydantic-settings declared 2.13.1, locked 2.14.2",
     )
+
+
+def test_hash_lock_diagnostics_require_active_linux_hashes(tmp_path: Path) -> None:
+    _write_repository(
+        tmp_path,
+        lock=(
+            "runtime-package==1.0.0 \\\n"
+            f"    --hash=sha256:{'a' * 64}\n"
+            "linux-unverified==2.0.0\n"
+            "windows-only==3.0.0; platform_system == 'Windows'\n"
+        ),
+    )
+
+    assert hash_lock_diagnostics(
+        tmp_path,
+        environment={"platform_system": "Linux", "sys_platform": "linux"},
+    ) == ("requirements.lock: linux-unverified has no SHA-256 hash",)
+
+
+def test_ci_installs_the_lock_with_hash_verification() -> None:
+    workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    assert "python -m pip install --require-hashes -r requirements.lock" in workflow
