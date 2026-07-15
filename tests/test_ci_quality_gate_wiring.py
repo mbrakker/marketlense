@@ -12,6 +12,7 @@ def test_ci_runs_policy_backed_structural_and_lint_gates() -> None:
     assert "python scripts/ci/check_role_io_boundaries.py" in ci
     assert "python scripts/ci/check_service_boundary_map.py" in ci
     assert "python scripts/ci/check_refactor_movement_evidence.py" in ci
+    assert "python scripts/ci/check_agent_policy.py" in ci
 
 
 def test_dependency_lock_and_pyproject_are_present() -> None:

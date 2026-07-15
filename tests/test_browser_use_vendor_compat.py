@@ -64,9 +64,9 @@ def test_agent_enhance_task_mentions_done_data_wrapper() -> None:
 
 def test_browser_use_usage_callback_records_each_provider_response(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
-    monkeypatch.chdir(tmp_path)
+    external_boundary_mocks_only.chdir(tmp_path)
     request = BrowserReportDownloadRequest(
         schema_version="1.0",
         url="https://example.com/reports/market-outlook",

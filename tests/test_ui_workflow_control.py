@@ -7,15 +7,17 @@ from src.contracts.ui_run_control import UiRunLaunchResponse, UiRunRecord
 from src.ui import run_control
 
 
-def test_ui_background_launch_embeds_workflow_control_resolution(monkeypatch) -> None:
+def test_ui_background_launch_embeds_workflow_control_resolution(
+    external_boundary_mocks_only,
+) -> None:
     captured = {}
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         run_control.ui_state,
         "get_ui_run_registry_path",
         lambda settings: "state/ui_runs.sqlite",
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         run_control.ui_state,
         "set_selected_run_id",
         lambda run_id: captured.setdefault("selected_run_id", run_id),
@@ -38,7 +40,7 @@ def test_ui_background_launch_embeds_workflow_control_resolution(monkeypatch) ->
             ),
         )
 
-    monkeypatch.setattr(run_control, "launch_ui_run", _fake_launch)
+    external_boundary_mocks_only.setattr(run_control, "launch_ui_run", _fake_launch)
 
     response = run_control.launch_background_run(
         SimpleNamespace(),

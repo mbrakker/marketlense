@@ -132,10 +132,12 @@ class RequestsBoundary:
 
 
 def test_client_discovers_query_route_when_pretty_permalinks_rest_404(
-    monkeypatch: pytest.MonkeyPatch,
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
 ) -> None:
     boundary = RequestsBoundary()
-    monkeypatch.setattr(rest_common.requests, "request", boundary.request)
+    external_boundary_mocks_only.setattr(
+        rest_common.requests, "request", boundary.request
+    )
     site_url = "http://site.test"
 
     boundary.add_json(
@@ -182,14 +184,14 @@ def test_client_discovers_query_route_when_pretty_permalinks_rest_404(
 
 
 def test_load_rest_settings_from_env_reads_tls_flags(
-    monkeypatch: pytest.MonkeyPatch, tmp_path
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly, tmp_path
 ) -> None:
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("WP_SITE_URL", "https://site.test")
-    monkeypatch.setenv("WP_USERNAME", "admin")
-    monkeypatch.setenv("WP_APP_PASSWORD", "secret")
-    monkeypatch.setenv("WP_SSL_VERIFY", "false")
-    monkeypatch.delenv("WP_CA_BUNDLE_PATH", raising=False)
+    external_boundary_mocks_only.chdir(tmp_path)
+    external_boundary_mocks_only.setenv("WP_SITE_URL", "https://site.test")
+    external_boundary_mocks_only.setenv("WP_USERNAME", "admin")
+    external_boundary_mocks_only.setenv("WP_APP_PASSWORD", "secret")
+    external_boundary_mocks_only.setenv("WP_SSL_VERIFY", "false")
+    external_boundary_mocks_only.delenv("WP_CA_BUNDLE_PATH", raising=False)
 
     settings = rest_common.load_rest_settings_from_env()
 
@@ -201,10 +203,12 @@ def test_load_rest_settings_from_env_reads_tls_flags(
 
 
 def test_client_raises_when_rest_root_cannot_be_discovered(
-    monkeypatch: pytest.MonkeyPatch,
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
 ) -> None:
     boundary = RequestsBoundary()
-    monkeypatch.setattr(rest_common.requests, "request", boundary.request)
+    external_boundary_mocks_only.setattr(
+        rest_common.requests, "request", boundary.request
+    )
     site_url = "http://site.test"
 
     boundary.add_json(
@@ -244,10 +248,12 @@ def test_client_raises_when_rest_root_cannot_be_discovered(
 
 
 def test_query_route_client_error_reports_effective_rest_url(
-    monkeypatch: pytest.MonkeyPatch,
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
 ) -> None:
     boundary = RequestsBoundary()
-    monkeypatch.setattr(rest_common.requests, "request", boundary.request)
+    external_boundary_mocks_only.setattr(
+        rest_common.requests, "request", boundary.request
+    )
     site_url = "http://site.test"
 
     def _query_route(call: RecordedRestCall) -> FakeRestResponse:

@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
-def test_list_pdfs_includes_nested_subfolders(monkeypatch):
+
+def test_list_pdfs_includes_nested_subfolders(external_boundary_mocks_only):
     responses = {
         "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false": {
             "files": [{"id": "child-folder"}],
@@ -54,30 +55,35 @@ def test_list_pdfs_includes_nested_subfolders(monkeypatch):
 
     fake_drive = _FakeDriveClient(responses)
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     files = list(drive_service.list_pdfs(_request(), _ctx()))
 
     assert [f.file_id for f in files] == ["root-pdf", "child-pdf", "grandchild-pdf"]
 
+
 def test_list_pdfs_subfolder_discovery_error_is_retryable_app_error(
-    monkeypatch, assert_app_error
+    external_boundary_mocks_only, assert_app_error
 ):
     failing_query = "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
     fake_drive = _FakeDriveClient({}, raise_on_query=failing_query)
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     with pytest.raises(AppError) as err:
@@ -85,7 +91,8 @@ def test_list_pdfs_subfolder_discovery_error_is_retryable_app_error(
 
     assert_app_error(err.value, code="drive_list_failed", retryable=True)
 
-def test_list_files_in_folder_filters_by_prefix(monkeypatch):
+
+def test_list_files_in_folder_filters_by_prefix(external_boundary_mocks_only):
     query = "'root-folder' in parents and trashed=false and name contains 'publisher_inventory_snapshot__'"
     fake_drive = _FakeDriveClient(
         {
@@ -103,12 +110,14 @@ def test_list_files_in_folder_filters_by_prefix(monkeypatch):
             }
         }
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     response = drive_service.list_files_in_folder(
@@ -125,14 +134,17 @@ def test_list_files_in_folder_filters_by_prefix(monkeypatch):
     assert [item.file_id for item in response.files] == ["snapshot-1"]
     assert response.files[0].mime_type == "application/json"
 
-def test_upload_bytes_creates_drive_file(monkeypatch):
+
+def test_upload_bytes_creates_drive_file(external_boundary_mocks_only):
     fake_drive = _FakeDriveClient({})
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     response = drive_service.upload_bytes(
@@ -151,7 +163,8 @@ def test_upload_bytes_creates_drive_file(monkeypatch):
     assert response.file.mime_type == "application/json"
     assert fake_drive.files().created_payloads[0]["body"]["parents"] == ["root-folder"]
 
-def test_ensure_folder_reuses_existing_child_folder(monkeypatch):
+
+def test_ensure_folder_reuses_existing_child_folder(external_boundary_mocks_only):
     fake_drive = _FakeDriveClient(
         {
             "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' and name='Publisher A' and trashed=false": {
@@ -167,12 +180,14 @@ def test_ensure_folder_reuses_existing_child_folder(monkeypatch):
             }
         }
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     response = drive_service.ensure_folder(
@@ -189,14 +204,17 @@ def test_ensure_folder_reuses_existing_child_folder(monkeypatch):
     assert response.created is False
     assert fake_drive.files().created_payloads == []
 
-def test_ensure_folder_creates_missing_child_folder(monkeypatch):
+
+def test_ensure_folder_creates_missing_child_folder(external_boundary_mocks_only):
     fake_drive = _FakeDriveClient({})
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     response = drive_service.ensure_folder(
@@ -218,14 +236,19 @@ def test_ensure_folder_creates_missing_child_folder(monkeypatch):
         "mimeType": "application/vnd.google-apps.folder",
     }
 
-def test_upload_local_file_reads_and_uploads_artifact(monkeypatch, tmp_path):
+
+def test_upload_local_file_reads_and_uploads_artifact(
+    external_boundary_mocks_only, tmp_path
+):
     fake_drive = _FakeDriveClient({})
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     drive_service._DRIVE_CLIENTS = {}
     source_path = tmp_path / "report.html"
     source_path.write_text("<html>report</html>", encoding="utf-8")
@@ -250,6 +273,7 @@ def test_upload_local_file_reads_and_uploads_artifact(monkeypatch, tmp_path):
     assert created["body"]["name"] == "report.html"
     assert created["body"]["parents"] == ["root-folder"]
 
+
 def test_upload_local_file_requires_existing_file(tmp_path):
     missing_path = tmp_path / "missing.pdf"
 
@@ -266,8 +290,9 @@ def test_upload_local_file_requires_existing_file(tmp_path):
 
     assert excinfo.value.code == "drive_upload_source_path_invalid"
 
+
 def test_preflight_drive_write_access_validates_folder_write_readiness(
-    monkeypatch, assert_no_defaulted_required_fields
+    external_boundary_mocks_only, assert_no_defaulted_required_fields
 ):
     fake_drive = _FakeDriveClient(
         {},
@@ -277,7 +302,7 @@ def test_preflight_drive_write_access_validates_folder_write_readiness(
             "capabilities": {"canAddChildren": True},
         },
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: _FakeAuthorizedUserCredentials()),
@@ -288,7 +313,7 @@ def test_preflight_drive_write_access_validates_folder_write_readiness(
         assert kwargs["static_discovery"] is True
         return fake_drive
 
-    monkeypatch.setattr(drive_service, "build", _fake_build)
+    external_boundary_mocks_only.setattr(drive_service, "build", _fake_build)
     _reset_drive_caches()
 
     response = drive_service.preflight_drive_write_access(
@@ -311,8 +336,9 @@ def test_preflight_drive_write_access_validates_folder_write_readiness(
     assert fake_drive.files().delete_calls[0]["fileId"] == "uploaded-file"
     assert_no_defaulted_required_fields(response)
 
+
 def test_preflight_drive_write_access_refreshes_expired_oauth_token(
-    monkeypatch, tmp_path
+    external_boundary_mocks_only, tmp_path
 ):
     fake_drive = _FakeDriveClient(
         {},
@@ -326,12 +352,14 @@ def test_preflight_drive_write_access_refreshes_expired_oauth_token(
     token_path.write_text("{}", encoding="utf-8")
     credentials = _FakeAuthorizedUserCredentials(valid=False, expired=True)
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.AuthorizedUserCredentials,
         "from_authorized_user_file",
         staticmethod(lambda _path, scopes: credentials),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     response = drive_service.preflight_drive_write_access(
@@ -349,8 +377,9 @@ def test_preflight_drive_write_access_refreshes_expired_oauth_token(
     assert credentials.refresh_count == 1
     assert token_path.read_text(encoding="utf-8").startswith('{"refresh_token"')
 
+
 def test_preflight_drive_write_access_reports_oauth_refresh_failure(
-    monkeypatch, tmp_path, assert_app_error
+    external_boundary_mocks_only, tmp_path, assert_app_error
 ):
     token_path = tmp_path / "token.json"
     token_path.write_text("{}", encoding="utf-8")
@@ -360,7 +389,7 @@ def test_preflight_drive_write_access_reports_oauth_refresh_failure(
         refresh_error=drive_service.RefreshError("refresh denied"),
     )
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.AuthorizedUserCredentials,
         "from_authorized_user_file",
         staticmethod(lambda _path, scopes: credentials),
@@ -381,8 +410,9 @@ def test_preflight_drive_write_access_reports_oauth_refresh_failure(
 
     assert_app_error(err.value, code="drive_oauth_refresh_failed", retryable=False)
 
+
 def test_preflight_drive_write_access_rejects_insufficient_oauth_scope(
-    monkeypatch, tmp_path, assert_app_error
+    external_boundary_mocks_only, tmp_path, assert_app_error
 ):
     token_path = tmp_path / "token.json"
     token_path.write_text("{}", encoding="utf-8")
@@ -390,7 +420,7 @@ def test_preflight_drive_write_access_rejects_insufficient_oauth_scope(
         scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"]
     )
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.AuthorizedUserCredentials,
         "from_authorized_user_file",
         staticmethod(lambda _path, scopes: credentials),
@@ -413,6 +443,7 @@ def test_preflight_drive_write_access_rejects_insufficient_oauth_scope(
         err.value, code="drive_preflight_scope_insufficient", retryable=False
     )
 
+
 def test_preflight_drive_write_access_reports_missing_oauth_token(
     tmp_path, assert_app_error
 ):
@@ -430,8 +461,9 @@ def test_preflight_drive_write_access_reports_missing_oauth_token(
 
     assert_app_error(err.value, code="drive_oauth_token_missing", retryable=False)
 
+
 def test_preflight_drive_write_access_rejects_folder_without_write_capability(
-    monkeypatch, assert_app_error
+    external_boundary_mocks_only, assert_app_error
 ):
     fake_drive = _FakeDriveClient(
         {},
@@ -441,12 +473,14 @@ def test_preflight_drive_write_access_rejects_folder_without_write_capability(
             "capabilities": {"canAddChildren": False},
         },
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: _FakeAuthorizedUserCredentials()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     with pytest.raises(AppError) as err:
@@ -461,8 +495,9 @@ def test_preflight_drive_write_access_rejects_folder_without_write_capability(
 
     assert_app_error(err.value, code="drive_preflight_no_write_access", retryable=False)
 
+
 def test_preflight_drive_write_access_rejects_failed_write_probe(
-    monkeypatch, assert_app_error
+    external_boundary_mocks_only, assert_app_error
 ):
     fake_drive = _FakeDriveClient(
         {},
@@ -473,12 +508,14 @@ def test_preflight_drive_write_access_rejects_failed_write_probe(
         },
         create_error=RuntimeError("storage quota exceeded"),
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: _FakeAuthorizedUserCredentials()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     with pytest.raises(AppError) as err:
@@ -497,7 +534,7 @@ def test_preflight_drive_write_access_rejects_failed_write_probe(
 
 
 def test_preflight_drive_write_access_tolerates_probe_cleanup_failure(
-    monkeypatch, caplog
+    external_boundary_mocks_only, caplog
 ):
     fake_drive = _FakeDriveClient(
         {},
@@ -508,12 +545,14 @@ def test_preflight_drive_write_access_tolerates_probe_cleanup_failure(
         },
         delete_error=RuntimeError("cleanup conflict"),
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: _FakeAuthorizedUserCredentials()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
     caplog.set_level("INFO", logger="market_lense.drive_service")
 
@@ -534,7 +573,7 @@ def test_preflight_drive_write_access_tolerates_probe_cleanup_failure(
     )
 
 
-def test_list_pdfs_uses_oauth_user_credentials(monkeypatch, tmp_path):
+def test_list_pdfs_uses_oauth_user_credentials(external_boundary_mocks_only, tmp_path):
     responses = {
         "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false": {
             "files": [],
@@ -556,12 +595,14 @@ def test_list_pdfs_uses_oauth_user_credentials(monkeypatch, tmp_path):
     token_path = tmp_path / "token.json"
     token_path.write_text("{}", encoding="utf-8")
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.AuthorizedUserCredentials,
         "from_authorized_user_file",
         staticmethod(lambda _path, scopes: _FakeAuthorizedUserCredentials()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     files = list(
@@ -580,7 +621,8 @@ def test_list_pdfs_uses_oauth_user_credentials(monkeypatch, tmp_path):
 
     assert [f.file_id for f in files] == ["root-pdf"]
 
-def test_authorize_oauth_user_writes_token(monkeypatch, tmp_path):
+
+def test_authorize_oauth_user_writes_token(external_boundary_mocks_only, tmp_path):
     client_secret_path = tmp_path / "client.json"
     token_output_path = tmp_path / "token.json"
     client_secret_path.write_text("{}", encoding="utf-8")
@@ -596,7 +638,7 @@ def test_authorize_oauth_user_writes_token(monkeypatch, tmp_path):
 
             return _Runner()
 
-    monkeypatch.setattr(drive_service, "InstalledAppFlow", _FakeFlow)
+    external_boundary_mocks_only.setattr(drive_service, "InstalledAppFlow", _FakeFlow)
 
     response = drive_service.authorize_oauth_user(
         DriveOAuthAuthorizeRequest(
@@ -611,10 +653,11 @@ def test_authorize_oauth_user_writes_token(monkeypatch, tmp_path):
     assert response.token_output_path == str(token_output_path)
     assert response.refresh_token_present is True
 
+
 def test_list_pdfs_wraps_missing_service_account_path_as_typed_error(
-    monkeypatch, assert_app_error
+    external_boundary_mocks_only, assert_app_error
 ):
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(
@@ -628,8 +671,9 @@ def test_list_pdfs_wraps_missing_service_account_path_as_typed_error(
 
     assert_app_error(err.value, code="drive_service_account_invalid", retryable=False)
 
+
 def test_download_pdf_to_path_removes_partial_file_on_failure(
-    monkeypatch, tmp_path, assert_app_error
+    external_boundary_mocks_only, tmp_path, assert_app_error
 ):
     fake_drive = _FakeDriveClient({})
     output_path = tmp_path / "downloaded.pdf"
@@ -644,13 +688,17 @@ def test_download_pdf_to_path_removes_partial_file_on_failure(
             self._writer.write(b"%PDF-partial")
             raise RuntimeError("chunk failed")
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
-    monkeypatch.setattr(drive_service, "MediaIoBaseDownload", _FailingDownloader)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
+    external_boundary_mocks_only.setattr(
+        drive_service, "MediaIoBaseDownload", _FailingDownloader
+    )
     _reset_drive_caches()
 
     with pytest.raises(AppError) as err:
@@ -674,12 +722,15 @@ def test_download_pdf_to_path_removes_partial_file_on_failure(
     assert_app_error(err.value, code="drive_download_failed", retryable=True)
     assert not output_path.exists()
 
-def test_list_pdfs_streams_pages_incrementally(monkeypatch):
+
+def test_list_pdfs_streams_pages_incrementally(external_boundary_mocks_only):
     folder_query = (
         "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' "
         "and trashed=false"
     )
-    pdf_query = "'root-folder' in parents and mimeType='application/pdf' and trashed=false"
+    pdf_query = (
+        "'root-folder' in parents and mimeType='application/pdf' and trashed=false"
+    )
     fake_drive = _FakeDriveClient(
         {
             folder_query: {"files": [], "nextPageToken": None},
@@ -707,12 +758,14 @@ def test_list_pdfs_streams_pages_incrementally(monkeypatch):
             },
         }
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     iterator = drive_service.list_pdfs(_request(), _ctx())
@@ -734,6 +787,7 @@ def test_list_pdfs_streams_pages_incrementally(monkeypatch):
     assert len(pdf_calls_after_second) == 2
     assert pdf_calls_after_second[1].get("pageToken") == "token-2"
     assert list(iterator) == []
+
 
 __all__ = [
     "test_list_pdfs_includes_nested_subfolders",

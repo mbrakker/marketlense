@@ -17,14 +17,18 @@ def test_chip_html_includes_escaped_tooltip_title() -> None:
     assert 'title="Use &quot;Refresh&quot; after ingest."' in rendered
 
 
-def test_inject_theme_includes_status_chip_and_terminal_styles(monkeypatch) -> None:
+def test_inject_theme_includes_status_chip_and_terminal_styles(
+    external_boundary_mocks_only,
+) -> None:
     captured: dict[str, object] = {}
 
     def _capture_markdown(body: str, unsafe_allow_html: bool = False) -> None:
         captured["body"] = body
         captured["unsafe"] = unsafe_allow_html
 
-    monkeypatch.setattr(streamlit_app.st, "markdown", _capture_markdown)
+    external_boundary_mocks_only.setattr(
+        streamlit_app.st, "markdown", _capture_markdown
+    )
     streamlit_app._inject_theme()
 
     body = str(captured.get("body") or "")
@@ -38,9 +42,9 @@ def test_inject_theme_includes_status_chip_and_terminal_styles(monkeypatch) -> N
     assert captured.get("unsafe") is True
 
 
-def test_initialize_ui_state_sets_shared_keys(monkeypatch) -> None:
+def test_initialize_ui_state_sets_shared_keys(external_boundary_mocks_only) -> None:
     session_state: dict[str, object] = {}
-    monkeypatch.setattr(ui_state.st, "session_state", session_state)
+    external_boundary_mocks_only.setattr(ui_state.st, "session_state", session_state)
 
     ui_state.initialize_ui_state(
         settings={"mode": "ok"},

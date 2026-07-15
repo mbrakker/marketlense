@@ -62,7 +62,7 @@ def test_get_lock_reflects_lock_lifecycle(tmp_path: Path) -> None:
 
 
 def test_release_lock_wraps_os_error_as_typed_app_error(
-    monkeypatch, tmp_path: Path, assert_app_error
+    external_boundary_mocks_only, tmp_path: Path, assert_app_error
 ) -> None:
     lock_path = tmp_path / "ingest.lock"
     lock_path.write_text(
@@ -73,7 +73,7 @@ def test_release_lock_wraps_os_error_as_typed_app_error(
     def _raise_unlink(self, *, missing_ok=False):
         raise PermissionError("denied")
 
-    monkeypatch.setattr(Path, "unlink", _raise_unlink)
+    external_boundary_mocks_only.setattr(Path, "unlink", _raise_unlink)
 
     with pytest.raises(AppError) as exc_info:
         release_lock(

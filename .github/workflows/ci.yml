@@ -39,6 +39,8 @@ jobs:
         run: python scripts/ci/run_type_check.py
       - name: Architecture import gate
         run: python scripts/ci/check_architecture_imports.py
+      - name: Agent policy consistency gate
+        run: python scripts/ci/check_agent_policy.py
       - name: Role I/O boundary gate
         run: python scripts/ci/check_role_io_boundaries.py
       - name: Service boundary map gate

@@ -61,7 +61,7 @@ def _events(caplog) -> list[dict]:
 
 
 def test_run_report_pipeline_retries_retryable(
-    caplog, monkeypatch, assert_logs_have_required_fields
+    caplog, external_boundary_mocks_only, assert_logs_have_required_fields
 ) -> None:
     caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
     file = DriveFile(
@@ -99,8 +99,10 @@ def test_run_report_pipeline_retries_retryable(
             )
         return outcome
 
-    monkeypatch.setattr(retry_orch.random, "uniform", lambda _a, _b: 0.0)
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
+        retry_orch.random, "uniform", lambda _a, _b: 0.0
+    )
+    external_boundary_mocks_only.setattr(
         orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds))
     )
     response = orch.run_report_pipeline(
@@ -150,7 +152,7 @@ def test_run_report_pipeline_retries_retryable(
 
 def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
     caplog,
-    monkeypatch,
+    external_boundary_mocks_only,
     assert_app_error,
     assert_logs_have_required_fields,
 ) -> None:
@@ -178,8 +180,10 @@ def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
         calls["count"] += 1
         raise AppError(code="openai_request_failed", message="retry", retryable=True)
 
-    monkeypatch.setattr(retry_orch.random, "uniform", lambda _a, _b: 0.0)
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
+        retry_orch.random, "uniform", lambda _a, _b: 0.0
+    )
+    external_boundary_mocks_only.setattr(
         orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds))
     )
 
@@ -229,7 +233,7 @@ def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
 
 
 def test_run_report_pipeline_retries_doc_map_transition_with_logs(
-    caplog, monkeypatch
+    caplog, external_boundary_mocks_only
 ) -> None:
     caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
     file = DriveFile(
@@ -272,7 +276,7 @@ def test_run_report_pipeline_retries_doc_map_transition_with_logs(
         calls["count"] += 1
         return retry_outcome if calls["count"] == 1 else success_outcome
 
-    monkeypatch.setattr(orch.time, "sleep", lambda _: None)
+    external_boundary_mocks_only.setattr(orch.time, "sleep", lambda _: None)
     response = orch.run_report_pipeline(
         file,
         local_pdf_path="./cache/a.pdf",
@@ -307,7 +311,7 @@ def test_run_report_pipeline_retries_doc_map_transition_with_logs(
 
 
 def test_run_report_pipeline_retries_doc_map_no_content_with_valid_text(
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
     file = DriveFile(
         schema_version="1.0",
@@ -350,7 +354,7 @@ def test_run_report_pipeline_retries_doc_map_no_content_with_valid_text(
         calls["count"] += 1
         return retry_outcome if calls["count"] == 1 else success_outcome
 
-    monkeypatch.setattr(orch.time, "sleep", lambda _: None)
+    external_boundary_mocks_only.setattr(orch.time, "sleep", lambda _: None)
 
     response = orch.run_report_pipeline(
         file,
@@ -367,7 +371,7 @@ def test_run_report_pipeline_retries_doc_map_no_content_with_valid_text(
 
 
 def test_run_report_pipeline_does_not_retry_doc_map_no_content_with_invalid_text(
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
     file = DriveFile(
         schema_version="1.0",
@@ -402,7 +406,7 @@ def test_run_report_pipeline_does_not_retry_doc_map_no_content_with_invalid_text
         calls["count"] += 1
         return retry_outcome
 
-    monkeypatch.setattr(orch.time, "sleep", lambda _: None)
+    external_boundary_mocks_only.setattr(orch.time, "sleep", lambda _: None)
 
     response = orch.run_report_pipeline(
         file,
@@ -419,7 +423,9 @@ def test_run_report_pipeline_does_not_retry_doc_map_no_content_with_invalid_text
     assert calls["count"] == 1
 
 
-def test_run_report_pipeline_doc_map_retry_is_bounded(monkeypatch) -> None:
+def test_run_report_pipeline_doc_map_retry_is_bounded(
+    external_boundary_mocks_only,
+) -> None:
     file = DriveFile(
         schema_version="1.0",
         file_id="f1",
@@ -453,7 +459,7 @@ def test_run_report_pipeline_doc_map_retry_is_bounded(monkeypatch) -> None:
         calls["count"] += 1
         return retry_outcome
 
-    monkeypatch.setattr(orch.time, "sleep", lambda _: None)
+    external_boundary_mocks_only.setattr(orch.time, "sleep", lambda _: None)
     response = orch.run_report_pipeline(
         file,
         local_pdf_path="./cache/a.pdf",
@@ -576,7 +582,7 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
 
 
 def test_run_report_pipeline_owns_retry_around_single_attempt_llm_service(
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
     file = DriveFile(
         schema_version="1.0",
@@ -595,10 +601,12 @@ def test_run_report_pipeline_owns_retry_around_single_attempt_llm_service(
         artifact_global_min_interval_ms=0,
     )
     sleep_calls: list[float] = []
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds))
     )
-    monkeypatch.setattr(retry_orch.random, "uniform", lambda _low, _high: 0.0)
+    external_boundary_mocks_only.setattr(
+        retry_orch.random, "uniform", lambda _low, _high: 0.0
+    )
 
     class _RetryThenSucceedClient:
         def __init__(self) -> None:
@@ -809,7 +817,9 @@ def test_run_report_pipeline_auto_resume_uses_latest_safe_when_stage_not_explici
     assert captured["resume_from_stage"] == "latest_safe"
 
 
-def test_run_report_pipeline_uses_workflow_retry_policy(caplog, monkeypatch) -> None:
+def test_run_report_pipeline_uses_workflow_retry_policy(
+    caplog, external_boundary_mocks_only
+) -> None:
     caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
     file = DriveFile(
         schema_version="1.0",
@@ -848,8 +858,10 @@ def test_run_report_pipeline_uses_workflow_retry_policy(caplog, monkeypatch) -> 
             status="processed",
         )
 
-    monkeypatch.setattr(retry_orch.random, "uniform", lambda _a, _b: 0.0)
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
+        retry_orch.random, "uniform", lambda _a, _b: 0.0
+    )
+    external_boundary_mocks_only.setattr(
         orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds))
     )
 
@@ -909,7 +921,7 @@ def test_report_generation_client_bundle_rejects_missing_client(
 
 
 def test_run_report_pipeline_preflights_before_model_client_construction(
-    monkeypatch,
+    external_boundary_mocks_only,
     assert_app_error,
 ) -> None:
     file = DriveFile(
@@ -951,7 +963,9 @@ def test_run_report_pipeline_preflights_before_model_client_construction(
         next_actions=["set_OPENAI_API_KEY", "rerun_preflight"],
     )
 
-    monkeypatch.setattr(orch.llm_service, "build_client_for_settings", _build_client)
+    external_boundary_mocks_only.setattr(
+        orch.llm_service, "build_client_for_settings", _build_client
+    )
 
     with pytest.raises(AppError) as exc_info:
         orch.run_report_pipeline(

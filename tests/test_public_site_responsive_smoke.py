@@ -30,7 +30,9 @@ def test_responsive_smoke_rejects_invalid_viewport() -> None:
         _parse_viewport("390-by-844")
 
 
-def test_responsive_smoke_uses_cmd_shim_on_windows(monkeypatch) -> None:
-    monkeypatch.setattr("sys.platform", "win32")
+def test_responsive_smoke_uses_cmd_shim_on_windows(
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr("sys.platform", "win32")
 
     assert _cli_command("session", "open", "https://example.test")[0] == "npx.cmd"

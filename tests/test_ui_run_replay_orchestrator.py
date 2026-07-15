@@ -86,7 +86,7 @@ def _seed_manifest(tmp_path: Path):
 
 def test_replay_ui_run_writes_match_report(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
     caplog,
     assert_logs_have_required_fields,
 ) -> None:
@@ -100,7 +100,7 @@ def test_replay_ui_run_writes_match_report(
         _ctx(),
     )
     manifest = _seed_manifest(tmp_path).manifest
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "resolve_ui_run_config_snapshot",
         lambda worker_request, ctx: {
@@ -108,7 +108,7 @@ def test_replay_ui_run_writes_match_report(
             "settings": {"headed": False},
         },
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "fingerprint_ui_run_workspace",
         lambda request, ctx: UiRunWorkspaceFingerprintResponse(
@@ -119,7 +119,7 @@ def test_replay_ui_run_writes_match_report(
             prompt_tree_fingerprint=manifest.prompt_tree_fingerprint,
         ),
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "execute_ui_run",
         lambda worker_request, ctx: UiRunExecutionResponse(
@@ -138,7 +138,7 @@ def test_replay_ui_run_writes_match_report(
             ),
         ),
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "fingerprint_ui_run_artifacts",
         lambda request, ctx: UiRunArtifactFingerprintResponse(
@@ -170,7 +170,7 @@ def test_replay_ui_run_writes_match_report(
 
 def test_replay_ui_run_blocks_on_environment_drift(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
     write_ui_run_record(
         UiRunRecordWriteRequest(
@@ -181,7 +181,7 @@ def test_replay_ui_run_blocks_on_environment_drift(
         _ctx(),
     )
     _seed_manifest(tmp_path)
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "resolve_ui_run_config_snapshot",
         lambda worker_request, ctx: {
@@ -189,7 +189,7 @@ def test_replay_ui_run_blocks_on_environment_drift(
             "settings": {"headed": True},
         },
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "fingerprint_ui_run_workspace",
         lambda request, ctx: UiRunWorkspaceFingerprintResponse(
@@ -206,7 +206,9 @@ def test_replay_ui_run_blocks_on_environment_drift(
         called["count"] += 1
         return SimpleNamespace()
 
-    monkeypatch.setattr(orchestrator, "execute_ui_run", _unexpected_execute)
+    external_boundary_mocks_only.setattr(
+        orchestrator, "execute_ui_run", _unexpected_execute
+    )
 
     result = orchestrator.replay_ui_run(
         UiRunReplayRequest(

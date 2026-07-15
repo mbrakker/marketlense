@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-
 ROOT = Path(__file__).resolve().parents[2]
 TESTS_DIR = ROOT / "tests"
 
@@ -146,6 +145,24 @@ def _scan_file(path: Path) -> list[Violation]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     violations: list[Violation] = []
     for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and "monkeypatch" in node.id.lower():
+            violations.append(
+                Violation(
+                    path,
+                    node.lineno,
+                    node.col_offset + 1,
+                    "pytest monkeypatching is forbidden",
+                )
+            )
+        if isinstance(node, ast.Attribute) and "monkeypatch" in node.attr.lower():
+            violations.append(
+                Violation(
+                    path,
+                    node.lineno,
+                    node.col_offset + 1,
+                    "pytest MonkeyPatch is forbidden",
+                )
+            )
         if isinstance(node, ast.Call):
             violations.extend(_check_call(path, node))
     return violations

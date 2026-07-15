@@ -33,7 +33,7 @@ def _request(tmp_path, *, user_prompt: str = "[]") -> RankRequest:
 
 
 def _patch_openai_chat_json(
-    monkeypatch, *, text: str, parsed_json: dict | None
+    external_boundary_mocks_only, *, text: str, parsed_json: dict | None
 ) -> None:
     def _fake_openai_chat_json(req, ctx):
         return OpenAIResponseResult(
@@ -48,10 +48,12 @@ def _patch_openai_chat_json(
             request_id="req_1",
         )
 
-    monkeypatch.setattr(rank_service, "openai_chat_json", _fake_openai_chat_json)
+    external_boundary_mocks_only.setattr(
+        rank_service, "openai_chat_json", _fake_openai_chat_json
+    )
 
 
-def test_rank_candidates_parses_extended_schema(monkeypatch, tmp_path):
+def test_rank_candidates_parses_extended_schema(external_boundary_mocks_only, tmp_path):
     payload = {
         "results": [
             {
@@ -67,7 +69,7 @@ def test_rank_candidates_parses_extended_schema(monkeypatch, tmp_path):
         ]
     }
     _patch_openai_chat_json(
-        monkeypatch,
+        external_boundary_mocks_only,
         text=json.dumps(payload),
         parsed_json=payload,
     )
@@ -84,7 +86,9 @@ def test_rank_candidates_parses_extended_schema(monkeypatch, tmp_path):
     assert row.reject_reason == ""
 
 
-def test_rank_candidates_legacy_score_only_defaults_subscores(monkeypatch, tmp_path):
+def test_rank_candidates_legacy_score_only_defaults_subscores(
+    external_boundary_mocks_only, tmp_path
+):
     payload = [
         {
             "id": "legacy_1",
@@ -93,7 +97,7 @@ def test_rank_candidates_legacy_score_only_defaults_subscores(monkeypatch, tmp_p
         }
     ]
     _patch_openai_chat_json(
-        monkeypatch,
+        external_boundary_mocks_only,
         text=json.dumps(payload),
         parsed_json=None,
     )
@@ -109,7 +113,7 @@ def test_rank_candidates_legacy_score_only_defaults_subscores(monkeypatch, tmp_p
     assert row.keep is True
 
 
-def test_rank_candidates_maps_openai_errors(monkeypatch, tmp_path):
+def test_rank_candidates_maps_openai_errors(external_boundary_mocks_only, tmp_path):
     def _raise_openai_error(req, ctx):
         raise AppError(
             code="openai_chat_failed",
@@ -118,7 +122,9 @@ def test_rank_candidates_maps_openai_errors(monkeypatch, tmp_path):
             severity="warning",
         )
 
-    monkeypatch.setattr(rank_service, "openai_chat_json", _raise_openai_error)
+    external_boundary_mocks_only.setattr(
+        rank_service, "openai_chat_json", _raise_openai_error
+    )
 
     with pytest.raises(AppError) as exc:
         rank_service.rank_candidates(_request(tmp_path), _ctx())

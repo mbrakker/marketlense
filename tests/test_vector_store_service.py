@@ -30,7 +30,7 @@ from src.services import vector_store_service as svc
 from src.utils.errors import AppError
 
 
-def _install_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+def _install_api_key(external_boundary_mocks_only: ExternalBoundaryMocksOnly) -> None:
     def _resolve(request, ctx):
         return OpenAICredentialResolveResponse(
             schema_version="1.0",
@@ -38,11 +38,13 @@ def _install_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
             source="env:OPENAI_API_KEY",
         )
 
-    monkeypatch.setattr(svc.config_service, "resolve_openai_credential", _resolve)
+    external_boundary_mocks_only.setattr(
+        svc.config_service, "resolve_openai_credential", _resolve
+    )
 
 
 def test_missing_openai_credential_is_typed_and_sanitized(
-    monkeypatch: pytest.MonkeyPatch,
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
     assert_app_error,
 ) -> None:
     def _resolve(request, ctx):
@@ -53,7 +55,9 @@ def test_missing_openai_credential_is_typed_and_sanitized(
             context={"source": "env:OPENAI_API_KEY"},
         )
 
-    monkeypatch.setattr(svc.config_service, "resolve_openai_credential", _resolve)
+    external_boundary_mocks_only.setattr(
+        svc.config_service, "resolve_openai_credential", _resolve
+    )
 
     with pytest.raises(AppError) as exc_info:
         svc.create_vector_store(
@@ -77,15 +81,17 @@ def test_missing_openai_credential_is_typed_and_sanitized(
     assert "test-key" not in str(exc_info.value)
 
 
-def test_create_vector_store(monkeypatch: pytest.MonkeyPatch):
-    _install_api_key(monkeypatch)
+def test_create_vector_store(external_boundary_mocks_only: ExternalBoundaryMocksOnly):
+    _install_api_key(external_boundary_mocks_only)
 
     def _create(req, ctx):
         return OpenAIVectorStoreCreateResponse(
             schema_version="1.0", vector_store_id="vs_123"
         )
 
-    monkeypatch.setattr(svc.llm_service, "openai_vector_store_create", _create)
+    external_boundary_mocks_only.setattr(
+        svc.llm_service, "openai_vector_store_create", _create
+    )
     resp = svc.create_vector_store(
         VectorStoreCreateRequest(
             schema_version="1.0",
@@ -105,15 +111,17 @@ def test_create_vector_store(monkeypatch: pytest.MonkeyPatch):
     assert resp.vector_store_id == "vs_123"
 
 
-def test_upload_file(monkeypatch: pytest.MonkeyPatch, tmp_path):
-    _install_api_key(monkeypatch)
+def test_upload_file(external_boundary_mocks_only: ExternalBoundaryMocksOnly, tmp_path):
+    _install_api_key(external_boundary_mocks_only)
 
     def _upload(req, ctx):
         return OpenAIVectorStoreFileUploadResponse(
             schema_version="1.0", openai_file_id="file_123"
         )
 
-    monkeypatch.setattr(svc.llm_service, "openai_vector_store_upload_file", _upload)
+    external_boundary_mocks_only.setattr(
+        svc.llm_service, "openai_vector_store_upload_file", _upload
+    )
     pdf = tmp_path / "f.pdf"
     pdf.write_bytes(b"hello")
     resp = svc.upload_file(
@@ -127,8 +135,8 @@ def test_upload_file(monkeypatch: pytest.MonkeyPatch, tmp_path):
     assert resp.openai_file_id == "file_123"
 
 
-def test_attach_file(monkeypatch: pytest.MonkeyPatch):
-    _install_api_key(monkeypatch)
+def test_attach_file(external_boundary_mocks_only: ExternalBoundaryMocksOnly):
+    _install_api_key(external_boundary_mocks_only)
 
     def _attach(req, ctx):
         return OpenAIVectorStoreAttachFileResponse(
@@ -137,7 +145,9 @@ def test_attach_file(monkeypatch: pytest.MonkeyPatch):
             openai_file_id="file_123",
         )
 
-    monkeypatch.setattr(svc.llm_service, "openai_vector_store_attach_file", _attach)
+    external_boundary_mocks_only.setattr(
+        svc.llm_service, "openai_vector_store_attach_file", _attach
+    )
     resp = svc.attach_file(
         VectorStoreAttachFileRequest(
             schema_version="1.0",
@@ -149,8 +159,10 @@ def test_attach_file(monkeypatch: pytest.MonkeyPatch):
     assert resp.openai_file_id == "file_123"
 
 
-def test_get_vector_store_status(monkeypatch: pytest.MonkeyPatch):
-    _install_api_key(monkeypatch)
+def test_get_vector_store_status(
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
+):
+    _install_api_key(external_boundary_mocks_only)
 
     def _status(req, ctx):
         return OpenAIVectorStoreStatusResponse(
@@ -161,7 +173,9 @@ def test_get_vector_store_status(monkeypatch: pytest.MonkeyPatch):
             last_error=None,
         )
 
-    monkeypatch.setattr(svc.llm_service, "openai_vector_store_status", _status)
+    external_boundary_mocks_only.setattr(
+        svc.llm_service, "openai_vector_store_status", _status
+    )
     resp = svc.get_vector_store_status(
         VectorStoreStatusRequest(
             schema_version="1.0",
@@ -173,9 +187,9 @@ def test_get_vector_store_status(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_delete_vector_store_handles_missing_remote_asset(
-    monkeypatch: pytest.MonkeyPatch,
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
 ) -> None:
-    _install_api_key(monkeypatch)
+    _install_api_key(external_boundary_mocks_only)
 
     def _delete(req, ctx):
         raise AppError(
@@ -184,7 +198,9 @@ def test_delete_vector_store_handles_missing_remote_asset(
             retryable=False,
         )
 
-    monkeypatch.setattr(svc.llm_service, "openai_vector_store_delete", _delete)
+    external_boundary_mocks_only.setattr(
+        svc.llm_service, "openai_vector_store_delete", _delete
+    )
 
     resp = svc.delete_vector_store(
         VectorStoreDeleteRequest(
@@ -201,9 +217,9 @@ def test_delete_vector_store_handles_missing_remote_asset(
 
 
 def test_prune_vector_stores_deduplicates_and_reports_deletions(
-    monkeypatch: pytest.MonkeyPatch,
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
 ) -> None:
-    _install_api_key(monkeypatch)
+    _install_api_key(external_boundary_mocks_only)
     calls: list[str] = []
 
     def _delete(req, ctx):
@@ -220,7 +236,9 @@ def test_prune_vector_stores_deduplicates_and_reports_deletions(
             deleted=True,
         )
 
-    monkeypatch.setattr(svc.llm_service, "openai_vector_store_delete", _delete)
+    external_boundary_mocks_only.setattr(
+        svc.llm_service, "openai_vector_store_delete", _delete
+    )
 
     resp = svc.prune_vector_stores(
         VectorStorePruneRequest(

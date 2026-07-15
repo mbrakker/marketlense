@@ -81,7 +81,7 @@ def test_browser_download_reuses_valid_artifact_acquisition_cache(tmp_path: Path
 
 def test_pre_llm_form_autofill_submits_without_model_client(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
 ):
     from src.services._browser_report_download import browser as browser_runtime
 
@@ -145,7 +145,7 @@ def test_pre_llm_form_autofill_submits_without_model_client(
         ChatOpenRouter=FailingChatOpenRouter,
         Agent=object,
     )
-    monkeypatch.setitem(sys.modules, "browser_use", fake_browser_use)
+    external_boundary_mocks_only.setitem(sys.modules, "browser_use", fake_browser_use)
     prompt_bundle = BrowserDownloadPromptBundle(
         schema_version="1.0",
         namespace="browser_report_download/browser_route/browser_email_form",
@@ -173,7 +173,7 @@ def test_pre_llm_form_autofill_submits_without_model_client(
 
 def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
 ):
     from src.services._browser_report_download import browser as browser_runtime
 
@@ -282,7 +282,7 @@ def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
         ChatOpenRouter=FakeChatOpenRouter,
         Agent=FakeAgent,
     )
-    monkeypatch.setitem(sys.modules, "browser_use", fake_browser_use)
+    external_boundary_mocks_only.setitem(sys.modules, "browser_use", fake_browser_use)
     prompt_bundle = BrowserDownloadPromptBundle(
         schema_version="1.0",
         namespace="browser_report_download/browser_route/browser_pdf_click",

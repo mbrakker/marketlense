@@ -179,8 +179,8 @@ def test_resolve_audit_limits_uses_presets_and_custom_values() -> None:
     ) == (7, 4)
 
 
-def test_selected_run_payload_filters_by_run_type(monkeypatch) -> None:
-    monkeypatch.setattr(
+def test_selected_run_payload_filters_by_run_type(external_boundary_mocks_only) -> None:
+    external_boundary_mocks_only.setattr(
         pages,
         "poll_selected_run",
         lambda settings, max_bytes=64000: SimpleNamespace(

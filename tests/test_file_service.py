@@ -141,7 +141,7 @@ def test_list_directory_supports_recursive_and_filters(tmp_path: Path) -> None:
 
 
 def test_read_text_wraps_os_error_as_typed_app_error(
-    monkeypatch, tmp_path: Path, assert_app_error
+    external_boundary_mocks_only, tmp_path: Path, assert_app_error
 ) -> None:
     target = tmp_path / "denied.txt"
     target.write_text("x", encoding="utf-8")
@@ -149,7 +149,7 @@ def test_read_text_wraps_os_error_as_typed_app_error(
     def _raise_permission(self, *, encoding="utf-8"):
         raise PermissionError("denied")
 
-    monkeypatch.setattr(Path, "read_text", _raise_permission)
+    external_boundary_mocks_only.setattr(Path, "read_text", _raise_permission)
 
     with pytest.raises(AppError) as exc_info:
         read_text(
@@ -314,7 +314,7 @@ def test_write_bytes_serializes_same_target_concurrent_writes(tmp_path: Path) ->
 
 
 def test_write_bytes_preserves_existing_file_when_replace_fails(
-    monkeypatch,
+    external_boundary_mocks_only,
     tmp_path: Path,
     assert_app_error,
 ) -> None:
@@ -327,7 +327,7 @@ def test_write_bytes_preserves_existing_file_when_replace_fails(
         created_temp_paths.append(Path(src))
         raise OSError("replace failed")
 
-    monkeypatch.setattr(os, "replace", _failing_replace)
+    external_boundary_mocks_only.setattr(os, "replace", _failing_replace)
 
     with pytest.raises(AppError) as exc_info:
         write_bytes(
@@ -343,11 +343,11 @@ def test_write_bytes_preserves_existing_file_when_replace_fails(
     assert target.read_bytes() == b"original"
     assert created_temp_paths
     assert all(not path.exists() for path in created_temp_paths)
-    monkeypatch.setattr(os, "replace", original_replace)
+    external_boundary_mocks_only.setattr(os, "replace", original_replace)
 
 
 def test_write_bytes_cleanup_failure_does_not_mask_replace_error(
-    monkeypatch,
+    external_boundary_mocks_only,
     tmp_path: Path,
     assert_app_error,
 ) -> None:
@@ -360,8 +360,8 @@ def test_write_bytes_cleanup_failure_does_not_mask_replace_error(
     def _failing_unlink(self, *, missing_ok=False):
         raise OSError("cleanup failed")
 
-    monkeypatch.setattr(os, "replace", _failing_replace)
-    monkeypatch.setattr(Path, "unlink", _failing_unlink)
+    external_boundary_mocks_only.setattr(os, "replace", _failing_replace)
+    external_boundary_mocks_only.setattr(Path, "unlink", _failing_unlink)
 
     with pytest.raises(AppError) as exc_info:
         write_bytes(

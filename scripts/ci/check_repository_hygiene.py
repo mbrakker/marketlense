@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
 import yaml
-
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -37,6 +37,9 @@ LOCAL_SECRET_NAMES = {".env"}
 GENERATED_SUFFIXES = {".log", ".tmp", ".bak", ".pyc", ".pyo"}
 SECRET_KEYWORDS = ("secret", "token", "credential", "credentials", "oauth")
 MAX_GENERATED_FILE_BYTES = 2_000_000
+SECRET_VALUE_PATTERN = re.compile(
+    r"(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{20,})"
+)
 
 
 @dataclass(frozen=True)
@@ -56,7 +59,10 @@ class HygieneViolation:
 
 
 def _normalize(path: str) -> str:
-    return path.replace("\\", "/").lstrip("./")
+    normalized = path.replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
 
 
 def load_allowlist(path: Path) -> tuple[HygieneAllowlistEntry, ...]:
@@ -180,6 +186,34 @@ def scan_tracked_paths(
     return tuple(violations)
 
 
+def validate_dotenv_policy(
+    *, root: Path, tracked_paths: Iterable[str]
+) -> tuple[HygieneViolation, ...]:
+    tracked = {_normalize(path) for path in tracked_paths}
+    violations: list[HygieneViolation] = []
+    if ".env" in tracked:
+        violations.append(HygieneViolation(".env", "local secret file is tracked", 0))
+    gitignore = (root / ".gitignore").read_text(encoding="utf-8")
+    if not any(line.strip() == ".env" for line in gitignore.splitlines()):
+        violations.append(
+            HygieneViolation(".gitignore", ".env is not explicitly ignored", 0)
+        )
+    example = root / ".env.example"
+    if not example.exists():
+        violations.append(
+            HygieneViolation(".env.example", "secret-name template is missing", 0)
+        )
+    elif SECRET_VALUE_PATTERN.search(example.read_text(encoding="utf-8")):
+        violations.append(
+            HygieneViolation(
+                ".env.example",
+                "contains a secret-looking value",
+                example.stat().st_size,
+            )
+        )
+    return tuple(violations)
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Reject tracked runtime artifacts, local credentials, and generated outputs."
@@ -196,10 +230,14 @@ def main() -> int:
     args = _parse_args()
     try:
         allowlist = load_allowlist(ROOT / args.allowlist)
-        violations = scan_tracked_paths(
-            list_tracked_files(),
-            root=ROOT,
-            allowlist=allowlist,
+        tracked_paths = list_tracked_files()
+        violations = (
+            *scan_tracked_paths(
+                tracked_paths,
+                root=ROOT,
+                allowlist=allowlist,
+            ),
+            *validate_dotenv_policy(root=ROOT, tracked_paths=tracked_paths),
         )
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         print(f"Repository hygiene gate failed to run: {exc}")

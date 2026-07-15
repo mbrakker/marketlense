@@ -73,7 +73,7 @@ def _queued_record(*, registry_path: str) -> UiRunRecord:
 
 def test_launch_ui_run_persists_record_and_request(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
     caplog,
     assert_logs_have_required_fields,
 ) -> None:
@@ -89,7 +89,9 @@ def test_launch_ui_run_persists_record_and_request(
             started_at_utc="2026-04-09T10:00:05+00:00",
         )
 
-    monkeypatch.setattr(orchestrator, "launch_process", _fake_launch_process)
+    external_boundary_mocks_only.setattr(
+        orchestrator, "launch_process", _fake_launch_process
+    )
 
     response = orchestrator.launch_ui_run(
         UiRunLaunchRequest(
@@ -125,7 +127,7 @@ def test_launch_ui_run_persists_record_and_request(
 
 def test_poll_ui_run_marks_unexpected_worker_exit_as_failed(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
     registry_path = _registry_path(tmp_path)
     write_ui_run_record(
@@ -137,7 +139,7 @@ def test_poll_ui_run_marks_unexpected_worker_exit_as_failed(
         _ctx(),
     )
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "poll_process",
         lambda request, ctx: ProcessPollResponse(
@@ -146,7 +148,7 @@ def test_poll_ui_run_marks_unexpected_worker_exit_as_failed(
             running=False,
         ),
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "read_process_output",
         lambda request, ctx: ProcessOutputReadResponse(
@@ -190,7 +192,7 @@ def test_poll_ui_run_marks_unexpected_worker_exit_as_failed(
 
 def test_cancel_ui_run_updates_state_and_terminates_process(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
     registry_path = _registry_path(tmp_path)
     write_ui_run_record(
@@ -211,7 +213,9 @@ def test_cancel_ui_run_updates_state_and_terminates_process(
             terminated=True,
         )
 
-    monkeypatch.setattr(orchestrator, "terminate_process", _fake_terminate)
+    external_boundary_mocks_only.setattr(
+        orchestrator, "terminate_process", _fake_terminate
+    )
 
     response = orchestrator.cancel_ui_run(
         UiRunCancelRequest(
@@ -230,7 +234,7 @@ def test_cancel_ui_run_updates_state_and_terminates_process(
 
 def test_launch_ui_run_same_request_creates_new_record_ids(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
     def _fake_launch_process(request, ctx):
         return ProcessLaunchResponse(
@@ -242,7 +246,9 @@ def test_launch_ui_run_same_request_creates_new_record_ids(
             started_at_utc="2026-04-09T10:00:05+00:00",
         )
 
-    monkeypatch.setattr(orchestrator, "launch_process", _fake_launch_process)
+    external_boundary_mocks_only.setattr(
+        orchestrator, "launch_process", _fake_launch_process
+    )
     request = UiRunLaunchRequest(
         schema_version="1.0",
         registry_path=_registry_path(tmp_path),
@@ -260,7 +266,7 @@ def test_launch_ui_run_same_request_creates_new_record_ids(
 
 def test_poll_ui_run_promotes_live_queued_worker_to_running(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
     registry_path = _registry_path(tmp_path)
     write_ui_run_record(
@@ -271,7 +277,7 @@ def test_poll_ui_run_promotes_live_queued_worker_to_running(
         ),
         _ctx(),
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "poll_process",
         lambda request, ctx: ProcessPollResponse(
@@ -280,7 +286,7 @@ def test_poll_ui_run_promotes_live_queued_worker_to_running(
             running=True,
         ),
     )
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         orchestrator,
         "read_process_output",
         lambda request, ctx: ProcessOutputReadResponse(

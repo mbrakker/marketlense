@@ -59,7 +59,9 @@ def _analyze_request(tmp_path) -> OpenAIAnalyzeRequest:
     )
 
 
-def test_openai_chat_json_uses_modern_chat_completion(monkeypatch, tmp_path) -> None:
+def test_openai_chat_json_uses_modern_chat_completion(
+    external_boundary_mocks_only, tmp_path
+) -> None:
     captured_client_kwargs = []
     captured_payloads = []
 
@@ -80,7 +82,7 @@ def test_openai_chat_json_uses_modern_chat_completion(monkeypatch, tmp_path) -> 
             captured_client_kwargs.append(dict(kwargs))
             self.chat = SimpleNamespace(completions=_FakeChatCompletions())
 
-    monkeypatch.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
 
     result = svc.openai_chat_json(_chat_request(tmp_path), _ctx())
 
@@ -247,7 +249,7 @@ def test_openai_chat_json_emits_redacted_model_call_audit(
 
 
 def test_openai_chat_json_semantic_response_cache_skips_repeated_provider_call(
-    monkeypatch,
+    external_boundary_mocks_only,
     tmp_path,
     caplog,
     assert_logs_have_required_fields,
@@ -273,7 +275,7 @@ def test_openai_chat_json_semantic_response_cache_skips_repeated_provider_call(
         def __init__(self, **kwargs):
             self.chat = SimpleNamespace(completions=_FakeChatCompletions())
 
-    monkeypatch.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _FakeClient)
     request = OpenAIJSONPromptRequest(
         **{
             **_chat_request(tmp_path).__dict__,
@@ -406,7 +408,7 @@ def test_openai_chat_json_compacts_over_budget_prompt_before_provider_call(
 
 
 def test_analyze_report_falls_back_to_legacy_chat_completion(
-    monkeypatch, tmp_path
+    external_boundary_mocks_only, tmp_path
 ) -> None:
     payload = {
         "tldr": "TLDR",
@@ -437,8 +439,10 @@ def test_analyze_report_falls_back_to_legacy_chat_completion(
                 },
             }
 
-    monkeypatch.setattr(svc.openai_legacy, "OpenAI", None)
-    monkeypatch.setattr(svc.openai_legacy, "ChatCompletion", _FakeLegacyChatCompletion)
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", None)
+    external_boundary_mocks_only.setattr(
+        svc.openai_legacy, "ChatCompletion", _FakeLegacyChatCompletion
+    )
 
     result = svc.analyze_report(_analyze_request(tmp_path), _ctx())
 
@@ -452,7 +456,7 @@ def test_analyze_report_falls_back_to_legacy_chat_completion(
 
 
 def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
-    monkeypatch, tmp_path, assert_app_error
+    external_boundary_mocks_only, tmp_path, assert_app_error
 ) -> None:
     class _FailingChatCompletions:
         def create(self, **kwargs):
@@ -462,7 +466,7 @@ def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
         def __init__(self, **kwargs):
             self.chat = SimpleNamespace(completions=_FailingChatCompletions())
 
-    monkeypatch.setattr(svc.openai_legacy, "OpenAI", _FailingClient)
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _FailingClient)
 
     with pytest.raises(AppError) as exc_info:
         svc.openai_chat_json(_chat_request(tmp_path), _ctx())
@@ -471,7 +475,7 @@ def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
 
 
 def test_openai_chat_json_maps_content_filter_to_non_retryable_refusal(
-    monkeypatch, tmp_path, assert_app_error
+    external_boundary_mocks_only, tmp_path, assert_app_error
 ) -> None:
     class _RefusingChatCompletions:
         def create(self, **kwargs):
@@ -481,7 +485,7 @@ def test_openai_chat_json_maps_content_filter_to_non_retryable_refusal(
         def __init__(self, **kwargs):
             self.chat = SimpleNamespace(completions=_RefusingChatCompletions())
 
-    monkeypatch.setattr(svc.openai_legacy, "OpenAI", _RefusingClient)
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _RefusingClient)
 
     with pytest.raises(AppError) as exc_info:
         svc.openai_chat_json(_chat_request(tmp_path), _ctx())

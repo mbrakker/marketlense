@@ -13,7 +13,6 @@ from scripts.ci.check_architecture_imports import (
 from scripts.ci.check_service_boundary_map import load_service_boundary_config
 from scripts.ci.policy import load_architecture_policy
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -31,10 +30,18 @@ def test_architecture_policy_encodes_required_enforcement_sections() -> None:
         "forbidden_placeholders",
         "prompt_text_ownership",
         "test_patching_rules",
+        "live_test_policy",
+        "secret_policy",
+        "policy_documents",
+        "policy_validation",
+        "waivers",
         "architecture_review_triggers",
         "decomposition_evidence_requirements",
     ):
         assert section in policy
+
+    assert policy["test_patching_rules"]["monkeypatch"] == "forbidden"
+    assert policy["policy_validation"]["agents_max_lines"] == 1000
 
 
 def test_architecture_import_gate_reads_role_rules_from_policy(tmp_path: Path) -> None:

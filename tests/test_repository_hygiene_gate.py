@@ -6,6 +6,7 @@ from pathlib import Path
 from scripts.ci.check_repository_hygiene import (
     HygieneAllowlistEntry,
     scan_tracked_paths,
+    validate_dotenv_policy,
 )
 
 
@@ -73,3 +74,16 @@ def test_repository_hygiene_allowlist_requires_unexpired_size_bound(
         allowlist=allowlist,
         today=date(2026, 5, 2),
     )
+
+
+def test_dotenv_policy_requires_ignore_and_safe_template(tmp_path: Path) -> None:
+    (tmp_path / ".gitignore").write_text(".env\n!.env.example\n", encoding="utf-8")
+    (tmp_path / ".env.example").write_text("OPENAI_API_KEY=\n", encoding="utf-8")
+
+    assert validate_dotenv_policy(root=tmp_path, tracked_paths=(".env.example",)) == ()
+
+    (tmp_path / ".env.example").write_text(
+        "OPENAI_API_KEY=sk-examplevalue1234567890\n", encoding="utf-8"
+    )
+    violations = validate_dotenv_policy(root=tmp_path, tracked_paths=(".env",))
+    assert {item.path for item in violations} == {".env", ".env.example"}

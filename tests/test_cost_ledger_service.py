@@ -526,7 +526,7 @@ def test_generate_cost_report_rejects_invalid_date(
 
 def test_append_entry_preserves_existing_ledger_when_atomic_write_fails(
     tmp_path: Path,
-    monkeypatch,
+    external_boundary_mocks_only,
     assert_app_error,
 ) -> None:
     ledger_path = tmp_path / "ledger.jsonl"
@@ -554,7 +554,9 @@ def test_append_entry_preserves_existing_ledger_when_atomic_write_fails(
             context={"path": request.path},
         )
 
-    monkeypatch.setattr(cost_ledger_service.file_service, "write_bytes", _fail_write)
+    external_boundary_mocks_only.setattr(
+        cost_ledger_service.file_service, "write_bytes", _fail_write
+    )
 
     with pytest.raises(AppError) as exc_info:
         append_entry(

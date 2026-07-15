@@ -15,6 +15,7 @@ def quality_gate_commands() -> tuple[tuple[str, ...], ...]:
         ("python", "scripts/ci/check_split_symbol_links.py"),
         ("python", "scripts/ci/run_type_check.py"),
         ("python", "scripts/ci/check_architecture_imports.py"),
+        ("python", "scripts/ci/check_agent_policy.py"),
         ("python", "scripts/ci/check_forbidden_patching.py"),
         ("python", "scripts/ci/check_repository_hygiene.py"),
         ("python", "scripts/ci/check_quality_ledger.py"),

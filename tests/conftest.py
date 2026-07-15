@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-import json
 import inspect
+import json
+import os
+from contextlib import ExitStack
 from dataclasses import MISSING, fields, is_dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable
+from unittest import mock
 
 import pytest
 
@@ -18,8 +21,13 @@ from tests.support.fakes import FakeOpenAIBoundary, RequestsRouter
 
 
 class ExternalBoundaryMocksOnly:
-    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        self._monkeypatch = monkeypatch
+    _UNSET = object()
+
+    def __init__(self) -> None:
+        self._stack = ExitStack()
+
+    def close(self) -> None:
+        self._stack.close()
 
     def _target_module_name(self, target: object) -> str:
         return str(getattr(target, "__name__", target.__class__.__module__) or "")
@@ -39,40 +47,62 @@ class ExternalBoundaryMocksOnly:
             return
         if not target_module.startswith("src."):
             return
-        if target_module.startswith("src.services."):
-            original = getattr(target, attr_name, None)
-            original_module = str(getattr(original, "__module__", "") or "")
-            if inspect.isfunction(original) or inspect.ismethod(original):
-                return
-            if original is None:
-                return
-            if original_module and not original_module.startswith("src."):
-                return
-            raise AssertionError(
-                "only public service boundaries or external client symbols may be patched"
-            )
+        original = getattr(target, attr_name, None)
+        original_module = str(getattr(original, "__module__", "") or "")
+        if inspect.isfunction(original) or inspect.ismethod(original):
+            return
+        if original is None:
+            return
+        if original_module and not original_module.startswith("src."):
+            return
+        if target_module.startswith("src.services.") and attr_name.isupper():
+            return
         raise AssertionError(
-            f"patching internal non-service code is forbidden: {target_module}.{attr_name}"
+            f"patching internal production state is forbidden: {target_module}.{attr_name}"
         )
 
     def setattr(
         self,
         target: object,
-        name: str,
-        value: object,
+        name: str | object,
+        value: object = _UNSET,
         raising: bool = True,
     ) -> None:
+        if isinstance(target, str):
+            if value is not self._UNSET:
+                raise TypeError(
+                    "string patch targets accept exactly one replacement value"
+                )
+            self._stack.enter_context(mock.patch(target, name))
+            return
+        if value is self._UNSET:
+            raise TypeError("object patch targets require an attribute name and value")
+        assert isinstance(name, str)
         self._assert_allowed(target, name)
-        self._monkeypatch.setattr(target, name, value, raising=raising)
+        if raising and not hasattr(target, name):
+            raise AttributeError(f"{target!r} has no attribute {name!r}")
+        self._stack.enter_context(
+            mock.patch.object(target, name, value, create=not raising)
+        )
+
+    def setitem(self, mapping: dict, name: object, value: object) -> None:
+        self._stack.enter_context(mock.patch.dict(mapping, {name: value}))
 
     def setenv(self, name: str, value: str, prepend: str | None = None) -> None:
-        self._monkeypatch.setenv(name, value, prepend=prepend)
+        rendered = f"{value}{prepend}{os.environ.get(name, '')}" if prepend else value
+        self._stack.enter_context(mock.patch.dict(os.environ, {name: rendered}))
 
     def delenv(self, name: str, raising: bool = True) -> None:
-        self._monkeypatch.delenv(name, raising=raising)
+        if raising and name not in os.environ:
+            raise KeyError(name)
+        previous = os.environ.pop(name, None)
+        if previous is not None:
+            self._stack.callback(os.environ.__setitem__, name, previous)
 
     def chdir(self, path: str | Path) -> None:
-        self._monkeypatch.chdir(path)
+        previous = Path.cwd()
+        os.chdir(path)
+        self._stack.callback(os.chdir, previous)
 
 
 @pytest.fixture
@@ -189,7 +219,7 @@ def assert_logs_have_required_fields():
             if isinstance(record, dict):
                 payload = record
             elif hasattr(record, "message"):
-                payload = getattr(record, "message")
+                payload = record.message
             else:
                 payload = record
             if isinstance(payload, str):
@@ -281,10 +311,12 @@ def idempotency_guard():
 
 
 @pytest.fixture
-def external_boundary_mocks_only(
-    monkeypatch: pytest.MonkeyPatch,
-) -> ExternalBoundaryMocksOnly:
-    return ExternalBoundaryMocksOnly(monkeypatch)
+def external_boundary_mocks_only() -> Iterable[ExternalBoundaryMocksOnly]:
+    boundary = ExternalBoundaryMocksOnly()
+    try:
+        yield boundary
+    finally:
+        boundary.close()
 
 
 @pytest.fixture

@@ -4,7 +4,7 @@
 > **Canonical topic:** Credentials and external access
 > **Update trigger:** Provider, authentication mode, secret name, or credential-recovery procedure changes.
 
-Store secrets in `.env`, a CI secret store, or process environment. `.env`, Google OAuth client files, Google OAuth token files, and runtime directories are ignored by Git. Never copy secret values into documentation, logs, fixtures, or generated references.
+Store local secrets in `.env`; production and CI inject the same environment variables from their managed secret stores. `.env`, Google OAuth client files, Google OAuth token files, and runtime directories are ignored by Git. `.env.example` is the committed inventory of supported secret names and contains no real values. Never copy secret values into source, YAML, documentation, logs, tests, fixtures, screenshots, errors, or generated references. Application code resolves credentials through `src/services/config_service.py`.
 
 | Boundary | Required when | Configuration or environment |
 | --- | --- | --- |

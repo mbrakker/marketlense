@@ -96,8 +96,30 @@ prompt_text_ownership:
   generators_must_not_read_prompt_files: true
   inline_prompt_text_outside_prompt_namespace: forbidden
 test_patching_rules:
+  monkeypatch: forbidden
   allowed_boundaries: [service module top-level functions, network clients, time, randomness, OS/process boundaries]
   forbidden: [private helpers, generator internals, orchestrator internals, dataclass constructors]
+live_test_policy:
+  default_suite: excluded
+  required_markers: [integration, live]
+  credentials: environment
+  controls: [explicit opt-in, bounded calls, bounded cost, safe side effects, redacted output]
+secret_policy:
+  local_store: .env
+  template: .env.example
+  configuration_boundary: src/services/config_service.py
+  forbidden_locations: [source, yaml, tests, fixtures, documentation, logs]
+policy_documents:
+  testing: docs/quality/testing.md
+  architecture: docs/quality/architecture-policy.md
+  logging_and_evidence: docs/quality/evidence.md
+  configuration: docs/ops/configuration.md
+  credentials: docs/ops/credentials.md
+policy_validation:
+  agents_max_lines: 1000
+  agents_forbidden_content: [duplicate headings, conversational rewrite residue, user-specific absolute paths, exact prompt logging mandate]
+waivers:
+  required_fields: [owner, reason, expires_on]
 architecture_review_triggers:
   - new top-level package under src
   - new external system boundary

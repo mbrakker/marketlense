@@ -27,7 +27,7 @@ def test_navigation_groups_cover_required_pages() -> None:
     assert all(section.strip() for section in streamlit_app.NAV_SECTIONS)
 
 
-def test_build_navigation_registers_grouped_pages(monkeypatch) -> None:
+def test_build_navigation_registers_grouped_pages(external_boundary_mocks_only) -> None:
     captured: dict[str, object] = {}
 
     def _page(page_callable, *, title: str, icon: str):
@@ -38,8 +38,8 @@ def test_build_navigation_registers_grouped_pages(monkeypatch) -> None:
         captured["position"] = position
         return {"pages": pages}
 
-    monkeypatch.setattr(streamlit_app.st, "Page", _page)
-    monkeypatch.setattr(streamlit_app.st, "navigation", _navigation)
+    external_boundary_mocks_only.setattr(streamlit_app.st, "Page", _page)
+    external_boundary_mocks_only.setattr(streamlit_app.st, "navigation", _navigation)
 
     result = streamlit_app._build_navigation(True)
 
@@ -57,7 +57,5 @@ def test_build_navigation_registers_grouped_pages(monkeypatch) -> None:
         "Publisher Sync",
         "Auth & External Access",
     ]
-    assert [item["title"] for item in pages["Strategy outputs"]] == [
-        "Strategy Outputs"
-    ]
+    assert [item["title"] for item in pages["Strategy outputs"]] == ["Strategy Outputs"]
     assert result == {"pages": pages}

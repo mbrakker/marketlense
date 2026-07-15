@@ -307,7 +307,7 @@ def test_parallel_executor_uses_real_concurrency(ingest_settings, run_context) -
 def test_drive_cache_prefetch_downloads_and_hashes_before_report_workers(
     ingest_settings,
     run_context,
-    monkeypatch,
+    external_boundary_mocks_only,
 ) -> None:
     settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
     file = DriveFile(
@@ -334,7 +334,7 @@ def test_drive_cache_prefetch_downloads_and_hashes_before_report_workers(
             size=len(payload),
         )
 
-    monkeypatch.setattr(orch, "download_pdf_to_path", _download)
+    external_boundary_mocks_only.setattr(orch, "download_pdf_to_path", _download)
 
     orch._prefetch_drive_cache_stage(
         [file],

@@ -18,7 +18,7 @@ def test_drive_credential_resolution_is_immutable_value() -> None:
         resolution.refreshed = True
 
 
-def test_drive_client_is_thread_local(monkeypatch):
+def test_drive_client_is_thread_local(external_boundary_mocks_only):
     drive_service._DRIVE_CLIENTS = {}
     drive_service._FOLDER_SCOPE_CACHE = {}
     created = []
@@ -43,12 +43,12 @@ def test_drive_client_is_thread_local(monkeypatch):
         created.append(obj)
         return obj
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(_fake_credentials_from_file),
     )
-    monkeypatch.setattr(drive_service, "build", _fake_build)
+    external_boundary_mocks_only.setattr(drive_service, "build", _fake_build)
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
     main_client_1 = drive_service._get_drive_client(
@@ -93,7 +93,7 @@ def test_drive_client_is_thread_local(monkeypatch):
     assert len(created) == 2
 
 
-def test_drive_client_build_happens_outside_cache_lock(monkeypatch):
+def test_drive_client_build_happens_outside_cache_lock(external_boundary_mocks_only):
     drive_service._DRIVE_CLIENTS = {}
     drive_service._FOLDER_SCOPE_CACHE = {}
 
@@ -121,12 +121,12 @@ def test_drive_client_build_happens_outside_cache_lock(monkeypatch):
                 drive_service._DRIVE_CLIENTS_LOCK.release()
         return object()
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(_fake_credentials_from_file),
     )
-    monkeypatch.setattr(drive_service, "build", _fake_build)
+    external_boundary_mocks_only.setattr(drive_service, "build", _fake_build)
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
     drive_service._get_drive_client(
@@ -137,7 +137,7 @@ def test_drive_client_build_happens_outside_cache_lock(monkeypatch):
     )
 
 
-def test_drive_client_isolated_under_concurrent_access(monkeypatch):
+def test_drive_client_isolated_under_concurrent_access(external_boundary_mocks_only):
     drive_service._DRIVE_CLIENTS = {}
     drive_service._FOLDER_SCOPE_CACHE = {}
     created = []
@@ -164,12 +164,12 @@ def test_drive_client_isolated_under_concurrent_access(monkeypatch):
         created.append(obj)
         return obj
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(_fake_credentials_from_file),
     )
-    monkeypatch.setattr(drive_service, "build", _fake_build)
+    external_boundary_mocks_only.setattr(drive_service, "build", _fake_build)
 
     def _worker(name: str):
         worker_ctx = RunContext(

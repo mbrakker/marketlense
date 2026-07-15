@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
-def test_list_pdfs_reuses_cached_folder_scope_until_invalidated(monkeypatch):
+
+def test_list_pdfs_reuses_cached_folder_scope_until_invalidated(
+    external_boundary_mocks_only,
+):
     folder_query_root = (
         "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' "
         "and trashed=false"
@@ -16,9 +19,15 @@ def test_list_pdfs_reuses_cached_folder_scope_until_invalidated(monkeypatch):
         "'child-b' in parents and mimeType='application/vnd.google-apps.folder' "
         "and trashed=false"
     )
-    pdf_query_root = "'root-folder' in parents and mimeType='application/pdf' and trashed=false"
-    pdf_query_child_a = "'child-a' in parents and mimeType='application/pdf' and trashed=false"
-    pdf_query_child_b = "'child-b' in parents and mimeType='application/pdf' and trashed=false"
+    pdf_query_root = (
+        "'root-folder' in parents and mimeType='application/pdf' and trashed=false"
+    )
+    pdf_query_child_a = (
+        "'child-a' in parents and mimeType='application/pdf' and trashed=false"
+    )
+    pdf_query_child_b = (
+        "'child-b' in parents and mimeType='application/pdf' and trashed=false"
+    )
     responses: dict[Any, dict] = {
         folder_query_root: {"files": [{"id": "child-a"}], "nextPageToken": None},
         folder_query_child_a: {"files": [], "nextPageToken": None},
@@ -26,12 +35,14 @@ def test_list_pdfs_reuses_cached_folder_scope_until_invalidated(monkeypatch):
         pdf_query_child_a: {"files": [{"id": "child-a-pdf"}], "nextPageToken": None},
     }
     fake_drive = _FakeDriveClient(responses)
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    external_boundary_mocks_only.setattr(
+        drive_service, "build", lambda *_args, **_kwargs: fake_drive
+    )
     _reset_drive_caches()
 
     first = list(drive_service.list_pdfs(_request(), _ctx()))
@@ -60,11 +71,10 @@ def test_list_pdfs_reuses_cached_folder_scope_until_invalidated(monkeypatch):
         "child-b-pdf",
     ]
 
-def test_drive_client_cache_expires_and_evicts_oldest(monkeypatch):
+
+def test_drive_client_cache_expires_and_evicts_oldest(external_boundary_mocks_only):
     created: list[object] = []
-    timestamps = iter(
-        [0.0, 1.0, 2.0, 3.0, 4.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0]
-    )
+    timestamps = iter([0.0, 1.0, 2.0, 3.0, 4.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0])
 
     def _fake_build(
         service_name: str,
@@ -82,15 +92,21 @@ def test_drive_client_cache_expires_and_evicts_oldest(monkeypatch):
         created.append(client)
         return client
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         drive_service.Credentials,
         "from_service_account_file",
         staticmethod(lambda _sa_path, scopes: object()),
     )
-    monkeypatch.setattr(drive_service, "build", _fake_build)
-    monkeypatch.setattr(drive_service.time, "monotonic", lambda: next(timestamps))
-    monkeypatch.setattr(drive_service, "DRIVE_CLIENT_CACHE_TTL_SECONDS", 5.0)
-    monkeypatch.setattr(drive_service, "DRIVE_CLIENT_CACHE_MAX_ENTRIES", 2)
+    external_boundary_mocks_only.setattr(drive_service, "build", _fake_build)
+    external_boundary_mocks_only.setattr(
+        drive_service.time, "monotonic", lambda: next(timestamps)
+    )
+    external_boundary_mocks_only.setattr(
+        drive_service, "DRIVE_CLIENT_CACHE_TTL_SECONDS", 5.0
+    )
+    external_boundary_mocks_only.setattr(
+        drive_service, "DRIVE_CLIENT_CACHE_MAX_ENTRIES", 2
+    )
     _reset_drive_caches()
 
     ctx = _ctx()
@@ -136,6 +152,7 @@ def test_drive_client_cache_expires_and_evicts_oldest(monkeypatch):
     assert client_b_2 is not client_b_1
     assert client_c_1 is not client_b_1
     assert len(created) == 5
+
 
 __all__ = [
     "test_list_pdfs_reuses_cached_folder_scope_until_invalidated",
