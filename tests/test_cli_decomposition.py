@@ -32,6 +32,12 @@ EXPECTED_OWNERS = {
     "browser.py": {"download_report", "browser_doctor"},
     "publisher.py": {"discover_publisher_inventory", "audit_acquisition_paths"},
     "admin.py": {"drive_oauth_login", "sync_publishers"},
+    "claim_embedding.py": {
+        "embedding_queue_health",
+        "embedding_queue_reconcile",
+        "embedding_queue_run",
+        "embedding_queue_failures",
+    },
     "ui_runs.py": {"replay_run", "ui_run_worker"},
 }
 

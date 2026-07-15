@@ -27,6 +27,7 @@ SCHEMA = {
     "_REPORT_FIGURES_TABLE_SQL",
     "_VECTOR_PROJECTION_QUEUE_TABLE_SQL",
     "_CLAIM_EMBEDDINGS_TABLE_SQL",
+    "_CLAIM_EMBEDDING_QUEUE_TRANSITIONS_TABLE_SQL",
     "_SIGNAL_CANDIDATES_TABLE_SQL",
     "_SIGNAL_CANDIDATE_GROUPS_TABLE_SQL",
 }
@@ -53,6 +54,7 @@ PROJECTIONS = {
     "_reports_db_013_create_signal_candidate_projection",
     "_reports_db_014_create_claim_embedding_records",
     "_reports_db_015_create_artifact_lineage_registry",
+    "_reports_db_016_add_claim_embedding_queue_controls",
 }
 
 

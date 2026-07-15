@@ -316,6 +316,22 @@ def persist_claim_embedding(
                 "SELECT attempt_count FROM claim_embeddings WHERE embedding_uid=?",
                 (str(record.embedding_uid),),
             ).fetchone()
+            queue_before = conn.execute(
+                """
+                SELECT embedding_status, queue_attempt_count
+                FROM vector_projection_queue
+                WHERE entity_uid=? AND content_hash=?
+                """,
+                (str(record.entity_uid), record.content_hash),
+            ).fetchone()
+            if queue_before is None:
+                raise AppError(
+                    code="claim_embedding_queue_item_missing",
+                    message="Claim embedding record must link to a current queue item",
+                    retryable=False,
+                    severity="error",
+                    context={"entity_uid": str(record.entity_uid)},
+                )
             attempt_count = int(existing["attempt_count"] or 0) + 1 if existing else 1
             stored_record = replace(record, attempt_count=attempt_count)
             conn.execute(
@@ -387,14 +403,73 @@ def persist_claim_embedding(
                 UPDATE vector_projection_queue
                 SET embedding_status=?,
                     embedding_version=?,
+                    queue_reason_code=?,
+                    queue_error_retryable=?,
+                    queue_attempt_count=queue_attempt_count + 1,
+                    next_eligible_at_utc=?,
+                    queue_actor=?,
+                    execution_lease_id='',
+                    execution_lease_expires_at_utc='',
                     updated_at_utc=?
-                WHERE entity_uid=?
+                WHERE entity_uid=? AND content_hash=?
+                  AND (?='' OR execution_lease_id=?)
                 """,
                 (
                     stored_record.status,
                     stored_record.embedding_version,
+                    request.queue_reason_code
+                    or (
+                        "embedding_completed"
+                        if stored_record.status == "embedded"
+                        else stored_record.error_code
+                    ),
+                    1 if stored_record.error_retryable else 0,
+                    request.next_eligible_at_utc
+                    if stored_record.error_retryable
+                    else "",
+                    request.queue_actor,
                     stored_record.updated_at_utc,
                     str(stored_record.entity_uid),
+                    stored_record.content_hash,
+                    request.execution_lease_id,
+                    request.execution_lease_id,
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO claim_embedding_queue_transitions(
+                  entity_uid,report_id,prior_status,new_status,reason_code,actor,run_id,
+                  timestamp_utc,content_hash,embedding_version,provider,model,details_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    str(stored_record.entity_uid),
+                    str(stored_record.report_id),
+                    str(queue_before["embedding_status"]),
+                    stored_record.status,
+                    request.queue_reason_code
+                    or (
+                        "embedding_completed"
+                        if stored_record.status == "embedded"
+                        else stored_record.error_code
+                    ),
+                    request.queue_actor,
+                    request.queue_run_id,
+                    stored_record.updated_at_utc,
+                    stored_record.content_hash,
+                    stored_record.embedding_version,
+                    stored_record.provider,
+                    stored_record.model,
+                    _json(
+                        {
+                            "embedding_attempt_count": stored_record.attempt_count,
+                            "queue_attempt_count": int(
+                                queue_before["queue_attempt_count"] or 0
+                            )
+                            + 1,
+                            "error_retryable": stored_record.error_retryable,
+                        }
+                    ),
                 ),
             )
     except AppError:

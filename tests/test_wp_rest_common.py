@@ -3,11 +3,14 @@ from __future__ import annotations
 import base64
 import json
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 import pytest
 
 from Wordpress.scripts import wp_rest_common as rest_common
+
+if TYPE_CHECKING:
+    from tests.conftest import ExternalBoundaryMocksOnly
 
 
 @dataclass(frozen=True)

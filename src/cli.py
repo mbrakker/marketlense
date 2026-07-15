@@ -149,6 +149,12 @@ from src._cli.pipeline import (
 from src._cli.browser import browser_doctor, download_report, poll_mail_report
 from src._cli.publisher import audit_acquisition_paths, discover_publisher_inventory
 from src._cli.admin import drive_oauth_login, sync_publishers
+from src._cli.claim_embedding import (
+    embedding_queue_failures,
+    embedding_queue_health,
+    embedding_queue_reconcile,
+    embedding_queue_run,
+)
 
 if __name__ == "__main__":
     main()

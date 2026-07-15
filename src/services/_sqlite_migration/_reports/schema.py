@@ -462,6 +462,25 @@ CREATE TABLE IF NOT EXISTS artifact_lineage_records (
 );
 """
 
+_CLAIM_EMBEDDING_QUEUE_TRANSITIONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS claim_embedding_queue_transitions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_uid TEXT NOT NULL,
+  report_id TEXT NOT NULL,
+  prior_status TEXT NOT NULL,
+  new_status TEXT NOT NULL,
+  reason_code TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  run_id TEXT NOT NULL,
+  timestamp_utc TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  embedding_version TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  details_json TEXT NOT NULL
+);
+"""
+
 _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS artifact_lineage_dependencies (
   artifact_id TEXT NOT NULL REFERENCES artifact_lineage_records(artifact_id),

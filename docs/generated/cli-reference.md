@@ -13,6 +13,10 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `discover-publisher-inventory` | [`src/_cli/publisher.py`](../../src/_cli/publisher.py) | Public |
 | `download-report` | [`src/_cli/browser.py`](../../src/_cli/browser.py) | Public |
 | `drive-oauth-login` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
+| `embedding-queue-failures` | [`src/_cli/claim_embedding.py`](../../src/_cli/claim_embedding.py) | Public |
+| `embedding-queue-health` | [`src/_cli/claim_embedding.py`](../../src/_cli/claim_embedding.py) | Public |
+| `embedding-queue-reconcile` | [`src/_cli/claim_embedding.py`](../../src/_cli/claim_embedding.py) | Public |
+| `embedding-queue-run` | [`src/_cli/claim_embedding.py`](../../src/_cli/claim_embedding.py) | Public |
 | `extract-candidates` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
 | `generate-covers` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
 | `generate-cross-report-analysis` | [`src/_cli/cross_report.py`](../../src/_cli/cross_report.py) | Public |

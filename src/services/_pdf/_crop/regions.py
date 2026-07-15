@@ -755,11 +755,11 @@ def _crop_outcome(
     raw_detectors = qa.get("detectors")
     detector_summary = (
         {
-            str(name): float(value.get("confidence"))
+            str(name): float(confidence)
             for name, value in raw_detectors.items()
             if isinstance(name, str)
             and isinstance(value, dict)
-            and isinstance(value.get("confidence"), (int, float))
+            and isinstance(confidence := value.get("confidence"), (int, float))
         }
         if isinstance(raw_detectors, dict)
         else {}

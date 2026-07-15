@@ -17,6 +17,7 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_013_create_signal_candidate_projection,
     _reports_db_014_create_claim_embedding_records,
     _reports_db_015_create_artifact_lineage_registry,
+    _reports_db_016_add_claim_embedding_queue_controls,
 )
 from src.services._sqlite_migration._reports.routing import (
     _reports_db_006_create_or_upgrade_download_route_history,
@@ -29,6 +30,7 @@ from src.services._sqlite_migration._reports.schema import (
     _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
     _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
     _CLAIM_EMBEDDINGS_TABLE_SQL,
+    _CLAIM_EMBEDDING_QUEUE_TRANSITIONS_TABLE_SQL,
     _DOWNLOAD_ROUTE_HISTORY_TABLE_SQL,
     _INVENTORY_RECOVERY_CACHE_TABLE_SQL,
     _INVENTORY_ROUTE_HISTORY_TABLE_SQL,
@@ -126,5 +128,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_015_create_artifact_lineage_registry",
         version=15,
         apply_fn=_reports_db_015_create_artifact_lineage_registry,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_016_add_claim_embedding_queue_controls",
+        version=16,
+        apply_fn=_reports_db_016_add_claim_embedding_queue_controls,
     ),
 )

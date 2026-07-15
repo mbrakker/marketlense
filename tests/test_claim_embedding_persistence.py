@@ -115,6 +115,7 @@ def test_claim_embedding_workflow_persists_vectors_and_skips_unchanged_reruns(
     assert first.skipped_count == 0
     assert second.embedded_count == 0
     assert second.skipped_count == 0
+    assert second.provider_calls_avoided == 1
     assert len(calls) == 1
     assert "Demand is expanding" in calls[0][0]
 
@@ -349,7 +350,7 @@ def test_claim_embedding_workflow_reembeds_when_content_hash_or_version_changes(
     )
     run_claim_embedding_workflow(version_two, dependencies=deps)
 
-    assert len(calls) == 3
+    assert len(calls) == 2
     embedded = read_claim_embeddings(
         ClaimEmbeddingReadRequest(
             schema_version="1.0",
@@ -361,7 +362,18 @@ def test_claim_embedding_workflow_reembeds_when_content_hash_or_version_changes(
     ).embeddings
     assert [record.embedding_version for record in embedded] == [
         "claim-embedding.v2",
-        "claim-embedding.v2",
         "claim-embedding.v1",
     ]
-    assert embedded[0].content_hash == "f" * 64
+    queue = _fetch_one(
+        ingest_settings.reports_db,
+        """
+        SELECT embedding_status, queue_reason_code
+        FROM vector_projection_queue
+        WHERE entity_uid=?
+        """,
+        (str(claim_queue.entity_uid),),
+    )
+    assert dict(queue) == {
+        "embedding_status": "pending",
+        "queue_reason_code": "",
+    }

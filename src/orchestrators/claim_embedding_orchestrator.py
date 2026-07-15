@@ -3,22 +3,29 @@ from __future__ import annotations
 """Control-plane workflow for durable claim-level embeddings."""
 
 import logging
+import math
+import time
+import uuid
 from dataclasses import dataclass
-from typing import Callable
+from datetime import timedelta
+from typing import Callable, cast
 
 from src.contracts.analytics_projection import (
-    ClaimEmbeddingPendingReadRequest,
     ClaimEmbeddingPersistRequest,
     ClaimEmbeddingQueueItem,
+    ClaimEmbeddingQueueHealthItem,
+    ClaimEmbeddingQueueHealthRequest,
     ClaimEmbeddingRecord,
     ClaimEmbeddingWorkflowRequest,
     ClaimEmbeddingWorkflowResponse,
+    ContentClass,
     PROJECTION_SCHEMA_VERSION,
 )
 from src.contracts.openai import OpenAIEmbeddingRequest, OpenAIEmbeddingResponse
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import EntityUid
 from src.services import analytics_store_service, llm_service
+from src.utils.costing import estimate_cost_usd
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
@@ -36,6 +43,12 @@ class ClaimEmbeddingDependencies:
     persist_record: Callable = analytics_store_service.persist_claim_embedding
     embedding_uid: Callable[..., EntityUid] = (
         analytics_store_service.claim_embedding_uid
+    )
+    read_queue_health: Callable = (
+        analytics_store_service.read_claim_embedding_queue_health
+    )
+    acquire_execution_lease: Callable = (
+        analytics_store_service.acquire_claim_embedding_execution_lease
     )
     utc_now: Callable[[], str] = lambda: ""
 
@@ -140,15 +153,114 @@ def _persist(
     request: ClaimEmbeddingWorkflowRequest,
     record: ClaimEmbeddingRecord,
     ctx: RunContext,
+    *,
+    run_id: str,
+    reason_code: str,
+    next_eligible_at_utc: str = "",
+    execution_lease_id: str = "",
 ) -> None:
     deps.persist_record(
         ClaimEmbeddingPersistRequest(
             schema_version=PROJECTION_SCHEMA_VERSION,
             db_path=request.db_path,
             record=record,
+            queue_run_id=run_id,
+            queue_reason_code=reason_code,
+            next_eligible_at_utc=next_eligible_at_utc,
+            execution_lease_id=execution_lease_id,
         ),
         ctx,
     )
+
+
+def _queue_health_request(
+    request: ClaimEmbeddingWorkflowRequest,
+) -> ClaimEmbeddingQueueHealthRequest:
+    return ClaimEmbeddingQueueHealthRequest(
+        schema_version=PROJECTION_SCHEMA_VERSION,
+        db_path=request.db_path,
+        embedding_version=request.embedding_version,
+        provider=request.provider,
+        model=request.model,
+        report_ids=request.report_ids,
+        publishers=request.publishers,
+        entity_types=["claim"],
+        max_estimated_tokens=request.max_estimated_tokens,
+        max_estimated_cost_usd=request.max_estimated_cost_usd,
+        model_pricing=request.model_pricing,
+    )
+
+
+def _select_items(
+    items: list[ClaimEmbeddingQueueHealthItem], request: ClaimEmbeddingWorkflowRequest
+) -> tuple[list[ClaimEmbeddingQueueHealthItem], int, float]:
+    """Select oldest-first rows under row, report, fairness and budget controls."""
+    selected: list[ClaimEmbeddingQueueHealthItem] = []
+    seen_reports: set[str] = set()
+    publisher_counts: dict[str, int] = {}
+    token_total = 0
+    cost_total = 0.0
+    avoided = 0
+    avoided_cost = 0.0
+    for item in items:
+        if item.classification not in {"ready_to_embed", "retryable_failure"}:
+            avoided += 1
+            avoided_cost += item.estimated_cost_usd
+            continue
+        if (
+            item.classification == "retryable_failure"
+            and item.classification_reason == "retry_not_yet_eligible"
+        ):
+            avoided += 1
+            avoided_cost += item.estimated_cost_usd
+            continue
+        publisher = item.publisher.casefold()
+        prospective_reports = seen_reports | {str(item.report_id)}
+        if request.limit > 0 and len(selected) >= request.limit:
+            avoided += 1
+            avoided_cost += item.estimated_cost_usd
+            continue
+        if request.max_reports > 0 and len(prospective_reports) > request.max_reports:
+            avoided += 1
+            avoided_cost += item.estimated_cost_usd
+            continue
+        if (
+            request.publisher_fairness_limit > 0
+            and publisher_counts.get(publisher, 0) >= request.publisher_fairness_limit
+        ):
+            avoided += 1
+            avoided_cost += item.estimated_cost_usd
+            continue
+        if (
+            request.max_estimated_tokens > 0
+            and token_total + item.estimated_tokens > request.max_estimated_tokens
+        ):
+            avoided += 1
+            avoided_cost += item.estimated_cost_usd
+            continue
+        if (
+            request.max_estimated_cost_usd > 0
+            and cost_total + item.estimated_cost_usd > request.max_estimated_cost_usd
+        ):
+            avoided += 1
+            avoided_cost += item.estimated_cost_usd
+            continue
+        selected.append(item)
+        seen_reports.add(str(item.report_id))
+        publisher_counts[publisher] = publisher_counts.get(publisher, 0) + 1
+        token_total += item.estimated_tokens
+        cost_total += item.estimated_cost_usd
+    return selected, avoided, avoided_cost
+
+
+def _retry_timestamp(generated_at_utc: str, attempt_count: int) -> str:
+    from datetime import datetime, timezone
+
+    base = datetime.fromisoformat(generated_at_utc.replace("Z", "+00:00"))
+    if base.tzinfo is None:
+        base = base.replace(tzinfo=timezone.utc)
+    seconds = min(3600, 60 * (2 ** max(0, attempt_count - 1)))
+    return (base + timedelta(seconds=seconds)).isoformat()
 
 
 def run_claim_embedding_workflow(
@@ -175,73 +287,21 @@ def run_claim_embedding_workflow(
             },
         )
     )
-    pending = deps.read_pending_rows(
-        ClaimEmbeddingPendingReadRequest(
-            schema_version=PROJECTION_SCHEMA_VERSION,
-            db_path=request.db_path,
-            embedding_version=request.embedding_version,
-            provider=request.provider,
-            model=request.model,
-            limit=request.limit,
-        ),
-        root_ctx,
-    )
-    rows = list(pending.rows)
-    if not rows:
+    health = deps.read_queue_health(_queue_health_request(request), root_ctx)
+    selected, avoided, avoided_cost = _select_items(list(health.items), request)
+    queue_age_before_seconds = health.oldest_pending_age_seconds
+    pending_before = health.total_pending
+    if not selected:
         response = ClaimEmbeddingWorkflowResponse(
             schema_version=PROJECTION_SCHEMA_VERSION,
             embedded_count=0,
             failed_count=0,
             skipped_count=0,
             processed_entity_uids=[],
-        )
-        logger.info(
-            log_event(
-                root_ctx,
-                role="orchestrator",
-                event="claim_embedding_workflow_complete",
-                module=logger.name,
-                fields={"embedded_count": 0, "failed_count": 0, "skipped_count": 0},
-            )
-        )
-        return response
-
-    processed: list[EntityUid] = [row.entity_uid for row in rows]
-    generated_at_utc = _timestamp(deps)
-    try:
-        provider_response = deps.create_embeddings(
-            OpenAIEmbeddingRequest(
-                schema_version="1.0",
-                api_key=request.api_key,
-                model=request.model,
-                inputs=[row.text_payload for row in rows],
-                timeout_seconds=request.timeout_seconds,
-                cost_ledger_path=request.cost_ledger_path,
-                cost_daily_path=request.cost_daily_path,
-                model_pricing=request.model_pricing,
-            ),
-            root_ctx,
-        )
-    except AppError as exc:
-        for row in rows:
-            _persist(
-                deps,
-                request,
-                _failure_record(
-                    row=row,
-                    error=exc,
-                    request=request,
-                    generated_at_utc=generated_at_utc,
-                    embedding_uid=_embedding_uid(deps, row, request),
-                ),
-                root_ctx,
-            )
-        response = ClaimEmbeddingWorkflowResponse(
-            schema_version=PROJECTION_SCHEMA_VERSION,
-            embedded_count=0,
-            failed_count=len(rows),
-            skipped_count=0,
-            processed_entity_uids=processed,
+            provider_calls_avoided=avoided,
+            estimated_cost_avoided_usd=avoided_cost,
+            queue_age_before_seconds=queue_age_before_seconds,
+            queue_age_after_seconds=queue_age_before_seconds,
         )
         logger.info(
             log_event(
@@ -250,32 +310,149 @@ def run_claim_embedding_workflow(
                 event="claim_embedding_workflow_complete",
                 module=logger.name,
                 fields={
-                    "embedded_count": response.embedded_count,
-                    "failed_count": response.failed_count,
+                    "embedded_count": 0,
+                    "failed_count": 0,
                     "skipped_count": response.skipped_count,
+                    "provider_calls_avoided": response.provider_calls_avoided,
                 },
             )
         )
         return response
 
-    if len(provider_response.embeddings) != len(rows):
-        raise AppError(
-            code="claim_embedding_provider_count_mismatch",
-            message="Embedding response count did not match pending claim rows",
-            retryable=True,
-            severity="error",
-            context={
-                "expected": len(rows),
-                "actual": len(provider_response.embeddings),
-            },
+    if request.dry_run:
+        return ClaimEmbeddingWorkflowResponse(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            embedded_count=0,
+            failed_count=0,
+            skipped_count=len(selected) + avoided,
+            processed_entity_uids=[],
+            provider_calls_avoided=len(selected) + avoided,
+            estimated_cost_avoided_usd=avoided_cost
+            + sum(item.estimated_cost_usd for item in selected),
+            queue_age_before_seconds=queue_age_before_seconds,
+            queue_age_after_seconds=queue_age_before_seconds,
         )
-    for row, vector in zip(rows, provider_response.embeddings):
+    started = time.monotonic()
+    run_id = str(request.ctx.run_id)
+    processed: list[EntityUid] = []
+    embedded_count = 0
+    failed_count = 0
+    actual_input_tokens = 0
+    actual_cost = 0.0
+    provider_latencies_ms: list[float] = []
+    skipped_count = avoided
+    for item in selected:
+        if (
+            request.max_runtime_seconds > 0
+            and time.monotonic() - started >= request.max_runtime_seconds
+        ):
+            skipped_count += 1
+            avoided += 1
+            avoided_cost += item.estimated_cost_usd
+            continue
+        lease_id = uuid.uuid4().hex
+        generated_at_utc = _timestamp(deps)
+        lease_expires = _retry_timestamp(generated_at_utc, 7)
+        acquired = deps.acquire_execution_lease(
+            db_path=request.db_path,
+            item=item,
+            embedding_version=request.embedding_version,
+            provider=request.provider,
+            model=request.model,
+            lease_id=lease_id,
+            lease_expires_at_utc=lease_expires,
+            ctx=root_ctx,
+        )
+        if not acquired:
+            skipped_count += 1
+            avoided += 1
+            avoided_cost += item.estimated_cost_usd
+            continue
+        row = ClaimEmbeddingQueueItem(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            claim_uid=item.entity_uid,
+            entity_uid=item.entity_uid,
+            report_id=item.report_id,
+            text_payload=item.text_payload,
+            content_hash=item.content_hash,
+            metadata=item.metadata,
+            content_class=cast(ContentClass, item.content_class),
+        )
+        processed.append(row.entity_uid)
+        try:
+            provider_started = time.monotonic()
+            provider_response = deps.create_embeddings(
+                OpenAIEmbeddingRequest(
+                    schema_version="1.0",
+                    api_key=request.api_key,
+                    model=request.model,
+                    inputs=[row.text_payload],
+                    timeout_seconds=request.timeout_seconds,
+                    cost_ledger_path=request.cost_ledger_path,
+                    cost_daily_path=request.cost_daily_path,
+                    model_pricing=request.model_pricing,
+                ),
+                root_ctx,
+            )
+            provider_latencies_ms.append((time.monotonic() - provider_started) * 1000)
+            if len(provider_response.embeddings) != 1:
+                raise AppError(
+                    code="claim_embedding_provider_count_mismatch",
+                    message=(
+                        "Embedding response count did not match one admitted claim row"
+                    ),
+                    retryable=True,
+                    severity="error",
+                    context={"actual": len(provider_response.embeddings)},
+                )
+        except AppError as exc:
+            provider_latencies_ms.append((time.monotonic() - provider_started) * 1000)
+            next_attempt = item.attempt_count + 1
+            retryable = exc.retryable and next_attempt < max(1, request.max_retries)
+            reason = exc.code if retryable else f"{exc.code}_retry_exhausted"
+            _persist(
+                deps,
+                request,
+                _failure_record(
+                    row=row,
+                    error=AppError(
+                        code=reason,
+                        message=exc.message,
+                        retryable=retryable,
+                        severity=exc.severity,
+                    ),
+                    request=request,
+                    generated_at_utc=generated_at_utc,
+                    embedding_uid=_embedding_uid(deps, row, request),
+                ),
+                root_ctx,
+                run_id=run_id,
+                reason_code=reason,
+                next_eligible_at_utc=(
+                    _retry_timestamp(generated_at_utc, next_attempt)
+                    if retryable
+                    else ""
+                ),
+                execution_lease_id=lease_id,
+            )
+            failed_count += 1
+            continue
+        actual_input_tokens += int(
+            provider_response.input_tokens or item.estimated_tokens
+        )
+        actual_cost += estimate_cost_usd(
+            request.model,
+            int(provider_response.input_tokens or item.estimated_tokens),
+            0,
+            0,
+            request.model_pricing,
+        )
         _persist(
             deps,
             request,
             _success_record(
                 row=row,
-                vector=vector,
+                vector=provider_response.embeddings[0],
                 dimensions=provider_response.dimensions,
                 response=provider_response,
                 request=request,
@@ -283,13 +460,37 @@ def run_claim_embedding_workflow(
                 embedding_uid=_embedding_uid(deps, row, request),
             ),
             root_ctx,
+            run_id=run_id,
+            reason_code="embedding_completed",
+            execution_lease_id=lease_id,
         )
+        embedded_count += 1
+    after_health = deps.read_queue_health(_queue_health_request(request), root_ctx)
+    average_latency = (
+        sum(provider_latencies_ms) / len(provider_latencies_ms)
+        if provider_latencies_ms
+        else 0.0
+    )
+    p95_latency = (
+        sorted(provider_latencies_ms)[math.ceil(len(provider_latencies_ms) * 0.95) - 1]
+        if provider_latencies_ms
+        else 0.0
+    )
     response = ClaimEmbeddingWorkflowResponse(
         schema_version=PROJECTION_SCHEMA_VERSION,
-        embedded_count=len(rows),
-        failed_count=0,
-        skipped_count=0,
+        embedded_count=embedded_count,
+        failed_count=failed_count,
+        skipped_count=skipped_count,
         processed_entity_uids=processed,
+        provider_calls_avoided=avoided,
+        estimated_cost_avoided_usd=avoided_cost,
+        actual_input_tokens=actual_input_tokens,
+        actual_cost_usd=actual_cost,
+        queue_age_before_seconds=queue_age_before_seconds,
+        queue_age_after_seconds=after_health.oldest_pending_age_seconds,
+        backlog_burndown_count=max(0, pending_before - after_health.total_pending),
+        average_provider_latency_ms=average_latency,
+        p95_provider_latency_ms=p95_latency,
     )
     logger.info(
         log_event(
@@ -301,6 +502,9 @@ def run_claim_embedding_workflow(
                 "embedded_count": response.embedded_count,
                 "failed_count": response.failed_count,
                 "skipped_count": response.skipped_count,
+                "provider_calls_avoided": response.provider_calls_avoided,
+                "actual_input_tokens": response.actual_input_tokens,
+                "actual_cost_usd": response.actual_cost_usd,
             },
         )
     )

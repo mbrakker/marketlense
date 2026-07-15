@@ -45,6 +45,7 @@ Projection-owned tables:
 - `report_figures`
 - `vector_projection_queue`
 - `claim_embeddings`
+- `claim_embedding_queue_transitions`
 
 `report_id` is the existing Drive file ID. `source_file_id` is intentionally not stored as a separate projected field when it would equal `report_id`.
 
@@ -77,6 +78,37 @@ Embedding records include:
 `run_claim_embedding_workflow` reads claim rows whose queue status is pending/failed, whose queue embedding version differs from the requested version, or whose current content/model/provider/version combination has no successful durable record. Successful runs persist vectors and update the queue to `embedded`; provider failures persist failed records with the typed `AppError` taxonomy and update the queue to `failed`.
 
 `read_claim_embeddings` returns local durable records filtered by claim IDs, report IDs, topic taxonomy/category metadata, and status. This is reusable claim grounding inside the existing reports DB; it does not introduce a new deployable worker, peer analytics database, external vector database, or semantic-search product UI.
+
+## Bounded Queue Remediation
+
+The queue is operated through explicit commands, not a daemon or scheduler. `embedding-queue-health` classifies every retained queue row without provider calls. Claim rows are classified as ready, already satisfied, stale, obsolete, terminal/retryable failures, invalid, orphaned, budget-blocked, or review-required. Non-claim projection rows remain visible as `unknown_requires_review`; they are never submitted to the claim embedding provider.
+
+The reports migration `reports_db_016_add_claim_embedding_queue_controls` adds retry eligibility, attempt, lease, actor, reason, and projection-schema fields to `vector_projection_queue`, plus the append-only `claim_embedding_queue_transitions` audit table. It also adds the queue-age, report-scope, durable-embedding identity, and audit indexes used by the bounded paths. Historical rows are retained.
+
+Reconciliation is provider-free. It marks a durable match as embedded, records stale content for deterministic reprojection, terminalizes obsolete versions, and terminalizes orphaned reports. Each state transition records the previous and new status, typed reason, actor, run ID, timestamp, content hash, version, provider/model, and compact details.
+
+The bounded execution path is intentionally sequential (`max_concurrent_provider_calls=1`) and supports row/report/token/spend/runtime/retry/fairness limits plus optional report/publisher filters. It checks current text/hash state, looks for a successful durable identity, and acquires a SQLite execution lease before each provider call. Retryable failures receive exponential-backoff metadata; terminal, invalid, stale, obsolete, orphaned, and already-satisfied rows do not call the provider. The canonical LLM usage ledger remains the source of provider accounting.
+
+Operator commands (all defaults are conservative):
+
+```powershell
+# Read-only health artifact
+python -m src.cli embedding-queue-health --output out/claim-embedding-queue-health.json
+
+# Provider-free reconciliation preview, then explicit apply
+python -m src.cli embedding-queue-reconcile --dry-run
+python -m src.cli embedding-queue-reconcile --apply
+
+# Bounded batch preview, then an explicitly scoped provider run
+python -m src.cli embedding-queue-run --dry-run --max-rows 25 --max-reports 5
+python -m src.cli embedding-queue-run --apply --max-rows 25 --max-estimated-tokens 8000 --max-estimated-cost-usd 1.0 --max-runtime-seconds 120
+
+# Report-scoped retry and failed-row inspection
+python -m src.cli embedding-queue-run --apply --report-id <report-id> --max-rows 10
+python -m src.cli embedding-queue-failures --output out/claim-embedding-queue-failures.json
+```
+
+The health and command artifacts contain operational identifiers and aggregate metrics, not queue text or retrieval metadata. They expose pending age, class/status counts, processed/embedded/failed/skipped rows, avoided calls and estimated spend, actual usage estimates, call latency, and queue burn-down. Existing report publication remains non-blocking when the queue fails, and Briefings/Signals retain their deterministic fallback when no fresh embedding is available.
 
 ## Briefing and Signal Evidence Preselection
 

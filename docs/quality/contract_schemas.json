@@ -10408,6 +10408,21 @@
         "db_path": {
           "type": "string"
         },
+        "execution_lease_id": {
+          "type": "string"
+        },
+        "next_eligible_at_utc": {
+          "type": "string"
+        },
+        "queue_actor": {
+          "type": "string"
+        },
+        "queue_reason_code": {
+          "type": "string"
+        },
+        "queue_run_id": {
+          "type": "string"
+        },
         "record": {
           "$ref": "#/$defs/src.contracts.analytics_projection.ClaimEmbeddingRecord"
         },
@@ -10442,6 +10457,223 @@
         "schema_version",
         "embedding_uid",
         "status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingQueueHealthItem": {
+      "additionalProperties": false,
+      "properties": {
+        "age_bucket": {
+          "type": "string"
+        },
+        "attempt_count": {
+          "type": "integer"
+        },
+        "classification": {
+          "enum": [
+            "ready_to_embed",
+            "already_satisfied",
+            "stale_content",
+            "obsolete_version",
+            "terminal_failure",
+            "retryable_failure",
+            "invalid_payload",
+            "orphaned_report",
+            "blocked_by_budget",
+            "unknown_requires_review"
+          ]
+        },
+        "classification_reason": {
+          "type": "string"
+        },
+        "content_class": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "embedding_status": {
+          "type": "string"
+        },
+        "embedding_version": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "entity_uid": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_retryable": {
+          "type": "boolean"
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "estimated_tokens": {
+          "type": "integer"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "model": {
+          "type": "string"
+        },
+        "next_eligible_at_utc": {
+          "type": "string"
+        },
+        "projection_schema_version": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "text_payload": {
+          "type": "string"
+        },
+        "updated_at_utc": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "entity_uid",
+        "report_id",
+        "entity_type",
+        "publisher",
+        "content_class",
+        "content_hash",
+        "projection_schema_version",
+        "embedding_status",
+        "embedding_version",
+        "provider",
+        "model",
+        "error_code",
+        "error_retryable",
+        "attempt_count",
+        "next_eligible_at_utc",
+        "created_at_utc",
+        "updated_at_utc",
+        "age_bucket",
+        "classification",
+        "classification_reason",
+        "estimated_tokens",
+        "estimated_cost_usd",
+        "text_payload",
+        "metadata"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingQueueHealthRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "embedding_version": {
+          "type": "string"
+        },
+        "entity_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "max_estimated_cost_usd": {
+          "type": "number"
+        },
+        "max_estimated_tokens": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "model_pricing": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "publishers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "embedding_version",
+        "provider",
+        "model"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingQueueHealthResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "classification_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ClaimEmbeddingQueueHealthItem"
+          },
+          "type": "array"
+        },
+        "oldest_pending_age_seconds": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "total_pending": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "items",
+        "classification_counts",
+        "status_counts",
+        "total_pending",
+        "oldest_pending_age_seconds"
       ],
       "type": "object"
     },
@@ -10487,6 +10719,68 @@
         "content_hash",
         "metadata",
         "content_class"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingQueueReconcileRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "health_request": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ClaimEmbeddingQueueHealthRequest"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "health_request",
+        "run_id",
+        "actor",
+        "dry_run"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ClaimEmbeddingQueueReconcileResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "classification_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "provider_calls_avoided": {
+          "type": "integer"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "transitioned_entity_uids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "transitioned_entity_uids",
+        "classification_counts",
+        "provider_calls_avoided"
       ],
       "type": "object"
     },
@@ -10686,11 +10980,32 @@
         "db_path": {
           "type": "string"
         },
+        "dry_run": {
+          "type": "boolean"
+        },
         "embedding_version": {
           "type": "string"
         },
         "limit": {
           "type": "integer"
+        },
+        "max_concurrent_provider_calls": {
+          "type": "integer"
+        },
+        "max_estimated_cost_usd": {
+          "type": "number"
+        },
+        "max_estimated_tokens": {
+          "type": "integer"
+        },
+        "max_reports": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "max_runtime_seconds": {
+          "type": "number"
         },
         "model": {
           "type": "string"
@@ -10701,6 +11016,21 @@
         },
         "provider": {
           "type": "string"
+        },
+        "publisher_fairness_limit": {
+          "type": "integer"
+        },
+        "publishers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "schema_version": {
           "type": "string"
@@ -10732,17 +11062,44 @@
     "src.contracts.analytics_projection.ClaimEmbeddingWorkflowResponse": {
       "additionalProperties": false,
       "properties": {
+        "actual_cost_usd": {
+          "type": "number"
+        },
+        "actual_input_tokens": {
+          "type": "integer"
+        },
+        "average_provider_latency_ms": {
+          "type": "number"
+        },
+        "backlog_burndown_count": {
+          "type": "integer"
+        },
         "embedded_count": {
           "type": "integer"
         },
+        "estimated_cost_avoided_usd": {
+          "type": "number"
+        },
         "failed_count": {
           "type": "integer"
+        },
+        "p95_provider_latency_ms": {
+          "type": "number"
         },
         "processed_entity_uids": {
           "items": {
             "type": "string"
           },
           "type": "array"
+        },
+        "provider_calls_avoided": {
+          "type": "integer"
+        },
+        "queue_age_after_seconds": {
+          "type": "integer"
+        },
+        "queue_age_before_seconds": {
+          "type": "integer"
         },
         "schema_version": {
           "type": "string"

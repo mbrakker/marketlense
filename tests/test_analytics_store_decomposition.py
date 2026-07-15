@@ -77,6 +77,12 @@ CLAIM_EMBEDDINGS = {
     "read_claim_embeddings",
 }
 
+QUEUE_REMEDIATION = {
+    "acquire_claim_embedding_execution_lease",
+    "read_claim_embedding_queue_health",
+    "reconcile_claim_embedding_queue",
+}
+
 SIGNALS = {
     "_candidate_source_ref_from_dict",
     "_candidate_from_row",
@@ -110,6 +116,7 @@ def test_analytics_store_owner_modules_exist() -> None:
         "projection_write.py",
         "cross_report_read.py",
         "claim_embeddings.py",
+        "queue_remediation.py",
         "signals.py",
     ):
         assert (PACKAGE / name).is_file()
@@ -121,6 +128,7 @@ def test_analytics_store_symbols_have_one_owner() -> None:
         "projection_write.py": PROJECTION_WRITE,
         "cross_report_read.py": CROSS_REPORT_READ,
         "claim_embeddings.py": CLAIM_EMBEDDINGS,
+        "queue_remediation.py": QUEUE_REMEDIATION,
         "signals.py": SIGNALS,
     }
     all_expected = set().union(*expected.values())
@@ -141,6 +149,7 @@ def test_analytics_store_facade_import_order() -> None:
         "projection_write",
         "cross_report_read",
         "claim_embeddings",
+        "queue_remediation",
         "signals",
     ]
 

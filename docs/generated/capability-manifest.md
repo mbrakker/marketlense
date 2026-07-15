@@ -70,6 +70,10 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `discover-publisher-inventory`
 - `download-report`
 - `drive-oauth-login`
+- `embedding-queue-failures`
+- `embedding-queue-health`
+- `embedding-queue-reconcile`
+- `embedding-queue-run`
 - `extract-candidates`
 - `generate-covers`
 - `generate-cross-report-analysis`

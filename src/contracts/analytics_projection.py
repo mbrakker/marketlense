@@ -20,6 +20,18 @@ ProjectionStatus = Literal["not_projected", "projected", "failed"]
 EmbeddingStatus = Literal["pending", "embedded", "failed"]
 ClaimEmbeddingStatus = Literal["embedded", "failed"]
 ContentClass = Literal["evidence", "derived_evidence", "editorial"]
+QueueClassification = Literal[
+    "ready_to_embed",
+    "already_satisfied",
+    "stale_content",
+    "obsolete_version",
+    "terminal_failure",
+    "retryable_failure",
+    "invalid_payload",
+    "orphaned_report",
+    "blocked_by_budget",
+    "unknown_requires_review",
+]
 
 
 @dataclass(frozen=True)
@@ -370,6 +382,24 @@ class ClaimEmbeddingPersistRequest:
     record: ClaimEmbeddingRecord = field(
         metadata={"doc": "Claim embedding record to persist."}
     )
+    queue_actor: str = field(
+        default="claim_embedding_workflow",
+        metadata={"doc": "Workflow or operator recording the queue transition."},
+    )
+    queue_run_id: str = field(
+        default="", metadata={"doc": "Run identifier retained with the transition."}
+    )
+    queue_reason_code: str = field(
+        default="", metadata={"doc": "Typed reason for the queue transition."}
+    )
+    next_eligible_at_utc: str = field(
+        default="",
+        metadata={"doc": "Retry eligibility timestamp for a retryable failure."},
+    )
+    execution_lease_id: str = field(
+        default="",
+        metadata={"doc": "Optional execution lease that must be released."},
+    )
 
 
 @dataclass(frozen=True)
@@ -447,6 +477,48 @@ class ClaimEmbeddingWorkflowRequest:
         default_factory=dict,
         metadata={"doc": "Per-model pricing table for cost estimation."},
     )
+    max_reports: int = field(
+        default=0,
+        metadata={"doc": "Maximum distinct reports; zero preserves the row limit."},
+    )
+    max_estimated_tokens: int = field(
+        default=0,
+        metadata={"doc": "Maximum estimated input tokens; zero disables this cap."},
+    )
+    max_estimated_cost_usd: float = field(
+        default=0.0,
+        metadata={"doc": "Maximum estimated spend in USD; zero disables this cap."},
+    )
+    max_runtime_seconds: float = field(
+        default=0.0,
+        metadata={"doc": "Maximum wall-clock time; zero disables this cap."},
+    )
+    max_retries: int = field(
+        default=3,
+        metadata={"doc": "Maximum retryable failures before terminal escalation."},
+    )
+    max_concurrent_provider_calls: int = field(
+        default=1,
+        metadata={"doc": "Provider-call concurrency cap; this workflow is sequential."},
+    )
+    publisher_fairness_limit: int = field(
+        default=0,
+        metadata={
+            "doc": "Maximum selected rows per publisher; zero disables fairness."
+        },
+    )
+    report_ids: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Optional report-scoped execution filter."},
+    )
+    publishers: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Optional publisher-scoped execution filter."},
+    )
+    dry_run: bool = field(
+        default=False,
+        metadata={"doc": "When true, admission is reported without writes or calls."},
+    )
 
 
 @dataclass(frozen=True)
@@ -461,6 +533,184 @@ class ClaimEmbeddingWorkflowResponse(SemanticIdContract):
     )
     processed_entity_uids: List[EntityUid] = field(
         metadata={"doc": "Entity UIDs attempted by this workflow run."}
+    )
+    provider_calls_avoided: int = field(
+        default=0,
+        metadata={"doc": "Rows resolved without a provider call."},
+    )
+    estimated_cost_avoided_usd: float = field(
+        default=0.0,
+        metadata={"doc": "Estimated spend avoided through deterministic admission."},
+    )
+    actual_input_tokens: int = field(
+        default=0,
+        metadata={"doc": "Provider-reported input tokens for completed calls."},
+    )
+    actual_cost_usd: float = field(
+        default=0.0,
+        metadata={"doc": "Estimated actual cost from provider-reported usage."},
+    )
+    queue_age_before_seconds: int = field(
+        default=0,
+        metadata={"doc": "Oldest eligible queue age before this bounded batch."},
+    )
+    queue_age_after_seconds: int = field(
+        default=0,
+        metadata={"doc": "Oldest eligible queue age after this bounded batch."},
+    )
+    backlog_burndown_count: int = field(
+        default=0,
+        metadata={"doc": "Eligible queue rows resolved by this bounded batch."},
+    )
+    average_provider_latency_ms: float = field(
+        default=0.0,
+        metadata={"doc": "Average provider-call latency for this batch."},
+    )
+    p95_provider_latency_ms: float = field(
+        default=0.0,
+        metadata={"doc": "p95 provider-call latency for this batch."},
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingQueueHealthRequest:
+    """Read-only request for deterministic claim-embedding queue classification."""
+
+    schema_version: str = field(
+        metadata={"doc": "Queue-health request schema version."}
+    )
+    db_path: str = field(metadata={"doc": "SQLite reports database path."})
+    embedding_version: str = field(metadata={"doc": "Required embedding version."})
+    provider: str = field(metadata={"doc": "Required embedding provider."})
+    model: str = field(metadata={"doc": "Required embedding model."})
+    report_ids: List[str] = field(
+        default_factory=list, metadata={"doc": "Optional report filter."}
+    )
+    publishers: List[str] = field(
+        default_factory=list, metadata={"doc": "Optional publisher filter."}
+    )
+    entity_types: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Optional projected entity-type filter."},
+    )
+    max_estimated_tokens: int = field(
+        default=0,
+        metadata={"doc": "Optional per-run token ceiling used for classification."},
+    )
+    max_estimated_cost_usd: float = field(
+        default=0.0,
+        metadata={"doc": "Optional per-run spend ceiling used for classification."},
+    )
+    model_pricing: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Pricing map used only for deterministic estimates."},
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingQueueHealthItem(SemanticIdContract):
+    """One classified queue row and the metadata needed for safe admission."""
+
+    schema_version: str = field(metadata={"doc": "Queue-health item schema version."})
+    entity_uid: EntityUid = field(metadata={"doc": "Queue entity identifier."})
+    report_id: ReportId = field(metadata={"doc": "Queue report identifier."})
+    entity_type: str = field(metadata={"doc": "Projected entity type."})
+    publisher: str = field(metadata={"doc": "Derived publisher when available."})
+    content_class: str = field(metadata={"doc": "Projected content class."})
+    content_hash: str = field(metadata={"doc": "Queued content hash."})
+    projection_schema_version: str = field(
+        metadata={"doc": "Projection schema version for the queued row."}
+    )
+    embedding_status: str = field(metadata={"doc": "Current queue embedding status."})
+    embedding_version: str = field(metadata={"doc": "Current queue embedding version."})
+    provider: str = field(metadata={"doc": "Requested embedding provider."})
+    model: str = field(metadata={"doc": "Requested embedding model."})
+    error_code: str = field(metadata={"doc": "Current typed queue reason code."})
+    error_retryable: bool = field(
+        metadata={"doc": "Whether queue failure is retryable."}
+    )
+    attempt_count: int = field(metadata={"doc": "Recorded queue attempt count."})
+    next_eligible_at_utc: str = field(
+        metadata={"doc": "Timestamp before which retries are not eligible."}
+    )
+    created_at_utc: str = field(metadata={"doc": "Queue creation timestamp."})
+    updated_at_utc: str = field(metadata={"doc": "Queue update timestamp."})
+    age_bucket: str = field(metadata={"doc": "Deterministic queue-age bucket."})
+    classification: QueueClassification = field(
+        metadata={"doc": "Deterministic no-call queue classification."}
+    )
+    classification_reason: str = field(
+        metadata={"doc": "Machine-readable classification explanation."}
+    )
+    estimated_tokens: int = field(
+        metadata={"doc": "Deterministic input-token estimate."}
+    )
+    estimated_cost_usd: float = field(
+        metadata={"doc": "Deterministic USD-cost estimate."}
+    )
+    text_payload: str = field(
+        metadata={"doc": "Canonical text retained only for bounded execution."}
+    )
+    metadata: Dict[str, Any] = field(
+        metadata={"doc": "Projected retrieval metadata for execution and fairness."}
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingQueueHealthResponse(SemanticIdContract):
+    """Read-only queue-health result, suitable for JSON artifact rendering."""
+
+    schema_version: str = field(
+        metadata={"doc": "Queue-health response schema version."}
+    )
+    items: List[ClaimEmbeddingQueueHealthItem] = field(
+        metadata={"doc": "Deterministically ordered classified queue rows."}
+    )
+    classification_counts: Dict[str, int] = field(
+        metadata={"doc": "Count of rows by classification."}
+    )
+    status_counts: Dict[str, int] = field(
+        metadata={"doc": "Count of rows by current queue status."}
+    )
+    total_pending: int = field(
+        metadata={"doc": "Total rows currently carrying pending queue status."}
+    )
+    oldest_pending_age_seconds: int = field(
+        metadata={"doc": "Age of oldest pending or retryable row."}
+    )
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingQueueReconcileRequest:
+    """No-provider mutation request for deterministic queue reconciliation."""
+
+    schema_version: str = field(
+        metadata={"doc": "Queue-reconcile request schema version."}
+    )
+    health_request: ClaimEmbeddingQueueHealthRequest = field(
+        metadata={"doc": "Read-only criteria used immediately before reconciliation."}
+    )
+    run_id: str = field(metadata={"doc": "Audit run identifier."})
+    actor: str = field(metadata={"doc": "Operator or workflow name."})
+    dry_run: bool = field(metadata={"doc": "When true, do not mutate the queue."})
+
+
+@dataclass(frozen=True)
+class ClaimEmbeddingQueueReconcileResponse(SemanticIdContract):
+    """Auditable outcome of no-provider queue reconciliation."""
+
+    schema_version: str = field(
+        metadata={"doc": "Queue-reconcile response schema version."}
+    )
+    run_id: str = field(metadata={"doc": "Audit run identifier."})
+    transitioned_entity_uids: List[EntityUid] = field(
+        metadata={"doc": "Rows whose queue state changed."}
+    )
+    classification_counts: Dict[str, int] = field(
+        metadata={"doc": "Classifications considered by reconciliation."}
+    )
+    provider_calls_avoided: int = field(
+        metadata={"doc": "Rows resolved without provider calls."}
     )
 
 

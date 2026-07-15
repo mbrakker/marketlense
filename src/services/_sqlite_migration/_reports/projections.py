@@ -10,6 +10,7 @@ from src.services._sqlite_migration._reports.schema import (
     _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
     _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
     _CLAIM_EMBEDDINGS_TABLE_SQL,
+    _CLAIM_EMBEDDING_QUEUE_TRANSITIONS_TABLE_SQL,
     _REPORT_CATEGORIES_TABLE_SQL,
     _REPORT_CLAIMS_TABLE_SQL,
     _REPORT_FIGURES_TABLE_SQL,
@@ -192,4 +193,47 @@ def _reports_db_015_create_artifact_lineage_registry(
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_artifact_lineage_dependencies_dependency ON artifact_lineage_dependencies(dependency_artifact_id)"
+    )
+
+
+def _reports_db_016_add_claim_embedding_queue_controls(
+    conn: sqlite3.Connection,
+) -> None:
+    """Add bounded-queue lifecycle metadata without rewriting retained rows."""
+    for name, column_type in (
+        ("queue_reason_code", "TEXT NOT NULL DEFAULT ''"),
+        ("queue_error_retryable", "INTEGER NOT NULL DEFAULT 0"),
+        ("queue_attempt_count", "INTEGER NOT NULL DEFAULT 0"),
+        ("next_eligible_at_utc", "TEXT NOT NULL DEFAULT ''"),
+        ("queue_actor", "TEXT NOT NULL DEFAULT ''"),
+        ("execution_lease_id", "TEXT NOT NULL DEFAULT ''"),
+        ("execution_lease_expires_at_utc", "TEXT NOT NULL DEFAULT ''"),
+        ("projection_schema_version", "TEXT NOT NULL DEFAULT ''"),
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="vector_projection_queue",
+            column_name=name,
+            column_type=column_type,
+        )
+    conn.execute(_CLAIM_EMBEDDING_QUEUE_TRANSITIONS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_vector_projection_queue_admission "
+        "ON vector_projection_queue(embedding_status, next_eligible_at_utc, updated_at_utc, entity_uid)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_vector_projection_queue_report_admission "
+        "ON vector_projection_queue(report_id, embedding_status, updated_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_claim_embeddings_identity "
+        "ON claim_embeddings(entity_uid, content_hash, embedding_version, provider, model, status)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_claim_embedding_queue_transitions_entity "
+        "ON claim_embedding_queue_transitions(entity_uid, timestamp_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_claim_embedding_queue_transitions_run "
+        "ON claim_embedding_queue_transitions(run_id, timestamp_utc)"
     )

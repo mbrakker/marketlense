@@ -620,14 +620,15 @@ def test_projection_store_migrates_legacy_reports_schema_and_records_ledger(
                   'report_figures',
                   'vector_projection_queue',
                   'claim_embeddings',
+                  'claim_embedding_queue_transitions',
                   'signal_candidates',
                   'signal_candidate_groups'
                 )
                 """
             ).fetchall()
         }
-    assert schema_version == (15,)
-    assert ledger_count == 15
+    assert schema_version == (16,)
+    assert ledger_count == 16
     assert analytics_tables == {
         "report_sections",
         "report_findings",
@@ -639,6 +640,7 @@ def test_projection_store_migrates_legacy_reports_schema_and_records_ledger(
         "report_figures",
         "vector_projection_queue",
         "claim_embeddings",
+        "claim_embedding_queue_transitions",
         "signal_candidates",
         "signal_candidate_groups",
     }

@@ -516,8 +516,8 @@ def _upsert_vector_queue(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
         _validate_queue_row(row)
     conn.executemany(
         """
-        INSERT INTO vector_projection_queue(entity_uid, entity_type, report_id, text_payload, content_hash, metadata_json, content_class, embedding_status, embedding_version, created_at_utc, updated_at_utc)
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO vector_projection_queue(entity_uid, entity_type, report_id, text_payload, content_hash, metadata_json, content_class, embedding_status, embedding_version, created_at_utc, updated_at_utc, projection_schema_version)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(entity_uid) DO UPDATE SET
             entity_type=excluded.entity_type,
             report_id=excluded.report_id,
@@ -535,6 +535,42 @@ def _upsert_vector_queue(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 THEN vector_projection_queue.embedding_version
                 ELSE ''
             END,
+            queue_reason_code=CASE
+                WHEN vector_projection_queue.content_hash = excluded.content_hash
+                THEN vector_projection_queue.queue_reason_code
+                ELSE ''
+            END,
+            queue_error_retryable=CASE
+                WHEN vector_projection_queue.content_hash = excluded.content_hash
+                THEN vector_projection_queue.queue_error_retryable
+                ELSE 0
+            END,
+            queue_attempt_count=CASE
+                WHEN vector_projection_queue.content_hash = excluded.content_hash
+                THEN vector_projection_queue.queue_attempt_count
+                ELSE 0
+            END,
+            next_eligible_at_utc=CASE
+                WHEN vector_projection_queue.content_hash = excluded.content_hash
+                THEN vector_projection_queue.next_eligible_at_utc
+                ELSE ''
+            END,
+            queue_actor=CASE
+                WHEN vector_projection_queue.content_hash = excluded.content_hash
+                THEN vector_projection_queue.queue_actor
+                ELSE ''
+            END,
+            execution_lease_id=CASE
+                WHEN vector_projection_queue.content_hash = excluded.content_hash
+                THEN vector_projection_queue.execution_lease_id
+                ELSE ''
+            END,
+            execution_lease_expires_at_utc=CASE
+                WHEN vector_projection_queue.content_hash = excluded.content_hash
+                THEN vector_projection_queue.execution_lease_expires_at_utc
+                ELSE ''
+            END,
+            projection_schema_version=excluded.projection_schema_version,
             updated_at_utc=excluded.updated_at_utc
         """,
         (
@@ -550,6 +586,7 @@ def _upsert_vector_queue(conn: sqlite3.Connection, rows: Sequence[Any]) -> None:
                 row.embedding_version,
                 row.created_at_utc,
                 row.updated_at_utc,
+                row.schema_version,
             )
             for row in rows
         ),

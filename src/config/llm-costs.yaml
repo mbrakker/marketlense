@@ -1,6 +1,10 @@
 schema_version: "1.0"
 
 pricing:
+  text-embedding-3-small:
+    input_tokens_per_1k_usd: 0.00002
+    output_tokens_per_1k_usd: 0.0
+    tool_call_usd: 0.0
   gpt-5:
     input_tokens_per_1k_usd: 0.00125
     output_tokens_per_1k_usd: 0.0100

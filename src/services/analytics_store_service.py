@@ -2,6 +2,8 @@ from __future__ import annotations
 
 """Canonical analytics store service facade."""
 
+# ruff: noqa: F401
+
 from src.services._analytics_store.common import (
     DDL,
     DEFAULT_BUSY_TIMEOUT_SECONDS,
@@ -70,6 +72,12 @@ from src.services._analytics_store.claim_embeddings import (
     persist_claim_embedding,
     read_claim_embeddings,
     read_pending_claim_embedding_rows,
+)
+
+from src.services._analytics_store.queue_remediation import (
+    acquire_claim_embedding_execution_lease,
+    read_claim_embedding_queue_health,
+    reconcile_claim_embedding_queue,
 )
 
 from src.services._analytics_store.signals import (

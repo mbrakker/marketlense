@@ -60,6 +60,7 @@ from ._sqlite_migration.reports import (
     _reports_db_013_create_signal_candidate_projection,
     _reports_db_014_create_claim_embedding_records,
     _reports_db_015_create_artifact_lineage_registry,
+    _reports_db_016_add_claim_embedding_queue_controls,
 )
 from ._sqlite_migration.state import (
     _STATE_DB_MIGRATIONS,
