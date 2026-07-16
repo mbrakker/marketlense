@@ -12,27 +12,61 @@ For operational diagnostics, use structured logs and retained workflow artifacts
 
 ## CTO Review Evidence Bundles
 
-`scripts/quality/collect_cto_review_evidence.py` creates a point-in-time CTO-review bundle from retained state. It snapshots each collector SQLite input with the SQLite backup API before querying it; live WAL files are never copied. Relevant crop-quality artifacts are copied into the same temporary workspace before their metrics are read. The workspace is removed after both successful and failed runs unless `--debug-retain-snapshots` is explicitly set.
+`scripts/quality/collect_cto_review_evidence.py` creates a point-in-time CTO-review bundle from retained state. A strict CTO review uses an exact repository HEAD, not merely the best-effort Git marker retained by legacy collection.
 
-Run it from the repository root:
+Run the strict operator procedure from the repository root after representative report processing has completed. The `FRESH_AFTER` value is an operator-provided, timezone-aware timestamp for that review run; use a current value, not a permanently checked-in date.
 
-```powershell
-python scripts/quality/collect_cto_review_evidence.py --state-dir state --artifact-dir out --output-dir out/cto-review-evidence
+```bash
+HEAD_SHA="$(git rev-parse HEAD)"
+FRESH_AFTER="<current-run-start-ISO-8601>"
+python scripts/quality/collect_cto_review_evidence.py \
+  --state-dir state \
+  --artifact-dir out \
+  --log-dir logs \
+  --output-dir out/cto-review-evidence \
+  --expected-commit-sha "$HEAD_SHA" \
+  --require-exact-head \
+  --fresh-after "$FRESH_AFTER" \
+  --minimum-source-canaries 5 \
+  --minimum-editorial-canaries 5
 ```
 
-Every CLI regeneration also atomically refreshes `docs/cto-review-evidence.zip`.
-Use `--archive-path <path>` only when a different distribution location is required.
+Strict mode resolves a full 40-character HEAD before snapshots and again immediately before finalization. It requires the expected, starting, and ending SHAs to match and the worktree to be clean at both checks. Git metadata being unavailable, a dirty worktree, an invalid or mismatched expected SHA, or a moving HEAD all fail the run. This proves the bundle-generation code came from one clean repository revision. It does not prove that historical log lines were produced by that revision: standard logs have separate corpus provenance unless a log record itself contains trustworthy commit metadata.
+
+Every database is snapshotted with SQLite's backup API before querying; live WAL files are never copied. The collector snapshots the retained crop and report-analysis JSON evidence inputs under `--artifact-dir` before either metrics or canaries are read. It does not treat unrelated benchmark or runtime sidecars as CTO-review inputs. The collector copies only canonical `market_lense_YYYY-MM-DD.log` files from `--log-dir` into the same workspace and scans only those immutable copies, line by line. Snapshot provenance records normalized source-relative and temporary-relative paths, sizes, hashes, source modification time, parsed event timestamp bounds, line/event counts, and accessibility. Noncanonical files are ignored. In strict mode a discovered standard log that cannot be copied is a failure.
+
+The log-content assessment takes deterministic representative samples from two categories:
+
+- source-report text from retained page/source-style fields, source-backed evidence-pack excerpts, and document-map section summaries;
+- generated editorial text from retained `artifacts.json` fields such as LinkedIn posts, expert comments, TLDRs, and executive summaries.
+
+It normalizes Unicode and whitespace, rejects short, boilerplate, placeholder, title-only, and identifier-only fields, then deterministically orders and spreads selected paragraphs across reports. Defaults require five source and five editorial canaries, with at most 25 in each class. Missing canaries, no standard logs, or no log at or after `--fresh-after` produce `incomplete`; they never become a zero-match pass.
+
+Raw snapshotted log lines are compared deterministically, including unstructured and JSON-escaped records. A match is either a whole normalized paragraph or two independent long windows from the same paragraph in one log record. The evidence never stores a paragraph, matching log line, raw source, or raw editorial text. It stores only bounded metadata, normalized-text hashes, and redacted match location and structured-event identifiers.
 
 The existing CSV filenames remain stable. The collector additionally writes:
 
 - `detailed_metrics.json`: finalized structured input for summary derivation;
 - `executive_summary.json`: totals derived only from that finalized detail;
-- `snapshot_manifest.json`: database and crop-artifact snapshot provenance;
-- `evidence_run_manifest.json`: run identity, repository state, configuration hash, runtime, and manifest hash;
-- `consistency_validation.json`: a passed validation result.
+- `snapshot_manifest.json`: database, retained-artifact, and standard-log snapshot provenance;
+- `log_content_leakage.json`: versioned canary coverage and redacted matching result (`passed`, `failed`, or `incomplete`);
+- `evidence_run_manifest.json`: exact repository provenance, configuration, snapshot-manifest hash, and canonical file inventory with byte counts and SHA-256 values;
+- `consistency_validation.json`: compact checks, exact-head outcome, repository SHA, and finalized run-manifest hash.
 
-Every output carries one `evidence_run_id`. Snapshot provenance records normalized source paths, temporary-relative snapshot paths, sizes, SHA-256, schema/table metadata, maximum timestamps, source journal mode, integrity checks, and foreign-key checks. Public output paths never include a workstation root or username.
+The JSON CTO artifacts carry one `evidence_run_id` and one `repository_commit_sha`; the manifest binds stable CSV names through the same inventory. The run manifest intentionally does not hash itself. Instead, `consistency_validation.json` records the finalized run-manifest SHA after independent validation, avoiding a circular hash. Public output paths never include a workstation root or username.
 
-The collector fails closed when a required source database is unavailable, a snapshot is corrupt, an expected artifact is missing, a manifest hash or repository SHA disagrees, a run ID is reused, or executive counts/tokens/costs differ from detailed artifacts. Monetary aggregation uses decimal arithmetic; cost equality allows only the documented `0.000001` USD tolerance. Optional state databases are explicitly recorded as unavailable rather than fabricated.
+All files are first created in a temporary staging directory. The collector validates snapshot integrity, exact-head state, log-content result, summary consistency, run IDs, repository SHAs, and every inventoried file hash before publishing. It will not merge into an existing output directory; use `--replace-output` for an explicit replacement. A failing strict run leaves no partial final bundle. Temporary workspaces are removed after success and failure unless `--debug-retain-snapshots` is set; retained debug workspaces are operator diagnostics and are not publishable evidence.
 
-Reproducibility means the database-backed and crop metrics in one bundle all derive from the immutable temporary snapshots created for that run. It does not mean that a second run receives the same run ID, timestamps, operating-system metadata, or repository dirty-state marker. A debug-retained workspace is an operator diagnostic and must not be published as release evidence.
+For release evidence, add the passed CTO JSON artifacts through the generic manifest command. The embedded repository SHA is checked against the requested release commit when `--require-head-commit` is used; a failed leakage artifact is therefore a normal unwaived `artifact_failed` release issue.
+
+```bash
+python scripts/quality/release_evidence_manifest.py \
+  --release-id "<release-id>" \
+  --artifact cto_log_content_leakage=out/cto-review-evidence/log_content_leakage.json \
+  --expected-schema cto_log_content_leakage=1.0 \
+  --artifact cto_consistency=out/cto-review-evidence/consistency_validation.json \
+  --expected-schema cto_consistency=1.0 \
+  --require-head-commit
+```
+
+Ordinary CI runs the collector and release-evidence unit/contract tests but does not synthesize retained databases, report artifacts, or logs merely to manufacture a passed CTO bundle. The real strict bundle remains an operator/review action against retained state.

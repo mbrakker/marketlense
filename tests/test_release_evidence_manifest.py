@@ -293,6 +293,113 @@ def test_release_evidence_manifest_fails_commit_sha_mismatch(
     assert {issue.reason for issue in manifest.issues} == {"commit_sha_mismatch"}
 
 
+def test_release_evidence_manifest_accepts_passed_cto_leakage_artifact(
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "log_content_leakage.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "generated_at": "2026-07-16T12:00:00+00:00",
+                "repository_commit_sha": "a" * 40,
+                "status": "passed",
+                "passed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = build_release_evidence_manifest(
+        artifact_inputs=(
+            ReleaseEvidenceArtifactInput(
+                name="cto_log_content_leakage",
+                path=artifact_path,
+                expected_schema_version="1.0",
+            ),
+        ),
+        release_id="release-20260716",
+        commit_sha="a" * 40,
+        command_args=("manifest",),
+        expected_commit_sha="a" * 40,
+    )
+
+    assert manifest.passed is True
+    assert manifest.artifacts[0].repository_commit_sha == "a" * 40
+
+
+def test_release_evidence_manifest_blocks_failed_cto_artifact_and_embedded_commit_mismatch(
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "consistency_validation.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "generated_at": "2026-07-16T12:00:00+00:00",
+                "repository_commit_sha": "b" * 40,
+                "exact_head_verified": False,
+                "status": "failed",
+                "passed": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = build_release_evidence_manifest(
+        artifact_inputs=(
+            ReleaseEvidenceArtifactInput(
+                name="cto_consistency",
+                path=artifact_path,
+                expected_schema_version="1.0",
+            ),
+        ),
+        release_id="release-20260716",
+        commit_sha="a" * 40,
+        command_args=("manifest",),
+        expected_commit_sha="a" * 40,
+    )
+
+    assert manifest.passed is False
+    assert {issue.reason for issue in manifest.issues} == {
+        "artifact_failed",
+        "artifact_commit_sha_mismatch",
+    }
+
+
+def test_release_evidence_manifest_applies_freshness_to_cto_artifact(
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "log_content_leakage.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "generated_at": "2026-07-16T12:00:00+00:00",
+                "passed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    os.utime(artifact_path, (100.0, 100.0))
+
+    manifest = build_release_evidence_manifest(
+        artifact_inputs=(
+            ReleaseEvidenceArtifactInput(
+                name="cto_log_content_leakage",
+                path=artifact_path,
+                expected_schema_version="1.0",
+            ),
+        ),
+        release_id="release-20260716",
+        commit_sha="a" * 40,
+        command_args=("manifest",),
+        fresh_after="1970-01-01T00:02:00+00:00",
+    )
+
+    assert [issue.reason for issue in manifest.issues] == ["artifact_stale"]
+
+
 def test_release_evidence_manifest_allow_issues_writes_failed_manifest(
     tmp_path: Path,
 ) -> None:

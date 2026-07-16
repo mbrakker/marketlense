@@ -37,6 +37,7 @@ class ReleaseEvidenceArtifact:
     producer_command: str
     byte_count: int
     artifact_sha256: str | None
+    repository_commit_sha: str | None
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,23 @@ def build_release_evidence_manifest(
         )
         artifacts.append(artifact)
         issues.extend(artifact_issues)
+        if (
+            expected_commit_sha
+            and artifact_input.required
+            and artifact.repository_commit_sha
+            and artifact.repository_commit_sha != commit_sha
+        ):
+            issues.append(
+                ReleaseEvidenceIssue(
+                    artifact_name=artifact.name,
+                    artifact_path=artifact.path,
+                    reason="artifact_commit_sha_mismatch",
+                    detail=(
+                        f"artifact repository commit {artifact.repository_commit_sha} "
+                        f"does not match release commit {commit_sha}"
+                    ),
+                )
+            )
     if expected_commit_sha and commit_sha != expected_commit_sha:
         issues.append(
             ReleaseEvidenceIssue(
@@ -224,6 +242,7 @@ def _artifact_from_payload(
 ) -> tuple[ReleaseEvidenceArtifact, tuple[ReleaseEvidenceIssue, ...]]:
     schema_version = _string_or_none(payload.get("schema_version"))
     generated_at = _string_or_none(payload.get("generated_at"))
+    repository_commit_sha = _embedded_repository_commit_sha(payload)
     status, passed = _status_from_payload(payload)
     issues: list[ReleaseEvidenceIssue] = []
     if schema_version != artifact_input.expected_schema_version:
@@ -276,6 +295,7 @@ def _artifact_from_payload(
             modified_at=_datetime_text(modified_at),
             byte_count=byte_count,
             artifact_sha256=artifact_sha256,
+            repository_commit_sha=repository_commit_sha,
         ),
         tuple(issues),
     )
@@ -304,6 +324,7 @@ def _artifact(
     modified_at: str | None,
     byte_count: int,
     artifact_sha256: str | None,
+    repository_commit_sha: str | None = None,
 ) -> ReleaseEvidenceArtifact:
     return ReleaseEvidenceArtifact(
         name=artifact_input.name,
@@ -318,6 +339,19 @@ def _artifact(
         producer_command=artifact_input.producer_command,
         byte_count=byte_count,
         artifact_sha256=artifact_sha256,
+        repository_commit_sha=repository_commit_sha,
+    )
+
+
+def _embedded_repository_commit_sha(payload: dict[str, Any]) -> str | None:
+    direct = _string_or_none(payload.get("repository_commit_sha"))
+    if direct:
+        return direct
+    repository = payload.get("repository")
+    if not isinstance(repository, dict):
+        return None
+    return _string_or_none(
+        repository.get("expected_commit_sha") or repository.get("commit_sha")
     )
 
 
