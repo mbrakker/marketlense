@@ -11773,6 +11773,9 @@
         "eligible_artifacts": {
           "type": "integer"
         },
+        "incomplete_artifacts": {
+          "type": "integer"
+        },
         "scanned_checkpoints": {
           "type": "integer"
         },
@@ -11802,10 +11805,17 @@
         "artifact_kind": {
           "type": "string"
         },
+        "compatibility": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "content_hash": {
           "type": "string"
         },
         "invalidation_reason": {
+          "type": "string"
+        },
+        "lineage_status": {
           "type": "string"
         },
         "metadata": {
@@ -11881,6 +11891,10 @@
         "artifact_kind": {
           "type": "string"
         },
+        "compatibility": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "content_hash": {
           "type": "string"
         },
@@ -11892,6 +11906,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "lineage_status": {
+          "type": "string"
         },
         "metadata": {
           "additionalProperties": {},
@@ -20489,6 +20506,556 @@
       ],
       "type": "object"
     },
+    "src.contracts.minimal_execution_plan.ArtifactInvalidation": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_family": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_kind": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "artifact_kind",
+        "artifact_family",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.EstimatedWorkCategory": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "estimated_calls": {
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "estimated_calls"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.ExecutionCompatibilityVersions": {
+      "additionalProperties": false,
+      "properties": {
+        "crop_profiles": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "model_policy_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "ocr_policy_version": {
+          "type": "string"
+        },
+        "parser_version": {
+          "type": "string"
+        },
+        "processing_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "prompt_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "schema_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "template_render_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "validator_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.ExecutionPlanRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "execution_mode": {
+          "type": "string"
+        },
+        "plan": {
+          "$ref": "#/$defs/src.contracts.minimal_execution_plan.MinimalExecutionPlan"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "plan",
+        "execution_mode"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.ExecutionPlanResultRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_external_calls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "actual_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "execution_intent": {
+          "type": "string"
+        },
+        "execution_status": {
+          "type": "string"
+        },
+        "plan_hash": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "plan_hash",
+        "report_id",
+        "execution_intent",
+        "actual_stages",
+        "actual_external_calls",
+        "execution_status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.MinimalExecutionPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "estimated_cost_call_categories": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.minimal_execution_plan.EstimatedWorkCategory"
+          },
+          "type": "array"
+        },
+        "execution_intent": {
+          "type": "string"
+        },
+        "expected_side_effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "invalid_artifacts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.minimal_execution_plan.ArtifactInvalidation"
+          },
+          "type": "array"
+        },
+        "missing_lineage_blockers": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.minimal_execution_plan.MissingLineageBlocker"
+          },
+          "type": "array"
+        },
+        "plan_hash": {
+          "type": "string"
+        },
+        "publication_prerequisites": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "required_external_calls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reusable_artifacts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "skipped_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "execution_intent",
+        "report_id",
+        "reusable_artifacts",
+        "invalid_artifacts",
+        "required_stages",
+        "skipped_stages",
+        "required_external_calls",
+        "expected_side_effects",
+        "estimated_cost_call_categories",
+        "missing_lineage_blockers",
+        "publication_prerequisites",
+        "plan_hash"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.MinimalExecutionPlanBuildRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "execution_input": {
+          "$ref": "#/$defs/src.contracts.minimal_execution_plan.MinimalExecutionPlanInput"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "execution_input"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.MinimalExecutionPlanBuildResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "plan": {
+          "$ref": "#/$defs/src.contracts.minimal_execution_plan.MinimalExecutionPlan"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "plan"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.MinimalExecutionPlanInput": {
+      "additionalProperties": false,
+      "properties": {
+        "current_compatibility": {
+          "$ref": "#/$defs/src.contracts.minimal_execution_plan.ExecutionCompatibilityVersions"
+        },
+        "current_publication_state": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "current_source_content_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "execution_intent": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "requested_output_families": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "retained_graph": {
+          "$ref": "#/$defs/src.contracts.minimal_execution_plan.RetainedArtifactGraph"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "source_metadata_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "execution_intent",
+        "report_id",
+        "source_id",
+        "current_source_content_hashes",
+        "retained_graph",
+        "requested_output_families",
+        "current_compatibility"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.MissingLineageBlocker": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_kind": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "artifact_kind",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.RetainedArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "artifact_kind": {
+          "type": "string"
+        },
+        "compatibility": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "dependency_artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "lineage_status": {
+          "type": "string"
+        },
+        "observed_content_hash": {
+          "type": "string"
+        },
+        "processing_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "schema_version_used": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "storage_available": {
+          "type": "boolean"
+        },
+        "storage_ref": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "artifact_kind",
+        "report_id",
+        "source_id",
+        "content_hash",
+        "storage_ref",
+        "state",
+        "schema_version_used",
+        "processing_version",
+        "validation_status"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.RetainedArtifactGraph": {
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.minimal_execution_plan.RetainedArtifact"
+          },
+          "type": "array"
+        },
+        "edges": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.ValidatedReportArtifactReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_families": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "current_compatibility": {
+          "$ref": "#/$defs/src.contracts.minimal_execution_plan.ExecutionCompatibilityVersions"
+        },
+        "current_source_content_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "report_id",
+        "artifact_families",
+        "current_compatibility"
+      ],
+      "type": "object"
+    },
+    "src.contracts.minimal_execution_plan.ValidatedReportArtifactReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.minimal_execution_plan.RetainedArtifact"
+          },
+          "type": "array"
+        },
+        "plan": {
+          "$ref": "#/$defs/src.contracts.minimal_execution_plan.MinimalExecutionPlan"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifacts",
+        "plan"
+      ],
+      "type": "object"
+    },
     "src.contracts.openai.OpenAIAnalyzeRequest": {
       "additionalProperties": false,
       "properties": {
@@ -26977,6 +27544,16 @@
         "ctx": {
           "$ref": "#/$defs/src.contracts.run_context.RunContext"
         },
+        "execution_compatibility": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "execution_plan_hash": {
+          "type": "string"
+        },
+        "execution_plan_intent": {
+          "type": "string"
+        },
         "file": {
           "$ref": "#/$defs/src.contracts.drive.DriveFile"
         },
@@ -26998,6 +27575,12 @@
         },
         "parallel_within_file": {
           "type": "boolean"
+        },
+        "planned_stages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "publisher_name": {
           "type": "string"

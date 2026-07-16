@@ -56,6 +56,18 @@ class ArtifactLineageRegistrationRequest:
         default_factory=dict,
         metadata={"doc": "Sanitized semantic compatibility metadata."},
     )
+    compatibility: dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Versioned provenance used by the minimum-regeneration planner."
+        },
+    )
+    lineage_status: str = field(
+        default="legacy_unverified",
+        metadata={
+            "doc": "complete for planner-safe provenance; legacy_unverified otherwise."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -99,6 +111,14 @@ class ArtifactLineageRecord:
     )
     metadata: dict[str, Any] = field(
         default_factory=dict, metadata={"doc": "Sanitized compatibility metadata."}
+    )
+    compatibility: dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Versioned provenance used by deterministic planning."},
+    )
+    lineage_status: str = field(
+        default="legacy_unverified",
+        metadata={"doc": "Planner provenance completeness state."},
     )
 
 
@@ -258,3 +278,9 @@ class ArtifactLineageBackfillResponse:
         metadata={"doc": "Missing or incompatible historical refs skipped."}
     )
     dry_run: bool = field(metadata={"doc": "Whether state was left unchanged."})
+    incomplete_artifacts: int = field(
+        default=0,
+        metadata={
+            "doc": "Legacy records retained but unavailable for planner-safe reuse."
+        },
+    )

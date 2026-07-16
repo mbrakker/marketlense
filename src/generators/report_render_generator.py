@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import os
+import re
 from copy import deepcopy
 from dataclasses import asdict
-import os
 from pathlib import Path
-import re
 from urllib.parse import quote
 
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
-from src.contracts.files import FileBundleHashRequest, FileStatRequest
+from src.contracts.files import (
+    FileBundleHashRequest,
+    FileExistsRequest,
+    FileStatRequest,
+)
 from src.contracts.ingest import IngestOutcome
 from src.contracts.report_assets import PreviewRequest, PreviewResponse, RenderRequest
 from src.contracts.report_cards import (
@@ -27,14 +31,14 @@ from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
 )
-from src.generators.report_generation_dependencies import ReportRenderDependencies
+from src.generators.report_card_date_remediation_generator import (
+    normalize_source_supported_publication_date,
+)
 from src.generators.report_card_projection import (
     build_cover_fingerprint,
     build_report_card_manifest,
 )
-from src.generators.report_card_date_remediation_generator import (
-    normalize_source_supported_publication_date,
-)
+from src.generators.report_generation_dependencies import ReportRenderDependencies
 from src.generators.report_generation_shared import (
     html_cache_key,
     logger,
@@ -98,7 +102,9 @@ def _relative_cover_assets(
             except ValueError as exc:
                 raise AppError(
                     code="cover_asset_set_incomplete",
-                    message="Cover assets must be stored inside the report output directory",
+                    message=(
+                        "Cover assets must be stored inside the report output directory"
+                    ),
                     retryable=False,
                     context={"size": size, "output_path": str(output_path)},
                 ) from exc
@@ -275,6 +281,7 @@ def render_report_output(
     dependencies: ReportRenderDependencies,
     *,
     preview_resp,
+    reuse_report_card_assets: bool = False,
 ) -> IngestOutcome:
     dependencies.upsert_report_metadata(
         _build_metadata_upsert_request(runtime, source, analysis, html_path_value=None),
@@ -466,6 +473,50 @@ def render_report_output(
         ),
         runtime.ctx,
     )
+
+    if reuse_report_card_assets:
+        report_output_dir = Path(runtime.settings.output_dir) / runtime.report_name
+        manifest_path = report_output_dir / "report-card-manifest.json"
+        report_card_manifest_path = (
+            str(manifest_path)
+            if dependencies.file_exists(
+                FileExistsRequest(schema_version="1.0", path=str(manifest_path)),
+                runtime.ctx,
+            ).exists
+            else None
+        )
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="generator",
+                event="report_card_assets_reused_for_render_only",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "manifest_available": bool(report_card_manifest_path),
+                },
+            )
+        )
+        return IngestOutcome(
+            schema_version="1.1",
+            file_id=runtime.file.file_id,
+            name=runtime.file_name,
+            md5=runtime.md5,
+            html_path=out_html,
+            status="processed",
+            vector_store_id=analysis.vector_store_id,
+            vector_store_status=analysis.vector_store_status,
+            indexed_at_utc=analysis.indexed_at_utc,
+            openai_file_id=analysis.openai_file_id,
+            evidence_packs=analysis.evidence_paths or None,
+            vector_store_last_error=analysis.last_error,
+            text_validation_status=source.text_validation_status,
+            text_validation_reason=source.text_validation_reason,
+            text_validation_pages=source.text_validation_pages,
+            ocr_fallback_used=source.ocr_fallback_used,
+            ocr_pdf_path=source.ocr_pdf_path or None,
+            report_card_manifest_path=report_card_manifest_path,
+        )
 
     cover_meta = dependencies.get_report_metadata(
         ReportMetadataGetRequest(

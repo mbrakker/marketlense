@@ -6,11 +6,12 @@ from __future__ import annotations
 import sqlite3
 
 from src.services._sqlite_migration._reports.schema import (
+    _ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL,
     _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL,
     _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
     _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
-    _CLAIM_EMBEDDINGS_TABLE_SQL,
     _CLAIM_EMBEDDING_QUEUE_TRANSITIONS_TABLE_SQL,
+    _CLAIM_EMBEDDINGS_TABLE_SQL,
     _REPORT_CATEGORIES_TABLE_SQL,
     _REPORT_CLAIMS_TABLE_SQL,
     _REPORT_FIGURES_TABLE_SQL,
@@ -228,6 +229,27 @@ def _reports_db_016_add_claim_embedding_queue_controls(
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_claim_embeddings_identity "
         "ON claim_embeddings(entity_uid, content_hash, embedding_version, provider, model, status)"
+    )
+
+
+def _reports_db_017_add_lineage_execution_planning(conn: sqlite3.Connection) -> None:
+    """Add explicit planner provenance and durable planned-versus-actual audit rows."""
+    _add_column_if_missing(
+        conn,
+        table_name="artifact_lineage_records",
+        column_name="compatibility_json",
+        column_type="TEXT NOT NULL DEFAULT '{}'",
+    )
+    _add_column_if_missing(
+        conn,
+        table_name="artifact_lineage_records",
+        column_name="lineage_status",
+        column_type="TEXT NOT NULL DEFAULT 'legacy_unverified'",
+    )
+    conn.execute(_ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_artifact_execution_plan_runs_scope "
+        "ON artifact_execution_plan_runs(report_id, execution_intent, created_at_utc)"
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_claim_embedding_queue_transitions_entity "

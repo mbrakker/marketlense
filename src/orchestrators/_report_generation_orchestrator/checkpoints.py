@@ -5,6 +5,7 @@ import json
 import logging
 from dataclasses import asdict
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from src.contracts.artifact_lineage import (
@@ -67,6 +68,10 @@ def _build_runtime_state(
     publisher_name: str = "",
     source_report_name: str = "",
     source_url: str = "",
+    execution_compatibility: Optional[dict[str, object]] = None,
+    execution_plan_hash: str = "",
+    execution_plan_intent: str = "",
+    planned_stages: Optional[list[str]] = None,
 ) -> ReportRuntimeState:
     report_worker_limit = getattr(settings, "report_worker_limit", 1)
     try:
@@ -93,6 +98,10 @@ def _build_runtime_state(
         publisher_name=str(publisher_name or "").strip(),
         source_report_name=str(source_report_name or "").strip(),
         source_url=str(source_url or "").strip(),
+        execution_compatibility=dict(execution_compatibility or {}),
+        execution_plan_hash=str(execution_plan_hash or "").strip(),
+        execution_plan_intent=str(execution_plan_intent or "").strip(),
+        planned_stages=[str(stage) for stage in (planned_stages or [])],
     )
 
 
@@ -354,7 +363,9 @@ def _record_checkpoint_artifact_lineage(
         if not isinstance(raw_ref, dict):
             continue
         artifact_name = str(raw_ref.get("artifact_id") or "").strip()
-        storage_ref = str(raw_ref.get("path") or "").strip()
+        storage_ref = _resolve_retained_artifact_path(
+            runtime, str(raw_ref.get("path") or "").strip()
+        )
         if not artifact_name or not storage_ref:
             continue
         storage_stat = file_stat(
@@ -376,9 +387,27 @@ def _record_checkpoint_artifact_lineage(
                 if dependency in lineage_ids
             ]
         )
-        prompt_hash, model_name, metadata = _checkpoint_model_provenance(
+        prompt_hash, model_name, metadata, compatibility = _checkpoint_model_provenance(
             payload, artifact_name
         )
+        compatibility = {
+            **dict(runtime.execution_compatibility),
+            **compatibility,
+        }
+        compatibility["source_metadata_hash"] = {
+            "rendered_html": hashlib.sha256(
+                json.dumps(
+                    {
+                        "publisher_name": runtime.publisher_name,
+                        "source_report_name": runtime.source_report_name,
+                        "source_url": runtime.source_url,
+                    },
+                    ensure_ascii=True,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+        }
         response = record_artifact_lineage(
             ArtifactLineageRegistrationRequest(
                 schema_version=ARTIFACT_LINEAGE_SCHEMA_VERSION,
@@ -389,7 +418,7 @@ def _record_checkpoint_artifact_lineage(
                 storage_ref=storage_ref,
                 producer=stage_name,
                 schema_version_used=str(raw_ref.get("schema_version") or "1.0"),
-                processing_version="report_generation_checkpoint_v1",
+                processing_version="report_generation_checkpoint_v2",
                 dependency_artifact_ids=dependencies,
                 prompt_hash=prompt_hash,
                 model_name=model_name,
@@ -399,11 +428,29 @@ def _record_checkpoint_artifact_lineage(
                     else "not_applicable"
                 ),
                 metadata=metadata,
+                compatibility=compatibility,
+                lineage_status=(
+                    "complete"
+                    if runtime.execution_compatibility
+                    else "legacy_unverified"
+                ),
             ),
             runtime.ctx,
         )
         lineage_ids[artifact_name] = response.record.artifact_id
     return lineage_ids
+
+
+def _resolve_retained_artifact_path(
+    runtime: ReportRuntimeState, storage_ref: str
+) -> str:
+    """Resolve generator-relative output refs before hashing them as lineage."""
+    raw_path = Path(storage_ref).expanduser()
+    candidates = (raw_path, Path(runtime.settings.output_dir) / raw_path)
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate.resolve())
+    return str(raw_path)
 
 
 def _checkpoint_dependency_names(artifact_name: str) -> tuple[str, ...]:
@@ -430,20 +477,21 @@ def _checkpoint_validation_status(payload: dict) -> str:
 
 def _checkpoint_model_provenance(
     payload: dict, artifact_name: str
-) -> tuple[str, str, dict[str, object]]:
+) -> tuple[str, str, dict[str, object], dict[str, object]]:
     metadata: dict[str, object] = {"checkpoint_artifact_name": artifact_name}
+    compatibility: dict[str, object] = {"artifact_family": artifact_name}
     if artifact_name != "artifacts":
-        return "", "", metadata
+        return "", "", metadata, compatibility
     analysis = payload.get("analysis")
     if not isinstance(analysis, dict):
-        return "", "", metadata
+        return "", "", metadata, compatibility
     generated = analysis.get("artifacts_payload")
     if not isinstance(generated, dict):
-        return "", "", metadata
+        return "", "", metadata, compatibility
     cache = generated.get("_cache")
     prompts = cache.get("prompts") if isinstance(cache, dict) else None
     if not isinstance(prompts, dict) or not prompts:
-        return "", "", metadata
+        return "", "", metadata, compatibility
     prompt_hash = hashlib.sha256(
         json.dumps(
             prompts, ensure_ascii=True, sort_keys=True, separators=(",", ":")
@@ -457,7 +505,22 @@ def _checkpoint_model_provenance(
         }
     )
     metadata["prompt_hashes"] = prompts
-    return prompt_hash, ",".join(models), metadata
+    compatibility["prompt_versions"] = {
+        str(namespace): hashlib.sha256(
+            json.dumps(
+                {
+                    "system": str(value.get("prompt_system_sha256") or ""),
+                    "user": str(value.get("prompt_user_sha256") or ""),
+                },
+                ensure_ascii=True,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        for namespace, value in prompts.items()
+        if isinstance(value, dict)
+    }
+    return prompt_hash, ",".join(models), metadata, compatibility
 
 
 def _artifact_required(artifact_id: str) -> bool:

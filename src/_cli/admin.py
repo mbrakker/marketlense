@@ -200,4 +200,5 @@ def backfill_artifact_lineage_command(
     table.add_row("Eligible artifacts", str(result.eligible_artifacts))
     table.add_row("New records", str(result.created_artifacts))
     table.add_row("Skipped", str(result.skipped_artifacts))
+    table.add_row("Planner-unverified", str(result.incomplete_artifacts))
     console.print(table)

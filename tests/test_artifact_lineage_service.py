@@ -280,3 +280,4 @@ def test_backfill_reads_legacy_checkpoint_artifact_refs_from_workspace_root(
     assert result.eligible_artifacts == 3
     assert result.created_artifacts == 3
     assert result.skipped_artifacts == 0
+    assert result.incomplete_artifacts == 3

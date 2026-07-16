@@ -121,7 +121,9 @@ class ReportRuntimeState:
     )
     publisher_name: str = field(
         default="",
-        metadata={"doc": "Source-backed publisher name used for LLM usage attribution."},
+        metadata={
+            "doc": "Source-backed publisher name used for LLM usage attribution."
+        },
     )
     source_report_name: str = field(
         default="",
@@ -132,6 +134,22 @@ class ReportRuntimeState:
     source_url: str = field(
         default="",
         metadata={"doc": "Source-backed report URL used for LLM usage attribution."},
+    )
+    execution_compatibility: Dict[str, object] = field(
+        default_factory=dict,
+        metadata={"doc": "Current planner profile retained with checkpoint lineage."},
+    )
+    execution_plan_hash: str = field(
+        default="",
+        metadata={"doc": "Deterministic plan consumed by this report execution."},
+    )
+    execution_plan_intent: str = field(
+        default="",
+        metadata={"doc": "Execution intent associated with the consumed plan."},
+    )
+    planned_stages: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Ordered planner stages visible to downstream orchestration."},
     )
 
 

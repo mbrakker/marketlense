@@ -26,6 +26,16 @@ from src.contracts.idempotency import (
     OrchestratorIdempotencyGetRequest,
     OrchestratorIdempotencyRecordRequest,
 )
+from src.contracts.minimal_execution_plan import (
+    MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+    ExecutionCompatibilityVersions,
+    ExecutionPlanRecordRequest,
+    ExecutionPlanResultRequest,
+    MinimalExecutionPlan,
+    MinimalExecutionPlanBuildRequest,
+    MinimalExecutionPlanInput,
+    RetainedArtifactGraph,
+)
 from src.contracts.publish import (
     PublishEntityMetadata,
     PublishHtmlSnapshot,
@@ -131,7 +141,12 @@ from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
 )
 from src.services.file_service import file_exists, list_html, read_text
-from src.services.report_store_service import list_metadata
+from src.services.report_store_service import (
+    build_minimal_execution_plan,
+    list_metadata,
+    record_minimal_execution_plan,
+    record_minimal_execution_plan_result,
+)
 from src.services.state_service import already_published as state_already_published
 from src.services.state_service import get as state_get
 from src.services.state_service import record_publish as state_record_publish
@@ -527,6 +542,7 @@ def run_publish(
     ctx: Optional[RunContext] = None,
     force_report_cards: bool = False,
     force_draft: bool = False,
+    execution_plan_mode: str = "shadow",
 ) -> List[PublishOutcome]:
     root_ctx = ctx or new_run_context()
     publish_budget = build_publish_budget(settings, root_ctx)
@@ -567,6 +583,13 @@ def run_publish(
     )
 
     auto_discovery = html_paths is None
+    normalized_plan_mode = str(execution_plan_mode or "shadow").strip().lower()
+    if normalized_plan_mode not in {"shadow", "enforce", "disabled"}:
+        raise AppError(
+            code="minimal_execution_plan_mode_invalid",
+            message="Execution planning mode must be shadow, enforce, or disabled",
+            retryable=False,
+        )
     if auto_discovery:
         list_resp = list_html(
             ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir),
@@ -668,6 +691,60 @@ def run_publish(
         ]
     if auto_discovery and limit is not None:
         candidates = candidates[:limit]
+    publication_plans: dict[str, MinimalExecutionPlan] = {}
+    blocked_paths: set[str] = set()
+    if normalized_plan_mode != "disabled":
+        publication_target = f"{base_url}|{settings.wp.post_status}"
+        for candidate in candidates:
+            file_id = str(candidate.file_id or "").strip()
+            if not file_id:
+                continue
+            plan = build_minimal_execution_plan(
+                MinimalExecutionPlanBuildRequest(
+                    schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    execution_input=MinimalExecutionPlanInput(
+                        schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                        execution_intent="publication_repair",
+                        report_id=file_id,
+                        source_id="",
+                        current_source_content_hashes={},
+                        retained_graph=RetainedArtifactGraph(),
+                        requested_output_families=["rendered_html"],
+                        current_compatibility=ExecutionCompatibilityVersions(),
+                        current_publication_state={"target": publication_target},
+                    ),
+                ),
+                root_ctx,
+            ).plan
+            publication_plans[candidate.html_path] = plan
+            record_minimal_execution_plan(
+                ExecutionPlanRecordRequest(
+                    schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    plan=plan,
+                    execution_mode=normalized_plan_mode,
+                ),
+                root_ctx,
+            )
+            if normalized_plan_mode == "enforce" and (
+                plan.missing_lineage_blockers or plan.publication_prerequisites
+            ):
+                blocked_paths.add(candidate.html_path)
+                outcomes.append(
+                    PublishOutcome(
+                        schema_version="1.0",
+                        html_path=candidate.html_path,
+                        file_id=file_id,
+                        status="error",
+                        error="publication_lineage_prerequisite_missing",
+                    )
+                )
+        candidates = [
+            candidate
+            for candidate in candidates
+            if candidate.html_path not in blocked_paths
+        ]
     preflight_entries = _build_publish_preflight_entries(
         settings=settings,
         candidates=candidates,
@@ -1161,4 +1238,45 @@ def run_publish(
             fields={"attempted": attempted, "published": published},
         )
     )
+    for html_path, plan in publication_plans.items():
+        outcome = next(
+            (candidate for candidate in outcomes if candidate.html_path == html_path),
+            None,
+        )
+        actual_stages = (
+            ["publication_complete"]
+            if outcome and outcome.status in {"published", "skipped"}
+            else []
+        )
+        actual_calls = (
+            ["wordpress_write"] if outcome and outcome.status == "published" else []
+        )
+        try:
+            record_minimal_execution_plan_result(
+                ExecutionPlanResultRequest(
+                    schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    plan_hash=plan.plan_hash,
+                    report_id=plan.report_id,
+                    execution_intent=plan.execution_intent,
+                    actual_stages=actual_stages,
+                    actual_external_calls=actual_calls,
+                    execution_status=outcome.status if outcome else "not_attempted",
+                ),
+                root_ctx,
+            )
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="minimal_execution_plan_result_record_failed",
+                    module=logger.name,
+                    fields={
+                        "plan_hash": plan.plan_hash,
+                        "html_path": html_path,
+                        "error": str(exc),
+                    },
+                )
+            )
     return outcomes

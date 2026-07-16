@@ -1,13 +1,15 @@
 from __future__ import annotations
-from dataclasses import asdict
-from dataclasses import replace
+
 import logging
+from dataclasses import asdict, replace
 from typing import Callable, Optional
+
 from src.contracts.analytics_projection import (
     AnalyticsProjectionRunRequest,
 )
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.minimal_execution_plan import MinimalExecutionPlan
 from src.contracts.report_generation import (
     ReportGenerationClientBundle,
     require_report_generation_client_bundle,
@@ -15,8 +17,10 @@ from src.contracts.report_generation import (
 from src.contracts.report_store import ReportSourceIdentityResolveRequest
 from src.contracts.run_context import RunContext
 from src.generators.report_analysis_generator import start_vector_store_indexing
-from src.generators.report_generation_dependencies import ReportGenerationDependencies
-from src.generators.report_generation_dependencies import ReportSignalDependencies
+from src.generators.report_generation_dependencies import (
+    ReportGenerationDependencies,
+    ReportSignalDependencies,
+)
 from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
@@ -41,7 +45,6 @@ from .checkpoints import (
     _vector_indexing_checkpoint_payload,
     _write_stage_checkpoint,
 )
-
 from .resume import (
     _analysis_with_report_value_score,
     _cleanup_transient_vector_store,
@@ -135,8 +138,7 @@ def _resolve_runtime_source_identity(
         return "", fallback_report_name, ""
     publisher_name = str(getattr(identity, "publisher_name", "") or "").strip()
     source_report_name = (
-        str(getattr(identity, "report_name", "") or "").strip()
-        or fallback_report_name
+        str(getattr(identity, "report_name", "") or "").strip() or fallback_report_name
     )
     source_url = str(getattr(identity, "source_url", "") or "").strip()
     logger.info(
@@ -181,12 +183,104 @@ def run_report_generation(
     ] = None,
     resume_from_stage: Optional[str] = None,
     require_artifact_lineage: bool = False,
+    execution_compatibility: Optional[dict[str, object]] = None,
+    minimal_execution_plan: Optional[MinimalExecutionPlan] = None,
 ) -> IngestOutcome:
     deps = (
         _with_signal_candidate_orchestrator(dependencies)
         if dependencies is not None
         else _default_report_generation_dependencies()
     )
+    publisher_name, source_report_name, source_url = _resolve_runtime_source_identity(
+        file=file,
+        settings=settings,
+        md5=md5,
+        ctx=ctx,
+        deps=deps,
+    )
+    runtime = _build_runtime_state(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        publisher_name=publisher_name,
+        source_report_name=source_report_name,
+        source_url=source_url,
+        execution_compatibility=execution_compatibility,
+        execution_plan_hash=(
+            minimal_execution_plan.plan_hash
+            if minimal_execution_plan is not None
+            else ""
+        ),
+        execution_plan_intent=(
+            minimal_execution_plan.execution_intent
+            if minimal_execution_plan is not None
+            else ""
+        ),
+        planned_stages=(
+            minimal_execution_plan.required_stages
+            if minimal_execution_plan is not None
+            else None
+        ),
+    )
+    if minimal_execution_plan is not None:
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="orchestrator",
+                event="minimal_execution_plan_consumed",
+                module=logger.name,
+                fields={
+                    "plan_hash": minimal_execution_plan.plan_hash,
+                    "intent": minimal_execution_plan.execution_intent,
+                    "required_stages": minimal_execution_plan.required_stages,
+                    "file_id": runtime.file.file_id,
+                },
+            )
+        )
+    requested_resume_stage = str(resume_from_stage or "").strip()
+    enforced_render_only = (
+        minimal_execution_plan is not None
+        and minimal_execution_plan.required_stages == [STAGE_RENDER_COMPLETE]
+    )
+    if (
+        requested_resume_stage in {STAGE_ANALYSIS_COMPLETE, STAGE_RENDER_COMPLETE}
+        and client_bundle is None
+        and all(
+            client is None
+            for client in (
+                source_openai_client,
+                taxonomy_openai_client,
+                category_fit_openai_client,
+                evidence_pack_openai_client,
+                artifact_openai_client,
+                validation_openai_client,
+                regeneration_openai_client,
+                figure_caption_openai_client,
+            )
+        )
+    ):
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="orchestrator",
+                event="report_generation_model_clients_avoided",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "resume_from_stage": requested_resume_stage,
+                },
+            )
+        )
+        return _resume_from_checkpoint_stage(
+            runtime,
+            deps,
+            analytics_projection_fn,
+            requested_resume_stage=requested_resume_stage,
+            require_artifact_lineage=require_artifact_lineage,
+            skip_post_render_projection=enforced_render_only,
+        )
     if client_bundle is not None:
         bundle = require_report_generation_client_bundle(client_bundle)
         source_openai_client = bundle.source_ocr_client
@@ -242,24 +336,6 @@ def run_report_generation(
                 deps.analysis.figure_caption.openai_chat_json_with_images
             ),
         )
-    publisher_name, source_report_name, source_url = _resolve_runtime_source_identity(
-        file=file,
-        settings=settings,
-        md5=md5,
-        ctx=ctx,
-        deps=deps,
-    )
-    runtime = _build_runtime_state(
-        file,
-        local_pdf_path,
-        settings,
-        md5,
-        ctx,
-        publisher_name=publisher_name,
-        source_report_name=source_report_name,
-        source_url=source_url,
-    )
-    requested_resume_stage = str(resume_from_stage or "").strip()
     if requested_resume_stage:
         return _resume_from_checkpoint_stage(
             runtime,

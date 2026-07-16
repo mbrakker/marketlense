@@ -133,6 +133,22 @@ def run_report_analysis(
     regeneration_openai_client=None,
     figure_caption_openai_client=None,
 ) -> ReportAnalysisState:
+    if runtime.execution_plan_hash:
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="orchestrator",
+                event="minimal_execution_plan_consumed",
+                module=logger.name,
+                fields={
+                    "plan_hash": runtime.execution_plan_hash,
+                    "intent": runtime.execution_plan_intent,
+                    "required_stages": runtime.planned_stages,
+                    "consumer_stage": "analysis_complete",
+                    "file_id": runtime.file.file_id,
+                },
+            )
+        )
     mode_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store")
     vector_state = _await_vector_store_indexing(
         indexing_state,

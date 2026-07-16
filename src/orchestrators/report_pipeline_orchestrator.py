@@ -2,19 +2,29 @@ from __future__ import annotations
 
 import logging
 import time
+from dataclasses import asdict
 from inspect import Parameter, signature
 from typing import Callable, Optional
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.minimal_execution_plan import (
+    MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+    ExecutionPlanRecordRequest,
+    ExecutionPlanResultRequest,
+    MinimalExecutionPlan,
+    MinimalExecutionPlanBuildRequest,
+    MinimalExecutionPlanInput,
+    RetainedArtifactGraph,
+)
 from src.contracts.pipeline_preflight import PipelinePreflightReport
 from src.contracts.regeneration import (
     LineageRegenerationPlan,
     LineageRegenerationQualityReport,
 )
 from src.contracts.report_generation import ReportGenerationClientBundle
-from src.contracts.run_context import RunContext
 from src.contracts.run_budget import BudgetRequest, RunBudget
+from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import WorkflowControlSettings
 from src.orchestrators.pipeline_preflight_orchestrator import (
     assert_expensive_side_effects_allowed,
@@ -28,6 +38,12 @@ from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.orchestrators.workflow_control_orchestrator import resolve_retry_policy
 from src.services import llm_service
 from src.services.llm_usage_ledger_service import evaluate_budget_request
+from src.services.report_store_service import (
+    build_current_report_execution_compatibility,
+    build_minimal_execution_plan,
+    record_minimal_execution_plan,
+    record_minimal_execution_plan_result,
+)
 from src.utils.coercion import coerce_int
 from src.utils.errors import AppError
 from src.utils.lineage_regeneration import (
@@ -79,14 +95,15 @@ def _invoke_report_fn(
     settings: IngestSettings,
     md5: Optional[str],
     ctx: RunContext,
-    client_bundle: ReportGenerationClientBundle,
+    client_bundle: ReportGenerationClientBundle | None,
     resume_from_stage: Optional[str] = None,
     require_artifact_lineage: bool = False,
+    execution_compatibility: dict[str, object] | None = None,
+    minimal_execution_plan: MinimalExecutionPlan | None = None,
 ) -> IngestOutcome:
-    arguments: dict[str, object] = dict(
-        client_bundle=client_bundle.validate(),
-        resume_from_stage=resume_from_stage,
-    )
+    arguments: dict[str, object] = {"resume_from_stage": resume_from_stage}
+    if client_bundle is not None:
+        arguments["client_bundle"] = client_bundle.validate()
     parameters = signature(report_fn).parameters.values()
     supports_lineage_requirement = any(
         parameter.kind == Parameter.VAR_KEYWORD
@@ -95,6 +112,20 @@ def _invoke_report_fn(
     )
     if supports_lineage_requirement:
         arguments["require_artifact_lineage"] = require_artifact_lineage
+    supports_compatibility = any(
+        parameter.kind == Parameter.VAR_KEYWORD
+        or parameter.name == "execution_compatibility"
+        for parameter in parameters
+    )
+    if supports_compatibility:
+        arguments["execution_compatibility"] = execution_compatibility
+    supports_minimal_plan = any(
+        parameter.kind == Parameter.VAR_KEYWORD
+        or parameter.name == "minimal_execution_plan"
+        for parameter in parameters
+    )
+    if supports_minimal_plan:
+        arguments["minimal_execution_plan"] = minimal_execution_plan
     return report_fn(
         file,
         local_pdf_path,
@@ -121,6 +152,7 @@ def run_report_pipeline(
     auto_resume_from_latest_safe: bool = False,
     lineage_change_kind: str = "",
     lineage_available: bool = False,
+    execution_plan_mode: str = "shadow",
 ) -> IngestOutcome:
     pdf_decision = evaluate_budget_request(
         BudgetRequest(
@@ -195,6 +227,64 @@ def run_report_pipeline(
         retry_policy = resolved_policy.policy
         retry_policy_id = resolved_policy.policy_id
         configured_retries = retry_policy.retries
+    normalized_plan_mode = str(execution_plan_mode or "shadow").strip().lower()
+    if normalized_plan_mode not in {"shadow", "enforce", "disabled"}:
+        raise AppError(
+            code="minimal_execution_plan_mode_invalid",
+            message="Execution planning mode must be shadow, enforce, or disabled",
+            retryable=False,
+        )
+    if lineage_change_kind and not lineage_available:
+        plan_lineage_regeneration(
+            change_kind=lineage_change_kind,
+            lineage_available=False,
+        )
+    minimal_plan = None
+    execution_compatibility: dict[str, object] | None = None
+    if normalized_plan_mode != "disabled":
+        current_compatibility = build_current_report_execution_compatibility(
+            settings, ctx
+        )
+        intent_by_change = {
+            "template": "render_repair",
+            "crop": "crop_repair",
+            "publication": "publication_repair",
+            "prompt": "targeted_repair",
+            "model": "targeted_repair",
+            "validator": "targeted_repair",
+        }
+        plan_response = build_minimal_execution_plan(
+            MinimalExecutionPlanBuildRequest(
+                schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                db_path=settings.reports_db,
+                source_path=local_pdf_path,
+                execution_input=MinimalExecutionPlanInput(
+                    schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                    execution_intent=intent_by_change.get(
+                        str(lineage_change_kind).strip().lower(),
+                        "report_generation",
+                    ),
+                    report_id=file.file_id,
+                    source_id=str(md5 or "").strip().lower(),
+                    current_source_content_hashes={},
+                    retained_graph=RetainedArtifactGraph(),
+                    requested_output_families=["rendered_html"],
+                    current_compatibility=current_compatibility,
+                ),
+            ),
+            ctx,
+        )
+        minimal_plan = plan_response.plan
+        execution_compatibility = asdict(current_compatibility)
+        record_minimal_execution_plan(
+            ExecutionPlanRecordRequest(
+                schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                db_path=settings.reports_db,
+                plan=minimal_plan,
+                execution_mode=normalized_plan_mode,
+            ),
+            ctx,
+        )
     lineage_plan: LineageRegenerationPlan | None = None
     lineage_quality: LineageRegenerationQualityReport | None = None
     if lineage_change_kind:
@@ -203,74 +293,122 @@ def run_report_pipeline(
             lineage_available=lineage_available,
         )
         lineage_quality = build_lineage_regeneration_quality_report(lineage_plan)
+    if (
+        normalized_plan_mode == "enforce"
+        and minimal_plan is not None
+        and (
+            minimal_plan.missing_lineage_blockers
+            or minimal_plan.required_stages != ["render_complete"]
+        )
+    ):
+        record_minimal_execution_plan_result(
+            ExecutionPlanResultRequest(
+                schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                db_path=settings.reports_db,
+                plan_hash=minimal_plan.plan_hash,
+                report_id=file.file_id,
+                execution_intent=minimal_plan.execution_intent,
+                actual_stages=[],
+                actual_external_calls=[],
+                execution_status="enforcement_deferred",
+            ),
+            ctx,
+        )
+        raise AppError(
+            code="minimal_execution_plan_enforcement_unavailable",
+            message=(
+                "Only a proven render-only execution plan is currently enabled "
+                "for stage skipping"
+            ),
+            retryable=False,
+            context={
+                "plan_hash": minimal_plan.plan_hash,
+                "required_stages": minimal_plan.required_stages,
+                "blockers": [
+                    blocker.reason for blocker in minimal_plan.missing_lineage_blockers
+                ],
+            },
+        )
     effective_resume_from_stage = (
         resume_from_stage
         if resume_from_stage
         else (
-            lineage_plan.resume_from_stage
-            if lineage_plan is not None and lineage_plan.resume_from_stage
+            "analysis_complete"
+            if (
+                normalized_plan_mode == "enforce"
+                and minimal_plan is not None
+                and not minimal_plan.missing_lineage_blockers
+                and minimal_plan.required_stages == ["render_complete"]
+            )
             else ("latest_safe" if auto_resume_from_latest_safe else None)
         )
     )
-    evidence_openai_client = llm_service.build_client_for_settings(
-        settings,
-        scope="evidence_pack",
-        rate_limit_max_in_flight=evidence_max_in_flight,
-        rate_limit_min_interval_ms=evidence_min_interval_ms,
-        base_client=openai_client_override,
-        sleep_fn=time.sleep,
-        monotonic_fn=time.monotonic,
-    )
-    artifact_openai_client = llm_service.build_client_for_settings(
-        settings,
-        scope="artifact",
-        rate_limit_max_in_flight=artifact_max_in_flight,
-        rate_limit_min_interval_ms=artifact_min_interval_ms,
-        base_client=openai_client_override,
-        sleep_fn=time.sleep,
-        monotonic_fn=time.monotonic,
-    )
-    source_openai_client = llm_service.build_client_for_settings(
-        settings,
-        scope="pdf_text_ocr",
-        base_client=openai_client_override,
-    )
-    taxonomy_openai_client = llm_service.build_client_for_settings(
-        settings,
-        scope="taxonomy",
-        base_client=openai_client_override,
-    )
-    category_fit_openai_client = llm_service.build_client_for_settings(
-        settings,
-        scope="context_category_fit",
-        base_client=openai_client_override,
-    )
-    validation_openai_client = llm_service.build_client_for_settings(
-        settings,
-        scope="validation",
-        base_client=openai_client_override,
-    )
-    regeneration_openai_client = llm_service.build_client_for_settings(
-        settings,
-        scope="artifact_regeneration",
-        base_client=openai_client_override,
-    )
-    figure_caption_openai_client = llm_service.build_client_for_settings(
-        settings,
-        scope="figure_caption",
-        base_client=openai_client_override,
-    )
-    client_bundle = ReportGenerationClientBundle(
-        schema_version="1.0",
-        source_ocr_client=source_openai_client,
-        taxonomy_client=taxonomy_openai_client,
-        category_fit_client=category_fit_openai_client,
-        evidence_pack_client=evidence_openai_client,
-        artifact_client=artifact_openai_client,
-        validation_client=validation_openai_client,
-        regeneration_client=regeneration_openai_client,
-        figure_caption_client=figure_caption_openai_client,
-    ).validate()
+    client_bundle: ReportGenerationClientBundle | None = None
+    if not (
+        normalized_plan_mode == "enforce"
+        and minimal_plan is not None
+        and not minimal_plan.missing_lineage_blockers
+        and minimal_plan.required_stages == ["render_complete"]
+    ):
+        evidence_openai_client = llm_service.build_client_for_settings(
+            settings,
+            scope="evidence_pack",
+            rate_limit_max_in_flight=evidence_max_in_flight,
+            rate_limit_min_interval_ms=evidence_min_interval_ms,
+            base_client=openai_client_override,
+            sleep_fn=time.sleep,
+            monotonic_fn=time.monotonic,
+        )
+        artifact_openai_client = llm_service.build_client_for_settings(
+            settings,
+            scope="artifact",
+            rate_limit_max_in_flight=artifact_max_in_flight,
+            rate_limit_min_interval_ms=artifact_min_interval_ms,
+            base_client=openai_client_override,
+            sleep_fn=time.sleep,
+            monotonic_fn=time.monotonic,
+        )
+        source_openai_client = llm_service.build_client_for_settings(
+            settings,
+            scope="pdf_text_ocr",
+            base_client=openai_client_override,
+        )
+        taxonomy_openai_client = llm_service.build_client_for_settings(
+            settings,
+            scope="taxonomy",
+            base_client=openai_client_override,
+        )
+        category_fit_openai_client = llm_service.build_client_for_settings(
+            settings,
+            scope="context_category_fit",
+            base_client=openai_client_override,
+        )
+        validation_openai_client = llm_service.build_client_for_settings(
+            settings,
+            scope="validation",
+            base_client=openai_client_override,
+        )
+        regeneration_openai_client = llm_service.build_client_for_settings(
+            settings,
+            scope="artifact_regeneration",
+            base_client=openai_client_override,
+        )
+        figure_caption_openai_client = llm_service.build_client_for_settings(
+            settings,
+            scope="figure_caption",
+            base_client=openai_client_override,
+        )
+        client_bundle = ReportGenerationClientBundle(
+            schema_version="1.0",
+            source_ocr_client=source_openai_client,
+            taxonomy_client=taxonomy_openai_client,
+            category_fit_client=category_fit_openai_client,
+            evidence_pack_client=evidence_openai_client,
+            artifact_client=artifact_openai_client,
+            validation_client=validation_openai_client,
+            regeneration_client=regeneration_openai_client,
+            figure_caption_client=figure_caption_openai_client,
+        ).validate()
     logger.info(
         log_event(
             ctx,
@@ -296,7 +434,9 @@ def run_report_pipeline(
                 "lineage_regeneration_plan": (
                     {
                         "change_kind": lineage_plan.change_kind,
-                        "full_regeneration_required": lineage_plan.full_regeneration_required,
+                        "full_regeneration_required": (
+                            lineage_plan.full_regeneration_required
+                        ),
                         "reused_stages": lineage_plan.reused_stages,
                         "regenerated_stages": lineage_plan.regenerated_stages,
                         "avoided_work": lineage_plan.avoided_work,
@@ -308,13 +448,29 @@ def run_report_pipeline(
                     {
                         "fan_out": lineage_quality.fan_out,
                         "reused_stage_count": lineage_quality.reused_stage_count,
-                        "regenerated_stage_count": lineage_quality.regenerated_stage_count,
+                        "regenerated_stage_count": (
+                            lineage_quality.regenerated_stage_count
+                        ),
                         "avoided_work": lineage_quality.avoided_work,
                         "avoided_work_count": len(lineage_quality.avoided_work),
-                        "estimated_avoided_cost_usd": lineage_quality.estimated_avoided_cost_usd,
+                        "estimated_avoided_cost_usd": (
+                            lineage_quality.estimated_avoided_cost_usd
+                        ),
                         "cost_status": lineage_quality.cost_status,
                     }
                     if lineage_quality is not None
+                    else {}
+                ),
+                "minimal_execution_plan": (
+                    {
+                        "plan_hash": minimal_plan.plan_hash,
+                        "intent": minimal_plan.execution_intent,
+                        "required_stages": minimal_plan.required_stages,
+                        "skipped_stages": minimal_plan.skipped_stages,
+                        "blocker_count": len(minimal_plan.missing_lineage_blockers),
+                        "mode": normalized_plan_mode,
+                    }
+                    if minimal_plan is not None
                     else {}
                 ),
             },
@@ -337,6 +493,8 @@ def run_report_pipeline(
                 client_bundle=client_bundle,
                 resume_from_stage=effective_resume_from_stage,
                 require_artifact_lineage=bool(lineage_change_kind),
+                execution_compatibility=execution_compatibility,
+                minimal_execution_plan=minimal_plan,
             )
         except AppError as exc:
             if (
@@ -366,6 +524,8 @@ def run_report_pipeline(
                     client_bundle=client_bundle,
                     resume_from_stage=None,
                     require_artifact_lineage=False,
+                    execution_compatibility=execution_compatibility,
+                    minimal_execution_plan=minimal_plan,
                 )
             else:
                 raise
@@ -409,7 +569,9 @@ def run_report_pipeline(
             )
             raise AppError(
                 code="doc_map_generation_retry",
-                message=f"Retrying report pipeline for doc_map reason: {doc_map_reason}",
+                message=(
+                    f"Retrying report pipeline for doc_map reason: {doc_map_reason}"
+                ),
                 retryable=True,
                 context={
                     "file_id": file.file_id,
@@ -471,5 +633,45 @@ def run_report_pipeline(
             input_checksum=md5 or file.file_id,
             report_id=file.file_id,
             source_id=local_pdf_path,
+        )
+    if minimal_plan is not None:
+        actual_stages = (
+            ["render_complete"]
+            if effective_resume_from_stage == "analysis_complete"
+            else [
+                "source_prepared",
+                "selection_complete",
+                "analysis_complete",
+                "render_complete",
+            ]
+        )
+        actual_external_calls = {
+            "source_prepared": ["pdf_parse", "ocr"],
+            "selection_complete": ["crop_render", "crop_qa"],
+            "analysis_complete": [
+                "vector_store",
+                "report_analysis_model",
+                "validator_model",
+            ],
+            "render_complete": ["html_render"],
+        }
+        record_minimal_execution_plan_result(
+            ExecutionPlanResultRequest(
+                schema_version=MINIMAL_EXECUTION_PLAN_SCHEMA_VERSION,
+                db_path=settings.reports_db,
+                plan_hash=minimal_plan.plan_hash,
+                report_id=file.file_id,
+                execution_intent=minimal_plan.execution_intent,
+                actual_stages=actual_stages,
+                actual_external_calls=sorted(
+                    {
+                        call
+                        for stage in actual_stages
+                        for call in actual_external_calls[stage]
+                    }
+                ),
+                execution_status=outcome.status,
+            ),
+            ctx,
         )
     return outcome

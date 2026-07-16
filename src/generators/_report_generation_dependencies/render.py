@@ -6,6 +6,7 @@ from typing import Any, Callable
 from src.contracts.cover_images import CoverImageGenerationRequest
 from src.contracts.files import (
     FileBundleHashRequest,
+    FileExistsRequest,
     FileStatRequest,
     JsonObjectCacheReadRequest,
     JsonObjectCacheWriteRequest,
@@ -25,19 +26,24 @@ from src.contracts.report_store import (
 from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
 from src.services.file_service import (
+    file_exists,
     file_stat,
     hash_file_bundle,
     read_json_object_cache,
     read_text,
-    write_json_object_cache,
     write_bytes,
+    write_json_object_cache,
     write_report_card_manifest,
 )
 from src.services.pdf_service import render_preview as render_preview_service
 from src.services.render_service import render_report as render_report_service
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
+)
+from src.services.report_store_service import (
     resolve_report_source_identity,
+)
+from src.services.report_store_service import (
     upsert_metadata as upsert_report_metadata,
 )
 
@@ -58,6 +64,7 @@ class ReportRenderDependencies:
     write_report_card_manifest: Callable[
         [ReportCardManifestWriteRequest, RunContext], ReportCardManifestWriteResponse
     ]
+    file_exists: Callable[[FileExistsRequest, RunContext], Any] = file_exists
     read_json_object_cache: Callable[[JsonObjectCacheReadRequest, RunContext], Any] = (
         read_json_object_cache
     )
@@ -81,6 +88,7 @@ class ReportRenderDependencies:
             read_text=read_text,
             write_bytes=write_bytes,
             write_report_card_manifest=write_report_card_manifest,
+            file_exists=file_exists,
             read_json_object_cache=read_json_object_cache,
             write_json_object_cache=write_json_object_cache,
             hash_file_bundle=hash_file_bundle,

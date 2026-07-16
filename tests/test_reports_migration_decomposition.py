@@ -30,6 +30,7 @@ SCHEMA = {
     "_CLAIM_EMBEDDING_QUEUE_TRANSITIONS_TABLE_SQL",
     "_SIGNAL_CANDIDATES_TABLE_SQL",
     "_SIGNAL_CANDIDATE_GROUPS_TABLE_SQL",
+    "_ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL",
 }
 
 CORE = {
@@ -55,6 +56,7 @@ PROJECTIONS = {
     "_reports_db_014_create_claim_embedding_records",
     "_reports_db_015_create_artifact_lineage_registry",
     "_reports_db_016_add_claim_embedding_queue_controls",
+    "_reports_db_017_add_lineage_execution_planning",
 }
 
 

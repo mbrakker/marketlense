@@ -77,6 +77,8 @@ def _identity_payload(
         "model_parameters_hash": request.model_parameters_hash.strip(),
         "validation_status": request.validation_status.strip(),
         "metadata": request.metadata,
+        "compatibility": request.compatibility,
+        "lineage_status": request.lineage_status.strip(),
     }
 
 
@@ -105,6 +107,8 @@ def _row_to_record(row: sqlite3.Row) -> ArtifactLineageRecord:
         invalidation_reason=str(row["invalidation_reason"] or ""),
         superseded_by=str(row["superseded_by"] or ""),
         metadata=json.loads(str(row["metadata_json"])),
+        compatibility=json.loads(str(row["compatibility_json"] or "{}")),
+        lineage_status=str(row["lineage_status"] or "legacy_unverified"),
     )
 
 
@@ -179,8 +183,8 @@ def record_artifact_lineage(
                 context={"missing_dependency_ids": missing},
             )
         conn.execute(
-            """INSERT INTO artifact_lineage_records(artifact_id,artifact_kind,report_id,source_id,content_hash,storage_ref,producer,schema_version_used,processing_version,prompt_hash,model_provider,model_name,model_parameters_hash,validation_status,metadata_json,created_at_utc)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))""",
+            """INSERT INTO artifact_lineage_records(artifact_id,artifact_kind,report_id,source_id,content_hash,storage_ref,producer,schema_version_used,processing_version,prompt_hash,model_provider,model_name,model_parameters_hash,validation_status,metadata_json,compatibility_json,lineage_status,created_at_utc)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))""",
             (
                 artifact_id,
                 request.artifact_kind.strip(),
@@ -197,6 +201,8 @@ def record_artifact_lineage(
                 request.model_parameters_hash.strip(),
                 request.validation_status.strip(),
                 _canonical_json(request.metadata),
+                _canonical_json(request.compatibility),
+                request.lineage_status.strip() or "legacy_unverified",
             ),
         )
         conn.execute(
@@ -402,7 +408,7 @@ def backfill_artifact_lineage(
     root = Path(request.checkpoint_root).expanduser()
     workspace_root = root.parent.parent.parent
     checkpoint_paths = sorted(root.glob("*/*.json"))[: max(0, request.limit)]
-    scanned = eligible = created = skipped = 0
+    scanned = eligible = created = skipped = incomplete = 0
     for checkpoint_path in checkpoint_paths:
         scanned += 1
         try:
@@ -438,6 +444,7 @@ def backfill_artifact_lineage(
                 ]
                 if request.dry_run:
                     known[artifact_name] = artifact_name
+                    incomplete += 1
                     continue
                 prompt_hash, model_name, metadata = _backfill_provenance(
                     inner, artifact_name
@@ -458,11 +465,13 @@ def backfill_artifact_lineage(
                         model_name=model_name,
                         validation_status="not_applicable",
                         metadata=metadata,
+                        lineage_status="legacy_unverified",
                     ),
                     ctx,
                 )
                 known[artifact_name] = response.record.artifact_id
                 created += int(response.created)
+                incomplete += int(response.record.lineage_status != "complete")
         except (OSError, ValueError, TypeError, AppError):
             skipped += 1
     return ArtifactLineageBackfillResponse(
@@ -472,6 +481,7 @@ def backfill_artifact_lineage(
         created_artifacts=created,
         skipped_artifacts=skipped,
         dry_run=request.dry_run,
+        incomplete_artifacts=incomplete,
     )
 
 

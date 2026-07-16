@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last audited: 2026-07-14
+Last audited: 2026-07-16
 
 This is the repository's single, source-neutral work register. Every task is evaluated by its current codebase evidence and project decision—not by where it was first proposed. Equivalent tasks are merged under one owner; deferred, closed, and excluded work stays visible in the same register.
 
@@ -44,6 +44,7 @@ All work is listed below in one register. `Active` items have detailed completio
 | Active | P8 | Readable evidence spans, methodology/source-quality trust, and deterministic related content | Public evidence/discovery outcome. |
 | Active | E1 | Claim-embedding freshness, retention, and cost controls | Embedding operations outcome. |
 | Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Semantic benchmark coverage outcome. |
+| Active | E7 | Expand planner-enforced artifact-family reuse beyond rendered HTML | Measured shadow-to-enforce rollout outcome. |
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Retained corpus is hash-pinned and CI-gated; local release-equivalent run passed. |
 | Active | R1 | CI/PR release-evidence summaries | Reviewer-surface outcome. |
 | Active | R2 | Role-mixing, import-graph, facade, direct-I/O, mutation-selection, and hygiene enforcement | Architecture enforcement outcome. |
@@ -78,7 +79,7 @@ All work is listed below in one register. `Active` items have detailed completio
 - **R5 (2026-07-15):** The canonical lock records SHA-256 hashes for all 177 active Ubuntu CPython 3.12 artifacts, including `numpy==2.4.2` from its official manylinux wheel. CI installs with `--require-hashes`; a native official-PyPI wheelhouse passed an offline clean install, while a tampered NumPy hash failed before package installation.
 - **R4 (2026-07-15):** Publication reads canonical SQLite usage plus projection status; normal bounded lag is accounted, while missing, invalid, or material lag stops the final public write without triggering a rebuild.
 - **E5 (2026-07-15):** Retained crop-QA sidecars now form operator-only scorecards and selection telemetry, including deterministic quality/clipping/storage comparisons with no public diagnostic rendering.
-- **E3 (2026-07-15):** Report selective regeneration now fails closed on absent lineage and logs stage fan-out, reuse, avoided work, and defensible avoided-cost status.
+- **E3 (2026-07-16):** Lineage-driven minimum regeneration is now the deterministic authority for report and publication repair. It captures current compatibility, persists plan/actual audits, fails historic provenance closed, exposes validated cross-report claim/evidence/summary/chart/metadata reads, and has a render-only enforcement path. A retained provider-backed full run completed in 208.51 seconds; the subsequent enforced render-only replay completed in 0.87 seconds with source, selection, analysis, model, projection, and WordPress work avoided.
 - **E2 (2026-07-15):** The retained-artifact benchmark reports Briefing and Signal prompt/token deltas, overlap, source/citation coverage, and explicitly records the deterministic fallback when no retained embedding export exists.
 - **P9 (2026-07-15):** The retained public-advisory benchmark now compares a saved baseline and emits typed per-insight source-grounded repair proposals or explicit abstentions without altering public rendering.
 - **S1/S2 (2026-07-15):** Canonical service-boundary and publish/ingest facade audits remain CI-enforced; focused decomposition regression coverage preserves the existing routing, retries, state transitions, and external-effect contracts.
@@ -292,6 +293,19 @@ The original ten-item screenshot baseline is complete in the committed implement
 - **Context:** The semantic-selection benchmark correctly falls back when a retained corpus has no persisted vectors, so it cannot yet measure real semantic ranking on the fixed corpus.
 - **Benefit:** A bounded, redacted export makes semantic quality and prompt savings reproducible without live embedding calls.
 - **Success criteria:** Persist a hash-pinned, retention-governed benchmark export containing only approved vector IDs/content hashes/vectors; benchmark it in CI and compare semantic coverage against lexical fallback without provider calls.
+
+#### E7. Expand planner-enforced artifact-family reuse beyond rendered HTML
+
+- **Title:** Expand planner-enforced artifact-family reuse beyond rendered HTML
+- **Impact 5 / effort: 3**
+- **Context:** The lineage planner now produces fail-closed plans for crop, targeted analysis, and publication repair, while only the proven rendered-HTML family is enabled for stage skipping. The remaining families stay in shadow to preserve current stage contracts.
+- **Benefit:** Measured evidence can safely extend avoided provider calls, crop work, and WordPress preflight/write work without introducing a general DAG scheduler.
+- **Risks to avoid:** Do not enable a family from synthetic evidence, downgrade missing-lineage blockers, or permit a plan to fall back to unplanned provider work.
+- **Success criteria:**
+
+- Shadow audits provide retained-fixture and live evidence for crop, prompt-family, validator, and publication plans, including zero unplanned calls for each candidate executor.
+- Crop repair is enabled only after it reuses validated analysis artifacts; targeted prompt repair preserves unaffected artifact families; publication repair verifies the current target without a public write when provenance is incomplete.
+- Each family has an explicit rollback switch, bounded live canary, plan/actual divergence threshold, and regression coverage before enforcement.
 
 ### 4. Release Integrity and Architectural Enforcement
 

@@ -578,11 +578,14 @@ def _validate_checkpoint_artifact_lineage(
                 db_path=runtime.settings.reports_db,
                 artifact_id=str(artifact_id or "").strip(),
                 expected_schema_version="1.0",
-                expected_processing_version="report_generation_checkpoint_v1",
+                expected_processing_version="",
             ),
             runtime.ctx,
         )
-        if reuse.reusable:
+        if reuse.reusable and (
+            not require_artifact_lineage
+            or (reuse.record is not None and reuse.record.lineage_status == "complete")
+        ):
             continue
         raise AppError(
             code="report_pipeline_checkpoint_lineage_not_reusable",
@@ -593,7 +596,14 @@ def _validate_checkpoint_artifact_lineage(
                 "stage_name": checkpoint.stage_name,
                 "artifact_name": str(artifact_name),
                 "artifact_id": str(artifact_id or ""),
-                "reason": reuse.reason,
+                "reason": (
+                    "lineage_incomplete"
+                    if reuse.reusable
+                    and require_artifact_lineage
+                    and reuse.record is not None
+                    and reuse.record.lineage_status != "complete"
+                    else reuse.reason
+                ),
                 "checkpoint_path": checkpoint_path,
             },
         )
@@ -723,9 +733,31 @@ def _render_project_and_cleanup(
     ],
     *,
     existing_artifact_refs: dict[str, str],
+    skip_post_render_projection: bool = False,
 ) -> IngestOutcome:
-    report_value_score = _score_ingested_report_source(runtime, analysis, dependencies)
-    analysis = _analysis_with_report_value_score(analysis, report_value_score)
+    if skip_post_render_projection:
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="orchestrator",
+                event="report_generation_render_only_side_effects_avoided",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "avoided": [
+                        "report_source_score",
+                        "analytics_projection",
+                        "signal_artifact_generation",
+                        "vector_store_cleanup",
+                    ],
+                },
+            )
+        )
+    else:
+        report_value_score = _score_ingested_report_source(
+            runtime, analysis, dependencies
+        )
+        analysis = _analysis_with_report_value_score(analysis, report_value_score)
     outcome = render_report_output(
         runtime,
         source,
@@ -733,6 +765,7 @@ def _render_project_and_cleanup(
         analysis,
         dependencies.render,
         preview_resp=preview_resp,
+        reuse_report_card_assets=skip_post_render_projection,
     )
     _write_stage_checkpoint(
         runtime,
@@ -749,7 +782,11 @@ def _render_project_and_cleanup(
         },
         payload={"schema_version": "1.0", "outcome": asdict(outcome)},
     )
-    if _run_projection(runtime, analysis, outcome, analytics_projection_fn) is not None:
+    if (
+        not skip_post_render_projection
+        and _run_projection(runtime, analysis, outcome, analytics_projection_fn)
+        is not None
+    ):
         outcome = _run_signal_artifact_generation(
             runtime,
             analysis,
@@ -771,6 +808,8 @@ def _render_project_and_cleanup(
             },
             payload={"schema_version": "1.0", "outcome": asdict(outcome)},
         )
+    if skip_post_render_projection:
+        return outcome
     return _cleanup_transient_vector_store(outcome, runtime, dependencies)
 
 
@@ -798,6 +837,8 @@ def _resume_from_analysis_checkpoint(
     analytics_projection_fn: Optional[
         Callable[[AnalyticsProjectionRunRequest], object]
     ],
+    *,
+    skip_post_render_projection: bool = False,
 ) -> IngestOutcome:
     checkpoint, checkpoint_path = _read_validated_checkpoint(
         runtime, stage_name=STAGE_ANALYSIS_COMPLETE
@@ -821,6 +862,7 @@ def _resume_from_analysis_checkpoint(
         dependencies,
         analytics_projection_fn,
         existing_artifact_refs=dict(checkpoint.artifact_refs),
+        skip_post_render_projection=skip_post_render_projection,
     )
 
 
@@ -1037,6 +1079,7 @@ def _resume_from_checkpoint_stage(
     validation_openai_client=None,
     regeneration_openai_client=None,
     figure_caption_openai_client=None,
+    skip_post_render_projection: bool = False,
 ) -> IngestOutcome:
     stage_name = str(requested_resume_stage or "").strip()
     if stage_name == LATEST_SAFE_RESTART_STAGE:
@@ -1092,6 +1135,7 @@ def _resume_from_checkpoint_stage(
             runtime,
             dependencies,
             analytics_projection_fn,
+            skip_post_render_projection=skip_post_render_projection,
         )
     return _resume_from_render_checkpoint(runtime)
 

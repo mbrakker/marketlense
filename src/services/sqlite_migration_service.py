@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-# ruff: noqa: F401
+# ruff: noqa: F401, I001
 import sqlite3
 
 from src.contracts.sqlite_migration import (
@@ -22,6 +22,7 @@ from ._sqlite_migration.runner import (
     _utc_now,
 )
 from ._sqlite_migration.reports import (
+    _ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL,
     _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL,
     _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
     _ARTIFACT_LINEAGE_STATES_TABLE_SQL,
@@ -62,6 +63,7 @@ from ._sqlite_migration.reports import (
     _reports_db_014_create_claim_embedding_records,
     _reports_db_015_create_artifact_lineage_registry,
     _reports_db_016_add_claim_embedding_queue_controls,
+    _reports_db_017_add_lineage_execution_planning,
 )
 from ._sqlite_migration.state import (
     _STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL,

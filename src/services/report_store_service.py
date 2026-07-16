@@ -14,6 +14,13 @@ from src.services._report_store_service.artifact_lineage import (
     record_artifact_lineage,
     trace_artifact_lineage,
 )
+from src.services._report_store_service.execution_plan import (
+    build_current_report_execution_compatibility,
+    build_minimal_execution_plan,
+    read_validated_report_artifacts,
+    record_minimal_execution_plan,
+    record_minimal_execution_plan_result,
+)
 from src.services._report_store_service.download_routes import (
     get_publisher_download_route,
     mark_publisher_private_api_candidate_promoted,
@@ -52,6 +59,8 @@ from src.services._report_store_service.sources import (
 
 __all__ = [
     "check_report_db_access",
+    "build_current_report_execution_compatibility",
+    "build_minimal_execution_plan",
     "backfill_artifact_lineage",
     "check_artifact_reuse",
     "get_metadata",
@@ -69,6 +78,9 @@ __all__ = [
     "mark_publisher_private_api_candidate_promoted",
     "record_discovered_report_source",
     "record_artifact_lineage",
+    "record_minimal_execution_plan",
+    "record_minimal_execution_plan_result",
+    "read_validated_report_artifacts",
     "record_publisher_private_api_candidate_observation",
     "record_report_value_score",
     "record_publisher_download_route",

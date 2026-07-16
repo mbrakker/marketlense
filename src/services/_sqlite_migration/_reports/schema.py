@@ -499,6 +499,23 @@ CREATE TABLE IF NOT EXISTS artifact_lineage_states (
 );
 """
 
+_ARTIFACT_EXECUTION_PLAN_RUNS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS artifact_execution_plan_runs (
+  plan_hash TEXT PRIMARY KEY,
+  report_id TEXT NOT NULL,
+  execution_intent TEXT NOT NULL,
+  execution_mode TEXT NOT NULL,
+  planned_stages_json TEXT NOT NULL,
+  planned_external_calls_json TEXT NOT NULL,
+  actual_stages_json TEXT NOT NULL DEFAULT '[]',
+  actual_external_calls_json TEXT NOT NULL DEFAULT '[]',
+  execution_status TEXT NOT NULL DEFAULT 'planned',
+  divergence_json TEXT NOT NULL DEFAULT '{}',
+  created_at_utc TEXT NOT NULL,
+  completed_at_utc TEXT NOT NULL DEFAULT ''
+);
+"""
+
 _SIGNAL_CANDIDATES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS signal_candidates (
   candidate_id TEXT PRIMARY KEY,
