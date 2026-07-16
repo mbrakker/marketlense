@@ -22,7 +22,6 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Callable, Iterator
 
-
 ROOT = Path(__file__).resolve().parents[2]
 COLLECTOR_VERSION = "2.0"
 COST_TOLERANCE = Decimal("0.000001")
@@ -83,6 +82,7 @@ class EvidencePaths:
     debug_retain_snapshots: bool = False
     evidence_run_id: str | None = None
     workspace_parent: Path | None = None
+    archive_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -188,6 +188,20 @@ def _write_json(path: Path, payload: object) -> Path:
         json.dump(payload, handle, ensure_ascii=True, indent=2, sort_keys=True)
         handle.write("\n")
     return path
+
+
+def _archive_evidence_bundle(output_dir: Path, archive_path: Path) -> Path:
+    """Atomically replace the distributable ZIP after evidence is validated."""
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix="cto_evidence_archive_", dir=archive_path.parent
+    ) as temp_dir:
+        temporary_base = Path(temp_dir) / archive_path.stem
+        created = Path(
+            shutil.make_archive(str(temporary_base), "zip", root_dir=output_dir)
+        )
+        created.replace(archive_path)
+    return archive_path
 
 
 def _public_path(path: Path, root: Path) -> str:
@@ -887,6 +901,11 @@ def collect(
                 "cost_tolerance_usd": _render_decimal(COST_TOLERANCE),
             },
         )
+        archive_path = (
+            _archive_evidence_bundle(paths.output_dir, paths.archive_path)
+            if paths.archive_path is not None
+            else None
+        )
         return [
             *csv_paths,
             detailed_path,
@@ -894,6 +913,7 @@ def collect(
             summary_path,
             manifest_path,
             validation_path,
+            *([archive_path] if archive_path is not None else []),
         ]
     finally:
         if not paths.debug_retain_snapshots:
@@ -905,6 +925,7 @@ def main() -> int:
     parser.add_argument("--state-dir", default="state")
     parser.add_argument("--artifact-dir", default="out")
     parser.add_argument("--output-dir", default="out/cto-review-evidence")
+    parser.add_argument("--archive-path", default="docs/cto-review-evidence.zip")
     parser.add_argument("--debug-retain-snapshots", action="store_true")
     args = parser.parse_args()
     for path in collect(
@@ -913,6 +934,7 @@ def main() -> int:
             Path(args.artifact_dir),
             Path(args.output_dir),
             debug_retain_snapshots=args.debug_retain_snapshots,
+            archive_path=Path(args.archive_path),
         ),
         command_args=tuple(sys.argv[1:]),
     ):

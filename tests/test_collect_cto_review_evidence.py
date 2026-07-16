@@ -3,6 +3,7 @@
 import csv
 import json
 import sqlite3
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -121,6 +122,25 @@ def test_collect_reads_local_state_and_writes_aggregate_csvs(tmp_path: Path) -> 
         newline="", encoding="utf-8"
     ) as handle:
         assert next(csv.DictReader(handle))["request_count"] == "1"
+
+
+def test_collect_writes_requested_validated_evidence_archive(tmp_path: Path) -> None:
+    state, _ = _seed_state(tmp_path)
+    archive_path = tmp_path / "docs" / "cto-review-evidence.zip"
+    paths = EvidencePaths(
+        state,
+        tmp_path / "artifacts",
+        tmp_path / "evidence",
+        workspace_parent=tmp_path,
+        archive_path=archive_path,
+    )
+
+    generated = collect(paths)
+
+    assert archive_path in generated
+    with zipfile.ZipFile(archive_path) as archive:
+        assert "consistency_validation.json" in archive.namelist()
+        assert "executive_summary.json" in archive.namelist()
 
 
 def test_collect_uses_snapshot_when_live_usage_changes_after_snapshot(

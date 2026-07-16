@@ -20,6 +20,9 @@ Run it from the repository root:
 python scripts/quality/collect_cto_review_evidence.py --state-dir state --artifact-dir out --output-dir out/cto-review-evidence
 ```
 
+Every CLI regeneration also atomically refreshes `docs/cto-review-evidence.zip`.
+Use `--archive-path <path>` only when a different distribution location is required.
+
 The existing CSV filenames remain stable. The collector additionally writes:
 
 - `detailed_metrics.json`: finalized structured input for summary derivation;
