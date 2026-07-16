@@ -23,6 +23,7 @@ from src.contracts.costs import (
 from src.contracts.files import WriteBytesRequest
 from src.contracts.run_context import RunContext
 from src.services import file_service
+from src.services.llm_usage_ledger_service import read_budget_authority_report
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -708,6 +709,15 @@ def generate_cost_report(
             totals=_to_cost_totals(totals_metrics),
             top_steps=top_steps,
             matched_entries=len(filtered),
+            budget_authority=(
+                read_budget_authority_report(
+                    usage_db_path=request.usage_db_path,
+                    run_id=str(request.run_id or ""),
+                    ctx=ctx,
+                )
+                if request.usage_db_path
+                else None
+            ),
         )
         logger.info(
             log_event(

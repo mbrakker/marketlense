@@ -12,6 +12,8 @@ from .auth import (
 )
 from .client_cache import _get_drive_client
 from src.utils.run_budget import evaluate_proposed_side_effect_budget
+from src.contracts.run_budget import BudgetRequest, RunBudget
+from src.services.llm_usage_ledger_service import evaluate_budget_request
 
 
 def preflight_drive_write_access(
@@ -304,7 +306,7 @@ def _probe_drive_folder_write_access(
             )
         )
         return
-    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+    except DRIVE_BOUNDARY_EXCEPTIONS:
         logger.info(
             log_event(
                 ctx,
@@ -352,6 +354,53 @@ def _safe_drive_probe_token(value: str) -> str:
 
 def _escape_drive_query_value(value: str) -> str:
     return str(value).replace("\\", "\\\\").replace("'", "\\'")
+
+
+def _authority_budget(request: object, ctx: RunContext) -> RunBudget:
+    configured = getattr(request, "run_budget", None)
+    if configured is not None:
+        return configured
+    return RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name="",
+    )
+
+
+def _assert_drive_write_authority(
+    request: object, ctx: RunContext, *, operation: str, report_id: str
+) -> None:
+    budget = _authority_budget(request, ctx)
+    authority = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=budget,
+            run_id=ctx.run_id,
+            workflow_id="report_download",
+            publisher_id=budget.publisher_name,
+            report_id=report_id,
+            resource_type="drive_write",
+            operation=operation,
+            estimated_writes=1,
+            idempotency_key=(
+                f"drive:{operation}:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}:{report_id}"
+            ),
+        ),
+        ctx,
+    )
+    if authority.decision in {"defer", "pause", "stop"}:
+        error_operation = (
+            "drive_upload" if operation == "drive_upload_bytes" else operation
+        )
+        raise AppError(
+            code=f"{error_operation}_budget_{authority.decision}",
+            message="Drive write was blocked by the canonical budget authority",
+            retryable=authority.decision in {"defer", "pause"},
+            context={
+                "reason_code": authority.reason_code,
+                "affected_limit": authority.affected_limit,
+            },
+        )
 
 
 def ensure_folder(
@@ -474,6 +523,12 @@ def ensure_folder(
                 )
             )
             return response
+    _assert_drive_write_authority(
+        request,
+        ctx,
+        operation="drive_ensure_folder",
+        report_id=folder_name,
+    )
     try:
         created = (
             drive.files()
@@ -554,6 +609,12 @@ def upload_bytes(
     request: DriveUploadBytesRequest, ctx: RunContext
 ) -> DriveUploadBytesResponse:
     auth_mode = _request_auth_mode(request)
+    _assert_drive_write_authority(
+        request,
+        ctx,
+        operation="drive_upload_bytes",
+        report_id=request.file_name,
+    )
     budget_decision = evaluate_proposed_side_effect_budget(
         request.run_budget,
         request.run_budget_usage,

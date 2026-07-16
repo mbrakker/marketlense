@@ -5,7 +5,7 @@ from typing import Any, Callable, Literal
 
 from src.contracts.browser_download import BrowserDownloadSettings
 from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
-from src.contracts.run_budget import RunBudget, RunBudgetDecision, RunBudgetUsage
+from src.contracts.run_budget import RunBudget, RunBudgetDecision, RunBudgetUsage  # noqa: F401
 
 WorkflowGateOutcome = Literal[
     "proceed",
@@ -401,6 +401,12 @@ class PipelineExecutionPlan:
         metadata={
             "doc": "Resolution blockers that prevent execution without a new plan."
         }
+    )
+    budget_boundaries: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Typed budget checks required before each planned side effect."
+        },
     )
 
 

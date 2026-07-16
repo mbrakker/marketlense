@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# Compatibility facade imports are consumed by decomposed browser runtime modules.
+# ruff: noqa: F401
+
 import asyncio
 import inspect
 import json
@@ -30,10 +33,12 @@ from src.contracts.llm_usage import (
     LLMUsageSpendReservationReleaseRequest,
 )
 from src.contracts.openai import OpenAIUsageAccountingRequest
+from src.contracts.run_budget import BudgetRequest, RunBudget
 from src.contracts.run_context import RunContext
 from src.services import llm_service
 from src.services._llm_service.policy import spend_reservation_key
 from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
     evaluate_daily_spend_guardrail,
     release_daily_spend_reservation,
 )
@@ -627,10 +632,7 @@ def run_browser_report_download_agent(
         agent_parameters = inspect.signature(browser_use.Agent).parameters
         if "calculate_cost" in agent_parameters:
             agent_kwargs["calculate_cost"] = True
-        if (
-            llm_clients.fallback_llm is not None
-            and "fallback_llm" in agent_parameters
-        ):
+        if llm_clients.fallback_llm is not None and "fallback_llm" in agent_parameters:
             agent_kwargs["fallback_llm"] = llm_clients.fallback_llm
         agent = browser_use.Agent(**agent_kwargs)
         usage_writer = _configure_browser_use_usage_recorder(
@@ -1060,6 +1062,48 @@ def _reserve_browser_use_spend(
         provider=provider,
         operation="browser_use_llm_call",
     )
+    authority_budget = request.run_budget or RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name=request.publisher_name,
+        usage_db_path=settings.usage_db_path,
+        max_spend_usd=settings.daily_spend_stop_usd,
+        limit_decision="stop",
+        policy_version=settings.run_budget_policy_version,
+        reservation_ttl_seconds=settings.run_budget_reservation_ttl_seconds,
+        run_limits=settings.run_budget_limits_run,
+        day_limits=settings.run_budget_limits_day,
+        publisher_limits=settings.run_budget_limits_publisher,
+    )
+    authority = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=authority_budget,
+            run_id=ctx.run_id,
+            workflow_id="browser_acquisition",
+            publisher_id=request.publisher_name,
+            report_id=_browser_usage_report_name(request),
+            resource_type="browser_use_model",
+            operation="browser_use_llm_call",
+            provider=provider,
+            model=model,
+            prompt_namespace=prompt_bundle.namespace,
+            forecast_method="historical_median",
+            idempotency_key=reservation_key,
+            reserve_in_flight=True,
+        ),
+        ctx,
+    )
+    if authority.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"browser_use_budget_{authority.decision}",
+            message="Browser Use provider call blocked by the canonical budget authority",
+            retryable=authority.decision in {"defer", "pause"},
+            context={
+                "reason_code": authority.reason_code,
+                "affected_limit": authority.affected_limit,
+            },
+        )
     decision = evaluate_daily_spend_guardrail(
         LLMUsageSpendGuardrailRequest(
             schema_version="1.0",
@@ -1230,40 +1274,40 @@ def _record_browser_use_usage_row(
         **extra,
     }
     return OpenAIUsageAccountingRequest(
-            schema_version="1.0",
-            step_name="browser_use_llm_call",
+        schema_version="1.0",
+        step_name="browser_use_llm_call",
+        model=model_name,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=total_tokens,
+        cached_input_tokens=cached_tokens,
+        tool_calls=0,
+        cost_ledger_path=request.settings.cost_ledger_path,
+        cost_daily_path=request.settings.cost_daily_path,
+        emit_cost_ledger=False,
+        model_pricing=request.settings.model_pricing,
+        request_id=request_id,
+        provider=_browser_usage_provider(
             model=model_name,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=total_tokens,
-            cached_input_tokens=cached_tokens,
-            tool_calls=0,
-            cost_ledger_path=request.settings.cost_ledger_path,
-            cost_daily_path=request.settings.cost_daily_path,
-            emit_cost_ledger=False,
-            model_pricing=request.settings.model_pricing,
-            request_id=request_id,
-            provider=_browser_usage_provider(
-                model=model_name,
-                llm_clients=llm_clients,
-            ),
-            action="browser_use_llm_call",
-            usage_db_path=request.settings.usage_db_path,
-            publisher_name=request.publisher_name,
-            report_name=_browser_usage_report_name(request),
-            source_url=normalized_url,
-            prompt_namespace=prompt_bundle.namespace,
-            prompt_hash=prompt_bundle.user_prompt_sha256,
-            provider_decision=_browser_usage_provider_decision(
-                model=model_name,
-                llm_clients=llm_clients,
-            ),
-            cache_decision="disabled",
-            temperature=request.settings.temperature,
-            seed=None,
-            timeout_seconds=request.settings.timeout_seconds,
-            call_ordinal=int(extra.get("browser_usage_entry_index") or 0),
-            extra=row_extra,
+            llm_clients=llm_clients,
+        ),
+        action="browser_use_llm_call",
+        usage_db_path=request.settings.usage_db_path,
+        publisher_name=request.publisher_name,
+        report_name=_browser_usage_report_name(request),
+        source_url=normalized_url,
+        prompt_namespace=prompt_bundle.namespace,
+        prompt_hash=prompt_bundle.user_prompt_sha256,
+        provider_decision=_browser_usage_provider_decision(
+            model=model_name,
+            llm_clients=llm_clients,
+        ),
+        cache_decision="disabled",
+        temperature=request.settings.temperature,
+        seed=None,
+        timeout_seconds=request.settings.timeout_seconds,
+        call_ordinal=int(extra.get("browser_usage_entry_index") or 0),
+        extra=row_extra,
     )
 
 

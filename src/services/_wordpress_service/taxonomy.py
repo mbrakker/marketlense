@@ -17,6 +17,8 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.run_budget import evaluate_proposed_side_effect_budget
 
+from .budget import assert_wordpress_write_authority
+
 from .transport import (
     _execute_request,
     _post_type_endpoint,
@@ -433,6 +435,12 @@ def _raise_term_semantics_readback_mismatch(
 def ensure_taxonomy_terms(
     request: WordPressTaxonomyEnsureRequest, ctx: RunContext
 ) -> WordPressTaxonomyEnsureResponse:
+    assert_wordpress_write_authority(
+        request,
+        ctx,
+        operation="taxonomy_ensure",
+        estimated_writes=max(1, len(request.terms)),
+    )
     logger.info(
         log_event(
             ctx,
@@ -499,6 +507,12 @@ def ensure_taxonomy_terms(
 def ensure_tags(
     request: WordPressTagEnsureRequest, ctx: RunContext
 ) -> WordPressTagEnsureResponse:
+    assert_wordpress_write_authority(
+        request,
+        ctx,
+        operation="tag_ensure",
+        estimated_writes=max(1, len(request.tags)),
+    )
     logger.info(
         log_event(
             ctx,
@@ -554,6 +568,7 @@ def ensure_tags(
 def update_post_categories(
     request: WordPressPostUpdateRequest, ctx: RunContext
 ) -> WordPressPostUpdateResponse:
+    assert_wordpress_write_authority(request, ctx, operation="post_update")
     budget_decision = evaluate_proposed_side_effect_budget(
         request.run_budget,
         request.run_budget_usage,

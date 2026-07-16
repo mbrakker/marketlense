@@ -14,6 +14,7 @@ from src.contracts.regeneration import (
 )
 from src.contracts.report_generation import ReportGenerationClientBundle
 from src.contracts.run_context import RunContext
+from src.contracts.run_budget import BudgetRequest, RunBudget
 from src.contracts.workflow_control import WorkflowControlSettings
 from src.orchestrators.pipeline_preflight_orchestrator import (
     assert_expensive_side_effects_allowed,
@@ -26,6 +27,7 @@ from src.orchestrators.report_generation_orchestrator import (
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.orchestrators.workflow_control_orchestrator import resolve_retry_policy
 from src.services import llm_service
+from src.services.llm_usage_ledger_service import evaluate_budget_request
 from src.utils.coercion import coerce_int
 from src.utils.errors import AppError
 from src.utils.lineage_regeneration import (
@@ -120,6 +122,36 @@ def run_report_pipeline(
     lineage_change_kind: str = "",
     lineage_available: bool = False,
 ) -> IngestOutcome:
+    pdf_decision = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=RunBudget(
+                schema_version="1.0",
+                run_id=ctx.run_id,
+                publisher_name="",
+                usage_db_path=settings.usage_db_path,
+                max_pdfs=getattr(settings, "run_budget_max_pdfs", None),
+            ),
+            run_id=ctx.run_id,
+            workflow_id="report_generation",
+            report_id=file.file_id,
+            resource_type="pdf_process",
+            operation="process_pdf",
+            estimated_pdfs=1,
+            idempotency_key=f"pdf-process:{ctx.run_id}:{file.file_id}:{md5 or ''}",
+        ),
+        ctx,
+    )
+    if pdf_decision.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"report_pipeline_pdf_budget_{pdf_decision.decision}",
+            message="PDF processing was blocked by the canonical budget authority",
+            retryable=pdf_decision.decision in {"defer", "pause"},
+            context={
+                "reason_code": pdf_decision.reason_code,
+                "affected_limit": pdf_decision.affected_limit,
+            },
+        )
     report_fn = generate_report_fn or generate_report_orchestrator
     preflight_report = (
         preflight_fn(settings, ctx)

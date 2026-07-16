@@ -35,7 +35,13 @@ from src.contracts.llm_usage import (
     LLMUsageSpendReservationReleaseResponse,
 )
 from src.contracts.run_budget import (
+    BudgetDecision,
+    BudgetAuthorityReport,
+    BudgetRequest,
+    BudgetReservationReconcileRequest,
+    BudgetReservationReconcileResponse,
     RunBudget,
+    RunBudgetLimits,
     RunBudgetEventAppendRequest,
     RunBudgetEventAppendResponse,
     RunBudgetUsage,
@@ -43,7 +49,9 @@ from src.contracts.run_budget import (
     RunBudgetUsageReadResponse,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.services import file_service
+from src.services.sqlite_migration_service import apply_llm_usage_ledger_migrations
 from src.services._llm_usage_ledger.projection_state import (
     allocate_projection_generation,
     ensure_projection_state_schema,
@@ -444,16 +452,17 @@ def _budget_day_utc(budget: RunBudget) -> str:
 
 
 def _usage_from_row(row: sqlite3.Row | tuple[object, ...] | None) -> RunBudgetUsage:
-    values = row or (0.0, 0, 0, 0, 0, 0, 0)
+    values = row or (0.0, 0, 0, 0, 0, 0, 0, 0)
     return RunBudgetUsage(
         schema_version="1.0",
         spend_usd=float(cast(Any, values[0]) or 0.0),
         tokens=int(cast(Any, values[1]) or 0),
-        retries=int(cast(Any, values[2]) or 0),
-        browser_launches=int(cast(Any, values[3]) or 0),
-        drive_writes=int(cast(Any, values[4]) or 0),
-        wordpress_writes=int(cast(Any, values[5]) or 0),
-        pdfs=int(cast(Any, values[6]) or 0),
+        calls=int(cast(Any, values[2]) or 0),
+        retries=int(cast(Any, values[3]) or 0),
+        browser_launches=int(cast(Any, values[4]) or 0),
+        drive_writes=int(cast(Any, values[5]) or 0),
+        wordpress_writes=int(cast(Any, values[6]) or 0),
+        pdfs=int(cast(Any, values[7]) or 0),
     )
 
 
@@ -467,7 +476,7 @@ def _read_budget_usage_for_scope(
 ) -> RunBudgetUsage:
     llm = conn.execute(
         f"""
-        select coalesce(sum(estimated_cost_usd), 0.0), coalesce(sum(total_tokens), 0)
+        select coalesce(sum(estimated_cost_usd), 0.0), coalesce(sum(total_tokens), 0), count(*)
         from llm_usage_events where {llm_where}
         """,
         llm_params,
@@ -484,13 +493,15 @@ def _read_budget_usage_for_scope(
         """,
         event_params,
     ).fetchone()
-    return _usage_from_row((*(llm or (0.0, 0)), *(events or (0, 0, 0, 0, 0))))
+    return _usage_from_row((*(llm or (0.0, 0, 0)), *(events or (0, 0, 0, 0, 0))))
 
 
 def _merge_budget_usage(*usages: RunBudgetUsage) -> RunBudgetUsage:
     fields = (
         "spend_usd",
         "tokens",
+        "calls",
+        "steps",
         "runtime_seconds",
         "retries",
         "browser_launches",
@@ -643,6 +654,875 @@ def read_run_budget_usage(
         )
     )
     return response
+
+
+_BUDGET_DECISIONS = {"allow", "warn", "defer", "pause", "stop", "authorized_override"}
+_BUDGET_LIMIT_FIELDS = (
+    ("spend_usd", "max_spend_usd"),
+    ("tokens", "max_tokens"),
+    ("calls", "max_calls"),
+    ("steps", "max_steps"),
+    ("runtime_seconds", "max_runtime_seconds"),
+    ("retries", "max_retries"),
+    ("browser_launches", "max_browser_launches"),
+    ("drive_writes", "max_drive_writes"),
+    ("wordpress_writes", "max_wordpress_writes"),
+    ("pdfs", "max_pdfs"),
+)
+
+
+def _apply_budget_authority_migrations(path: Path, ctx: RunContext) -> None:
+    """Use the shared migration service for policy-state schema changes."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with _LOCK, sqlite3.connect(path) as conn:
+        apply_llm_usage_ledger_migrations(
+            SqliteMigrationApplyRequest(
+                schema_version="1.0",
+                database_key="llm_usage_ledger",
+                db_path=str(path),
+                target_version=1,
+                ctx=ctx,
+            ),
+            conn,
+        )
+
+
+def _empty_budget_usage() -> RunBudgetUsage:
+    return RunBudgetUsage(schema_version="1.0")
+
+
+def _add_budget_usage(*usages: RunBudgetUsage) -> RunBudgetUsage:
+    fields = (
+        "spend_usd",
+        "tokens",
+        "calls",
+        "steps",
+        "runtime_seconds",
+        "retries",
+        "browser_launches",
+        "drive_writes",
+        "wordpress_writes",
+        "pdfs",
+    )
+    return RunBudgetUsage(
+        schema_version="1.0",
+        **{field: sum(getattr(usage, field) for usage in usages) for field in fields},
+    )
+
+
+def _request_usage(request: BudgetRequest) -> RunBudgetUsage:
+    resource = str(request.resource_type or "").strip().lower()
+    writes = max(0, int(request.estimated_writes))
+    return RunBudgetUsage(
+        schema_version="1.0",
+        spend_usd=max(0.0, float(request.estimated_cost_usd or 0.0)),
+        tokens=max(0, int(request.estimated_tokens)),
+        calls=max(0, int(request.estimated_calls))
+        or (
+            1
+            if resource
+            in {
+                "llm_provider",
+                "embedding",
+                "ocr",
+                "vision",
+                "browser_use_model",
+                "vector_store",
+            }
+            else 0
+        ),
+        steps=max(0, int(request.estimated_steps)),
+        runtime_seconds=max(0, int(request.estimated_duration_seconds)),
+        retries=1 if resource == "retry" else 0,
+        browser_launches=1 if resource == "browser_launch" else 0,
+        drive_writes=writes if resource == "drive_write" else 0,
+        wordpress_writes=writes if resource == "wordpress_write" else 0,
+        pdfs=max(0, int(request.estimated_pdfs))
+        or (1 if resource == "pdf_process" else 0),
+    )
+
+
+def _legacy_limits(budget: RunBudget) -> RunBudgetLimits:
+    return RunBudgetLimits(
+        schema_version="1.0",
+        max_spend_usd=budget.max_spend_usd,
+        max_tokens=budget.max_tokens,
+        max_calls=budget.max_calls,
+        max_steps=budget.max_steps,
+        max_runtime_seconds=budget.max_runtime_seconds,
+        max_retries=budget.max_retries,
+        max_browser_launches=budget.max_browser_launches,
+        max_drive_writes=budget.max_drive_writes,
+        max_wordpress_writes=budget.max_wordpress_writes,
+        max_pdfs=budget.max_pdfs,
+    )
+
+
+def _scope_limits(budget: RunBudget, scope: str) -> RunBudgetLimits:
+    configured = {
+        "run": budget.run_limits,
+        "day": budget.day_limits,
+        "publisher": budget.publisher_limits,
+    }[scope]
+    return configured or _legacy_limits(budget)
+
+
+def _reservation_usage_for_scope(
+    conn: sqlite3.Connection,
+    *,
+    scope: str,
+    request: BudgetRequest,
+    day_utc: str,
+    now_utc: str,
+) -> RunBudgetUsage:
+    clauses = ["status = 'reserved'", "expires_at_utc > ?"]
+    params: list[object] = [now_utc]
+    if request.idempotency_key:
+        clauses.append("reservation_key <> ?")
+        params.append(request.idempotency_key)
+    if scope == "run":
+        clauses.append("run_id = ?")
+        params.append(request.run_id)
+    elif scope == "day":
+        clauses.append("day_utc = ?")
+        params.append(day_utc)
+    else:
+        clauses.extend(("day_utc = ?", "publisher_name = ?"))
+        params.extend((day_utc, request.publisher_id))
+    where = " and ".join(clauses)
+    row = conn.execute(
+        f"""
+        select coalesce(sum(estimated_cost_usd), 0.0),
+               coalesce(sum(estimated_tokens), 0),
+               coalesce(sum(estimated_calls), 0),
+               coalesce(sum(estimated_steps), 0),
+               coalesce(sum(estimated_duration_seconds), 0),
+               coalesce(sum(case when resource_type = 'retry' then 1 else 0 end), 0),
+               coalesce(sum(case when resource_type = 'browser_launch' then 1 else 0 end), 0),
+               coalesce(sum(case when resource_type = 'drive_write' then estimated_writes else 0 end), 0),
+               coalesce(sum(case when resource_type = 'wordpress_write' then estimated_writes else 0 end), 0),
+               coalesce(sum(estimated_pdfs), 0)
+        from budget_authority_reservations where {where}
+        """,
+        tuple(params),
+    ).fetchone()
+    values = row or (0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    return RunBudgetUsage(
+        schema_version="1.0",
+        spend_usd=float(values[0] or 0.0),
+        tokens=int(values[1] or 0),
+        calls=int(values[2] or 0),
+        steps=int(values[3] or 0),
+        runtime_seconds=int(values[4] or 0),
+        retries=int(values[5] or 0),
+        browser_launches=int(values[6] or 0),
+        drive_writes=int(values[7] or 0),
+        wordpress_writes=int(values[8] or 0),
+        pdfs=int(values[9] or 0),
+    )
+
+
+def _actual_usage_for_scope(
+    conn: sqlite3.Connection, *, scope: str, request: BudgetRequest, day_utc: str
+) -> RunBudgetUsage:
+    if scope == "run":
+        return _read_budget_usage_for_scope(
+            conn,
+            llm_where="run_id = ?",
+            llm_params=(request.run_id,),
+            event_where="run_id = ?",
+            event_params=(request.run_id,),
+        )
+    if scope == "day":
+        return _read_budget_usage_for_scope(
+            conn,
+            llm_where="substr(timestamp_utc, 1, 10) = ?",
+            llm_params=(day_utc,),
+            event_where="day_utc = ?",
+            event_params=(day_utc,),
+        )
+    if not request.publisher_id:
+        return _empty_budget_usage()
+    return _read_budget_usage_for_scope(
+        conn,
+        llm_where="publisher_name = ? and substr(timestamp_utc, 1, 10) = ?",
+        llm_params=(request.publisher_id, day_utc),
+        event_where="publisher_name = ? and day_utc = ?",
+        event_params=(request.publisher_id, day_utc),
+    )
+
+
+def _validate_budget_request(request: BudgetRequest) -> None:
+    if request.schema_version != "1.0":
+        raise AppError(
+            code="budget_request_schema_version_invalid",
+            message="Budget request schema version is unsupported",
+            retryable=False,
+        )
+    _validate_run_budget(request.budget)
+    if (
+        request.run_id != request.budget.run_id
+        or not request.workflow_id.strip()
+        or not request.resource_type.strip()
+        or not request.operation.strip()
+    ):
+        raise AppError(
+            code="budget_request_identity_invalid",
+            message="Budget request requires matching run, workflow, resource, and operation identifiers",
+            retryable=False,
+        )
+    if (
+        request.publisher_id
+        and request.budget.publisher_name
+        and request.publisher_id != request.budget.publisher_name
+    ):
+        raise AppError(
+            code="budget_request_publisher_mismatch",
+            message="Budget request publisher must match the governed budget",
+            retryable=False,
+        )
+    if (
+        request.attempt_number < 0
+        or request.reservation_ttl_seconds <= 0
+        or not 0.0 <= float(request.forecast_confidence) <= 1.0
+    ):
+        raise AppError(
+            code="budget_request_estimate_invalid",
+            message="Budget request estimate fields are invalid",
+            retryable=False,
+        )
+
+
+def _apply_historical_cost_forecast(request: BudgetRequest) -> BudgetRequest:
+    """Use the canonical derived median only when a caller has no explicit price."""
+    if request.estimated_cost_usd is not None or not all(
+        (request.provider, request.model)
+    ):
+        return request
+    median_path = _median_db_path(Path(request.budget.usage_db_path))
+    if not median_path.is_file():
+        return replace(
+            request,
+            estimated_cost_usd=0.0,
+            forecast_method="unavailable",
+            forecast_confidence=0.0,
+        )
+    try:
+        with sqlite3.connect(median_path) as conn:
+            row = conn.execute(
+                """
+                select sample_count, median_estimated_cost_usd from llm_usage_medians
+                where provider = ? and task = ? and action = ? and model = ?
+                  and prompt_namespace = ?
+                """,
+                (
+                    request.provider,
+                    request.operation,
+                    request.operation,
+                    request.model,
+                    request.prompt_namespace,
+                ),
+            ).fetchone()
+    except sqlite3.Error:
+        row = None
+    if row is None:
+        return replace(
+            request,
+            estimated_cost_usd=0.0,
+            forecast_method="unavailable",
+            forecast_confidence=0.0,
+        )
+    samples = max(0, int(row[0] or 0))
+    return replace(
+        request,
+        estimated_cost_usd=round(float(row[1] or 0.0), 6),
+        forecast_method="historical_median",
+        forecast_confidence=min(1.0, samples / 20.0),
+    )
+
+
+def _validate_override(request: BudgetRequest, *, now: datetime) -> None:
+    override = request.requested_override
+    if override is None:
+        return
+    if override.schema_version != "1.0" or not all(
+        (
+            override.actor.strip(),
+            override.reason.strip(),
+            override.scope.strip(),
+            override.expires_at_utc.strip(),
+            override.policy_version.strip(),
+        )
+    ):
+        raise AppError(
+            code="budget_override_audit_missing",
+            message="Budget overrides require actor, reason, scope, expiry, and policy version",
+            retryable=False,
+        )
+    if (
+        override.policy_version != request.budget.policy_version
+        or override.scope not in {"run", "day", "publisher", "all"}
+    ):
+        raise AppError(
+            code="budget_override_scope_invalid",
+            message="Budget override scope or policy version is invalid",
+            retryable=False,
+        )
+    try:
+        expires = datetime.fromisoformat(override.expires_at_utc.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise AppError(
+            code="budget_override_expiry_invalid",
+            message="Budget override expiry must be ISO-8601 UTC",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    if expires.tzinfo is None or expires <= now:
+        raise AppError(
+            code="budget_override_expired",
+            message="Budget override has expired",
+            retryable=False,
+        )
+
+
+def _budget_limit_breach(
+    limits: RunBudgetLimits, usage: RunBudgetUsage
+) -> tuple[str, float | int, float | int] | None:
+    for usage_field, limit_field in _BUDGET_LIMIT_FIELDS:
+        limit = getattr(limits, limit_field)
+        value = getattr(usage, usage_field)
+        if limit is not None and value >= limit:
+            return usage_field, value, limit
+    return None
+
+
+def _budget_warning(
+    limits: RunBudgetLimits, usage: RunBudgetUsage, fraction: float
+) -> tuple[str, float | int, float | int] | None:
+    if not 0.0 < fraction < 1.0:
+        return None
+    for usage_field, limit_field in _BUDGET_LIMIT_FIELDS:
+        limit = getattr(limits, limit_field)
+        value = getattr(usage, usage_field)
+        if limit is not None and value >= limit * fraction:
+            return usage_field, value, limit
+    return None
+
+
+def _record_budget_authority_event(
+    conn: sqlite3.Connection,
+    *,
+    request: BudgetRequest,
+    decision: BudgetDecision,
+    now_utc: str,
+) -> None:
+    override = request.requested_override
+    conn.execute(
+        """
+        insert into budget_authority_events(
+            schema_version, timestamp_utc, run_id, workflow_id, publisher_name,
+            report_id, resource_type, operation, decision, reason_code,
+            policy_version, reservation_key, override_actor, override_scope,
+            override_reason, override_expires_at_utc, details_json
+        ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "1.0",
+            now_utc,
+            request.run_id,
+            request.workflow_id,
+            request.publisher_id,
+            request.report_id,
+            request.resource_type,
+            request.operation,
+            decision.decision,
+            decision.reason_code,
+            decision.policy_version,
+            decision.reservation_key,
+            override.actor if override else "",
+            override.scope if override else "",
+            override.reason if override else "",
+            override.expires_at_utc if override else "",
+            json.dumps(
+                {
+                    "affected_limit": decision.affected_limit,
+                    "next_action": decision.next_action,
+                    "forecast_method": request.forecast_method,
+                    "forecast_confidence": request.forecast_confidence,
+                    "forecast_cost_usd": request.estimated_cost_usd or 0.0,
+                    "forecast_calls": _request_usage(request).calls,
+                },
+                sort_keys=True,
+            ),
+        ),
+    )
+
+
+def evaluate_budget_request(request: BudgetRequest, ctx: RunContext) -> BudgetDecision:
+    """Atomically decide and, when requested, reserve one future side effect.
+
+    The canonical LLM usage ledger remains the source of actual monetary usage;
+    this function stores only forecasts, decision evidence, and override audit.
+    """
+    _validate_budget_request(request)
+    request = _apply_historical_cost_forecast(request)
+    path = Path(request.budget.usage_db_path)
+    _apply_budget_authority_migrations(path, ctx)
+    now = datetime.now(timezone.utc)
+    _validate_override(request, now=now)
+    now_utc = now.isoformat()
+    day_utc = _budget_day_utc(request.budget)
+    proposed = _request_usage(request)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="budget_request",
+            module=logger.name,
+            fields={
+                "run_id": request.run_id,
+                "workflow_id": request.workflow_id,
+                "publisher_id": request.publisher_id,
+                "report_id": request.report_id,
+                "resource_type": request.resource_type,
+                "operation": request.operation,
+                "attempt_number": request.attempt_number,
+                "policy_version": request.budget.policy_version,
+            },
+        )
+    )
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            conn.execute("begin immediate")
+            _ensure_schema(conn)
+            expired = conn.execute(
+                "update budget_authority_reservations set status = 'expired' where status = 'reserved' and expires_at_utc <= ?",
+                (now_utc,),
+            ).rowcount
+            scope_rows: list[
+                tuple[str, RunBudgetUsage, RunBudgetUsage, RunBudgetUsage]
+            ] = []
+            for scope in ("run", "day", "publisher"):
+                if scope == "publisher" and not request.publisher_id:
+                    continue
+                actual = _actual_usage_for_scope(
+                    conn, scope=scope, request=request, day_utc=day_utc
+                )
+                reserved = _reservation_usage_for_scope(
+                    conn, scope=scope, request=request, day_utc=day_utc, now_utc=now_utc
+                )
+                scope_rows.append(
+                    (
+                        scope,
+                        actual,
+                        reserved,
+                        _add_budget_usage(actual, reserved, proposed),
+                    )
+                )
+            breach: (
+                tuple[
+                    str,
+                    tuple[str, float | int, float | int],
+                    RunBudgetUsage,
+                    RunBudgetUsage,
+                    RunBudgetUsage,
+                ]
+                | None
+            ) = None
+            for scope, actual, reserved, projected in scope_rows:
+                limit_breach = _budget_limit_breach(
+                    _scope_limits(request.budget, scope), projected
+                )
+                if limit_breach is not None:
+                    breach = (scope, limit_breach, actual, reserved, projected)
+                    break
+            warning: (
+                tuple[
+                    str,
+                    tuple[str, float | int, float | int],
+                    RunBudgetUsage,
+                    RunBudgetUsage,
+                    RunBudgetUsage,
+                ]
+                | None
+            ) = None
+            if breach is None:
+                for scope, actual, reserved, projected in scope_rows:
+                    limit_warning = _budget_warning(
+                        _scope_limits(request.budget, scope),
+                        projected,
+                        request.budget.warning_fraction,
+                    )
+                    if limit_warning is not None:
+                        warning = (scope, limit_warning, actual, reserved, projected)
+                        break
+            selected = breach if breach is not None else warning
+            base_actual = (
+                selected[2]
+                if selected is not None
+                else (scope_rows[0][1] if scope_rows else _empty_budget_usage())
+            )
+            base_reserved = (
+                selected[3]
+                if selected is not None
+                else (scope_rows[0][2] if scope_rows else _empty_budget_usage())
+            )
+            base_projected = (
+                selected[4]
+                if selected is not None
+                else (scope_rows[0][3] if scope_rows else proposed)
+            )
+            affected_limit = ""
+            if breach:
+                scope, metric = breach[0], breach[1][0]
+                affected_limit = f"{scope}.{metric}"
+                override = request.requested_override
+                if override is not None and override.scope in {scope, "all"}:
+                    decision_name, reason_code, next_action = (
+                        "authorized_override",
+                        "budget_override_authorized",
+                        "proceed_with_audited_override",
+                    )
+                else:
+                    decision_name = str(request.budget.limit_decision or "stop").lower()
+                    reason_code, next_action = (
+                        "budget_limit_reached",
+                        "defer_or_request_expiry_bound_override",
+                    )
+            elif warning:
+                affected_limit = f"{warning[0]}.{warning[1][0]}"
+                decision_name, reason_code, next_action = (
+                    "warn",
+                    "budget_warning_threshold",
+                    "proceed_and_monitor_budget",
+                )
+            else:
+                decision_name, reason_code, next_action = (
+                    "allow",
+                    "within_budget",
+                    "proceed",
+                )
+            if decision_name not in _BUDGET_DECISIONS:
+                raise AppError(
+                    code="budget_limit_decision_invalid",
+                    message="Budget limit decision must be defer, pause, or stop",
+                    retryable=False,
+                )
+            reservation_key = (
+                request.idempotency_key
+                if request.reserve_in_flight
+                and decision_name in {"allow", "warn", "authorized_override"}
+                else ""
+            )
+            created = False
+            if reservation_key:
+                cursor = conn.execute(
+                    """
+                    insert into budget_authority_reservations(
+                        reservation_key, schema_version, run_id, workflow_id, publisher_name,
+                        report_id, resource_type, operation, day_utc, estimated_cost_usd,
+                        estimated_tokens, estimated_calls, estimated_steps, estimated_writes,
+                        estimated_pdfs, estimated_duration_seconds, status, expires_at_utc,
+                        created_at_utc
+                    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?)
+                    on conflict(reservation_key) do nothing
+                    """,
+                    (
+                        reservation_key,
+                        "1.0",
+                        request.run_id,
+                        request.workflow_id,
+                        request.publisher_id,
+                        request.report_id,
+                        request.resource_type,
+                        request.operation,
+                        day_utc,
+                        proposed.spend_usd,
+                        proposed.tokens,
+                        proposed.calls,
+                        proposed.steps,
+                        max(proposed.drive_writes, proposed.wordpress_writes),
+                        proposed.pdfs,
+                        proposed.runtime_seconds,
+                        (
+                            now + timedelta(seconds=request.reservation_ttl_seconds)
+                        ).isoformat(),
+                        now_utc,
+                    ),
+                )
+                created = cursor.rowcount == 1
+            decision = BudgetDecision(
+                schema_version="1.0",
+                decision=decision_name,
+                reason_code=reason_code,
+                affected_limit=affected_limit,
+                current_usage=base_actual,
+                reserved_usage=base_reserved,
+                projected_usage=base_projected,
+                next_action=next_action,
+                policy_version=request.budget.policy_version,
+                reservation_key=reservation_key,
+                reservation_created=created,
+            )
+            _record_budget_authority_event(
+                conn, request=request, decision=decision, now_utc=now_utc
+            )
+            conn.commit()
+    except (sqlite3.Error, OSError, ValueError) as exc:
+        raise AppError(
+            code="budget_authority_evaluation_failed",
+            message="Canonical budget authority could not decide the operation",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path), "operation": request.operation},
+        ) from exc
+    fields = {
+        "run_id": request.run_id,
+        "workflow_id": request.workflow_id,
+        "publisher_id": request.publisher_id,
+        "report_id": request.report_id,
+        "resource_type": request.resource_type,
+        "operation": request.operation,
+        "decision": decision.decision,
+        "reason_code": decision.reason_code,
+        "affected_limit": decision.affected_limit,
+        "policy_version": decision.policy_version,
+        "reservation_key": decision.reservation_key,
+        "reservation_created": decision.reservation_created,
+        "forecast_cost_usd": request.estimated_cost_usd or 0.0,
+        "current_cost_usd": decision.current_usage.spend_usd,
+        "reserved_cost_usd": decision.reserved_usage.spend_usd,
+        "projected_cost_usd": decision.projected_usage.spend_usd,
+        "forecast_calls": _request_usage(request).calls,
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="budget_decision",
+            module=logger.name,
+            fields=fields,
+        )
+    )
+    if expired:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="reservation_expired",
+                module=logger.name,
+                fields={**fields, "expired_count": expired},
+            )
+        )
+    if decision.reservation_created:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="reservation_created",
+                module=logger.name,
+                fields=fields,
+            )
+        )
+    if decision.decision == "authorized_override":
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="override_used",
+                module=logger.name,
+                fields=fields,
+            )
+        )
+    if decision.decision in {"defer", "pause", "stop"}:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="side_effect_prevented",
+                module=logger.name,
+                fields=fields,
+            )
+        )
+        if decision.decision == "defer":
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="work_deferred",
+                    module=logger.name,
+                    fields=fields,
+                )
+            )
+    return decision
+
+
+def reconcile_budget_reservation(
+    request: BudgetReservationReconcileRequest, ctx: RunContext
+) -> BudgetReservationReconcileResponse:
+    """Release one budget forecast after durable canonical usage is appended."""
+    if (
+        request.schema_version != "1.0"
+        or not request.usage_db_path
+        or not request.reservation_key
+    ):
+        raise AppError(
+            code="budget_reservation_reconcile_request_invalid",
+            message="Reservation reconciliation requires a usage database and key",
+            retryable=False,
+        )
+    path = Path(request.usage_db_path)
+    _apply_budget_authority_migrations(path, ctx)
+    now_utc = datetime.now(timezone.utc).isoformat()
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            conn.execute("begin immediate")
+            row = conn.execute(
+                "select estimated_cost_usd, run_id, workflow_id, publisher_name, report_id, resource_type, operation from budget_authority_reservations where reservation_key = ? and status = 'reserved'",
+                (request.reservation_key,),
+            ).fetchone()
+            released = False
+            forecast = 0.0
+            if row is not None:
+                forecast = float(row[0] or 0.0)
+                released = (
+                    conn.execute(
+                        "update budget_authority_reservations set status = 'released', released_at_utc = ?, reconciled_at_utc = ? where reservation_key = ? and status = 'reserved'",
+                        (
+                            now_utc,
+                            now_utc,
+                            request.reservation_key,
+                        ),
+                    ).rowcount
+                    == 1
+                )
+            conn.commit()
+    except (sqlite3.Error, OSError, ValueError) as exc:
+        raise AppError(
+            code="budget_reservation_reconcile_failed",
+            message="Canonical budget reservation could not be reconciled",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path)},
+        ) from exc
+    response = BudgetReservationReconcileResponse(
+        schema_version="1.0",
+        released=released,
+        forecast_cost_usd=forecast,
+        actual_cost_usd=float(request.actual_cost_usd),
+        forecast_error_usd=round(float(request.actual_cost_usd) - forecast, 6),
+    )
+    fields = {
+        "run_id": ctx.run_id,
+        "workflow_id": ctx.task_id,
+        "resource_type": str(row[5]) if row is not None else "",
+        "operation": str(row[6]) if row is not None else "",
+        "decision": "allow",
+        "policy_version": "budget-authority-v2",
+        "reservation_key": request.reservation_key,
+        "released": response.released,
+        "actual_cost_usd": response.actual_cost_usd,
+        "forecast_cost_usd": response.forecast_cost_usd,
+        "forecast_error_usd": response.forecast_error_usd,
+    }
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="reservation_released",
+            module=logger.name,
+            fields=fields,
+        )
+    )
+    if released:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="actual_usage_reconciled",
+                module=logger.name,
+                fields=fields,
+            )
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="forecast_error",
+                module=logger.name,
+                fields=fields,
+            )
+        )
+    return response
+
+
+def read_budget_authority_report(
+    *, usage_db_path: str, run_id: str = "", ctx: RunContext
+) -> BudgetAuthorityReport:
+    """Read budget-policy evidence without creating a second cost ledger."""
+    path = Path(usage_db_path)
+    _apply_budget_authority_migrations(path, ctx)
+    try:
+        with _LOCK, sqlite3.connect(path) as conn:
+            where = "where run_id = ?" if run_id else ""
+            params: tuple[object, ...] = (run_id,) if run_id else ()
+            rows = conn.execute(
+                f"select decision, details_json from budget_authority_events {where}",
+                params,
+            ).fetchall()
+            reservation_where = "where run_id = ?" if run_id else ""
+            reservations = conn.execute(
+                f"select status from budget_authority_reservations {reservation_where}",
+                params,
+            ).fetchall()
+            actual = float(
+                conn.execute(
+                    f"select coalesce(sum(estimated_cost_usd), 0.0) from llm_usage_events {where}",
+                    params,
+                ).fetchone()[0]
+                or 0.0
+            )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="budget_authority_report_read_failed",
+            message="Canonical budget policy evidence could not be read",
+            cause=exc,
+            retryable=False,
+            context={"db_path": str(path)},
+        ) from exc
+    allowed = deferred = overrides = avoided_calls = orphaned = 0
+    forecast = avoided_cost = 0.0
+    for raw_decision, raw_details in rows:
+        decision = str(raw_decision or "")
+        try:
+            details = json.loads(str(raw_details or "{}"))
+        except json.JSONDecodeError:
+            details = {}
+        cost = float(details.get("forecast_cost_usd") or 0.0)
+        calls = int(details.get("forecast_calls") or 0)
+        forecast += cost
+        if decision in {"allow", "warn", "authorized_override"}:
+            allowed += 1
+        if decision in {"defer", "pause", "stop"}:
+            deferred += 1
+            avoided_calls += calls
+            avoided_cost += cost
+        if decision == "authorized_override":
+            overrides += 1
+    for (status,) in reservations:
+        if str(status) == "expired":
+            orphaned += 1
+    return BudgetAuthorityReport(
+        schema_version="1.0",
+        allowed_operations=allowed,
+        deferred_or_stopped_operations=deferred,
+        forecast_cost_usd=round(forecast, 6),
+        actual_cost_usd=round(actual, 6),
+        avoided_calls=avoided_calls,
+        avoided_estimated_cost_usd=round(avoided_cost, 6),
+        orphaned_reservation_recoveries=orphaned,
+        overrides=overrides,
+    )
 
 
 def append_run_budget_side_effect(

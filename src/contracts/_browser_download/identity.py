@@ -5,6 +5,7 @@ from typing import Optional
 
 from .session_reuse import BrowserDownloadSessionReusePolicy
 from .worker_pool import BrowserDownloadWarmWorkerPoolPolicy
+from src.contracts.run_budget import RunBudgetLimits
 
 BROWSER_DOWNLOAD_IDENTITY_SCHEMA_VERSION = "1.0"
 
@@ -530,23 +531,50 @@ class BrowserDownloadSettings:
     )
     run_budget_enabled: bool = field(
         default=False,
-        metadata={"doc": "Whether browser report runs enforce the canonical run budget."},
+        metadata={
+            "doc": "Whether browser report runs enforce the canonical run budget."
+        },
     )
     run_budget_max_browser_launches: int | None = field(
         default=None,
-        metadata={"doc": "Maximum governed browser launches per run, day, and publisher scope."},
+        metadata={
+            "doc": "Maximum governed browser launches per run, day, and publisher scope."
+        },
     )
     run_budget_max_pdfs: int | None = field(
         default=None,
-        metadata={"doc": "Maximum governed PDF acquisitions per run, day, and publisher scope."},
+        metadata={
+            "doc": "Maximum governed PDF acquisitions per run, day, and publisher scope."
+        },
     )
     run_budget_max_drive_writes: int | None = field(
         default=None,
-        metadata={"doc": "Maximum governed Drive writes per run, day, and publisher scope."},
+        metadata={
+            "doc": "Maximum governed Drive writes per run, day, and publisher scope."
+        },
     )
     run_budget_limit_decision: str = field(
         default="stop",
-        metadata={"doc": "Action when a canonical browser run-budget limit is reached."},
+        metadata={
+            "doc": "Action when a canonical browser run-budget limit is reached."
+        },
+    )
+    run_budget_policy_version: str = field(
+        default="budget-authority-v2",
+        metadata={"doc": "Configuration-controlled canonical budget policy version."},
+    )
+    run_budget_reservation_ttl_seconds: int = field(
+        default=300,
+        metadata={"doc": "Bounded TTL for browser-related budget reservations."},
+    )
+    run_budget_limits_run: RunBudgetLimits | None = field(
+        default=None, metadata={"doc": "Explicit run-scoped browser budget limits."}
+    )
+    run_budget_limits_day: RunBudgetLimits | None = field(
+        default=None, metadata={"doc": "Explicit UTC-day browser budget limits."}
+    )
+    run_budget_limits_publisher: RunBudgetLimits | None = field(
+        default=None, metadata={"doc": "Explicit publisher browser budget limits."}
     )
     daily_spend_warn_usd: float = field(
         default=3.0,

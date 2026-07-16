@@ -128,10 +128,19 @@ class WordPressMediaUploadRequest:
     alt_text: Optional[str] = field(
         default=None, metadata={"doc": "Optional alt text."}
     )
-    run_budget: RunBudget | None = field(default=None, metadata={"doc": "Optional governed budget for this WordPress write."})
-    run_budget_usage: RunBudgetUsage | None = field(default=None, metadata={"doc": "Observed usage before this WordPress write."})
-    budget_override_actor: str = field(default="", metadata={"doc": "Authorized budget override actor."})
-    budget_override_reason: str = field(default="", metadata={"doc": "Authorized budget override reason."})
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional governed budget for this WordPress write."},
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None, metadata={"doc": "Observed usage before this WordPress write."}
+    )
+    budget_override_actor: str = field(
+        default="", metadata={"doc": "Authorized budget override actor."}
+    )
+    budget_override_reason: str = field(
+        default="", metadata={"doc": "Authorized budget override reason."}
+    )
 
 
 @dataclass(frozen=True)
@@ -216,10 +225,19 @@ class WordPressPostCreateRequest:
     post_type: str = field(
         default="posts", metadata={"doc": "REST post type endpoint slug."}
     )
-    run_budget: RunBudget | None = field(default=None, metadata={"doc": "Optional governed budget for this WordPress write."})
-    run_budget_usage: RunBudgetUsage | None = field(default=None, metadata={"doc": "Observed usage before this WordPress write."})
-    budget_override_actor: str = field(default="", metadata={"doc": "Authorized budget override actor."})
-    budget_override_reason: str = field(default="", metadata={"doc": "Authorized budget override reason."})
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional governed budget for this WordPress write."},
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None, metadata={"doc": "Observed usage before this WordPress write."}
+    )
+    budget_override_actor: str = field(
+        default="", metadata={"doc": "Authorized budget override actor."}
+    )
+    budget_override_reason: str = field(
+        default="", metadata={"doc": "Authorized budget override reason."}
+    )
 
 
 @dataclass(frozen=True)
@@ -261,10 +279,19 @@ class WordPressCardUpdateRequest:
     post_type: str = field(
         default="posts", metadata={"doc": "REST post type endpoint slug."}
     )
-    run_budget: RunBudget | None = field(default=None, metadata={"doc": "Optional governed budget for this WordPress write."})
-    run_budget_usage: RunBudgetUsage | None = field(default=None, metadata={"doc": "Observed usage before this WordPress write."})
-    budget_override_actor: str = field(default="", metadata={"doc": "Authorized budget override actor."})
-    budget_override_reason: str = field(default="", metadata={"doc": "Authorized budget override reason."})
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional governed budget for this WordPress write."},
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None, metadata={"doc": "Observed usage before this WordPress write."}
+    )
+    budget_override_actor: str = field(
+        default="", metadata={"doc": "Authorized budget override actor."}
+    )
+    budget_override_reason: str = field(
+        default="", metadata={"doc": "Authorized budget override reason."}
+    )
 
 
 # Preserve the report-only contract name for existing callers during migration.
@@ -438,6 +465,18 @@ class WordPressTaxonomyEnsureRequest:
             "doc": "Optional CA bundle path used when verifying HTTPS certificates."
         },
     )
+    run_budget: RunBudget | None = field(
+        default=None, metadata={"doc": "Optional governed budget for taxonomy writes."}
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None, metadata={"doc": "Observed usage before taxonomy writes."}
+    )
+    budget_override_actor: str = field(
+        default="", metadata={"doc": "Authorized budget override actor."}
+    )
+    budget_override_reason: str = field(
+        default="", metadata={"doc": "Authorized budget override reason."}
+    )
 
 
 @dataclass(frozen=True)
@@ -467,6 +506,18 @@ class WordPressTagEnsureRequest:
         metadata={
             "doc": "Optional CA bundle path used when verifying HTTPS certificates."
         },
+    )
+    run_budget: RunBudget | None = field(
+        default=None, metadata={"doc": "Optional governed budget for tag writes."}
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None, metadata={"doc": "Observed usage before tag writes."}
+    )
+    budget_override_actor: str = field(
+        default="", metadata={"doc": "Authorized budget override actor."}
+    )
+    budget_override_reason: str = field(
+        default="", metadata={"doc": "Authorized budget override reason."}
     )
 
 
@@ -502,10 +553,19 @@ class WordPressPostUpdateRequest:
     post_type: str = field(
         default="posts", metadata={"doc": "REST post type endpoint slug."}
     )
-    run_budget: RunBudget | None = field(default=None, metadata={"doc": "Optional governed budget for this WordPress write."})
-    run_budget_usage: RunBudgetUsage | None = field(default=None, metadata={"doc": "Observed usage before this WordPress write."})
-    budget_override_actor: str = field(default="", metadata={"doc": "Authorized budget override actor."})
-    budget_override_reason: str = field(default="", metadata={"doc": "Authorized budget override reason."})
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional governed budget for this WordPress write."},
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None, metadata={"doc": "Observed usage before this WordPress write."}
+    )
+    budget_override_actor: str = field(
+        default="", metadata={"doc": "Authorized budget override actor."}
+    )
+    budget_override_reason: str = field(
+        default="", metadata={"doc": "Authorized budget override reason."}
+    )
 
 
 @dataclass(frozen=True)

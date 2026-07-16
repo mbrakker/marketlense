@@ -253,3 +253,81 @@ def _add_column_if_missing(
 ) -> None:
     if column_name not in _fetch_columns(conn, table_name):
         conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+
+
+def _llm_usage_001_create_budget_authority_tables(conn: sqlite3.Connection) -> None:
+    """Add policy state to the canonical LLM ledger without a second cost ledger."""
+    conn.execute(
+        """
+        create table if not exists budget_authority_reservations (
+            reservation_key text primary key,
+            schema_version text not null,
+            run_id text not null,
+            workflow_id text not null,
+            publisher_name text not null,
+            report_id text not null,
+            resource_type text not null,
+            operation text not null,
+            day_utc text not null,
+            estimated_cost_usd real not null,
+            estimated_tokens integer not null,
+            estimated_calls integer not null,
+            estimated_steps integer not null,
+            estimated_writes integer not null,
+            estimated_pdfs integer not null,
+            estimated_duration_seconds integer not null,
+            status text not null,
+            expires_at_utc text not null,
+            created_at_utc text not null,
+            released_at_utc text not null default '',
+            reconciled_at_utc text not null default ''
+        )
+        """
+    )
+    conn.execute(
+        """
+        create index if not exists idx_budget_authority_reservations_scope
+        on budget_authority_reservations(
+            day_utc, run_id, publisher_name, status, expires_at_utc
+        )
+        """
+    )
+    conn.execute(
+        """
+        create table if not exists budget_authority_events (
+            id integer primary key autoincrement,
+            schema_version text not null,
+            timestamp_utc text not null,
+            run_id text not null,
+            workflow_id text not null,
+            publisher_name text not null,
+            report_id text not null,
+            resource_type text not null,
+            operation text not null,
+            decision text not null,
+            reason_code text not null,
+            policy_version text not null,
+            reservation_key text not null default '',
+            override_actor text not null default '',
+            override_scope text not null default '',
+            override_reason text not null default '',
+            override_expires_at_utc text not null default '',
+            details_json text not null default '{}'
+        )
+        """
+    )
+    conn.execute(
+        """
+        create index if not exists idx_budget_authority_events_scope
+        on budget_authority_events(run_id, workflow_id, publisher_name, timestamp_utc)
+        """
+    )
+
+
+_LLM_USAGE_LEDGER_MIGRATIONS: tuple[_MigrationSpec, ...] = (
+    _MigrationSpec(
+        migration_id="llm_usage_ledger_001_create_budget_authority_tables",
+        version=1,
+        apply_fn=_llm_usage_001_create_budget_authority_tables,
+    ),
+)

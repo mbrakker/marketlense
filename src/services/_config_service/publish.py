@@ -3,6 +3,31 @@ from __future__ import annotations
 # ruff: noqa: F403, F405
 
 from src.services._config_service.common import *
+from src.contracts.run_budget import RunBudgetLimits
+
+
+def _load_budget_limits(raw: object) -> RunBudgetLimits | None:
+    if not isinstance(raw, dict) or not raw:
+        return None
+
+    def limit(name: str) -> int | None:
+        value = raw.get(name)
+        return None if _is_missing(value) else max(0, _to_int(value, 0))
+
+    spend = raw.get("max_spend_usd")
+    return RunBudgetLimits(
+        schema_version="1.0",
+        max_spend_usd=(None if _is_missing(spend) else max(0.0, _to_float(spend, 0.0))),
+        max_tokens=limit("max_tokens"),
+        max_calls=limit("max_calls"),
+        max_steps=limit("max_steps"),
+        max_runtime_seconds=limit("max_runtime_seconds"),
+        max_retries=limit("max_retries"),
+        max_browser_launches=limit("max_browser_launches"),
+        max_drive_writes=limit("max_drive_writes"),
+        max_wordpress_writes=limit("max_wordpress_writes"),
+        max_pdfs=limit("max_pdfs"),
+    )
 
 
 def _normalize_site_url(site_url: str) -> str:
@@ -42,6 +67,7 @@ def load_publish_settings(
     validation_cfg = publish.get("validation", {}) or {}
     run_budget_cfg = publish.get("run_budget", {}) or {}
     cost_cfg = data.get("cost", {}) or {}
+    authority_cfg = cost_cfg.get("budget_authority", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(
         Path(__file__).resolve().parents[2] / "config" / "category-mappings.yaml"
     )
@@ -172,6 +198,15 @@ def load_publish_settings(
         run_budget_limit_decision=str(run_budget_cfg.get("limit_decision") or "stop")
         .strip()
         .lower(),
+        run_budget_policy_version=str(
+            authority_cfg.get("policy_version") or "budget-authority-v2"
+        ).strip(),
+        run_budget_reservation_ttl_seconds=max(
+            _to_int(authority_cfg.get("reservation_ttl_seconds"), 300), 1
+        ),
+        run_budget_limits_run=_load_budget_limits(authority_cfg.get("run")),
+        run_budget_limits_day=_load_budget_limits(authority_cfg.get("day")),
+        run_budget_limits_publisher=_load_budget_limits(authority_cfg.get("publisher")),
         wp=wp,
     )
     logger.info(

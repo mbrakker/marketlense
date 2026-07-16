@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 
 from src.contracts.semantic_ids import RunId, SemanticIdContract, TaskId
+from src.contracts.run_budget import BudgetAuthorityReport
 
 
 @dataclass(frozen=True)
@@ -136,6 +137,12 @@ class CostReportRequest(SemanticIdContract):
     top_n: int = field(
         default=5, metadata={"doc": "Number of top-cost steps to return."}
     )
+    usage_db_path: str = field(
+        default="",
+        metadata={
+            "doc": "Optional canonical usage DB used for budget-policy evidence."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -153,6 +160,10 @@ class CostReportResponse:
     )
     matched_entries: int = field(
         metadata={"doc": "Number of ledger entries included in the report."}
+    )
+    budget_authority: BudgetAuthorityReport | None = field(
+        default=None,
+        metadata={"doc": "Canonical budget-policy evidence for the same filter."},
     )
 
 

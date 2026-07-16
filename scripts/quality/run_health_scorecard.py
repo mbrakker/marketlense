@@ -70,6 +70,14 @@ class RunHealthScorecard:
     cost_usd: float
     latency_seconds: float | None
     warnings: tuple[str, ...]
+    allowed_budget_operation_count: int = 0
+    deferred_or_stopped_budget_operation_count: int = 0
+    forecast_cost_usd: float = 0.0
+    actual_reconciled_cost_usd: float = 0.0
+    avoided_call_count: int = 0
+    avoided_estimated_cost_usd: float = 0.0
+    orphaned_reservation_recovery_count: int = 0
+    override_count: int = 0
     pdf_benchmark_scorecard: PdfBenchmarkScorecard | None = None
     retry_telemetry_report: RetryDecisionTelemetryReport | None = None
 
@@ -155,6 +163,47 @@ def build_scorecard(
         )
     )
     cost_usd = sum(float(item.get("cost_usd") or 0.0) for item in fields)
+    budget_decisions = [
+        (event, field)
+        for event, field in zip(events, fields)
+        if str(event.get("event") or "") == "budget_decision"
+    ]
+    allowed_budget_operation_count = sum(
+        1
+        for _, field in budget_decisions
+        if str(field.get("decision") or "") in {"allow", "warn", "authorized_override"}
+    )
+    deferred_or_stopped_budget_operation_count = sum(
+        1
+        for _, field in budget_decisions
+        if str(field.get("decision") or "") in {"defer", "pause", "stop"}
+    )
+    forecast_cost_usd = sum(
+        float(field.get("forecast_cost_usd") or 0.0) for _, field in budget_decisions
+    )
+    actual_reconciled_cost_usd = sum(
+        float(field.get("actual_cost_usd") or 0.0)
+        for event, field in zip(events, fields)
+        if str(event.get("event") or "") == "actual_usage_reconciled"
+    )
+    avoided_call_count = sum(
+        int(field.get("forecast_calls") or 0)
+        for event, field in zip(events, fields)
+        if str(event.get("event") or "") == "side_effect_prevented"
+    )
+    avoided_estimated_cost_usd = sum(
+        float(field.get("forecast_cost_usd") or 0.0)
+        for event, field in zip(events, fields)
+        if str(event.get("event") or "") == "side_effect_prevented"
+    )
+    orphaned_reservation_recovery_count = sum(
+        int(field.get("expired_count") or 0)
+        for event, field in zip(events, fields)
+        if str(event.get("event") or "") == "reservation_expired"
+    )
+    override_count = sum(
+        1 for event in events if str(event.get("event") or "") == "override_used"
+    )
     latency_seconds = None
     if len(timestamps) >= 2:
         latency_seconds = (max(timestamps) - min(timestamps)).total_seconds()
@@ -227,6 +276,14 @@ def build_scorecard(
         cost_usd=round(cost_usd, 6),
         latency_seconds=latency_seconds,
         warnings=tuple(warnings),
+        allowed_budget_operation_count=allowed_budget_operation_count,
+        deferred_or_stopped_budget_operation_count=deferred_or_stopped_budget_operation_count,
+        forecast_cost_usd=round(forecast_cost_usd, 6),
+        actual_reconciled_cost_usd=round(actual_reconciled_cost_usd, 6),
+        avoided_call_count=avoided_call_count,
+        avoided_estimated_cost_usd=round(avoided_estimated_cost_usd, 6),
+        orphaned_reservation_recovery_count=orphaned_reservation_recovery_count,
+        override_count=override_count,
         pdf_benchmark_scorecard=pdf_benchmark_scorecard,
         retry_telemetry_report=retry_telemetry_report,
     )

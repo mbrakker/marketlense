@@ -37,6 +37,15 @@ def build_report_download_budget(
         max_pdfs=settings.run_budget_max_pdfs,
         max_drive_writes=settings.run_budget_max_drive_writes,
         limit_decision=settings.run_budget_limit_decision,
+        policy_version=getattr(
+            settings, "run_budget_policy_version", "budget-authority-v2"
+        ),
+        reservation_ttl_seconds=getattr(
+            settings, "run_budget_reservation_ttl_seconds", 300
+        ),
+        run_limits=getattr(settings, "run_budget_limits_run", None),
+        day_limits=getattr(settings, "run_budget_limits_day", None),
+        publisher_limits=getattr(settings, "run_budget_limits_publisher", None),
     )
 
 

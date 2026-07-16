@@ -37,6 +37,8 @@ from src.services._browser_report_download.dev_diagnostics import (
 )
 from src.services._browser_report_download import http as http_runtime
 from src.services._browser_report_download.budgets import apply_browser_route_budget
+from src.contracts.run_budget import BudgetRequest, RunBudget
+from src.services.llm_usage_ledger_service import evaluate_budget_request
 from src.utils.run_budget import evaluate_run_budget
 from src.services._browser_report_download.http import try_direct_pdf_download
 from src.services._browser_report_download.http import try_direct_onsite_capture
@@ -1053,6 +1055,46 @@ def download_report_with_browser_use(
         ctx=ctx,
         normalized_url=normalized_url,
     )
+    authority_budget = request.run_budget or RunBudget(
+        schema_version="1.0",
+        run_id=ctx.run_id,
+        publisher_name=request.publisher_name,
+        usage_db_path=request.settings.usage_db_path,
+        max_spend_usd=request.settings.daily_spend_stop_usd,
+        max_browser_launches=request.settings.run_budget_max_browser_launches,
+        limit_decision=request.settings.run_budget_limit_decision,
+        policy_version=request.settings.run_budget_policy_version,
+        reservation_ttl_seconds=request.settings.run_budget_reservation_ttl_seconds,
+        run_limits=request.settings.run_budget_limits_run,
+        day_limits=request.settings.run_budget_limits_day,
+        publisher_limits=request.settings.run_budget_limits_publisher,
+    )
+    authority_decision = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=authority_budget,
+            run_id=ctx.run_id,
+            workflow_id="browser_acquisition",
+            publisher_id=request.publisher_name,
+            report_id=_normalized_report_title(request),
+            resource_type="browser_launch",
+            operation="browser_launch",
+            estimated_duration_seconds=int(request.settings.timeout_seconds),
+            forecast_method="explicit",
+            idempotency_key=f"browser-launch:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}",
+        ),
+        ctx,
+    )
+    if authority_decision.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"browser_budget_{authority_decision.decision}",
+            message="Browser launch blocked by the canonical budget authority",
+            retryable=authority_decision.decision in {"defer", "pause"},
+            context={
+                "reason_code": authority_decision.reason_code,
+                "affected_limit": authority_decision.affected_limit,
+            },
+        )
     if request.run_budget is not None:
         prior_usage = request.run_budget_usage
         if prior_usage is None:

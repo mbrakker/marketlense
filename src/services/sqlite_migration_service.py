@@ -8,6 +8,19 @@ from src.contracts.sqlite_migration import (
     SqliteMigrationApplyResponse,
 )
 
+from ._sqlite_migration.runner import (
+    _LEDGER_DDL,
+    _LLM_USAGE_LEDGER_MIGRATIONS,
+    _add_column_if_missing,
+    _applied_migration_ids,
+    _apply_migration_plan,
+    _current_version,
+    _fetch_columns,
+    _MigrationSpec,
+    _normalize_url_key,
+    _table_exists,
+    _utc_now,
+)
 from ._sqlite_migration.reports import (
     _ARTIFACT_LINEAGE_DEPENDENCIES_TABLE_SQL,
     _ARTIFACT_LINEAGE_RECORDS_TABLE_SQL,
@@ -49,18 +62,6 @@ from ._sqlite_migration.reports import (
     _reports_db_014_create_claim_embedding_records,
     _reports_db_015_create_artifact_lineage_registry,
     _reports_db_016_add_claim_embedding_queue_controls,
-)
-from ._sqlite_migration.runner import (
-    _LEDGER_DDL,
-    _add_column_if_missing,
-    _applied_migration_ids,
-    _apply_migration_plan,
-    _current_version,
-    _fetch_columns,
-    _MigrationSpec,
-    _normalize_url_key,
-    _table_exists,
-    _utc_now,
 )
 from ._sqlite_migration.state import (
     _STATE_ARTIFACT_ACQUISITION_CACHE_TABLE_SQL,
@@ -114,3 +115,11 @@ def apply_ui_run_registry_migrations(
     conn: sqlite3.Connection,
 ) -> SqliteMigrationApplyResponse:
     return _apply_migration_plan(request, conn, _UI_RUN_REGISTRY_MIGRATIONS)
+
+
+def apply_llm_usage_ledger_migrations(
+    request: SqliteMigrationApplyRequest,
+    conn: sqlite3.Connection,
+) -> SqliteMigrationApplyResponse:
+    """Apply policy-state migrations owned by the canonical usage ledger."""
+    return _apply_migration_plan(request, conn, _LLM_USAGE_LEDGER_MIGRATIONS)

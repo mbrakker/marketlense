@@ -1143,6 +1143,36 @@
         "run_budget_limit_decision": {
           "type": "string"
         },
+        "run_budget_limits_day": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_limits_publisher": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_limits_run": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "run_budget_max_browser_launches": {
           "anyOf": [
             {
@@ -1172,6 +1202,12 @@
               "type": "null"
             }
           ]
+        },
+        "run_budget_policy_version": {
+          "type": "string"
+        },
+        "run_budget_reservation_ttl_seconds": {
+          "type": "integer"
         },
         "schema_version": {
           "type": "string"
@@ -13908,6 +13944,9 @@
         },
         "top_n": {
           "type": "integer"
+        },
+        "usage_db_path": {
+          "type": "string"
         }
       },
       "required": [
@@ -13919,6 +13958,16 @@
     "src.contracts.costs.CostReportResponse": {
       "additionalProperties": false,
       "properties": {
+        "budget_authority": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.BudgetAuthorityReport"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "filter_type": {
           "type": "string"
         },
@@ -15637,6 +15686,12 @@
         "auth_mode": {
           "type": "string"
         },
+        "budget_override_actor": {
+          "type": "string"
+        },
+        "budget_override_reason": {
+          "type": "string"
+        },
         "drive_id": {
           "anyOf": [
             {
@@ -15675,6 +15730,26 @@
         },
         "parent_folder_id": {
           "type": "string"
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -23754,6 +23829,36 @@
         "run_budget_limit_decision": {
           "type": "string"
         },
+        "run_budget_limits_day": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_limits_publisher": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_limits_run": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "run_budget_max_wordpress_writes": {
           "anyOf": [
             {
@@ -23763,6 +23868,12 @@
               "type": "null"
             }
           ]
+        },
+        "run_budget_policy_version": {
+          "type": "string"
+        },
+        "run_budget_reservation_ttl_seconds": {
+          "type": "integer"
         },
         "schema_version": {
           "type": "string"
@@ -27548,9 +27659,296 @@
       ],
       "type": "object"
     },
+    "src.contracts.run_budget.BudgetAuthorityReport": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_cost_usd": {
+          "type": "number"
+        },
+        "allowed_operations": {
+          "type": "integer"
+        },
+        "avoided_calls": {
+          "type": "integer"
+        },
+        "avoided_estimated_cost_usd": {
+          "type": "number"
+        },
+        "deferred_or_stopped_operations": {
+          "type": "integer"
+        },
+        "forecast_cost_usd": {
+          "type": "number"
+        },
+        "orphaned_reservation_recoveries": {
+          "type": "integer"
+        },
+        "overrides": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "allowed_operations",
+        "deferred_or_stopped_operations",
+        "forecast_cost_usd",
+        "actual_cost_usd",
+        "avoided_calls",
+        "avoided_estimated_cost_usd",
+        "orphaned_reservation_recoveries",
+        "overrides"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.BudgetDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_limit": {
+          "type": "string"
+        },
+        "current_usage": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "next_action": {
+          "type": "string"
+        },
+        "policy_version": {
+          "type": "string"
+        },
+        "projected_usage": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "reservation_created": {
+          "type": "boolean"
+        },
+        "reservation_key": {
+          "type": "string"
+        },
+        "reserved_usage": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "decision",
+        "reason_code",
+        "affected_limit",
+        "current_usage",
+        "reserved_usage",
+        "projected_usage",
+        "next_action",
+        "policy_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.BudgetOverrideContext": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "type": "string"
+        },
+        "expires_at_utc": {
+          "type": "string"
+        },
+        "policy_version": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "actor",
+        "reason",
+        "scope",
+        "expires_at_utc",
+        "policy_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.BudgetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_number": {
+          "type": "integer"
+        },
+        "budget": {
+          "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+        },
+        "estimated_calls": {
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "estimated_duration_seconds": {
+          "type": "integer"
+        },
+        "estimated_pdfs": {
+          "type": "integer"
+        },
+        "estimated_steps": {
+          "type": "integer"
+        },
+        "estimated_tokens": {
+          "type": "integer"
+        },
+        "estimated_writes": {
+          "type": "integer"
+        },
+        "forecast_confidence": {
+          "type": "number"
+        },
+        "forecast_method": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "prompt_namespace": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "requested_override": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.BudgetOverrideContext"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reservation_ttl_seconds": {
+          "type": "integer"
+        },
+        "reserve_in_flight": {
+          "type": "boolean"
+        },
+        "resource_type": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "workflow_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "budget",
+        "run_id",
+        "workflow_id",
+        "resource_type",
+        "operation"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.BudgetReservationReconcileRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_cost_usd": {
+          "type": "number"
+        },
+        "reservation_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "usage_db_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "usage_db_path",
+        "reservation_key"
+      ],
+      "type": "object"
+    },
+    "src.contracts.run_budget.BudgetReservationReconcileResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_cost_usd": {
+          "type": "number"
+        },
+        "forecast_cost_usd": {
+          "type": "number"
+        },
+        "forecast_error_usd": {
+          "type": "number"
+        },
+        "released": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "released"
+      ],
+      "type": "object"
+    },
     "src.contracts.run_budget.RunBudget": {
       "additionalProperties": false,
       "properties": {
+        "day_limits": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "day_utc": {
           "type": "string"
         },
@@ -27558,6 +27956,16 @@
           "type": "string"
         },
         "max_browser_launches": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_calls": {
           "anyOf": [
             {
               "type": "integer"
@@ -27617,6 +28025,16 @@
             }
           ]
         },
+        "max_steps": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "max_tokens": {
           "anyOf": [
             {
@@ -27637,6 +28055,9 @@
             }
           ]
         },
+        "policy_version": {
+          "type": "string"
+        },
         "projection_daily_path": {
           "type": "string"
         },
@@ -27646,11 +28067,34 @@
         "projection_pending_event_threshold": {
           "type": "integer"
         },
+        "publisher_limits": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "publisher_name": {
           "type": "string"
         },
+        "reservation_ttl_seconds": {
+          "type": "integer"
+        },
         "run_id": {
           "type": "string"
+        },
+        "run_limits": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetLimits"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -27772,10 +28216,125 @@
       ],
       "type": "object"
     },
+    "src.contracts.run_budget.RunBudgetLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "max_browser_launches": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_calls": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_drive_writes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_pdfs": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_retries": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_runtime_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_spend_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_steps": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_wordpress_writes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.run_budget.RunBudgetUsage": {
       "additionalProperties": false,
       "properties": {
         "browser_launches": {
+          "type": "integer"
+        },
+        "calls": {
           "type": "integer"
         },
         "drive_writes": {
@@ -27795,6 +28354,9 @@
         },
         "spend_usd": {
           "type": "number"
+        },
+        "steps": {
+          "type": "integer"
         },
         "tokens": {
           "type": "integer"
@@ -35035,10 +35597,36 @@
         "base_url": {
           "type": "string"
         },
+        "budget_override_actor": {
+          "type": "string"
+        },
+        "budget_override_reason": {
+          "type": "string"
+        },
         "ca_bundle_path": {
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
             },
             {
               "type": "null"
@@ -35094,10 +35682,36 @@
         "base_url": {
           "type": "string"
         },
+        "budget_override_actor": {
+          "type": "string"
+        },
+        "budget_override_reason": {
+          "type": "string"
+        },
         "ca_bundle_path": {
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_budget_usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.run_budget.RunBudgetUsage"
             },
             {
               "type": "null"
@@ -36628,6 +37242,12 @@
           "type": "array"
         },
         "blockers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "budget_boundaries": {
           "items": {
             "type": "string"
           },

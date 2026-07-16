@@ -1,12 +1,65 @@
 from __future__ import annotations
 
+# This module deliberately preserves its pre-decomposition compatibility facade.
+# ruff: noqa: F403, F405
+
+from typing import Any
+
 from src.services._llm_service.openai_shared import *
 from src.services._llm_service.openai_client import *
+from src.contracts.run_budget import BudgetRequest, RunBudget
+from src.contracts.run_context import RunContext
+from src.services.llm_usage_ledger_service import evaluate_budget_request
+
+
+def _require_vector_store_budget(
+    request: Any, ctx: RunContext, *, operation: str
+) -> None:
+    """Admit every vector-store provider call through the canonical authority."""
+    decision = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=RunBudget(
+                schema_version="1.0",
+                run_id=ctx.run_id,
+                publisher_name=str(getattr(request, "publisher_name", "") or ""),
+                usage_db_path=str(
+                    getattr(request, "usage_db_path", "./state/llm_usage.sqlite")
+                ),
+                max_spend_usd=float(
+                    getattr(request, "daily_spend_stop_usd", 6.0) or 6.0
+                ),
+                limit_decision="stop",
+            ),
+            run_id=ctx.run_id,
+            workflow_id="vector_store",
+            publisher_id=str(getattr(request, "publisher_name", "") or ""),
+            resource_type="vector_store",
+            operation=operation,
+            provider="openai",
+            model=str(getattr(request, "model", "") or "vector_store"),
+            idempotency_key=f"openai:{operation}:{ctx.run_id}:{ctx.task_id}:{ctx.span_id}",
+            reserve_in_flight=True,
+            forecast_method="historical_median",
+        ),
+        ctx,
+    )
+    if decision.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"{operation}_budget_{decision.decision}",
+            message="Vector-store provider call was blocked by the canonical budget authority",
+            retryable=decision.decision in {"defer", "pause"},
+            context={
+                "reason_code": decision.reason_code,
+                "affected_limit": decision.affected_limit,
+            },
+        )
 
 
 def openai_vector_store_create(
     request: OpenAIVectorStoreCreateRequest, ctx: RunContext
 ) -> OpenAIVectorStoreCreateResponse:
+    _require_vector_store_budget(request, ctx, operation="openai_vector_store_create")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_CREATE_OPERATION.start_event,
@@ -44,6 +97,7 @@ def openai_vector_store_upload_file(
     request: OpenAIVectorStoreFileUploadRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreFileUploadResponse:
+    _require_vector_store_budget(request, ctx, operation="openai_vector_store_upload")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_UPLOAD_OPERATION.start_event,
@@ -97,6 +151,7 @@ def openai_vector_store_attach_file(
     request: OpenAIVectorStoreAttachFileRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreAttachFileResponse:
+    _require_vector_store_budget(request, ctx, operation="openai_vector_store_attach")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_ATTACH_OPERATION.start_event,
@@ -140,6 +195,7 @@ def openai_vector_store_status(
     request: OpenAIVectorStoreStatusRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreStatusResponse:
+    _require_vector_store_budget(request, ctx, operation="openai_vector_store_status")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_STATUS_OPERATION.start_event,
@@ -179,6 +235,7 @@ def openai_vector_store_delete(
     request: OpenAIVectorStoreDeleteRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreDeleteResponse:
+    _require_vector_store_budget(request, ctx, operation="openai_vector_store_delete")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_DELETE_OPERATION.start_event,
@@ -213,6 +270,7 @@ def openai_vector_store_update_metadata(
     request: OpenAIVectorStoreUpdateMetadataRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreUpdateMetadataResponse:
+    _require_vector_store_budget(request, ctx, operation="openai_vector_store_update")
     _log_vector_store_event(
         ctx,
         event=_VECTOR_STORE_UPDATE_METADATA_OPERATION.start_event,

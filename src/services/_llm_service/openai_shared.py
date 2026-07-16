@@ -15,6 +15,7 @@ import openai as openai_legacy
 
 from src.contracts.files import WriteBytesRequest
 from src.contracts.llm_usage import LLMUsageSpendGuardrailRequest
+from src.contracts.run_budget import BudgetRequest, RunBudget
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
     OpenAIAnalyzeResponse,
@@ -53,7 +54,10 @@ from src.services._llm_service.openai_usage_accounting import (
     record_usage_accounting as _record_usage_accounting,
 )
 from src.services._llm_service.policy import spend_reservation_key
-from src.services.llm_usage_ledger_service import evaluate_daily_spend_guardrail
+from src.services.llm_usage_ledger_service import (
+    evaluate_budget_request,
+    evaluate_daily_spend_guardrail,
+)
 from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import log_event
@@ -101,6 +105,49 @@ def enforce_daily_spend_guardrail(
     if namespace_parts[:1] == ["report_vs"]:
         namespace_parts = namespace_parts[1:]
     semantic_action = ":".join(namespace_parts) or operation
+    reservation_key = spend_reservation_key(ctx, provider=provider, operation=operation)
+    # This is the typed pipeline-wide decision.  The legacy guardrail below is
+    # retained temporarily to preserve its configured warn/pause/stop semantics.
+    authority = evaluate_budget_request(
+        BudgetRequest(
+            schema_version="1.0",
+            budget=RunBudget(
+                schema_version="1.0",
+                run_id=ctx.run_id,
+                publisher_name=str(getattr(request, "publisher_name", "") or ""),
+                usage_db_path=str(
+                    getattr(request, "usage_db_path", "./state/llm_usage.sqlite")
+                ),
+                max_spend_usd=float(getattr(request, "daily_spend_stop_usd", 6.0)),
+                limit_decision="stop",
+            ),
+            run_id=ctx.run_id,
+            workflow_id=str(getattr(request, "workflow_id", "llm")),
+            publisher_id=str(getattr(request, "publisher_name", "") or ""),
+            report_id=str(getattr(request, "report_name", "") or ""),
+            resource_type="llm_provider",
+            operation=semantic_action,
+            provider=provider,
+            model=str(getattr(request, "model", "")),
+            prompt_namespace=str(getattr(request, "prompt_namespace", "")),
+            forecast_method="historical_median",
+            idempotency_key=reservation_key,
+            attempt_number=max(0, int(getattr(request, "budget_attempt_number", 0))),
+            reserve_in_flight=True,
+        ),
+        ctx,
+    )
+    if authority.decision in {"defer", "pause", "stop"}:
+        raise AppError(
+            code=f"{provider}_daily_spend_{authority.decision}",
+            message="Canonical budget authority blocked the provider call",
+            retryable=authority.decision in {"pause", "defer"},
+            context={
+                "operation": operation,
+                "reason_code": authority.reason_code,
+                "affected_limit": authority.affected_limit,
+            },
+        )
     guardrail = evaluate_daily_spend_guardrail(
         LLMUsageSpendGuardrailRequest(
             schema_version="1.0",
@@ -114,9 +161,7 @@ def enforce_daily_spend_guardrail(
             action=semantic_action,
             model=str(getattr(request, "model", "")),
             prompt_namespace=str(getattr(request, "prompt_namespace", "")),
-            reservation_key=spend_reservation_key(
-                ctx, provider=provider, operation=operation
-            ),
+            reservation_key=reservation_key,
             reserve_in_flight=True,
         ),
         ctx,

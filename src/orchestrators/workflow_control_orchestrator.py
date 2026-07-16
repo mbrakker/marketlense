@@ -637,6 +637,7 @@ def build_pipeline_execution_plan(
             idempotency_key="",
             executable=False,
             blockers=list(resolved.blockers),
+            budget_boundaries=[],
         )
     else:
         profile = _profile(settings, resolved.preflight_profile)
@@ -668,6 +669,7 @@ def build_pipeline_execution_plan(
             idempotency_key=hashlib.sha256(identity.encode("utf-8")).hexdigest(),
             executable=True,
             blockers=[],
+            budget_boundaries=_budget_boundaries(resolved.side_effect_plan),
         )
     logger.info(
         log_event(
@@ -679,6 +681,23 @@ def build_pipeline_execution_plan(
         )
     )
     return plan
+
+
+def _budget_boundaries(side_effects: list[str]) -> list[str]:
+    """Expose pre-side-effect budget gates in the operator-visible plan."""
+    resource_by_side_effect = {
+        "model": "llm_provider",
+        "browser": "browser_launch",
+        "drive": "drive_write",
+        "wordpress": "wordpress_write",
+        "publish": "wordpress_write",
+        "pdf": "pdf_process",
+        "network": "provider_call",
+    }
+    return [
+        f"before:{resource_by_side_effect.get(effect, effect)}:{effect}"
+        for effect in sorted(dict.fromkeys(side_effects))
+    ]
 
 
 def authorize_pipeline_execution(

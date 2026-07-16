@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from src.contracts.wordpress import WordPressAuthSettings
-from src.contracts.run_budget import RunBudget, RunBudgetUsage
+from src.contracts.run_budget import RunBudget, RunBudgetLimits, RunBudgetUsage
 
 
 @dataclass(frozen=True)
@@ -97,6 +97,22 @@ class PublishSettings:
     run_budget_limit_decision: str = field(
         default="stop",
         metadata={"doc": "Action when the WordPress publication budget is reached."},
+    )
+    run_budget_policy_version: str = field(
+        default="budget-authority-v2",
+        metadata={"doc": "Canonical budget policy version for publication writes."},
+    )
+    run_budget_reservation_ttl_seconds: int = field(
+        default=300, metadata={"doc": "Bounded publication budget reservation TTL."}
+    )
+    run_budget_limits_run: RunBudgetLimits | None = field(
+        default=None, metadata={"doc": "Explicit run-scoped publication limits."}
+    )
+    run_budget_limits_day: RunBudgetLimits | None = field(
+        default=None, metadata={"doc": "Explicit UTC-day publication limits."}
+    )
+    run_budget_limits_publisher: RunBudgetLimits | None = field(
+        default=None, metadata={"doc": "Explicit publisher publication limits."}
     )
 
 

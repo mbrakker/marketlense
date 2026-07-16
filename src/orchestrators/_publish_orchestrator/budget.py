@@ -34,6 +34,11 @@ def build_publish_budget(
         day_utc=datetime.now(timezone.utc).date().isoformat(),
         max_wordpress_writes=settings.run_budget_max_wordpress_writes,
         limit_decision=settings.run_budget_limit_decision,
+        policy_version=settings.run_budget_policy_version,
+        reservation_ttl_seconds=settings.run_budget_reservation_ttl_seconds,
+        run_limits=settings.run_budget_limits_run,
+        day_limits=settings.run_budget_limits_day,
+        publisher_limits=settings.run_budget_limits_publisher,
     )
 
 

@@ -18,6 +18,7 @@ from src.contracts.openai import (
     OpenAIUsageAccountingResponse,
     OpenAIUsageOutcomeUpdateRequest,
 )
+from src.contracts.run_budget import BudgetReservationReconcileRequest
 from src.contracts.run_context import RunContext
 from src.services import llm_usage_ledger_service
 from src.services._llm_service.policy import spend_reservation_key
@@ -242,6 +243,19 @@ def record_usage(
                     provider=request.provider,
                     operation=request.reservation_operation or action,
                 ),
+            ),
+            ctx,
+        )
+        llm_usage_ledger_service.reconcile_budget_reservation(
+            BudgetReservationReconcileRequest(
+                schema_version="1.0",
+                usage_db_path=request.usage_db_path,
+                reservation_key=spend_reservation_key(
+                    ctx,
+                    provider=request.provider,
+                    operation=request.reservation_operation or action,
+                ),
+                actual_cost_usd=estimated_cost,
             ),
             ctx,
         )

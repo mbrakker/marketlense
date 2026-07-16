@@ -334,6 +334,14 @@ cost:
   ledger_path: "./out/cost-ledger.jsonl"
   daily_path: "./out/cost-daily.json"
   usage_db_path: "./state/llm_usage.sqlite"
+  budget_authority:
+    policy_version: "budget-authority-v2"
+    reservation_ttl_seconds: 300
+    # Scoped limits are opt-in unless an existing workflow-specific limit maps
+    # to the same metric; this preserves the current successful default policy.
+    run: {}
+    day: {}
+    publisher: {}
   daily_spend_warn_usd: 3.0
   daily_spend_pause_usd: 5.0
   daily_spend_stop_usd: 6.0

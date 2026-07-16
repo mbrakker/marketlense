@@ -376,6 +376,20 @@ class DriveFolderEnsureRequest:
             "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
         },
     )
+    run_budget: RunBudget | None = field(
+        default=None,
+        metadata={"doc": "Optional governed budget when ensure creates a folder."},
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None,
+        metadata={"doc": "Observed usage before a possible folder creation."},
+    )
+    budget_override_actor: str = field(
+        default="", metadata={"doc": "Authorized budget override actor."}
+    )
+    budget_override_reason: str = field(
+        default="", metadata={"doc": "Authorized budget override reason."}
+    )
 
 
 @dataclass(frozen=True)
@@ -385,9 +399,7 @@ class DriveFolderEnsureResponse:
     )
     folder: DriveFile = field(metadata={"doc": "Existing or newly created folder."})
     parent_folder_id: str = field(metadata={"doc": "Drive parent folder ID searched."})
-    created: bool = field(
-        metadata={"doc": "True when a new Drive folder was created."}
-    )
+    created: bool = field(metadata={"doc": "True when a new Drive folder was created."})
 
 
 @dataclass(frozen=True)
@@ -426,10 +438,18 @@ class DriveUploadBytesRequest:
             "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
         },
     )
-    run_budget: RunBudget | None = field(default=None, metadata={"doc": "Optional governed budget for this Drive write."})
-    run_budget_usage: RunBudgetUsage | None = field(default=None, metadata={"doc": "Observed usage before this Drive write."})
-    budget_override_actor: str = field(default="", metadata={"doc": "Authorized budget override actor."})
-    budget_override_reason: str = field(default="", metadata={"doc": "Authorized budget override reason."})
+    run_budget: RunBudget | None = field(
+        default=None, metadata={"doc": "Optional governed budget for this Drive write."}
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None, metadata={"doc": "Observed usage before this Drive write."}
+    )
+    budget_override_actor: str = field(
+        default="", metadata={"doc": "Authorized budget override actor."}
+    )
+    budget_override_reason: str = field(
+        default="", metadata={"doc": "Authorized budget override reason."}
+    )
 
 
 @dataclass(frozen=True)
@@ -490,10 +510,18 @@ class DriveUploadLocalFileRequest:
             "doc": "OAuth authorized-user token JSON path when auth_mode=oauth_user."
         },
     )
-    run_budget: RunBudget | None = field(default=None, metadata={"doc": "Optional governed budget for this Drive write."})
-    run_budget_usage: RunBudgetUsage | None = field(default=None, metadata={"doc": "Observed usage before this Drive write."})
-    budget_override_actor: str = field(default="", metadata={"doc": "Authorized budget override actor."})
-    budget_override_reason: str = field(default="", metadata={"doc": "Authorized budget override reason."})
+    run_budget: RunBudget | None = field(
+        default=None, metadata={"doc": "Optional governed budget for this Drive write."}
+    )
+    run_budget_usage: RunBudgetUsage | None = field(
+        default=None, metadata={"doc": "Observed usage before this Drive write."}
+    )
+    budget_override_actor: str = field(
+        default="", metadata={"doc": "Authorized budget override actor."}
+    )
+    budget_override_reason: str = field(
+        default="", metadata={"doc": "Authorized budget override reason."}
+    )
 
 
 @dataclass(frozen=True)
